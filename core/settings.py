@@ -1,6 +1,7 @@
 from pathlib import Path
 import os 
 from decouple import config
+from django.utils.timezone import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -23,6 +24,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'Auth',
+    'Produtos',
 ]
 
 MIDDLEWARE = [
@@ -73,6 +75,9 @@ DATABASES = {
 AUTHENTICATION_BACKENDS = [
     'Auth.backends.UCTabUserBackend', 
 ]
+
+AUTH_USER_MODEL = 'Auth.UCTabUsers'
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -109,9 +114,12 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    
 }
 
 SIMPLE_JWT = {
-    'USER_ID_FIELD': 'uciduser',
-    'USER_ID_CLAIM': 'user_id',
+    "USER_ID_FIELD": "uciduser", 
+    "USER_ID_CLAIM": "uciduser",
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
 }

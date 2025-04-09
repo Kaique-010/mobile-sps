@@ -4,8 +4,12 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
+from datetime import timedelta
+from django.conf import settings
+from rest_framework_simplejwt.settings import api_settings as jwt_settings
 
 class LoginView(APIView):
+
     def post(self, request):
         username = request.data.get('username')
         password = request.data.get('password')
@@ -16,11 +20,19 @@ class LoginView(APIView):
         if user:
             print(f'[LOGIN] Usuário autenticado com sucesso: {user.ucusername}')
 
-            refresh = RefreshToken.for_user(user)  # ← isso só funciona se user for um User válido
+            # Cria um token manualmente com o payload necessário
+            refresh = RefreshToken()
+            refresh['username'] = user.ucusername
+            refresh['email'] = user.ucemail
+            refresh['uciduser'] = user.uciduser  # ID personalizado
+
+            access_token = refresh.access_token
+            access_token.set_exp(lifetime=jwt_settings.ACCESS_TOKEN_LIFETIME)
+
             print(f'[LOGIN] Token JWT gerado para: {user.ucusername}')
 
             return Response({
-                'access': str(refresh.access_token),
+                'access': str(access_token),
                 'refresh': str(refresh),
                 'user': {
                     'username': user.ucusername,
