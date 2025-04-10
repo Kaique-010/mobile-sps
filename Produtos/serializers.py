@@ -3,10 +3,14 @@ from rest_framework import serializers
 from .models import Produtos
 
 class ProdutoSerializer(serializers.ModelSerializer):
+    saldo_estoque = serializers.SerializerMethodField()
     class Meta:
         model = Produtos
         fields = '__all__'
         read_only_fields = ['prod_codi']  # impede que seja enviado manualmente
+    
+    def get_saldo_estoque(self, obj):
+      return getattr(obj, 'saldo_estoque', 0)
 
     def create(self, validated_data):
         empresa = validated_data['prod_empr']

@@ -115,14 +115,7 @@ class Tabelaprecos(models.Model):
         unique_together = (('tabe_empr', 'tabe_fili', 'tabe_prod'),)
 
 
-class SaldoProduto(models.Model):
-    produto_codigo = models.ForeignKey("Produtos", on_delete=models.CASCADE)
-    empresa = models.CharField(max_length=50, db_column='sapr_empr')
-    filial = models.CharField(max_length=50, db_column='sapr_fili')
-    saldo_estoque = models.DecimalField(max_digits=10, decimal_places=2, db_column='sapr_sald')
 
-    class Meta:
-        db_table = 'saldosprodutos'
 
 class Produtos(models.Model):
     prod_empr = models.CharField(max_length=50, db_column='prod_empr')
@@ -155,3 +148,13 @@ class Produtos(models.Model):
             return "Sem foto"
 
     imagem_tag.short_description = 'Imagem'
+
+
+class SaldoProduto(models.Model):
+    produto_codigo = models.ForeignKey(Produtos, on_delete=models.CASCADE, db_column='sapr_prod')
+    empresa = models.CharField(max_length=50, db_column='sapr_empr')
+    filial = models.CharField(max_length=50, db_column='sapr_fili')
+    saldo_estoque = models.DecimalField(max_digits=10, decimal_places=2, db_column='sapr_sald')
+
+    class Meta:
+        db_table = 'saldosprodutos'
