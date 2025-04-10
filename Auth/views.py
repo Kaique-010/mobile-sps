@@ -15,7 +15,7 @@ class LoginView(APIView):
         password = request.data.get('password')
         print(f'\n[LOGIN] Requisição recebida: {request.data}')
 
-        user = authenticate(request, username=username, password=password)
+        user = authenticate(request, username=username.lower(), password=password)
 
         if user:
             print(f'[LOGIN] Usuário autenticado com sucesso: {user.ucusername}')
