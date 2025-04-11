@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'Auth',
     'Produtos',
     'Entidades',
+    'Pedidos',
 ]
 
 MIDDLEWARE = [

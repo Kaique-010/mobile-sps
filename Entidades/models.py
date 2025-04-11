@@ -30,7 +30,6 @@ class Entidades(models.Model):
     enti_fone = models.CharField(max_length=14, blank=True, null= True)  
     enti_celu = models.CharField(max_length=15, blank=True, null= True)  
     enti_emai = models.CharField(max_length=60, blank=True, null= True)  
-    enti_emai_empr = models.CharField(max_length=60,blank=True, null= True)  
 
     def __str__(self):
         return self.enti_nome
