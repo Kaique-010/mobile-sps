@@ -51,3 +51,41 @@ class UCTabUsers(AbstractBaseUser, PermissionsMixin):
     @property
     def last_login(self):
         return None  # Django exige isso
+    
+    
+
+
+class Empresas(models.Model):
+    empr_codi = models.AutoField(primary_key=True, db_column='empr_codi')
+    empr_nome = models.CharField('Nome da Empresa', max_length=100, db_column='empr_nome')
+    empr_docu = models.CharField('CNPJ', max_length=14, unique=True, db_column='empr_cnpj')
+
+    class Meta:
+        db_table = 'empresas'
+
+    def __str__(self):
+        return self.empr_nome
+
+
+class Filiais(models.Model):
+    fili_id = models.AutoField(primary_key=True, db_column='fili_id')  # PK separada
+    empr_codi = models.ForeignKey(Empresas, db_column='empr_codi', on_delete=models.CASCADE)
+    empr_nome = models.CharField('Nome da Filial', max_length=100, db_column='empr_nome')
+    empr_docu = models.CharField('CNPJ da Filial', max_length=14, unique=True, db_column='empr_cnpj')
+
+    class Meta:
+        db_table = 'filiais'
+
+    def __str__(self):
+        return self.empr_nome
+
+
+class UserEmpresaFilial(models.Model):
+    user = models.ForeignKey(UCTabUsers, related_name="empresas_filiais", on_delete=models.CASCADE)
+    empresa = models.ForeignKey(Empresas, related_name="usuarios_empresas", on_delete=models.CASCADE)
+    filial = models.ForeignKey(Filiais, related_name="usuarios_filiais", on_delete=models.CASCADE)
+
+    # Aqui associamos um usuário a uma empresa e filial de forma independente
+    class Meta:
+        unique_together = ('user', 'empresa', 'filial')
+        db_table = 'user_empresa_filial'

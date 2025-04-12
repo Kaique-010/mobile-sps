@@ -8,6 +8,6 @@ class PedidoVendaViewSet(viewsets.ModelViewSet):
     queryset = PedidoVenda.objects.all().order_by('pedi_nume')
     serializer_class = PedidoVendaSerializer
     filter_backends = [SearchFilter]
-    search_fields = ['pedi_nume', 'pédi_nume']
+    search_fields = ['pedi_nume', 'pedi_forn']
 
     
