@@ -68,7 +68,8 @@ class Empresas(models.Model):
 
 
 class Filiais(models.Model):
-    fili_id = models.AutoField(primary_key=True, db_column='fili_id')
+    #fili_id = models.AutoField(primary_key=True, db_column='fili_id') 
+    empr_empr = models.IntegerField(primary_key=True, db_column='empr_empr')
     empr_codi = models.ForeignKey(Empresas, db_column='empr_codi', on_delete=models.CASCADE)
     empr_nome = models.CharField('Nome da Filial', max_length=100, db_column='empr_nome')
     empr_docu = models.CharField('CNPJ da Filial', max_length=14, unique=True, db_column='empr_cnpj')

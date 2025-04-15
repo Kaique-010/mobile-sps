@@ -8,8 +8,6 @@ class EntidadesSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         erros = {}
-
-        # Lista de campos obrigatórios personalizados
         obrigatorios = ['enti_nome', 'enti_cep', 'enti_ende', 'enti_nume', 'enti_cida', 'enti_esta']
 
         for campo in obrigatorios:
@@ -19,17 +17,28 @@ class EntidadesSerializer(serializers.ModelSerializer):
         if erros:
             raise serializers.ValidationError(erros)
 
-        # Garantir que o campo `enti_clie` seja preenchido com o valor sequencial correto
-        if not data.get('enti_clie'):
-            # Buscar o último valor de `enti_clie` da empresa e filial atual (ou qualquer critério que você utilize para isso)
-            ultimo_enti_clie = Entidades.objects.filter(
-                empresa=data.get('empresa'), filial=data.get('filial')
-            ).order_by('-enti_clie').first()
-
-            # Gerar o próximo valor sequencial
-            if ultimo_enti_clie:
-                data['enti_clie'] = ultimo_enti_clie.enti_clie + 1
-            else:
-                data['enti_clie'] = 1  # Caso não haja registros, iniciar com 1
-
         return data
+
+    def create(self, validated_data):
+        # empresa e filial já devem estar presentes
+        empresa = validated_data.get('enti_empr')
+        filial = validated_data.get('enti_fili')
+
+        # Verifica se o campo enti_clie não foi enviado, e gera automaticamente
+        if not validated_data.get('enti_clie'):
+            ultimo = Entidades.objects.filter(
+                enti_empr=empresa,
+                enti_fili=filial
+            ).order_by('-enti_clie').first()
+            
+            
+            print(f"Ultimo valor de enti_clie: {ultimo.enti_clie if ultimo else 'Nenhum registrado'}")
+
+            validated_data['enti_clie'] = (ultimo.enti_clie + 1) if ultimo else 1
+
+        # Agora, chama o método create do serializer que irá salvar a instância
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        validated_data.pop('enti_clie', None)
+        return super().update(instance, validated_data)

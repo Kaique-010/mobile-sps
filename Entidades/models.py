@@ -14,7 +14,8 @@ class Entidades(models.Model):
         ('FU', 'FUNCIONÁRIOS'),
        
     ]
-    enti_empr = models.IntegerField(default=1)
+    enti_empr = models.IntegerField()
+    enti_fili = models.IntegerField()
     enti_clie = models.IntegerField(unique=True, primary_key=True) 
     enti_nome = models.CharField(max_length=100, default='')
     enti_tipo_enti = models.CharField(max_length=100, choices=TIPO_ENTIDADES, default='1')
