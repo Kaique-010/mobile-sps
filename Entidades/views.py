@@ -5,9 +5,13 @@ from rest_framework.filters import SearchFilter
 from .models import Entidades
 from .serializers import EntidadesSerializer
 from .utils import buscar_endereco_por_cep
+from core.mixins import EmprFiliMixin, EmprFiliSaveMixin
 
-class EntidadesViewSet(viewsets.ModelViewSet):
-    queryset = Entidades.objects.all().order_by('enti_nome')
+class EntidadesViewSet(EmprFiliMixin, EmprFiliSaveMixin, viewsets.ModelViewSet):
+    empresa_field = 'enti_empr' #variável global vinda do mixin em core
+    filial_field = 'enti_fili'  #variável global vinda do mixin em core
+    
+    queryset = Entidades.objects.all()
     serializer_class = EntidadesSerializer
     filter_backends = [SearchFilter]
     search_fields = ['enti_nome', 'enti_nume']
