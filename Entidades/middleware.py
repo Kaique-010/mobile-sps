@@ -9,8 +9,11 @@ class EmpresaFilialMiddleware:
         print(f'[MIDDLEWARE] X-Empresa: {empresa_id}')
         print(f'[MIDDLEWARE] X-Filial: {filial_id}')
 
-        # Setar no request diretamente
-        request.empresa_id = empresa_id
-        request.filial_id = filial_id
+        try:
+            request.empresa_id = int(empresa_id) if empresa_id is not None else None
+            request.filial_id = int(filial_id) if filial_id is not None else None
+        except ValueError:
+            request.empresa_id = None
+            request.filial_id = None
 
         return self.get_response(request)
