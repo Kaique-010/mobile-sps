@@ -23,3 +23,8 @@ class EntidadesSerializer(serializers.ModelSerializer):
         # Garante que o campo sequencial não seja modificado no update
         validated_data.pop('enti_clie', None)
         return super().update(instance, validated_data)
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['enti_clie'].required = False
+        self.fields['enti_fant'].required = False

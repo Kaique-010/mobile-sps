@@ -15,6 +15,7 @@ class EntidadesViewSet(EmprFiliMixin, EmprFiliSaveMixin, viewsets.ModelViewSet):
     queryset = Entidades.objects.all()
     serializer_class = EntidadesSerializer
     filter_backends = [SearchFilter]
+    lookup_field = 'enti_clie'
     search_fields = ['enti_nome', 'enti_nume']
 
     @action(detail=False, methods=['get'], url_path='buscar-endereco')
