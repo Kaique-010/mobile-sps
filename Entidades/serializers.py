@@ -19,26 +19,7 @@ class EntidadesSerializer(serializers.ModelSerializer):
 
         return data
 
-    def create(self, validated_data):
-        # empresa e filial já devem estar presentes
-        empresa = validated_data.get('enti_empr')
-        filial = validated_data.get('enti_fili')
-
-        # Verifica se o campo enti_clie não foi enviado, e gera automaticamente
-        if not validated_data.get('enti_clie'):
-            ultimo = Entidades.objects.filter(
-                enti_empr=empresa,
-                enti_fili=filial
-            ).order_by('-enti_clie').first()
-            
-            
-            print(f"Ultimo valor de enti_clie: {ultimo.enti_clie if ultimo else 'Nenhum registrado'}")
-
-            validated_data['enti_clie'] = (ultimo.enti_clie + 1) if ultimo else 1
-
-        # Agora, chama o método create do serializer que irá salvar a instância
-        return super().create(validated_data)
-
     def update(self, instance, validated_data):
+        # Garante que o campo sequencial não seja modificado no update
         validated_data.pop('enti_clie', None)
         return super().update(instance, validated_data)
