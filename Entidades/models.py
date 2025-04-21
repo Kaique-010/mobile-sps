@@ -53,6 +53,10 @@ class Sequencial(models.Model):
     nome_sequencial = models.CharField(max_length=100, unique=True)
     ultimo_valor = models.BigIntegerField(null=True)
 
+    class Meta:
+        db_table = 'sequencial'
+        managed = 'false'
+    
     @staticmethod
     def preparar_proximo_valor(nome_sequencial="enti_clie"):
         from .models import Entidades  # evita import circular
