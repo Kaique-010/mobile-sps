@@ -18,6 +18,7 @@ class GrupoProduto(models.Model):
         db_table = 'gruposprodutos'
         verbose_name = 'Grupo de Produto'
         verbose_name_plural = 'Grupos de Produtos'
+        managed = 'false'
 
 
     def __str__(self):
@@ -37,6 +38,7 @@ class SubgrupoProduto(models.Model):
 
     class Meta:
         db_table = 'subgruposprodutos'
+        managed = 'false'
 
 
 
@@ -57,6 +59,7 @@ class FamiliaProduto(models.Model):
 
     class Meta:
         db_table = 'familiaprodutos'
+        managed = 'false'
 
 
 
@@ -77,6 +80,7 @@ class Marca(models.Model):
 
     class Meta:
         db_table = 'marca'
+        managed = 'false'
 
 
 
@@ -113,6 +117,7 @@ class Tabelaprecos(models.Model):
     class Meta:
         db_table = 'tabelaprecos'
         unique_together = (('tabe_empr', 'tabe_fili', 'tabe_prod'),)
+        managed = 'false'
 
 
 
@@ -137,6 +142,7 @@ class Produtos(models.Model):
         db_table = 'produtos'
         verbose_name = 'Produto'
         verbose_name_plural = 'Produtos'
+        managed = 'false'
 
     def __str__(self):
         return f'{self.nome_produto} ({self.produto_codigo})'
@@ -158,3 +164,5 @@ class SaldoProduto(models.Model):
 
     class Meta:
         db_table = 'saldosprodutos'
+        managed = 'false'
+        

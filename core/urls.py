@@ -8,5 +8,6 @@ urlpatterns = [
     path('api/', include('Entidades.urls')),
     path('api/', include('Pedidos.urls')), 
     path('api/', include('dashboards.urls')),
+    path('api/', include('listacasamento.urls')),
     
 ]

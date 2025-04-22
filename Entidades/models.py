@@ -48,6 +48,7 @@ class Entidades(models.Model):
 
     class Meta:
         db_table = 'entidades'
+        managed = 'false'
 
 class Sequencial(models.Model):
     nome_sequencial = models.CharField(max_length=100, unique=True)

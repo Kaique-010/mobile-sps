@@ -30,6 +30,7 @@ class PedidoVenda(models.Model):
 
     class Meta:
         db_table = 'pedidosvenda'
+        managed = 'false'
 
     def __str__(self):
         return f"Pedido {self.pedi_nume} - {self.pedi_forn}"
@@ -60,4 +61,5 @@ class Itenspedidovenda(models.Model):
     class Meta:
         db_table = 'itenspedidovenda'
         unique_together = (('iped_empr', 'iped_fili', 'iped_pedi', 'iped_item'),)
+        managed = 'false'
 

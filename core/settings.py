@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     'Entidades',
     'Pedidos',
     'dashboards',
+    'listacasamento',
 ]
 
 MIDDLEWARE = [
@@ -114,14 +115,15 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
+    'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
-    
+    ],
+    #'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    #'PAGE_SIZE': 20,
 }
 
 SIMPLE_JWT = {
-    "USER_ID_FIELD": "uciduser", 
+    "USER_ID_FIELD": "uciduser",
     "USER_ID_CLAIM": "uciduser",
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=10),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),

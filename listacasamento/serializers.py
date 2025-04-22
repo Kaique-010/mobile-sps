@@ -4,6 +4,7 @@ from .models import ListaCasamento, ItensListaCasamento
 from rest_framework.permissions import IsAuthenticated
 
 class ItensListaCasamentoSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = ItensListaCasamento
         fields = '__all__'
@@ -11,6 +12,7 @@ class ItensListaCasamentoSerializer(serializers.ModelSerializer):
 class ListaCasamentoSerializer(serializers.ModelSerializer):
     permission_classes = [IsAuthenticated]
     itens = ItensListaCasamentoSerializer(many=True, required=False)
+    cliente_nome = serializers.CharField(source='list_clie.enti_nome', read_only=True)
 
     class Meta:
         model = ListaCasamento

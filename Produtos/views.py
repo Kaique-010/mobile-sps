@@ -1,4 +1,6 @@
 from rest_framework.views import APIView
+from django.db.models import Q
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.db.models import Subquery, OuterRef
@@ -45,3 +47,22 @@ class ProdutoViewSet(viewsets.ModelViewSet):
         return Produtos.objects.annotate(
             saldo_estoque=Coalesce(saldo_subquery, V(0), output_field=DecimalField())
         )
+
+    @action(detail=False, methods=["get"])
+    def busca(self, request):
+        q = request.query_params.get("q", "")
+        saldo_subquery = Subquery(
+            SaldoProduto.objects.filter(
+                produto_codigo=OuterRef('pk')
+            ).values('saldo_estoque')[:1],
+            output_field=DecimalField()
+        )
+
+        produtos = Produtos.objects.annotate(
+            saldo_estoque=Coalesce(saldo_subquery, V(0), output_field=DecimalField())
+        ).filter(
+            Q(prod_nome__icontains=q) | Q(prod_codi__icontains=q)
+        )
+
+        serializer = self.get_serializer(produtos, many=True)
+        return Response(serializer.data)
