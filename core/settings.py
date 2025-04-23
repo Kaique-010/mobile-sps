@@ -73,8 +73,16 @@ DATABASES = {
         'PASSWORD': config('DB_PASSWORD'),
         'HOST': config('DB_HOST', default='localhost'),
         'PORT': config('DB_PORT', default='5432'),
+        
     }
 }
+
+print("Configuração do Banco de Dados:")
+print("DB_NAME:", config('DB_NAME'))
+print("DB_USER:", config('DB_USER'))
+print("DB_HOST:", config('DB_HOST'))
+print("DB_PORT:", config('DB_PORT'))
+
 
 AUTHENTICATION_BACKENDS = [
     'Auth.backends.UCTabUserBackend', 

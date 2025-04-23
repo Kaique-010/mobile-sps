@@ -9,27 +9,41 @@ from Auth.models import Empresas, Filiais, UserEmpresaFilial
 from Auth.serializers import EmpresaSerializer, FilialSerializer
 
 # View de Login
+from django.db.models import Q
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.permissions import IsAuthenticated
+from Auth.models import Empresas, UserEmpresaFilial
+from django.contrib.auth import authenticate
+
 class LoginView(APIView):
     def post(self, request):
         username = request.data.get('username')
         password = request.data.get('password')
-        print(f'\n[LOGIN] Requisição recebida: {request.data}')
+        docu = request.data.get('docu')  # CNPJ da empresa
 
+        # Verificar se o CNPJ existe na tabela Empresas
+        empresa = Empresas.objects.filter(empr_docu=docu).first()
+
+        if not empresa:
+            return Response({'error': 'CNPJ não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Autenticação do usuário
         user = authenticate(request, username=username.lower(), password=password)
 
         if user:
-            print(f'[LOGIN] Usuário autenticado com sucesso: {user.ucusername}')
+            # Associa o usuário à empresa no modelo UserEmpresaFilial
+            user_empresa = UserEmpresaFilial.objects.filter(user=user, empresa=empresa).first()
+            if not user_empresa:
+                return Response({'error': 'Usuário não associado à empresa.'}, status=status.HTTP_403_FORBIDDEN)
 
-            # Cria um token manualmente com o payload necessário
+            # Criação do token JWT
             refresh = RefreshToken()
             refresh['username'] = user.ucusername
             refresh['email'] = user.ucemail
-            refresh['uciduser'] = user.uciduser  # ID personalizado
+            refresh['uciduser'] = user.uciduser
 
             access_token = refresh.access_token
-            access_token.set_exp(lifetime=api_settings.ACCESS_TOKEN_LIFETIME) 
-
-            print(f'[LOGIN] Token JWT gerado para: {user.ucusername}')
+            access_token.set_exp(lifetime=api_settings.ACCESS_TOKEN_LIFETIME)
 
             return Response({
                 'access': str(access_token),
@@ -40,9 +54,7 @@ class LoginView(APIView):
                 }
             })
         else:
-            print('[LOGIN] Falha na autenticação. Credenciais inválidas.')
             return Response({'error': 'Credenciais inválidas.'}, status=status.HTTP_401_UNAUTHORIZED)
-
 
 # View de Lista de Empresas (para admin)
 class EmpresaListView(APIView):
