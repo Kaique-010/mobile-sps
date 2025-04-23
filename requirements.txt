@@ -3,10 +3,10 @@ certifi==2025.1.31
 cffi==1.17.1
 charset-normalizer==3.4.1
 cryptography==44.0.2
-Django==5.2
-django-cors-headers==4.7.0
-djangorestframework==3.16.0
-djangorestframework_simplejwt==5.5.0
+Django>=2.2,<3.0
+django-cors-headers==3.7.0
+djangorestframework==3.12.4
+djangorestframework-simplejwt==4.8.0 
 idna==3.10
 pillow==11.1.0
 psycopg2-binary==2.9.10

@@ -6,14 +6,16 @@ from rest_framework.filters import SearchFilter
 from .models import Entidades
 from .serializers import EntidadesSerializer
 from .utils import buscar_endereco_por_cep
-from core.mixins import EmprFiliMixin, EmprFiliSaveMixin
 
 class EntidadesViewSet(viewsets.ModelViewSet):    
-    queryset = Entidades.objects.all().order_by('enti_clie')
     serializer_class = EntidadesSerializer
     filter_backends = [SearchFilter]
     lookup_field = 'enti_clie'
     search_fields = ['enti_nome', 'enti_nume']
+
+    def get_queryset(self):
+        db_alias = getattr(self.request, 'db_alias', 'default')
+        return Entidades.objects.using(db_alias).all().order_by('enti_clie')
 
     @action(detail=False, methods=['get'], url_path='buscar-endereco')
     def buscar_endereco(self, request):

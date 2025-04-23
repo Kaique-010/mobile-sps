@@ -1,5 +1,5 @@
 from pathlib import Path
-import os 
+import os
 from decouple import config
 from django.utils.timezone import timedelta
 
@@ -8,11 +8,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = ['*']
-
+# Hosts permitidos
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
 
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -34,15 +33,18 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    'core.middleware.db_router.DynamicDatabaseMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True
+# Configurações de CORS
+CORS_ALLOW_ALL_ORIGINS = DEBUG 
+CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='').split(',')
 
 ROOT_URLCONF = 'core.urls'
 
@@ -63,26 +65,35 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
+from .db_config import get_db_config
 
+USE_LOCAL_DB = config('USE_LOCAL_DB', default=True, cast=bool)
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME'),
-        'USER': config('DB_USER'),
-        'PASSWORD': config('DB_PASSWORD'),
-        'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='5432'),
-        
+if USE_LOCAL_DB:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('DB_NAME'),
+            'USER': config('DB_USER'),
+            'PASSWORD': config('DB_PASSWORD'),
+            'HOST': config('DB_HOST'),
+            'PORT': config('DB_PORT'),
+        }
     }
-}
-
-print("Configuração do Banco de Dados:")
-print("DB_NAME:", config('DB_NAME'))
-print("DB_USER:", config('DB_USER'))
-print("DB_HOST:", config('DB_HOST'))
-print("DB_PORT:", config('DB_PORT'))
-
+else:
+    dummy_config = get_db_config('000')
+    if not dummy_config.get('NAME'):
+        raise Exception("❌ Configuração de banco inválida para produção.")
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': dummy_config["NAME"],
+            'USER': dummy_config["USER"],
+            'PASSWORD': dummy_config["PASSWORD"],
+            'HOST': dummy_config["HOST"],
+            'PORT': dummy_config["PORT"],
+        }
+    }
 
 AUTHENTICATION_BACKENDS = [
     'Auth.backends.UCTabUserBackend', 
@@ -105,20 +116,14 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+LANGUAGE_CODE = 'pt-br'
 
-
-LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'UTC'
-
+TIME_ZONE = 'America/Sao_Paulo'
+USE_TZ = True
 USE_I18N = True
 
-USE_TZ = True
-
-
-STATIC_URL = 'static/'
-
-
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -126,8 +131,6 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
-    #'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    #'PAGE_SIZE': 20,
 }
 
 SIMPLE_JWT = {
@@ -136,3 +139,4 @@ SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=10),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
 }
+

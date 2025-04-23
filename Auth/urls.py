@@ -9,7 +9,5 @@ urlpatterns = [
     path('user-empresas/', EmpresasDoUsuarioView.as_view(), name='user-empresas'),  
     path('user-filiais/', FiliaisDaEmpresaView.as_view(), name='user-filiais'),    
     path('set-empresa-filial/', SetEmpresaFilialView.as_view(), name='set-empresa-filial'),
-    
-    # Adicione a URL para o refresh token
     path('auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]

@@ -6,40 +6,35 @@ from rest_framework.decorators import action
 from .serializers import ListaCasamentoSerializer, ItensListaCasamentoSerializer
 
 class ListaCasamentoViewSet(viewsets.ModelViewSet):
-
-    queryset = ListaCasamento.objects.all().order_by('list_nume')
     serializer_class = ListaCasamentoSerializer
     filter_backends = [SearchFilter]
     search_fields = ['list_clie__nome', 'list_nume']
 
-class ItensListaCasamentoViewSet(viewsets.ModelViewSet):
-    queryset = ItensListaCasamento.objects.all()
-    serializer_class = ItensListaCasamentoSerializer
     def get_queryset(self):
+        db_alias = getattr(self.request, 'db_alias', 'default')
+        return ListaCasamento.objects.using(db_alias).all().order_by('list_nume')
+
+class ItensListaCasamentoViewSet(viewsets.ModelViewSet):
+    serializer_class = ItensListaCasamentoSerializer
+
+    def get_queryset(self):
+        db_alias = getattr(self.request, 'db_alias', 'default')
         lista_id = self.request.query_params.get("lista")
+        qs = ItensListaCasamento.objects.using(db_alias)
         if lista_id:
-            return ItensListaCasamento.objects.filter(lista=lista_id)
-        return ItensListaCasamento.objects.all()
+            return qs.filter(lista=lista_id)
+        return qs.all()
 
     @action(detail=False, methods=['post'])
     def adicionar_lote(self, request):
-        """
-        Espera:
-        {
-            "lista": 1,
-            "itens": [
-                {"produto": 5, "quantidade": 2},
-                {"produto": 7, "quantidade": 1},
-                ...
-            ]
-        }
-        """
+        db_alias = getattr(request, 'db_alias', 'default')
+
         lista_id = request.data.get("lista")
         itens = request.data.get("itens", [])
 
         criados = []
         for item in itens:
-            criado = ItensListaCasamento.objects.create(
+            criado = ItensListaCasamento.objects.using(db_alias).create(
                 lista_id=lista_id,
                 produto_id=item["produto"],
                 quantidade=item["quantidade"]

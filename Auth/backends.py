@@ -1,9 +1,9 @@
 # Auth/backends.py
-from django.contrib.auth.backends import BaseBackend
+from django.contrib.auth.backends import ModelBackend
 from django.contrib.auth.hashers import check_password
 from .models import UCTabUsers
 
-class UCTabUserBackend(BaseBackend):
+class UCTabUserBackend(ModelBackend):
     def authenticate(self, request, username=None, password=None):
         try:
             print(f'\n[AUTH] Tentando autenticar: {username}')

@@ -9,5 +9,9 @@ class PedidoVendaViewSet(viewsets.ModelViewSet):
     serializer_class = PedidoVendaSerializer
     filter_backends = [SearchFilter]
     search_fields = ['pedi_nume', 'pedi_forn']
+    
+    def get_queryset(self):
+        db_alias = getattr(self.request, 'db_alias', 'default')
+        return PedidoVenda.objects.using(db_alias).all().order_by('pedi_nume')
 
     

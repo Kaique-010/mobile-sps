@@ -8,21 +8,24 @@ from decimal import Decimal
 
 class DashboardAPIView(APIView):
     def get(self, request):
-        # Saldo por produto
-        saldos = list(SaldoProduto.objects.values(
-            nome=F('produto_codigo__prod_nome')
-        ).annotate(
-            total=Sum('saldo_estoque')
-        ))
+        db_alias = getattr(request, 'db_alias', 'default')
 
-        # Pedidos por cliente
-        pedidos = list(PedidoVenda.objects.values(
-            cliente=F('pedi_forn__enti_nome')
-        ).annotate(
-            total=Sum('pedi_tota')
-        ))
+        saldos = list(
+            SaldoProduto.objects.using(db_alias).values(
+                nome=F('produto_codigo__prod_nome')
+            ).annotate(
+                total=Sum('saldo_estoque')
+            )
+        )
 
-        # Converte Decimal pra float (pra não dar ruim no front)
+        pedidos = list(
+            PedidoVenda.objects.using(db_alias).values(
+                cliente=F('pedi_forn__enti_nome')
+            ).annotate(
+                total=Sum('pedi_tota')
+            )
+        )
+
         for item in saldos:
             item['total'] = float(item['total']) if isinstance(item['total'], Decimal) else item['total']
         for item in pedidos:

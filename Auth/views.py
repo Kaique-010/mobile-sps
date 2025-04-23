@@ -8,12 +8,6 @@ from rest_framework.permissions import IsAuthenticated
 from Auth.models import Empresas, Filiais, UserEmpresaFilial
 from Auth.serializers import EmpresaSerializer, FilialSerializer
 
-# View de Login
-from django.db.models import Q
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.permissions import IsAuthenticated
-from Auth.models import Empresas, UserEmpresaFilial
-from django.contrib.auth import authenticate
 
 class LoginView(APIView):
     def post(self, request):
