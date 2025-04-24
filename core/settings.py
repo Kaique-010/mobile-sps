@@ -98,10 +98,10 @@ else:
     }
 
 AUTHENTICATION_BACKENDS = [
-    'Auth.backends.UCTabUserBackend', 
+    'Auth.backends.UserBackend', 
 ]
 
-AUTH_USER_MODEL = 'Auth.UCTabUsers'
+AUTH_USER_MODEL = 'Auth.Usuarios'
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -136,8 +136,8 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    "USER_ID_FIELD": "uciduser",
-    "USER_ID_CLAIM": "uciduser",
+    "USER_ID_FIELD": "usua_codi",
+    "USER_ID_CLAIM": "usua_nome",
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=10),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
 }
@@ -154,7 +154,7 @@ LOGGING = {
     'loggers': {
         'django.db.backends': {
             'handlers': ['console'],
-            'level': 'INFO',  # ou DEBUG se quiser ver as queries
+            'level': 'INFO',  
         },
     },
 }

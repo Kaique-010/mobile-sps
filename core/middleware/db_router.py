@@ -22,19 +22,16 @@ class DynamicDatabaseMiddleware:
 
         if not docu:
             print('[AVISO] Nenhum CNPJ (docu) recebido no header. Usando DB padrão.')
-            request.db_alias = 'default'  # Usando DB padrão se não houver CNPJ
+            request.db_alias = 'default' 
         else:
             try:
-                # Verificando se o CNPJ possui uma licença válida
+
                 licenca = Licencas.objects.filter(lice_docu=docu, lice_bloq=False).first()
 
                 if not licenca:
                     print(f"[ERRO] Licença não encontrada ou bloqueada para o CNPJ {docu}")
                     return JsonResponse({"error": "Licença inválida ou bloqueada."}, status=403)
 
-                # Verificando validade da licença
-                # Se for necessário validar uma data, podemos adicionar essa verificação aqui
-                # Por exemplo, se precisar verificar a data do log _log_data
                 if licenca._log_data and licenca._log_data < datetime.date.today():
                     print(f"[ERRO] Licença do CNPJ {docu} está expirada.")
                     return JsonResponse({"error": "Licença expirada."}, status=403)
@@ -61,6 +58,5 @@ class DynamicDatabaseMiddleware:
                 return JsonResponse({"error": "Licença não encontrada."}, status=404)
             except Exception as e:
                 print(f"[ERRO] Falha ao configurar banco para CNPJ {docu}: {e}")
-                request.db_alias = 'default'  # Fallback para o banco default em caso de erro
-
+                request.db_alias = 'default'  
         return self.get_response(request)

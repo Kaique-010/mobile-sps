@@ -51,7 +51,8 @@ class Entidades(models.Model):
         managed = 'false'
 
 class Sequencial(models.Model):
-    nome_sequencial = models.CharField(max_length=100, unique=True)
+    nome_sequencial = models.CharField(max_length=100, primary_key=True)
+
     ultimo_valor = models.BigIntegerField(null=True)
 
     class Meta:

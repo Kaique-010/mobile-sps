@@ -1,35 +1,56 @@
 from django.db import models
-from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
+from django.contrib.auth.hashers import make_password, check_password
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 
-class UCTabUsers(AbstractBaseUser, PermissionsMixin):
-    uciduser = models.AutoField(primary_key=True)
-    ucusername = models.CharField(max_length=150, unique=True)
-    uclogin = models.CharField(max_length=150)
-    ucpassword = models.CharField(max_length=128)
-    ucemail = models.EmailField(blank=True, null=True)
+class UsuariosManager(BaseUserManager):
+    def get_by_natural_key(self, username):
+        return self.get(usua_nome=username)
 
-    USERNAME_FIELD = 'ucusername'
+    def create_user(self, usua_nome, password=None, **extra_fields):
+        if not usua_nome:
+            raise ValueError("O campo 'usua_nome' é obrigatório")
+
+        # Remove campos que o model não suporta (do legado)
+        extra_fields.pop('is_superuser', None)
+        extra_fields.pop('is_staff', None)
+        extra_fields.pop('is_active', None)
+
+        user = self.model(usua_nome=usua_nome, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, usua_nome, password=None, **extra_fields):
+        # Flags são ignoradas, mas deixamos por padrão
+        extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_active', True)
+
+        return self.create_user(usua_nome, password, **extra_fields)
+
+class Usuarios(AbstractBaseUser, PermissionsMixin):
+    usua_codi = models.AutoField(primary_key=True)
+    usua_nome = models.CharField(max_length=150, unique=True)
+    password = models.CharField(max_length=128, db_column='usua_senh_mobi')
+
+    USERNAME_FIELD = 'usua_nome'
     REQUIRED_FIELDS = []
 
+    objects = UsuariosManager()
+
     class Meta:
-        db_table = 'uctabusers'
+        db_table = 'usuarios'
         managed = False
 
     def __str__(self):
-        return self.ucusername
-
-    @property
-    def id(self):
-        return self.uciduser
-
-    # 👇 ESSA LINHA FAZ O LOGIN FUNCIONAR
-    @property
-    def password(self):
-        return self.ucpassword
+        return self.usua_nome
 
     def check_password(self, raw_password):
-        from django.contrib.auth.hashers import check_password
-        return check_password(raw_password, self.ucpassword)
+        return check_password(raw_password, self.password)
+
+    def set_password(self, raw_password):
+        self.password = make_password(raw_password)
+
     def has_perm(self, perm, obj=None):
         return True
 
@@ -38,22 +59,22 @@ class UCTabUsers(AbstractBaseUser, PermissionsMixin):
 
     @property
     def is_staff(self):
-        return False  # ou sua lógica aqui
+        return True  # ou coloque uma lógica se quiser restringir
 
     @property
     def is_superuser(self):
-        return False  # ou sua lógica aqui
+        return True  # idem, pode colocar regra
 
     @property
     def is_active(self):
-        return True  # ou sua lógica aqui
+        return True
 
     @property
     def last_login(self):
-        return None  # Django exige isso
-    
-    
+        return None
 
+
+# ---- Classes auxiliares ----
 
 class Empresas(models.Model):
     empr_codi = models.AutoField(primary_key=True, db_column='empr_codi')
@@ -62,13 +83,13 @@ class Empresas(models.Model):
 
     class Meta:
         db_table = 'empresas'
+        managed = False
 
     def __str__(self):
         return self.empr_nome
 
 
 class Filiais(models.Model):
-    #fili_id = models.AutoField(primary_key=True, db_column='fili_id') 
     empr_empr = models.IntegerField(primary_key=True, db_column='empr_empr')
     empr_codi = models.ForeignKey(Empresas, db_column='empr_codi', on_delete=models.CASCADE)
     empr_nome = models.CharField('Nome da Filial', max_length=100, db_column='empr_nome')
@@ -76,6 +97,7 @@ class Filiais(models.Model):
 
     class Meta:
         db_table = 'filiais'
+        managed = False
 
     def __str__(self):
         return self.empr_nome
