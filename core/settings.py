@@ -1,9 +1,14 @@
 from pathlib import Path
 import os
 from decouple import config
+from .db_config import get_db_config
 from django.utils.timezone import timedelta
 
+
+
+
 BASE_DIR = Path(__file__).resolve().parent.parent
+DB_CONFIG_PATH = os.path.join(BASE_DIR, 'db_config.json')
 
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
@@ -65,7 +70,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
-from .db_config import get_db_config
+
 
 USE_LOCAL_DB = config('USE_LOCAL_DB', default=True, cast=bool)
 
@@ -81,17 +86,14 @@ if USE_LOCAL_DB:
         }
     }
 else:
-    dummy_config = get_db_config('000')
-    if not dummy_config.get('NAME'):
-        raise Exception("❌ Configuração de banco inválida para produção.")
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': dummy_config["NAME"],
-            'USER': dummy_config["USER"],
-            'PASSWORD': dummy_config["PASSWORD"],
-            'HOST': dummy_config["HOST"],
-            'PORT': dummy_config["PORT"],
+            'NAME': config('DEFAULT_DB_NAME'),
+            'USER': config('DEFAULT_DB_USER'),
+            'PASSWORD': config('DEFAULT_DB_PASSWORD'),
+            'HOST': config('DEFAULT_DB_HOST'),
+            'PORT': config('DEFAULT_DB_PORT'),
         }
     }
 
@@ -140,3 +142,19 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
 }
 
+
+
+LOGGING = {
+    'version': 1,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django.db.backends': {
+            'handlers': ['console'],
+            'level': 'INFO',  # ou DEBUG se quiser ver as queries
+        },
+    },
+}

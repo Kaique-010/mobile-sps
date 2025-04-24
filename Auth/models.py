@@ -81,11 +81,17 @@ class Filiais(models.Model):
         return self.empr_nome
 
 
-class UserEmpresaFilial(models.Model):
-    user = models.ForeignKey(UCTabUsers, related_name="empresas_filiais", on_delete=models.CASCADE)
-    empresa = models.ForeignKey(Empresas, related_name="usuarios_empresas", on_delete=models.CASCADE)
-    filial = models.ForeignKey(Filiais, related_name="usuarios_filiais", on_delete=models.CASCADE)
+class Licencas(models.Model):
+    lice_id = models.AutoField(primary_key=True)
+    lice_docu = models.CharField(max_length=14, unique=True)
+    lice_nome = models.CharField(max_length=100)
+    lice_emai = models.EmailField(blank=True, null=True)
+    lice_bloq = models.BooleanField(default=False)
+    lice_nume_empr = models.IntegerField()
+    lice_nume_fili = models.IntegerField()
+    _log_data = models.DateField(blank=True, null=True)
+    _log_time = models.TimeField(blank=True, null=True)
 
     class Meta:
-        unique_together = ('user', 'empresa', 'filial')
-        db_table = 'user_empresa_filial'
+        managed = False
+        db_table = 'licencas'

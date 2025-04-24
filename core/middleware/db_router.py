@@ -1,8 +1,11 @@
 import threading
+from django.http import JsonResponse
 import json
+import datetime
 from django.db import connections
 from django.db.utils import ConnectionDoesNotExist
 from django.conf import settings
+from Auth.models import Licencas
 from core.db_config import get_db_config 
 
 _thread_local = threading.local()
@@ -19,9 +22,24 @@ class DynamicDatabaseMiddleware:
 
         if not docu:
             print('[AVISO] Nenhum CNPJ (docu) recebido no header. Usando DB padrão.')
-        
-        if docu and not settings.USE_LOCAL_DB:
+            request.db_alias = 'default'  # Usando DB padrão se não houver CNPJ
+        else:
             try:
+                # Verificando se o CNPJ possui uma licença válida
+                licenca = Licencas.objects.filter(lice_docu=docu, lice_bloq=False).first()
+
+                if not licenca:
+                    print(f"[ERRO] Licença não encontrada ou bloqueada para o CNPJ {docu}")
+                    return JsonResponse({"error": "Licença inválida ou bloqueada."}, status=403)
+
+                # Verificando validade da licença
+                # Se for necessário validar uma data, podemos adicionar essa verificação aqui
+                # Por exemplo, se precisar verificar a data do log _log_data
+                if licenca._log_data and licenca._log_data < datetime.date.today():
+                    print(f"[ERRO] Licença do CNPJ {docu} está expirada.")
+                    return JsonResponse({"error": "Licença expirada."}, status=403)
+
+                # Configurando o banco de dados dinâmico
                 db_data = get_db_config(docu)
                 db_alias = f'docu_{docu}'
 
@@ -38,10 +56,11 @@ class DynamicDatabaseMiddleware:
                 _thread_local.db_connection = db_alias
                 request.db_alias = db_alias
 
+            except Licencas.DoesNotExist:
+                print(f"[ERRO] CNPJ {docu} não encontrado na tabela de licenças.")
+                return JsonResponse({"error": "Licença não encontrada."}, status=404)
             except Exception as e:
-                print(f"[ERRO] Falha ao configurar banco para docu={docu}: {e}")
-                request.db_alias = 'default'
-        else:
-            request.db_alias = 'default'
+                print(f"[ERRO] Falha ao configurar banco para CNPJ {docu}: {e}")
+                request.db_alias = 'default'  # Fallback para o banco default em caso de erro
 
         return self.get_response(request)
