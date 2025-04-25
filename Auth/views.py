@@ -7,7 +7,7 @@ from django.conf import settings
 from django.http import JsonResponse
 from rest_framework import status
 from django.contrib.auth import authenticate
-from core.db_config import get_db_config
+from core.db_config import get_dynamic_db_config
 from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer

@@ -8,6 +8,26 @@
       "name": "savexml839",
       "database": "savexml839",
       "username": "savexml839"
+    },
+    {
+      "previewLimit": 50,
+      "server": "localhost",
+      "port": 5433,
+      "askForPassword": true,
+      "driver": "PostgreSQL",
+      "name": "casa",
+      "database": "casa",
+      "username": "postgres"
+    },
+    {
+      "previewLimit": 50,
+      "server": "base.rtalmeida.com.br",
+      "port": 5432,
+      "askForPassword": true,
+      "driver": "PostgreSQL",
+      "name": "savexml6",
+      "database": "savexml6",
+      "username": "savexml6"
     }
   ]
 }

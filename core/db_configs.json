@@ -1,0 +1,23 @@
+{
+  "31108104000148": {
+    "NAME": "savexml839",
+    "USER": "savexml839",
+    "PASSWORD": "eikkmoqqssuv",
+    "HOST": "base.rtalmeida.com.br",
+    "PORT": "5432"
+  },
+  "43131832000150": {
+    "NAME": "casa",
+    "USER": "postgres",
+    "PASSWORD": "@spartacus201@",
+    "HOST": "localhost",
+    "PORT": "5433"
+  },
+  "23905964287": {
+    "NAME": "savexml6",
+    "USER": "savexml6",
+    "PASSWORD": "ikkmooqqssuu",
+    "HOST": "base.rtalmeida.com.br",
+    "PORT": "5432"
+  }
+}

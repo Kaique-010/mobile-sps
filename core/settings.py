@@ -1,22 +1,42 @@
 from pathlib import Path
 import os
 from decouple import config
-from .db_config import get_db_config
 from django.utils.timezone import timedelta
-
-
-
+from requests import request
+from core.db_config import get_dynamic_db_config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-DB_CONFIG_PATH = os.path.join(BASE_DIR, 'db_config.json')
 
+# Variáveis de ambiente locais
+USE_LOCAL_DB = config('USE_LOCAL_DB', default=True, cast=bool)
+
+# Variáveis de ambiente para o banco de dados principal
+DB_NAME = config('DB_NAME')
+DB_USER = config('DB_USER')
+DB_PASSWORD = config('DB_PASSWORD')
+DB_HOST = config('DB_HOST')
+DB_PORT = config('DB_PORT')
+
+# Variáveis de ambiente para o banco de dados default (nuvem)
+DEFAULT_DB_NAME = config('DEFAULT_DB_NAME')
+DEFAULT_DB_USER = config('DEFAULT_DB_USER')
+DEFAULT_DB_PASSWORD = config('DEFAULT_DB_PASSWORD')
+DEFAULT_DB_HOST = config('DEFAULT_DB_HOST')
+DEFAULT_DB_PORT = config('DEFAULT_DB_PORT')
+
+# Variáveis de configuração gerais
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 
 # Hosts permitidos
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
 
-# Application definition
+# Configuração do banco de dados
+DATABASES = {
+    'default': get_dynamic_db_config('DEFAULT_DOCU')  # Definido inicialmente para 'DEFAULT_DOCU'
+}
+
+# Definir aplicativos instalados
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -35,11 +55,12 @@ INSTALLED_APPS = [
     'listacasamento',
 ]
 
+# Middleware
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
-    'core.middleware.db_router.DynamicDatabaseMiddleware',
+    'core.middleware.db_router.DynamicDBMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -71,31 +92,8 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 
 
+docu = getattr(request, 'docu', 'DEFAULT_DOCU') 
 
-USE_LOCAL_DB = config('USE_LOCAL_DB', default=True, cast=bool)
-
-if USE_LOCAL_DB:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': config('DB_NAME'),
-            'USER': config('DB_USER'),
-            'PASSWORD': config('DB_PASSWORD'),
-            'HOST': config('DB_HOST'),
-            'PORT': config('DB_PORT'),
-        }
-    }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': config('DEFAULT_DB_NAME'),
-            'USER': config('DEFAULT_DB_USER'),
-            'PASSWORD': config('DEFAULT_DB_PASSWORD'),
-            'HOST': config('DEFAULT_DB_HOST'),
-            'PORT': config('DEFAULT_DB_PORT'),
-        }
-    }
 
 AUTHENTICATION_BACKENDS = [
     'Auth.backends.UserBackend', 
