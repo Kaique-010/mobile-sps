@@ -112,21 +112,3 @@ class FiliaisPorEmpresaView(APIView):
         return Response(serializer.data)
 
 
-class SetEmpresaFilialView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        user = request.user
-        empresa_id = request.data.get('empresa')
-        filial_id = request.data.get('filial')
-
-        if not empresa_id or not filial_id:
-            logger.warning(f"Atualização de empresa/filial falhou: Dados incompletos. Usuário: {user}")
-            return Response({'error': 'Empresa ou Filial não fornecida.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        user.empr_codi = empresa_id
-        user.fili_codi = filial_id
-        user.save()
-
-        logger.info(f"Empresa ({empresa_id}) e filial ({filial_id}) setadas para usuário {user}.")
-        return Response({'message': 'Empresa e filial atualizadas com sucesso!'})
