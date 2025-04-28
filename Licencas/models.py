@@ -1,4 +1,5 @@
 from django.db import models
+import json
 from django.contrib.auth.hashers import make_password, check_password
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 
@@ -40,7 +41,7 @@ class Usuarios(AbstractBaseUser, PermissionsMixin):
 
     class Meta:
         db_table = 'usuarios'
-        managed = False
+        managed = 'false'
 
     def __str__(self):
         return self.usua_nome
@@ -83,7 +84,7 @@ class Empresas(models.Model):
 
     class Meta:
         db_table = 'empresas'
-        managed = False
+        managed = 'false'
 
     def __str__(self):
         return self.empr_nome
@@ -97,7 +98,7 @@ class Filiais(models.Model):
 
     class Meta:
         db_table = 'filiais'
-        managed = False
+        managed = 'false'
 
     def __str__(self):
         return self.empr_nome
@@ -111,9 +112,16 @@ class Licencas(models.Model):
     lice_bloq = models.BooleanField(default=False)
     lice_nume_empr = models.IntegerField()
     lice_nume_fili = models.IntegerField()
-    _log_data = models.DateField(blank=True, null=True)
+    lice_modu_libe = models.TextField(default="{}")
+    _log_data = models.DateField(blank=True, null=True) 
     _log_time = models.TimeField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = 'false'
         db_table = 'licencas'
+
+    def get_modu_libe(self):
+        return json.loads(self.lice_modu_libe or "{}")
+
+    def set_modu_libe(self, data):
+        self.lice_modu_libe = json.dumps(data)

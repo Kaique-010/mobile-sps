@@ -7,23 +7,6 @@ from core.db_config import get_dynamic_db_config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Variáveis de ambiente locais
-USE_LOCAL_DB = config('USE_LOCAL_DB', default=True, cast=bool)
-
-# Variáveis de ambiente para o banco de dados principal
-DB_NAME = config('DB_NAME')
-DB_USER = config('DB_USER')
-DB_PASSWORD = config('DB_PASSWORD')
-DB_HOST = config('DB_HOST')
-DB_PORT = config('DB_PORT')
-
-# Variáveis de ambiente para o banco de dados default (nuvem)
-DEFAULT_DB_NAME = config('DEFAULT_DB_NAME')
-DEFAULT_DB_USER = config('DEFAULT_DB_USER')
-DEFAULT_DB_PASSWORD = config('DEFAULT_DB_PASSWORD')
-DEFAULT_DB_HOST = config('DEFAULT_DB_HOST')
-DEFAULT_DB_PORT = config('DEFAULT_DB_PORT')
-
 # Variáveis de configuração gerais
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
@@ -31,11 +14,11 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 # Hosts permitidos
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
 
-# Configuração do banco de dados
-DATABASES = {
-    'default': get_dynamic_db_config('DEFAULT_DOCU')  # Definido inicialmente para 'DEFAULT_DOCU'
-}
+from core.db_config import get_license_database
 
+DATABASES = {
+    'default': get_license_database()
+}
 # Definir aplicativos instalados
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -47,7 +30,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt',
-    'Auth',
+    'Licencas',
     'Produtos',
     'Entidades',
     'Pedidos',
@@ -58,9 +41,10 @@ INSTALLED_APPS = [
 # Middleware
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # <-- PRIMEIRO EXTERNO
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
     'core.middleware.db_router.DynamicDBMiddleware',
+    'core.middleware.db_router.JWTDBMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -69,8 +53,12 @@ MIDDLEWARE = [
 ]
 
 # Configurações de CORS
-CORS_ALLOW_ALL_ORIGINS = DEBUG 
-CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='').split(',')
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    CORS_ALLOW_ALL_ORIGINS = False
+    CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='').split(',')
+
 
 ROOT_URLCONF = 'core.urls'
 
@@ -92,14 +80,12 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 
 
-docu = getattr(request, 'docu', 'DEFAULT_DOCU') 
-
 
 AUTHENTICATION_BACKENDS = [
-    'Auth.backends.UserBackend', 
+    'Licencas.backends.UserBackend', 
 ]
 
-AUTH_USER_MODEL = 'Auth.Usuarios'
+AUTH_USER_MODEL = 'Licencas.Usuarios'
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -135,7 +121,7 @@ REST_FRAMEWORK = {
 
 SIMPLE_JWT = {
     "USER_ID_FIELD": "usua_codi",
-    "USER_ID_CLAIM": "usua_nome",
+    "USER_ID_CLAIM": "usua_codi",
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=10),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
 }

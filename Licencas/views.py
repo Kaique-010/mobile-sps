@@ -1,21 +1,18 @@
 import base64
+import logging
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.db import connections
-import datetime
-from django.conf import settings
-from django.http import JsonResponse
 from rest_framework import status
 from django.contrib.auth import authenticate
 from core.db_config import get_dynamic_db_config
-from rest_framework_simplejwt.settings import api_settings
-from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
-from Auth.models import Empresas, Filiais, Licencas, Usuarios  
-from Auth.serializers import EmpresaSerializer, FilialSerializer
+from Licencas.models import Empresas, Filiais, Licencas, Usuarios
+from Licencas.serializers import EmpresaSerializer, FilialSerializer
 
+# Logger
+logger = logging.getLogger(__name__)
 
 def check_legacy_hash(legacy_base64_hash, raw_password):
     try:
@@ -24,7 +21,6 @@ def check_legacy_hash(legacy_base64_hash, raw_password):
     except Exception:
         return False
 
-
 class LoginView(APIView):
     def post(self, request):
         username = request.data.get('username')
@@ -32,31 +28,43 @@ class LoginView(APIView):
         docu = request.data.get('docu')
 
         if not docu:
+            logger.warning(f"Login falhou: CNPJ não informado. Username tentado: {username}")
             return Response({'error': 'CNPJ não informado.'}, status=status.HTTP_400_BAD_REQUEST)
 
         licenca = Licencas.objects.filter(lice_docu=docu).first()
         if not licenca:
+            logger.warning(f"Login falhou: CNPJ inválido ({docu}). Username tentado: {username}")
             return Response({'error': 'CNPJ inválido ou licença bloqueada.'}, status=status.HTTP_404_NOT_FOUND)
 
+        lice_nome = f'saa_{licenca.lice_id}_{licenca.lice_nome}'.lower().replace(' ', '_')
+        db_config = get_dynamic_db_config(docu)
+        db_alias = f'db_{lice_nome}'
+
+        connections.databases[db_alias] = db_config
+        connections[db_alias].connect()
+
         try:
-            user = Usuarios.objects.get(usua_nome=username.lower())
+            with connections[db_alias].cursor() as cursor:
+                user = Usuarios.objects.using(db_alias).get(usua_nome=username.lower())
         except Usuarios.DoesNotExist:
+            logger.warning(f"Login falhou: Usuário não encontrado ({username}) no banco {db_alias}.")
             return Response({'error': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
         if not user.check_password(password):
+            logger.warning(f"Login falhou: Senha inválida para usuário {username} no banco {db_alias}.")
             return Response({'error': 'Senha inválida.'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        # 🔥 Aqui é onde a mágica acontece
+        # Gerar o refresh token
         refresh = RefreshToken.for_user(user)
-        db_name = f'saa_{licenca.lice_id}_{licenca.lice_nome}'.lower().replace(' ', '_')
-
-        # Custom payload
         refresh['username'] = user.usua_nome
         refresh['user_id'] = user.usua_codi
         refresh['lice_id'] = licenca.lice_id
-        refresh['db_name'] = db_name
+        refresh['lice_nome'] = lice_nome
 
+        # Gerar o access token
         access_token = refresh.access_token
+
+        logger.info(f"Login bem-sucedido: Usuário {username} autenticado no banco {db_alias}.")
 
         return Response({
             'access': str(access_token),
@@ -68,7 +76,7 @@ class LoginView(APIView):
             'licenca': {
                 'lice_id': licenca.lice_id,
                 'lice_nome': licenca.lice_nome,
-                'banco': db_name,
+                'banco': lice_nome,
             }
         })
 
@@ -77,27 +85,29 @@ class EmpresaUsuarioView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user = request.user  
-
+        user = request.user
         empresas = Empresas.objects.all()
+        logger.info(f"Listagem de empresas solicitada por usuário {user}.")
         serializer = EmpresaSerializer(empresas, many=True)
         return Response(serializer.data)
+
 
 class FiliaisPorEmpresaView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        empresa_id = request.query_params.get('empresa_id')  # empresa_id é o parâmetro vindo da requisição
+        empresa_id = request.query_params.get('empresa_id')
         if not empresa_id:
+            logger.warning(f"Consulta de filiais falhou: Empresa não fornecida. Usuário: {request.user}")
             return Response({'error': 'Empresa não fornecida.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Alterando para o campo correto 'empr_empr' para filtrar pela empresa associada
-        filiais = Filiais.objects.filter(empr_empr=empresa_id)  # Agora usamos 'empr_empr', que é a referência à empresa
+        filiais = Filiais.objects.filter(empr_empr=empresa_id)
 
-        # Verificando se há filiais
         if not filiais:
+            logger.warning(f"Nenhuma filial encontrada para empresa {empresa_id}. Usuário: {request.user}")
             return Response({'error': 'Nenhuma filial encontrada para esta empresa.'}, status=status.HTTP_404_NOT_FOUND)
 
+        logger.info(f"Listagem de filiais da empresa {empresa_id} solicitada por usuário {request.user}.")
         serializer = FilialSerializer(filiais, many=True)
         return Response(serializer.data)
 
@@ -111,12 +121,12 @@ class SetEmpresaFilialView(APIView):
         filial_id = request.data.get('filial')
 
         if not empresa_id or not filial_id:
+            logger.warning(f"Atualização de empresa/filial falhou: Dados incompletos. Usuário: {user}")
             return Response({'error': 'Empresa ou Filial não fornecida.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Atualiza direto no user
         user.empr_codi = empresa_id
         user.fili_codi = filial_id
         user.save()
 
+        logger.info(f"Empresa ({empresa_id}) e filial ({filial_id}) setadas para usuário {user}.")
         return Response({'message': 'Empresa e filial atualizadas com sucesso!'})
-
