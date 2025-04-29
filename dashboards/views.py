@@ -10,19 +10,26 @@ class DashboardAPIView(APIView):
     def get(self, request):
         db_alias = getattr(request, 'db_alias', 'default')
 
-        saldos = SaldoProduto.objects.using(db_alias).values(
-            nome=F('produto_codigo__prod_nome')
-        ).annotate(
-            total=Sum('saldo_estoque')
+        # Top 10 produtos com mais saldo
+        saldos = (
+            SaldoProduto.objects.using(db_alias)
+            .values(nome=F('produto_codigo__prod_nome'))
+            .annotate(total=Sum('saldo_estoque'))
+            .order_by('-total')[:10]
         )
 
-        pedidos = PedidoVenda.objects.using(db_alias).values(
-            cliente=F('pedi_forn__enti_nome')
-        ).annotate(
-            total=Sum('pedi_tota')
+        # Últimos 10 pedidos
+        pedidos = (
+            PedidoVenda.objects.using(db_alias)
+            .order_by('-pedi_data')[:10]  # Substitua 'pedi_data' se seu campo for outro
+            .values(
+                cliente=F('pedi_forn__enti_nome'),
+                total=F('pedi_tota'),
+                data=F('pedi_data')  
+            )
         )
 
-        # Convertendo Decimal pra float porque o serializer espera DecimalField
+        # Convertendo Decimal pra garantir compatibilidade com o serializer
         for item in saldos:
             item['total'] = Decimal(item['total']) if not isinstance(item['total'], Decimal) else item['total']
         for item in pedidos:
