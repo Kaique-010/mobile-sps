@@ -5,9 +5,10 @@ from .models import PedidoVenda
 from .serializers import PedidoVendaSerializer
 
 class PedidoVendaViewSet(viewsets.ModelViewSet):
-    queryset = PedidoVenda.objects.all().order_by('pedi_nume')
     serializer_class = PedidoVendaSerializer
+    queryset = PedidoVenda.objects.all().order_by('pedi_nume')
     filter_backends = [SearchFilter]
+    lookup_field = 'pedi_nume'
     search_fields = ['pedi_nume', 'pedi_forn']
     
     def get_queryset(self):

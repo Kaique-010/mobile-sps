@@ -2,10 +2,8 @@ import base64
 import logging
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from django.db import connections
 from rest_framework import status
 from django.contrib.auth import authenticate
-from core.db_config import get_dynamic_db_config
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 from Licencas.models import Empresas, Filiais, Licencas, Usuarios
@@ -18,7 +16,8 @@ def check_legacy_hash(legacy_base64_hash, raw_password):
     try:
         decoded = base64.b64decode(legacy_base64_hash).decode('utf-8')
         return decoded == raw_password
-    except Exception:
+    except Exception as e:
+        logger.error(f"Erro ao verificar hash legada: {e}")
         return False
 
 class LoginView(APIView):
@@ -36,22 +35,21 @@ class LoginView(APIView):
             logger.warning(f"Login falhou: CNPJ inválido ({docu}). Username tentado: {username}")
             return Response({'error': 'CNPJ inválido ou licença bloqueada.'}, status=status.HTTP_404_NOT_FOUND)
 
-        lice_nome = f'saa_{licenca.lice_id}_{licenca.lice_nome}'.lower().replace(' ', '_')
-        db_config = get_dynamic_db_config(docu)
-        db_alias = f'db_{lice_nome}'
-
-        connections.databases[db_alias] = db_config
-        connections[db_alias].connect()
+        # A partir daqui, não é mais necessário alterar a conexão do banco
+        # Vamos usar o banco configurado no settings.py (DATABASES['default'])
 
         try:
-            with connections[db_alias].cursor() as cursor:
-                user = Usuarios.objects.using(db_alias).get(usua_nome=username.lower())
+            user = Usuarios.objects.get(usua_nome=username.lower())
         except Usuarios.DoesNotExist:
-            logger.warning(f"Login falhou: Usuário não encontrado ({username}) no banco {db_alias}.")
+            logger.warning(f"Login falhou: Usuário não encontrado ({username}).")
             return Response({'error': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Erro ao buscar o usuário: {e}")
+            return Response({'error': 'Erro ao acessar os dados do usuário.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+        # Verificar a senha
         if not user.check_password(password):
-            logger.warning(f"Login falhou: Senha inválida para usuário {username} no banco {db_alias}.")
+            logger.warning(f"Login falhou: Senha inválida para usuário {username}.")
             return Response({'error': 'Senha inválida.'}, status=status.HTTP_401_UNAUTHORIZED)
 
         # Gerar o refresh token
@@ -59,12 +57,12 @@ class LoginView(APIView):
         refresh['username'] = user.usua_nome
         refresh['user_id'] = user.usua_codi
         refresh['lice_id'] = licenca.lice_id
-        refresh['lice_nome'] = lice_nome
+        refresh['lice_nome'] = licenca.lice_nome
 
         # Gerar o access token
         access_token = refresh.access_token
 
-        logger.info(f"Login bem-sucedido: Usuário {username} autenticado no banco {db_alias}.")
+        logger.info(f"Login bem-sucedido: Usuário {username} autenticado.")
 
         return Response({
             'access': str(access_token),
@@ -76,7 +74,6 @@ class LoginView(APIView):
             'licenca': {
                 'lice_id': licenca.lice_id,
                 'lice_nome': licenca.lice_nome,
-                'banco': lice_nome,
             }
         })
 
@@ -110,5 +107,3 @@ class FiliaisPorEmpresaView(APIView):
         logger.info(f"Listagem de filiais da empresa {empresa_id} solicitada por usuário {request.user}.")
         serializer = FilialSerializer(filiais, many=True)
         return Response(serializer.data)
-
-

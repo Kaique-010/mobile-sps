@@ -1,9 +1,7 @@
 from pathlib import Path
-import os
-from decouple import config
+from decouple import config  # Adicionando o decouple para ler as variáveis do .env
 from django.utils.timezone import timedelta
-from requests import request
-from core.db_config import get_dynamic_db_config
+import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -14,11 +12,18 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 # Hosts permitidos
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
 
-from core.db_config import get_license_database
-
+# Configuração do banco de dados
 DATABASES = {
-    'default': get_license_database()
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': config('DB_HOST'),
+        'PORT': config('DB_PORT'),
+    }
 }
+
 # Definir aplicativos instalados
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -43,8 +48,6 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',  # <-- PRIMEIRO EXTERNO
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'core.middleware.db_router.DynamicDBMiddleware',
-    'core.middleware.db_router.JWTDBMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -58,7 +61,6 @@ if DEBUG:
 else:
     CORS_ALLOW_ALL_ORIGINS = False
     CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='').split(',')
-
 
 ROOT_URLCONF = 'core.urls'
 
@@ -78,8 +80,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'core.wsgi.application'
-
-
 
 AUTHENTICATION_BACKENDS = [
     'Licencas.backends.UserBackend', 
@@ -126,8 +126,7 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
 }
 
-
-
+# Logs
 LOGGING = {
     'version': 1,
     'handlers': {
