@@ -1,5 +1,5 @@
 from pathlib import Path
-from decouple import config  # Adicionando o decouple para ler as variáveis do .env
+from decouple import config  
 from django.utils.timezone import timedelta
 import os
 
@@ -11,6 +11,7 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 
 # Hosts permitidos
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
+print(ALLOWED_HOSTS)
 
 # Configuração do banco de dados
 DATABASES = {
@@ -23,6 +24,10 @@ DATABASES = {
         'PORT': config('DB_PORT'),
     }
 }
+
+print(config('DB_NAME'))
+
+
 
 # Definir aplicativos instalados
 INSTALLED_APPS = [
@@ -126,18 +131,3 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
 }
 
-# Logs
-LOGGING = {
-    'version': 1,
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-        },
-    },
-    'loggers': {
-        'django.db.backends': {
-            'handlers': ['console'],
-            'level': 'INFO',  
-        },
-    },
-}

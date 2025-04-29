@@ -28,6 +28,16 @@
       "name": "savexml6",
       "database": "savexml6",
       "username": "savexml6"
+    },
+    {
+      "previewLimit": 50,
+      "server": "base.rtalmeida.com.br",
+      "port": 5432,
+      "askForPassword": true,
+      "driver": "PostgreSQL",
+      "name": "savexml1014",
+      "database": "savexml1014",
+      "username": "savexml1014"
     }
   ]
 }
