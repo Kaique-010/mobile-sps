@@ -7,7 +7,7 @@ from Licencas.models import Usuarios
 class ListaCasamento(models.Model):
     list_empr = models.IntegerField('Empresa')
     list_fili = models.IntegerField('Filial')
-    list_codi = models.IntegerField('Número Lista', primary_key=True) 
+    list_codi = models.AutoField('Número Lista', primary_key=True)
     list_noiv = models.ForeignKey(Entidades, verbose_name='Noiva', on_delete=models.CASCADE, db_column='list_noiv')
     list_data = models.DateField('Data')
     list_stat = models.CharField(
@@ -39,20 +39,19 @@ class ListaCasamento(models.Model):
         item_list=self.list_codi
     )
 
-class ItensListaCasamento(models.Model):
-    id = models.AutoField(primary_key=True)  
+class ItensListaCasamento(models.Model):  
     item_empr = models.IntegerField()
     item_fili = models.IntegerField()
     item_list = models.IntegerField()
-    item_item = models.IntegerField()
-    item_prod = models.CharField(max_length=60)
+    item_item = models.IntegerField(primary_key=True)
+    item_prod = models.ForeignKey(Produtos, on_delete=models.CASCADE, db_column='item_prod')
     item_fina = models.BooleanField(default=False)
-    item_clie = models.ForeignKey(Entidades, verbose_name='Cliente', on_delete=models.SET_NULL, blank=True, null=True)
+    item_clie = models.ForeignKey(Entidades, verbose_name='Cliente', on_delete=models.SET_NULL, blank=True, null=True, db_column='item_clie')
     item_pedi = models.IntegerField()
-    item_usua = models.ForeignKey(Usuarios, on_delete=models.CASCADE)
+    item_usua = models.ForeignKey(Usuarios, on_delete=models.CASCADE, db_column='item_usua')
     log_data = models.DateField(auto_now_add=True)
     log_time = models.TimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'itenslistanoiva'
+        db_table = 'itenslistacasamento'
         managed = False

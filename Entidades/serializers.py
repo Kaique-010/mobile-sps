@@ -1,7 +1,10 @@
 from rest_framework import serializers
 from .models import Entidades
+from Licencas.models  import Empresas
 
 class EntidadesSerializer(serializers.ModelSerializer):
+    
+    empresa_nome = serializers.SerializerMethodField()
     class Meta:
         model = Entidades
         fields = '__all__'
@@ -28,3 +31,9 @@ class EntidadesSerializer(serializers.ModelSerializer):
         super().__init__(*args, **kwargs)
         self.fields['enti_clie'].required = False
         self.fields['enti_fant'].required = False
+
+    def get_empresa_nome(self, obj):
+        try:
+            return Empresas.objects.get(empr_codi=obj.enti_empr).empr_nome
+        except Empresas.DoesNotExist:
+            return None

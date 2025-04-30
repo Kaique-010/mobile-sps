@@ -1,7 +1,10 @@
+from ctypes import cast
+from email.policy import default
 from pathlib import Path
 from decouple import config  
 from django.utils.timezone import timedelta
 import os
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -13,20 +16,37 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
 print(ALLOWED_HOSTS)
 
-# Configuração do banco de dados
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME'),
-        'USER': config('DB_USER'),
-        'PASSWORD': config('DB_PASSWORD'),
-        'HOST': config('DB_HOST'),
-        'PORT': config('DB_PORT'),
+USE_LOCAL_DB = config('USE_LOCAL_DB', default=True, cast=bool)
+
+if USE_LOCAL_DB:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('LOCAL_DB_NAME'),
+            'USER': config('LOCAL_DB_USER'),
+            'PASSWORD': config('LOCAL_DB_PASSWORD'),
+            'HOST': config('LOCAL_DB_HOST'),
+            'PORT': config('LOCAL_DB_PORT'),
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('REMOTE_DB_NAME'),
+            'USER': config('REMOTE_DB_USER'),
+            'PASSWORD': config('REMOTE_DB_PASSWORD'),
+            'HOST': config('REMOTE_DB_HOST'),
+            'PORT': config('REMOTE_DB_PORT'),
+        }
+    }
 
-print(config('DB_NAME'))
 
+print("USE_LOCAL_DB =", USE_LOCAL_DB)
+if USE_LOCAL_DB:
+    print("DB_NAME usado =", config('LOCAL_DB_NAME'))
+else:
+    print("DB_NAME usado =", config('REMOTE_DB_NAME'))
 
 
 # Definir aplicativos instalados
