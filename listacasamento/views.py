@@ -8,11 +8,11 @@ from .serializers import ListaCasamentoSerializer, ItensListaCasamentoSerializer
 class ListaCasamentoViewSet(viewsets.ModelViewSet):
     serializer_class = ListaCasamentoSerializer
     filter_backends = [SearchFilter]
-    search_fields = ['list_clie__nome', 'list_nume']
+    search_fields = ['list_clie__nome', 'list_codi']
 
     def get_queryset(self):
         db_alias = getattr(self.request, 'db_alias', 'default')
-        return ListaCasamento.objects.using(db_alias).all().order_by('list_nume')
+        return ListaCasamento.objects.using(db_alias).all().order_by('list_codi')
 
 class ItensListaCasamentoViewSet(viewsets.ModelViewSet):
     serializer_class = ItensListaCasamentoSerializer

@@ -7,8 +7,8 @@ from Licencas.models import Usuarios
 class ListaCasamento(models.Model):
     list_empr = models.IntegerField('Empresa')
     list_fili = models.IntegerField('Filial')
-    list_codi = models.IntegerField('Número Lista', primary_key=True)  # OK: Django vai usar como PK
-    list_noiv = models.ForeignKey(Entidades, verbose_name='Noiva', on_delete=models.CASCADE)
+    list_codi = models.IntegerField('Número Lista', primary_key=True) 
+    list_noiv = models.ForeignKey(Entidades, verbose_name='Noiva', on_delete=models.CASCADE, db_column='list_noiv')
     list_data = models.DateField('Data')
     list_stat = models.CharField(
         'Status',
@@ -19,9 +19,9 @@ class ListaCasamento(models.Model):
             ('3', 'Cancelada'),
         ],
         default='0',
-        max_length=1  # obrigatório no CharField
+        max_length=1  
     )
-    list_usua = models.ForeignKey(Usuarios, on_delete=models.CASCADE)
+    list_usua = models.ForeignKey(Usuarios, on_delete=models.CASCADE, db_column='list_usua')
     log_data = models.DateField(auto_now_add=True)
     log_time = models.TimeField(auto_now_add=True)
 
