@@ -1,8 +1,11 @@
 # views.py
 from rest_framework import viewsets
+from rest_framework.viewsets import ModelViewSet
 from rest_framework import viewsets, status
 from rest_framework.response import Response
-from django.db import transaction
+from django.db import transaction, IntegrityError
+from rest_framework.exceptions import ValidationError
+from Produtos.models import Produtos
 from rest_framework.response import Response
 from rest_framework.response import Response
 from rest_framework.filters import SearchFilter
@@ -20,29 +23,35 @@ class ListaCasamentoViewSet(viewsets.ModelViewSet):
         db_alias = getattr(self.request, 'db_alias', 'default')
         return ListaCasamento.objects.using(db_alias).all().order_by('list_codi')
 
-    def perform_create(self, serializer):
-        db_alias = getattr(self.request, 'db_alias', 'default')
-        max_id = ListaCasamento.objects.using(db_alias).aggregate(models.Max('list_codi'))['list_codi__max'] or 0
-        serializer.save(list_codi=max_id + 1)
 class ItensListaCasamentoViewSet(viewsets.ModelViewSet):
+    queryset = ItensListaCasamento.objects.all()
     serializer_class = ItensListaCasamentoSerializer
 
-    def get_queryset(self):
-        db_alias = getattr(self.request, 'db_alias', 'default')
-        return ItensListaCasamento.objects.using(db_alias).all()
-
     def create(self, request, *args, **kwargs):
-        db_alias = getattr(request, 'db_alias', 'default')
-        data = request.data
+        try:
+            if isinstance(request.data, list):
+                serializer = self.get_serializer(data=request.data, many=True)
+                serializer.is_valid(raise_exception=True)
 
-        if isinstance(data, list):
-            results = []
-            with transaction.atomic(using=db_alias):
-                for item_data in data:
-                    serializer = self.get_serializer(data=item_data)
-                    serializer.is_valid(raise_exception=True)
-                    instance = serializer.save()
-                    results.append(serializer.data)
-            return Response(results, status=status.HTTP_201_CREATED)
-        else:
+                # Cria os objetos manualmente a partir dos dados validados
+                items = [ItensListaCasamento(**data) for data in serializer.validated_data]
+                created_items = ItensListaCasamento.objects.bulk_create(items)
+
+                # Re-serializa os objetos criados para retorno
+                response_serializer = self.get_serializer(created_items, many=True)
+                return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+            # Se não for lista, salva normalmente
             return super().create(request, *args, **kwargs)
+
+        except ValidationError as e:
+            print(f'🧨 ValidationError: {e.detail}')
+            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+
+        except IntegrityError as e:
+            print(f'🧱 IntegrityError: {str(e)}')
+            return Response({'detail': 'Erro de integridade no banco de dados.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            print(f'🔥 Erro inesperado: {str(e)}')
+            return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

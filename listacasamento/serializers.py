@@ -7,25 +7,22 @@ from Licencas.models import Empresas
 from .models import ListaCasamento, ItensListaCasamento
 
 class ItensListaCasamentoSerializer(serializers.ModelSerializer):
-    produto_nome = serializers.CharField(source='item_prod.nome', read_only=True)
+    produto_nome = serializers.SerializerMethodField(read_only=True)
+    item_item = serializers.IntegerField(read_only=True)
+    item_prod = serializers.IntegerField()
     class Meta:
         model = ItensListaCasamento
         fields = '__all__'
-        read_only_fields = ['item_item']  
-
-    def create(self, validated_data):
-        validated_data['item_item'] = get_next_item_number(
-            item_list=validated_data['item_list'],
-            item_empr=validated_data['item_empr'],
-            item_fili=validated_data['item_fili'],
-        )
-        return super().create(validated_data)
-
+      
+    
+    def get_produto_nome(self, obj):
+     return getattr(obj.item_prod, 'prod_nome', None)
 
 class ListaCasamentoSerializer(serializers.ModelSerializer):
     itens = ItensListaCasamentoSerializer(many=True, required=False)
     cliente_nome = serializers.CharField(source='list_noiv.enti_nome', read_only=True)
     empresa_nome = serializers.SerializerMethodField()
+   
 
     class Meta:
         model = ListaCasamento
@@ -48,7 +45,9 @@ class ListaCasamentoSerializer(serializers.ModelSerializer):
         except Empresas.DoesNotExist:
             return None
     
-    def perform_create(self, serializer):
-        db_alias = getattr(self.request, 'db_alias', 'default')
-        max_id = ListaCasamento.objects.using(db_alias).aggregate(models.Max('list_codi'))['list_codi__max']or 0
-        serializer.save(list_codi=max_id+1)
+    def perform_bulk_create(self, serializer):
+        try:
+            serializer.save()
+        except Exception as e:
+            print('[ERRO] Falha ao salvar itens em massa:', e)
+            raise
