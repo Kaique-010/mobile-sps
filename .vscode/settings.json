@@ -38,6 +38,16 @@
       "name": "savexml1014",
       "database": "savexml1014",
       "username": "savexml1014"
+    },
+    {
+      "previewLimit": 50,
+      "server": "localhost",
+      "port": 5432,
+      "askForPassword": true,
+      "driver": "PostgreSQL",
+      "name": "lacera",
+      "database": "lacera",
+      "username": "postgres"
     }
   ]
 }

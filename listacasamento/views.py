@@ -1,5 +1,8 @@
 # views.py
 from rest_framework import viewsets
+from rest_framework import viewsets, status
+from rest_framework.response import Response
+from django.db import transaction
 from rest_framework.response import Response
 from rest_framework.response import Response
 from rest_framework.filters import SearchFilter
@@ -17,48 +20,29 @@ class ListaCasamentoViewSet(viewsets.ModelViewSet):
         db_alias = getattr(self.request, 'db_alias', 'default')
         return ListaCasamento.objects.using(db_alias).all().order_by('list_codi')
 
+    def perform_create(self, serializer):
+        db_alias = getattr(self.request, 'db_alias', 'default')
+        max_id = ListaCasamento.objects.using(db_alias).aggregate(models.Max('list_codi'))['list_codi__max'] or 0
+        serializer.save(list_codi=max_id + 1)
 class ItensListaCasamentoViewSet(viewsets.ModelViewSet):
     serializer_class = ItensListaCasamentoSerializer
 
     def get_queryset(self):
         db_alias = getattr(self.request, 'db_alias', 'default')
-        lista_id = self.request.query_params.get("lista")
-        qs = ItensListaCasamento.objects.using(db_alias)
-        if lista_id:
-            return qs.filter(item_list=lista_id)
-        return qs.all()
+        return ItensListaCasamento.objects.using(db_alias).all()
 
-    def perform_create(self, serializer):
-        db_alias = getattr(self.request, 'db_alias', 'default')
-        max_id = ItensListaCasamento.objects.using(db_alias).aggregate(
-            models.Max("item_item")
-        )["item_item__max"] or 0
-        serializer.save(item_item=max_id + 1)
-
-    @action(detail=False, methods=['post'])
-    def adicionar_lote(self, request):
+    def create(self, request, *args, **kwargs):
         db_alias = getattr(request, 'db_alias', 'default')
-        lista_codi = request.data.get("lista")
-        itens = request.data.get("itens", [])
+        data = request.data
 
-        if not lista_codi or not isinstance(itens, list):
-            return Response({"detail": "Parâmetros inválidos."}, status=400)
-
-        criados = []
-        max_id = ItensListaCasamento.objects.using(db_alias).aggregate(
-            models.Max("item_item")
-        )["item_item__max"] or 0
-
-        for i, item in enumerate(itens):
-            novo = ItensListaCasamento.objects.using(db_alias).create(
-                item_item=max_id + i + 1,
-                item_list=lista_codi,
-                item_prod=item["produto"],  # deve ser o ID
-                item_empr=request.data.get("empresa", 1),
-                item_fili=request.data.get("filial", 1),
-                item_usua=request.user,  # ou ajusta conforme a lógica
-            )
-            criados.append(novo)
-
-        serializer = self.get_serializer(criados, many=True)
-        return Response(serializer.data)
+        if isinstance(data, list):
+            results = []
+            with transaction.atomic(using=db_alias):
+                for item_data in data:
+                    serializer = self.get_serializer(data=item_data)
+                    serializer.is_valid(raise_exception=True)
+                    instance = serializer.save()
+                    results.append(serializer.data)
+            return Response(results, status=status.HTTP_201_CREATED)
+        else:
+            return super().create(request, *args, **kwargs)

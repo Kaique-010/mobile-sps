@@ -46,7 +46,7 @@ class ItensListaCasamento(models.Model):
     item_item = models.IntegerField(primary_key=True)
     item_prod = models.ForeignKey(Produtos, on_delete=models.CASCADE, db_column='item_prod')
     item_fina = models.BooleanField(default=False)
-    item_clie = models.ForeignKey(Entidades, verbose_name='Cliente', on_delete=models.SET_NULL, blank=True, null=True, db_column='item_clie')
+    item_clie = models.ForeignKey(Entidades, verbose_name='Noiva', on_delete=models.SET_NULL, blank=True, null=True, db_column='item_clie')
     item_pedi = models.IntegerField()
     item_usua = models.ForeignKey(Usuarios, on_delete=models.CASCADE, db_column='item_usua')
     log_data = models.DateField(auto_now_add=True)
@@ -55,3 +55,9 @@ class ItensListaCasamento(models.Model):
     class Meta:
         db_table = 'itenslistacasamento'
         managed = False
+
+    def get_next_item_number(lista_id):
+        ultimo = ItensListaCasamento.objects.filter(item_list=lista_id).aggregate(
+            models.Max('item_item')
+        )['item_item__max']
+        return (ultimo or 0) + 1

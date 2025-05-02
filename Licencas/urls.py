@@ -8,12 +8,11 @@ from .views import (
 )
 from rest_framework_simplejwt.views import TokenRefreshView 
 
-
 router = DefaultRouter()
 
 urlpatterns = [
     path('login/', LoginView.as_view(), name='login'),
     path('empresas/', EmpresaUsuarioView.as_view(), name='empresa-list'),
     path('filiais/', FiliaisPorEmpresaView.as_view(), name='filial_list'),    
-    path('auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    
 ]

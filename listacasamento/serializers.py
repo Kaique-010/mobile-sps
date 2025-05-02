@@ -1,7 +1,8 @@
 # serializers.py
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-
+from django.db import models
+from .utils import get_next_item_number
 from Licencas.models import Empresas
 from .models import ListaCasamento, ItensListaCasamento
 
@@ -10,6 +11,16 @@ class ItensListaCasamentoSerializer(serializers.ModelSerializer):
     class Meta:
         model = ItensListaCasamento
         fields = '__all__'
+        read_only_fields = ['item_item']  
+
+    def create(self, validated_data):
+        validated_data['item_item'] = get_next_item_number(
+            item_list=validated_data['item_list'],
+            item_empr=validated_data['item_empr'],
+            item_fili=validated_data['item_fili'],
+        )
+        return super().create(validated_data)
+
 
 class ListaCasamentoSerializer(serializers.ModelSerializer):
     itens = ItensListaCasamentoSerializer(many=True, required=False)
@@ -37,41 +48,7 @@ class ListaCasamentoSerializer(serializers.ModelSerializer):
         except Empresas.DoesNotExist:
             return None
     
-    '''def create(self, validated_data):
-        itens_data = validated_data.pop('itens', [])
-        lista = ListaCasamento.objects.create(**validated_data)
-
-        for item in itens_data:
-            ItensListaCasamento.objects.create(
-
-                item_list=lista.list_codi,
-                **item
-            )
-
-        return lista
-
-    def update(self, instance, validated_data):
-        itens_data = validated_data.pop('itens', [])
-        instance = super().update(instance, validated_data)
-
-        existentes_ids = [item.id for item in instance.itens.all()]
-        novos_ids = [item.get('id') for item in itens_data if 'id' in item]
-
-        # Remove os que sumiram
-        for item_id in set(existentes_ids) - set(novos_ids):
-            ItensListaCasamento.objects.filter(id=item_id).delete()
-
-        # Atualiza ou cria novos
-        for item in itens_data:
-            if 'id' in item:
-                item_obj = ItensListaCasamento.objects.get(id=item['id'])
-                for field, value in item.items():
-                    setattr(item_obj, field, value)
-                item_obj.save()
-            else:
-                ItensListaCasamento.objects.create(
-                    item_list=instance.list_codi,
-                    **item
-                )
-
-        return instance'''
+    def perform_create(self, serializer):
+        db_alias = getattr(self.request, 'db_alias', 'default')
+        max_id = ListaCasamento.objects.using(db_alias).aggregate(models.Max('list_codi'))['list_codi__max']or 0
+        serializer.save(list_codi=max_id+1)
