@@ -14,6 +14,9 @@ from django.db import models
 from rest_framework.decorators import action
 from .serializers import ListaCasamentoSerializer, ItensListaCasamentoSerializer
 
+
+import logging
+logger = logging.getLogger(__name__)  
 class ListaCasamentoViewSet(viewsets.ModelViewSet):
     serializer_class = ListaCasamentoSerializer
     filter_backends = [SearchFilter]
@@ -23,35 +26,34 @@ class ListaCasamentoViewSet(viewsets.ModelViewSet):
         db_alias = getattr(self.request, 'db_alias', 'default')
         return ListaCasamento.objects.using(db_alias).all().order_by('list_codi')
 
+
+
 class ItensListaCasamentoViewSet(viewsets.ModelViewSet):
     queryset = ItensListaCasamento.objects.all()
     serializer_class = ItensListaCasamentoSerializer
 
+    @transaction.atomic
     def create(self, request, *args, **kwargs):
+        logger.debug("🔥 Entrou no método create de ItensListaCasamentoViewSet")
+
         try:
             if isinstance(request.data, list):
                 serializer = self.get_serializer(data=request.data, many=True)
                 serializer.is_valid(raise_exception=True)
+                self.perform_create(serializer)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-                # Cria os objetos manualmente a partir dos dados validados
-                items = [ItensListaCasamento(**data) for data in serializer.validated_data]
-                created_items = ItensListaCasamento.objects.bulk_create(items)
-
-                # Re-serializa os objetos criados para retorno
-                response_serializer = self.get_serializer(created_items, many=True)
-                return Response(response_serializer.data, status=status.HTTP_201_CREATED)
-
-            # Se não for lista, salva normalmente
+            # Se for objeto único
             return super().create(request, *args, **kwargs)
 
         except ValidationError as e:
-            print(f'🧨 ValidationError: {e.detail}')
+            logger.warning(f'🧨 ValidationError: {e.detail}')
             return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
 
         except IntegrityError as e:
-            print(f'🧱 IntegrityError: {str(e)}')
+            logger.error(f'🧱 IntegrityError: {str(e)}')
             return Response({'detail': 'Erro de integridade no banco de dados.'}, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
-            print(f'🔥 Erro inesperado: {str(e)}')
+            logger.exception("🔥 Erro inesperado ao salvar itens.")
             return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

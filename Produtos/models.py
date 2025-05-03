@@ -145,7 +145,7 @@ class Produtos(models.Model):
         managed = 'false'
 
     def __str__(self):
-        return f'{self.nome_produto} ({self.produto_codigo})'
+        return self.prod_codi
     
     def imagem_tag(self):
         try:

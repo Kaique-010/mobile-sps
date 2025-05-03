@@ -152,3 +152,42 @@ SIMPLE_JWT = {
 }
 
 APPEND_SLASH = True
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,  # mantém os logs padrão do Django
+    'formatters': {
+        'verbose': {
+            'format': '[{asctime}] [{levelname}] {name}: {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname}: {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',  # troca pra 'simple' se quiser mais limpo
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG',  # nível mínimo global
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        # logger do seu app
+        'listacasamento.views': {  # substitui pelo nome real do seu app, tipo 'listas'
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}
