@@ -27,7 +27,10 @@ class ItensListaCasamentoSerializer(serializers.ModelSerializer):
         return queryset
     
     def get_produto_nome(self, obj):
-        return str(obj.item_prod)
+        try:
+            return Produtos.objects.get(prod_codi=obj.item_prod).prod_nome
+        except Produtos.DoesNotExist:
+            return None
 
     def create(self, validated_data):
         item_empr = validated_data['item_empr']
@@ -43,9 +46,7 @@ class ItensListaCasamentoSerializer(serializers.ModelSerializer):
 class ListaCasamentoSerializer(serializers.ModelSerializer):
     itens = ItensListaCasamentoSerializer(many=True, required=False)
     cliente_nome = serializers.CharField(source='list_noiv.enti_nome', read_only=True)
-    empresa_nome = serializers.SerializerMethodField()
-    
-    
+    empresa_nome = serializers.SerializerMethodField()  
    
 
     class Meta:
@@ -69,6 +70,8 @@ class ListaCasamentoSerializer(serializers.ModelSerializer):
         except Empresas.DoesNotExist:
             return None
     
+    
+            
     def perform_bulk_create(self, serializer):
         try:
             serializer.save()

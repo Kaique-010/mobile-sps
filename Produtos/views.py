@@ -1,6 +1,6 @@
 from rest_framework.views import APIView
-from django.db.models import Q, Subquery, OuterRef, DecimalField, Value as V
-from django.db.models.functions import Coalesce
+from django.db.models import Q, Subquery, OuterRef, DecimalField, Value as V, CharField
+from django.db.models.functions import Coalesce, Cast
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -34,7 +34,7 @@ class ProdutoListView(APIView):
 class ProdutoViewSet(viewsets.ModelViewSet):
     serializer_class = ProdutoSerializer
     filter_backends = [SearchFilter]
-    search_fields = ['prod_nome', 'prod_codi']
+    search_fields = ['prod_nome', 'prod_codi', 'prod_coba']
 
     def get_queryset(self):
         db_alias = getattr(self.request, 'db_alias', 'default')
@@ -53,7 +53,7 @@ class ProdutoViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"])
     def busca(self, request):
         db_alias = getattr(request, 'db_alias', 'default')
-        q = request.query_params.get("q", "")
+        q = request.query_params.get("q", "").lstrip("0")  # <<< AQUI
 
         saldo_subquery = Subquery(
             SaldoProduto.objects.using(db_alias).filter(
@@ -63,10 +63,14 @@ class ProdutoViewSet(viewsets.ModelViewSet):
         )
 
         produtos = Produtos.objects.using(db_alias).annotate(
-            saldo_estoque=Coalesce(saldo_subquery, V(0), output_field=DecimalField())
+            saldo_estoque=Coalesce(saldo_subquery, V(0), output_field=DecimalField()),
+            prod_coba_str=Cast('prod_coba', CharField())
         ).filter(
-            Q(prod_nome__icontains=q) | Q(prod_codi__icontains=q)
+            Q(prod_nome__icontains=q) |
+            Q(prod_coba_str__icontains=q) |
+            Q(prod_codi__icontains=q)
         )
 
         serializer = self.get_serializer(produtos, many=True)
         return Response(serializer.data)
+

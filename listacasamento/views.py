@@ -57,3 +57,47 @@ class ItensListaCasamentoViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.exception("🔥 Erro inesperado ao salvar itens.")
             return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        # Verificação para impedir exclusão de item com item_pedi diferente de 0
+        if instance.item_pedi != 0:
+            logger.info(f"❌ Tentativa de excluir item com pedido: {instance.item_item}")
+            return Response(
+                {"detail": "Este item já foi pedido e não pode ser removido."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Realiza a exclusão do item
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        # Verificação para impedir edição de item com item_pedi diferente de 0
+        if instance.item_pedi != 0:
+            logger.info(f"❌ Tentativa de editar item com pedido: {instance.item_item}")
+            return Response(
+                {"detail": "Este item já foi pedido e não pode ser editado."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Realiza a atualização do item
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        # Verificação para impedir atualização parcial de item com item_pedi diferente de 0
+        if instance.item_pedi != 0:
+            logger.info(f"❌ Tentativa de edição parcial em item com pedido: {instance.item_item}")
+            return Response(
+                {"detail": "Este item já foi pedido e não pode ser editado."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Realiza a atualização parcial do item
+        return super().partial_update(request, *args, **kwargs)

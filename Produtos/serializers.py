@@ -6,6 +6,7 @@ from django.db import connection
 
 class ProdutoSerializer(serializers.ModelSerializer):
     saldo_estoque = serializers.SerializerMethodField()
+   
 
     class Meta:
         model = Produtos
