@@ -43,7 +43,7 @@ class ItensListaCasamento(models.Model):
     item_empr = models.IntegerField()
     item_fili = models.IntegerField()
     item_list = models.IntegerField()
-    item_item = models.IntegerField(primary_key=True, editable=False) 
+    item_item = models.IntegerField(primary_key=True) 
     item_prod = models.CharField(max_length=60) 
     item_fina = models.BooleanField(default=False)
     item_clie = models.IntegerField()
@@ -55,5 +55,6 @@ class ItensListaCasamento(models.Model):
     class Meta:
         db_table = 'itenslistacasamento'
         managed = False  
+        unique_together = ('item_list', 'item_item','item_empr', 'item_fili')
         
     

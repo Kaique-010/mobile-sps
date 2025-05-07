@@ -10,8 +10,8 @@ from .models import ListaCasamento, ItensListaCasamento
 
 class ItensListaCasamentoSerializer(serializers.ModelSerializer):
     produto_nome = serializers.SerializerMethodField(read_only=True)
-    item_item = serializers.IntegerField(read_only=True)  # O AutoField será preenchido automaticamente
-    item_prod = serializers.PrimaryKeyRelatedField(queryset=Produtos.objects.all())  # Serializa a chave primária do produto
+    item_item = serializers.IntegerField(read_only=True)  
+    item_prod = serializers.PrimaryKeyRelatedField(queryset=Produtos.objects.all()) 
     log_time = serializers.TimeField(read_only=True)
     log_data = serializers.DateField(read_only=True)
 
