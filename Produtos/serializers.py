@@ -6,7 +6,6 @@ from django.db import connection
 
 class ProdutoSerializer(serializers.ModelSerializer):
     saldo_estoque = serializers.SerializerMethodField()
-   
 
     class Meta:
         model = Produtos
@@ -25,7 +24,7 @@ class ProdutoSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'prod_empr': 'Empresa é obrigatória.'})
 
         if not codigo:
-            # Lock REAL sobre o último produto da empresa
+            print("Código não fornecido, gerando automaticamente.")
             ultimo_produto = (
                 Produtos.objects
                 .filter(prod_empr=empresa, prod_codi__regex=r'^\d+$')
@@ -33,7 +32,7 @@ class ProdutoSerializer(serializers.ModelSerializer):
                 .order_by('-prod_codi')
                 .first()
             )
-
+            print(f"Último produto encontrado: {ultimo_produto}")
             if ultimo_produto:
                 try:
                     novo_codigo = str(int(ultimo_produto.prod_codi) + 1)
@@ -42,14 +41,16 @@ class ProdutoSerializer(serializers.ModelSerializer):
                         'prod_codi': f'Não foi possível incrementar o código existente: {ultimo_produto.prod_codi}'
                     })
             else:
+                print("Nenhum produto encontrado, iniciando com o código 1.")
                 novo_codigo = "1"
-
+            print(f"Novo código gerado: {novo_codigo}")
+            
+            # Verificar se o código gerado já existe para a empresa
+            while Produtos.objects.filter(prod_empr=empresa, prod_codi=novo_codigo).exists():
+                print(f"O código {novo_codigo} já existe, tentando gerar um novo.")
+                novo_codigo = str(int(novo_codigo) + 1)
+                
+            print(f"Código único gerado: {novo_codigo}")
             validated_data['prod_codi'] = novo_codigo
-        else:
-            # Valida se já existe o código para essa empresa
-            if Produtos.objects.filter(prod_empr=empresa, prod_codi=codigo).exists():
-                raise serializers.ValidationError({
-                    'prod_codi': f'O código {codigo} já existe para a empresa {empresa}.'
-                })
-
+        
         return super().create(validated_data)

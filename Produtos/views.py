@@ -53,8 +53,7 @@ class ProdutoViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"])
     def busca(self, request):
         db_alias = getattr(request, 'db_alias', 'default')
-        q = request.query_params.get("q", "").lstrip("0")  # <<< AQUI
-
+        q = request.query_params.get("q", "").lstrip("0") 
         saldo_subquery = Subquery(
             SaldoProduto.objects.using(db_alias).filter(
                 produto_codigo=OuterRef('pk')

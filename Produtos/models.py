@@ -119,14 +119,24 @@ class Tabelaprecos(models.Model):
         unique_together = (('tabe_empr', 'tabe_fili', 'tabe_prod'),)
         managed = 'false'
 
+class UnidadeMedida(models.Model):
+    codigo = models.CharField(max_length=10, db_column='unme_codi', primary_key=True) 
+    descricao = models.CharField(max_length=50, db_column='unme_desc') 
 
+    class Meta:
+        db_table = 'unidadesmedida'
+        managed = 'false'
+
+
+    def __str__(self):
+        return self.descricao
 
 
 class Produtos(models.Model):
     prod_empr = models.CharField(max_length=50, db_column='prod_empr')
     prod_codi = models.CharField(max_length=50, db_column='prod_codi', primary_key=True) 
     prod_nome = models.CharField(max_length=255, db_column='prod_nome') 
-    prod_unme = models.CharField(max_length=10, db_column='prod_unme') 
+    prod_unme = models.ForeignKey(UnidadeMedida,on_delete=models.PROTECT, db_column='prod_unme') 
     prod_grup= models.ForeignKey(GrupoProduto, on_delete=models.DO_NOTHING, db_column='prod_grup', related_name='produtos', blank= True, null= True) 
     prod_sugr = models.ForeignKey(SubgrupoProduto, on_delete=models.DO_NOTHING, db_column='prod_sugr', related_name='produtos', blank= True, null= True) 
     prod_fami= models.ForeignKey(FamiliaProduto, on_delete=models.DO_NOTHING, db_column='prod_fami', related_name='produtos', blank= True, null= True) 
