@@ -1,23 +1,20 @@
-# views.py
-from rest_framework import viewsets
 from rest_framework.viewsets import ModelViewSet
-from rest_framework import viewsets, status
+from rest_framework import status
+from rest_framework import serializers
 from rest_framework.response import Response
-from django.db import transaction, IntegrityError
-from rest_framework.exceptions import ValidationError
-from Produtos.models import Produtos
-from rest_framework.exceptions import NotFound
-from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.filters import SearchFilter
-from .models import ListaCasamento, ItensListaCasamento
-from django.db import models
 from rest_framework.decorators import action
+from django.db import transaction, IntegrityError
+from rest_framework.decorators import api_view
+from .models import ListaCasamento, ItensListaCasamento
 from .serializers import ListaCasamentoSerializer, ItensListaCasamentoSerializer
 
-
 import logging
-logger = logging.getLogger(__name__)  
-class ListaCasamentoViewSet(viewsets.ModelViewSet):
+logger = logging.getLogger(__name__)
+
+
+class ListaCasamentoViewSet(ModelViewSet):
     serializer_class = ListaCasamentoSerializer
     filter_backends = [SearchFilter]
     search_fields = ['list_noiv__nome', 'list_codi']
@@ -25,66 +22,66 @@ class ListaCasamentoViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         db_alias = getattr(self.request, 'db_alias', 'default')
         return ListaCasamento.objects.using(db_alias).all().order_by('list_codi')
+    
+    def destroy(self, request, *args, **kwargs):
+        lista = self.get_object()
+        
+        if ItensListaCasamento.objects.filter(item_list=lista.list_codi).exists():
+            raise ValidationError({"detail": "Não é possível excluir a lista de casamento, pois existem itens associados."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        
+        return super().destroy(request, *args, **kwargs)
 
 
-
-class ItensListaCasamentoViewSet(viewsets.ModelViewSet):
-    queryset = ItensListaCasamento.objects.all()
+class ItensListaCasamentoViewSet(ModelViewSet):
     serializer_class = ItensListaCasamentoSerializer
-    lookup_field = 'item_item'
 
     def get_queryset(self):
         item_empr = self.request.query_params.get('item_empr')
         item_fili = self.request.query_params.get('item_fili')
         item_list = self.request.query_params.get('item_list')
 
+        if not item_list:
+            logger.warning("item_list não fornecido")
+            return ItensListaCasamento.objects.none()
+        
+        queryset = ItensListaCasamento.objects.filter(item_list=item_list)
+        if item_empr:
+            queryset = queryset.filter(item_empr=item_empr)
+        if item_fili:   
+            queryset = queryset.filter(item_fili=item_fili)
+        
         logger.info(f"Parâmetros recebidos: item_empr={item_empr}, item_fili={item_fili}, item_list={item_list}")
-
-        # Verifica se algum parâmetro obrigatório está ausente
-        if None in (item_empr, item_fili, item_list):
-            logger.warning("Parâmetros obrigatórios faltando")
-            raise ValidationError({"detail": "item_empr, item_fili e item_list são obrigatórios."})
-
-        # Filtra os itens pela combinação de parâmetros
-        return ItensListaCasamento.objects.filter(
-            item_empr=item_empr,
-            item_fili=item_fili,
-            item_list=item_list
-        )
-
-
+        logger.info(f"Queryset filtrado: {queryset.query}")  # Log da consulta SQL gerada
+        return queryset.order_by('item_item')
+    
     def get_object(self):
-        queryset = self.get_queryset()
-        pk = self.kwargs.get(self.lookup_field)
-
+        item_item = self.kwargs.get('pk')
         item_list = self.request.query_params.get("item_list")
         item_empr = self.request.query_params.get("item_empr")
         item_fili = self.request.query_params.get("item_fili")
 
-        if not all([item_list, item_empr, item_fili]):
-            raise ValidationError("Parâmetros item_list, item_empr e item_fili são obrigatórios.")
+        if not all([item_list, item_empr, item_fili, item_item]):
+            raise ValidationError("Parâmetros item_list, item_empr, item_fili e pk (item_item) são obrigatórios.")
 
-        instance = queryset.filter(
-            pk=pk,
-            item_list=item_list,
-            item_empr=item_empr,
-            item_fili=item_fili
-        ).first()
-
-        if not instance:
+        try:
+            return self.get_queryset().get(
+                item_item=item_item,
+                item_list=item_list,
+                item_empr=item_empr,
+                item_fili=item_fili
+            )
+        except ItensListaCasamento.DoesNotExist:
             raise NotFound("Item não encontrado na lista especificada.")
-
-        return instance
-
-
+        except ItensListaCasamento.MultipleObjectsReturned:
+            raise ValidationError("Mais de um item encontrado com essa chave composta.")
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
         try:
-            logger.info(f"Criação de item(s) por {request.user.pk if request.user else 'Anon'}")
+            logger.info(f"Criação de item(s) por {request.user.pk if request.user else 'None'}")
 
-            # Validação: Garantir que item_pedi seja 0 para todos os itens
-            for item in request.data:
+            for item in request.data if isinstance(request.data, list) else [request.data]:
                 if item.get('item_pedi') != 0:
                     return Response({"detail": "Item não pode ser criado com item_pedi diferente de 0."}, status=400)
 
@@ -103,41 +100,44 @@ class ItensListaCasamentoViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    @action(detail=False, methods=["delete"], url_path="delete-by-composite-key")
-    def delete_by_composite_key(self, request):
-        item_empr = request.query_params.get("item_empr")
-        item_fili = request.query_params.get("item_fili")
-        item_list = request.query_params.get("item_list")
-        item_item = request.query_params.get("item_item")
+    
 
-        if not all([item_empr, item_fili, item_list, item_item]):
-            return Response({"detail": "Parâmetros obrigatórios faltando."}, status=400)
+    @action(detail=False, methods=['post'], url_path='update-lista')
+    @transaction.atomic
+    def update_lista(self, request):
+        data = request.data
+        logger.info(f"Payload recebido no update_lista: {data}")
 
+        if not isinstance(data, dict):
+            return Response({"detail": "Formato de dados inválido. Esperado um objeto com 'remover' e 'adicionar'."}, status=400)
+
+        remover = data.get("remover", [])
+        adicionar = data.get("adicionar", [])
+
+        if not isinstance(remover, list) or not isinstance(adicionar, list):
+            return Response({"detail": "'remover' e 'adicionar' devem ser listas."}, status=400)
+
+        # Remove itens
+        for item in remover:
+            ItensListaCasamento.objects.filter(
+                item_empr=item["item_empr"],
+                item_fili=item["item_fili"],
+                item_list=item["item_list"],
+                item_item=item["item_item"]
+            ).delete()
+
+        # Prepara os dados para adicionar
+        for item in adicionar:
+            item["item_prod"] = item.pop("prod_codi")
+            item["item_pedi"] = 0 # Definindo item_pedi como 0 para novos itens
+
+        serializer = self.get_serializer(data=adicionar, many=True)
         try:
-            item = ItensListaCasamento.objects.get(
-                item_empr=item_empr,
-                item_fili=item_fili,
-                item_list=item_list,
-                item_item=item_item
-            )
-        except ItensListaCasamento.DoesNotExist:
-            return Response({"detail": "Item não encontrado."}, status=404)
+            serializer = self.get_serializer(data=adicionar, many=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+        except serializers.ValidationError as e:
+            logger.warning(f"Erros de validação: {e.detail}")
+            return Response({"errors": e.detail}, status=400)
 
-        if item.item_pedi != 0:
-            return Response({"detail": "Item já foi pedido e não pode ser excluído."}, status=400)
-
-        item.delete()
-        return Response(status=204)
-
-
-
-
-
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-
-        # Verifica se o item foi pedido (não pode editar)
-        if instance.item_pedi != 0:
-            return Response({"detail": "Item já foi pedido e não pode ser editado."}, status=400)
-
-        return super().update(request, *args, **kwargs)
+        return Response({"message": "Lista atualizada com sucesso!"})
