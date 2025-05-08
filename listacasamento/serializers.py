@@ -38,7 +38,9 @@ class ItensListaCasamentoSerializer(serializers.ModelSerializer):
         item_list = validated_data['item_list']
 
         validated_data['item_item'] = get_next_item_number(item_empr, item_fili, item_list)
-        return ItensListaCasamento.objects.create(**validated_data)
+        instance = super().create(validated_data)
+        return instance
+
 
 
 
