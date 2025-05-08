@@ -19,12 +19,6 @@ class ItensListaCasamentoSerializer(serializers.ModelSerializer):
         model = ItensListaCasamento
         fields = '__all__'
 
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        item_list = self.request.query_params.get('item_list', None)
-        if item_list is not None:
-            queryset = queryset.filter(item_list=item_list)
-        return queryset
     
     def get_produto_nome(self, obj):
         try:
