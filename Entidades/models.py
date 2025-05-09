@@ -15,7 +15,7 @@ class Entidades(models.Model):
     ]
 
     enti_empr = models.IntegerField()
-    enti_fili = models.CharField(max_length=100, default='')
+    enti_fili = models.IntegerField(default=1)
     enti_clie = models.BigIntegerField(unique=True, primary_key=True)
     enti_nome = models.CharField(max_length=100, default='')
     enti_tipo_enti = models.CharField(max_length=100, choices=TIPO_ENTIDADES, default='1')
@@ -34,44 +34,7 @@ class Entidades(models.Model):
 
     def __str__(self):
         return self.enti_nome
-
-    def save(self, *args, **kwargs):
-        if not self.enti_clie:
-            self.enti_clie, self._sequencial_ref = Sequencial.preparar_proximo_valor("enti_clie")
-        super().save(*args, **kwargs)
-
-        # Salva o sequencial só se o save da entidade foi bem-sucedido
-        if hasattr(self, "_sequencial_ref"):
-            self._sequencial_ref.ultimo_valor = self.enti_clie
-            self._sequencial_ref.save()
-            del self._sequencial_ref
-
     class Meta:
         db_table = 'entidades'
         managed = 'false'
 
-class Sequencial(models.Model):
-    nome_sequencial = models.CharField(max_length=100, primary_key=True)
-
-    ultimo_valor = models.BigIntegerField(null=True)
-
-    class Meta:
-        db_table = 'sequencial'
-        managed = 'false'
-    
-    @staticmethod
-    def preparar_proximo_valor(nome_sequencial="enti_clie"):
-        from .models import Entidades  # evita import circular
-
-        with transaction.atomic():
-            sequencial, _ = Sequencial.objects.select_for_update().get_or_create(
-                nome_sequencial=nome_sequencial
-            )
-
-            if sequencial.ultimo_valor is None:
-                max_valor = Entidades.objects.aggregate(Max('enti_clie'))['enti_clie__max']
-                sequencial.ultimo_valor = max_valor or 1
-            else:
-                sequencial.ultimo_valor += 1
-
-            return sequencial.ultimo_valor, sequencial

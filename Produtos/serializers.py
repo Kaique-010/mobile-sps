@@ -1,7 +1,7 @@
 # produtos/serializers.py
 from rest_framework import serializers
 from django.db import transaction
-from .models import Produtos
+from .models import Produtos, UnidadeMedida
 from django.db import connection
 
 class ProdutoSerializer(serializers.ModelSerializer):
@@ -20,11 +20,8 @@ class ProdutoSerializer(serializers.ModelSerializer):
         empresa = validated_data.get('prod_empr')
         codigo = validated_data.get('prod_codi')
 
-        if not empresa:
-            raise serializers.ValidationError({'prod_empr': 'Empresa é obrigatória.'})
-
         if not codigo:
-            print("Código não fornecido, gerando automaticamente.")
+            print("Código não fornecido")
             ultimo_produto = (
                 Produtos.objects
                 .filter(prod_empr=empresa, prod_codi__regex=r'^\d+$')
@@ -54,3 +51,9 @@ class ProdutoSerializer(serializers.ModelSerializer):
             validated_data['prod_codi'] = novo_codigo
         
         return super().create(validated_data)
+
+
+class UnidadeMedidaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UnidadeMedida
+        fields = '__all__'

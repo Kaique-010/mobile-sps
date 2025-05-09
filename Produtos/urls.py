@@ -1,8 +1,12 @@
-# produtos/urls.py
 from rest_framework.routers import DefaultRouter
-from .views import ProdutoViewSet
+from .views import ProdutoViewSet, UnidadeMedidaListView
+from django.urls import path
 
 router = DefaultRouter()
 router.register(r'produtos', ProdutoViewSet, basename='produtos')
 
-urlpatterns = router.urls
+urlpatterns = [
+    path('unidadesmedida/', UnidadeMedidaListView.as_view(), name='unidade-list'),
+]
+
+urlpatterns += router.urls  # junta tudo

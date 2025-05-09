@@ -1,4 +1,5 @@
 from rest_framework.views import APIView
+from rest_framework.generics import ListAPIView
 from django.db.models import Q, Subquery, OuterRef, DecimalField, Value as V, CharField
 from django.db.models.functions import Coalesce, Cast
 from rest_framework.decorators import action
@@ -6,9 +7,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import viewsets
 from rest_framework.filters import SearchFilter
-from .models import Produtos, SaldoProduto
-from .serializers import ProdutoSerializer
+from .models import Produtos, SaldoProduto, UnidadeMedida
+from .serializers import ProdutoSerializer, UnidadeMedidaSerializer
 
+
+class UnidadeMedidaListView(ListAPIView):
+    queryset = UnidadeMedida.objects.all()
+    serializer_class = UnidadeMedidaSerializer
 
 class ProdutoListView(APIView):
     permission_classes = [IsAuthenticated]

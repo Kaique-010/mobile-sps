@@ -120,16 +120,17 @@ class Tabelaprecos(models.Model):
         managed = 'false'
 
 class UnidadeMedida(models.Model):
-    codigo = models.CharField(max_length=10, db_column='unme_codi', primary_key=True) 
-    descricao = models.CharField(max_length=50, db_column='unme_desc') 
+    unid_codi = models.CharField(max_length=10, db_column='unid_codi', primary_key=True) 
+    unid_desc = models.CharField(max_length=50, db_column='unid_desc') 
+    
 
     class Meta:
-        db_table = 'unidadesmedida'
+        db_table = 'unidadesmedidas'
         managed = 'false'
 
 
     def __str__(self):
-        return self.descricao
+        return self.unid_desc
 
 
 class Produtos(models.Model):
