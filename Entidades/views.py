@@ -15,7 +15,7 @@ class EntidadesViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         db_alias = getattr(self.request, 'db_alias', 'default')
-        return Entidades.objects.using(db_alias).all().order_by('enti_clie')
+        return Entidades.objects.using(db_alias).all().order_by('enti_nome')
 
     @action(detail=False, methods=['get'], url_path='buscar-endereco')
     def buscar_endereco(self, request):
