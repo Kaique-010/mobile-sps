@@ -28,7 +28,8 @@ class LoginView(APIView):
             print(f' Documento {docu} encontrado ')
             return Response({'error': 'CNPJ não informado.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        licenca = Licencas.objects.filter(lice_docu=docu).first()
+        licenca = Licencas.objects.using("default").filter(lice_docu=docu).first()
+
         print(f'Licença {licenca} encontrada')
         if not licenca:
             return Response({'error': 'CNPJ inválido ou licença bloqueada.'}, status=status.HTTP_404_NOT_FOUND)

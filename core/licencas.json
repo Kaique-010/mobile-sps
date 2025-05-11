@@ -1,0 +1,20 @@
+[
+  {
+    "slug": "demonstracao",
+    "db_name": "savexml839",
+    "db_host": "base.rtalmeida.com.br",
+    "db_port": "5432"
+  },
+  {
+    "slug": "casaealma",
+    "db_name": "savexml1014",
+    "db_host": "base.rtalmeida.com.br",
+    "db_port": "5432"
+  },
+  {
+    "slug": "save6",
+    "db_name": "savexml6",
+    "db_host": "base.rtalmeida.com.br",
+    "db_port": "5432"
+  }
+]

@@ -49,6 +49,8 @@ else:
     print("DB_NAME usado =", config('REMOTE_DB_NAME'))
 
 
+DATABASE_ROUTERS = ['core.db_router.LicencaDBRouter']
+
 # Definir aplicativos instalados
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -80,6 +82,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'core.middleware.LicencaMiddleware',
 ]
 
 # Configurações de CORS
