@@ -1,18 +1,21 @@
 [
   {
     "slug": "demonstracao",
+    "cnpj": "31108104000148",
     "db_name": "savexml839",
     "db_host": "base.rtalmeida.com.br",
     "db_port": "5432"
   },
   {
     "slug": "casaealma",
+    "cnpj": "43131832000150",
     "db_name": "savexml1014",
     "db_host": "base.rtalmeida.com.br",
     "db_port": "5432"
   },
   {
     "slug": "save6",
+    "cnpj": "23905964287",
     "db_name": "savexml6",
     "db_host": "base.rtalmeida.com.br",
     "db_port": "5432"

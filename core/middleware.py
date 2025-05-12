@@ -1,7 +1,5 @@
 from threading import local
-from core.licenca_context import set_licenca_slug
-from core.registry import LICENCAS_MAP
-
+from core.licenca_context import set_current_request, LICENCAS_MAP
 
 _local = local()
 
@@ -16,21 +14,27 @@ class LicencaMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        # Extrai as partes da URL
         path_parts = request.path.strip('/').split('/')
-
-        # Ignorar a verificação de slug na rota de login
-        if len(path_parts) >= 3 and path_parts[1] == "licencas" and path_parts[2] == "login":
+        print(f"URL dividida em partes: {path_parts}")
+        
+        # Se a requisição for para o mapa de licenças, não precisa de slug
+        if request.path.startswith('/api/licencas/mapa/'):
             return self.get_response(request)
 
-        # Certificar que estamos processando uma URL válida para o slug
-        if len(path_parts) < 2 or path_parts[1] == "licencas":
-            raise Exception(f"Licença com slug '{path_parts[1]}' não encontrada ou não informada.")
-        
-        # O slug é o segundo item após /api/{slug}/...
-        slug = path_parts[1] if len(path_parts) > 1 else None
+        # O slug deve estar sempre na URL após '/api/'
+        if len(path_parts) < 3 or path_parts[0] != "api":
+            raise Exception("URL malformada. Esperado /api/<slug>/licencas/...")
 
-        if not slug or not any(lic["slug"] == slug for lic in LICENCAS_MAP):
+        # Extrai o slug
+        slug = path_parts[1]
+        print(f"Slug extraído: {slug}")
+
+        # Verifica se o slug é válido
+        if not any(lic["slug"] == slug for lic in LICENCAS_MAP):
             raise Exception(f"Licença com slug '{slug}' não encontrada ou não informada.")
 
-        set_licenca_slug(slug)  # Define o slug no contexto
+        # Definir o banco de dados da licença
+        set_licenca_slug(slug)
+
         return self.get_response(request)

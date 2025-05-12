@@ -2,6 +2,7 @@ import base64
 import logging
 from Licencas.utils import atualizar_senha
 from rest_framework.views import APIView
+from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import authenticate
@@ -10,10 +11,12 @@ from rest_framework.permissions import IsAuthenticated
 from Licencas.models import Empresas, Filiais, Licencas, Usuarios
 from Licencas.serializers import EmpresaSerializer, FilialSerializer
 from django.contrib.auth.hashers import check_password
+from core.middleware import get_licenca_slug
+from core.registry import LICENCAS_MAP
 
 class LoginView(APIView):
-    def post(self, request):
-
+    def post(self, request, slug=None):  
+        print(f"[DEBUG] Slug recebido: {slug}")
         print("[DEBUG] Request data cru:", request.data)
 
         username = request.data.get('username')
@@ -45,13 +48,12 @@ class LoginView(APIView):
         print(f"[DEBUG] Hash armazenado no banco: {usuario.password}")
         print(f"[DEBUG] Senha fornecida: {password}")
 
-        # Verifique se a senha está sendo comparada corretamente
         if usuario.password == password:  # Senha em texto simples
             print("[DEBUG] Senha comparada diretamente: Senha correta!")
         else:
             print("[DEBUG] Senha comparada diretamente: Senha incorreta!")
 
-        # Token
+
         refresh = RefreshToken.for_user(usuario)
         refresh['username'] = usuario.usua_nome
         refresh['usuario_id'] = usuario.usua_codi
@@ -74,33 +76,51 @@ class LoginView(APIView):
 
 
 
+
 class EmpresaUsuarioView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
-       
-        empresas = Empresas.objects.all()
-        
-        serializer = EmpresaSerializer(empresas, many=True)
-        return Response(serializer.data)
+    def get(self, request, *args, **kwargs):
+        slug = get_licenca_slug()  # Aqui você obtém o slug do contexto
+        licenca_info = next((item for item in LICENCAS_MAP if item['slug'] == slug), None)
+
+        if licenca_info:
+            cnpj = licenca_info['cnpj']
+            empresas = Empresas.objects.filter(empr_docu=cnpj)  # Busca empresas usando o CNPJ
+            if empresas.exists():
+                # Aqui você usa o serializer corretamente, com .data para pegar os dados serializados
+                serializer = EmpresaSerializer(empresas, many=True)
+                return Response(serializer.data)
+            else:
+                return Response({"error": "Nenhuma empresa encontrada para este CNPJ."}, status=404)
+        else:
+            return Response({"error": "Licença não encontrada."}, status=404)
+
+
 
 
 class FiliaisPorEmpresaView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
+    def get(self, request, slug=None):
+        slug = get_licenca_slug()
+
+        if not slug:
+            return Response({"error": "Licença não encontrada."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Verificar se o 'empresa_id' foi passado na query string
         empresa_id = request.query_params.get('empresa_id')
+
         if not empresa_id:
-            
             return Response({'error': 'Empresa não fornecida.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Aqui, vamos buscar filiais usando o campo correto, por exemplo 'empr_empr'
         filiais = Filiais.objects.filter(empr_empr=empresa_id)
 
         if not filiais:
-           
             return Response({'error': 'Nenhuma filial encontrada para esta empresa.'}, status=status.HTTP_404_NOT_FOUND)
 
-       
+        # Serializar e retornar os dados das filiais
         serializer = FilialSerializer(filiais, many=True)
         return Response(serializer.data)
 
@@ -121,3 +141,12 @@ class AlterarSenhaView(APIView):
             return Response({"message": "Senha alterada com sucesso."}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    
+@api_view(['GET'])
+def licencas_mapa(request, slug=None):
+    
+    
+    # Retorna as licenças públicas sem depender de slug
+    from core.licenca_context import LICENCAS_MAP
+    return Response(LICENCAS_MAP)

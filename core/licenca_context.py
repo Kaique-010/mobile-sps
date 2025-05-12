@@ -1,11 +1,17 @@
 # core/licenca_context.py
 
-from threading import local
+import threading
+_thread_locals = threading.local()
 
-_local = local()
+def set_current_request(request):
+    _thread_locals.request = request
 
-def set_licenca_slug(slug):
-    _local.licenca_slug = slug
+def get_current_request():
+    return getattr(_thread_locals, 'request', None)
 
-def get_licenca_slug():
-    return getattr(_local, 'licenca_slug', None)
+import json
+from pathlib import Path
+
+# Carrega apenas os dados. Nada de settings, nada de imports cruzados.
+json_path = Path(__file__).resolve().parent / 'licencas.json'
+LICENCAS_MAP = json.load(open(json_path))

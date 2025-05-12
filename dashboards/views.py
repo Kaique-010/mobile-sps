@@ -2,17 +2,22 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from Produtos.models import SaldoProduto
 from Pedidos.models import PedidoVenda
+from rest_framework import status
+from core.middleware import get_licenca_slug
 from .serializers import DashboardSerializer
 from django.db.models import Sum, F
 from decimal import Decimal
 
 class DashboardAPIView(APIView):
-    def get(self, request):
-        db_alias = getattr(request, 'db_alias', 'default')
+    def get(self, request, slug=None):
+        slug = get_licenca_slug()
+
+        if not slug:
+            return Response({"error": "Licença não encontrada."}, status=status.HTTP_404_NOT_FOUND)
 
         # Top 10 produtos com mais saldo
         saldos = (
-            SaldoProduto.objects.using(db_alias)
+            SaldoProduto.objects.all()  # Remove o uso do db_alias
             .values(nome=F('produto_codigo__prod_nome'))
             .annotate(total=Sum('saldo_estoque'))
             .order_by('-total')[:10]
@@ -20,7 +25,7 @@ class DashboardAPIView(APIView):
 
         # Últimos 10 pedidos
         pedidos = (
-            PedidoVenda.objects.using(db_alias)
+            PedidoVenda.objects.all()  # Remove o uso do db_alias
             .order_by('-pedi_data')[:10]  # Substitua 'pedi_data' se seu campo for outro
             .values(
                 cliente=F('pedi_forn__enti_nome'),
