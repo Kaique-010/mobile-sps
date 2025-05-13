@@ -12,47 +12,40 @@ from Licencas.models import Empresas, Filiais, Licencas, Usuarios
 from Licencas.serializers import EmpresaSerializer, FilialSerializer
 from django.contrib.auth.hashers import check_password
 from core.middleware import get_licenca_slug
-from core.registry import LICENCAS_MAP
+from core.registry import LICENCAS_MAP, get_licenca_db_config
+
+
+def get_banco_por_docu(docu):
+    from core.registry import LICENCAS_MAP
+    match = next((x for x in LICENCAS_MAP if x['cnpj'] == docu), None)
+    return match['slug'] if match else None
+
 
 class LoginView(APIView):
     def post(self, request, slug=None):  
-        print(f"[DEBUG] Slug recebido: {slug}")
-        print("[DEBUG] Request data cru:", request.data)
-
-        username = request.data.get('username')
-        password = request.data.get('password')
-        docu = request.data.get('docu')
-
-        print(f"[DEBUG] usuarioname: {username}")
-        print(f"[DEBUG] password: {password}")
-        print(f"[DEBUG] docu: {docu}")
+        data = request.data
+        username = data.get("username")
+        password = data.get("password")
+        docu = data.get("docu")
 
         if not docu:
-            print(f' Documento {docu} encontrado ')
             return Response({'error': 'CNPJ não informado.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        licenca = Licencas.objects.using("default").filter(lice_docu=docu).first()
+        banco = get_licenca_db_config()
+        if not banco:
+            return Response({'error': 'CNPJ inválido ou licença não encontrada.'}, status=404)
 
-        print(f'Licença {licenca} encontrada')
-        if not licenca:
-            return Response({'error': 'CNPJ inválido ou licença bloqueada.'}, status=status.HTTP_404_NOT_FOUND)
+        licenca = Licencas.objects.using(banco).filter(lice_docu=docu).first()
+        if not licenca or licenca.lice_bloq:
+            return Response({'error': 'CNPJ inválido ou licença bloqueada.'}, status=403)
 
         try:
-            usuario = Usuarios.objects.get(usua_nome=username)
-            print(f'Usuário {usuario.usua_nome} encontrado')  
+            usuario = Usuarios.objects.using(banco).get(usua_nome=username)
         except Usuarios.DoesNotExist:
-            return Response({'error': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            return Response({'error': f'Erro ao acessar os dados do usuário: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'error': 'Usuário não encontrado.'}, status=404)
 
-        print(f"[DEBUG] Hash armazenado no banco: {usuario.password}")
-        print(f"[DEBUG] Senha fornecida: {password}")
-
-        if usuario.password == password:  # Senha em texto simples
-            print("[DEBUG] Senha comparada diretamente: Senha correta!")
-        else:
-            print("[DEBUG] Senha comparada diretamente: Senha incorreta!")
-
+        if usuario.password == password:
+            return Response({'login': 'Login Ok.'}, status=200)
 
         refresh = RefreshToken.for_user(usuario)
         refresh['username'] = usuario.usua_nome
@@ -72,9 +65,6 @@ class LoginView(APIView):
                 'lice_nome': licenca.lice_nome,
             }
         })
-
-
-
 
 
 class EmpresaUsuarioView(APIView):

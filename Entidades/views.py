@@ -1,4 +1,3 @@
-from urllib import request
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import viewsets
@@ -10,12 +9,13 @@ from .utils import buscar_endereco_por_cep
 class EntidadesViewSet(viewsets.ModelViewSet):    
     serializer_class = EntidadesSerializer
     filter_backends = [SearchFilter]
-    lookup_field = 'enti_clie'
     search_fields = ['enti_nome', 'enti_nume']
+    lookup_field = 'enti_clie'
+    queryset = Entidades.objects.none()  # Evita erro antes do middleware definir o DB
 
     def get_queryset(self):
-        db_alias = getattr(self.request, 'db_alias', 'default')
-        return Entidades.objects.using(db_alias).all().order_by('enti_nome')
+        # Aqui o banco já foi trocado pelo middleware, então é só filtrar normalmente
+        return Entidades.objects.all().order_by('enti_nome')
 
     @action(detail=False, methods=['get'], url_path='buscar-endereco')
     def buscar_endereco(self, request):
