@@ -3,31 +3,39 @@ from rest_framework import status
 from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError, NotFound
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.filters import SearchFilter
 from rest_framework.decorators import action
 from django.db import transaction, IntegrityError
 from rest_framework.decorators import api_view
+from core.decorator import modulo_necessario, ModuloRequeridoMixin
+from core.registry import get_licenca_db_config
 from .models import EntradaEstoque
 from .serializers import EntradasEstoqueSerializer
+
+
+
 import logging
+
 logger = logging.getLogger(__name__)
 
 
-import logging
-
-logger = logging.getLogger(__name__)
-
-
-class EntradasEstoqueViewSet(ModelViewSet):
+class EntradasEstoqueViewSet(ModuloRequeridoMixin, ModelViewSet):
+    modulo_necessario = 'Entradas_Estoque'
+    permission_classes = [IsAuthenticated]
     serializer_class = EntradasEstoqueSerializer
     filter_backends = [SearchFilter]
     search_fields = ['entr_enti', 'entr_prod']
 
-    def get_queryset(self):
-        db_alias = getattr(self.request, 'db_alias', 'default')
-        return EntradaEstoque.objects.using(db_alias).all().order_by('-entr_sequ')
-
-       
+    def get_queryset(self): 
+        banco = get_licenca_db_config(self.request)
+        
+        if banco:
+            return EntradaEstoque.objects.using(banco).all().order_by('-entr_sequ')
+        else:           
+            logger.error("Banco de dados não encontrado.")
+            raise NotFound("Banco de dados não encontrado.")
+        
 
     def create(self, request, *args, **kwargs):
         db_alias = getattr(request, 'db_alias', 'default')

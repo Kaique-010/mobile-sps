@@ -9,32 +9,39 @@ def set_licenca_slug(slug):
 def get_licenca_slug():
     return getattr(_local, 'licenca_slug', None)
 
+def set_modulos_disponiveis(modulos):
+    _local.modulos_disponiveis = modulos
+
+def get_modulos_disponiveis():
+    return getattr(_local, 'modulos_disponiveis', [])
+
 class LicencaMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        # Extrai as partes da URL
         path_parts = request.path.strip('/').split('/')
         print(f"URL dividida em partes: {path_parts}")
-        
-        # Se a requisição for para o mapa de licenças, não precisa de slug
+
         if request.path.startswith('/api/licencas/mapa/'):
             return self.get_response(request)
 
-        # O slug deve estar sempre na URL após '/api/'
         if len(path_parts) < 3 or path_parts[0] != "api":
-            raise Exception("URL malformada. Esperado /api/<slug>/licencas/...")
+            raise Exception("URL malformada. Esperado /api/<slug>/...")
 
-        # Extrai o slug
         slug = path_parts[1]
         print(f"Slug extraído: {slug}")
 
-        # Verifica se o slug é válido
-        if not any(lic["slug"] == slug for lic in LICENCAS_MAP):
-            raise Exception(f"Licença com slug '{slug}' não encontrada ou não informada.")
+        licenca = next((lic for lic in LICENCAS_MAP if lic["slug"] == slug), None)
+        if not licenca:
+            raise Exception(f"Licença com slug '{slug}' não encontrada.")
 
-        # Definir o banco de dados da licença
+        # Set no contexto local e request
         set_licenca_slug(slug)
+        set_modulos_disponiveis(licenca.get("modulos", []))
+
+        # Joga direto no request também
+        request.slug = slug
+        request.modulos_disponiveis = licenca.get("modulos", [])
 
         return self.get_response(request)

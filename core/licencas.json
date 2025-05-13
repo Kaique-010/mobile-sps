@@ -4,20 +4,23 @@
     "cnpj": "31108104000148",
     "db_name": "savexml839",
     "db_host": "base.rtalmeida.com.br",
-    "db_port": "5432"
+    "db_port": "5432",
+    "modulos": ["dashboards","Produtos", "Pedidos", "Entradas_Estoque", "Saidas_Estoque", "listacasamento", "Entidades"] 
   },
   {
     "slug": "casaealma",
     "cnpj": "43131832000150",
     "db_name": "savexml1014",
     "db_host": "base.rtalmeida.com.br",
-    "db_port": "5432"
+    "db_port": "5432",
+    "modulos": ["dashboards","Produtos", "listacasamento"] 
   },
   {
     "slug": "save6",
     "cnpj": "23905964287",
     "db_name": "savexml6",
     "db_host": "base.rtalmeida.com.br",
-    "db_port": "5432"
+    "db_port": "5432",
+    "modulos": ["dashboards","Produtos", "Entradas_Estoque", "Saidas_Estoque", "listacasamento"] 
   }
 ]

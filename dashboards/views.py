@@ -3,12 +3,14 @@ from rest_framework.response import Response
 from Produtos.models import SaldoProduto
 from Pedidos.models import PedidoVenda
 from rest_framework import status
+from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from core.middleware import get_licenca_slug
 from .serializers import DashboardSerializer
 from django.db.models import Sum, F
 from decimal import Decimal
 
-class DashboardAPIView(APIView):
+class DashboardAPIView(ModuloRequeridoMixin, APIView):
+    modulo_necessario = 'Dashboard'
     def get(self, request, slug=None):
         slug = get_licenca_slug()
 

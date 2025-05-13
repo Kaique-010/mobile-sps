@@ -15,10 +15,9 @@ class Entidades(models.Model):
     ]
 
     enti_empr = models.IntegerField()
-    enti_fili = models.IntegerField(default=1)
     enti_clie = models.BigIntegerField(unique=True, primary_key=True)
     enti_nome = models.CharField(max_length=100, default='')
-    enti_tipo_enti = models.CharField(max_length=100, choices=TIPO_ENTIDADES, default='1')
+    enti_tipo_enti = models.CharField(max_length=100, choices=TIPO_ENTIDADES, default='FO')
     enti_fant = models.CharField(max_length=100, default='', blank=True, null=True)  
     enti_cpf = models.CharField(max_length=11, blank=True, null=True)  
     enti_cnpj = models.CharField(max_length=14, blank=True, null=True)  

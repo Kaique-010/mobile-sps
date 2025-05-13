@@ -1,5 +1,6 @@
 import base64
 import logging
+import re
 from Licencas.utils import atualizar_senha
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view
@@ -10,9 +11,10 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 from Licencas.models import Empresas, Filiais, Licencas, Usuarios
 from Licencas.serializers import EmpresaSerializer, FilialSerializer
+from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from django.contrib.auth.hashers import check_password
 from core.middleware import get_licenca_slug
-from core.registry import LICENCAS_MAP, get_licenca_db_config
+from core.registry import LICENCAS_MAP, get_licenca_db_config, get_modulos_por_docu
 
 
 def get_banco_por_docu(docu):
@@ -22,16 +24,18 @@ def get_banco_por_docu(docu):
 
 
 class LoginView(APIView):
+    
     def post(self, request, slug=None):  
         data = request.data
         username = data.get("username")
         password = data.get("password")
         docu = data.get("docu")
+        modulos_disponiveis = [mod.lower().replace("_", "") for mod in get_modulos_por_docu(docu)]
 
         if not docu:
             return Response({'error': 'CNPJ não informado.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        banco = get_licenca_db_config()
+        banco = get_licenca_db_config(request)
         if not banco:
             return Response({'error': 'CNPJ inválido ou licença não encontrada.'}, status=404)
 
@@ -63,7 +67,8 @@ class LoginView(APIView):
             'licenca': {
                 'lice_id': licenca.lice_id,
                 'lice_nome': licenca.lice_nome,
-            }
+            },
+            'modulos': modulos_disponiveis,
         })
 
 
@@ -71,20 +76,18 @@ class EmpresaUsuarioView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        slug = get_licenca_slug()  # Aqui você obtém o slug do contexto
+        slug = get_licenca_slug()
         licenca_info = next((item for item in LICENCAS_MAP if item['slug'] == slug), None)
 
-        if licenca_info:
-            cnpj = licenca_info['cnpj']
-            empresas = Empresas.objects.filter(empr_docu=cnpj)  # Busca empresas usando o CNPJ
-            if empresas.exists():
-                # Aqui você usa o serializer corretamente, com .data para pegar os dados serializados
-                serializer = EmpresaSerializer(empresas, many=True)
-                return Response(serializer.data)
-            else:
-                return Response({"error": "Nenhuma empresa encontrada para este CNPJ."}, status=404)
-        else:
+        if not licenca_info:
             return Response({"error": "Licença não encontrada."}, status=404)
+
+        empresas = Empresas.objects.all()
+        if empresas.exists():
+            serializer = EmpresaSerializer(empresas, many=True)
+            return Response(serializer.data)
+        else:
+            return Response({"error": "Nenhuma empresa encontrada."}, status=404)
 
 
 

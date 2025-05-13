@@ -3,10 +3,13 @@ from rest_framework import status
 from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError, NotFound
+from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from rest_framework.filters import SearchFilter
 from rest_framework.decorators import action
 from django.db import transaction, IntegrityError
 from rest_framework.decorators import api_view
+from rest_framework.permissions import IsAuthenticated
+from core.utils import get_licenca_db_config
 from .models import ListaCasamento, ItensListaCasamento
 from .serializers import ListaCasamentoSerializer, ItensListaCasamentoSerializer
 
@@ -14,17 +17,36 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class ListaCasamentoViewSet(ModelViewSet):
+class ListaCasamentoViewSet(ModuloRequeridoMixin,ModelViewSet):
+    modulo_necessario = 'listacasamento'
+    permission_classes = [IsAuthenticated]
     serializer_class = ListaCasamentoSerializer
     filter_backends = [SearchFilter]
     search_fields = ['list_noiv__nome', 'list_codi']
 
     def get_queryset(self):
-        db_alias = getattr(self.request, 'db_alias', 'default')
-        return ListaCasamento.objects.using(db_alias).all().order_by('list_codi')
+        banco = get_licenca_db_config(self.request)
+        if banco:
+            return ListaCasamento.objects.using(banco).all().order_by('list_codi')
+        
+        else:
+            logger.error("Banco de dados não encontrado.")
+            raise NotFound("Banco de dados não encontrado.")
     
     def destroy(self, request, *args, **kwargs):
         lista = self.get_object()
+        logger.info(f"🗑️ [VIEW DELETE] Solicitada exclusão da lista de casamento ID {lista.list_codi}")
+        
+        banco = get_licenca_db_config(self.request)
+        if banco:
+            with transaction.atomic(using=banco):
+                lista.delete()
+            logger.info(f"🗑️ [VIEW DELETE] Exclusão da lista de casamento ID {lista.list_codi} concluída")
+            logger.info(f"✅ Exclusão concluída: ID {lista.list_codi}")
+        else:
+            logger.error("Banco de dados não encontrado.")
+            raise NotFound("Banco de dados não encontrado.")
+        
         
         if ItensListaCasamento.objects.filter(item_list=lista.list_codi).exists():
             raise ValidationError({"detail": "Não é possível excluir a lista de casamento, pois existem itens associados."}, status=status.HTTP_400_BAD_REQUEST)
@@ -33,8 +55,17 @@ class ListaCasamentoViewSet(ModelViewSet):
         return super().destroy(request, *args, **kwargs)
 
 
-class ItensListaCasamentoViewSet(ModelViewSet):
+class ItensListaCasamentoViewSet(ModuloRequeridoMixin,ModelViewSet):
+    modulo_necessario = 'listacasamento'
     serializer_class = ItensListaCasamentoSerializer
+    
+    banco = get_licenca_db_config
+    
+    if banco:
+        queryset = ItensListaCasamento.objects.using(banco).all().order_by('item_item')
+    else:
+        logger.error("Banco de dados não encontrado.")
+        raise NotFound("Banco de dados não encontrado.")
 
     def get_queryset(self):
         item_empr = self.request.query_params.get('item_empr')
