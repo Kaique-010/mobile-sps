@@ -3,12 +3,12 @@ from rest_framework import serializers
 from django.db.models import Max
 from .models import SaidasEstoque
 from Produtos.models import Produtos
-from Licencas.models  import Empresas
-
+from Licencas.models import Empresas
+from core.serializers import BancoContextMixin  # nosso mixin
 
 logger = logging.getLogger(__name__)
 
-class SaidasEstoqueSerializer(serializers.ModelSerializer):
+class SaidasEstoqueSerializer(BancoContextMixin, serializers.ModelSerializer):
     empresa_nome = serializers.SerializerMethodField()
     produto_nome = serializers.SerializerMethodField()
 
@@ -20,46 +20,54 @@ class SaidasEstoqueSerializer(serializers.ModelSerializer):
         }
 
     def get_produto_nome(self, obj):
-        try:
-            return Produtos.objects.get(prod_codi=obj.said_prod).prod_nome
-        except Produtos.DoesNotExist:
+        banco = self.context.get('banco')
+        if not banco:
             return None
+        try:
+            return Produtos.objects.using(banco).get(prod_codi=obj.entr_prod).prod_nome
+        except Produtos.DoesNotExist:
+            logger.warning(f"Produto com ID {obj.entr_prod} não encontrado.")
+            return None
+        
 
     def get_empresa_nome(self, obj):
+        banco = self.context.get('banco')
+        if not banco:
+            return None
+
         try:
-            return Empresas.objects.get(empr_codi=obj.said_empr).empr_nome
+            return Empresas.objects.using(banco).get(empr_codi=obj.entr_empr).empr_nome
         except Empresas.DoesNotExist:
+            logger.warning(f"Empresa com ID {obj.entr_empr} não encontrada.")
             return None
 
     def create(self, validated_data):
-        logger.info(f" [CREATE] Dados recebidos: {validated_data}")
+        banco = self.get_banco()
+        logger.info(f"[CREATE] Dados recebidos: {validated_data}")
+
         if not validated_data.get('said_sequ'):
-            max_seq = SaidasEstoque.objects.aggregate(Max('said_sequ'))['said_sequ__max'] or 0
+            max_seq = self.using_queryset(SaidasEstoque).aggregate(
+                Max('said_sequ')
+            )['said_sequ__max'] or 0
             validated_data['said_sequ'] = max_seq + 1
-            logger.info(f" Sequência gerada automaticamente: {validated_data['said_sequ']}")
+            logger.info(f"Sequência gerada automaticamente: {validated_data['said_sequ']}")
+
         try:
-            instance = super().create(validated_data)
-            logger.info(f" Saída criada com sucesso: ID={instance}")
+            instance = self.using_queryset(SaidasEstoque).create(**validated_data)
+            logger.info(f"Saída criada com sucesso: ID={instance.pk}")
             return instance
         except Exception as e:
-            logger.error(f" Erro ao criar saída: {str(e)}")
+            logger.error(f"Erro ao criar saída: {e}")
             raise
 
     def update(self, instance, validated_data):
-        logger.info(f" [UPDATE] Atualizando ID={instance} com dados: {validated_data}")
+        logger.info(f"[UPDATE] Atualizando ID={instance.pk} com dados: {validated_data}")
         try:
+            # Assumindo que a view buscou a instância via using_queryset,
+            # super().update() já salva no banco correto.
             instance = super().update(instance, validated_data)
-            logger.info(f"✅ Saída atualizada com sucesso: ID={instance.id}")
+            logger.info(f"✅ Saída atualizada com sucesso: ID={instance.pk}")
             return instance
         except Exception as e:
-            logger.error(f" Erro ao atualizar saída ID={instance.id}: {str(e)}")
-            raise
-
-    def destroy(self, instance):
-        logger.info(f"[DELETE] Tentando excluir Saída ID={instance}")
-        try:
-            instance.delete()
-            logger.info(f"✅ saída excluída com sucesso: ID={instance}")
-        except Exception as e:
-            logger.error(f"Erro ao excluir saída ID={instance}: {str(e)}")
+            logger.error(f"Erro ao atualizar saída ID={instance.pk}: {e}")
             raise

@@ -6,7 +6,9 @@ from rest_framework.permissions import IsAuthenticated
 from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from Pedidos import serializers
 import Produtos
+from rest_framework import status
 from Produtos.serializers import ProdutoSerializer
+from core.middleware import get_licenca_slug
 from core.registry import get_licenca_db_config
 from .models import Entidades
 from .serializers import EntidadesSerializer
@@ -30,11 +32,21 @@ class EntidadesViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
 
     def get_serializer_class(self):
         return EntidadesSerializer
-            
+    
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['banco'] = get_licenca_db_config(self.request)
+        return context
 
     @action(detail=False, methods=['get'], url_path='buscar-endereco')
     @modulo_necessario('Entidades')
-    def buscar_endereco(self, request):
+    def buscar_endereco(self, request, slug=None):
+        slug = get_licenca_slug()
+
+        if not slug:
+            return Response({"error": "Licença não encontrada."}, status=status.HTTP_404_NOT_FOUND)
+        
         cep = request.GET.get('cep')
         if not cep:
             return Response({"erro": "CEP não informado"}, status=400)

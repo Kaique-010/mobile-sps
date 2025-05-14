@@ -1,6 +1,3 @@
-import base64
-import logging
-import re
 from Licencas.utils import atualizar_senha
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view

@@ -1,4 +1,3 @@
-# serializers.py
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from django.db import models
@@ -7,11 +6,17 @@ from Produtos.models import Produtos
 from .utils import get_next_item_number
 from Licencas.models import Empresas
 from .models import ListaCasamento, ItensListaCasamento
+from core.serializers import BancoContextMixin
 
-class ItensListaCasamentoSerializer(serializers.ModelSerializer):
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class ItensListaCasamentoSerializer(BancoContextMixin, serializers.ModelSerializer):
     produto_nome = serializers.SerializerMethodField(read_only=True)
-    item_item = serializers.IntegerField(read_only=True)  
-    item_prod = serializers.PrimaryKeyRelatedField(queryset=Produtos.objects.all()) 
+    item_item = serializers.IntegerField(read_only=True)
+    item_prod = serializers.PrimaryKeyRelatedField(queryset=Produtos.objects.all())
     log_time = serializers.TimeField(read_only=True)
     log_data = serializers.DateField(read_only=True)
 
@@ -19,11 +24,14 @@ class ItensListaCasamentoSerializer(serializers.ModelSerializer):
         model = ItensListaCasamento
         fields = '__all__'
 
-    
     def get_produto_nome(self, obj):
+        banco = self.context.get('banco')
+        if not banco:
+            return None
         try:
-            return Produtos.objects.get(prod_codi=obj.item_prod).prod_nome
+            return Produtos.objects.using(banco).get(prod_codi=obj.entr_prod).prod_nome
         except Produtos.DoesNotExist:
+            logger.warning(f"Produto com ID {obj.entr_prod} não encontrado.")
             return None
 
     def create(self, validated_data):
@@ -32,18 +40,13 @@ class ItensListaCasamentoSerializer(serializers.ModelSerializer):
         item_list = validated_data['item_list']
 
         validated_data['item_item'] = get_next_item_number(item_empr, item_fili, item_list)
-        instance = super().create(validated_data)
-        return instance
+        return self.using_queryset(ItensListaCasamento).create(**validated_data)
 
 
-
-
-
-class ListaCasamentoSerializer(serializers.ModelSerializer):
+class ListaCasamentoSerializer(BancoContextMixin, serializers.ModelSerializer):
     itens = ItensListaCasamentoSerializer(many=True, required=False)
     cliente_nome = serializers.CharField(source='list_noiv.enti_nome', read_only=True)
-    empresa_nome = serializers.SerializerMethodField()  
-   
+    empresa_nome = serializers.SerializerMethodField()
 
     class Meta:
         model = ListaCasamento
@@ -61,13 +64,16 @@ class ListaCasamentoSerializer(serializers.ModelSerializer):
         return data
 
     def get_empresa_nome(self, obj):
-        try:
-            return Empresas.objects.get(empr_codi=obj.list_empr).empr_nome
-        except Empresas.DoesNotExist:
+        banco = self.context.get('banco')
+        if not banco:
             return None
-    
-    
-            
+
+        try:
+            return Empresas.objects.using(banco).get(empr_codi=obj.entr_empr).empr_nome
+        except Empresas.DoesNotExist:
+            logger.warning(f"Empresa com ID {obj.entr_empr} não encontrada.")
+            return None
+
     def perform_bulk_create(self, serializer):
         try:
             serializer.save()

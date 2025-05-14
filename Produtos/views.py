@@ -4,10 +4,12 @@ from django.db.models import Q, Subquery, OuterRef, DecimalField, Value as V, Ch
 from django.db.models.functions import Coalesce, Cast
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
 from rest_framework.response import Response
 from rest_framework import viewsets
 from rest_framework.filters import SearchFilter
 from core.decorator import modulo_necessario, ModuloRequeridoMixin
+from core.middleware import get_licenca_slug
 from core.registry import get_licenca_db_config
 from .models import Produtos, SaldoProduto, UnidadeMedida
 from .serializers import ProdutoSerializer, UnidadeMedidaSerializer
@@ -16,7 +18,11 @@ from .serializers import ProdutoSerializer, UnidadeMedidaSerializer
 class UnidadeMedidaListView(ModuloRequeridoMixin, ListAPIView):
     modulo_necessario = 'Produtos'
     serializer_class = UnidadeMedidaSerializer
-    def get(self, request):
+    def get(self, request, slug=None):
+        slug = get_licenca_slug()
+
+        if not slug:
+            return Response({"error": "Licença não encontrada."}, status=status.HTTP_404_NOT_FOUND)
         banco = get_licenca_db_config(self.request)
         print(f"\n🔍 Banco de dados selecionado: {banco}")
         
@@ -102,3 +108,7 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         serializer = self.get_serializer(produtos, many=True)
         return Response(serializer.data)
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['banco'] = get_licenca_db_config(self.request)
+        return context
