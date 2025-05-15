@@ -5,7 +5,15 @@
     "db_name": "savexml839",
     "db_host": "base.rtalmeida.com.br",
     "db_port": "5432",
-    "modulos": ["dashboards","Produtos", "Pedidos", "Entradas_Estoque", "Saidas_Estoque", "listacasamento", "Entidades"] 
+    "modulos": [
+      "dashboards",
+      "Produtos",
+      "Pedidos",
+      "Entradas_Estoque",
+      "Saidas_Estoque",
+      "listacasamento",
+      "Entidades"
+    ]
   },
   {
     "slug": "casaealma",
@@ -13,7 +21,7 @@
     "db_name": "savexml1014",
     "db_host": "base.rtalmeida.com.br",
     "db_port": "5432",
-    "modulos": ["dashboards","Produtos", "listacasamento"] 
+    "modulos": ["dashboards", "Produtos", "listacasamento"]
   },
   {
     "slug": "save6",
@@ -21,6 +29,28 @@
     "db_name": "savexml6",
     "db_host": "base.rtalmeida.com.br",
     "db_port": "5432",
-    "modulos": ["dashboards","Produtos", "Entradas_Estoque", "Saidas_Estoque", "listacasamento"] 
+    "modulos": [
+      "dashboards",
+      "Produtos",
+      "Entradas_Estoque",
+      "Saidas_Estoque",
+      "listacasamento"
+    ]
+  },
+  {
+    "slug": "casa",
+    "cnpj": "43131832000151",
+    "db_name": "casa",
+    "db_host": "localhost",
+    "db_port": "5432",
+    "modulos": [
+      "dashboards",
+      "Produtos",
+      "Pedidos",
+      "Entradas_Estoque",
+      "Saidas_Estoque",
+      "listacasamento",
+      "Entidades"
+    ]
   }
 ]
