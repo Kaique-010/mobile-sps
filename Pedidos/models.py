@@ -17,8 +17,8 @@ class PedidoVenda(models.Model):
     pedi_data = models.DateField()
     pedi_tota = models.DecimalField(decimal_places=2, max_digits=15)
     pedi_canc = models.BooleanField(default=False)
-    pedi_fina = models.CharField(max_length=100, choices=TIPO_FINANCEIRO, default='0')  # Ajustado para ser uma string
-    pedi_vend = models.ForeignKey(Entidades, on_delete=models.CASCADE, db_column='pedi_vend', related_name='pedidos_como_vendedor', null=True)  # Removido 'default'
+    pedi_fina = models.CharField(max_length=100, choices=TIPO_FINANCEIRO, default='0')
+    pedi_vend = models.ForeignKey(Entidades, on_delete=models.CASCADE, db_column='pedi_vend', related_name='pedidos_como_vendedor', null=True)  
     pedi_stat = models.CharField(max_length=50, choices=[
         ('Pendente', 'Pendente'),
         ('Processando', 'Processando'),
@@ -38,11 +38,11 @@ class PedidoVenda(models.Model):
     
     
 class Itenspedidovenda(models.Model):
-    iped_empr = models.IntegerField(primary_key=True)  
+    iped_empr = models.IntegerField(primary_key=True, db_column='iped_empr')  
     iped_fili = models.IntegerField(unique=True)
-    iped_pedi = models.ForeignKey(PedidoVenda, on_delete=models.CASCADE, related_name="itens_pedido")
+    iped_pedi = models.CharField(db_column='iped_pedi', max_length=50)
     iped_item = models.IntegerField()
-    iped_prod = models.ForeignKey(Produtos, on_delete=models.CASCADE, db_column='prod_codi') 
+    iped_prod = models.CharField(max_length=60, db_column='iped_prod') 
     iped_quan = models.DecimalField(max_digits=15, decimal_places=5, blank=True, null=True)
     iped_unit = models.DecimalField(max_digits=15, decimal_places=5, blank=True, null=True)
     iped_tota = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)

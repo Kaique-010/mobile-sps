@@ -48,6 +48,16 @@
       "name": "lacera",
       "database": "lacera",
       "username": "postgres"
+    },
+    {
+      "previewLimit": 50,
+      "server": "localhost",
+      "port": 5432,
+      "askForPassword": true,
+      "driver": "PostgreSQL",
+      "name": "casaa",
+      "database": "casaa",
+      "username": "postgres"
     }
   ]
 }
