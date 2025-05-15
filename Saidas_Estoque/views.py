@@ -30,6 +30,11 @@ class SaidasEstoqueViewSet(ModuloRequeridoMixin, ModelViewSet):
         else:
             logger.error("Banco de dados não encontrado.")
             raise NotFound("Banco de dados não encontrado.")
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['banco'] = get_licenca_db_config(self.request)
+        return context
         
 
     def create(self, request, *args, **kwargs):

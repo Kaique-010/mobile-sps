@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 from django.db.models import Max
 from .models import EntradaEstoque
 from Produtos.models import Produtos
@@ -44,15 +45,21 @@ class EntradasEstoqueSerializer(BancoContextMixin, serializers.ModelSerializer):
 
 
     def create(self, validated_data):
+        banco = self.context.get('banco')
+        
+        if not banco:
+            raise ValidationError("Banco de dados não informado no contexto.")
+
         if not validated_data.get('entr_sequ'):
-            max_seq = self.using_queryset(EntradaEstoque).aggregate(Max('entr_sequ'))['entr_sequ__max'] or 0
+            max_seq = EntradaEstoque.objects.using(banco).aggregate(Max('entr_sequ'))['entr_sequ__max'] or 0
             validated_data['entr_sequ'] = max_seq + 1
         try:
-            instance = self.using_queryset(EntradaEstoque).create(**validated_data)
+            instance = EntradaEstoque.objects.using(banco).create(**validated_data)
             return instance
         except Exception as e:
             logger.error(f"Erro ao criar entrada: {str(e)}")
             raise
+
         
 
     def update(self, instance, validated_data):
