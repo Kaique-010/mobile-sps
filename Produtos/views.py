@@ -1,4 +1,5 @@
 from rest_framework.views import APIView
+import re
 from rest_framework.generics import ListAPIView
 from django.db.models import Q, Subquery, OuterRef, DecimalField, Value as V, CharField
 from django.db.models.functions import Coalesce, Cast
@@ -85,30 +86,38 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         )
 
     @action(detail=False, methods=["get"])
-    def busca(self, request):
-        banco = get_licenca_db_config(self.request)
-        print(f"\n🔍 Banco de dados selecionado: {banco}")
-        q = request.query_params.get("q", "").lstrip("0") 
-        saldo_subquery = Subquery(
-            SaldoProduto.objects.using(banco).filter(
-                produto_codigo=OuterRef('pk')
-            ).values('saldo_estoque')[:1],
-            output_field=DecimalField()
-        )
+    def busca(self, request, slug=None):
+        slug = get_licenca_slug()
 
-        produtos = Produtos.objects.using(banco).annotate(
-            saldo_estoque=Coalesce(saldo_subquery, V(0), output_field=DecimalField()),
-            prod_coba_str=Cast('prod_coba', CharField())
-        ).filter(
-            Q(prod_nome__icontains=q) |
-            Q(prod_coba_str__icontains=q) |
-            Q(prod_codi__icontains=q)
-        )
+        if not slug:
+            return Response({"error": "Licença não encontrada."}, status=status.HTTP_404_NOT_FOUND)
+        
+        try:
+            banco = get_licenca_db_config(self.request)
+            print(f"\n🔍 Banco de dados selecionado: {banco}")
+            q = request.query_params.get("q", "")
 
-        serializer = self.get_serializer(produtos, many=True)
-        return Response(serializer.data)
+            saldo_subquery = Subquery(
+                SaldoProduto.objects.using(banco).filter(
+                    produto_codigo=OuterRef('pk')
+                ).values('saldo_estoque')[:1],
+                output_field=DecimalField()
+            )
 
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context['banco'] = get_licenca_db_config(self.request)
-        return context
+            produtos = Produtos.objects.using(banco).annotate(
+                saldo_estoque=Coalesce(saldo_subquery, V(0), output_field=DecimalField()),
+                prod_coba_str=Coalesce(Cast('prod_coba', CharField()), V(''))
+            ).filter(
+                Q(prod_nome__icontains=q) |
+                Q(prod_coba_str__icontains=q) |
+                Q(prod_codi__icontains=q.lstrip("0"))  
+            )
+
+
+            serializer = self.get_serializer(produtos, many=True)
+            return Response(serializer.data)
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return Response({'detail': f'Erro interno: {str(e)}'}, status=500)

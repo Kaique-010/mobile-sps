@@ -1,9 +1,11 @@
 from rest_framework import serializers
+import base64
 from .models import Produtos, UnidadeMedida
 from core.serializers import BancoContextMixin
 
 class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
     saldo_estoque = serializers.SerializerMethodField()
+    imagem_base64 = serializers.SerializerMethodField()
 
     class Meta:
         model = Produtos
@@ -12,6 +14,11 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
 
     def get_saldo_estoque(self, obj):
         return getattr(obj, 'saldo_estoque', 0)
+    
+    def get_imagem_base64(self, obj):
+        if obj.prod_foto:
+            return base64.b64encode(obj.prod_foto).decode('utf-8')
+        return None
 
     def create(self, validated_data):
         banco = self.context.get('banco')

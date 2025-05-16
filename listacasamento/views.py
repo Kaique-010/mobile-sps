@@ -9,6 +9,7 @@ from rest_framework.decorators import action
 from django.db import transaction, IntegrityError
 from rest_framework.decorators import api_view
 from rest_framework.permissions import IsAuthenticated
+from core.middleware import get_licenca_slug
 from core.utils import get_licenca_db_config
 from .models import ListaCasamento, ItensListaCasamento
 from .serializers import ListaCasamentoSerializer, ItensListaCasamentoSerializer
@@ -53,6 +54,11 @@ class ListaCasamentoViewSet(ModuloRequeridoMixin,ModelViewSet):
         
         
         return super().destroy(request, *args, **kwargs)
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['banco'] = get_licenca_db_config(self.request)
+        return context
 
 
 class ItensListaCasamentoViewSet(ModuloRequeridoMixin,ModelViewSet):
@@ -106,6 +112,11 @@ class ItensListaCasamentoViewSet(ModuloRequeridoMixin,ModelViewSet):
             raise NotFound("Item não encontrado na lista especificada.")
         except ItensListaCasamento.MultipleObjectsReturned:
             raise ValidationError("Mais de um item encontrado com essa chave composta.")
+        
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['banco'] = get_licenca_db_config(self.request)
+        return context
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
@@ -135,7 +146,11 @@ class ItensListaCasamentoViewSet(ModuloRequeridoMixin,ModelViewSet):
 
     @action(detail=False, methods=['post'], url_path='update-lista')
     @transaction.atomic
-    def update_lista(self, request):
+    def update_lista(self, request, slug=None):
+        slug = get_licenca_slug()
+
+        if not slug:
+            return Response({"error": "Licença não encontrada."}, status=status.HTTP_404_NOT_FOUND)
         data = request.data
         logger.info(f"Payload recebido no update_lista: {data}")
 

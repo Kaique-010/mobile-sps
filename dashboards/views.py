@@ -17,26 +17,26 @@ class DashboardAPIView(ModuloRequeridoMixin, APIView):
         if not slug:
             return Response({"error": "Licença não encontrada."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Top 10 produtos com mais saldo
+        
         saldos = (
-            SaldoProduto.objects.all()  # Remove o uso do db_alias
+            SaldoProduto.objects.all()  
             .values(nome=F('produto_codigo__prod_nome'))
             .annotate(total=Sum('saldo_estoque'))
             .order_by('-total')[:10]
         )
 
-        # Últimos 10 pedidos
+      
         pedidos = (
-            PedidoVenda.objects.all()  # Remove o uso do db_alias
-            .order_by('-pedi_data')[:10]  # Substitua 'pedi_data' se seu campo for outro
+            PedidoVenda.objects.all()  
+            .order_by('-pedi_data')[:10] 
             .values(
-                cliente=F('pedi_forn__enti_nome'),
+                cliente=F('pedi_forn'),
                 total=F('pedi_tota'),
                 data=F('pedi_data')  
             )
         )
 
-        # Convertendo Decimal pra garantir compatibilidade com o serializer
+        
         for item in saldos:
             item['total'] = Decimal(item['total']) if not isinstance(item['total'], Decimal) else item['total']
         for item in pedidos:

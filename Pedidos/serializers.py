@@ -23,14 +23,16 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
     pedi_fili = serializers.IntegerField(required=True)
     pedi_data = serializers.DateField(required=True)
     pedi_tota = serializers.DecimalField(max_digits=15, decimal_places=2, required=True)
-    pedi_forn = serializers.IntegerField(required=True)  # Mantém simples, evita conflito com queryset e db dinâmico
+    pedi_forn = serializers.IntegerField(required=True) 
+    pedi_nume = serializers.IntegerField(read_only=True)
+    pedi_stat = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = PedidoVenda
         fields = [
             'pedi_empr', 'pedi_fili', 'pedi_data', 'pedi_tota', 'pedi_forn',
             'itens',
-            'valor_total', 'cliente_nome', 'empresa_nome',
+            'valor_total', 'cliente_nome', 'empresa_nome','pedi_nume', 'pedi_stat'
             # outros campos que quiser
         ]
 
