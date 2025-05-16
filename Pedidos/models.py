@@ -13,19 +13,19 @@ class PedidoVenda(models.Model):
     pedi_empr = models.IntegerField()
     pedi_fili = models.IntegerField()
     pedi_nume = models.BigAutoField(primary_key=True, unique=True)
-    pedi_forn = models.ForeignKey(Entidades, on_delete=models.CASCADE, db_column='pedi_forn', related_name='pedidos_por_clientes')
+    pedi_forn = models.CharField(db_column='pedi_forn',max_length=60)
     pedi_data = models.DateField()
     pedi_tota = models.DecimalField(decimal_places=2, max_digits=15)
     pedi_canc = models.BooleanField(default=False)
     pedi_fina = models.CharField(max_length=100, choices=TIPO_FINANCEIRO, default='0')
     pedi_vend = models.ForeignKey(Entidades, on_delete=models.CASCADE, db_column='pedi_vend', related_name='pedidos_como_vendedor', null=True)  
     pedi_stat = models.CharField(max_length=50, choices=[
-        ('Pendente', 'Pendente'),
-        ('Processando', 'Processando'),
-        ('Enviado', 'Enviado'),
-        ('Concluído', 'Concluído'),
-        ('Cancelado', 'Cancelado'),
-    ], default='Pendente')
+        (0, 'Pendente'),
+        (1, 'Processando'),
+        (2, 'Enviado'),
+        (3, 'Concluído'),
+        (4, 'Cancelado'),
+    ], default=0)
     pedi_obse = models.TextField(blank=True, null=True)
 
     class Meta:
