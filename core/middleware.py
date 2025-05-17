@@ -22,6 +22,9 @@ class LicencaMiddleware:
     def __call__(self, request):
         path_parts = request.path.strip('/').split('/')
         print(f"URL dividida em partes: {path_parts}")
+        
+        if not path_parts or path_parts [0] != 'api':
+            return self.get_response(request)
 
         if request.path.startswith('/api/licencas/mapa/'):
             return self.get_response(request)
