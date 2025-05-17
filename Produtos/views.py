@@ -12,8 +12,8 @@ from rest_framework.filters import SearchFilter
 from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from core.middleware import get_licenca_slug
 from core.registry import get_licenca_db_config
-from .models import Produtos, SaldoProduto, UnidadeMedida
-from .serializers import ProdutoSerializer, UnidadeMedidaSerializer
+from .models import Produtos, SaldoProduto, Tabelaprecos, UnidadeMedida
+from .serializers import ProdutoSerializer, TabelaPrecoSerializer, UnidadeMedidaSerializer
 
 
 class UnidadeMedidaListView(ModuloRequeridoMixin, ListAPIView):
@@ -33,6 +33,10 @@ class UnidadeMedidaListView(ModuloRequeridoMixin, ListAPIView):
             serializer = UnidadeMedidaSerializer(queryset, many=True)
             return Response(serializer.data)
     
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['banco'] = get_licenca_db_config(self.request)
+        return context
 
 class ProdutoListView(ModuloRequeridoMixin, APIView):
     modulo_necessario = 'Produtos'
@@ -40,8 +44,11 @@ class ProdutoListView(ModuloRequeridoMixin, APIView):
 
     def get(self, request):
         banco = get_licenca_db_config(self.request)
-        print(f"\n🔍 Banco de dados selecionado: {banco}")
-        
+
+        if not banco:
+            return Response({"error": "Banco não encontrado."}, status=400)
+
+        queryset = Produtos.objects.using(banco).all().order_by('enti_nome')
         if banco:
             queryset = Produtos.objects.using(banco).all().order_by('enti_nome')
             print(f"📦 Total de entidades encontradas: {queryset.count()}")
@@ -63,6 +70,11 @@ class ProdutoListView(ModuloRequeridoMixin, APIView):
         return Response(serializer.data)
 
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['banco'] = get_licenca_db_config(self.request)
+        return context
+        
 class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
     modulo_necessario = 'Produtos'
     permission_classes = [IsAuthenticated]
@@ -121,3 +133,22 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             import traceback
             traceback.print_exc()
             return Response({'detail': f'Erro interno: {str(e)}'}, status=500)
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['banco'] = get_licenca_db_config(self.request)
+        return context
+class TabelaPrecoMobileViewSet(viewsets.ModelViewSet):
+    queryset = Tabelaprecos.objects.all()
+    serializer_class = TabelaPrecoSerializer
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['banco'] = get_licenca_db_config(self.request)
+        return context
+    
+    def get_queryset(self):
+        produto_id = self.request.query_params.get("produto_id")
+        if produto_id:
+            return self.queryset.filter(tabe_prod=produto_id)
+        return self.queryset.none()

@@ -1,9 +1,16 @@
 from rest_framework import serializers
 import base64
-from .models import Produtos, UnidadeMedida
+from .models import Produtos, UnidadeMedida, Tabelaprecos
 from core.serializers import BancoContextMixin
 
+class TabelaPrecoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tabelaprecos
+        fields = ['tabe_empr', 'tabe_fili', 'tabe_prod', 'tabe_prco', 'tabe_cuge', 'tabe_avis', 'tabe_apra']
+
+
 class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
+    precos = TabelaPrecoSerializer(source='tabelaprecos_set', many=True, read_only=True)
     saldo_estoque = serializers.SerializerMethodField()
     imagem_base64 = serializers.SerializerMethodField()
 
@@ -72,3 +79,4 @@ class UnidadeMedidaSerializer(serializers.ModelSerializer):
     class Meta:
         model = UnidadeMedida
         fields = '__all__'
+

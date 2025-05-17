@@ -90,7 +90,7 @@ class Marca(models.Model):
 class Tabelaprecos(models.Model):
     tabe_empr = models.IntegerField(primary_key=True, default=1)  
     tabe_fili = models.IntegerField(default=1)
-    tabe_prod = models.ForeignKey("Produtos", verbose_name="Produto", on_delete=models.CASCADE, default=1)
+    tabe_prod = models.CharField("Produtos",max_length=60, db_column='tabe_prod')
     tabe_prco = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
     tabe_icms = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
     tabe_desc = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
