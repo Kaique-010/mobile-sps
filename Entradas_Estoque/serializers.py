@@ -25,7 +25,12 @@ class EntradasEstoqueSerializer(BancoContextMixin, serializers.ModelSerializer):
         if not banco:
             return None
         try:
-            return Produtos.objects.using(banco).get(prod_codi=obj.entr_prod).prod_nome
+            produto = Produtos.objects.using(banco).filter(
+                prod_codi=obj.entr_prod,
+                prod_empr=obj.entr_empr, 
+              
+            ).first()
+            return produto.prod_nome if produto else None
         except Produtos.DoesNotExist:
             logger.warning(f"Produto com ID {obj.entr_prod} não encontrado.")
             return None

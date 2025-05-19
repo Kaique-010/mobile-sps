@@ -2,6 +2,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import viewsets
 from rest_framework.filters import SearchFilter
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.permissions import IsAuthenticated
 from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from Pedidos import serializers
@@ -18,9 +19,10 @@ class EntidadesViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
     modulo_requerido = 'Entidades'
     permission_classes = [IsAuthenticated]
     serializer_class = EntidadesSerializer
-    filter_backends = [SearchFilter]
+    filter_backends = [DjangoFilterBackend, SearchFilter]
     search_fields = ['enti_nome', 'enti_nume']
     lookup_field = 'enti_clie'
+    filterset_fields = ['enti_empr']
 
     def get_queryset(self):
         banco = get_licenca_db_config(self.request)

@@ -14,6 +14,7 @@ from core.middleware import get_licenca_slug
 from core.registry import get_licenca_db_config
 from .models import Produtos, SaldoProduto, Tabelaprecos, UnidadeMedida
 from .serializers import ProdutoSerializer, TabelaPrecoSerializer, UnidadeMedidaSerializer
+from django_filters.rest_framework import DjangoFilterBackend
 
 
 class UnidadeMedidaListView(ModuloRequeridoMixin, ListAPIView):
@@ -79,8 +80,10 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
     modulo_necessario = 'Produtos'
     permission_classes = [IsAuthenticated]
     serializer_class = ProdutoSerializer
-    filter_backends = [SearchFilter]
+    filter_backends = [DjangoFilterBackend, SearchFilter]
     search_fields = ['prod_nome', 'prod_codi', 'prod_coba']
+    filterset_fields = ['prod_empr']
+    
 
     def get_queryset(self):
         banco = get_licenca_db_config(self.request)

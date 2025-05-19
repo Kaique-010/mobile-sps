@@ -4,6 +4,7 @@ from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.filters import SearchFilter
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from django.db import transaction, IntegrityError
@@ -22,6 +23,7 @@ class SaidasEstoqueViewSet(ModuloRequeridoMixin, ModelViewSet):
     serializer_class = SaidasEstoqueSerializer
     filter_backends = [SearchFilter]
     search_fields = ['said_enti', 'said_prod']
+    filterset_fields = ['said_empr', 'said_fili']
 
     def get_queryset(self):
         banco = get_licenca_db_config(self.request)

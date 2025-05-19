@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.filters import SearchFilter
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import action
 from django.db import transaction, IntegrityError
 from rest_framework.decorators import api_view
@@ -24,8 +25,9 @@ class EntradasEstoqueViewSet(ModuloRequeridoMixin, ModelViewSet):
     modulo_necessario = 'Entradas_Estoque'
     permission_classes = [IsAuthenticated]
     serializer_class = EntradasEstoqueSerializer
-    filter_backends = [SearchFilter]
+    filter_backends = [DjangoFilterBackend, SearchFilter]
     search_fields = ['entr_enti', 'entr_prod']
+    filterset_fields = ['entr_empr', 'entr_fili']
 
     def get_queryset(self): 
         banco = get_licenca_db_config(self.request)

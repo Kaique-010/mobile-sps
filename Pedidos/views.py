@@ -8,6 +8,8 @@ from .models import PedidoVenda
 from .serializers import PedidoVendaSerializer
 from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from rest_framework.filters import SearchFilter
+from django_filters.rest_framework import DjangoFilterBackend
+
 
 
 import logging
@@ -18,9 +20,10 @@ class PedidoVendaViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
     modeulo_necessario = 'Pedidos'  
     permission_classes = [IsAuthenticated]
     serializer_class = PedidoVendaSerializer
-    filter_backends = [SearchFilter]
+    filter_backends = [DjangoFilterBackend, SearchFilter]
     lookup_field = 'pedi_nume'
     search_fields = ['pedi_nume', 'pedi_forn']
+    filterset_fields = ['pedi_empr', 'pedi_fili']
     
     def get_queryset(self):
        banco = get_licenca_db_config(self.request)
