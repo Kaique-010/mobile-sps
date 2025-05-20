@@ -151,7 +151,14 @@ class TabelaPrecoMobileViewSet(viewsets.ModelViewSet):
         return context
     
     def get_queryset(self):
-        produto_id = self.request.query_params.get("produto_id")
-        if produto_id:
-            return self.queryset.filter(tabe_prod=produto_id)
-        return self.queryset.none()
+        banco = get_licenca_db_config(self.request)
+        prod = self.request.query_params.get("tabe_prod")
+        empr = self.request.query_params.get("tabe_empr")
+        fili = self.request.query_params.get("tabe_fili")
+
+        queryset = Tabelaprecos.objects.using(banco).all()
+
+        if prod and empr and fili:
+            return queryset.filter(tabe_prod=prod, tabe_empr=empr, tabe_fili=fili)
+
+        return queryset.none()
