@@ -36,24 +36,28 @@ class ListaCasamentoViewSet(ModuloRequeridoMixin,ModelViewSet):
     
     def destroy(self, request, *args, **kwargs):
         lista = self.get_object()
-        logger.info(f"🗑️ [VIEW DELETE] Solicitada exclusão da lista de casamento ID {lista.list_codi}")
-        
         banco = get_licenca_db_config(self.request)
-        if banco:
-            with transaction.atomic(using=banco):
-                lista.delete()
-            logger.info(f"🗑️ [VIEW DELETE] Exclusão da lista de casamento ID {lista.list_codi} concluída")
-            logger.info(f"✅ Exclusão concluída: ID {lista.list_codi}")
-        else:
+        
+        if not banco:
             logger.error("Banco de dados não encontrado.")
             raise NotFound("Banco de dados não encontrado.")
-        
-        
-        if ItensListaCasamento.objects.filter(item_list=lista.list_codi).exists():
-            raise ValidationError({"detail": "Não é possível excluir a lista de casamento, pois existem itens associados."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        
-        return super().destroy(request, *args, **kwargs)
+
+        # Verifica se tem itens antes de excluir
+        if ItensListaCasamento.objects.using(banco).filter(
+            item_empr=lista.list_empr,
+            item_fili=lista.list_fili,
+            item_list=lista.list_codi
+        ).exists():
+            return Response(
+                {"detail": "Não é possível excluir a lista de casamento, pois existem itens associados."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        with transaction.atomic(using=banco):
+            lista.delete()
+            logger.info(f"🗑️ Exclusão da lista de casamento ID {lista.list_codi} concluída")
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
     
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -61,19 +65,17 @@ class ListaCasamentoViewSet(ModuloRequeridoMixin,ModelViewSet):
         return context
 
 
-class ItensListaCasamentoViewSet(ModuloRequeridoMixin,ModelViewSet):
+class ItensListaCasamentoViewSet(ModuloRequeridoMixin, ModelViewSet):
     modulo_necessario = 'listacasamento'
     serializer_class = ItensListaCasamentoSerializer
-    
-    banco = get_licenca_db_config
-    
-    if banco:
-        queryset = ItensListaCasamento.objects.using(banco).all().order_by('item_item')
-    else:
-        logger.error("Banco de dados não encontrado.")
-        raise NotFound("Banco de dados não encontrado.")
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        banco = get_licenca_db_config(self.request)
+        if not banco:
+            logger.error("Banco de dados não encontrado.")
+            raise NotFound("Banco de dados não encontrado.")
+
         item_empr = self.request.query_params.get('item_empr')
         item_fili = self.request.query_params.get('item_fili')
         item_list = self.request.query_params.get('item_list')
@@ -81,18 +83,23 @@ class ItensListaCasamentoViewSet(ModuloRequeridoMixin,ModelViewSet):
         if not item_list:
             logger.warning("item_list não fornecido")
             return ItensListaCasamento.objects.none()
-        
-        queryset = ItensListaCasamento.objects.filter(item_list=item_list)
+
+        queryset = ItensListaCasamento.objects.using(banco).filter(item_list=item_list)
         if item_empr:
             queryset = queryset.filter(item_empr=item_empr)
-        if item_fili:   
+        if item_fili:
             queryset = queryset.filter(item_fili=item_fili)
-        
+
         logger.info(f"Parâmetros recebidos: item_empr={item_empr}, item_fili={item_fili}, item_list={item_list}")
-        logger.info(f"Queryset filtrado: {queryset.query}")  # Log da consulta SQL gerada
+        logger.info(f"Queryset filtrado: {queryset.query}")
         return queryset.order_by('item_item')
-    
+
     def get_object(self):
+        banco = get_licenca_db_config(self.request)
+        if not banco:
+            logger.error("Banco de dados não encontrado.")
+            raise NotFound("Banco de dados não encontrado.")
+
         item_item = self.kwargs.get('pk')
         item_list = self.request.query_params.get("item_list")
         item_empr = self.request.query_params.get("item_empr")
@@ -112,7 +119,7 @@ class ItensListaCasamentoViewSet(ModuloRequeridoMixin,ModelViewSet):
             raise NotFound("Item não encontrado na lista especificada.")
         except ItensListaCasamento.MultipleObjectsReturned:
             raise ValidationError("Mais de um item encontrado com essa chave composta.")
-        
+
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context['banco'] = get_licenca_db_config(self.request)
@@ -142,48 +149,46 @@ class ItensListaCasamentoViewSet(ModuloRequeridoMixin,ModelViewSet):
         except Exception as e:
             return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    
-
     @action(detail=False, methods=['post'], url_path='update-lista')
-    @transaction.atomic
     def update_lista(self, request, slug=None):
-        slug = get_licenca_slug()
+        banco = get_licenca_db_config(self.request)
+        if not banco:
+            return Response({"error": "Banco de dados não encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
-        if not slug:
-            return Response({"error": "Licença não encontrada."}, status=status.HTTP_404_NOT_FOUND)
         data = request.data
-        logger.info(f"Payload recebido no update_lista: {data}")
-
-        if not isinstance(data, dict):
-            return Response({"detail": "Formato de dados inválido. Esperado um objeto com 'remover' e 'adicionar'."}, status=400)
-
         remover = data.get("remover", [])
         adicionar = data.get("adicionar", [])
 
-        if not isinstance(remover, list) or not isinstance(adicionar, list):
-            return Response({"detail": "'remover' e 'adicionar' devem ser listas."}, status=400)
-
-        # Remove itens
-        for item in remover:
-            ItensListaCasamento.objects.filter(
-                item_empr=item["item_empr"],
-                item_fili=item["item_fili"],
-                item_list=item["item_list"],
-                item_item=item["item_item"]
-            ).delete()
-
-        # Prepara os dados para adicionar
-        for item in adicionar:
-            item["item_prod"] = item.pop("prod_codi")
-            item["item_pedi"] = 0 # Definindo item_pedi como 0 para novos itens
-
-        serializer = self.get_serializer(data=adicionar, many=True)
         try:
-            serializer = self.get_serializer(data=adicionar, many=True)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
+            with transaction.atomic(using=banco):
+                # Remover itens
+                for item in remover:
+                    ItensListaCasamento.objects.using(banco).filter(
+                        item_empr=item["item_empr"],
+                        item_fili=item["item_fili"],
+                        item_list=item["item_list"],
+                        item_item=item["item_item"]
+                    ).delete()
+
+                # Ajustar dados para adicionar
+                for item in adicionar:
+                    item["item_prod"] = item.pop("prod_codi")
+                    item["item_pedi"] = 0
+
+                serializer = self.get_serializer(data=adicionar, many=True)
+                serializer.is_valid(raise_exception=True)
+
+                # Cria manualmente no banco correto
+                for validated_data in serializer.validated_data:
+                    ItensListaCasamento.objects.using(banco).create(**validated_data)
+
         except serializers.ValidationError as e:
             logger.warning(f"Erros de validação: {e.detail}")
-            return Response({"errors": e.detail}, status=400)
+            return Response({"errors": e.detail}, status=status.HTTP_400_BAD_REQUEST)
+        except IntegrityError:
+            return Response({'detail': 'Erro de integridade.'}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"Erro inesperado: {str(e)}")
+            return Response({'detail': 'Erro interno no servidor.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response({"message": "Lista atualizada com sucesso!"})

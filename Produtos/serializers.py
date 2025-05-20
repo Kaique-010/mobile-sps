@@ -3,14 +3,35 @@ import base64
 from .models import Produtos, UnidadeMedida, Tabelaprecos
 from core.serializers import BancoContextMixin
 
-class TabelaPrecoSerializer(serializers.ModelSerializer):
+class TabelaPrecoSerializer(BancoContextMixin, serializers.ModelSerializer):
     class Meta:
         model = Tabelaprecos
         fields = ['tabe_empr', 'tabe_fili', 'tabe_prod', 'tabe_prco', 'tabe_cuge', 'tabe_avis', 'tabe_apra']
+        extra_kwargs = {
+            'tabe_empr': {'read_only': True},
+            'tabe_fili': {'read_only': True},
+            'tabe_prod': {'read_only': True},
+        }
+
+    def create(self, validated_data):
+        using = self.context.get('using')
+        if using:
+            return Tabelaprecos.objects.using(using).create(**validated_data)
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        using = self.context.get('using')
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        if using:
+            instance.save(using=using)
+        else:
+            instance.save()
+        return instance
 
 
 class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
-    precos = TabelaPrecoSerializer(source='tabelaprecos_set', many=True, read_only=True)
+    precos = serializers.SerializerMethodField()
     saldo_estoque = serializers.SerializerMethodField()
     imagem_base64 = serializers.SerializerMethodField()
 
@@ -27,13 +48,24 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
             return base64.b64encode(obj.prod_foto).decode('utf-8')
         return None
 
+    def get_precos(self, obj):
+        banco = self.context.get("banco")
+        if not banco:
+            return []
+
+        precos = Tabelaprecos.objects.using(banco).filter(
+            tabe_prod=obj.prod_codi,
+            tabe_empr=obj.prod_empr,
+        )
+
+        return TabelaPrecoSerializer(precos, many=True).data
+    
     def create(self, validated_data):
         banco = self.context.get('banco')
         if not banco:
             raise serializers.ValidationError("Banco não encontrado")
 
         empresa = validated_data.get('prod_empr')
-        print(empresa)
         codigo = validated_data.get('prod_codi')
 
         if not codigo:
@@ -50,10 +82,10 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
 
             if ultimo_produto:
                 try:
-                    # Incrementando o código do último produto
+                    
                     novo_codigo = str(int(ultimo_produto.prod_codi) + 1)
                 except ValueError:
-                    # Se o último código não puder ser incrementado, geramos erro
+                   
                     raise serializers.ValidationError({
                         'prod_codi': f'Não foi possível incrementar o código existente: {ultimo_produto.prod_codi}'
                     })
@@ -61,8 +93,8 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
                 print("Nenhum produto encontrado, iniciando com o código 1.")
                 novo_codigo = "1"
 
-            # Garantir que o novo código não exista já na tabela
-            # A verificação será feita até que um código único seja encontrado
+           
+           
             while Produtos.objects.using(banco).filter(prod_empr=empresa, prod_codi=novo_codigo).exists():
                 print(f"O código {novo_codigo} já existe, tentando gerar um novo.")
                 novo_codigo = str(int(novo_codigo) + 1)
@@ -70,8 +102,30 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
             print(f"Código único gerado: {novo_codigo}")
             validated_data['prod_codi'] = novo_codigo
 
-        # Criar o produto diretamente sem transação atômica
+      
         return super().create(validated_data)
+    
+
+    def update_or_create_precos(self, produto, precos_data):
+        banco = self.context.get("banco")
+        if not banco:
+            return
+
+        for preco_data in precos_data:
+            preco_data['tabe_prod'] = produto.prod_codi
+            preco_data['tabe_empr'] = produto.prod_empr
+
+            obj, created = Tabelaprecos.objects.using(banco).get_or_create(
+                tabe_empr=preco_data['tabe_empr'],
+                tabe_fili=preco_data['tabe_fili'],
+                tabe_prod=preco_data['tabe_prod'],
+                defaults=preco_data
+            )
+            if not created:
+                for k, v in preco_data.items():
+                    setattr(obj, k, v)
+                obj.save(using=banco)
+
 
 
 

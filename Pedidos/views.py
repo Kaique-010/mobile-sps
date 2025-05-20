@@ -53,3 +53,15 @@ class PedidoVendaViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
         except ValidationError as e:
             logger.warning(f"[PedidoVendaViewSet.create] Erro de validação: {e.detail}")
             return Response({'errors': e.detail}, status=status.HTTP_400_BAD_REQUEST)
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+    
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        pedido = serializer.save()
+        return Response(self.get_serializer(pedido).data, status=status.HTTP_200_OK)

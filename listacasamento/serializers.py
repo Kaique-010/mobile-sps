@@ -96,3 +96,5 @@ class ListaCasamentoSerializer(BancoContextMixin, serializers.ModelSerializer):
             list_codi = ListaCasamento.objects.using(banco).aggregate(Max('list_codi'))['list_codi__max'] or 0
             validated_data['list_codi'] = list_codi + 1
         return ListaCasamento.objects.using(banco).create(**validated_data)
+    
+    
