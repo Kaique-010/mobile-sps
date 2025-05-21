@@ -1,12 +1,16 @@
+from optparse import Values
+from re import S
+from typing import Annotated
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from Entidades.models import Entidades
 from Produtos.models import SaldoProduto
 from Pedidos.models import PedidoVenda
 from rest_framework import status
 from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from core.middleware import get_licenca_slug
 from .serializers import DashboardSerializer
-from django.db.models import Sum, F
+from django.db.models import Sum, F, OuterRef, Subquery, Max
 from decimal import Decimal
 
 class DashboardAPIView(ModuloRequeridoMixin, APIView):
@@ -25,18 +29,27 @@ class DashboardAPIView(ModuloRequeridoMixin, APIView):
             .order_by('-total')[:10]
         )
 
-      
+        cliente_nome = Entidades.objects.filter(
+            enti_clie=OuterRef('pedi_forn')
+        ).values('enti_nome')[:1]
+
         pedidos = (
-            PedidoVenda.objects.all()  
-            .order_by('-pedi_data')[:10] 
+            PedidoVenda.objects.annotate(
+                cliente_nome=Subquery(cliente_nome)
+            )
+            .values('cliente_nome')  # agrupa por cliente
+            .annotate(
+                total=Sum('pedi_tota'),
+                data=Max('pedi_data')  # opcional: data do último pedido
+            )
+            .order_by('-total')[:10]  # top 10 clientes
             .values(
-                cliente=F('pedi_forn'),
-                total=F('pedi_tota'),
-                data=F('pedi_data')  
+                cliente=F('cliente_nome'),
+                total=F('total'),
+                data=F('data')
             )
         )
 
-        
         for item in saldos:
             item['total'] = Decimal(item['total']) if not isinstance(item['total'], Decimal) else item['total']
         for item in pedidos:
