@@ -24,6 +24,14 @@ class ItensListaCasamentoSerializer(BancoContextMixin, serializers.ModelSerializ
         model = ItensListaCasamento
         fields = '__all__'
 
+    def validate(self, attrs):
+      
+        item_pedi = attrs.get('item_pedi', 0)
+        if item_pedi != 0:
+            raise serializers.ValidationError({"item_pedi": "item_pedi deve ser igual a 0."})
+        attrs['item_pedi'] = 0
+        return attrs
+    
     def get_produto_nome(self, obj):
         banco = self.context.get('banco')
         if not banco:
@@ -97,4 +105,4 @@ class ListaCasamentoSerializer(BancoContextMixin, serializers.ModelSerializer):
             validated_data['list_codi'] = list_codi + 1
         return ListaCasamento.objects.using(banco).create(**validated_data)
     
-    
+ 

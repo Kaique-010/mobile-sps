@@ -2,6 +2,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from Licencas.models import Empresas
+from Produtos.models import Produtos
 from .models import PedidoVenda, Itenspedidovenda
 from Entidades.models import Entidades
 from core.serializers import BancoContextMixin
@@ -11,10 +12,26 @@ logger = logging.getLogger(__name__)
 
 
 class ItemPedidoVendaSerializer(BancoContextMixin,serializers.ModelSerializer):
+    produto_nome = serializers.SerializerMethodField()
     class Meta:
         model = Itenspedidovenda
         exclude = ['iped_empr', 'iped_fili', 'iped_item', 'iped_pedi', 'iped_data', 'iped_forn']
+    
+    
+    def get_produto_nome(self, obj):
+        banco = self.context.get('banco')
+        if not banco:
+            logger.warning("Banco não informado no context.")
+            return None
+        try:
+            produto = Produtos.objects.using(banco).get(prod_codi=obj.iped_prod)
+            return produto.prod_nome
+        except Exception as e:
+            logger.error(f"Erro ao buscar produto: {e}")
+            return None
 
+            
+            
 class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
     valor_total = serializers.FloatField(source='pedi_tota', read_only=True)
     cliente_nome = serializers.SerializerMethodField(read_only=True)
@@ -32,14 +49,13 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
     
     def get_itens(self, obj):
         banco = self.context.get('banco')
-        return ItemPedidoVendaSerializer(
-            Itenspedidovenda.objects.using(banco).filter(
-                iped_empr=obj.pedi_empr,
-                iped_fili=obj.pedi_fili,
-                iped_pedi=str(obj.pedi_nume)         
+        itens = Itenspedidovenda.objects.using(banco).filter(
+            iped_empr=obj.pedi_empr,
+            iped_fili=obj.pedi_fili,
+            iped_pedi=str(obj.pedi_nume)
+        )
+        return ItemPedidoVendaSerializer(itens, many=True, context=self.context).data
 
-            ), many=True
-        ).data
 
     #metodo de criacao de pedidos ja olhando se era um pedido criado ou não no update
     def create(self, validated_data):
@@ -172,4 +188,16 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
             logger.warning(f"Empresa com ID {obj.pedi_empr} não encontrada.")
             return None
 
-    
+    def get_produto_nome(self, obj):
+        banco = self.context.get('banco')
+        if not banco:
+            return None
+        try:
+            produto = Produtos.objects.using(banco).filter(
+                prod_codi=obj.iped_prod,
+                prod_empr=obj.iped_empr
+            ).first()
+            return produto.prod_nome if produto else None
+        except Exception as e:
+            logger.warning(f"Erro ao buscar nome do produto: {e}")
+            return None

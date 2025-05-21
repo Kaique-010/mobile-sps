@@ -4,7 +4,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError, NotFound
 from core.registry import get_licenca_db_config
-from .models import PedidoVenda
+from .models import Itenspedidovenda, PedidoVenda
 from .serializers import PedidoVendaSerializer
 from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from rest_framework.filters import SearchFilter
@@ -65,3 +65,29 @@ class PedidoVendaViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         pedido = serializer.save()
         return Response(self.get_serializer(pedido).data, status=status.HTTP_200_OK)
+    
+    
+    def destroy(self, request, *args, **kwargs):
+        pedido = self.get_object()
+        banco = get_licenca_db_config(self.request)
+        
+        if not banco:
+            logger.error("Banco de dados não encontrado.")
+            raise NotFound("Banco de dados não encontrado.")
+
+       
+        if Itenspedidovenda.objects.using(banco).filter(
+            iped_empr=pedido.pedi_empr,
+            iped_fili=pedido.pedi_fili,
+            iped_pedi=pedido.pedi_nume
+        ).exists():
+            return Response(
+                {"detail": "Não é possível excluir a Pedidos , Há itens associados."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        with transaction.atomic(using=banco):
+            pedido.delete()
+            logger.info(f"🗑️ Exclusão Pedido de casamento ID {pedido.pedi_nume} concluída")
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
