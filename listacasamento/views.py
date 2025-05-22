@@ -161,9 +161,6 @@ class ItensListaCasamentoViewSet(ModuloRequeridoMixin, ModelViewSet):
         remover = data.get('remover', [])
         adicionar = data.get('adicionar', [])
 
-        logger.info(f"Slug extraído: {slug}")
-        logger.info(f"[update_lista] Dados recebidos: {data}")
-
         try:
             with transaction.atomic(using=banco):
                 # Remover itens
@@ -178,10 +175,13 @@ class ItensListaCasamentoViewSet(ModuloRequeridoMixin, ModelViewSet):
 
                 # Adicionar itens
                 for item in adicionar:
+                    
+                  
+                    
                     # Limpa campos extras que o serializer não aceita
                     for campo_extra in ['prod_nome', 'precos', 'saldo_estoque', 'imagem_base64', 'prod_empr', 'prod_loca', 'prod_ncm', 'prod_coba', 'prod_foto', 'prod_unme', 'prod_grup', 'prod_sugr', 'prod_fami', 'prod_marc']:
                         item.pop(campo_extra, None)
-                    
+                    item.pop('item_item', None)
                     # Ajusta o campo ForeignKey para o serializer
                     if 'prod_codi' in item:
                         item['item_prod'] = item.pop('prod_codi')

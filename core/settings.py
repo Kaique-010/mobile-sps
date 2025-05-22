@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     'Produtos',
     'Entidades',
     'Pedidos',
+    'Orcamentos',
     'dashboards',
     'Entradas_Estoque',
     'Saidas_Estoque',

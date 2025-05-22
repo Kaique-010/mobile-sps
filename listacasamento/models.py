@@ -56,5 +56,6 @@ class ItensListaCasamento(models.Model):
         db_table = 'itenslistacasamento'
         managed = False  
         unique_together = ('item_list', 'item_item','item_empr', 'item_fili')
-        
+   
+            
     

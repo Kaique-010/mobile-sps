@@ -51,7 +51,7 @@ class ItensListaCasamentoSerializer(BancoContextMixin, serializers.ModelSerializ
         item_fili = validated_data['item_fili']
         item_list = validated_data['item_list']
 
-        validated_data['item_item'] = get_next_item_number(item_empr, item_fili, item_list)
+        validated_data['item_item'] = get_next_item_number(item_empr, item_fili, item_list, banco)
         return ItensListaCasamento.objects.using(banco).create(**validated_data)
 
 
@@ -104,5 +104,3 @@ class ListaCasamentoSerializer(BancoContextMixin, serializers.ModelSerializer):
             list_codi = ListaCasamento.objects.using(banco).aggregate(Max('list_codi'))['list_codi__max'] or 0
             validated_data['list_codi'] = list_codi + 1
         return ListaCasamento.objects.using(banco).create(**validated_data)
-    
- 

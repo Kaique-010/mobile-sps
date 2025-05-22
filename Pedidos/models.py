@@ -1,7 +1,6 @@
 # models.py
 from django.db import models
-from Entidades.models import Entidades
-from Produtos.models import Produtos
+
 
 TIPO_FINANCEIRO = [
     ('0', 'À VISTA'),
@@ -18,7 +17,7 @@ class PedidoVenda(models.Model):
     pedi_tota = models.DecimalField(decimal_places=2, max_digits=15)
     pedi_canc = models.BooleanField(default=False)
     pedi_fina = models.CharField(max_length=100, choices=TIPO_FINANCEIRO, default='0')
-    pedi_vend = models.ForeignKey(Entidades, on_delete=models.CASCADE, db_column='pedi_vend', related_name='pedidos_como_vendedor', null=True)  
+    pedi_vend = models.CharField( db_column='pedi_vend', max_length=15)  
     pedi_stat = models.CharField(max_length=50, choices=[
         (0, 'Pendente'),
         (1, 'Processando'),
