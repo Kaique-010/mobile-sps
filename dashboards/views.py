@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from Entidades.models import Entidades
 from Entradas_Estoque.models import EntradaEstoque
-from Produtos.models import SaldoProduto
+from Produtos.models import Produtos, SaldoProduto
 from Pedidos.models import Itenspedidovenda, PedidoVenda
 from rest_framework import status
 from Saidas_Estoque.models import SaidasEstoque
@@ -15,6 +15,11 @@ from .serializers import DashboardSerializer
 from django.db.models import Sum, F, OuterRef, Subquery, Max, Count
 from decimal import Decimal
 from datetime import datetime
+from .utils import enviar_email, enviar_whatsapp
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 class DashboardAPIView(ModuloRequeridoMixin, APIView):
     modulo_necessario = 'Dashboard'
@@ -77,14 +82,8 @@ class DashboardEstoqueView(APIView):
         data_ini = request.query_params.get('data_ini')
         data_fim = request.query_params.get('data_fim')
 
-        if not data_ini or not data_fim:
-            return Response({"erro": "Informe data_ini e data_fim no formato YYYY-MM-DD"}, status=400)
-
-        try:
-            data_ini = datetime.strptime(data_ini, '%Y-%m-%d').date()
-            data_fim = datetime.strptime(data_fim, '%Y-%m-%d').date()
-        except ValueError:
-            return Response({"erro": "Formato de data inválido. Use YYYY-MM-DD"}, status=400)
+        data_ini = datetime.strptime(data_ini, '%Y-%m-%d').date()
+        data_fim = datetime.strptime(data_fim, '%Y-%m-%d').date()
 
         entradas = EntradaEstoque.objects.using(slug).filter(
             entr_data__range=(data_ini, data_fim)
@@ -104,7 +103,7 @@ class DashboardEstoqueView(APIView):
             said_data__range=(data_ini, data_fim)
         ).values('said_prod').annotate(
             total=Sum('said_quan')
-        ).order_by('-total')[:5]
+        ).order_by('-total')[:9]
 
         saldo_produtos = SaldoProduto.objects.using(slug).annotate(
             codigo=F('produto_codigo__prod_codi'),
@@ -118,10 +117,6 @@ class DashboardEstoqueView(APIView):
             'saldos_estoque': list(saldo_produtos)
         })
 
-
-import logging
-
-logger = logging.getLogger(__name__)
 
 class DashboardVendasView(APIView):
     def get(self, request, slug=None):
@@ -137,17 +132,10 @@ class DashboardVendasView(APIView):
             data_fim = request.query_params.get('data_fim')
             logger.debug(f"Data_ini: {data_ini}, Data_fim: {data_fim}")
 
-            if not data_ini or not data_fim:
-                logger.warning("Parâmetros data_ini ou data_fim ausentes no DashboardVendasView")
-                return Response({"erro": "Informe data_ini e data_fim no formato YYYY-MM-DD"}, status=status.HTTP_400_BAD_REQUEST)
+            data_ini = datetime.strptime(data_ini, '%Y-%m-%d')
+            data_fim = datetime.strptime(data_fim, '%Y-%m-%d')
+            data_fim = datetime.combine(data_fim.date(), time.max)
 
-            try:
-                data_ini = datetime.strptime(data_ini, '%Y-%m-%d')
-                data_fim = datetime.strptime(data_fim, '%Y-%m-%d')
-                data_fim = datetime.combine(data_fim.date(), time.max)
-            except ValueError:
-                logger.error("Formato de data inválido no DashboardVendasView")
-                return Response({"erro": "Formato de data inválido. Use YYYY-MM-DD"}, status=status.HTTP_400_BAD_REQUEST)
 
             pedidos_periodo = PedidoVenda.objects.using(slug).filter(pedi_data__range=(data_ini, data_fim))
             logger.debug(f"Pedidos no período: {pedidos_periodo.count()}")
@@ -161,7 +149,7 @@ class DashboardVendasView(APIView):
                 iped_data__range=(data_ini, data_fim)
             ).values('iped_prod').annotate(
                 total=Sum('iped_quan')
-            ).order_by('-total')[:5]
+            ).order_by('-total')[:10]
             logger.debug(f"Top vendas: {list(top_vendas)}")
 
             return Response({
@@ -174,3 +162,44 @@ class DashboardVendasView(APIView):
         except Exception:
             logger.exception("Erro ao gerar dashboard de vendas")
             return Response({"erro": "Erro interno no servidor."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    
+    
+
+class EnviarEmail(APIView):
+    def post(self, request, slug = None ):
+        slug = get_licenca_slug()
+
+        if not slug:
+            return Response({"error": "Licença não encontrada."}, status=status.HTTP_404_NOT_FOUND)
+        
+        email = request.data.get('email')
+        dados = request.data.get('dados')
+        
+        if not email or not dados:
+            return Response({'erro': 'Email e dados são obrigatórios'}, status= 400)
+        
+        enviado = enviar_email(email, dados)
+        
+        if enviado:
+            return Response({'mensagem': 'E-mail enviado com sucesso'})
+        return Response({'erro': 'Falha ao enviar o e-mail.'}, status=500)
+
+
+class EnviarWhats(APIView):
+    def post(self, request, slug = None ):
+        slug = get_licenca_slug()
+
+        if not slug:
+            return Response({"error": "Licença não encontrada."}, status=status.HTTP_404_NOT_FOUND)
+        numero = request.data.get('numero')
+        dados = request.data.get('dados')
+        
+        if not numero or not  dados:
+            return Response({'erro': 'numero e dados são obrigatórios'}, status= 400)
+        
+        enviado = enviar_whatsapp(numero, dados)
+        
+        if enviado:
+            return Response({'mensagem': 'Whats enviado com sucesso'})
+        return Response({'erro': 'Falha ao enviar o e-mail.'}, status=500)

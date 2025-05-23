@@ -43,9 +43,9 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
     class Meta:
         model = Orcamentos
         fields = [
-            'pedi_empr', 'pedi_fili', 'pedi_data', 'pedi_tota', 'pedi_forn',
+            'pedi_empr', 'pedi_fili', 'pedi_data', 'pedi_tota', 'pedi_forn', 'pedi_vend',
             'itens', 'itens_input',
-            'valor_total', 'cliente_nome', 'empresa_nome', 'pedi_nume', 'pedi_stat'
+            'valor_total', 'cliente_nome', 'empresa_nome', 'pedi_nume'
         ]
     
     def get_itens(self, obj):
@@ -55,7 +55,7 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
             iped_fili=obj.pedi_fili,
             iped_pedi=str(obj.pedi_nume)
         )
-        return ItensOrcamento(itens, many=True, context=self.context).data
+        return ItemOrcamentoSerializer(itens, many=True, context=self.context).data
 
 
    

@@ -12,7 +12,8 @@
       "Entradas_Estoque",
       "Saidas_Estoque",
       "listacasamento",
-      "Entidades"
+      "Entidades",
+      "Orcamentos"
     ]
   },
   {
@@ -35,7 +36,8 @@
       "Produtos",
       "Entradas_Estoque",
       "Saidas_Estoque",
-      "listacasamento"
+      "listacasamento",
+      "Orcamentos"
     ]
   },
   {
@@ -51,7 +53,8 @@
       "Entradas_Estoque",
       "Saidas_Estoque",
       "listacasamento",
-      "Entidades"
+      "Entidades",
+      "Orcamentos"
     ]
   }
 ]

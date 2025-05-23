@@ -7,7 +7,6 @@ class Orcamentos(models.Model):
     pedi_forn = models.CharField(db_column='pedi_forn',max_length=60)
     pedi_data = models.DateField()
     pedi_tota = models.DecimalField(decimal_places=2, max_digits=15)
-    pedi_canc = models.BooleanField(default=False)
     pedi_vend = models.CharField( db_column='pedi_vend', max_length=15)  
     pedi_obse = models.TextField(blank=True, null=True)
 
@@ -32,12 +31,8 @@ class ItensOrcamento(models.Model):
     iped_desc = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
     iped_unli = models.DecimalField(max_digits=15, decimal_places=5, blank=True, null=True)
     iped_forn = models.IntegerField(blank=True, null=True)
-    iped_vend = models.IntegerField(blank=True, null=True)
-    iped_cust = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
-    iped_tipo = models.IntegerField(blank=True, null=True)
-    iped_desc_item = models.BooleanField(blank=True, null=True)
-    iped_perc_desc = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
-    iped_unme = models.CharField(max_length=6, blank=True, null=True)
+    iped_desc = models.BooleanField(blank=True, null=True)
+    iped_pdes_item = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
     iped_data = models.DateField()
 
 

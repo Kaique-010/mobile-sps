@@ -207,3 +207,29 @@ LOGGING = {
         },
     },
 }
+
+
+#configurações de E-mail
+
+EMAIL_BACKEND = config('EMAIL_BACKEND')
+EMAIL_HOST = config('EMAIL_HOST') 
+EMAIL_PORT = int(config('EMAIL_PORT'))
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', cast=bool)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
+
+
+import smtplib
+
+orig_starttls = smtplib.SMTP.starttls
+
+def starttls_patch(self, *args, **kwargs):
+    # Remove keyfile e certfile se passados para evitar erro
+    if 'keyfile' in kwargs:
+        del kwargs['keyfile']
+    if 'certfile' in kwargs:
+        del kwargs['certfile']
+    return orig_starttls(self, *args, **kwargs)
+
+smtplib.SMTP.starttls = starttls_patch
