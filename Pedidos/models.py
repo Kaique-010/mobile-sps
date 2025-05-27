@@ -17,7 +17,7 @@ class PedidoVenda(models.Model):
     pedi_tota = models.DecimalField(decimal_places=2, max_digits=15)
     pedi_canc = models.BooleanField(default=False)
     pedi_fina = models.CharField(max_length=100, choices=TIPO_FINANCEIRO, default='0')
-    pedi_vend = models.CharField( db_column='pedi_vend', max_length=15)  
+    pedi_vend = models.CharField( db_column='pedi_vend', max_length=15, default=0)  
     pedi_stat = models.CharField(max_length=50, choices=[
         (0, 'Pendente'),
         (1, 'Processando'),
@@ -55,7 +55,7 @@ class Itenspedidovenda(models.Model):
     iped_desc_item = models.BooleanField(blank=True, null=True)
     iped_perc_desc = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
     iped_unme = models.CharField(max_length=6, blank=True, null=True)
-    iped_data = models.DateField()
+    iped_data = models.DateField(auto_now=True)
 
 
     class Meta:

@@ -1,5 +1,6 @@
 from pyexpat import model
 from django.db import models
+from django.contrib.postgres.fields import ArrayField
 
 class ImplantacaoTela(models.Model):
     MODULOS_CHOICES = [
@@ -30,8 +31,8 @@ class ImplantacaoTela(models.Model):
     Empresa = models.IntegerField(default=1)
     Filial = models.IntegerField(default=1)
     cliente = models.CharField(max_length=120)
-    modulo = models.CharField(max_length=30, choices=MODULOS_CHOICES)
-    tela = models.CharField(max_length=100)  
+    modulos = ArrayField(models.CharField(max_length=30), blank=True, default=list)
+    telas = ArrayField(models.CharField(max_length=1000), blank=True, default=list)
     implantador = models.CharField(max_length=120)
     data_implantacao = models.DateField()
     status = models.CharField(
@@ -45,14 +46,27 @@ class ImplantacaoTela(models.Model):
     )
     treinado = models.BooleanField(default=False)
     observacoes = models.TextField(blank=True)
-    criado_em = models.DateTimeField(auto_now_add=True)
+    criado_em =models.DateField(auto_now_add=True)
 
     def clean(self):
-        # Valida se a tela realmente pertence ao módulo informado
-        telas_validas = self.TELAS_POR_MODULO.get(self.modulo, [])
-        if self.tela not in telas_validas:
-            from django.core.exceptions import ValidationError
-            raise ValidationError(f"A tela '{self.tela}' não pertence ao módulo '{self.modulo}'.")
-
-    def __str__(self):
-        return f"{self.cliente} - {self.modulo} > {self.tela}"
+        from django.core.exceptions import ValidationError
+        
+        # Validar módulos escolhidos
+        for modulo in self.modulos:
+            if modulo not in dict(self.MODULOS_CHOICES).keys():
+                raise ValidationError(f"Módulo inválido: {modulo}")
+        
+        # Validar telas
+        telas_validas = []
+        for modulo in self.modulos:
+            telas_validas += self.TELAS_POR_MODULO.get(modulo, [])
+        
+        for tela in self.telas:
+            if tela not in telas_validas:
+                raise ValidationError(f"A tela '{tela}' não pertence aos módulos selecionados.")
+    
+    class Meta:
+        db_table = 'implantacoes'
+        managed = False
+       
+        

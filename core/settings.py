@@ -72,6 +72,10 @@ INSTALLED_APPS = [
     'Entradas_Estoque',
     'Saidas_Estoque',
     'listacasamento',
+    'implantacao',
+    'contas_a_pagar',
+    'contas_a_receber',
+    'contratos'
 ]
 
 # Middleware
