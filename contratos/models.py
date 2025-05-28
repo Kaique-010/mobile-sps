@@ -2,9 +2,9 @@ from django.db import models
 
 
 class Contratosvendas(models.Model):
-    cont_empr = models.IntegerField(primary_key=True)
+    cont_empr = models.IntegerField()
     cont_fili = models.IntegerField()
-    cont_cont = models.IntegerField()
+    cont_cont = models.IntegerField(primary_key=True)
     cont_data = models.DateField(blank=True, null=True)
     cont_clie = models.IntegerField(blank=True, null=True)
     cont_perm_alte_clie = models.BooleanField(blank=True, null=True)
