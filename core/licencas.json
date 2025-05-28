@@ -24,10 +24,11 @@
     "db_port": "5432",
     "modulos": ["dashboards", "Produtos", "listacasamento"]
   },
+
   {
-    "slug": "save6",
-    "cnpj": "23905964287",
-    "db_name": "savexml6",
+    "slug": "itajara",
+    "cnpj": "78071149000159",
+    "db_name": "savexml140",
     "db_host": "base.rtalmeida.com.br",
     "db_port": "5432",
     "modulos": [
@@ -35,9 +36,7 @@
       "Entidades",
       "Produtos",
       "Entradas_Estoque",
-      "Saidas_Estoque",
-      "listacasamento",
-      "Orcamentos"
+      "contratos"
     ]
   },
   {

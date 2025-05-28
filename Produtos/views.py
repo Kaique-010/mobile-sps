@@ -105,11 +105,17 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             output_field=DecimalField()
         )
         
+        prod_preco_vista=Subquery(
+            Tabelaprecos.objects.filter(tabe_prod=OuterRef('prod_codi'))
+            .values('tabe_avis')[:1]
+        )
         
 
         return Produtos.objects.using(banco).annotate(
-            saldo_estoque=Coalesce(saldo_subquery, V(0), output_field=DecimalField())
-        )
+        saldo_estoque=Coalesce(saldo_subquery, V(0), output_field=DecimalField()),
+        prod_preco_vista=Coalesce(prod_preco_vista, V(0), output_field=DecimalField())
+    )
+
 
     @action(detail=False, methods=["get"])
     def busca(self, request, slug=None):
@@ -132,12 +138,17 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
 
             produtos = Produtos.objects.using(banco).annotate(
                 saldo_estoque=Coalesce(saldo_subquery, V(0), output_field=DecimalField()),
-                prod_coba_str=Coalesce(Cast('prod_coba', CharField()), V(''))
+                prod_coba_str=Coalesce(Cast('prod_coba', CharField()), V('')),
+                
             ).filter(
                 Q(prod_nome__icontains=q) |
                 Q(prod_coba_str__icontains=q) |
                 Q(prod_codi__icontains=q.lstrip("0"))  
             )
+            prod_preco_vista=Subquery(
+            Tabelaprecos.objects.filter(tabe_prod=OuterRef('prod_codi'))
+            .values('tabe_avis')[:1]
+        )
 
 
             serializer = self.get_serializer(produtos, many=True)

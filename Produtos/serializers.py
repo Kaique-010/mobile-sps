@@ -32,6 +32,7 @@ class TabelaPrecoSerializer(BancoContextMixin, serializers.ModelSerializer):
 
 class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
     precos = serializers.SerializerMethodField()
+    prod_preco_vista =  serializers.SerializerMethodField()
     saldo_estoque = serializers.SerializerMethodField()
     imagem_base64 = serializers.SerializerMethodField()
 
@@ -58,7 +59,23 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
             tabe_empr=obj.prod_empr,
         )
 
-        return TabelaPrecoSerializer(precos, many=True).data
+        return TabelaPrecoSerializer(precos, many=True, context=self.context).data
+    
+    
+    def get_prod_preco_vista(self, obj):
+        banco = self.context.get("banco")
+        if not banco:
+            return None
+
+        preco = Tabelaprecos.objects.using(banco).filter(
+            tabe_prod=obj.prod_codi,
+            tabe_empr=obj.prod_empr
+        ).values_list('tabe_avis', flat=True).first()
+
+        return preco
+
+
+        
     
     def create(self, validated_data):
         banco = self.context.get('banco')
@@ -103,7 +120,8 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
             validated_data['prod_codi'] = novo_codigo
 
       
-        return super().create(validated_data)
+        return Produtos.objects.using(banco).create(**validated_data)
+
     
 
     def update_or_create_precos(self, produto, precos_data):

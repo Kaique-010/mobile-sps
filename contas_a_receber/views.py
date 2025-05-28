@@ -1,11 +1,14 @@
 from rest_framework import viewsets, filters
 from django_filters.rest_framework import DjangoFilterBackend
+
+from core.decorator import ModuloRequeridoMixin
 from .models import Titulosreceber
 from .serializers import TitulosreceberSerializer
 
 
 
-class TitulosreceberViewSet(viewsets.ModelViewSet):
+class TitulosreceberViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
+    modulo_requerido = 'Financeiro'
     queryset = Titulosreceber.objects.all()
     serializer_class = TitulosreceberSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
