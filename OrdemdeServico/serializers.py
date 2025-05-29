@@ -35,13 +35,12 @@ class OrdemServicoSerializer(BancoModelSerializer):
         model = Ordemservico
         fields = '__all__'
 
-    VALID_STATUSES = ['aberto', 'fechado', 'cancelado']
+VALID_STATUSES = [0, 1, 2, 3, 4, 5, 20]
 
-    def validate_orde_stat(self, value):
-        if value not in self.VALID_STATUSES:
-            raise ValidationError('Status inválido.')
-        return value
-
+def validate_orde_stat(self, value):
+    if value not in self.VALID_STATUSES:
+        raise ValidationError('Status inválido.')
+    return value
 
 
 class OrdemServicoPecasSerializer(BancoModelSerializer):

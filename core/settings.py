@@ -75,7 +75,8 @@ INSTALLED_APPS = [
     'implantacao',
     'contas_a_pagar',
     'contas_a_receber',
-    'contratos'
+    'contratos', 
+    'OrdemdeServico'
 ]
 
 # Middleware

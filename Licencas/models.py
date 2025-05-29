@@ -6,9 +6,6 @@ from django.contrib.auth.hashers import make_password, check_password
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 
 
-class Setores(models.Model):
-    seto_codi = models.AutoField(primary_key=True)
-    seto_desc = models.CharField(max_length=255)
 
 class UsuariosManager(BaseUserManager):
     def get_by_natural_key(self, username):
@@ -40,7 +37,7 @@ class Usuarios(AbstractBaseUser, PermissionsMixin):
     usua_codi = models.AutoField(primary_key=True)
     usua_nome = models.CharField(max_length=150, unique=True)
     password = models.CharField(max_length=128, db_column='usua_senh_mobi')
-    usua_seto = models.CharField(max_length=50, db_column='usua_seto')
+    usua_seto = models.IntegerField(db_column='usua_seto') 
     USERNAME_FIELD = 'usua_nome'
     PASSWORD_FIELD = 'password'
     REQUIRED_FIELDS = []
@@ -103,9 +100,14 @@ class Usuarios(AbstractBaseUser, PermissionsMixin):
     @property
     def last_login(self):
         return None
+    
     @property
     def setor(self):
-        return self.usua_seto
+        from OrdemdeServico.models import OrdemServicoFaseSetor 
+        try:
+            return OrdemServicoFaseSetor.objects.get(osfs_codi=self.usua_seto)
+        except OrdemServicoFaseSetor.DoesNotExist:
+            return None
 
 # ---- Classes auxiliares ----
 

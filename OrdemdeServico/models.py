@@ -1,36 +1,50 @@
 from django.db import models
 
 
-class OrdemStatusChoices(models.TextChoices):
-    ABERTA = "aberta", "Aberta"
-    EM_ANDAMENTO = "andamento", "Em andamento"
-    CONCLUIDA = "concluida", "Concluída"
-    CANCELADA = "cancelada", "Cancelada"
-    ATRASADA = "atrasada", "Atrasada"
+ORDEM_STATUS_CHOICES = (
+    (0, "Aberta"),
+    (1, "Orçamento gerado"),
+    (2, "Aguardando Liberação"),
+    (3, "Liberada"),
+    (4, "Finalizada"),
+    (5, "Reprovada"),
+    (20, "Faturada_parcial"),
+)
 
 
-class OrdemPrioridadeChoices(models.TextChoices):
-    BAIXA = "baixa", "Baixa"
-    MEDIA = "media", "Média"
-    ALTA = "alta", "Alta"
+Ordem_Prioridade_Choices = (
+    ("normal", "Normal"),
+    ( "alerta", "Alerta"),
+    ( "urgente", "Urgente")
+)
+OrdensTipos =(
+   ("1", "Manutenção"),
+   ( "2", "Revisão"),
+   ("3", "Upgrade")
+)
 
+class OrdemServicoFaseSetor(models.Model):
+    osfs_codi = models.IntegerField(primary_key=True)
+    osfs_nome = models.CharField(max_length=100)
 
-class OrdensTipos(models.TextChoices):
-    MANUTENCAO = "manutenca", "Manutenção"
-    REVISAO = "revisao", "Revisão"
-    UPGRADE = "upgrade", "Upgrade"
+    class Meta:
+        db_table = 'ordemservicofasesetor'
+        managed = False
+
+    def __str__(self):
+        return self.osfs_nome
 
 
 class Ordemservico(models.Model):
     orde_empr = models.IntegerField(primary_key=True) 
     orde_fili = models.IntegerField()
     orde_nume = models.IntegerField()  
-    orde_tipo = models.CharField(max_length=20, choices=OrdensTipos.choices,default=OrdensTipos.MANUTENCAO)
+    orde_tipo = models.CharField(max_length=20, choices=OrdensTipos, default="1")
     orde_data_aber = models.DateField(blank=True, null=True) 
     orde_hora_aber = models.TimeField(blank=True, null=True)
-    orde_stat = models.CharField(max_length=20, choices=OrdemStatusChoices.choices, default=OrdemStatusChoices.ABERTA)
-    orde_seto = models.CharField(max_length=50) 
-    orde_prio = models.CharField(max_length=10, choices=OrdemPrioridadeChoices.choices, default=OrdemPrioridadeChoices.MEDIA)
+    orde_stat_orde = models.IntegerField(choices=ORDEM_STATUS_CHOICES, default=0)
+    orde_seto = models.IntegerField() 
+    orde_prio = models.CharField(max_length=10, choices=Ordem_Prioridade_Choices, default="alerta")
     orde_prob = models.TextField(blank=True, null=True)  
     orde_defe_desc = models.TextField(blank=True, null=True)  
     orde_obse = models.TextField(blank=True, null=True) 

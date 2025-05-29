@@ -1,11 +1,13 @@
 from rest_framework.viewsets import ModelViewSet
 from rest_framework import status, filters
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.response import Response
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction, IntegrityError
 from .permissions import PodeVerOrdemDoSetor
-from core.middleware import get_licenca_db_config
+from core.middleware import get_licenca_slug
+from core.registry import get_licenca_db_config
 from core.decorator import modulo_necessario, ModuloRequeridoMixin
 
 from .models import (
@@ -93,8 +95,8 @@ class BaseMultiDBModelViewSet(ModuloRequeridoMixin, ModelViewSet):
 class OrdemServicoViewSet(BaseMultiDBModelViewSet):
     modulo_necessario = 'ordemservico'
     serializer_class = OrdemServicoSerializer
-    filter_backends = [filters.OrderingFilter, filters.SearchFilter, filters.DjangoFilterBackend]
-    filterset_fields = ['orde_stat', 'orde_prio', 'orde_tipo', 'orde_enti']
+    ffilter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
+    filterset_fields = ['orde_stat_orde', 'orde_prio', 'orde_tipo', 'orde_enti']
     ordering_fields = ['orde_data_aber', 'orde_data_fech', 'orde_prio']
     search_fields = ['orde_prob', 'orde_defe_desc', 'orde_obse']
     permission_classes = [IsAuthenticated, PodeVerOrdemDoSetor]
@@ -102,7 +104,13 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
     def get_queryset(self):
         banco = self.get_banco()
         user_setor = self.request.user.setor
-        return Ordemservico.objects.using(banco).filter(orde_setor=user_setor).order_by('orde_data_aber')
+
+        if user_setor.osfs_codi == 6:  
+            return Ordemservico.objects.using(banco).all().order_by('orde_data_aber')
+        else:
+            return Ordemservico.objects.using(banco).filter(orde_seto=user_setor.osfs_codi).order_by('orde_data_aber')
+
+
 
 
 class OrdemServicoPecasViewSet(BaseMultiDBModelViewSet):
@@ -120,7 +128,9 @@ class OrdemServicoServicosViewSet(BaseMultiDBModelViewSet):
 
     def get_queryset(self):
         banco = self.get_banco()
+     
         return Ordemservicoservicos.objects.using(banco).all()
+
 
 
 class ImagemAntesViewSet(BaseMultiDBModelViewSet):
