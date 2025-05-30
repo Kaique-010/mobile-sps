@@ -22,7 +22,7 @@ class CaixageralSerializer(serializers.ModelSerializer):
             'caix_fech_hora',
             'caix_obse_fech',
         ]
-        read_only_fields = ['caix_empr']  # Chave primária, evita alteração no update
+       
     
     def validate(self, data):
         banco = self.context.get('banco')
@@ -30,7 +30,7 @@ class CaixageralSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Banco não encontrado")
         
         erros = {}
-        obrigatorios = ['caix_empr', 'caix_fili', 'caix_caix', 'caix_data', 'caix_aber', 'caix_oper']
+        obrigatorios = [ 'caix_fili', 'caix_caix', 'caix_data', 'caix_aber', 'caix_oper']
         for campo in obrigatorios:
             if not data.get(campo):
                 erros[campo] = ['Campo obrigatório.']
@@ -44,7 +44,7 @@ class CaixageralSerializer(serializers.ModelSerializer):
         return Caixageral.objects.using(banco).create(**validated_data)
 
     def update(self, instance, validated_data):
-        validated_data.pop('caix_empr', None)
+        
         return super().update(instance, validated_data)
 
 
@@ -91,8 +91,7 @@ class MovicaixaSerializer(serializers.ModelSerializer):
             'movi_docu_fisc',
             'movi_bare_ctrl',
         ]
-        read_only_fields = ['movi_empr']  # Chave primária
-    
+       
     def validate(self, data):
         banco = self.context.get('banco')
         if not banco:

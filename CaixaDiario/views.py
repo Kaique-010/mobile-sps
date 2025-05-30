@@ -16,23 +16,31 @@ class CaixageralViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = CaixageralSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['caix_empr', 'caix_fili', 'caix_caix', 'caix_data']
+    filterset_fields = ['caix_empr', 'caix_fili', 'caix_caix', 'caix_data', 'caix_oper', 'caix_aber']
     search_fields = ['caix_ecf', 'caix_obse_fech']
     ordering_fields = ['caix_data', 'caix_hora']
     ordering = ['caix_data']
-    lookup_field = 'caix_empr'  # ajuste se quiser chave composta, mas Django não gerencia isso direto
+    lookup_field = 'caix_empr' 
 
     def get_queryset(self):
         banco = get_licenca_db_config(self.request)
         empresa_id = self.request.headers.get("X-Empresa")
         filial_id = self.request.headers.get("X-Filial")
+        operador = self.request.query_params.get('oper')
+        status = self.request.query_params.get('status')  # não força 'A', deixa o front decidir
 
         if banco and empresa_id and filial_id:
             queryset = Caixageral.objects.using(banco).filter(
                 caix_empr=empresa_id,
                 caix_fili=filial_id
             )
-            return queryset
+            if operador:
+                queryset = queryset.filter(caix_oper=operador)
+            if status:
+                queryset = queryset.filter(caix_aber=status)
+
+            return queryset.order_by('-caix_data')
+        
         return Caixageral.objects.none()
 
     def destroy(self, request, *args, **kwargs):

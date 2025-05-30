@@ -2,11 +2,11 @@ from django.db import models
 
 
 class Caixageral(models.Model):
-    caix_empr = models.IntegerField(primary_key=True)
+    caix_empr = models.IntegerField()
     caix_fili = models.IntegerField()
     caix_caix = models.IntegerField()
-    caix_data = models.DateField()
-    caix_hora = models.TimeField(blank=True, null=True)
+    caix_data = models.DateField(primary_key=True)
+    caix_hora = models.TimeField(auto_now_add=True)
     caix_aber = models.CharField(max_length=1)
     caix_oper = models.IntegerField()
     caix_ecf = models.CharField(max_length=30, blank=True, null=True)
