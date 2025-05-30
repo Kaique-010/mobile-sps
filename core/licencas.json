@@ -22,7 +22,7 @@
     "db_name": "savexml1014",
     "db_host": "base.rtalmeida.com.br",
     "db_port": "5432",
-    "modulos": ["dashboards", "Produtos", "listacasamento"]
+    "modulos": ["dashboards", "listacasamento"]
   },
 
   {
@@ -47,6 +47,7 @@
     "db_port": "5432",
     "modulos": [
       "dashboards",
+      "dash",
       "Produtos",
       "Pedidos",
       "contratos",
@@ -55,7 +56,9 @@
       "listacasamento",
       "Entidades",
       "Orcamentos",
-      "implantacao"
+      "implantacao",
+      "Financeiro",
+      "OrdemdeServico"
     ]
   }
 ]
