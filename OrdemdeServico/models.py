@@ -36,14 +36,14 @@ class OrdemServicoFaseSetor(models.Model):
 
 
 class Ordemservico(models.Model):
-    orde_empr = models.IntegerField(primary_key=True) 
+    orde_empr = models.IntegerField() 
     orde_fili = models.IntegerField()
-    orde_nume = models.IntegerField()  
+    orde_nume = models.IntegerField(primary_key=True)  
     orde_tipo = models.CharField(max_length=20, choices=OrdensTipos, default="1")
     orde_data_aber = models.DateField(blank=True, null=True) 
     orde_hora_aber = models.TimeField(blank=True, null=True)
     orde_stat_orde = models.IntegerField(choices=ORDEM_STATUS_CHOICES, default=0)
-    orde_seto = models.IntegerField() 
+    orde_seto = models.IntegerField(blank=True, null=True) 
     orde_prio = models.CharField(max_length=10, choices=Ordem_Prioridade_Choices, default="alerta")
     orde_prob = models.TextField(blank=True, null=True)  
     orde_defe_desc = models.TextField(blank=True, null=True)  

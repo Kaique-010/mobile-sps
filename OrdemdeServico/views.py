@@ -1,10 +1,12 @@
 from rest_framework.viewsets import ModelViewSet
 from rest_framework import status, filters
+from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.response import Response
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction, IntegrityError
+from django.db.models import Max
 from .permissions import PodeVerOrdemDoSetor
 from core.middleware import get_licenca_slug
 from core.registry import get_licenca_db_config
@@ -51,24 +53,32 @@ class BaseMultiDBModelViewSet(ModuloRequeridoMixin, ModelViewSet):
         context['banco'] = self.get_banco()
         return context
 
-    @transaction.atomic
+    @transaction.atomic(using='default')  # ou o default do seu banco principal, não do banco multi
     def create(self, request, *args, **kwargs):
         banco = self.get_banco()
-        try:
-            serializer = self.get_serializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            with transaction.atomic(using=banco):
-                serializer.save()
-            logger.info(f"{self.__class__.__name__} criado por user {request.user.pk if request.user else 'anon'}")
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        except ValidationError as e:
-            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
-        except IntegrityError as e:
-            logger.error(f"Erro de integridade na criação {self.__class__.__name__}: {e}")
-            return Response({"detail": "Erro de integridade."}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            logger.error(f"Erro inesperado na criação {self.__class__.__name__}: {e}")
-            return Response({"detail": "Erro interno."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        data = request.data.copy()
+
+        agora = timezone.localtime()
+        data['orde_data_aber'] = agora.date()
+        data['orde_hora_aber'] = agora.time().replace(microsecond=0)
+        data['orde_stat_orde'] = 0
+
+        # Sequencial (se quiser)
+        data['orde_nume'] = self.get_next_ordem_numero(data.get('orde_empr'), data.get('orde_fili'))
+
+        if request.user and request.user.pk:
+            data['orde_usua_aber'] = request.user.pk
+
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+
+        with transaction.atomic(using=banco):
+            instance = serializer.save()
+
+        logger.info(f"O.S. {instance.orde_nume} aberta por user {request.user.pk if request.user else 'anon'}")
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
 
     @transaction.atomic
     def update(self, request, *args, **kwargs):
@@ -109,7 +119,48 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
             return Ordemservico.objects.using(banco).all().order_by('orde_data_aber')
         else:
             return Ordemservico.objects.using(banco).filter(orde_seto=user_setor.osfs_codi).order_by('orde_data_aber')
+    
+    
+    def get_next_ordem_numero(self, empre, fili):
+        banco = self.get_banco()
+        ultimo_numero = Ordemservico.objects.using(banco).filter(orde_empr=empre, orde_fili=fili).aggregate(Max('orde_nume'))['orde_nume__max']
+        return (ultimo_numero or 0) + 1
+    
+    @transaction.atomic
+    def create(self, request, *args, **kwargs):
+        banco = self.get_banco()
+        data = request.data.copy()
 
+        # Setar data e hora da abertura na criação
+        agora = timezone.now()
+        data['orde_data_aber'] = agora.date()
+        data['orde_hora_aber'] = agora.time().replace(microsecond=0)
+
+        # Status inicial Aberta (0)
+        data['orde_stat_orde'] = 0
+
+        # Se quiser guardar quem abriu a O.S. (campo orde_usua_aber)
+        if request.user and request.user.pk:
+            data['orde_usua_aber'] = request.user.pk
+
+        # Aqui você tem que definir o número da ordem
+        empre = data.get('orde_empr') or data.get('empr')
+        fili = data.get('orde_fili') or data.get('fili')
+
+        if not empre or not fili:
+            return Response({"detail": "Empresa (orde_empr) e Filial (orde_fili) são obrigatórios."}, status=400)
+
+        data['orde_nume'] = self.get_next_ordem_numero(empre, fili)
+
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+
+        with transaction.atomic(using=banco):
+            instance = serializer.save()
+        
+        logger.info(f"O.S. {instance.orde_nume} aberta por user {request.user.pk if request.user else 'anon'}")
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 
 
