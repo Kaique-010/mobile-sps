@@ -172,15 +172,49 @@ class OrdemServicoPecasViewSet(BaseMultiDBModelViewSet):
         banco = self.get_banco()
         return Ordemservicopecas.objects.using(banco).all()
 
+    def perform_create(self, serializer):
+        banco = self.get_banco()
+        with transaction.atomic(using=banco):
+            serializer.save()
+    
+    def update(self, request, *args, **kwargs):
+        banco = self.get_banco()
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+
+        with transaction.atomic(using=banco):
+            serializer.save()
+
+        return Response(serializer.data)
 
 class OrdemServicoServicosViewSet(BaseMultiDBModelViewSet):
-    modulo_necessario = 'ordemservico'
     serializer_class = OrdemServicoServicosSerializer
+    modulo_necessario = 'ordemservico'
 
     def get_queryset(self):
+        return Ordemservicoservicos.objects.using(self.get_banco()).all()
+
+    def perform_create(self, serializer):
         banco = self.get_banco()
-     
-        return Ordemservicoservicos.objects.using(banco).all()
+        with transaction.atomic(using=banco):
+            serializer.save()
+
+    def update(self, request, *args, **kwargs):
+        banco = self.get_banco()
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+
+        with transaction.atomic(using=banco):
+            serializer.save()
+
+        return Response(serializer.data)
+
 
 
 
