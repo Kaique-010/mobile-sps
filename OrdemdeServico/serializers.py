@@ -1,5 +1,8 @@
 import base64
 import logging
+from django.db.models import Max
+from django.db import transaction,IntegrityError
+from .utils import get_next_item_number
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from core.serializers import BancoContextMixin
@@ -17,7 +20,8 @@ class BancoModelSerializer(BancoContextMixin, serializers.ModelSerializer):
         banco = self.context.get('banco')
         if not banco:
             raise ValidationError('Banco não encontrado no contexto')
-        return self.Meta.model.objects.using(banco).create(**validated_data)
+        instance = self.Meta.model.objects.using(banco).create(**validated_data)
+        return instance
 
     def update(self, instance, validated_data):
         banco = self.context.get('banco')
@@ -29,31 +33,139 @@ class BancoModelSerializer(BancoContextMixin, serializers.ModelSerializer):
         return instance
 
 
-# Serializer de Ordem de Serviço
-class OrdemServicoSerializer(BancoModelSerializer):
-    class Meta:
-        model = Ordemservico
-        fields = '__all__'
-
-VALID_STATUSES = [0, 1, 2, 3, 4, 5, 20]
-
-def validate_orde_stat(self, value):
-    if value not in self.VALID_STATUSES:
-        raise ValidationError('Status inválido.')
-    return value
-
 
 class OrdemServicoPecasSerializer(BancoModelSerializer):
+    peca_id = serializers.IntegerField(read_only=True)  
+
     class Meta:
         model = Ordemservicopecas
         fields = '__all__'
 
+    def create(self, validated_data):
+        banco = self.context.get('banco')
+        if not banco:
+            raise ValidationError("Banco de dados não fornecido.")
+
+        with transaction.atomic(using=banco):
+            validated_data['peca_id'] = get_next_item_number(
+                validated_data['peca_empr'],
+                validated_data['peca_fili'],
+                validated_data['peca_orde'],
+                banco
+            )
+            return Ordemservicopecas.objects.using(banco).create(**validated_data)
+
+
 
 
 class OrdemServicoServicosSerializer(BancoModelSerializer):
+    serv_id = serializers.IntegerField(required=False)
     class Meta:
         model = Ordemservicoservicos
         fields = '__all__'
+    
+    def create(self, validated_data):
+        banco = self.context.get('banco')
+        if not banco:
+            return None
+        
+        serv_empr = validated_data['serv_empr']
+        serv_fili = validated_data['serv_fili']
+        serv_orde = validated_data['serv_orde']
+
+        validated_data['serv_id'] = get_next_item_number(serv_empr, serv_fili, serv_orde, banco)
+        return Ordemservicoservicos.objects.using(banco).create(**validated_data)
+
+
+class OrdemServicoSerializer(BancoModelSerializer):
+    pecas = OrdemServicoPecasSerializer(many=True, required=False)
+    servicos = OrdemServicoServicosSerializer(many=True, required=False)
+
+    class Meta:
+        model = Ordemservico
+        fields = '__all__'
+
+    def validate_orde_stat(self, value):
+        VALID_STATUSES = [0, 1, 2, 3, 4, 5, 20]
+        if value not in VALID_STATUSES:
+            raise ValidationError('Status inválido.')
+        return value
+
+    def create(self, validated_data):
+        pecas_data = validated_data.pop('pecas', [])
+        servicos_data = validated_data.pop('servicos', [])
+        banco = self.context.get('banco')
+        ordem = super().create(validated_data)
+
+        self._sync_pecas(ordem, pecas_data, banco)
+        self._sync_servicos(ordem, servicos_data, banco)
+
+        return ordem
+
+    def update(self, instance, validated_data):
+        pecas_data = validated_data.pop('pecas', [])
+        servicos_data = validated_data.pop('servicos', [])
+        banco = self.context.get('banco')
+
+        instance = super().update(instance, validated_data)
+
+        self._sync_pecas(instance, pecas_data, banco)
+        self._sync_servicos(instance, servicos_data, banco)
+
+        return instance
+
+    def _sync_pecas(self, ordem, pecas_data, banco):
+        ids_enviados = []
+        for item in pecas_data:
+            item['peca_empr'] = ordem.orde_empr
+            item['peca_fili'] = ordem.orde_fili
+            item['peca_orde'] = ordem.orde_nume
+
+            peca_id = item.get('peca_id')
+            if peca_id:
+                obj, _ = Ordemservicopecas.objects.using(banco).update_or_create(
+                    peca_id=peca_id,
+                    peca_empr=ordem.orde_empr,
+                    peca_fili=ordem.orde_fili,
+                    peca_orde=ordem.orde_nume,
+                    defaults=item
+                )
+                ids_enviados.append(obj.peca_id)
+            else:
+                obj = Ordemservicopecas.objects.using(banco).create(**item)
+                ids_enviados.append(obj.peca_id)
+
+        # Remove peças que não vieram mais
+        Ordemservicopecas.objects.using(banco).filter(
+            peca_orde=ordem.orde_nume
+        ).exclude(peca_id__in=ids_enviados).delete()
+
+    def _sync_servicos(self, ordem, servicos_data, banco):
+        ids_enviados = []
+        for item in servicos_data:
+            item['serv_empr'] = ordem.orde_empr
+            item['serv_fili'] = ordem.orde_fili
+            item['serv_orde'] = ordem.orde_nume
+
+            serv_id = item.get('serv_id')
+            if serv_id:
+                obj, _ = Ordemservicoservicos.objects.using(banco).update_or_create(
+                    serv_id=serv_id,
+                    serv_empr=ordem.orde_empr,
+                    serv_fili=ordem.orde_fili,
+                    serv_orde=ordem.orde_nume,
+                    defaults=item
+                )
+                ids_enviados.append(obj.serv_id)
+            else:
+                obj = Ordemservicoservicos.objects.using(banco).create(**item)
+                ids_enviados.append(obj.serv_id)
+
+        # Remove serviços que não vieram mais
+        Ordemservicoservicos.objects.using(banco).filter(
+            serv_orde=ordem.orde_nume
+        ).exclude(serv_id__in=ids_enviados).delete()
+
 
 
 

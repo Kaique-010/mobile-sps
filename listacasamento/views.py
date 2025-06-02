@@ -177,8 +177,6 @@ class ItensListaCasamentoViewSet(ModuloRequeridoMixin, ModelViewSet):
                 for item in adicionar:
                     
                   
-                    
-                    # Limpa campos extras que o serializer não aceita
                     for campo_extra in ['prod_nome', 'precos', 'saldo_estoque', 'imagem_base64', 'prod_empr', 'prod_loca', 'prod_ncm', 'prod_coba', 'prod_foto', 'prod_unme', 'prod_grup', 'prod_sugr', 'prod_fami', 'prod_marc']:
                         item.pop(campo_extra, None)
                     item.pop('item_item', None)

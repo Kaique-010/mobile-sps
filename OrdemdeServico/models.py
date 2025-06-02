@@ -40,8 +40,8 @@ class Ordemservico(models.Model):
     orde_fili = models.IntegerField()
     orde_nume = models.IntegerField(primary_key=True)  
     orde_tipo = models.CharField(max_length=20, choices=OrdensTipos, default="1")
-    orde_data_aber = models.DateField(blank=True, null=True) 
-    orde_hora_aber = models.TimeField(blank=True, null=True)
+    orde_data_aber = models.DateField(auto_now_add=True) 
+    orde_hora_aber = models.TimeField(auto_now_add=True)
     orde_stat_orde = models.IntegerField(choices=ORDEM_STATUS_CHOICES, default=0)
     orde_seto = models.IntegerField(blank=True, null=True) 
     orde_prio = models.CharField(max_length=10, choices=Ordem_Prioridade_Choices, default="alerta")
@@ -57,6 +57,14 @@ class Ordemservico(models.Model):
     orde_ulti_usua = models.CharField(max_length=100, blank=True, null=True)
     orde_ulti_alte = models.DateTimeField(blank=True, null=True)  
 
+    
+    @property
+    def itens_lista(self):
+        return Ordemservicopecas.objects.filter(
+        peca_empr=self.orde_empr,
+        peca_fili=self.orde_fili,
+        peca_orde=self.orde_nume
+    )
     class Meta:
         managed = False
         db_table = 'ordemservico'
@@ -65,7 +73,7 @@ class Ordemservico(models.Model):
 
 
 class Ordemservicopecas(models.Model):
-    peca_id = models.AutoField(primary_key=True)
+    peca_id = models.IntegerField(primary_key=True)
     peca_empr = models.IntegerField() 
     peca_fili = models.IntegerField()
     peca_orde = models.IntegerField()
@@ -78,10 +86,11 @@ class Ordemservicopecas(models.Model):
     class Meta:
         managed = False
         db_table = 'ordemservicopecas'
+        unique_together = (('peca_empr', 'peca_fili', 'peca_orde', 'peca_id'),)
 
 
 class Ordemservicoservicos(models.Model):
-    serv_id = models.AutoField(primary_key=True)
+    serv_id = models.IntegerField(primary_key=True)
     serv_empr = models.IntegerField()
     serv_fili = models.IntegerField()
     serv_orde = models.IntegerField()
