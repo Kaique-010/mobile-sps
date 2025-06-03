@@ -2,7 +2,6 @@ import base64
 import logging
 from django.db.models import Max
 from django.db import transaction,IntegrityError
-from .utils import get_next_item_number
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from core.serializers import BancoContextMixin
@@ -35,7 +34,8 @@ class BancoModelSerializer(BancoContextMixin, serializers.ModelSerializer):
 
 
 class OrdemServicoPecasSerializer(BancoModelSerializer):
-    peca_id = serializers.IntegerField(read_only=True)  
+    # Remova o read_only=True ou defina como False
+    peca_id = serializers.IntegerField(required=False)  
 
     class Meta:
         model = Ordemservicopecas
@@ -45,15 +45,9 @@ class OrdemServicoPecasSerializer(BancoModelSerializer):
         banco = self.context.get('banco')
         if not banco:
             raise ValidationError("Banco de dados não fornecido.")
+        # Não remova o peca_id aqui
+        return Ordemservicopecas.objects.using(banco).create(**validated_data)
 
-        with transaction.atomic(using=banco):
-            validated_data['peca_id'] = get_next_item_number(
-                validated_data['peca_empr'],
-                validated_data['peca_fili'],
-                validated_data['peca_orde'],
-                banco
-            )
-            return Ordemservicopecas.objects.using(banco).create(**validated_data)
 
 
 
@@ -69,11 +63,6 @@ class OrdemServicoServicosSerializer(BancoModelSerializer):
         if not banco:
             return None
         
-        serv_empr = validated_data['serv_empr']
-        serv_fili = validated_data['serv_fili']
-        serv_orde = validated_data['serv_orde']
-
-        validated_data['serv_id'] = get_next_item_number(serv_empr, serv_fili, serv_orde, banco)
         return Ordemservicoservicos.objects.using(banco).create(**validated_data)
 
 

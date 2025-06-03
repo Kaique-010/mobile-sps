@@ -1,12 +1,21 @@
-# utils.py
+from django.db import connections
 
-from .models import Ordemservicopecas
-from django.db.models import Max
-
-def get_next_item_number(peca_empr, peca_fili, peca_orde, banco):
-        ultimo = Ordemservicopecas.objects.using(banco).filter(
-            peca_empr=peca_empr,
-            peca_fili=peca_fili,
-            peca_orde=peca_orde
-        ).aggregate(max_id=Max('peca_id'))['max_id']
-        return (ultimo or 0) + 1
+def get_next_item_number_sequence(banco, peca_orde, peca_empr, peca_fili):
+    try:
+        with connections[banco].cursor() as cursor:
+           
+            cursor.execute("""
+                SELECT COALESCE(MAX(peca_id), 0) + 1 
+                FROM ordemservicopecas 
+                WHERE peca_empr = %s AND peca_fili = %s AND peca_orde = %s
+            """, [peca_empr, peca_fili, peca_orde])
+            next_id = cursor.fetchone()[0]
+            
+            if next_id == 1:  
+                return 1
+            return next_id
+    except Exception as e:
+       
+        with connections[banco].cursor() as cursor:
+            cursor.execute("SELECT nextval('ordemservicopecas_peca_id_seq')")
+            return cursor.fetchone()[0]

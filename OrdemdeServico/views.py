@@ -9,6 +9,7 @@ from django.db.models import Max
 from django.utils import timezone
 from rest_framework.decorators import action
 
+from OrdemdeServico.utils import get_next_item_number_sequence
 from listacasamento.utils import get_next_item_number
 from .permissions import PodeVerOrdemDoSetor
 from .models import (
@@ -208,59 +209,61 @@ class OrdemServicoPecasViewSet(BaseMultiDBModelViewSet,ModelViewSet):
             return Response({"error": "Banco de dados não encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
         data = request.data
-        remover = data.get('remover', [])
         adicionar = data.get('adicionar', [])
+        editar = data.get('editar', [])
+        remover = data.get('remover', [])
 
-        try:
-            with transaction.atomic(using=banco):
-                if remover:
-                    Ordemservicopecas.objects.using(banco).filter(
-                        peca_empr=remover[0].get('peca_empr'),
-                        peca_fili=remover[0].get('peca_fili'),
-                        peca_orde=remover[0].get('peca_orde'),
-                        peca_id__in=[x.get('peca_id') for x in remover]
-                    ).delete()
+        resposta = {
+            'adicionados': [],
+            'editados': [],
+            'removidos': [],
+        }
 
-                if adicionar:
-                    # Pega o último peca_id para aquela ordem, empresa e filial
-                    peca_empr = adicionar[0].get('peca_empr')
-                    peca_fili = adicionar[0].get('peca_fili')
-                    peca_orde = adicionar[0].get('peca_orde')
+        with transaction.atomic(using=banco):
+            # Adicionar
+            for item in adicionar:
+                item['peca_id'] = get_next_item_number_sequence(
+                    banco,
+                    item['peca_orde'],
+                    item['peca_empr'],
+                    item['peca_fili']
+                )
+            
+                serializer = OrdemServicoPecasSerializer(data=item, context={'banco': banco})
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+                resposta['adicionados'].append(serializer.data)
 
-                    ultimo_id = get_next_item_number(peca_empr, peca_fili, peca_orde, banco) - 1
+            # Editar
+            for item in editar:
+                try:
+                    obj = Ordemservicopecas.objects.using(banco).get(
+                        peca_empr=item['peca_empr'],
+                        peca_fili=item['peca_fili'],
+                        peca_orde=item['peca_orde'],
+                        peca_id=item['peca_id']
+                    )
+                except Ordemservicopecas.DoesNotExist:
+                    continue
 
-                    for i, peca in enumerate(adicionar):
-                        # Remove campos extras que não pertencem ao modelo
-                        for campo_extra in [
-                            'prod_nome', 'precos', 'saldo_estoque', 'imagem_base64',
-                            'prod_empr', 'prod_loca', 'prod_ncm', 'prod_coba', 'prod_foto',
-                            'prod_unme', 'prod_grup', 'prod_sugr', 'prod_fami', 'prod_marc'
-                        ]:
-                            peca.pop(campo_extra, None)
+                serializer = OrdemServicoPecasSerializer(
+                    obj, data=item, context={'banco': banco}, partial=True
+                )
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+                resposta['editados'].append(serializer.data)
 
-                        # Força o peca_id incremental, ignorando o que vier no front
-                        peca['peca_id'] = ultimo_id + i + 1
+            # Remover
+            for item in remover:
+                Ordemservicopecas.objects.using(banco).filter(
+                    peca_empr=item['peca_empr'],
+                    peca_fili=item['peca_fili'],
+                    peca_orde=item['peca_orde'],
+                    peca_id=item['peca_id']
+                ).delete()
+                resposta['removidos'].append(item['peca_id'])
 
-                        # Ajuste do nome do campo, se necessário
-                        if 'prod_codi' in peca:
-                            peca['peca_codi'] = peca.pop('prod_codi')
-
-                        serializer = OrdemServicoPecasSerializer(data=peca, context={'banco': banco})
-                        if serializer.is_valid():
-                            try:
-                                serializer.save()
-                            except IntegrityError as e:
-                                logger.exception(f"Erro de integridade ao salvar peça: {peca}")
-                                return Response({"detail": str(e)}, status=500)
-                        else:
-                            logger.error(f"Erro de validação: {serializer.errors} | Dados: {peca}")
-                            return Response(serializer.errors, status=400)
-
-        except IntegrityError as e:
-            logger.exception(f"Erro de integridade ao salvar peça. Dados: {request.data}")
-            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-        return Response({"success": True}, status=status.HTTP_200_OK)
+        return Response(resposta, status=status.HTTP_200_OK)
 
 
 
