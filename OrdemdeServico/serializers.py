@@ -34,8 +34,8 @@ class BancoModelSerializer(BancoContextMixin, serializers.ModelSerializer):
 
 
 class OrdemServicoPecasSerializer(BancoModelSerializer):
-    # Remova o read_only=True ou defina como False
     peca_id = serializers.IntegerField(required=False)  
+    produto_nome = serializers.SerializerMethodField()
 
     class Meta:
         model = Ordemservicopecas
@@ -45,10 +45,20 @@ class OrdemServicoPecasSerializer(BancoModelSerializer):
         banco = self.context.get('banco')
         if not banco:
             raise ValidationError("Banco de dados não fornecido.")
-        # Não remova o peca_id aqui
+      
         return Ordemservicopecas.objects.using(banco).create(**validated_data)
 
 
+    def get_produto_nome(self, obj):
+        try:
+          
+            banco = self.context.get('banco')
+            from Produtos.models import Produtos  
+
+            produto = Produtos.objects.using(banco).get(prod_codi=obj.peca_codi)
+            return produto.prod_nome
+        except:
+            return ''
 
 
 

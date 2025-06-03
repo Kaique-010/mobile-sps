@@ -8,7 +8,7 @@ from django.db import transaction, IntegrityError
 from django.db.models import Max
 from django.utils import timezone
 from rest_framework.decorators import action
-
+from rest_framework.parsers import JSONParser
 from OrdemdeServico.utils import get_next_item_number_sequence
 from listacasamento.utils import get_next_item_number
 from .permissions import PodeVerOrdemDoSetor
@@ -116,6 +116,8 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
 class OrdemServicoPecasViewSet(BaseMultiDBModelViewSet,ModelViewSet):
     serializer_class = OrdemServicoPecasSerializer
     permission_classes = [IsAuthenticated]
+    parser_classes = [JSONParser]
+   
 
     def get_queryset(self):
         banco = get_licenca_db_config(self.request)
@@ -201,71 +203,73 @@ class OrdemServicoPecasViewSet(BaseMultiDBModelViewSet,ModelViewSet):
             return Response({'detail': 'Erro de integridade.'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+  
+  
+  
     @action(detail=False, methods=['post'], url_path='update-lista')
     def update_lista(self, request, slug=None):
-        banco = get_licenca_db_config(self.request)
+        banco = get_licenca_db_config(request)
         if not banco:
-            return Response({"error": "Banco de dados não encontrado."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Banco de dados não encontrado."}, status=404)
 
         data = request.data
         adicionar = data.get('adicionar', [])
         editar = data.get('editar', [])
         remover = data.get('remover', [])
 
-        resposta = {
-            'adicionados': [],
-            'editados': [],
-            'removidos': [],
-        }
+        resposta = {'adicionados': [], 'editados': [], 'removidos': []}
 
-        with transaction.atomic(using=banco):
-            # Adicionar
-            for item in adicionar:
-                item['peca_id'] = get_next_item_number_sequence(
-                    banco,
-                    item['peca_orde'],
-                    item['peca_empr'],
-                    item['peca_fili']
-                )
-            
-                serializer = OrdemServicoPecasSerializer(data=item, context={'banco': banco})
-                serializer.is_valid(raise_exception=True)
-                serializer.save()
-                resposta['adicionados'].append(serializer.data)
+        try:
+            with transaction.atomic(using=banco):
 
-            # Editar
-            for item in editar:
-                try:
-                    obj = Ordemservicopecas.objects.using(banco).get(
+                for item in adicionar:
+                    item['peca_id'] = get_next_item_number_sequence(
+                        banco, item['peca_orde'], item['peca_empr'], item['peca_fili']
+                    )
+                    serializer = OrdemServicoPecasSerializer(data=item, context={'banco': banco})
+                    serializer.is_valid(raise_exception=True)
+                    obj = serializer.save()
+
+                    obj_refetch = Ordemservicopecas.objects.using(banco).get(
+                        peca_empr=obj.peca_empr,
+                        peca_fili=obj.peca_fili,
+                        peca_orde=obj.peca_orde,
+                        peca_id=obj.peca_id,
+                    )
+                    resposta['adicionados'].append(
+                        OrdemServicoPecasSerializer(obj_refetch, context={'banco': banco}).data
+                    )
+
+                for item in editar:
+                    try:
+                        obj = Ordemservicopecas.objects.using(banco).get(
+                            peca_empr=item['peca_empr'],
+                            peca_fili=item['peca_fili'],
+                            peca_orde=item['peca_orde'],
+                            peca_id=item['peca_id'],
+                        )
+                    except Ordemservicopecas.DoesNotExist:
+                        continue
+
+                    serializer = OrdemServicoPecasSerializer(obj, data=item, context={'banco': banco}, partial=True)
+                    serializer.is_valid(raise_exception=True)
+                    serializer.save()
+                    resposta['editados'].append(serializer.data)
+
+                for item in remover:
+                    Ordemservicopecas.objects.using(banco).filter(
                         peca_empr=item['peca_empr'],
                         peca_fili=item['peca_fili'],
                         peca_orde=item['peca_orde'],
-                        peca_id=item['peca_id']
-                    )
-                except Ordemservicopecas.DoesNotExist:
-                    continue
+                        peca_id=item['peca_id'],
+                    ).delete()
+                    resposta['removidos'].append(item['peca_id'])
 
-                serializer = OrdemServicoPecasSerializer(
-                    obj, data=item, context={'banco': banco}, partial=True
-                )
-                serializer.is_valid(raise_exception=True)
-                serializer.save()
-                resposta['editados'].append(serializer.data)
+            return Response(resposta)
 
-            # Remover
-            for item in remover:
-                Ordemservicopecas.objects.using(banco).filter(
-                    peca_empr=item['peca_empr'],
-                    peca_fili=item['peca_fili'],
-                    peca_orde=item['peca_orde'],
-                    peca_id=item['peca_id']
-                ).delete()
-                resposta['removidos'].append(item['peca_id'])
-
-        return Response(resposta, status=status.HTTP_200_OK)
-
-
+        except Exception as e:
+            logger.error(f"Erro ao processar update_lista: {str(e)}")
+            return Response({"error": str(e)}, status=400)
 
 
 

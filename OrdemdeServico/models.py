@@ -1,4 +1,6 @@
 from django.db import models
+from django.db import transaction
+from django.db.models import Max
 
 
 ORDEM_STATUS_CHOICES = (
@@ -89,6 +91,7 @@ class Ordemservicopecas(models.Model):
         unique_together = (('peca_empr', 'peca_fili', 'peca_orde', 'peca_id'),)
 
 
+
 class Ordemservicoservicos(models.Model):
     serv_id = models.IntegerField(primary_key=True)
     serv_empr = models.IntegerField()
@@ -120,8 +123,6 @@ class Ordemservicoimgantes(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'ordemservicoimgantes'
-
         db_table = 'ordemservicoimgantes'
 
 
