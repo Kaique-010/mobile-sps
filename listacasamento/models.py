@@ -46,7 +46,7 @@ class ItensListaCasamento(models.Model):
     item_item = models.IntegerField(primary_key=True) 
     item_prod = models.CharField(max_length=60) 
     item_fina = models.BooleanField(default=False)
-    item_clie = models.IntegerField()
+    item_clie = models.IntegerField(blank=True, null=True)
     item_pedi = models.IntegerField()
     item_usua = models.IntegerField()
     log_data = models.DateField(auto_now_add=True)
