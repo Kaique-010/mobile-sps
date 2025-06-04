@@ -1,11 +1,20 @@
 from django.db import models
 
 
-
-        
-        
-
-from django.db import models
+FORMA_RECEBIMENTO = [
+    ('00', 'DUPLICATA'),
+    ('01', 'CHEQUE'),
+    ('02', 'PROMISSÓRIA'),
+    ('03', 'RECIBO'),
+    ('50', 'CHEQUE PRÉ'),
+    ('51', 'CARTÃ DE CRÉDITO'),
+    ('52', 'CARTÃ DE DÉBITO'),
+    ('53', 'BOLETO BANCÁRIO'),
+    ('54', 'DINHEIRO'),
+    ('55', 'DEPÓSITO EM CONTA'),
+    ('56', 'VENDA À VISTA '),
+    ('60', 'PIX'),
+]
 
 class Titulosreceber(models.Model):
     titu_empr = models.IntegerField(primary_key=True)
@@ -43,7 +52,7 @@ class Titulosreceber(models.Model):
     titu_port = models.IntegerField(blank=True, null=True)
     titu_situ = models.IntegerField(blank=True, null=True)
     titu_inte = models.BooleanField(blank=True, null=True)
-    titu_form_reci = models.CharField(max_length=2, blank=True, null=True)
+    titu_form_reci = models.CharField(max_length=2, choices=FORMA_RECEBIMENTO, blank=True, null=True, default='54')
     titu_noss_nume = models.CharField(max_length=30, blank=True, null=True)
     titu_nome_arqu = models.CharField(max_length=100, blank=True, null=True)
     titu_nume_arqu = models.IntegerField(blank=True, null=True)

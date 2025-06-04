@@ -4,6 +4,8 @@ from django.db.models import Max
 from django.db import transaction,IntegrityError
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from Entidades.models import Entidades
+from contas_a_receber.models import Titulosreceber
 from core.serializers import BancoContextMixin
 from .models import (
     Ordemservico, Ordemservicopecas, Ordemservicoservicos,
@@ -44,6 +46,7 @@ class OrdemServicoPecasSerializer(BancoModelSerializer):
     peca_unit = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
     peca_tota = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
     produto_nome = serializers.SerializerMethodField()
+   
 
     class Meta:
         model = Ordemservicopecas
@@ -88,6 +91,8 @@ class OrdemServicoPecasSerializer(BancoModelSerializer):
             return produto.prod_nome
         except:
             return ''
+        
+   
 
 
 
@@ -102,11 +107,14 @@ class OrdemServicoServicosSerializer(BancoModelSerializer):
     serv_quan = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
     serv_unit = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
     serv_tota = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
+    
 
     class Meta:
         model = Ordemservicoservicos
         fields = '__all__'
-
+        
+    
+        
     def validate(self, data):
         # Validar campos obrigatórios
         campos_obrigatorios = ['serv_empr', 'serv_fili', 'serv_orde', 'serv_codi']
@@ -138,13 +146,64 @@ class OrdemServicoServicosSerializer(BancoModelSerializer):
         return Ordemservicoservicos.objects.using(banco).create(**validated_data)
 
 
+
+class TituloReceberSerializer(BancoModelSerializer):
+    class Meta:
+        model = Titulosreceber
+        fields = [
+            'titu_empr',
+            'titu_fili',
+            'titu_titu',
+            'titu_seri',
+            'titu_parc',
+            'titu_clie',
+            'titu_valo',
+            'titu_venc',
+            'titu_form_reci',
+        ]
+
+
 class OrdemServicoSerializer(BancoModelSerializer):
     pecas = OrdemServicoPecasSerializer(many=True, required=False)
-    servicos = OrdemServicoServicosSerializer(many=True, required=False)
+    servicos = serializers.SerializerMethodField()
+    cliente_nome = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Ordemservico
         fields = '__all__'
+
+    def get_servicos(self, obj):
+        banco = self.context.get('banco')
+        if not banco:
+            return []
+        
+        servicos = Ordemservicoservicos.objects.using(banco).filter(
+            serv_empr=obj.orde_empr,
+            serv_fili=obj.orde_fili,
+            serv_orde=obj.orde_nume
+        ).order_by('serv_sequ')
+        
+        return OrdemServicoServicosSerializer(servicos, many=True, context=self.context).data
+    
+    def get_cliente_nome(self, obj):
+        banco = self.context.get('banco')
+        if not banco or not obj.orde_enti or not obj.orde_empr:
+            return None
+            
+        try:
+            entidade = Entidades.objects.using(banco).get(
+                enti_clie=obj.orde_enti,
+                enti_empr=obj.orde_empr
+            )
+            return entidade.enti_nome
+        except Entidades.DoesNotExist:
+            logger.warning(f"Entidade não encontrada: empresa {obj.orde_empr}, código {obj.orde_enti}")
+            return None
+        except Exception as e:
+            logger.error(f"Erro ao buscar cliente: {e}")
+            return None
+        
+            
 
     def validate_orde_stat(self, value):
         VALID_STATUSES = [0, 1, 2, 3, 4, 5, 20]

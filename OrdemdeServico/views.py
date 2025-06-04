@@ -76,6 +76,11 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
     ordering_fields = ['orde_data_aber', 'orde_data_fech', 'orde_prio']
     search_fields = ['orde_prob', 'orde_defe_desc', 'orde_obse']
     permission_classes = [IsAuthenticated, PodeVerOrdemDoSetor]
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['banco'] = get_licenca_db_config(self.request)
+        return context
 
     def get_queryset(self):
         banco = self.get_banco()
@@ -112,12 +117,51 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
+    @action(
+        detail=True, 
+        methods=['post'],
+        permission_classes=[IsAuthenticated]  # Removendo a restrição de setor para esta ação específica
+    )
+    def atualizar_total(self, request, pk=None, slug=None):
+        """
+        Endpoint para atualizar o total da ordem de serviço.
+        """
+        try:
+            banco = self.get_banco()
+            ordem = self.get_object()
+            
+            with transaction.atomic(using=banco):
+                ordem.calcular_total()
+                ordem.save(using=banco)
+            
+            serializer = self.get_serializer(ordem)
+            return Response(serializer.data)
+            
+        except Exception as e:
+            logger.error(f"Erro ao atualizar total da ordem {pk}: {str(e)}")
+            return Response(
+                {"error": "Erro ao atualizar total da ordem de serviço"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
 
 class OrdemServicoPecasViewSet(BaseMultiDBModelViewSet,ModelViewSet):
     serializer_class = OrdemServicoPecasSerializer
     permission_classes = [IsAuthenticated]
     parser_classes = [JSONParser]
    
+    def atualizar_total_ordem(self, peca_empr, peca_fili, peca_orde):
+        banco = self.get_banco()
+        try:
+            ordem = Ordemservico.objects.using(banco).get(
+                orde_empr=peca_empr,
+                orde_fili=peca_fili,
+                orde_nume=peca_orde
+            )
+            ordem.calcular_total()
+            ordem.save(using=banco)
+        except Ordemservico.DoesNotExist:
+            logger.error(f"Ordem de serviço não encontrada: {peca_orde}")
 
     def get_queryset(self):
         banco = get_licenca_db_config(self.request)
@@ -129,15 +173,15 @@ class OrdemServicoPecasViewSet(BaseMultiDBModelViewSet,ModelViewSet):
         peca_fili = self.request.query_params.get('peca_fili')
         peca_orde = self.request.query_params.get('peca_orde')
 
-        if not peca_orde:
-            logger.warning("peca_orde não fornecido")
+        if not all([peca_empr, peca_fili, peca_orde]):
+            logger.warning("Parâmetros obrigatórios não fornecidos (peca_empr, peca_fili, peca_orde)")
             return Ordemservicopecas.objects.none()
 
-        queryset = Ordemservicopecas.objects.using(banco).filter(peca_orde=peca_orde)
-        if peca_empr:
-            queryset = queryset.filter(peca_empr=peca_empr)
-        if peca_fili:
-            queryset = queryset.filter(peca_fili=peca_fili)
+        queryset = Ordemservicopecas.objects.using(banco).filter(
+            peca_empr=peca_empr,
+            peca_fili=peca_fili,
+            peca_orde=peca_orde
+        )
 
         logger.info(f"Parâmetros recebidos: peca_empr={peca_empr}, peca_fili={peca_fili}, peca_orde={peca_orde}")
         logger.info(f"Queryset filtrado: {queryset.query}")
@@ -313,6 +357,36 @@ class OrdemServicoPecasViewSet(BaseMultiDBModelViewSet,ModelViewSet):
             logger.error(f"Erro ao processar update_lista: {str(e)}")
             return Response({"error": str(e)}, status=400)
 
+    def create(self, request, *args, **kwargs):
+        response = super().create(request, *args, **kwargs)
+        if response.status_code == 201:  # Se criou com sucesso
+            data = request.data
+            self.atualizar_total_ordem(
+                data.get('peca_empr'),
+                data.get('peca_fili'),
+                data.get('peca_orde')
+            )
+        return response
+
+    def update(self, request, *args, **kwargs):
+        response = super().update(request, *args, **kwargs)
+        if response.status_code == 200:  # Se atualizou com sucesso
+            instance = self.get_object()
+            self.atualizar_total_ordem(
+                instance.peca_empr,
+                instance.peca_fili,
+                instance.peca_orde
+            )
+        return response
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        empr, fili, orde = instance.peca_empr, instance.peca_fili, instance.peca_orde
+        response = super().destroy(request, *args, **kwargs)
+        if response.status_code == 204:  # Se deletou com sucesso
+            self.atualizar_total_ordem(empr, fili, orde)
+        return response
+
 
 class OrdemServicoServicosViewSet(BaseMultiDBModelViewSet):
     modulo_necessario = 'ordemservico'
@@ -320,11 +394,37 @@ class OrdemServicoServicosViewSet(BaseMultiDBModelViewSet):
     permission_classes = [IsAuthenticated]
     parser_classes = [JSONParser]
 
+    def atualizar_total_ordem(self, serv_empr, serv_fili, serv_orde):
+        banco = self.get_banco()
+        try:
+            ordem = Ordemservico.objects.using(banco).get(
+                orde_empr=serv_empr,
+                orde_fili=serv_fili,
+                orde_nume=serv_orde
+            )
+            ordem.calcular_total()
+            ordem.save(using=banco)
+        except Ordemservico.DoesNotExist:
+            logger.error(f"Ordem de serviço não encontrada: {serv_orde}")
+
     def get_queryset(self):
         banco = self.get_banco()
-        ordem_id = self.request.query_params.get('ordem')
-        qs = Ordemservicoservicos.objects.using(banco).all()
-        return qs.filter(serv_orde=ordem_id) if ordem_id else qs
+        serv_empr = self.request.query_params.get('serv_empr') or self.request.query_params.get('empr')
+        serv_fili = self.request.query_params.get('serv_fili') or self.request.query_params.get('fili')
+        serv_orde = self.request.query_params.get('serv_orde') or self.request.query_params.get('ordem')
+
+        if not all([serv_empr, serv_fili, serv_orde]):
+            logger.warning("Parâmetros obrigatórios não fornecidos (serv_empr/empr, serv_fili/fili, serv_orde/ordem)")
+            return Ordemservicoservicos.objects.using(banco).none()
+
+        qs = Ordemservicoservicos.objects.using(banco).filter(
+            serv_empr=serv_empr,
+            serv_fili=serv_fili,
+            serv_orde=serv_orde
+        )
+        
+        logger.info(f"Filtrando serviços com: ordem={serv_orde}, empresa={serv_empr}, filial={serv_fili}")
+        return qs.order_by('serv_sequ')
 
     @action(detail=False, methods=['post'], url_path='update-lista')
     def update_lista(self, request, slug=None):
@@ -427,6 +527,36 @@ class OrdemServicoServicosViewSet(BaseMultiDBModelViewSet):
         except Exception as e:
             logger.error(f"Erro ao processar update_lista: {str(e)}")
             return Response({"error": str(e)}, status=400)
+
+    def create(self, request, *args, **kwargs):
+        response = super().create(request, *args, **kwargs)
+        if response.status_code == 201:  # Se criou com sucesso
+            data = request.data
+            self.atualizar_total_ordem(
+                data.get('serv_empr'),
+                data.get('serv_fili'),
+                data.get('serv_orde')
+            )
+        return response
+
+    def update(self, request, *args, **kwargs):
+        response = super().update(request, *args, **kwargs)
+        if response.status_code == 200:  # Se atualizou com sucesso
+            instance = self.get_object()
+            self.atualizar_total_ordem(
+                instance.serv_empr,
+                instance.serv_fili,
+                instance.serv_orde
+            )
+        return response
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        empr, fili, orde = instance.serv_empr, instance.serv_fili, instance.serv_orde
+        response = super().destroy(request, *args, **kwargs)
+        if response.status_code == 204:  # Se deletou com sucesso
+            self.atualizar_total_ordem(empr, fili, orde)
+        return response
 
 
 class BaseImagemViewSet(BaseMultiDBModelViewSet):

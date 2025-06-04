@@ -58,7 +58,29 @@ class Ordemservico(models.Model):
     orde_usua_aber = models.IntegerField(blank=True, null=True)
     orde_ulti_usua = models.CharField(max_length=100, blank=True, null=True)
     orde_ulti_alte = models.DateTimeField(blank=True, null=True)  
+    orde_tota = models.DecimalField(max_digits=15, decimal_places=4, default=0)
 
+    def calcular_total(self):
+        total_pecas = sum(
+            peca.peca_tota or 0 
+            for peca in Ordemservicopecas.objects.filter(
+                peca_empr=self.orde_empr,
+                peca_fili=self.orde_fili,
+                peca_orde=self.orde_nume
+            )
+        )
+        
+        total_servicos = sum(
+            servico.serv_tota or 0
+            for servico in Ordemservicoservicos.objects.filter(
+                serv_empr=self.orde_empr,
+                serv_fili=self.orde_fili,
+                serv_orde=self.orde_nume
+            )
+        )
+        
+        self.orde_tota = total_pecas + total_servicos
+        return self.orde_tota
     
     @property
     def itens_lista(self):
