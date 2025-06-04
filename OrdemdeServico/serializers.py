@@ -34,12 +34,43 @@ class BancoModelSerializer(BancoContextMixin, serializers.ModelSerializer):
 
 
 class OrdemServicoPecasSerializer(BancoModelSerializer):
-    peca_id = serializers.IntegerField(required=False)  
+    peca_id = serializers.IntegerField(required=False)
+    peca_empr = serializers.IntegerField(required=True)
+    peca_fili = serializers.IntegerField(required=True)
+    peca_orde = serializers.IntegerField(required=True)
+    peca_codi = serializers.CharField(required=True)
+    peca_comp = serializers.CharField(required=False, allow_blank=True)
+    peca_quan = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
+    peca_unit = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
+    peca_tota = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
     produto_nome = serializers.SerializerMethodField()
 
     class Meta:
         model = Ordemservicopecas
         fields = '__all__'
+
+    def validate(self, data):
+        # Validar campos obrigatórios
+        campos_obrigatorios = ['peca_empr', 'peca_fili', 'peca_orde', 'peca_codi']
+        for campo in campos_obrigatorios:
+            if campo not in data:
+                raise serializers.ValidationError(f"O campo {campo} é obrigatório.")
+            
+            if data[campo] is None:
+                raise serializers.ValidationError(f"O campo {campo} não pode ser nulo.")
+
+        # Validar valores numéricos
+        if data.get('peca_quan', 0) < 0:
+            raise serializers.ValidationError("A quantidade não pode ser negativa.")
+        
+        if data.get('peca_unit', 0) < 0:
+            raise serializers.ValidationError("O valor unitário não pode ser negativo.")
+
+        # Calcular o total se não fornecido
+        if 'peca_tota' not in data and 'peca_quan' in data and 'peca_unit' in data:
+            data['peca_tota'] = data['peca_quan'] * data['peca_unit']
+
+        return data
 
     def create(self, validated_data):
         banco = self.context.get('banco')
@@ -48,12 +79,10 @@ class OrdemServicoPecasSerializer(BancoModelSerializer):
       
         return Ordemservicopecas.objects.using(banco).create(**validated_data)
 
-
     def get_produto_nome(self, obj):
         try:
-          
             banco = self.context.get('banco')
-            from Produtos.models import Produtos  
+            from Produtos.models import Produtos
 
             produto = Produtos.objects.using(banco).get(prod_codi=obj.peca_codi)
             return produto.prod_nome
@@ -64,14 +93,47 @@ class OrdemServicoPecasSerializer(BancoModelSerializer):
 
 class OrdemServicoServicosSerializer(BancoModelSerializer):
     serv_id = serializers.IntegerField(required=False)
+    serv_empr = serializers.IntegerField(required=True)
+    serv_fili = serializers.IntegerField(required=True)
+    serv_orde = serializers.IntegerField(required=True)
+    serv_sequ = serializers.IntegerField(required=False)
+    serv_codi = serializers.CharField(required=True)
+    serv_comp = serializers.CharField(required=False, allow_blank=True)
+    serv_quan = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
+    serv_unit = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
+    serv_tota = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
+
     class Meta:
         model = Ordemservicoservicos
         fields = '__all__'
-    
+
+    def validate(self, data):
+        # Validar campos obrigatórios
+        campos_obrigatorios = ['serv_empr', 'serv_fili', 'serv_orde', 'serv_codi']
+        for campo in campos_obrigatorios:
+            if campo not in data:
+                raise serializers.ValidationError(f"O campo {campo} é obrigatório.")
+            
+            if data[campo] is None:
+                raise serializers.ValidationError(f"O campo {campo} não pode ser nulo.")
+
+        # Validar valores numéricos
+        if data.get('serv_quan', 0) < 0:
+            raise serializers.ValidationError("A quantidade não pode ser negativa.")
+        
+        if data.get('serv_unit', 0) < 0:
+            raise serializers.ValidationError("O valor unitário não pode ser negativo.")
+
+        # Calcular o total se não fornecido
+        if 'serv_tota' not in data and 'serv_quan' in data and 'serv_unit' in data:
+            data['serv_tota'] = data['serv_quan'] * data['serv_unit']
+
+        return data
+
     def create(self, validated_data):
         banco = self.context.get('banco')
         if not banco:
-            return None
+            raise ValidationError("Banco de dados não fornecido.")
         
         return Ordemservicoservicos.objects.using(banco).create(**validated_data)
 

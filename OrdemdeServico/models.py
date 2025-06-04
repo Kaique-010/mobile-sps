@@ -97,6 +97,7 @@ class Ordemservicoservicos(models.Model):
     serv_empr = models.IntegerField()
     serv_fili = models.IntegerField()
     serv_orde = models.IntegerField()
+    serv_sequ = models.IntegerField()
     serv_codi = models.CharField(max_length=20)  
     serv_comp = models.TextField(blank=True, null=True)
     serv_quan = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
@@ -106,6 +107,7 @@ class Ordemservicoservicos(models.Model):
     class Meta:
         managed = False
         db_table = 'ordemservicoservicos'
+        unique_together = (('serv_empr', 'serv_fili', 'serv_orde', 'serv_sequ'),)
 
 
 class Ordemservicoimgantes(models.Model):
