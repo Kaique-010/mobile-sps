@@ -4,37 +4,83 @@ from .models import Produtos, UnidadeMedida, Tabelaprecos
 from core.serializers import BancoContextMixin
 
 class TabelaPrecoSerializer(BancoContextMixin, serializers.ModelSerializer):
+    percentual_avis = serializers.FloatField(write_only=True, required=False)
+    percentual_apra = serializers.FloatField(write_only=True, required=False)
+
     class Meta:
         model = Tabelaprecos
-        fields = ['tabe_empr', 'tabe_fili', 'tabe_prod', 'tabe_prco', 'tabe_cuge', 'tabe_avis', 'tabe_apra']
+        fields = [
+            'tabe_empr', 'tabe_fili', 'tabe_prod', 
+            'tabe_prco', 'tabe_cuge', 'tabe_avis', 'tabe_apra',
+            'tabe_desc', 'tabe_marg', 'tabe_vare',
+            'tabe_cust', 'tabe_icms', 'tabe_valo_st',
+            'percentual_avis', 'percentual_apra'
+        ]
         extra_kwargs = {
             'tabe_empr': {'read_only': True},
             'tabe_fili': {'read_only': True},
             'tabe_prod': {'read_only': True},
         }
 
+    def validate(self, data):
+        # Validar se os preços são positivos
+        campos_preco = ['tabe_prco', 'tabe_avis', 'tabe_apra', 'tabe_cuge', 'tabe_vare']
+        for campo in campos_preco:
+            if campo in data and data[campo] and data[campo] < 0:
+                raise serializers.ValidationError({campo: "O preço não pode ser negativo"})
+        
+        # Calcular preços baseados nos percentuais
+        if 'tabe_prco' in data:
+            preco_base = data['tabe_prco']
+            
+            if 'percentual_avis' in data:
+                percentual = data.pop('percentual_avis')
+                data['tabe_avis'] = round(preco_base * (1 + percentual / 100), 2)
+            
+            if 'percentual_apra' in data:
+                percentual = data.pop('percentual_apra')
+                data['tabe_apra'] = round(preco_base * (1 + percentual / 100), 2)
+
+        return data
+
     def create(self, validated_data):
-        using = self.context.get('using')
-        if using:
+        using = self.context.get('using') or self.context.get('banco')
+        if not using:
+            raise serializers.ValidationError("Banco de dados não especificado")
+
+        # Verificar se já existe um registro
+        try:
+            instance = Tabelaprecos.objects.using(using).get(
+                tabe_empr=validated_data['tabe_empr'],
+                tabe_fili=validated_data['tabe_fili'],
+                tabe_prod=validated_data['tabe_prod']
+            )
+            # Atualizar o existente
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save(using=using)
+            return instance
+        except Tabelaprecos.DoesNotExist:
+            # Criar novo
             return Tabelaprecos.objects.using(using).create(**validated_data)
-        return super().create(validated_data)
 
     def update(self, instance, validated_data):
-        using = self.context.get('using')
+        using = self.context.get('using') or self.context.get('banco')
+        if not using:
+            raise serializers.ValidationError("Banco de dados não especificado")
+
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-        if using:
-            instance.save(using=using)
-        else:
-            instance.save()
+        instance.save(using=using)
         return instance
 
 
 class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
-    precos = serializers.SerializerMethodField()
-    prod_preco_vista =  serializers.SerializerMethodField()
-    saldo_estoque = serializers.SerializerMethodField()
+    precos = TabelaPrecoSerializer(many=True, read_only=True)
+    prod_preco_vista = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
+    saldo_estoque = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
     imagem_base64 = serializers.SerializerMethodField()
+    preco_principal = serializers.SerializerMethodField()
 
     class Meta:
         model = Produtos
@@ -49,6 +95,21 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
             return base64.b64encode(obj.prod_foto).decode('utf-8')
         return None
 
+    def get_preco_principal(self, obj):
+        """Retorna o preço principal do produto (à vista ou normal)"""
+        banco = self.context.get("banco")
+        if not banco:
+            return None
+
+        preco = Tabelaprecos.objects.using(banco).filter(
+            tabe_prod=obj.prod_codi,
+            tabe_empr=obj.prod_empr
+        ).values('tabe_avis', 'tabe_prco').first()
+
+        if preco:
+            return preco['tabe_avis'] if preco['tabe_avis'] else preco['tabe_prco']
+        return None
+
     def get_precos(self, obj):
         banco = self.context.get("banco")
         if not banco:
@@ -60,91 +121,56 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
         )
 
         return TabelaPrecoSerializer(precos, many=True, context=self.context).data
-    
-    
-    def get_prod_preco_vista(self, obj):
-        banco = self.context.get("banco")
-        if not banco:
-            return None
 
-        preco = Tabelaprecos.objects.using(banco).filter(
-            tabe_prod=obj.prod_codi,
-            tabe_empr=obj.prod_empr
-        ).values_list('tabe_avis', flat=True).first()
-
-        return preco
-
-
-        
-    
     def create(self, validated_data):
         banco = self.context.get('banco')
         if not banco:
             raise serializers.ValidationError("Banco não encontrado")
 
-        empresa = validated_data.get('prod_empr')
-        codigo = validated_data.get('prod_codi')
+        # Criar produto
+        produto = super().create(validated_data)
 
-        if not codigo:
-            print("Código não fornecido")
+        # Criar tabela de preço padrão se não existir
+        precos_data = self.context.get('precos_data', {})
+        if precos_data:
+            TabelaPrecoSerializer(context=self.context).create({
+                'tabe_empr': produto.prod_empr,
+                'tabe_fili': 1,  # Filial padrão
+                'tabe_prod': produto.prod_codi,
+                **precos_data
+            })
 
-            ultimo_produto = (
-                Produtos.objects.using(banco)  # Usando o banco correto
-                .filter(prod_empr=empresa, prod_codi__regex=r'^\d+$')
-                .order_by('-prod_codi')
-                .first()
-            )
+        return produto
 
-            print(f"Último produto encontrado: {ultimo_produto}")
-
-            if ultimo_produto:
-                try:
-                    
-                    novo_codigo = str(int(ultimo_produto.prod_codi) + 1)
-                except ValueError:
-                   
-                    raise serializers.ValidationError({
-                        'prod_codi': f'Não foi possível incrementar o código existente: {ultimo_produto.prod_codi}'
-                    })
-            else:
-                print("Nenhum produto encontrado, iniciando com o código 1.")
-                novo_codigo = "1"
-
-           
-           
-            while Produtos.objects.using(banco).filter(prod_empr=empresa, prod_codi=novo_codigo).exists():
-                print(f"O código {novo_codigo} já existe, tentando gerar um novo.")
-                novo_codigo = str(int(novo_codigo) + 1)
-
-            print(f"Código único gerado: {novo_codigo}")
-            validated_data['prod_codi'] = novo_codigo
-
-      
-        return Produtos.objects.using(banco).create(**validated_data)
-
-    
-
-    def update_or_create_precos(self, produto, precos_data):
-        banco = self.context.get("banco")
+    def update(self, instance, validated_data):
+        banco = self.context.get('banco')
         if not banco:
-            return
+            raise serializers.ValidationError("Banco não encontrado")
 
-        for preco_data in precos_data:
-            preco_data['tabe_prod'] = produto.prod_codi
-            preco_data['tabe_empr'] = produto.prod_empr
+        # Atualizar produto
+        produto = super().update(instance, validated_data)
 
-            obj, created = Tabelaprecos.objects.using(banco).get_or_create(
-                tabe_empr=preco_data['tabe_empr'],
-                tabe_fili=preco_data['tabe_fili'],
-                tabe_prod=preco_data['tabe_prod'],
-                defaults=preco_data
-            )
-            if not created:
-                for k, v in preco_data.items():
-                    setattr(obj, k, v)
-                obj.save(using=banco)
+        # Atualizar preços se fornecidos
+        precos_data = self.context.get('precos_data')
+        if precos_data:
+            try:
+                tabela_preco = Tabelaprecos.objects.using(banco).get(
+                    tabe_empr=produto.prod_empr,
+                    tabe_fili=1,
+                    tabe_prod=produto.prod_codi
+                )
+                TabelaPrecoSerializer(tabela_preco, data=precos_data, context=self.context).update(
+                    tabela_preco, precos_data
+                )
+            except Tabelaprecos.DoesNotExist:
+                TabelaPrecoSerializer(context=self.context).create({
+                    'tabe_empr': produto.prod_empr,
+                    'tabe_fili': 1,
+                    'tabe_prod': produto.prod_codi,
+                    **precos_data
+                })
 
-
+        return produto
 
 
 class UnidadeMedidaSerializer(serializers.ModelSerializer):

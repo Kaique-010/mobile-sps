@@ -97,7 +97,23 @@ class MovicaixaSerializer(serializers.ModelSerializer):
         if not banco:
             raise serializers.ValidationError("Banco não encontrado")
 
+        # Campos obrigatórios base
         obrigatorios = ['movi_empr', 'movi_fili', 'movi_caix', 'movi_data', 'movi_ctrl']
+        
+        # Se for movimento de venda, validar campos adicionais
+        if data.get('movi_nume_vend'):
+            obrigatorios.extend(['movi_tipo', 'movi_entr'])
+            
+            # Se for item de venda (tipo 1)
+            if data.get('movi_tipo') == 1:
+                if not data.get('movi_obse'):
+                    raise serializers.ValidationError("Detalhes do item são obrigatórios para venda")
+            
+            # Se for pagamento (tipo > 1)
+            elif data.get('movi_tipo') > 1:
+                if data.get('movi_tipo') not in [2, 3, 4, 5]:
+                    raise serializers.ValidationError("Tipo de pagamento inválido")
+
         erros = {}
         for campo in obrigatorios:
             if not data.get(campo):
