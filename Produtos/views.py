@@ -105,16 +105,27 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             output_field=DecimalField()
         )
         
-        prod_preco_vista=Subquery(
-            Tabelaprecos.objects.filter(tabe_prod=OuterRef('prod_codi'))
-            .values('tabe_avis')[:1]
+        preco_vista_subquery = Subquery(
+            Tabelaprecos.objects.using(banco).filter(
+                tabe_prod=OuterRef('prod_codi'),
+                tabe_empr=OuterRef('prod_empr')
+            ).values('tabe_avis')[:1],
+            output_field=DecimalField()
         )
-        
+
+        preco_normal_subquery = Subquery(
+            Tabelaprecos.objects.using(banco).filter(
+                tabe_prod=OuterRef('prod_codi'),
+                tabe_empr=OuterRef('prod_empr')
+            ).values('tabe_prco')[:1],
+            output_field=DecimalField()
+        )
 
         return Produtos.objects.using(banco).annotate(
-        saldo_estoque=Coalesce(saldo_subquery, V(0), output_field=DecimalField()),
-        prod_preco_vista=Coalesce(prod_preco_vista, V(0), output_field=DecimalField())
-    )
+            saldo_estoque=Coalesce(saldo_subquery, V(0), output_field=DecimalField()),
+            prod_preco_vista=Coalesce(preco_vista_subquery, V(0), output_field=DecimalField()),
+            prod_preco_normal=Coalesce(preco_normal_subquery, V(0), output_field=DecimalField())
+        )
 
 
     @action(detail=False, methods=["get"])
@@ -161,29 +172,34 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         banco = get_licenca_db_config(request)
-        serializer = self.get_serializer(data=request.data, context={'banco': banco})
+        precos_data = request.data.pop('precos', None)
+        
+        serializer = self.get_serializer(
+            data=request.data, 
+            context={'banco': banco, 'precos_data': precos_data}
+        )
         serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
         
-        produto = serializer.save()
-        
-        precos_data = request.data.get('precos', [])
-        serializer.update_or_create_precos(produto, precos_data)
-
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     def update(self, request, *args, **kwargs):
         banco = get_licenca_db_config(request)
+        precos_data = request.data.pop('precos', None)
+        
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
-
-        serializer = self.get_serializer(instance, data=request.data, partial=partial, context={'banco': banco})
+        
+        serializer = self.get_serializer(
+            instance,
+            data=request.data,
+            partial=partial,
+            context={'banco': banco, 'precos_data': precos_data}
+        )
         serializer.is_valid(raise_exception=True)
-
-        produto = serializer.save()
-
-        precos_data = request.data.get('precos', [])
-        serializer.update_or_create_precos(produto, precos_data)
-
+        self.perform_update(serializer)
+        
         return Response(serializer.data)
     
     def get_serializer_context(self):
@@ -191,60 +207,148 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         context['banco'] = get_licenca_db_config(self.request)
         return context
 
+    @action(detail=True, methods=['get'])
+    def precos(self, request, pk=None):
+        produto = self.get_object()
+        banco = get_licenca_db_config(request)
+        
+        precos = Tabelaprecos.objects.using(banco).filter(
+            tabe_prod=produto.prod_codi,
+            tabe_empr=produto.prod_empr
+        )
+        
+        serializer = TabelaPrecoSerializer(precos, many=True, context={'banco': banco})
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def atualizar_precos(self, request, pk=None):
+        produto = self.get_object()
+        banco = get_licenca_db_config(request)
+        
+        serializer = TabelaPrecoSerializer(
+            data=request.data,
+            context={'banco': banco}
+        )
+        
+        if serializer.is_valid():
+            try:
+                preco = Tabelaprecos.objects.using(banco).get(
+                    tabe_prod=produto.prod_codi,
+                    tabe_empr=produto.prod_empr,
+                    tabe_fili=request.data.get('tabe_fili', 1)
+                )
+                serializer.update(preco, serializer.validated_data)
+            except Tabelaprecos.DoesNotExist:
+                serializer.save(
+                    tabe_prod=produto.prod_codi,
+                    tabe_empr=produto.prod_empr,
+                    tabe_fili=request.data.get('tabe_fili', 1)
+                )
+            
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class TabelaPrecoMobileViewSet(viewsets.ModelViewSet):
     serializer_class = TabelaPrecoSerializer
-    lookup_field = 'lookup_key'
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_fields = ['tabe_empr', 'tabe_fili', 'tabe_prod']
+    search_fields = ['tabe_prod']
+    lookup_field = 'chave_composta'
+    lookup_value_regex = '[^/]+'
+
+    def get_object(self):
+        # Extrair os componentes da chave composta
+        chave = self.kwargs['chave_composta'].split('-')
+        if len(chave) != 3:
+            raise ValidationError("Formato de chave inválido")
+        
+        empresa, filial, produto = chave
+        
+        # Buscar o objeto
+        queryset = self.get_queryset().filter(
+            tabe_empr=empresa,
+            tabe_fili=filial,
+            tabe_prod=produto
+        )
+        
+        obj = get_object_or_404(queryset)
+        self.check_object_permissions(self.request, obj)
+        return obj
 
     def get_queryset(self):
         banco = get_licenca_db_config(self.request)
-        return Tabelaprecos.objects.using(banco).all()
-
-    def get_object(self):
-        banco = get_licenca_db_config(self.request)
-        slug = self.kwargs.get(self.lookup_field)
-        if not slug:
-            raise ValidationError("Chave composta não fornecida")
-
-        try:
-            tabe_empr, tabe_fili, tabe_prod = slug.split('-')
-        except ValueError:
-            raise ValidationError("Chave composta inválida")
-
-        return get_object_or_404(
-            Tabelaprecos.objects.using(banco),
-            tabe_empr=tabe_empr,
-            tabe_fili=tabe_fili,
-            tabe_prod=tabe_prod,
-        )
-
-    def update(self, request, *args, **kwargs):
-        banco = get_licenca_db_config(request)
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=False, context={'using': banco})
-        serializer.is_valid(raise_exception=True)
-        serializer.save()  # Remove o using daqui
-        return Response(serializer.data)
+        if not banco:
+            return Tabelaprecos.objects.none()
+        
+        queryset = Tabelaprecos.objects.using(banco)
+        
+        # Filtrar por empresa se fornecido
+        empresa = self.request.query_params.get('empresa')
+        if empresa:
+            queryset = queryset.filter(tabe_empr=empresa)
+            
+        # Filtrar por filial se fornecido
+        filial = self.request.query_params.get('filial')
+        if filial:
+            queryset = queryset.filter(tabe_fili=filial)
+            
+        # Filtrar por produto se fornecido
+        produto = self.request.query_params.get('produto')
+        if produto:
+            queryset = queryset.filter(tabe_prod=produto)
+            
+        return queryset
 
     def create(self, request, *args, **kwargs):
         banco = get_licenca_db_config(request)
-        data = request.data
-
-        try:
-            obj = Tabelaprecos.objects.using(banco).get(
-                tabe_empr=data['tabe_empr'],
-                tabe_fili=data['tabe_fili'],
-                tabe_prod=data['tabe_prod']
+        if not banco:
+            return Response(
+                {"detail": "Banco de dados não especificado"},
+                status=status.HTTP_400_BAD_REQUEST
             )
-            serializer = self.get_serializer(obj, data=data, context={'using': banco})
-        except Tabelaprecos.DoesNotExist:
-            serializer = self.get_serializer(data=data, context={'using': banco})
 
+        serializer = self.get_serializer(data=request.data, context={'banco': banco})
         serializer.is_valid(raise_exception=True)
-        serializer.save()  # Remove o using daqui
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
+        try:
+            # Tentar encontrar registro existente
+            preco = Tabelaprecos.objects.using(banco).get(
+                tabe_empr=request.data['tabe_empr'],
+                tabe_fili=request.data['tabe_fili'],
+                tabe_prod=request.data['tabe_prod']
+            )
+            # Atualizar registro existente
+            serializer.update(preco, serializer.validated_data)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Tabelaprecos.DoesNotExist:
+            # Criar novo registro
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        banco = get_licenca_db_config(request)
+        if not banco:
+            return Response(
+                {"detail": "Banco de dados não especificado"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(
+            instance,
+            data=request.data,
+            partial=partial,
+            context={'banco': banco}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(serializer.data)
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        context['using'] = get_licenca_db_config(self.request)
+        context['banco'] = get_licenca_db_config(self.request)
         return context

@@ -90,34 +90,43 @@ class Marca(models.Model):
 class Tabelaprecos(models.Model):
     tabe_empr = models.IntegerField(primary_key=True, default=1)  
     tabe_fili = models.IntegerField(default=1)
-    tabe_prod = models.CharField("Produtos",max_length=60, db_column='tabe_prod')
-    tabe_prco = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
-    tabe_icms = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
-    tabe_desc = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
-    tabe_vipi = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
-    tabe_pipi = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
-    tabe_fret = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
-    tabe_desp = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
-    tabe_cust = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
-    tabe_marg = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
-    tabe_impo = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
-    tabe_avis = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
-    tabe_praz = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
-    tabe_apra = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
-    tabe_vare = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_prod = models.CharField("Produtos", max_length=60, db_column='tabe_prod')
+    tabe_prco = models.DecimalField("Preço", max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_icms = models.DecimalField("ICMS", max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_desc = models.DecimalField("Desconto", max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_vipi = models.DecimalField("Valor IPI", max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_pipi = models.DecimalField("% IPI", max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_fret = models.DecimalField("Frete", max_digits=15, decimal_places=4, blank=True, null=True)
+    tabe_desp = models.DecimalField("Despesas", max_digits=15, decimal_places=4, blank=True, null=True)
+    tabe_cust = models.DecimalField("Custo", max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_marg = models.DecimalField("Margem", max_digits=15, decimal_places=4, blank=True, null=True)
+    tabe_impo = models.DecimalField("Impostos", max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_avis = models.DecimalField("Preço à Vista", max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_praz = models.DecimalField("Prazo", max_digits=15, decimal_places=4, blank=True, null=True)
+    tabe_apra = models.DecimalField("Preço a Prazo", max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_vare = models.DecimalField("Varejo", max_digits=15, decimal_places=2, blank=True, null=True)
     field_log_data = models.DateField(db_column='_log_data', blank=True, null=True) 
     field_log_time = models.TimeField(db_column='_log_time', blank=True, null=True) 
-    tabe_valo_st = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
-    tabe_perc_reaj = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
-    tabe_hist = models.TextField(blank=True, null=True)
-    tabe_cuge = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
-    tabe_entr = models.DateField(blank=True, null=True)
-    tabe_perc_st = models.DecimalField(max_digits=7, decimal_places=4, blank=True, null=True)
+    tabe_valo_st = models.DecimalField("Valor ST", max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_perc_reaj = models.DecimalField("% Reajuste", max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_hist = models.TextField("Histórico", blank=True, null=True)
+    tabe_cuge = models.DecimalField("Custo Geral", max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_entr = models.DateField("Data Entrada", blank=True, null=True)
+    tabe_perc_st = models.DecimalField("% ST", max_digits=7, decimal_places=4, blank=True, null=True)
 
     class Meta:
         db_table = 'tabelaprecos'
         unique_together = (('tabe_empr', 'tabe_fili', 'tabe_prod'),)
-        managed = 'false'
+        managed = False
+        verbose_name = 'Tabela de Preço'
+        verbose_name_plural = 'Tabelas de Preços'
+
+    def __str__(self):
+        return f"{self.tabe_prod} - R$ {self.tabe_prco or 0:.2f}"
+
+    @property
+    def preco_formatado(self):
+        return f"R$ {self.tabe_prco or 0:.2f}"
 
 class UnidadeMedida(models.Model):
     unid_codi = models.CharField(max_length=10, db_column='unid_codi', primary_key=True) 
