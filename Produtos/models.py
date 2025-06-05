@@ -186,3 +186,45 @@ class SaldoProduto(models.Model):
         db_table = 'saldosprodutos'
         managed = 'false'
         
+
+
+
+
+class Tabelaprecoshist(models.Model):
+    tabe_id = models.AutoField(primary_key=True)
+    tabe_empr = models.IntegerField()
+    tabe_fili = models.IntegerField()
+    tabe_prod = models.CharField(max_length=20)
+    tabe_data_hora = models.DateTimeField()
+    tabe_perc_reaj = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_avis_ante = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_avis_novo = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_apra_ante = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_apra_novo = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_hist = models.TextField(blank=True, null=True)
+    tabe_prco_ante = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_prco_novo = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_pipi_ante = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_pipi_novo = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_fret_ante = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_fret_novo = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_desp_ante = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_desp_novo = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_cust_ante = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_cust_novo = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_cuge_ante = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_cuge_novo = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_icms_ante = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_icms_novo = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_impo_ante = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_impo_novo = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_marg_ante = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_marg_novo = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_praz_ante = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_praz_novo = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_valo_st_ante = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    tabe_valo_st_novo = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'tabelaprecoshist'

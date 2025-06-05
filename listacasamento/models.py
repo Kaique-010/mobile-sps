@@ -8,6 +8,7 @@ class ListaCasamento(models.Model):
     list_empr = models.IntegerField('Empresa')
     list_fili = models.IntegerField('Filial')
     list_codi = models.AutoField('Número Lista', primary_key=True)
+    list_nome = models.CharField('Nome da Lista', max_length=60, null=True, blank=True)
     list_noiv = models.ForeignKey(Entidades, verbose_name='Noiva', on_delete=models.CASCADE, db_column='list_noiv')
     list_data = models.DateField('Data')
     list_stat = models.CharField(
@@ -15,7 +16,7 @@ class ListaCasamento(models.Model):
         choices=[
             ('0', 'Aberta'),
             ('1', 'Aguardando cliente'),
-            ('2', 'Finalizada'),
+            ('2', 'Finalizada'),    
             ('3', 'Cancelada'),
         ],
         default='0',
@@ -45,6 +46,7 @@ class ItensListaCasamento(models.Model):
     item_list = models.IntegerField()
     item_item = models.IntegerField(primary_key=True) 
     item_prod = models.CharField(max_length=60) 
+    item_quan = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     item_fina = models.BooleanField(default=False)
     item_clie = models.IntegerField(blank=True, null=True)
     item_pedi = models.IntegerField()

@@ -2,6 +2,7 @@ from rest_framework import serializers
 import base64
 from .models import Produtos, UnidadeMedida, Tabelaprecos
 from core.serializers import BancoContextMixin
+from decimal import Decimal
 
 class TabelaPrecoSerializer(BancoContextMixin, serializers.ModelSerializer):
     percentual_avis = serializers.FloatField(write_only=True, required=False)
@@ -14,12 +15,15 @@ class TabelaPrecoSerializer(BancoContextMixin, serializers.ModelSerializer):
             'tabe_prco', 'tabe_cuge', 'tabe_avis', 'tabe_apra',
             'tabe_desc', 'tabe_marg', 'tabe_vare',
             'tabe_cust', 'tabe_icms', 'tabe_valo_st',
-            'percentual_avis', 'percentual_apra'
+            'percentual_avis', 'percentual_apra',
+            'field_log_data', 'field_log_time', 'tabe_hist'
         ]
         extra_kwargs = {
             'tabe_empr': {'read_only': True},
             'tabe_fili': {'read_only': True},
             'tabe_prod': {'read_only': True},
+            'field_log_data': {'read_only': True},
+            'field_log_time': {'read_only': True},
         }
 
     def validate(self, data):
@@ -34,12 +38,12 @@ class TabelaPrecoSerializer(BancoContextMixin, serializers.ModelSerializer):
             preco_base = data['tabe_prco']
             
             if 'percentual_avis' in data:
-                percentual = data.pop('percentual_avis')
-                data['tabe_avis'] = round(preco_base * (1 + percentual / 100), 2)
+                percentual = Decimal(str(data.pop('percentual_avis')))
+                data['tabe_avis'] = round(preco_base * (Decimal('1') + percentual / Decimal('100')), 2)
             
             if 'percentual_apra' in data:
-                percentual = data.pop('percentual_apra')
-                data['tabe_apra'] = round(preco_base * (1 + percentual / 100), 2)
+                percentual = Decimal(str(data.pop('percentual_apra')))
+                data['tabe_apra'] = round(preco_base * (Decimal('1') + percentual / Decimal('100')), 2)
 
         return data
 
@@ -69,15 +73,19 @@ class TabelaPrecoSerializer(BancoContextMixin, serializers.ModelSerializer):
         if not using:
             raise serializers.ValidationError("Banco de dados não especificado")
 
+        # Atualizar os campos do modelo
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-        instance.save(using=using)
+        
+        # Forçar update ao invés de insert
+        instance.save(using=using, force_update=True)
         return instance
 
 
 class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
     precos = TabelaPrecoSerializer(many=True, read_only=True)
     prod_preco_vista = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
+    prod_preco_normal = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
     saldo_estoque = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
     imagem_base64 = serializers.SerializerMethodField()
     preco_principal = serializers.SerializerMethodField()
@@ -97,6 +105,11 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
 
     def get_preco_principal(self, obj):
         """Retorna o preço principal do produto (à vista ou normal)"""
+        if hasattr(obj, 'prod_preco_vista') and obj.prod_preco_vista:
+            return obj.prod_preco_vista
+        if hasattr(obj, 'prod_preco_normal') and obj.prod_preco_normal:
+            return obj.prod_preco_normal
+            
         banco = self.context.get("banco")
         if not banco:
             return None

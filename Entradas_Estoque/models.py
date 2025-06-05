@@ -2,10 +2,10 @@ from django.db import models
 
 
 class EntradaEstoque(models.Model):
-    entr_sequ = models.IntegerField()
+    entr_sequ = models.IntegerField(primary_key=True )
     entr_empr = models.IntegerField(default=1)
     entr_fili = models.IntegerField(default=1)
-    entr_prod = models.CharField(db_column='entr_prod', primary_key=True, max_length=10)
+    entr_prod = models.CharField(db_column='entr_prod', max_length=10)
     entr_enti = models.CharField(db_column='entr_enti', max_length=10, blank=True, null=True)
     entr_data = models.DateField()
     entr_quan = models.DecimalField(max_digits=10, decimal_places=2)

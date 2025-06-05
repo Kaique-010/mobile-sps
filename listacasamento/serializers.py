@@ -30,6 +30,12 @@ class ItensListaCasamentoSerializer(BancoContextMixin, serializers.ModelSerializ
         if item_pedi != 0:
             raise serializers.ValidationError({"item_pedi": "item_pedi deve ser igual a 0."})
         attrs['item_pedi'] = 0
+        
+        item_quan = attrs.get('item_quan', 0)
+        if item_quan <= 0:
+            raise serializers.ValidationError({"item_quan": "item_quan deve ser maior que 0."})
+        attrs['item_quan'] = item_quan
+        
         return attrs
     
     def get_produto_nome(self, obj):
