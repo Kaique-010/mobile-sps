@@ -19,8 +19,10 @@ logger = logging.getLogger(__name__)
 class OrcamentoViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
     modeulo_necessario = 'orcamentos'  
     permission_classes = [IsAuthenticated]
-    serializer_class = OrcamentosSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_fields = ['pedi_empr', 'pedi_fili']
+    search_fields = ['pedi_nume', 'pedi_forn']
+    serializer_class = OrcamentosSerializer
     lookup_field = 'pedi_nume'
     search_fields = ['pedi_nume', 'pedi_forn']
     filterset_fields = ['pedi_empr', 'pedi_fili']

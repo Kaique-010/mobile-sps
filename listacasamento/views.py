@@ -6,7 +6,7 @@ from rest_framework.filters import SearchFilter
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from django.db import transaction, IntegrityError, models
-
+from django_filters.rest_framework import DjangoFilterBackend
 from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from core.middleware import get_licenca_slug
 from core.utils import get_licenca_db_config
@@ -21,7 +21,8 @@ class ListaCasamentoViewSet(ModuloRequeridoMixin, ModelViewSet):
     modulo_necessario = 'listacasamento'
     permission_classes = [IsAuthenticated]
     serializer_class = ListaCasamentoSerializer
-    filter_backends = [SearchFilter]
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_fields = ['list_empr', 'list_fili']
     search_fields = ['list_noiv__nome', 'list_codi']
 
     def get_queryset(self):
@@ -65,6 +66,8 @@ class ItensListaCasamentoViewSet(ModuloRequeridoMixin, ModelViewSet):
     modulo_necessario = 'listacasamento'
     serializer_class = ItensListaCasamentoSerializer
     permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['itli_empr', 'itli_fili']
 
     def get_queryset(self):
         banco = get_licenca_db_config(self.request)
