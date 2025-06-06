@@ -59,7 +59,7 @@ class ProdutoListView(ModuloRequeridoMixin, APIView):
             return Response({"error": "Banco não encontrado."}, status=400)
 
         if banco:
-            queryset = Produtos.objects.using(banco).all().order_by('enti_nome')
+            queryset = Produtos.objects.using(banco).all().order_by('-prod_codi')
             print(f"📦 Total de entidades encontradas: {queryset.count()}")
             serializer = ProdutoSerializer(queryset, many=True)
             return Response(serializer.data)
@@ -126,7 +126,7 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             saldo_estoque=Coalesce(saldo_subquery, V(0), output_field=DecimalField()),
             prod_preco_vista=Coalesce(preco_vista_subquery, V(0), output_field=DecimalField()),
             prod_preco_normal=Coalesce(preco_normal_subquery, V(0), output_field=DecimalField())
-        )
+        ).order_by('prod_codi')
 
 
     @action(detail=False, methods=["get"])

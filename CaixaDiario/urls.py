@@ -9,7 +9,7 @@ router.register(r'movicaixa', MovicaixaViewSet, basename='movicaixa')
 # POST /api/movicaixa/iniciar_venda/
 # Payload: { "cliente": int, "vendedor": int, "caixa": int }
 #
-# POST /api/movicaixa/adicionar_item/
+#POST /api/movicaixa/adicionar_item/
 # Payload: { "numero_venda": int, "produto": int, "quantidade": decimal, "valor_unitario": decimal }
 #
 # POST /api/movicaixa/processar_pagamento/

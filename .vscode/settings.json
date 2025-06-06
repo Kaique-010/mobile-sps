@@ -67,6 +67,24 @@
       "name": "itajara",
       "database": "savexml140",
       "username": "savexml140"
+    },
+    {
+      "previewLimit": 50,
+      "server": "base.rtalmeida.com.br",
+      "port": 5432,
+      "driver": "PostgreSQL",
+      "name": "dalitz",
+      "database": "savexml903",
+      "username": "savexml903"
+    },
+    {
+      "previewLimit": 50,
+      "server": "base.rtalmeida.com.br",
+      "port": 5432,
+      "driver": "PostgreSQL",
+      "name": "TRATORMAQ",
+      "database": "savexml43",
+      "username": "savexml43"
     }
   ]
 }

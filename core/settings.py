@@ -77,7 +77,8 @@ INSTALLED_APPS = [
     'contas_a_receber',
     'contratos', 
     'OrdemdeServico',
-    'CaixaDiario'
+    'CaixaDiario',
+    "O_S"
 ]
 
 # Middleware

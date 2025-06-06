@@ -67,7 +67,7 @@ class ItensListaCasamentoViewSet(ModuloRequeridoMixin, ModelViewSet):
     serializer_class = ItensListaCasamentoSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['itli_empr', 'itli_fili']
+    filterset_fields = ['item_empr', 'item_fili']
 
     def get_queryset(self):
         banco = get_licenca_db_config(self.request)

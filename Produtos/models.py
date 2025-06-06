@@ -88,8 +88,8 @@ class Marca(models.Model):
         return self.nome
 
 class Tabelaprecos(models.Model):
-    tabe_empr = models.IntegerField(primary_key=True, default=1)  
-    tabe_fili = models.IntegerField(default=1)
+    tabe_empr = models.IntegerField(primary_key=True)  
+    tabe_fili = models.IntegerField()
     tabe_prod = models.CharField("Produtos", max_length=60, db_column='tabe_prod')
     tabe_prco = models.DecimalField("Preço", max_digits=15, decimal_places=2, blank=True, null=True)
     tabe_icms = models.DecimalField("ICMS", max_digits=15, decimal_places=2, blank=True, null=True)

@@ -40,6 +40,36 @@
     ]
   },
   {
+    "slug": "tratormaq",
+    "cnpj": "7828564000182",
+    "db_name": "savexml43",
+    "db_host": "base.rtalmeida.com.br",
+    "db_port": "5432",
+    "modulos": [
+      "dashboards",
+      "Entidades",
+      "Produtos",
+      "Entradas_Estoque",
+      "Saidas_Estoque",
+      "OrdemdeServico"
+    ]
+  },
+  {
+    "slug": "dalitz",
+    "cnpj": "05029328000154",
+    "db_name": "savexml903",
+    "db_host": "base.rtalmeida.com.br",
+    "db_port": "5432",
+    "modulos": [
+      "dashboards",
+      "Entidades",
+      "Produtos",
+      "Entradas_Estoque",
+      "Saidas_Estoque",
+      "Pedidos"
+    ]
+  },
+  {
     "slug": "casaa",
     "cnpj": "43131832000155",
     "db_name": "casaa",
@@ -58,7 +88,8 @@
       "Orcamentos",
       "implantacao",
       "Financeiro",
-      "OrdemdeServico"
+      "OrdemdeServico",
+      "Os"
     ]
   }
 ]

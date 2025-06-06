@@ -177,7 +177,7 @@ class MovicaixaViewSet(viewsets.ModelViewSet):
             caixa_aberto = Caixageral.objects.using(banco).filter(
                 caix_empr=empresa_id,
                 caix_fili=filial_id,
-                caix_aber='S'
+                caix_aber='A'
             ).first()
 
             if not caixa_aberto:
@@ -200,7 +200,7 @@ class MovicaixaViewSet(viewsets.ModelViewSet):
                 movi_empr=empresa_id,
                 movi_fili=filial_id,
                 movi_caix=caixa_aberto.caix_caix,
-                movi_nume_vend=numero_venda,
+                movi_vend=numero_venda,
                 movi_tipo=1,  # Tipo 1 = Item de venda
                 movi_entr=valor_total,
                 movi_obse=f'Produto: {produto}, Qtd: {quantidade}',
@@ -260,7 +260,7 @@ class MovicaixaViewSet(viewsets.ModelViewSet):
                 movi_fili=filial_id,
                 movi_caix=caixa_aberto.caix_caix,
                 movi_nume_vend=numero_venda,
-                movi_tipo=forma_pagamento,
+                movi_tipo_movi=forma_pagamento,
                 movi_entr=valor,
                 movi_obse=f'Pagamento - Forma: {forma_pagamento}',
                 movi_data=caixa_aberto.caix_data,

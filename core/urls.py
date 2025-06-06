@@ -32,4 +32,5 @@ urlpatterns = [
     path('api/<slug>/contratos/', include('contratos.urls')),
     path('api/<slug>/ordemdeservico/', include('OrdemdeServico.urls')),
     path('api/<slug>/caixadiario/', include('CaixaDiario.urls')),
+    path('api/<slug>/Os/', include('O_S.urls')),
 ]
