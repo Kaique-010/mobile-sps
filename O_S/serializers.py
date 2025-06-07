@@ -8,12 +8,10 @@ from Entidades.models import Entidades
 from contas_a_receber.models import Titulosreceber
 from core.serializers import BancoContextMixin
 from .models import (
-    Ordemservico, Ordemservicopecas, Ordemservicoservicos,
-    Ordemservicoimgantes, Ordemservicoimgdurante, Ordemservicoimgdepois
+    Os, PecasOs, ServicosOs
 )
 
 logger = logging.getLogger(__name__)
-
 
 
 class BancoModelSerializer(BancoContextMixin, serializers.ModelSerializer):
@@ -34,27 +32,25 @@ class BancoModelSerializer(BancoContextMixin, serializers.ModelSerializer):
         return instance
 
 
-
-class OsPecasSerializer(BancoModelSerializer):
-    peca_id = serializers.IntegerField(required=False)
+class PecasOsSerializer(BancoModelSerializer):
+    peca_item = serializers.IntegerField(required=False)
     peca_empr = serializers.IntegerField(required=True)
     peca_fili = serializers.IntegerField(required=True)
-    peca_orde = serializers.IntegerField(required=True)
-    peca_codi = serializers.CharField(required=True)
+    peca_os = serializers.IntegerField(required=True)
+    peca_prod = serializers.CharField(required=True)  # Changed from peca_codi to peca_prod
     peca_comp = serializers.CharField(required=False, allow_blank=True)
     peca_quan = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
     peca_unit = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
     peca_tota = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
     produto_nome = serializers.SerializerMethodField()
    
-
     class Meta:
-        model = Ordemservicopecas
+        model = PecasOs
         fields = '__all__'
-
+        
     def validate(self, data):
         # Validar campos obrigatórios
-        campos_obrigatorios = ['peca_empr', 'peca_fili', 'peca_orde', 'peca_codi']
+        campos_obrigatorios = ['peca_empr', 'peca_fili', 'peca_os', 'peca_prod']  # Changed from peca_codi to peca_prod
         for campo in campos_obrigatorios:
             if campo not in data:
                 raise serializers.ValidationError(f"O campo {campo} é obrigatório.")
@@ -75,49 +71,71 @@ class OsPecasSerializer(BancoModelSerializer):
 
         return data
 
-    def create(self, validated_data):
+    def validate_peca_quan(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Quantidade deve ser maior que zero")
+        if value > 9999:
+            raise serializers.ValidationError("Quantidade muito alta")
+        return value
+    
+    def validate_peca_unit(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Valor unitário deve ser maior que zero")
+        return value
+    
+    def validate_peca_prod(self, value):  # Changed from validate_peca_codi to validate_peca_prod
+        # Validar se produto existe
         banco = self.context.get('banco')
-        if not banco:
-            raise ValidationError("Banco de dados não fornecido.")
-      
-        return Ordemservicopecas.objects.using(banco).create(**validated_data)
+        if banco:
+            from Produtos.models import Produtos
+            if not Produtos.objects.using(banco).filter(prod_codi=value).exists():
+                raise serializers.ValidationError("Produto não encontrado")
+        return value
+    
+    @transaction.atomic
+    def create(self, validated_data):
+        # Gerar próximo item automaticamente
+        banco = self.context.get('banco')
+        if not validated_data.get('peca_item'):
+            from .utils import get_next_item_number_sequence
+            validated_data['peca_item'] = get_next_item_number_sequence(
+                banco, 
+                validated_data['peca_os'],
+                validated_data['peca_empr'],
+                validated_data['peca_fili']
+            )
+        
+        return super().create(validated_data)
 
     def get_produto_nome(self, obj):
         try:
             banco = self.context.get('banco')
             from Produtos.models import Produtos
 
-            produto = Produtos.objects.using(banco).get(prod_codi=obj.peca_codi)
+            produto = Produtos.objects.using(banco).get(prod_codi=obj.peca_prod)  # Changed from peca_codi to peca_prod
             return produto.prod_nome
         except:
             return ''
-        
-   
 
 
-
-class OsServicosSerializer(BancoModelSerializer):
-    serv_id = serializers.IntegerField(required=False)
+class ServicosOsSerializer(BancoModelSerializer):
+    serv_item = serializers.IntegerField(required=False)
     serv_empr = serializers.IntegerField(required=True)
     serv_fili = serializers.IntegerField(required=True)
-    serv_orde = serializers.IntegerField(required=True)
-    serv_sequ = serializers.IntegerField(required=False)
+    serv_os = serializers.IntegerField(required=True)
     serv_codi = serializers.CharField(required=True)
     serv_comp = serializers.CharField(required=False, allow_blank=True)
     serv_quan = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
     serv_unit = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
     serv_tota = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
     
-
     class Meta:
-        model = Ordemservicoservicos
+        model = ServicosOs
         fields = '__all__'
-        
-    
         
     def validate(self, data):
         # Validar campos obrigatórios
-        campos_obrigatorios = ['serv_empr', 'serv_fili', 'serv_orde', 'serv_codi']
+        campos_obrigatorios = ['serv_empr', 'serv_fili', 'serv_os', 'serv_codi']
         for campo in campos_obrigatorios:
             if campo not in data:
                 raise serializers.ValidationError(f"O campo {campo} é obrigatório.")
@@ -143,8 +161,7 @@ class OsServicosSerializer(BancoModelSerializer):
         if not banco:
             raise ValidationError("Banco de dados não fornecido.")
         
-        return Ordemservicoservicos.objects.using(banco).create(**validated_data)
-
+        return ServicosOs.objects.using(banco).create(**validated_data)
 
 
 class TituloReceberSerializer(BancoModelSerializer):
@@ -164,12 +181,12 @@ class TituloReceberSerializer(BancoModelSerializer):
 
 
 class OsSerializer(BancoModelSerializer):
-    pecas = OrdemServicoPecasSerializer(many=True, required=False)
+    pecas = PecasOsSerializer(many=True, required=False)
     servicos = serializers.SerializerMethodField()
     cliente_nome = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
-        model = Ordemservico
+        model = Os
         fields = '__all__'
 
     def get_servicos(self, obj):
@@ -177,35 +194,33 @@ class OsSerializer(BancoModelSerializer):
         if not banco:
             return []
         
-        servicos = Ordemservicoservicos.objects.using(banco).filter(
-            serv_empr=obj.orde_empr,
-            serv_fili=obj.orde_fili,
-            serv_orde=obj.orde_nume
-        ).order_by('serv_sequ')
+        servicos = ServicosOs.objects.using(banco).filter(
+            serv_empr=obj.os_empr,
+            serv_fili=obj.os_fili,
+            serv_os=obj.os_os
+        ).order_by('serv_item')
         
-        return OrdemServicoServicosSerializer(servicos, many=True, context=self.context).data
+        return ServicosOsSerializer(servicos, many=True, context=self.context).data
     
     def get_cliente_nome(self, obj):
         banco = self.context.get('banco')
-        if not banco or not obj.orde_enti or not obj.orde_empr:
+        if not banco or not obj.os_clie or not obj.os_empr:
             return None
             
         try:
             entidade = Entidades.objects.using(banco).get(
-                enti_clie=obj.orde_enti,
-                enti_empr=obj.orde_empr
+                enti_clie=obj.os_clie,
+                enti_empr=obj.os_empr
             )
             return entidade.enti_nome
         except Entidades.DoesNotExist:
-            logger.warning(f"Entidade não encontrada: empresa {obj.orde_empr}, código {obj.orde_enti}")
+            logger.warning(f"Entidade não encontrada: empresa {obj.os_empr}, código {obj.os_clie}")
             return None
         except Exception as e:
             logger.error(f"Erro ao buscar cliente: {e}")
             return None
-        
             
-
-    def validate_orde_stat(self, value):
+    def validate_os_stat_os(self, value):
         VALID_STATUSES = [0, 1, 2, 3, 4, 5, 20]
         if value not in VALID_STATUSES:
             raise ValidationError('Status inválido.')
@@ -237,114 +252,53 @@ class OsSerializer(BancoModelSerializer):
     def _sync_pecas(self, ordem, pecas_data, banco):
         ids_enviados = []
         for item in pecas_data:
-            item['peca_empr'] = ordem.orde_empr
-            item['peca_fili'] = ordem.orde_fili
-            item['peca_orde'] = ordem.orde_nume
+            item['peca_empr'] = ordem.os_empr
+            item['peca_fili'] = ordem.os_fili
+            item['peca_os'] = ordem.os_os
 
-            peca_id = item.get('peca_id')
-            if peca_id:
-                obj, _ = Ordemservicopecas.objects.using(banco).update_or_create(
-                    peca_id=peca_id,
-                    peca_empr=ordem.orde_empr,
-                    peca_fili=ordem.orde_fili,
-                    peca_orde=ordem.orde_nume,
+            peca_item = item.get('peca_item')
+            if peca_item:
+                obj, _ = PecasOs.objects.using(banco).update_or_create(
+                    peca_item=peca_item,
+                    peca_empr=ordem.os_empr,
+                    peca_fili=ordem.os_fili,
+                    peca_os=ordem.os_os,
                     defaults=item
                 )
-                ids_enviados.append(obj.peca_id)
+                ids_enviados.append(obj.peca_item)
             else:
-                obj = Ordemservicopecas.objects.using(banco).create(**item)
-                ids_enviados.append(obj.peca_id)
+                obj = PecasOs.objects.using(banco).create(**item)
+                ids_enviados.append(obj.peca_item)
 
         # Remove peças que não vieram mais
-        Ordemservicopecas.objects.using(banco).filter(
-            peca_orde=ordem.orde_nume
-        ).exclude(peca_id__in=ids_enviados).delete()
+        PecasOs.objects.using(banco).filter(
+            peca_os=ordem.os_os
+        ).exclude(peca_item__in=ids_enviados).delete()
 
     def _sync_servicos(self, ordem, servicos_data, banco):
         ids_enviados = []
         for item in servicos_data:
-            item['serv_empr'] = ordem.orde_empr
-            item['serv_fili'] = ordem.orde_fili
-            item['serv_orde'] = ordem.orde_nume
+            item['serv_empr'] = ordem.os_empr
+            item['serv_fili'] = ordem.os_fili
+            item['serv_os'] = ordem.os_os
 
-            serv_id = item.get('serv_id')
-            if serv_id:
-                obj, _ = Ordemservicoservicos.objects.using(banco).update_or_create(
-                    serv_id=serv_id,
-                    serv_empr=ordem.orde_empr,
-                    serv_fili=ordem.orde_fili,
-                    serv_orde=ordem.orde_nume,
+            serv_item = item.get('serv_item')
+            if serv_item:
+                obj, _ = ServicosOs.objects.using(banco).update_or_create(
+                    serv_item=serv_item,
+                    serv_empr=ordem.os_empr,
+                    serv_fili=ordem.os_fili,
+                    serv_os=ordem.os_os,
                     defaults=item
                 )
-                ids_enviados.append(obj.serv_id)
+                ids_enviados.append(obj.serv_item)
             else:
-                obj = Ordemservicoservicos.objects.using(banco).create(**item)
-                ids_enviados.append(obj.serv_id)
+                obj = ServicosOs.objects.using(banco).create(**item)
+                ids_enviados.append(obj.serv_item)
 
         # Remove serviços que não vieram mais
-        Ordemservicoservicos.objects.using(banco).filter(
-            serv_orde=ordem.orde_nume
-        ).exclude(serv_id__in=ids_enviados).delete()
+        ServicosOs.objects.using(banco).filter(
+            serv_os=ordem.os_os
+        ).exclude(serv_item__in=ids_enviados).delete()
 
 
-
-
-class ImagemBase64Serializer(BancoModelSerializer):
-    imagem_base64 = serializers.SerializerMethodField()
-    imagem_upload = serializers.CharField(write_only=True, required=False)
-
-    def get_imagem_base64(self, obj):
-        campo_imagem = getattr(obj, self.Meta.imagem_field, None)
-        if campo_imagem and len(campo_imagem) > 0:
-            try:
-                return base64.b64encode(campo_imagem).decode('utf-8')
-            except Exception as e:
-                logger.warning(f"Erro ao codificar imagem: {e}")
-        return None
-
-    def to_internal_value(self, data):
-        ret = super().to_internal_value(data)
-        img_base64 = data.get('imagem_upload')
-        if isinstance(img_base64, str) and img_base64.strip():
-            try:
-                ret[self.Meta.imagem_field] = base64.b64decode(img_base64)
-            except Exception as e:
-                logger.warning(f"Erro ao decodificar imagem base64: {e}")
-                raise ValidationError({'imagem_upload': 'Imagem inválida ou corrompida.'})
-        return ret
-
-
-
-class ImagemAntesSerializer(ImagemBase64Serializer):
-    class Meta:
-        model = Ordemservicoimgantes
-        imagem_field = 'iman_imag'
-        fields = [
-            'iman_id', 'iman_empr', 'iman_fili', 'iman_orde', 'iman_codi',
-            'iman_come', 'iman_obse', 'img_latitude', 'img_longitude',
-            'img_data', 'imagem_base64', 'imagem_upload'
-        ]
-
-
-# Imagem Durante
-class ImagemDuranteSerializer(ImagemBase64Serializer):
-    class Meta:
-        model = Ordemservicoimgdurante
-        imagem_field = 'imdu_imag'
-        fields = [
-            'imdu_id', 'imdu_empr', 'imdu_fili', 'imdu_orde', 'imdu_codi',
-            'imdu_come', 'imdu_obse', 'img_latitude', 'img_longitude',
-            'img_data', 'imagem_base64', 'imagem_upload'
-        ]
-
-
-# Imagem Depois
-class ImagemDepoisSerializer(ImagemBase64Serializer):
-    class Meta:
-        model = Ordemservicoimgdepois
-        imagem_field = 'imde_imag'
-        fields = [
-            'imde_id', 'imde_empr', 'imde_fili', 'imde_orde', 'imde_codi',
-            'imde_come', 'imde_obse', 'img_latitude', 'img_longitude',
-            'img_data', 'imagem_base64', 'imagem_upload'
-        ]

@@ -2,9 +2,9 @@ from django.db import models
 
 
 class Os(models.Model):
-    os_empr = models.IntegerField(primary_key=True)
+    os_empr = models.IntegerField()
     os_fili = models.IntegerField()
-    os_os = models.IntegerField()
+    os_os = models.IntegerField(primary_key=True)
     os_data_aber = models.DateField()
     os_hora_aber = models.TimeField(blank=True, null=True)
     os_clie = models.IntegerField(blank=True, null=True)
@@ -59,7 +59,7 @@ class PecasOs(models.Model):
     peca_empr = models.IntegerField(primary_key=True)
     peca_fili = models.IntegerField()
     peca_os = models.IntegerField()
-    peca_item = models.IntegerField()
+    peca_item = models.IntegerField(db_column='peca_item')
     peca_prod = models.CharField(max_length=20, blank=True, null=True)
     peca_quan = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
     peca_unit = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
@@ -98,7 +98,6 @@ class ServicosOs(models.Model):
     serv_desc = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
     field_log_data = models.DateField(db_column='_log_data', blank=True, null=True)  # Field renamed because it started with '_'.
     field_log_time = models.TimeField(db_column='_log_time', blank=True, null=True)  # Field renamed because it started with '_'.
-    selecionado = models.BooleanField(blank=True, null=True)
     serv_perc_desc = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
     serv_impr = models.BooleanField(blank=True, null=True)
     serv_stat = models.IntegerField()

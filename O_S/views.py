@@ -9,11 +9,12 @@ from django.db.models import Max
 from django.utils import timezone
 from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser
-from Os.utils import get_next_item_number_sequence, get_next_service_id, get_next_image_id
+from .utils import get_next_item_number_sequence, get_next_service_id
 from .permissions import PodeVerOrdemDoSetor
 from .models import Os, PecasOs, ServicosOs
 from .serializers import (
-    OsSerializer, OsPecasSerializer, OsServicosSerializer
+    OsSerializer, PecasOsSerializer, ServicosOsSerializer)
+from django.db.models import Prefetch
 from core.middleware import get_licenca_slug
 from core.registry import get_licenca_db_config
 from core.decorator import modulo_necessario, ModuloRequeridoMixin
@@ -54,7 +55,8 @@ class BaseMultiDBModelViewSet(ModuloRequeridoMixin, ModelViewSet):
     def update(self, request, *args, **kwargs):
         banco = self.get_banco()
         partial = kwargs.pop('partial', False)
-        instance = self.get_object()
+        instance = self.get_object()        
+        
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         with transaction.atomic(using=banco):
@@ -67,11 +69,10 @@ class OsViewSet(BaseMultiDBModelViewSet):
     modulo_necessario = 'os'
     serializer_class = OsSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
-    filterset_fields = ['os_stat_os', 'os_tipo', 'os_clie']
+    filterset_fields = ['os_stat_os', 'os_clie']
     ordering_fields = ['os_data_aber', 'os_data_fech']
     search_fields = ['os_prob_rela', 'os_obse']
    
-    
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context['banco'] = get_licenca_db_config(self.request)
@@ -80,10 +81,47 @@ class OsViewSet(BaseMultiDBModelViewSet):
     def get_queryset(self):
         banco = self.get_banco()
         user_setor = self.request.user.setor
-        qs = Os.objects.using(banco)
+
+        qs = Os.objects.using(banco).all()
+
         if user_setor.osfs_codi != 6:
             qs = qs.filter(os_seto=user_setor.osfs_codi)
-        return qs.order_by('os_data_aber')
+
+        return qs.order_by('-os_data_aber')
+        
+    @action(detail=True, methods=['post'])
+    def finalizar_os(self, request, pk=None):
+        """Endpoint para finalizar uma OS com validações"""
+        os_instance = self.get_object()
+        
+        # Validações de negócio
+        if os_instance.os_stat_os == 2:
+            return Response(
+                {'error': 'OS já finalizada'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Verificar se tem peças ou serviços
+        banco = self.get_banco()
+        tem_pecas = PecasOs.objects.using(banco).filter(
+            peca_os=os_instance.os_os
+        ).exists()
+        tem_servicos = ServicosOs.objects.using(banco).filter(
+            serv_os=os_instance.os_os
+        ).exists()
+        
+        if not tem_pecas and not tem_servicos:
+            return Response(
+                {'error': 'OS deve ter pelo menos uma peça ou serviço'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        with transaction.atomic(using=banco):
+            os_instance.os_stat_os = 2
+            os_instance.os_data_fech = timezone.now().date()
+            os_instance.save(using=banco)
+        
+        return Response({'message': 'OS finalizada com sucesso'})
 
     def get_next_ordem_numero(self, empre, fili):
         banco = self.get_banco()
@@ -115,7 +153,7 @@ class OsViewSet(BaseMultiDBModelViewSet):
     @action(
         detail=True, 
         methods=['post'],
-        permission_classes=[IsAuthenticated]  # Removendo a restrição de setor para esta ação específica
+        permission_classes=[IsAuthenticated]
     )
     def atualizar_total(self, request, pk=None, slug=None):
         """
@@ -140,19 +178,19 @@ class OsViewSet(BaseMultiDBModelViewSet):
             )
 
 
-class OsPecasViewSet(BaseMultiDBModelViewSet,ModelViewSet):
-    modulo_necessario = 'os'
+class PecasOsViewSet(BaseMultiDBModelViewSet,ModelViewSet):
     serializer_class = PecasOsSerializer
     permission_classes = [IsAuthenticated]
     parser_classes = [JSONParser]
+ 
    
     def atualizar_total_ordem(self, peca_empr, peca_fili, peca_os):
         banco = self.get_banco()
         try:
             ordem = Os.objects.using(banco).get(
-                orde_empr=peca_empr,
-                orde_fili=peca_fili,
-                orde_nume=peca_os
+                os_empr=peca_empr,
+                os_fili=peca_fili,
+                os_s=peca_os
             )
             ordem.calcular_total()
             ordem.save(using=banco)
@@ -264,7 +302,7 @@ class OsPecasViewSet(BaseMultiDBModelViewSet,ModelViewSet):
                 # Validar e adicionar novos itens
                 for item in adicionar:
                     # Validar campos obrigatórios
-                    campos_obrigatorios = ['peca_os', 'peca_empr', 'peca_fili', 'peca_prod']
+                    campos_obrigatorios = ['peca_os', 'peca_empr', 'peca_fili', 'peca_codi']
                     campos_faltantes = [campo for campo in campos_obrigatorios if not item.get(campo)]
                     
                     if campos_faltantes:
@@ -383,24 +421,23 @@ class OsPecasViewSet(BaseMultiDBModelViewSet,ModelViewSet):
             self.atualizar_total_ordem(empr, fili, orde)
         return response
 
-
-class OsServicosViewSet(BaseMultiDBModelViewSet):
+class ServicosOsViewSet(BaseMultiDBModelViewSet):
     modulo_necessario = 'os'
-    serializer_class = OservicosSerializer
+    serializer_class = ServicosOsSerializer
     permission_classes = [IsAuthenticated]
     parser_classes = [JSONParser]
 
     def atualizar_total_ordem(self, serv_empr, serv_fili, serv_os):
         banco = self.get_banco()
         try:
-            ordem = Ordemservico.objects.using(banco).get(
-                orde_empr=serv_empr,
-                orde_fili=serv_fili,
-                orde_nume=serv_os
+            ordem = Os.objects.using(banco).get(
+                os_empr=serv_empr,
+                os_fili=serv_fili,
+                os_os=serv_os
             )
             ordem.calcular_total()
             ordem.save(using=banco)
-        except Ordemservico.DoesNotExist:
+        except Os.DoesNotExist:
             logger.error(f"Ordem de serviço não encontrada: {serv_os}")
 
     def get_queryset(self):
@@ -411,16 +448,16 @@ class OsServicosViewSet(BaseMultiDBModelViewSet):
 
         if not all([serv_empr, serv_fili, serv_os]):
             logger.warning("Parâmetros obrigatórios não fornecidos (serv_empr/empr, serv_fili/fili, serv_os/ordem)")
-            return OsServicos.objects.using(banco).none()
+            return ServicosOs.objects.using(banco).none()
 
-        qs = OsServicos.objects.using(banco).filter(
+        qs = ServicosOs.objects.using(banco).filter(
             serv_empr=serv_empr,
             serv_fili=serv_fili,
             serv_os=serv_os
         )
         
         logger.info(f"Filtrando serviços com: ordem={serv_os}, empresa={serv_empr}, filial={serv_fili}")
-        return qs.order_by('serv_sequ')
+        return qs.order_by('serv_item')
 
     @action(detail=False, methods=['post'], url_path='update-lista')
     def update_lista(self, request, slug=None):
@@ -463,8 +500,8 @@ class OsServicosViewSet(BaseMultiDBModelViewSet):
                             'item': item
                         })
 
-                    # Gerar novo ID sequencial e número de sequência
-                    item['serv_item'], item['serv_sequ'] = get_next_service_id(
+                    # Gerar novo ID sequencial
+                    item['serv_item'] = get_next_service_id(
                         banco, 
                         item['serv_os'], 
                         item['serv_empr'], 
@@ -485,7 +522,7 @@ class OsServicosViewSet(BaseMultiDBModelViewSet):
                         })
 
                     try:
-                        obj = OsServicos.objects.using(banco).get(
+                        obj = ServicosOs.objects.using(banco).get(
                             serv_item=item['serv_item'],
                             serv_os=item['serv_os'],
                             serv_empr=item['serv_empr'],
@@ -495,7 +532,7 @@ class OsServicosViewSet(BaseMultiDBModelViewSet):
                         serializer.is_valid(raise_exception=True)
                         serializer.save()
                         resposta['editados'].append(serializer.data)
-                    except OsServicos.DoesNotExist:
+                    except ServicosOs.DoesNotExist:
                         logger.warning(f"Serviço não encontrado para edição: {item}")
                         continue
 
@@ -507,7 +544,7 @@ class OsServicosViewSet(BaseMultiDBModelViewSet):
                             'item': item
                         })
 
-                    OsServicos.objects.using(banco).filter(
+                    ServicosOs.objects.using(banco).filter(
                         serv_item=item['serv_item'],
                         serv_os=item['serv_os'],
                         serv_empr=item['serv_empr'],
