@@ -114,7 +114,12 @@ class ConsultarTitulosOSView(APIView):
             return Response({"detail": "Banco não encontrado"}, status=400)
 
         try:
-            ordem = Os.objects.using(banco).get(os_os=orde_nume)  # Alterado para usar orde_nume
+            # Alterando a consulta para usar apenas os campos que existem no modelo
+            ordem = Os.objects.using(banco).get(
+                os_empr=request.query_params.get('empr'),
+                os_fili=request.query_params.get('fili'),
+                os_os=orde_nume
+            )
         except Os.DoesNotExist:
             return Response({"detail": "Ordem de serviço não encontrada."}, status=404)
 
@@ -122,7 +127,7 @@ class ConsultarTitulosOSView(APIView):
             titu_empr=ordem.os_empr,
             titu_fili=ordem.os_fili,
             titu_seri="ORS",
-            titu_titu=str(os_os)
+            titu_titu=str(ordem.os_os)
         ).order_by('titu_parc')
 
         if not titulos.exists():

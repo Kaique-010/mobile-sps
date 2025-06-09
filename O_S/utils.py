@@ -5,6 +5,7 @@ from O_S.models import ServicosOs, Os, PecasOs
 def get_next_sequential_id(banco, model, ordem_id, empresa_id, filial_id, id_field, ordem_field, empresa_field, filial_field):
     """
     Gera o próximo ID sequencial para um item com base nos campos de empresa, filial e ordem.
+    O ID é composto por: <ordem_id><sequencia crescente, com padding>.
     """
     with connections[banco].cursor() as cursor:
         cursor.execute(
@@ -18,19 +19,19 @@ def get_next_sequential_id(banco, model, ordem_id, empresa_id, filial_id, id_fie
             """,
             [ordem_id, empresa_id, filial_id]
         )
-        ids = [row[0] for row in cursor.fetchall() if row[0] is not None]
-
-    if not ids:
-        ultimo_local = 0
-    else:
-        # Assume que os dois últimos dígitos do ID são a sequência
-        ultimo_local = max(int(str(id_)[-2:]) for id_ in ids)
+        ids = [row[0] for row in cursor.fetchall()]
+        
+        # Se não houver IDs, começa do 1
+        if not ids:
+            ultimo_local = 0
+        else:
+            # Pega o último número local (últimos 3 dígitos do maior ID)
+            ultimo_local = max(int(str(id_)[-3:]) for id_ in ids if id_ is not None)
 
     novo_local = ultimo_local + 1
-    novo_id = int(f"{ordem_id}{novo_local:02d}")
+    novo_id = int(f"{ordem_id}{novo_local:03d}")
 
     return novo_id
-
 
 def get_next_item_number_sequence(banco, peca_os, peca_empr, peca_fili):
     """
@@ -38,7 +39,7 @@ def get_next_item_number_sequence(banco, peca_os, peca_empr, peca_fili):
     """
     return get_next_sequential_id(
         banco=banco,
-        model=PecasOs,  # ✅ Corrigido: busca na tabela certa
+        model=PecasOs, 
         ordem_id=peca_os,
         empresa_id=peca_empr,
         filial_id=peca_fili,
@@ -58,7 +59,7 @@ def get_next_service_id(banco, ordem_id, empresa_id, filial_id):
             """
             SELECT serv_item 
             FROM servicosos 
-            WHERE serv_orde = %s 
+            WHERE serv_os = %s 
               AND serv_empr = %s 
               AND serv_fili = %s 
             ORDER BY serv_item DESC

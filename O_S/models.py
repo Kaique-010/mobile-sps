@@ -15,7 +15,6 @@ class Os(models.Model):
     os_fabr = models.IntegerField(blank=True, null=True)
     os_marc = models.IntegerField(blank=True, null=True)
     os_mode = models.IntegerField(blank=True, null=True)
-    os_nume_seri = models.CharField(max_length=30, blank=True, null=True)
     os_hori = models.DecimalField(max_digits=15, decimal_places=1, blank=True, null=True)
     os_plac = models.CharField(max_length=40, blank=True, null=True)
     os_pref = models.CharField(max_length=30, blank=True, null=True)
@@ -53,14 +52,34 @@ class Os(models.Model):
         db_table = 'os'
         unique_together = (('os_empr', 'os_fili', 'os_os'),)
     
-
+    def calcular_total(self):
+            total_pecas = sum(
+                peca.peca_tota or 0 
+                for peca in PecasOs.objects.filter(
+                    peca_empr=self.os_empr,
+                    peca_fili=self.os_fili,
+                    peca_os=self.os_os
+                )
+            )
+            
+            total_servicos = sum(
+                servico.serv_tota or 0
+                for servico in ServicosOs.objects.filter(
+                    serv_empr=self.os_empr,
+                    serv_fili=self.os_fili,
+                    serv_os=self.os_os
+                )
+            )
+            
+            self.os_tota = total_pecas + total_servicos
+            return self.os_tota
 
 
 class PecasOs(models.Model):
-    peca_empr = models.IntegerField(primary_key=True)
+    peca_empr = models.IntegerField()
     peca_fili = models.IntegerField()
     peca_os = models.IntegerField()
-    peca_item = models.IntegerField(db_column='peca_item')
+    peca_item = models.IntegerField(db_column='peca_item',primary_key=True)
     peca_prod = models.CharField(max_length=20, blank=True, null=True)
     peca_quan = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
     peca_unit = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)

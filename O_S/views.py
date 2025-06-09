@@ -10,6 +10,7 @@ from django.utils import timezone
 from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser
 from .utils import get_next_item_number_sequence, get_next_service_id
+from listacasamento.utils import get_next_item_number
 from .permissions import PodeVerOrdemDoSetor
 from .models import Os, PecasOs, ServicosOs
 from .serializers import (
@@ -190,7 +191,7 @@ class PecasOsViewSet(BaseMultiDBModelViewSet,ModelViewSet):
             ordem = Os.objects.using(banco).get(
                 os_empr=peca_empr,
                 os_fili=peca_fili,
-                os_s=peca_os
+                os_os=peca_os
             )
             ordem.calcular_total()
             ordem.save(using=banco)
@@ -302,7 +303,7 @@ class PecasOsViewSet(BaseMultiDBModelViewSet,ModelViewSet):
                 # Validar e adicionar novos itens
                 for item in adicionar:
                     # Validar campos obrigatórios
-                    campos_obrigatorios = ['peca_os', 'peca_empr', 'peca_fili', 'peca_codi']
+                    campos_obrigatorios = ['peca_os', 'peca_empr', 'peca_fili', 'peca_prod']
                     campos_faltantes = [campo for campo in campos_obrigatorios if not item.get(campo)]
                     
                     if campos_faltantes:
@@ -383,6 +384,7 @@ class PecasOsViewSet(BaseMultiDBModelViewSet,ModelViewSet):
                     resposta['removidos'].append(item['peca_item'])
 
             return Response(resposta)
+            print(resposta)
 
         except ValidationError as e:
             logger.error(f"Erro de validação ao processar update_lista: {str(e)}")
@@ -474,46 +476,47 @@ class ServicosOsViewSet(BaseMultiDBModelViewSet):
 
         try:
             with transaction.atomic(using=banco):
-                # Validar e adicionar novos itens
+                # ADICIONAR
                 for item in adicionar:
-                    # Validar campos obrigatórios
-                    campos_obrigatorios = ['serv_os', 'serv_empr', 'serv_fili', 'serv_codi']
+                    # Verifica campos obrigatórios
+                    campos_obrigatorios = ['serv_os', 'serv_empr', 'serv_fili', 'serv_prod']
                     campos_faltantes = [campo for campo in campos_obrigatorios if not item.get(campo)]
-                    
                     if campos_faltantes:
                         raise ValidationError({
                             'error': f"Campos obrigatórios faltando: {', '.join(campos_faltantes)}",
                             'item': item
                         })
 
-                    # Converter campos numéricos
+                    # Converte campos numéricos
                     try:
                         item['serv_os'] = int(item['serv_os'])
                         item['serv_empr'] = int(item['serv_empr'])
                         item['serv_fili'] = int(item['serv_fili'])
-                        item['serv_quan'] = float(item.get('serv_quan', 0))
-                        item['serv_unit'] = float(item.get('serv_unit', 0))
-                        item['serv_tota'] = float(item.get('serv_tota', 0))
+                        item['serv_quan'] = float(item.get('serv_quan') or 0)
+                        item['serv_unit'] = float(item.get('serv_unit') or 0)
+                        item['serv_tota'] = float(item.get('serv_tota') or (item['serv_quan'] * item['serv_unit']))
                     except (ValueError, TypeError) as e:
                         raise ValidationError({
                             'error': f"Erro ao converter valores numéricos: {str(e)}",
                             'item': item
                         })
 
-                    # Gerar novo ID sequencial
-                    item['serv_item'] = get_next_service_id(
-                        banco, 
-                        item['serv_os'], 
-                        item['serv_empr'], 
+                    # Gera novo ID sequencial (recebe tupla)
+                    novo_id, _ = get_next_service_id(
+                        banco,
+                        item['serv_os'],
+                        item['serv_empr'],
                         item['serv_fili']
                     )
+                    item['serv_item'] = novo_id
 
-                    serializer = self.get_serializer(data=item)
+                    # Cria via serializer
+                    serializer = self.get_serializer(data=item, context={'banco': banco})
                     serializer.is_valid(raise_exception=True)
                     obj = serializer.save()
                     resposta['adicionados'].append(serializer.data)
 
-                # Editar serviços existentes
+                # EDITAR
                 for item in editar:
                     if not all(k in item for k in ['serv_item', 'serv_os', 'serv_empr', 'serv_fili']):
                         raise ValidationError({
@@ -528,7 +531,7 @@ class ServicosOsViewSet(BaseMultiDBModelViewSet):
                             serv_empr=item['serv_empr'],
                             serv_fili=item['serv_fili']
                         )
-                        serializer = self.get_serializer(obj, data=item, partial=True)
+                        serializer = self.get_serializer(obj, data=item, partial=True, context={'banco': banco})
                         serializer.is_valid(raise_exception=True)
                         serializer.save()
                         resposta['editados'].append(serializer.data)
@@ -536,7 +539,7 @@ class ServicosOsViewSet(BaseMultiDBModelViewSet):
                         logger.warning(f"Serviço não encontrado para edição: {item}")
                         continue
 
-                # Remover serviços
+                # REMOVER
                 for item in remover:
                     if not all(k in item for k in ['serv_item', 'serv_os', 'serv_empr', 'serv_fili']):
                         raise ValidationError({
@@ -544,22 +547,26 @@ class ServicosOsViewSet(BaseMultiDBModelViewSet):
                             'item': item
                         })
 
-                    ServicosOs.objects.using(banco).filter(
+                    deleted, _ = ServicosOs.objects.using(banco).filter(
                         serv_item=item['serv_item'],
                         serv_os=item['serv_os'],
                         serv_empr=item['serv_empr'],
                         serv_fili=item['serv_fili']
                     ).delete()
-                    resposta['removidos'].append(item['serv_item'])
+
+                    if deleted:
+                        resposta['removidos'].append(item['serv_item'])
 
             return Response(resposta)
 
         except ValidationError as e:
             logger.error(f"Erro de validação ao processar update_lista: {str(e)}")
             return Response(e.detail, status=400)
+
         except Exception as e:
-            logger.error(f"Erro ao processar update_lista: {str(e)}")
+            logger.exception("Erro inesperado ao processar update_lista")
             return Response({"error": str(e)}, status=400)
+
 
     def create(self, request, *args, **kwargs):
         response = super().create(request, *args, **kwargs)

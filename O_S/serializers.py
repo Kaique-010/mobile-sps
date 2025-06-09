@@ -50,7 +50,7 @@ class PecasOsSerializer(BancoModelSerializer):
         
     def validate(self, data):
         # Validar campos obrigatórios
-        campos_obrigatorios = ['peca_empr', 'peca_fili', 'peca_os', 'peca_prod']  # Changed from peca_codi to peca_prod
+        campos_obrigatorios = ['peca_empr', 'peca_fili', 'peca_os', 'peca_prod'] 
         for campo in campos_obrigatorios:
             if campo not in data:
                 raise serializers.ValidationError(f"O campo {campo} é obrigatório.")
@@ -92,21 +92,14 @@ class PecasOsSerializer(BancoModelSerializer):
                 raise serializers.ValidationError("Produto não encontrado")
         return value
     
-    @transaction.atomic
     def create(self, validated_data):
-        # Gerar próximo item automaticamente
         banco = self.context.get('banco')
-        if not validated_data.get('peca_item'):
-            from .utils import get_next_item_number_sequence
-            validated_data['peca_item'] = get_next_item_number_sequence(
-                banco, 
-                validated_data['peca_os'],
-                validated_data['peca_empr'],
-                validated_data['peca_fili']
-            )
-        
-        return super().create(validated_data)
-
+        if not banco:
+            raise ValidationError("Banco de dados não fornecido.")
+      
+        return Ordemservicopecas.objects.using(banco).create(**validated_data)
+    
+    
     def get_produto_nome(self, obj):
         try:
             banco = self.context.get('banco')
@@ -123,7 +116,7 @@ class ServicosOsSerializer(BancoModelSerializer):
     serv_empr = serializers.IntegerField(required=True)
     serv_fili = serializers.IntegerField(required=True)
     serv_os = serializers.IntegerField(required=True)
-    serv_codi = serializers.CharField(required=True)
+    serv_prod = serializers.CharField(required=True)
     serv_comp = serializers.CharField(required=False, allow_blank=True)
     serv_quan = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
     serv_unit = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
@@ -135,7 +128,7 @@ class ServicosOsSerializer(BancoModelSerializer):
         
     def validate(self, data):
         # Validar campos obrigatórios
-        campos_obrigatorios = ['serv_empr', 'serv_fili', 'serv_os', 'serv_codi']
+        campos_obrigatorios = ['serv_empr', 'serv_fili', 'serv_os', 'serv_prod']
         for campo in campos_obrigatorios:
             if campo not in data:
                 raise serializers.ValidationError(f"O campo {campo} é obrigatório.")
@@ -161,7 +154,7 @@ class ServicosOsSerializer(BancoModelSerializer):
         if not banco:
             raise ValidationError("Banco de dados não fornecido.")
         
-        return ServicosOs.objects.using(banco).create(**validated_data)
+        return Ordemservicoservicos.objects.using(banco).create(**validated_data)
 
 
 class TituloReceberSerializer(BancoModelSerializer):
