@@ -97,7 +97,7 @@ class PecasOsSerializer(BancoModelSerializer):
         if not banco:
             raise ValidationError("Banco de dados não fornecido.")
       
-        return Ordemservicopecas.objects.using(banco).create(**validated_data)
+        return PecasOs.objects.using(banco).create(**validated_data)
     
     
     def get_produto_nome(self, obj):
@@ -154,7 +154,7 @@ class ServicosOsSerializer(BancoModelSerializer):
         if not banco:
             raise ValidationError("Banco de dados não fornecido.")
         
-        return Ordemservicoservicos.objects.using(banco).create(**validated_data)
+        return ServicosOs.objects.using(banco).create(**validated_data)
 
 
 class TituloReceberSerializer(BancoModelSerializer):

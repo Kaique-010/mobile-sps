@@ -104,10 +104,10 @@ class PecasOs(models.Model):
 
 
 class ServicosOs(models.Model):
-    serv_empr = models.IntegerField(primary_key=True)
+    serv_empr = models.IntegerField()
     serv_fili = models.IntegerField()
     serv_os = models.IntegerField()
-    serv_item = models.IntegerField()
+    serv_item = models.IntegerField(primary_key=True)
     serv_prod = models.CharField(max_length=20, blank=True, null=True)
     serv_quan = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
     serv_unit = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
