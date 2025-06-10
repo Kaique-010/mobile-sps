@@ -14,8 +14,6 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 
 # Hosts permitidos
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
-print(ALLOWED_HOSTS)
-
 USE_LOCAL_DB = config('USE_LOCAL_DB', default=True, cast=bool)
 
 if USE_LOCAL_DB:
@@ -41,8 +39,6 @@ else:
         }
     }
 
-
-print("USE_LOCAL_DB =", USE_LOCAL_DB)
 if USE_LOCAL_DB:
     print("DB_NAME usado =", config('LOCAL_DB_NAME'))
 else:
@@ -157,9 +153,9 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PARSER_CLASSES': [
-        'rest_framework.parsers.JSONParser',        # ESSENCIAL para JSON
-        'rest_framework.parsers.FormParser',        # para dados via form
-        'rest_framework.parsers.MultiPartParser',   # para upload de arquivos
+        'rest_framework.parsers.JSONParser',        
+        'rest_framework.parsers.FormParser',       
+        'rest_framework.parsers.MultiPartParser',  
     ],
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',

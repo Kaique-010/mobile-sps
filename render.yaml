@@ -5,8 +5,8 @@ services:
     env: docker
     plan: free
     autoDeploy: true
-    buildCommand: '' # vazio pq o Docker já cuida
-    startCommand: '' # também vazio
+    buildCommand: '' 
+    startCommand: '' 
     envVars:
       - key: DJANGO_SETTINGS_MODULE
         value: core.settings

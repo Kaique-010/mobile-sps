@@ -5,6 +5,7 @@ from django.db import transaction
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from core.registry import get_licenca_db_config
+from core.middleware import get_licenca_slug
 from rest_framework.permissions import IsAuthenticated
 import logging
 from datetime import datetime
@@ -102,8 +103,11 @@ class MovicaixaViewSet(viewsets.ModelViewSet):
         context['banco'] = get_licenca_db_config(self.request)
         return context
 
+
+
     @action(detail=False, methods=['post'])
-    def iniciar_venda(self, request):
+    def iniciar_venda(self, request, slug=None):
+        slug = get_licenca_slug()
         banco = get_licenca_db_config(self.request)
         empresa_id = self.request.headers.get("X-Empresa")
         filial_id = self.request.headers.get("X-Filial")
@@ -120,12 +124,11 @@ class MovicaixaViewSet(viewsets.ModelViewSet):
             )
 
         try:
-            # Verificar se o caixa está aberto
             caixa_aberto = Caixageral.objects.using(banco).filter(
                 caix_empr=empresa_id,
                 caix_fili=filial_id,
                 caix_caix=caixa,
-                caix_aber='S'
+                caix_aber='A'
             ).first()
 
             if not caixa_aberto:
@@ -134,7 +137,7 @@ class MovicaixaViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # Gerar número da venda (próximo número disponível)
+           
             ultimo_numero = Movicaixa.objects.using(banco).filter(
                 movi_empr=empresa_id,
                 movi_fili=filial_id
@@ -156,17 +159,19 @@ class MovicaixaViewSet(viewsets.ModelViewSet):
             )
 
     @action(detail=False, methods=['post'])
-    def adicionar_item(self, request):
+    def adicionar_item(self, request, slug=None):
+        slug = get_licenca_slug()
         banco = get_licenca_db_config(self.request)
         empresa_id = self.request.headers.get("X-Empresa")
         filial_id = self.request.headers.get("X-Filial")
 
+        # Validar dados do item da venda
         numero_venda = request.data.get('numero_venda')
         produto = request.data.get('produto')
         quantidade = request.data.get('quantidade')
         valor_unitario = request.data.get('valor_unitario')
         
-        if not all([numero_venda, produto, quantidade, valor_unitario]):
+        if not all([numero_venda, produto, quantidade]):
             return Response(
                 {'detail': 'Dados do item incompletos'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -218,7 +223,8 @@ class MovicaixaViewSet(viewsets.ModelViewSet):
             )
 
     @action(detail=False, methods=['post'])
-    def processar_pagamento(self, request):
+    def processar_pagamento(self, request, slug=None):
+        slug = get_licenca_slug()
         banco = get_licenca_db_config(self.request)
         empresa_id = self.request.headers.get("X-Empresa")
         filial_id = self.request.headers.get("X-Filial")
@@ -226,6 +232,7 @@ class MovicaixaViewSet(viewsets.ModelViewSet):
         numero_venda = request.data.get('numero_venda')
         forma_pagamento = request.data.get('forma_pagamento')
         valor = request.data.get('valor')
+        troco = request.data.get('troco')
         
         if not all([numero_venda, forma_pagamento, valor]):
             return Response(
@@ -238,7 +245,7 @@ class MovicaixaViewSet(viewsets.ModelViewSet):
             caixa_aberto = Caixageral.objects.using(banco).filter(
                 caix_empr=empresa_id,
                 caix_fili=filial_id,
-                caix_aber='S'
+                caix_aber='A'
             ).first()
 
             if not caixa_aberto:
@@ -265,7 +272,8 @@ class MovicaixaViewSet(viewsets.ModelViewSet):
                 movi_obse=f'Pagamento - Forma: {forma_pagamento}',
                 movi_data=caixa_aberto.caix_data,
                 movi_hora=datetime.now().time(),
-                movi_ctrl=ultimo_ctrl + 1
+                movi_ctrl=ultimo_ctrl + 1,
+                
             )
 
             return Response(MovicaixaSerializer(movimento).data)
@@ -277,7 +285,8 @@ class MovicaixaViewSet(viewsets.ModelViewSet):
             )
 
     @action(detail=False, methods=['post'])
-    def finalizar_venda(self, request):
+    def finalizar_venda(self, requestslug=None):
+        slug = get_licenca_slug()
         banco = get_licenca_db_config(self.request)
         empresa_id = self.request.headers.get("X-Empresa")
         filial_id = self.request.headers.get("X-Filial")
@@ -291,14 +300,14 @@ class MovicaixaViewSet(viewsets.ModelViewSet):
             )
 
         try:
-            # Buscar todos os movimentos da venda
+          
             movimentos = Movicaixa.objects.using(banco).filter(
                 movi_empr=empresa_id,
                 movi_fili=filial_id,
                 movi_nume_vend=numero_venda
             )
 
-            # Calcular totais
+   
             total_itens = movimentos.filter(movi_tipo=1).aggregate(
                 total=Sum('movi_entr')
             )['total'] or 0
@@ -312,9 +321,7 @@ class MovicaixaViewSet(viewsets.ModelViewSet):
                     {'detail': 'Valor pago é menor que o total da venda'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-
-            # Aqui você pode adicionar a lógica de geração da NFC-e
-            # usando os campos movi_seri_nota, movi_nume_nota, etc.
+                
 
             return Response({
                 'numero_venda': numero_venda,

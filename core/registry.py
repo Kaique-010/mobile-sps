@@ -11,7 +11,7 @@ from core.middleware import get_licenca_slug
 # Carrega o arquivo licencas.json
 json_path = Path(__file__).resolve().parent / 'licencas.json'
 LICENCAS_MAP = json.load(open(json_path))
-print(f"Licenças carregadas: {LICENCAS_MAP}")
+
 
 
 

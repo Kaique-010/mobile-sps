@@ -49,6 +49,7 @@ class CaixageralSerializer(serializers.ModelSerializer):
 
 
 class MovicaixaSerializer(serializers.ModelSerializer):
+    produto_nome = serializers.SerializerMethodField()
     class Meta:
         model = Movicaixa
         fields = [
@@ -131,3 +132,18 @@ class MovicaixaSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         validated_data.pop('movi_empr', None)
         return super().update(instance, validated_data)
+
+    
+    def get_produto_nome(self, obj):
+        banco = self.context.get('banco')
+        if not banco:
+            return None
+        try:
+            produto = Produtos.objects.using(banco).filter(
+                prod_codi=obj.iped_prod,
+                prod_empr=obj.iped_empr
+            ).first()
+            return produto.prod_nome if produto else None
+        except Exception as e:
+            logger.warning(f"Erro ao buscar nome do produto: {e}")
+            return None
