@@ -15,7 +15,7 @@ class Titulospagar(models.Model):
     titu_even = models.IntegerField(blank=True, null=True)
     titu_prov = models.BooleanField(blank=True, null=True)
     titu_hist = models.TextField(blank=True, null=True)
-    titu_aber = models.CharField(max_length=1, blank=True, null=True)
+    titu_aber = models.CharField(max_length=1, default='A')
     titu_lote = models.CharField(max_length=10, blank=True, null=True)
     titu_ctrl = models.IntegerField(blank=True, null=True)
     titu_coba = models.CharField(max_length=100, blank=True, null=True)
@@ -52,8 +52,8 @@ class Titulospagar(models.Model):
     titu_paga_nao_cont = models.BooleanField(blank=True, null=True)
     titu_nomi = models.CharField(max_length=60, blank=True, null=True)
     titu_aler = models.TextField(blank=True, null=True)
-    field_log_data = models.DateField(db_column='_log_data', blank=True, null=True)  # Field renamed because it started with '_'.
-    field_log_time = models.TimeField(db_column='_log_time', blank=True, null=True)  # Field renamed because it started with '_'.
+    field_log_data = models.DateField(db_column='_log_data', blank=True, null=True) 
+    field_log_time = models.TimeField(db_column='_log_time', blank=True, null=True) 
     titu_audi = models.BooleanField(blank=True, null=True)
     titu_audi_data = models.DateField(blank=True, null=True)
     titu_audi_por = models.IntegerField(blank=True, null=True)

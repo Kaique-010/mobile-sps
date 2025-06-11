@@ -10,7 +10,7 @@ class TitulospagarSerializer(serializers.ModelSerializer):
         model = Titulospagar
         fields = [
             'titu_empr','titu_fili','titu_titu','titu_seri','titu_parc',
-            'titu_forn','titu_valo','titu_venc','titu_situ',
+            'titu_forn','titu_valo','titu_emis','titu_venc','titu_situ',
             'titu_usua_lanc','titu_form_reci','fornecedor_nome'
         ]
 

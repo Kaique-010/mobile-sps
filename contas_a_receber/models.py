@@ -17,10 +17,10 @@ FORMA_RECEBIMENTO = [
 ]
 
 class Titulosreceber(models.Model):
-    titu_empr = models.IntegerField(primary_key=True)
+    titu_empr = models.IntegerField()
     titu_fili = models.IntegerField()
     titu_clie = models.IntegerField()
-    titu_titu = models.CharField(max_length=13)
+    titu_titu = models.CharField(max_length=13, primary_key=True)
     titu_seri = models.CharField(max_length=5)
     titu_parc = models.CharField(max_length=3)
     titu_emis = models.DateField(blank=True, null=True)
