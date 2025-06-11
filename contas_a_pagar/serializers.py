@@ -1,3 +1,4 @@
+from typing import override
 from rest_framework import serializers
 from Entidades.models import Entidades
 from .models import Titulospagar
@@ -8,17 +9,9 @@ class TitulospagarSerializer(serializers.ModelSerializer):
     class Meta:
         model = Titulospagar
         fields = [
-            'titu_empr',
-            'titu_titu',
-            'titu_seri',
-            'titu_parc',
-            'titu_forn',
-            'titu_valo',
-            'titu_venc',
-            'titu_situ',
-            'titu_usua_lanc',
-            'titu_form_reci', 
-            'fornecedor_nome'
+            'titu_empr','titu_fili','titu_titu','titu_seri','titu_parc',
+            'titu_forn','titu_valo','titu_venc','titu_situ',
+            'titu_usua_lanc','titu_form_reci','fornecedor_nome'
         ]
 
     def get_fornecedor_nome(self, obj):
@@ -29,12 +22,22 @@ class TitulospagarSerializer(serializers.ModelSerializer):
         try:
             entidades = Entidades.objects.using(banco).filter(
                 enti_clie=obj.titu_forn,
-                enti_empr=obj.titu_empr,
-                       
+                enti_empr=obj.titu_empr,                   
             ).first()
 
             return entidades.enti_nome if entidades else None
-
-        except Exception as e:
-          
+        except Exception as e:          
             return None
+    
+    def create(self, validated_data):
+        banco = self.context.get('banco')
+        return Titulospagar.objects.using(banco).create(**validated_data)
+    
+    def update(self, instance, validated_data):
+        banco = self.context.get('banco')
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save(using=banco)
+        return instance
+    
+   

@@ -1,10 +1,10 @@
 from django.db import models
 
 class Titulospagar(models.Model):
-    titu_empr = models.IntegerField(primary_key=True)
+    titu_empr = models.IntegerField()
     titu_fili = models.IntegerField()
     titu_forn = models.IntegerField()
-    titu_titu = models.CharField(max_length=13)
+    titu_titu = models.CharField(max_length=13, primary_key=True)
     titu_seri = models.CharField(max_length=5)
     titu_parc = models.CharField(max_length=4)
     titu_emis = models.DateField(blank=True, null=True)
