@@ -91,6 +91,7 @@ class MovicaixaSerializer(serializers.ModelSerializer):
             'movi_vend_orig',
             'movi_docu_fisc',
             'movi_bare_ctrl',
+            'produto_nome'
         ]
        
     def validate(self, data):

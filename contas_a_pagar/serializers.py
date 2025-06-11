@@ -10,7 +10,7 @@ class TitulospagarSerializer(serializers.ModelSerializer):
         fields = [
             'titu_empr','titu_fili','titu_titu','titu_seri','titu_parc',
             'titu_forn','titu_valo','titu_emis','titu_venc','titu_situ',
-            'titu_usua_lanc','titu_form_reci','fornecedor_nome'
+            'titu_usua_lanc','titu_form_reci','fornecedor_nome', 'titu_aber'
         ]
 
     def get_fornecedor_nome(self, obj):
