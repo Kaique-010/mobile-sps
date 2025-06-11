@@ -1,4 +1,3 @@
-from typing import override
 from rest_framework import serializers
 from Entidades.models import Entidades
 from .models import Titulospagar
