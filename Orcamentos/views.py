@@ -1,4 +1,5 @@
 from rest_framework.response import Response
+from django.db import transaction
 from rest_framework import viewsets
 from rest_framework import status
 from rest_framework.views import APIView
@@ -6,6 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError, NotFound
 from core.registry import get_licenca_db_config
 from .models import ItensOrcamento, Orcamentos
+from Entidades.models import Entidades
 from .serializers import OrcamentosSerializer
 from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from rest_framework.filters import SearchFilter
@@ -17,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class OrcamentoViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
-    modeulo_necessario = 'orcamentos'  
+    modulo_necessario = 'orcamentos'  
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ['pedi_empr', 'pedi_fili']
@@ -31,8 +33,36 @@ class OrcamentoViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
     
     def get_queryset(self):
        banco = get_licenca_db_config(self.request)
-       if banco:
-          return Orcamentos.objects.using(banco).all().order_by('pedi_nume')
+       queryset = Orcamentos.objects.using(banco).all()
+       if banco:       
+
+        cliente_nome = self.request.query_params.get('cliente_nome')
+        empresa_id = self.request.query_params.get('pedi_empr')
+        numero_orcamento = self.request.query_params.get('pedi_nume')
+
+
+
+        if cliente_nome:
+            ent_qs = Entidades.objects.using(banco).filter(enti_nome__icontains=cliente_nome)
+            if empresa_id:
+                ent_qs = ent_qs.filter(enti_empr=empresa_id)
+            
+            clientes_ids = list(ent_qs.values_list('enti_clie', flat=True))
+            
+            if clientes_ids:
+                queryset = queryset.filter(pedi_forn__in=clientes_ids)
+            else:
+                queryset = queryset.none()
+
+        if numero_orcamento:
+            try:
+                numero = int(numero_orcamento)
+                queryset = queryset.filter(pedi_nume=numero)
+            except ValueError:
+                queryset = queryset.none()
+        
+        return queryset 
+         
        else:
         logger.error("Banco de dados não encontrado.")
         raise NotFound("Banco de dados não encontrado.")
