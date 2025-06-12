@@ -25,6 +25,9 @@ if USE_LOCAL_DB:
             'PASSWORD': config('LOCAL_DB_PASSWORD'),
             'HOST': config('LOCAL_DB_HOST'),
             'PORT': config('LOCAL_DB_PORT'),
+            'OPTIONS': {
+                'options': '-c timezone=America/Araguaina'
+            }
         }
     }
 else:
@@ -36,6 +39,9 @@ else:
             'PASSWORD': config('REMOTE_DB_PASSWORD'),
             'HOST': config('REMOTE_DB_HOST'),
             'PORT': config('REMOTE_DB_PORT'),
+            'OPTIONS': {
+                'options': '-c timezone=America/Araguaina'
+            }
         }
     }
 
@@ -74,7 +80,8 @@ INSTALLED_APPS = [
     'contratos', 
     'OrdemdeServico',
     'CaixaDiario',
-    "O_S"
+    "O_S", 
+    "auditoria"
 ]
 
 # Middleware
@@ -87,7 +94,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'core.middleware.LicencaMiddleware',
+    'auditoria.middleware.AuditoriaMiddleware',
+    'core.middleware.LicencaMiddleware'
 ]
 
 # Configurações de CORS
@@ -139,8 +147,8 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'pt-br'
 
-TIME_ZONE = 'America/Sao_Paulo'
-USE_TZ = True
+TIME_ZONE = 'America/Araguaina'
+USE_TZ = False
 USE_I18N = True
 
 STATIC_URL = '/static/'
