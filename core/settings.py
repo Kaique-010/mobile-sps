@@ -94,6 +94,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'auditoria.signals.AuditoriaSignalMiddleware',  # Para capturar contexto nos signals
     'auditoria.middleware.AuditoriaMiddleware',
     'core.middleware.LicencaMiddleware'
 ]
