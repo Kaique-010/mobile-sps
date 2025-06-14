@@ -1,11 +1,16 @@
-from rest_framework import viewsets, filters
+from rest_framework import viewsets, status, filters
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from core.registry import get_licenca_db_config
 from Entidades.models import Entidades 
 from core.middleware import get_licenca_slug
 from core.decorator import ModuloRequeridoMixin
-from .models import Titulosreceber
-from .serializers import TitulosreceberSerializer
+from .models import Titulosreceber, Baretitulos
+from .serializers import TitulosreceberSerializer, BaixaTitulosReceberSerializer, BaretitulosSerializer
+from decimal import Decimal
+from datetime import date
 
 class TitulosreceberViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
     modulo_requerido = 'Financeiro'
@@ -52,11 +57,130 @@ class TitulosreceberViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
 
     def get_object(self):
         banco = get_licenca_db_config(self.request)
-        return Titulosreceber.objects.using(banco).get(
+        queryset = Titulosreceber.objects.using(banco).filter(
             titu_empr=self.kwargs["titu_empr"],
             titu_fili=self.kwargs["titu_fili"],
             titu_clie=self.kwargs["titu_clie"],
             titu_titu=self.kwargs["titu_titu"],
             titu_seri=self.kwargs["titu_seri"],
             titu_parc=self.kwargs["titu_parc"],
+            titu_emis=self.kwargs["titu_emis"], 
+            titu_venc=self.kwargs["titu_venc"], 
+            titu_aber='A' 
         )
+        
+        if queryset.count() == 0:
+            raise Http404("Título não encontrado")
+        elif queryset.count() > 1:
+            # Log para debug
+            logger.warning(f"Múltiplos títulos encontrados para {self.kwargs}, usando o primeiro")
+            return queryset.first()
+        else:
+            return queryset.get()
+
+    @action(detail=True, methods=['post'])
+    def baixar_titulo(self, request, *args, **kwargs):
+        """Endpoint para baixar (liquidar) um título a receber"""
+        titulo = self.get_object()
+        banco = get_licenca_db_config(request)
+        
+        serializer = BaixaTitulosReceberSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        data = serializer.validated_data
+        
+        try:
+            with transaction.atomic(using=banco):
+                # Verificar se o título já está baixado
+                if titulo.titu_aber == 'P' or titulo.titu_aber == 'T':
+                    return Response(
+                        {'error': 'Título já está baixado'}, 
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                # Calcular valores
+                valor_titulo = titulo.titu_valo or Decimal('0')
+                valor_recebido = data['valor_recebido']
+                valor_juros = data.get('valor_juros', Decimal('0'))
+                valor_multa = data.get('valor_multa', Decimal('0'))
+                valor_desconto = data.get('valor_desconto', Decimal('0'))
+                
+                valor_total_recebido = valor_recebido + valor_juros + valor_multa - valor_desconto
+                
+                # Gerar próximo número de sequência
+                ultimo_bare = Baretitulos.objects.using(banco).order_by('-bare_sequ').first()
+                proximo_sequ = (ultimo_bare.bare_sequ + 1) if ultimo_bare else 1
+                
+                # Determinar tipo de baixa baseado no valor recebido
+                if valor_total_recebido >= valor_titulo:
+                    tipo_baixa_final = 'T'  # Total
+                else:
+                    tipo_baixa_final = 'P'  # Parcial
+                
+                # Criar registro de baixa
+                baixa = Baretitulos.objects.using(banco).create(
+                    bare_sequ=proximo_sequ,
+                    bare_titu_id=titulo.pk,
+                    bare_ctrl=titulo.titu_ctrl or 0,
+                    bare_empr=titulo.titu_empr,
+                    bare_fili=titulo.titu_fili,
+                    bare_clie=titulo.titu_clie,
+                    bare_titu=titulo,
+                    bare_seri=titulo.titu_seri,
+                    bare_parc=titulo.titu_parc,
+                    bare_dpag=data['data_recebimento'],
+                    bare_apag=valor_titulo,
+                    bare_vmul=valor_multa,
+                    bare_vjur=valor_juros,
+                    bare_vdes=valor_desconto,
+                    bare_pago=valor_total_recebido,
+                    bare_topa=tipo_baixa_final,  # Usar a lógica condicional
+                    bare_banc=data.get('banco'),
+                    bare_cheq=data.get('cheque'),
+                    bare_hist=data.get('historico', f'Baixa do título {titulo.titu_titu}'),
+                    bare_emis=titulo.titu_emis,
+                    bare_venc=titulo.titu_venc,
+                    bare_cont=titulo.titu_cont,
+                    bare_cecu=titulo.titu_cecu,
+                    bare_even=titulo.titu_even,
+                    bare_port=titulo.titu_port,
+                    bare_situ=titulo.titu_situ,
+                    bare_usua_baix=request.usuarios.usua_codi if hasattr(request, 'usuarios') else None,
+                    bare_data_baix=data['data_recebimento']
+                )
+                
+                # Atualizar status do título usando a mesma lógica
+                titulo.titu_aber = tipo_baixa_final
+                titulo.save(using=banco)
+                
+                return Response({
+                    'message': 'Título baixado com sucesso',
+                    'baixa_id': baixa.bare_sequ,
+                    'valor_recebido': valor_total_recebido,
+                    'status_titulo': titulo.titu_aber
+                }, status=status.HTTP_200_OK)
+                
+        except Exception as e:
+            return Response(
+                {'error': f'Erro ao baixar título: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['get'])
+    def historico_baixas(self, request, *args, **kwargs):
+        """Endpoint para consultar histórico de baixas de um título"""
+        titulo = self.get_object()
+        banco = get_licenca_db_config(request)
+        
+        baixas = Baretitulos.objects.using(banco).filter(
+            bare_empr=titulo.titu_empr,
+            bare_fili=titulo.titu_fili,
+            bare_clie=titulo.titu_clie,
+            bare_titu=titulo.titu_titu,
+            bare_seri=titulo.titu_seri,
+            bare_parc=titulo.titu_parc
+        ).order_by('-bare_dpag')
+        
+        serializer = BaretitulosSerializer(baixas, many=True)
+        return Response(serializer.data)

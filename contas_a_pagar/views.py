@@ -1,11 +1,16 @@
-from rest_framework import viewsets, filters
+from rest_framework import viewsets, status, filters
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Titulospagar
+from .models import Titulospagar, Bapatitulos
 from Entidades.models import Entidades 
 from core.registry import get_licenca_db_config
 from core.middleware import get_licenca_slug
 from core.decorator import modulo_necessario, ModuloRequeridoMixin
-from .serializers import TitulospagarSerializer
+from .serializers import TitulospagarSerializer, BaixaTitulosPagarSerializer, BapatitulosSerializer
+from decimal import Decimal
+from datetime import date
 
 class TitulospagarViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
     modulo_requerido = 'Financeiro'
@@ -53,11 +58,129 @@ class TitulospagarViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
 
     def get_object(self):
         banco = get_licenca_db_config(self.request)
-        return Titulospagar.objects.using(banco).get(
+        queryset = Titulospagar.objects.using(banco).filter(
             titu_empr=self.kwargs["titu_empr"],
             titu_fili=self.kwargs["titu_fili"],
             titu_forn=self.kwargs["titu_forn"],
             titu_titu=self.kwargs["titu_titu"],
             titu_seri=self.kwargs["titu_seri"],
             titu_parc=self.kwargs["titu_parc"],
+            titu_emis=self.kwargs["titu_emis"],
+            titu_venc=self.kwargs["titu_venc"],
+            titu_aber='A'
         )
+        
+        if queryset.count() == 0:
+            raise Http404("Título não encontrado")
+        elif queryset.count() > 1:
+            # Log do problema e retorna o primeiro
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Múltiplos títulos encontrados para os critérios: {self.kwargs}")
+            return queryset.first()
+        else:
+            return queryset.get()
+
+    @action(detail=True, methods=['post'])
+    def baixar_titulo(self, request, *args, **kwargs):
+        """Endpoint para baixar (liquidar) um título a pagar"""
+        titulo = self.get_object()
+        banco = get_licenca_db_config(request)
+        
+        serializer = BaixaTitulosPagarSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        data = serializer.validated_data
+        
+        try:
+            with transaction.atomic(using=banco):
+                # Verificar se o título já está baixado
+                if titulo.titu_aber == 'T' or titulo.titu_aber == 'P':
+                    return Response(
+                        {'error': 'Título já está baixado'}, 
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                # Calcular valores
+                valor_titulo = titulo.titu_valo or Decimal('0')
+                valor_pago = data['valor_pago']
+                valor_juros = data.get('valor_juros', Decimal('0'))
+                valor_multa = data.get('valor_multa', Decimal('0'))
+                valor_desconto = data.get('valor_desconto', Decimal('0'))
+                
+                valor_total_pago = valor_pago + valor_juros + valor_multa - valor_desconto
+                
+                # Gerar próximo número de sequência
+                ultimo_bapa = Bapatitulos.objects.using(banco).order_by('-bapa_sequ').first()
+                proximo_sequencial = (ultimo_bapa.bapa_sequ + 1) if ultimo_bapa else 1
+                
+                # Determinar tipo de baixa baseado no valor pago
+                if valor_total_pago >= valor_titulo:
+                    tipo_baixa_final = 'T'  # Total
+                else:
+                    tipo_baixa_final = 'P'  # Parcial
+                
+                # Criar registro de baixa
+                baixa = Bapatitulos.objects.using(banco).create(
+                    bapa_sequ=proximo_sequencial,
+                    bapa_ctrl=titulo.titu_ctrl or 0,
+                    bapa_empr=titulo.titu_empr,
+                    bapa_fili=titulo.titu_fili,
+                    bapa_forn=titulo.titu_forn,
+                    bapa_titu=titulo, 
+                    bapa_seri=titulo.titu_seri,
+                    bapa_parc=titulo.titu_parc,
+                    bapa_dpag=data['data_pagamento'],
+                    bapa_apag=valor_titulo,
+                    bapa_vmul=valor_multa,
+                    bapa_vjur=valor_juros,
+                    bapa_vdes=valor_desconto,
+                    bapa_pago=valor_total_pago,
+                    bapa_topa=tipo_baixa_final,  # Usar a lógica condicional
+                    bapa_banc=data.get('banco'),
+                    bapa_cheq=data.get('cheque'),
+                    bapa_hist=data.get('historico', f'Baixa do título {titulo.titu_titu}'),
+                    bapa_emis=titulo.titu_emis,
+                    bapa_venc=titulo.titu_venc,
+                    bapa_cont=titulo.titu_cont,
+                    bapa_cecu=titulo.titu_cecu,
+                    bapa_even=titulo.titu_even,
+                    bapa_port=titulo.titu_port,
+                    bapa_situ=titulo.titu_situ
+                )
+                
+                # Atualizar status do título usando a mesma lógica
+                titulo.titu_aber = tipo_baixa_final
+                titulo.save(using=banco)
+                
+                return Response({
+                    'message': 'Título baixado com sucesso',
+                    'baixa_id': baixa.bapa_sequ,
+                    'valor_pago': valor_total_pago,
+                    'status_titulo': titulo.titu_aber
+                }, status=status.HTTP_200_OK)
+                
+        except Exception as e:
+            return Response(
+                {'error': f'Erro ao baixar título: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['get'])
+    def historico_baixas(self, request, *args, **kwargs):
+        """Endpoint para consultar histórico de baixas de um título"""
+        titulo = self.get_object()
+        banco = get_licenca_db_config(request)
+        
+        baixas = Bapatitulos.objects.using(banco).filter(
+            bapa_empr=titulo.titu_empr,
+            bapa_fili=titulo.titu_fili,
+            bapa_forn=titulo.titu_forn,
+            bapa_titu=titulo.titu_titu,
+            bapa_seri=titulo.titu_seri,
+            bapa_parc=titulo.titu_parc
+        ).order_by('-bapa_dpag')
+        
+        serializer = BapatitulosSerializer(baixas, many=True)
+        return Response(serializer.data)

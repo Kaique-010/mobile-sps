@@ -48,16 +48,26 @@ class AuditoriaMiddleware:
                 'auditoria': 'auditoria'
             }
             
+            # Mapear nomes de modelos com hífen para nomes reais dos modelos
+            modelo_mapping = {
+                'titulos-pagar': 'Titulospagar',
+                'titulos-receber': 'Titulosreceber',
+                # Adicione outros mapeamentos conforme necessário
+            }
+            
             # Usar o nome real do app
             real_app_name = app_mapping.get(app_name.lower(), app_name)
             
+            # Usar o nome real do modelo se houver mapeamento
+            real_modelo_name = modelo_mapping.get(modelo_name, modelo_name)
+            
             # Tentar obter o modelo real
             try:
-                modelo = apps.get_model(real_app_name, modelo_name)
-                logger.debug(f'Modelo encontrado: {real_app_name}.{modelo_name}')
+                modelo = apps.get_model(real_app_name, real_modelo_name)
+                logger.debug(f'Modelo encontrado: {real_app_name}.{real_modelo_name}')
                 return modelo, objeto_id
             except LookupError:
-                logger.debug(f'Modelo não encontrado: {real_app_name}.{modelo_name} (tentativa com {app_name}.{modelo_name})')
+                logger.debug(f'Modelo não encontrado: {real_app_name}.{real_modelo_name} (tentativa com {app_name}.{modelo_name})')
                 # Tentar com o nome original como fallback
                 try:
                     modelo = apps.get_model(app_name, modelo_name)

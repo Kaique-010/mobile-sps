@@ -275,7 +275,7 @@ pagamento = Bapatitulos.objects.create(
 )
 
 # Atualizar status do título
-titulo_pagar.titu_aber = 'B'  # Baixado
+titulo_pagar.titu_aber = 'P' 
 titulo_pagar.save()
 
 print(f"Pagamento realizado: R$ {valor_pago} (desconto: R$ {desconto})")
@@ -316,13 +316,12 @@ pagamento_atraso = Bapatitulos.objects.create(
     bapa_pmul=titulo_atrasado.titu_mult,  # % Multa
     bapa_pjur=juros_mes,  # % Juros
     bapa_topa='A',  # Tipo: Atrasado
-    bapa_form='T',  # Forma: Transferência
     bapa_hist=f'Pagamento com {dias_atraso} dias de atraso. Multa: R$ {multa}, Juros: R$ {juros}',
     bapa_lote_valo='PAG002'
 )
 
 # Baixar título
-titulo_atrasado.titu_aber = 'B'
+titulo_atrasado.titu_aber = 'A'
 titulo_atrasado.save()
 
 print(f"Pagamento com atraso: R$ {valor_total} (original: R$ {valor_original}, encargos: R$ {multa + juros})")

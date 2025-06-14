@@ -93,7 +93,7 @@ class Titulospagar(models.Model):
     class Meta:
         managed = False
         db_table = 'titulospagar'
-        unique_together = (('titu_empr', 'titu_fili', 'titu_forn', 'titu_titu', 'titu_seri', 'titu_parc'),)
+        unique_together = (('titu_empr', 'titu_fili', 'titu_forn', 'titu_titu', 'titu_seri', 'titu_parc', 'titu_emis', 'titu_venc'),)
 
 
 

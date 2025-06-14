@@ -417,7 +417,7 @@ LOGGING = {
 
 CREATE TABLE auditoria_logacao (
     id SERIAL PRIMARY KEY,
-    usuario_id INTEGER REFERENCES auth_user(id) ON DELETE SET NULL,
+    usuario_id INTEGER REFERENCES usuarios(usua_codi) ON DELETE SET NULL,
     data_hora TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
     tipo_acao VARCHAR(10) NOT NULL,
     url TEXT NOT NULL,
@@ -433,7 +433,6 @@ CREATE TABLE auditoria_logacao (
     licenca VARCHAR(100)
 );
 
--- Agora sim: índices criados fora da tabela
 CREATE INDEX idx_auditoria_empresa_licenca_datahora ON auditoria_logacao (empresa, licenca, data_hora);
 CREATE INDEX idx_auditoria_usuario_datahora ON auditoria_logacao (usuario_id, data_hora);
 CREATE INDEX idx_auditoria_modelo_objeto ON auditoria_logacao (modelo, objeto_id);
