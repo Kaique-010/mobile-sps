@@ -34,4 +34,6 @@ urlpatterns = [
     path('api/<slug>/caixadiario/', include('CaixaDiario.urls')),
     path('api/<slug>/Os/', include('O_S.urls')),
     path('api/<slug>/auditoria/', include('auditoria.urls')),
+    path('api/<slug>/notificacoes/', include('notificacoes.urls')),
+    
 ]
