@@ -134,7 +134,7 @@ class Baretitulos(models.Model):
     bare_empr = models.IntegerField()
     bare_fili = models.IntegerField()
     bare_clie = models.IntegerField()
-    bare_titu = models.ForeignKey('Titulosreceber', models.DO_NOTHING, db_column='bare_titu')
+    bare_titu = models.CharField(max_length=13, db_column='bare_titu')
     bare_seri = models.CharField(max_length=5, blank=True, null=True)
     bare_parc = models.CharField(max_length=3, blank=True, null=True)
     bare_dpag = models.DateField(blank=True, null=True)

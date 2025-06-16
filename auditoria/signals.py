@@ -65,7 +65,9 @@ def capturar_dados_antes_salvar(sender, instance, **kwargs):
             if not hasattr(_thread_locals, 'dados_antes'):
                 _thread_locals.dados_antes = {}
             _thread_locals.dados_antes[f"{sender.__name__}_{instance.pk}"] = model_to_dict(dados_anteriores)
-        except sender.DoesNotExist:
+        except (sender.DoesNotExist, sender.MultipleObjectsReturned):
+            # Ignorar se não existe ou se há múltiplos objetos com a mesma PK
+            # Isso pode acontecer em modelos com chaves primárias compostas mal definidas
             pass
 
 @receiver(post_save)

@@ -24,17 +24,17 @@ historico_baixas = TitulosreceberViewSet.as_view({
 urlpatterns = [
     path('', include(router.urls)),
     path(
-        'titulos-receber/<int:titu_empr>/<int:titu_fili>/<int:titu_clie>/<str:titu_titu>/<str:titu_seri>/<str:titu_parc>/',
+        'titulos-receber/<int:titu_empr>/<int:titu_fili>/<int:titu_clie>/<str:titu_titu>/<str:titu_seri>/<str:titu_parc>/<str:titu_emis>/<str:titu_venc>/',
         titulos_detail,
         name='titulosreceber-detail'
     ),
     path(
-        'titulos-receber/<int:titu_empr>/<int:titu_fili>/<int:titu_clie>/<str:titu_titu>/<str:titu_seri>/<str:titu_parc>/baixar/',
+        'titulos-receber/<int:titu_empr>/<int:titu_fili>/<int:titu_clie>/<str:titu_titu>/<str:titu_seri>/<str:titu_parc>/<str:titu_emis>/<str:titu_venc>/baixar/',
         baixar_titulo,
         name='titulosreceber-baixar'
     ),
     path(
-        'titulos-receber/<int:titu_empr>/<int:titu_fili>/<int:titu_clie>/<str:titu_titu>/<str:titu_seri>/<str:titu_parc>/historico-baixas/',
+        'titulos-receber/<int:titu_empr>/<int:titu_fili>/<int:titu_clie>/<str:titu_titu>/<str:titu_seri>/<str:titu_parc>/<str:titu_emis>/<str:titu_venc>/historico-baixas/',
         historico_baixas,
         name='titulosreceber-historico-baixas'
     ),

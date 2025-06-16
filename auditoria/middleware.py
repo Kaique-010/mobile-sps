@@ -45,7 +45,8 @@ class AuditoriaMiddleware:
                 'listacasamento': 'listacasamento',
                 'contratos': 'contratos',
                 'dashboards': 'dashboards',
-                'auditoria': 'auditoria'
+                'auditoria': 'auditoria',
+
             }
             
             # Mapear nomes de modelos com hífen para nomes reais dos modelos
@@ -148,9 +149,11 @@ class AuditoriaMiddleware:
             return self.get_response(request)
 
         # Ignorar logs para rotas de auditoria (exceto a rota principal)
-        if '/auditoria/logs/' in request.path:
-            logger.debug(f'Ignorando log para rota de auditoria: {request.path}')
+        # Ignorar logs para rotas de auditoria e notificações
+        if '/auditoria/logs/' in request.path or '/notificacoes/' in request.path:
+            logger.debug(f'Ignorando log para rota: {request.path}')
             return self.get_response(request)
+
 
         # Capturar dados antes da alteração (para PUT, PATCH, DELETE)
         dados_antes = None
@@ -184,6 +187,7 @@ class AuditoriaMiddleware:
             # Define a licença como 'auditoria' para endpoints de auditoria
             if request.path.startswith('/api/auditoria/'):
                 licenca_slug = 'auditoria'
+
             else:
                 licenca_slug = get_licenca_slug()
 

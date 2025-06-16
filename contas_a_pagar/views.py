@@ -2,6 +2,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db import transaction
+from django.http import Http404  # ✅ Adicionar
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Titulospagar, Bapatitulos
 from Entidades.models import Entidades 
@@ -58,28 +59,38 @@ class TitulospagarViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
 
     def get_object(self):
         banco = get_licenca_db_config(self.request)
-        queryset = Titulospagar.objects.using(banco).filter(
-            titu_empr=self.kwargs["titu_empr"],
-            titu_fili=self.kwargs["titu_fili"],
-            titu_forn=self.kwargs["titu_forn"],
-            titu_titu=self.kwargs["titu_titu"],
-            titu_seri=self.kwargs["titu_seri"],
-            titu_parc=self.kwargs["titu_parc"],
-            titu_emis=self.kwargs["titu_emis"],
-            titu_venc=self.kwargs["titu_venc"],
-            titu_aber='A'
-        )
-        
-        if queryset.count() == 0:
-            raise Http404("Título não encontrado")
-        elif queryset.count() > 1:
-            # Log do problema e retorna o primeiro
+        try:
+            queryset = Titulospagar.objects.using(banco).filter(
+                titu_empr=self.kwargs["titu_empr"],
+                titu_fili=self.kwargs["titu_fili"],
+                titu_forn=self.kwargs["titu_forn"],
+                titu_titu=self.kwargs["titu_titu"],
+                titu_seri=self.kwargs["titu_seri"],
+                titu_parc=self.kwargs["titu_parc"],
+                titu_emis=self.kwargs["titu_emis"],
+                titu_venc=self.kwargs["titu_venc"],
+                titu_aber='A'
+            )
+            
+            if queryset.count() == 0:
+                raise Http404("Título não encontrado ou já baixado")
+            elif queryset.count() > 1:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Múltiplos títulos encontrados para os critérios: {self.kwargs}")
+                return queryset.first()
+            else:
+                return queryset.get()
+        except KeyError as e:
             import logging
             logger = logging.getLogger(__name__)
-            logger.warning(f"Múltiplos títulos encontrados para os critérios: {self.kwargs}")
-            return queryset.first()
-        else:
-            return queryset.get()
+            logger.error(f"Parâmetro obrigatório ausente: {e}")
+            raise Http404(f"Parâmetro obrigatório ausente: {e}")
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Erro ao buscar título: {e}")
+            raise Http404("Erro ao buscar título")
 
     @action(detail=True, methods=['post'])
     def baixar_titulo(self, request, *args, **kwargs):
@@ -95,7 +106,7 @@ class TitulospagarViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         
         try:
             with transaction.atomic(using=banco):
-                # Verificar se o título já está baixado
+            
                 if titulo.titu_aber == 'T' or titulo.titu_aber == 'P':
                     return Response(
                         {'error': 'Título já está baixado'}, 
@@ -121,14 +132,13 @@ class TitulospagarViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                 else:
                     tipo_baixa_final = 'P'  # Parcial
                 
-                # Criar registro de baixa
                 baixa = Bapatitulos.objects.using(banco).create(
                     bapa_sequ=proximo_sequencial,
                     bapa_ctrl=titulo.titu_ctrl or 0,
                     bapa_empr=titulo.titu_empr,
                     bapa_fili=titulo.titu_fili,
                     bapa_forn=titulo.titu_forn,
-                    bapa_titu=titulo, 
+                    bapa_titu=titulo.titu_titu,
                     bapa_seri=titulo.titu_seri,
                     bapa_parc=titulo.titu_parc,
                     bapa_dpag=data['data_pagamento'],
@@ -137,7 +147,7 @@ class TitulospagarViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                     bapa_vjur=valor_juros,
                     bapa_vdes=valor_desconto,
                     bapa_pago=valor_total_pago,
-                    bapa_topa=tipo_baixa_final,  # Usar a lógica condicional
+                    bapa_topa=tipo_baixa_final, 
                     bapa_banc=data.get('banco'),
                     bapa_cheq=data.get('cheque'),
                     bapa_hist=data.get('historico', f'Baixa do título {titulo.titu_titu}'),
@@ -150,9 +160,16 @@ class TitulospagarViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                     bapa_situ=titulo.titu_situ
                 )
                 
-                # Atualizar status do título usando a mesma lógica
-                titulo.titu_aber = tipo_baixa_final
-                titulo.save(using=banco)
+                Titulospagar.objects.using(banco).filter(
+                    titu_empr=titulo.titu_empr,
+                    titu_fili=titulo.titu_fili,
+                    titu_forn=titulo.titu_forn,
+                    titu_titu=titulo.titu_titu,
+                    titu_seri=titulo.titu_seri,
+                    titu_parc=titulo.titu_parc,
+                    titu_emis=titulo.titu_emis,
+                    titu_venc=titulo.titu_venc
+                ).update(titu_aber=tipo_baixa_final)
                 
                 return Response({
                     'message': 'Título baixado com sucesso',

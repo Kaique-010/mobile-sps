@@ -103,7 +103,7 @@ class Bapatitulos(models.Model):
     bapa_empr = models.IntegerField()
     bapa_fili = models.IntegerField()
     bapa_forn = models.IntegerField()
-    bapa_titu = models.ForeignKey('Titulospagar', models.DO_NOTHING, db_column='bapa_titu')
+    bapa_titu = models.CharField(max_length=13, db_column='bapa_titu')
     bapa_seri = models.CharField(max_length=5, blank=True, null=True)
     bapa_parc = models.CharField(max_length=4, blank=True, null=True)
     bapa_dpag = models.DateField(blank=True, null=True)

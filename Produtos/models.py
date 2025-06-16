@@ -184,7 +184,10 @@ class SaldoProduto(models.Model):
 
     class Meta:
         db_table = 'saldosprodutos'
-        managed = 'false'
+        managed = False
+        unique_together = (('produto_codigo', 'empresa', 'filial'),)
+
+    
         
 
 

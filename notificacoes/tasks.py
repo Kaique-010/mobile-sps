@@ -6,17 +6,12 @@ from .views import (
     NotificaResumoView
 )
 from rest_framework.test import APIRequestFactory
-from django.contrib.auth.models import AnonymousUser
 
 @shared_task
 def enviar_notificacoes_diarias():
     """Task para enviar notificações diárias automaticamente"""
     factory = APIRequestFactory()
-    
-    # Criar request fake para as views
-    request = factory.post('/')
-    request.user = AnonymousUser()
-    
+    request = factory.post('/')    
     resultados = {}
     
     # Notificações de estoque
