@@ -177,7 +177,7 @@ class Produtos(models.Model):
 
 
 class SaldoProduto(models.Model):
-    produto_codigo = models.ForeignKey(Produtos, on_delete=models.CASCADE, db_column='sapr_prod')
+    produto_codigo = models.ForeignKey(Produtos, on_delete=models.CASCADE, db_column='sapr_prod', primary_key=True)
     empresa = models.CharField(max_length=50, db_column='sapr_empr')
     filial = models.CharField(max_length=50, db_column='sapr_fili')
     saldo_estoque = models.DecimalField(max_digits=10, decimal_places=2, db_column='sapr_sald')
@@ -186,6 +186,12 @@ class SaldoProduto(models.Model):
         db_table = 'saldosprodutos'
         managed = False
         unique_together = (('produto_codigo', 'empresa', 'filial'),)
+        constraints = [
+            models.UniqueConstraint(
+                fields=['produto_codigo', 'empresa', 'filial'],
+                name='saldosprodutos_pk'
+            )
+        ]
 
     
         

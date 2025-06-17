@@ -68,11 +68,6 @@ class BaixaTitulosReceberSerializer(serializers.Serializer):
         
         if valor_recebido <= 0:
             raise serializers.ValidationError("Valor recebido deve ser maior que zero")
-        
-        # Validação adicional: data de recebimento não pode ser futura
-        data_recebimento = data.get('data_recebimento')
-        if data_recebimento and data_recebimento > date.today():
-            raise serializers.ValidationError("Data de recebimento não pode ser futura")
             
         return data
 

@@ -23,7 +23,7 @@ class NotificaEstoqueView(APIView):
             return Response({"error": "Licença não encontrada."}, status=status.HTTP_404_NOT_FOUND)
 
         produtos_baixo_estoque = SaldoProduto.objects.using(banco).filter(
-            saldo_estoque__lt=2
+            saldo_estoque__lt=0
         ).select_related('produto_codigo')
 
         usuarios = Usuarios.objects.using(banco).all()
