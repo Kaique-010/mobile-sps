@@ -1,5 +1,9 @@
 from rest_framework import serializers
 from .models import Caixageral, Movicaixa
+from Produtos.models import Produtos  # Para o método get_produto_nome
+import logging
+
+logger = logging.getLogger(__name__)
 
 class CaixageralSerializer(serializers.ModelSerializer):
     class Meta:
@@ -136,15 +140,5 @@ class MovicaixaSerializer(serializers.ModelSerializer):
 
     
     def get_produto_nome(self, obj):
-        banco = self.context.get('banco')
-        if not banco:
-            return None
-        try:
-            produto = Produtos.objects.using(banco).filter(
-                prod_codi=obj.iped_prod,
-                prod_empr=obj.iped_empr
-            ).first()
-            return produto.prod_nome if produto else None
-        except Exception as e:
-            logger.warning(f"Erro ao buscar nome do produto: {e}")
-            return None
+    # Remover este método ou retornar None, pois Movicaixa não tem iped_prod
+     return None

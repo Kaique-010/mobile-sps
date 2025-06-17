@@ -91,5 +91,29 @@
       "OrdemdeServico",
       "Os"
     ]
+  },
+
+  {
+    "slug": "alma",
+    "cnpj": "99999999999999",
+    "db_name": "alma",
+    "db_host": "localhost",
+    "db_port": "5432",
+    "modulos": [
+      "dashboards",
+      "dash",
+      "Produtos",
+      "Pedidos",
+      "contratos",
+      "Entradas_Estoque",
+      "Saidas_Estoque",
+      "listacasamento",
+      "Entidades",
+      "Orcamentos",
+      "implantacao",
+      "Financeiro",
+      "OrdemdeServico",
+      "Os"
+    ]
   }
 ]
