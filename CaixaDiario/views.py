@@ -139,22 +139,39 @@ class MovicaixaViewSet(viewsets.ModelViewSet):
 
             with transaction.atomic(using=banco):
 
-                ultimo_numero = Movicaixa.objects.using(banco).filter(
+                ultimo_num_pedido = PedidoVenda.objects.using(banco).filter(
+                    pedi_empr=empresa_id,
+                    pedi_fili=filial_id
+                ).aggregate(Max('pedi_nume'))['pedi_nume__max'] or 0
+
+                ultimo_num_movimento = Movicaixa.objects.using(banco).filter(
                     movi_empr=empresa_id,
                     movi_fili=filial_id
                 ).aggregate(Max('movi_nume_vend'))['movi_nume_vend__max'] or 0
 
-                numero_venda = ultimo_numero + 1
+                numero_venda = max(ultimo_num_pedido, ultimo_num_movimento) + 1
+                
+                ultimo_ctrl = Movicaixa.objects.using(banco).filter(
+                    movi_empr=empresa_id,
+                    movi_fili=filial_id,
+                    movi_caix=caixa_aberto.caix_caix,
+                    movi_data=datetime.today().date()
+                ).aggregate(Max('movi_ctrl'))['movi_ctrl__max'] or 0
+
 
                 ultimo_pedido = PedidoVenda.objects.using(banco).filter(
                     pedi_empr=empresa_id,
                     pedi_fili=filial_id,
                     pedi_nume=numero_venda,
+                    pedi_forn=cliente,
+                    pedi_vend=vendedor,
+                    pedi_data=datetime.today().date(),
+                    pedi_stat='0',
                 ).first()
 
                 if ultimo_pedido:
                    
-                    ultimo_pedido.pedi_clie = cliente
+                    ultimo_pedido.pedi_forn = cliente
                     ultimo_pedido.pedi_vend = vendedor
                     ultimo_pedido.pedi_data = datetime.today().date()
                     ultimo_pedido.pedi_hora = datetime.now().time()
@@ -165,24 +182,24 @@ class MovicaixaViewSet(viewsets.ModelViewSet):
                         pedi_empr=empresa_id,
                         pedi_fili=filial_id,
                         pedi_nume=numero_venda,
-                        pedi_clie=cliente,
+                        pedi_forn=cliente,
                         pedi_vend=vendedor,
                         pedi_data=datetime.today().date(),
-                        pedi_hora=datetime.now().time(),
-                        pedi_stat='P',  
-                        pedi_caix=caixa_aberto.caix_caix
+                        pedi_stat='0',  
                       )
-                    Movicaixa.objects.using(banco).create(
+                    '''Movicaixa.objects.using(banco).create(
                         movi_empr=empresa_id,
                         movi_fili=filial_id,
                         movi_caix=caixa_aberto.caix_caix,
                         movi_vend = vendedor,
                         movi_clie = cliente,
                         movi_nume_vend=numero_venda,
-                        movi_obse=f'Pedido de Venda {numero_venda}',
                         movi_hora=datetime.now().time(),
                         movi_data=datetime.today().date(),
-                    )
+                        movi_ctrl=ultimo_ctrl + 1,
+                        movi_oper=vendedor,
+                        movi_obse=f'Caixa  {caixa} Gerado por Mobile o Pedido de Venda {numero_venda}',
+                    )'''
 
             return Response({
                 'numero_venda': numero_venda,
@@ -412,6 +429,7 @@ class MovicaixaViewSet(viewsets.ModelViewSet):
                         movi_clie = cliente,
                         movi_tipo=1,
                         movi_entr=total_pedido,
+                        movi_said=total_pedido,
                         movi_obse=f'Venda {numero_venda} - {len(itens)} itens',
                         movi_data=caixa_aberto.caix_data,
                         movi_hora=datetime.now().time(),
@@ -482,7 +500,8 @@ class MovicaixaViewSet(viewsets.ModelViewSet):
                 movi_vend = vendedor,
                 movi_clie = cliente,
                 movi_entr=valor,
-                movi_obse=f'Pagamento - Forma: {forma_pagamento}',
+                movi_said=valor,
+                movi_obse=f'Venda {numero_venda}, Pagamento realizado pela Forma: {forma_pagamento}',
                 movi_data=caixa_aberto.caix_data,
                 movi_hora=datetime.now().time(),
                 movi_ctrl=ultimo_ctrl + 1,
@@ -528,7 +547,7 @@ class MovicaixaViewSet(viewsets.ModelViewSet):
             )['total'] or 0
 
             total_pagamentos = movimentos.exclude(movi_tipo=1).aggregate(
-                total=Sum('movi_entr') and Sum('movi_said')
+                total=Sum('movi_entr') 
             )['total'] or 0
 
             pedido = PedidoVenda.objects.using(banco).filter(
