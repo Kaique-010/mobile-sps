@@ -311,8 +311,21 @@ class ImagemBase64Serializer(BancoModelSerializer):
             except Exception as e:
                 logger.warning(f"Erro ao decodificar imagem base64: {e}")
                 raise ValidationError({'imagem_upload': 'Imagem inválida ou corrompida.'})
+        # Remove imagem_upload from the data since it's processed and shouldn't be passed to the model
+        ret.pop('imagem_upload', None)
         return ret
 
+
+
+class OrdemServicoImgAntesSerializer(ImagemBase64Serializer):
+    class Meta:
+        model = Ordemservicoimgantes
+        imagem_field = 'iman_imag'
+        fields = [
+            'iman_id', 'iman_empr', 'iman_fili', 'iman_orde', 'iman_codi',
+            'iman_come', 'iman_obse', 'img_latitude', 'img_longitude',
+            'img_data', 'imagem_base64', 'imagem_upload'
+        ]
 
 
 class ImagemAntesSerializer(ImagemBase64Serializer):

@@ -159,8 +159,8 @@ class Ordemservicoimgdurante(models.Model):
     imdu_come = models.TextField(blank=True, null=True)
     imdu_imag = models.BinaryField(blank=True, null=True)
     imdu_obse = models.CharField(max_length=255, blank=True, null=True)
-    img_latitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
-    img_longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
+    img_latitude = models.DecimalField(max_digits=10, decimal_places=7, blank=True, null=True)
+    img_longitude = models.DecimalField(max_digits=10, decimal_places=7, blank=True, null=True)
     img_data = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -26,6 +26,15 @@ class Caixageral(models.Model):
 
 
 
+TIPO_MOVIMENTO = [
+    ('1', 'DINHEIRO'),
+    ('2', 'CHEQUE'),
+    ('4', 'CARTÃO'),
+    ('5', 'CREDIÁRIO'),
+    ('6', 'PIX'),
+   
+]
+
 
 class Movicaixa(models.Model):
     movi_empr = models.IntegerField(primary_key=True)
@@ -35,7 +44,7 @@ class Movicaixa(models.Model):
     movi_ctrl = models.IntegerField("Controle",)
     movi_entr = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
     movi_said = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
-    movi_tipo = models.IntegerField(blank=True, null=True)
+    movi_tipo = models.IntegerField("Tipo de Movimento",choices=TIPO_MOVIMENTO)
     movi_obse = models.TextField(blank=True, null=True)
     movi_oper = models.IntegerField(blank=True, null=True)
     movi_hora = models.TimeField(blank=True, null=True)
