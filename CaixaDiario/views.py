@@ -295,7 +295,6 @@ class MovicaixaViewSet(viewsets.ModelViewSet):
                 pedido.pedi_tota = total_pedido
                 pedido.save(using=banco)
                 
-                # Verificar se já existe movimento de caixa para este item específico
                 movimento_existente = Movicaixa.objects.using(banco).filter(
                     movi_empr=empresa_id,
                     movi_fili=filial_id,

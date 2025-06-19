@@ -34,7 +34,7 @@ urlpatterns = [
         name='titulospagar-baixar'
     ),
     path(
-        'titulos-pagar/<int:titu_empr>/<int:titu_fili>/<int:titu_forn>/<str:titu_titu>/<str:titu_seri>/<str:titu_parc>/<str:titu_emis>/<str:titu_venc>/historico-baixas/',
+        'titulos-pagar/<int:titu_empr>/<int:titu_fili>/<int:titu_forn>/<str:titu_titu>/<str:titu_seri>/<str:titu_parc>/<str:titu_emis>/<str:titu_venc>/historico_baixas/',
         historico_baixas,
         name='titulospagar-historico-baixas'
     ),

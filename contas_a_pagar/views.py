@@ -1,7 +1,7 @@
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.db import transaction
+from django.db import transaction, models
 from django.http import Http404  # ✅ Adicionar
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Titulospagar, Bapatitulos
@@ -60,6 +60,7 @@ class TitulospagarViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
     def get_object(self):
         banco = get_licenca_db_config(self.request)
         try:
+            
             queryset = Titulospagar.objects.using(banco).filter(
                 titu_empr=self.kwargs["titu_empr"],
                 titu_fili=self.kwargs["titu_fili"],
@@ -69,7 +70,7 @@ class TitulospagarViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                 titu_parc=self.kwargs["titu_parc"],
                 titu_emis=self.kwargs["titu_emis"],
                 titu_venc=self.kwargs["titu_venc"],
-                titu_aber='A'
+                titu_aber__in=['A', 'P']  
             )
             
             if queryset.count() == 0:
@@ -107,13 +108,15 @@ class TitulospagarViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         try:
             with transaction.atomic(using=banco):
             
-                if titulo.titu_aber == 'T' or titulo.titu_aber == 'P':
+                # Verificar se o título já está totalmente baixado
+                if titulo.titu_aber == 'T':
                     return Response(
-                        {'error': 'Título já está baixado'}, 
+                        {'error': 'Título já está totalmente baixado'}, 
                         status=status.HTTP_400_BAD_REQUEST
                     )
                 
-                # Calcular valores
+                
+              
                 valor_titulo = titulo.titu_valo or Decimal('0')
                 valor_pago = data['valor_pago']
                 valor_juros = data.get('valor_juros', Decimal('0'))
@@ -122,12 +125,26 @@ class TitulospagarViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                 
                 valor_total_pago = valor_pago + valor_juros + valor_multa - valor_desconto
                 
+                # Calcular valor já pago anteriormente (para títulos parciais)
+                valor_ja_pago = Decimal('0')
+                if titulo.titu_aber == 'P':
+                    baixas_anteriores = Bapatitulos.objects.using(banco).filter(
+                        bapa_empr=titulo.titu_empr,
+                        bapa_fili=titulo.titu_fili,
+                        bapa_forn=titulo.titu_forn,
+                        bapa_titu=titulo.titu_titu,
+                        bapa_seri=titulo.titu_seri,
+                        bapa_parc=titulo.titu_parc
+                    ).aggregate(total=models.Sum('bapa_pago'))['total'] or Decimal('0')
+                    valor_ja_pago = baixas_anteriores
+                
                 # Gerar próximo número de sequência
                 ultimo_bapa = Bapatitulos.objects.using(banco).order_by('-bapa_sequ').first()
                 proximo_sequencial = (ultimo_bapa.bapa_sequ + 1) if ultimo_bapa else 1
                 
-                # Determinar tipo de baixa baseado no valor pago
-                if valor_total_pago >= valor_titulo:
+                # Determinar tipo de baixa baseado no valor total (já pago + novo pagamento)
+                valor_total_acumulado = valor_ja_pago + valor_total_pago
+                if valor_total_acumulado >= valor_titulo:
                     tipo_baixa_final = 'T'  # Total
                 else:
                     tipo_baixa_final = 'P'  # Parcial
@@ -186,7 +203,6 @@ class TitulospagarViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
     
     @action(detail=True, methods=['get'])
     def historico_baixas(self, request, *args, **kwargs):
-        """Endpoint para consultar histórico de baixas de um título"""
         titulo = self.get_object()
         banco = get_licenca_db_config(request)
         

@@ -1,7 +1,7 @@
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.db import transaction
+from django.db import transaction, models
 from django.http import Http404
 import logging
 from django_filters.rest_framework import DjangoFilterBackend
@@ -62,6 +62,7 @@ class TitulosreceberViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
     def get_object(self):
         banco = get_licenca_db_config(self.request)
         try:
+            # Permitir buscar títulos abertos ('A') ou parcialmente recebidos ('P')
             queryset = Titulosreceber.objects.using(banco).filter(
                 titu_empr=self.kwargs["titu_empr"],
                 titu_fili=self.kwargs["titu_fili"],
@@ -71,7 +72,7 @@ class TitulosreceberViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
                 titu_parc=self.kwargs["titu_parc"],
                 titu_emis=self.kwargs["titu_emis"], 
                 titu_venc=self.kwargs["titu_venc"], 
-                titu_aber='A' 
+                titu_aber__in=['A', 'P']  # Permite títulos abertos ou parcialmente recebidos
             )
             
             if queryset.count() == 0:
@@ -112,13 +113,16 @@ class TitulosreceberViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
         
         try:
             with transaction.atomic(using=banco):
-                # Verificar se o título já está baixado
-                if titulo.titu_aber == 'P' or titulo.titu_aber == 'T':
-                    logger.warning(f"Tentativa de baixar título já baixado: {titulo.titu_titu}")
+                # Verificar se o título já está totalmente baixado
+                if titulo.titu_aber == 'T':
+                    logger.warning(f"Tentativa de baixar título totalmente baixado: {titulo.titu_titu}")
                     return Response(
-                        {'error': 'Título já está baixado'}, 
+                        {'error': 'Título já está totalmente baixado'}, 
                         status=status.HTTP_400_BAD_REQUEST
                     )
+                
+                # Títulos com status 'P' (parcial) podem receber baixas adicionais
+                # Títulos com status 'A' (aberto) podem ser baixados normalmente
                 
                 # Calcular valores
                 valor_titulo = titulo.titu_valo or Decimal('0')
@@ -129,14 +133,28 @@ class TitulosreceberViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
                 
                 valor_total_recebido = valor_recebido + valor_juros + valor_multa - valor_desconto
                 
-                logger.info(f"Valores calculados - Título: {valor_titulo}, Recebido: {valor_total_recebido}")
+                # Calcular valor já recebido anteriormente (para títulos parciais)
+                valor_ja_recebido = Decimal('0')
+                if titulo.titu_aber == 'P':
+                    baixas_anteriores = Baretitulos.objects.using(banco).filter(
+                        bare_empr=titulo.titu_empr,
+                        bare_fili=titulo.titu_fili,
+                        bare_clie=titulo.titu_clie,
+                        bare_titu=titulo.titu_titu,
+                        bare_seri=titulo.titu_seri,
+                        bare_parc=titulo.titu_parc
+                    ).aggregate(total=models.Sum('bare_pago'))['total'] or Decimal('0')
+                    valor_ja_recebido = baixas_anteriores
+                
+                logger.info(f"Valores calculados - Título: {valor_titulo}, Já recebido: {valor_ja_recebido}, Novo recebimento: {valor_total_recebido}")
                 
                 # Gerar próximo número de sequência
                 ultimo_bare = Baretitulos.objects.using(banco).order_by('-bare_sequ').first()
                 proximo_sequ = (ultimo_bare.bare_sequ + 1) if ultimo_bare else 1
                 
-                # Determinar tipo de baixa baseado no valor recebido
-                if valor_total_recebido >= valor_titulo:
+                # Determinar tipo de baixa baseado no valor total (já recebido + novo recebimento)
+                valor_total_acumulado = valor_ja_recebido + valor_total_recebido
+                if valor_total_acumulado >= valor_titulo:
                     tipo_baixa_final = 'T'  # Total
                 else:
                     tipo_baixa_final = 'P'  # Parcial
