@@ -85,6 +85,15 @@
       "name": "TRATORMAQ",
       "database": "savexml43",
       "username": "savexml43"
+    },
+    {
+      "previewLimit": 50,
+      "server": "base.rtalmeida.com.br",
+      "port": 5432,
+      "driver": "PostgreSQL",
+      "name": "operario",
+      "database": "savexml894",
+      "username": "savexml894"
     }
   ]
 }

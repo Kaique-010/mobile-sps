@@ -20,6 +20,8 @@ class DashboardFinanceiroView(ModuloRequeridoMixin, APIView):
         if not slug:
             return Response({"error": "Licença não encontrada."}, status=status.HTTP_404_NOT_FOUND)
 
+        empresa_id = request.headers.get("X-Empresa")
+        filial_id = request.headers.get("X-Filial")
         data_ini = request.query_params.get('data_ini')
         data_fim = request.query_params.get('data_fim')
         saldo_inicial = request.query_params.get('saldo_inicial', '0.00')
@@ -31,36 +33,41 @@ class DashboardFinanceiroView(ModuloRequeridoMixin, APIView):
         except Exception:
             return Response({"error": "Parâmetros inválidos."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # RECEBIMENTOS agrupados por mês e cliente
-        recebimentos_raw = (
+
+        recebimentos_agrupados = (
             Baretitulos.objects.using(slug)
-            .filter(bare_dpag__range=(data_ini, data_fim))
+            .filter(
+                bare_empr=empresa_id,
+                bare_fili=filial_id,
+                bare_dpag__range=(data_ini, data_fim)
+            )
             .annotate(mes=TruncMonth('bare_dpag'))
             .values('mes', 'bare_clie')
             .annotate(valor=Sum('bare_pago'))
         )
 
-        # PAGAMENTOS agrupados por mês e fornecedor
-        pagamentos_raw = (
+        pagamentos_agrupados = (
             Bapatitulos.objects.using(slug)
-            .filter(bapa_dpag__range=(data_ini, data_fim))
+            .filter(
+                bapa_empr=empresa_id,
+                bapa_fili=filial_id,
+                bapa_dpag__range=(data_ini, data_fim)
+            )
             .annotate(mes=TruncMonth('bapa_dpag'))
             .values('mes', 'bapa_forn')
             .annotate(valor=Sum('bapa_pago'))
         )
 
-        # Pega entidades relacionadas
-        ent_ids = set([r['bare_clie'] for r in recebimentos_raw] + [p['bapa_forn'] for p in pagamentos_raw])
+        ent_ids = set([r['bare_clie'] for r in recebimentos_agrupados] + [p['bapa_forn'] for p in pagamentos_agrupados])
         entidades = Entidades.objects.using(slug).filter(enti_clie__in=ent_ids).values('enti_clie', 'enti_nome')
         nomes = {e['enti_clie']: e['enti_nome'] for e in entidades}
 
-        # Monta os dados
         recebimentos = []
         pagamentos = []
         total_recebido = Decimal('0.00')
         total_pago = Decimal('0.00')
 
-        for r in recebimentos_raw:
+        for r in recebimentos_agrupados:
             valor = r['valor'] or Decimal('0.00')
             total_recebido += valor
             recebimentos.append({
@@ -69,7 +76,7 @@ class DashboardFinanceiroView(ModuloRequeridoMixin, APIView):
                 "valor": str(valor)
             })
 
-        for p in pagamentos_raw:
+        for p in pagamentos_agrupados:
             valor = p['valor'] or Decimal('0.00')
             total_pago += valor
             pagamentos.append({

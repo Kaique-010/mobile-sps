@@ -24,6 +24,14 @@
     "db_port": "5432",
     "modulos": ["dashboards", "listacasamento", "Entidades", "Produtos"]
   },
+  {
+    "slug": "operario",
+    "cnpj": "75603316000177",
+    "db_name": "savexml894",
+    "db_host": "base.rtalmeida.com.br",
+    "db_port": "5432",
+    "modulos": ["dashboards", "Financeiro"]
+  },
 
   {
     "slug": "itajara",
