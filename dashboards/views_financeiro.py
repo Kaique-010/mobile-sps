@@ -106,16 +106,6 @@ class DashboardFinanceiroView(ModuloRequeridoMixin, APIView):
 
 
 #com contas Operario
-#com contas Operario
-def classificar_grupo(conta_reduzida):
-    conta_str = str(conta_reduzida)
-    if conta_str.startswith('3'):
-        return 'Receitas'
-    elif conta_str.startswith('4'):
-        return 'Despesas'
-    else:
-        return 'Outros'
-
 class OrcamentoRealizadoView(APIView):
     def get(self, request, slug=None):
         slug = get_licenca_slug()
@@ -133,6 +123,7 @@ class OrcamentoRealizadoView(APIView):
         except Exception:
             return Response({"error": "Parâmetros inválidos."}, status=400)
 
+        #  Orçamentos por conta e mês
         with connections[slug].cursor() as cursor:
             cursor.execute("""
                 SELECT plan_cont, plan_nome, mes_num, mes_nome, valor_previsto
@@ -141,37 +132,20 @@ class OrcamentoRealizadoView(APIView):
             """, [data_ini])
             rows = cursor.fetchall()
 
-        detalhamento = defaultdict(lambda: defaultdict(list))
-        resumo = defaultdict(lambda: {
-            "Receitas": {"previsto": 0, "realizado": 0},
-            "Despesas": {"previsto": 0, "realizado": 0},
-            "Outros": {"previsto": 0, "realizado": 0}
-        })
-
-        # Processar orçamento
-        for row in rows:
-            conta = str(row[0])
-            nome = row[1]
-            mes_num = int(row[2])
-            mes_nome = row[3]
-            previsto = float(row[4] or 0)
-            grupo = classificar_grupo(conta)
-
-            detalhamento[mes_nome][grupo].append({
-                "conta": conta,
+        orcamento = defaultdict(dict)
+        for conta, nome, mes_num, mes_nome, valor_previsto in rows:
+            conta = str(conta)
+            orcamento[mes_nome][conta] = {
                 "nome": nome,
-                "valor_previsto": previsto,
-                "valor_realizado": 0.0,
-                "diferenca": 0.0
-            })
+                "previsto": float(valor_previsto or 0),
+                "realizado": 0.0,
+                "diferenca": 0.0,
+            }
 
-            resumo[mes_nome][grupo]["previsto"] += previsto
+        def mes_nome(dt):
+            return dt.strftime('%B').capitalize()
 
-        # Buscar realizados por conta e mês
-        realizados_receitas = defaultdict(float)
-        realizados_despesas = defaultdict(float)
-
-        # Recebimentos por conta
+        #  Receitas
         recebimentos = Baretitulos.objects.using(slug).filter(
             bare_empr=empresa_id,
             bare_fili=filial_id,
@@ -185,13 +159,13 @@ class OrcamentoRealizadoView(APIView):
         )
 
         for r in recebimentos:
-            valor = float(r['valor'] or 0)
-            mes_num = int(r['mes'].strftime('%m'))
             conta = str(r['bare_cont'])
-            chave = (mes_num, conta)
-            realizados_receitas[chave] += valor
+            mes = mes_nome(r['mes'])
+            valor = float(r['valor'] or 0)
+            if conta in orcamento[mes]:
+                orcamento[mes][conta]['realizado'] += valor
 
-        # Pagamentos por conta
+        # Despesas
         pagamentos = Bapatitulos.objects.using(slug).filter(
             bapa_empr=empresa_id,
             bapa_fili=filial_id,
@@ -205,64 +179,36 @@ class OrcamentoRealizadoView(APIView):
         )
 
         for p in pagamentos:
-            valor = float(p['valor'] or 0)
-            mes_num = int(p['mes'].strftime('%m'))
             conta = str(p['bapa_cont'])
-            chave = (mes_num, conta)
-            realizados_despesas[chave] += valor
+            mes = mes_nome(p['mes'])
+            valor = float(p['valor'] or 0)
+            if conta in orcamento[mes]:
+                orcamento[mes][conta]['realizado'] -= valor  
 
-        # Fazer match direto por conta
-        for mes_nome in detalhamento:
-            mes_num = next(
-                (int(r[2]) for r in rows if r[3] == mes_nome),
-                None
-            )
-            
-            if mes_num is not None:
-                for grupo in detalhamento[mes_nome]:
-                    for item in detalhamento[mes_nome][grupo]:
-                        conta = item['conta']
-                        chave = (mes_num, conta)
-                        
-                        if grupo == 'Receitas':
-                            realizado = realizados_receitas.get(chave, 0.0)
-                        elif grupo == 'Despesas':
-                            realizado = realizados_despesas.get(chave, 0.0)
-                        else:
-                            realizado = 0.0
-                        
-                        item['valor_realizado'] = round(realizado, 2)
-                        item['diferenca'] = round(item['valor_previsto'] - realizado, 2)
-                        resumo[mes_nome][grupo]["realizado"] += realizado
-
-        # Criar resumo mensal final
         resumo_mensal = {}
-        for mes, grupos in resumo.items():
-            receitas = grupos.get("Receitas", {"previsto": 0, "realizado": 0})
-            despesas = grupos.get("Despesas", {"previsto": 0, "realizado": 0})
+        for mes in orcamento:
+            total_previsto = 0.0
+            total_realizado = 0.0
 
-            saldo_previsto = receitas["previsto"] - despesas["previsto"]
-            saldo_realizado = receitas["realizado"] - despesas["realizado"]
+            for conta in orcamento[mes]:
+                item = orcamento[mes][conta]
+                item['realizado'] = round(item['realizado'], 2)
+                item['diferenca'] = round(item['realizado'] - item['previsto'], 2)
 
-            def pct(real, prev):
-                return round((real / prev) * 100, 2) if prev > 0 else None
+                total_previsto += item['previsto']
+                total_realizado += item['realizado']
+
+            percentual = round((total_realizado / total_previsto) * 100, 2) if total_previsto else None
+            saldo = round(total_realizado - total_previsto, 2)
 
             resumo_mensal[mes] = {
-                "Receitas": {
-                    "previsto": round(receitas["previsto"], 2),
-                    "realizado": round(receitas["realizado"], 2),
-                    "percentual": pct(receitas["realizado"], receitas["previsto"])
-                },
-                "Despesas": {
-                    "previsto": round(despesas["previsto"], 2),
-                    "realizado": round(despesas["realizado"], 2),
-                    "percentual": pct(despesas["realizado"], despesas["previsto"])
-                },
-                "saldo_previsto": round(saldo_previsto, 2),
-                "saldo_realizado": round(saldo_realizado, 2)
+                "total_previsto": round(total_previsto, 2),
+                "total_realizado": round(total_realizado, 2),
+                "saldo": saldo,
+                "percentual_execucao": percentual
             }
 
         return Response({
-            "detalhamento": dict(detalhamento),
+            "detalhamento": dict(orcamento),
             "resumo_mensal": resumo_mensal
         })
