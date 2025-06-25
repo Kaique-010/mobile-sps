@@ -37,7 +37,7 @@ class LoginView(APIView):
             return Response({'error': 'CNPJ inválido ou licença não encontrada.'}, status=404)
 
         licenca = Licencas.objects.using(banco).filter(lice_docu=docu).first()
-        if not licenca or licenca.lice_bloq:
+        if not licenca :
             return Response({'error': 'CNPJ inválido ou licença bloqueada.'}, status=403)
 
         try:
