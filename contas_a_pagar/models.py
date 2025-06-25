@@ -84,10 +84,7 @@ class Titulospagar(models.Model):
     titu_gera_auto = models.BooleanField(blank=True, null=True)
     titu_proj_resp_paga = models.IntegerField(blank=True, null=True)
     titu_usua_lanc = models.CharField(max_length=60, blank=True, null=True)
-    titu_juro_mes = models.DecimalField(max_digits=17, decimal_places=4, blank=True, null=True)
-    titu_juro_mes_perc = models.BooleanField(blank=True, null=True)
-    titu_juro_mes_vlr = models.BooleanField(blank=True, null=True)
-    titu_oste = models.IntegerField(blank=True, null=True)
+
 
     class Meta:
         managed = False

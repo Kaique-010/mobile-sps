@@ -108,15 +108,6 @@ class Titulosreceber(models.Model):
     titu_linh_digi = models.CharField(max_length=255, blank=True, null=True)
     titu_url_bole = models.CharField(max_length=255, blank=True, null=True)
     titu_gera_prot = models.BooleanField(blank=True, null=True)
-    titu_gera_bole = models.BooleanField(blank=True, null=True)
-    titu_mult_nfse = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
-    titu_cobr_regi_onli = models.BooleanField(blank=True, null=True)
-    titu_url_pix = models.TextField(blank=True, null=True)
-    titu_txid_pix = models.CharField(max_length=144, blank=True, null=True)
-    titu_emv_pix = models.CharField(max_length=255, blank=True, null=True)
-    titu_cheq = models.IntegerField(blank=True, null=True)
-    titu_cheq_banc = models.IntegerField(blank=True, null=True)
-    titu_cheq_sem_sald = models.BooleanField(blank=True, null=True)
 
     class Meta:
         managed = False

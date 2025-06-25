@@ -35,5 +35,7 @@ urlpatterns = [
     path('api/<slug>/Os/', include('O_S.urls')),
     path('api/<slug>/auditoria/', include('auditoria.urls')),
     path('api/<slug>/notificacoes/', include('notificacoes.urls')),
+    path('api/<slug>/Sdk_recebimentos/', include('Sdk_recebimentos.urls')),
+    
     
 ]
