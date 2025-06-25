@@ -1,5 +1,6 @@
 # dashboards/serializers.py
 from rest_framework import serializers
+from .models import OrcamentoAnaliticoView
 
 class SaldoProdutoSerializer(serializers.Serializer):
     nome = serializers.CharField(max_length=255)
@@ -12,3 +13,14 @@ class PedidoVendaSerializer(serializers.Serializer):
 class DashboardSerializer(serializers.Serializer):
     saldos_produto = SaldoProdutoSerializer(many=True)
     pedidos_por_cliente = PedidoVendaSerializer(many=True)
+    
+    
+
+
+
+
+class OrcamentoAnaliticoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrcamentoAnaliticoView
+        fields = '__all__'
+
