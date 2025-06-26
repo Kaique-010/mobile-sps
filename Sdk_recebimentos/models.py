@@ -40,7 +40,7 @@ class TituloReceberSdk(models.Model):
     
     class Meta:
         ordering = ["titu_data"]
-        db_table = "TituloReceberSdk"
+        db_table = "titulosrecebersdk"
         unique_together = ('titu_empr', 'titu_fili', 'titu_rece', 'titu_nume')
         
     def __str__(self):

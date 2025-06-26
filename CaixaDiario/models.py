@@ -29,7 +29,8 @@ class Caixageral(models.Model):
 TIPO_MOVIMENTO = [
     ('1', 'DINHEIRO'),
     ('2', 'CHEQUE'),
-    ('4', 'CARTÃO'),
+    ('3', 'CARTÃO DE CREDITO'),
+    ('4', 'CARTÃO DE DEBITO'),
     ('5', 'CREDIÁRIO'),
     ('6', 'PIX'),
    

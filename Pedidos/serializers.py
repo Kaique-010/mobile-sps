@@ -15,7 +15,7 @@ class ItemPedidoVendaSerializer(BancoContextMixin,serializers.ModelSerializer):
     produto_nome = serializers.SerializerMethodField()
     class Meta:
         model = Itenspedidovenda
-        exclude = ['iped_empr', 'iped_fili', 'iped_item', 'iped_pedi', 'iped_data', 'iped_forn']
+        exclude = ['iped_empr', 'iped_fili', 'iped_item', 'iped_pedi', 'iped_data', 'iped_forn', 'iped_vend', 'iped_suto']
     
     
     def get_produto_nome(self, obj):
@@ -38,6 +38,7 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
     empresa_nome = serializers.SerializerMethodField(read_only=True)
     itens = serializers.SerializerMethodField()
     itens_input = ItemPedidoVendaSerializer(many=True, write_only=True, required=True)
+
 
     class Meta:
         model = PedidoVenda
@@ -105,6 +106,8 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
                 iped_pedi=str(pedido.pedi_nume),
                 iped_data=pedido.pedi_data,
                 iped_forn=pedido.pedi_forn,
+                iped_vend=pedido.pedi_vend,
+                iped_suto=pedido.pedi_tota,
                 **item_data
             )
             total += item_data.get('iped_quan', 0) * item_data.get('iped_unit', 0)
@@ -146,6 +149,8 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
                 iped_pedi=str(instance.pedi_nume),
                 iped_data=instance.pedi_data,
                 iped_forn=instance.pedi_forn,
+                iped_vend=instance.pedi_vend,
+                iped_suto=instance.pedi_tota,
                 **item_data
             )
             total += item_data.get('iped_quan', 0) * item_data.get('iped_unit', 0)

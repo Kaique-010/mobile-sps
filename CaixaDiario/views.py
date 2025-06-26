@@ -112,6 +112,13 @@ class MovicaixaViewSet(viewsets.ModelViewSet):
         banco = get_licenca_db_config(self.request)
         empresa_id = self.request.headers.get("X-Empresa")
         filial_id = self.request.headers.get("X-Filial")
+        
+        # Pegar operador de forma mais robusta
+        operador = (
+            self.request.headers.get("usuario_id") or 
+            self.request.headers.get("X-Usuario") or 
+            self.request.data.get('operador')
+        )
 
         cliente = request.data.get('cliente')
         vendedor = request.data.get('vendedor')
@@ -318,7 +325,7 @@ class MovicaixaViewSet(viewsets.ModelViewSet):
                             movi_data=caixa_aberto.caix_data
                         ).aggregate(Max('movi_ctrl'))['movi_ctrl__max'] or 0
                         
-                        Movicaixa.objects.using(banco).create(
+                        '''Movicaixa.objects.using(banco).create(
                             movi_empr=empresa_id,
                             movi_fili=filial_id,
                             movi_caix=caixa_aberto.caix_caix,
@@ -331,7 +338,7 @@ class MovicaixaViewSet(viewsets.ModelViewSet):
                             movi_data=caixa_aberto.caix_data,
                             movi_hora=datetime.now().time(),
                             movi_ctrl=ultimo_ctrl + 1
-                        )
+                        )'''
                 
                 return Response({
                     'numero_venda': numero_venda,
@@ -419,7 +426,7 @@ class MovicaixaViewSet(viewsets.ModelViewSet):
                         movi_data=caixa_aberto.caix_data
                     ).aggregate(Max('movi_ctrl'))['movi_ctrl__max'] or 0
                     
-                    Movicaixa.objects.using(banco).create(
+                    '''Movicaixa.objects.using(banco).create(
                         movi_empr=empresa_id,
                         movi_fili=filial_id,
                         movi_caix=caixa_aberto.caix_caix,
@@ -433,7 +440,7 @@ class MovicaixaViewSet(viewsets.ModelViewSet):
                         movi_data=caixa_aberto.caix_data,
                         movi_hora=datetime.now().time(),
                         movi_ctrl=ultimo_ctrl + 1
-                    )
+                    )'''
                 
                 return Response({
                     'numero_venda': numero_venda,
@@ -455,16 +462,72 @@ class MovicaixaViewSet(viewsets.ModelViewSet):
         banco = get_licenca_db_config(self.request)
         empresa_id = self.request.headers.get("X-Empresa")
         filial_id = self.request.headers.get("X-Filial")
+        operador = (
+            self.request.data.get('operador') or  # Primeiro: dados enviados explicitamente
+            self.request.data.get('movi_oper') or  # Segundo: campo específico do movimento
+            self.request.headers.get("usuario_id") or  # Terceiro: header usuario_id
+            self.request.headers.get("X-Usuario") or  # Quarto: header X-Usuario
+            (self.request.user.usua_codi if hasattr(self.request.user, 'usua_codi') else None) or  # Quinto: usuário autenticado
+            (self.request.user.id if hasattr(self.request.user, 'id') else None)  # Sexto: fallback para id padrão
+        )
+        
+        # Validar se o operador foi obtido
+        if not operador:
+            return Response(
+                {'detail': 'Operador não identificado. Verifique se o usuário está autenticado ou envie o operador nos dados.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
         cliente = request.data.get('cliente')
         vendedor = request.data.get('vendedor')
         numero_venda = request.data.get('numero_venda')
-        forma_pagamento = request.data.get('forma_pagamento')
+        forma_pagamento = request.data.get('forma_pagamento')  # Códigos 51,52,54,60
+        movi_tipo = request.data.get('movi_tipo')  # Códigos 1-6 (obrigatório)
         valor = request.data.get('valor')
+        valor_pago = request.data.get('valor_pago')
         troco = request.data.get('troco')
+        parcelas = request.data.get('parcelas', 1)
         
-        if not all([numero_venda, forma_pagamento, valor]):
+        
+        MAPEAMENTO_FORMAS = {
+            '51': '3',  # CARTÃO DE CRÉDITO
+            '52': '4',  # CARTÃO DE DÉBITO  
+            '54': '1',  # DINHEIRO
+            '60': '6',  # PIX
+        }
+        
+        TIPO_MOVIMENTO = [
+            ('1', 'DINHEIRO'),
+            ('2', 'CHEQUE'),
+            ('3', 'CARTÃO DE CREDITO'),
+            ('4', 'CARTÃO DE DEBITO'),
+            ('5', 'CREDIÁRIO'),
+            ('6', 'PIX'),
+        ]
+      
+        tipo_movimento = None
+        if movi_tipo:
+            tipo_movimento = str(movi_tipo)
+        elif forma_pagamento:
+            tipo_movimento = MAPEAMENTO_FORMAS.get(str(forma_pagamento))
+        
+        if not all([numero_venda, valor]):
             return Response(
-                {'detail': 'Dados do pagamento incompletos'},
+                {'detail': 'Número da venda e valor são obrigatórios'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not tipo_movimento:
+            return Response(
+                {'detail': 'Forma de pagamento inválida'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+
+        tipos_validos = [choice[0] for choice in TIPO_MOVIMENTO]
+        if tipo_movimento not in tipos_validos:
+            return Response(
+                {'detail': f'Tipo de movimento inválido. Opções válidas: {tipos_validos}'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -495,21 +558,37 @@ class MovicaixaViewSet(viewsets.ModelViewSet):
                 movi_fili=filial_id,
                 movi_caix=caixa_aberto.caix_caix,
                 movi_nume_vend=numero_venda,
+                movi_tipo=tipo_movimento,  # Campo obrigatório (1-6)
                 movi_tipo_movi=forma_pagamento,
-                movi_vend = vendedor,
-                movi_clie = cliente,
-                movi_entr=valor,
-                movi_said=valor,
-                movi_obse=f'Venda {numero_venda}, Pagamento realizado pela Forma: {forma_pagamento}',
+                movi_vend=vendedor,
+                movi_clie=cliente,
+                movi_entr=valor_pago or valor,
+                movi_said=troco if troco and float(troco) > 0 else 0,
+                movi_obse=f'Venda {numero_venda}, Pagamento {dict(TIPO_MOVIMENTO).get(tipo_movimento)} - Parcelas: {parcelas}',
                 movi_data=caixa_aberto.caix_data,
                 movi_hora=datetime.now().time(),
                 movi_ctrl=ultimo_ctrl + 1,
-                
+                movi_oper=operador, 
+                movi_parc=str(parcelas) if parcelas else '1'
             )
-
-            return Response(MovicaixaSerializer(movimento).data)
+            
+            return Response({
+                'success': True,
+                'movimento_id': movimento.movi_ctrl,
+                'movi_tipo': tipo_movimento,
+                'movi_tipo_movi': forma_pagamento,
+                'descricao_tipo': dict(TIPO_MOVIMENTO).get(tipo_movimento),
+                'valor_pago': float(valor_pago or valor),
+                'troco': movimento.movi_said,
+                'parcelas': parcelas,
+                'movi_entr': movimento.movi_entr,
+                'movi_said': movimento.movi_said,
+                'movi_oper': movimento.movi_oper,  
+                'operador_usado': operador  
+            })
 
         except Exception as e:
+            logger.error(f'Erro ao processar pagamento: {str(e)}')
             return Response(
                 {'detail': f'Erro ao processar pagamento: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR

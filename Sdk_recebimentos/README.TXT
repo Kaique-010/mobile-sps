@@ -18,7 +18,7 @@ CREATE TABLE recebimentosdk (
 
 
 
-CREATE TABLE "TituloReceberSdk" (
+CREATE TABLE "titulorecebersdk" (
     titu_id SERIAL PRIMARY KEY,
     titu_empr INTEGER DEFAULT 1 NOT NULL,
     titu_fili INTEGER DEFAULT 1 NOT NULL,
@@ -30,4 +30,5 @@ CREATE TABLE "TituloReceberSdk" (
     titu_stat VARCHAR(20) DEFAULT 'previsto' NOT NULL,
     CONSTRAINT titulorecebersdk_unique UNIQUE (titu_empr, titu_fili, titu_rece, titu_nume)
 );
+
 

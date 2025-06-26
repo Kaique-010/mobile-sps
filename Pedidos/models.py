@@ -11,7 +11,7 @@ TIPO_FINANCEIRO = [
 class PedidoVenda(models.Model):
     pedi_empr = models.IntegerField()
     pedi_fili = models.IntegerField()
-    pedi_nume = models.BigAutoField(primary_key=True, unique=True)
+    pedi_nume = models.IntegerField(primary_key=True, unique=True)
     pedi_forn = models.CharField(db_column='pedi_forn',max_length=60)
     pedi_data = models.DateField()
     pedi_tota = models.DecimalField(decimal_places=2, max_digits=15)
@@ -30,6 +30,7 @@ class PedidoVenda(models.Model):
     class Meta:
         db_table = 'pedidosvenda'
         managed = 'false'
+        unique_together = ('pedi_empr', 'pedi_fili', 'pedi_nume')
 
     def __str__(self):
         return f"Pedido {self.pedi_nume} - {self.pedi_forn}"
@@ -37,13 +38,14 @@ class PedidoVenda(models.Model):
     
     
 class Itenspedidovenda(models.Model):
-    iped_empr = models.IntegerField(primary_key=True, db_column='iped_empr')  
+    iped_empr = models.IntegerField(unique=True)  
     iped_fili = models.IntegerField(unique=True)
-    iped_pedi = models.CharField(db_column='iped_pedi', max_length=50)
+    iped_pedi = models.CharField(db_column='iped_pedi', max_length=50, unique=True, primary_key=True)
     iped_item = models.IntegerField()
     iped_prod = models.CharField(max_length=60, db_column='iped_prod') 
     iped_quan = models.DecimalField(max_digits=15, decimal_places=5, blank=True, null=True)
     iped_unit = models.DecimalField(max_digits=15, decimal_places=5, blank=True, null=True)
+    iped_suto = models.DecimalField(max_digits=15, decimal_places=5, blank=True, null=True)
     iped_tota = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
     iped_fret = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
     iped_desc = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)

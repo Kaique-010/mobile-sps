@@ -14,3 +14,22 @@ class OrcamentoAnaliticoView(models.Model):
     class Meta:
         managed = False
         db_table = 'orcamento_2025'
+
+
+
+class ExtratoCaixa(models.Model):
+    empresa = models.IntegerField(db_column='Empresa')
+    filial = models.IntegerField(db_column='Filial')
+    pedido = models.IntegerField(db_column='Pedido', primary_key=True)
+    cliente = models.IntegerField(db_column='Cliente')
+    nome_cliente = models.CharField(max_length=200, db_column='Nome Cliente')
+    produto = models.CharField(max_length=100, db_column='Produto')
+    descricao = models.CharField(max_length=200, db_column='Descrição')
+    quantidade = models.DecimalField(max_digits=10, decimal_places=2, db_column='Quantidade')
+    valor_total = models.DecimalField(max_digits=12, decimal_places=2, db_column='Valor Total')
+    data = models.DateField(db_column='Data')
+    forma_de_recebimento = models.CharField(max_length=50, db_column='Forma de Recebimento')
+
+    class Meta:
+        managed = False
+        db_table = 'extrato_caixa'

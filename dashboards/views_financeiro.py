@@ -9,7 +9,6 @@ from django.db.models.functions import TruncMonth
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
 from Entidades.models import Entidades
 from contas_a_pagar.models import Bapatitulos, Titulospagar
 from contas_a_receber.models import Baretitulos, Titulosreceber
