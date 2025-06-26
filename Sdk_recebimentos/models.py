@@ -31,7 +31,7 @@ class TituloReceberSdk(models.Model):
     titu_id = models.AutoField(primary_key=True)
     titu_empr = models.IntegerField(default=1, verbose_name='Empresa')
     titu_fili = models.IntegerField(default=1, verbose_name='Filial')
-    titu_rece = models.ForeignKey(RecebimentoSdk, on_delete=models.CASCADE)
+    titu_rece = models.ForeignKey(RecebimentoSdk, on_delete=models.CASCADE, db_column='titu_rece')
     titu_nume = models.IntegerField() 
     titu_valo = models.DecimalField(max_digits=10, decimal_places=2)
     titu_seri = models.CharField(max_length=20, default='SDK')
