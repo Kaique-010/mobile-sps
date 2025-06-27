@@ -14,7 +14,8 @@ class ExtratoCaixaViewSet(ModelViewSet, ModuloRequeridoMixin):
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ('data', 'pedido', 'nome_cliente', 'forma_de_recebimento')
-    search_fields = ('pedido', 'nome_cliente', 'produto', 'descricao', 'forma_de_recebimento')
+    search_fields = ('pedido', 'nome_cliente', 'produto', 'descricao', 'forma_de_recebimento', 'data')
+
     
 
     def get_queryset(self):

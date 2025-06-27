@@ -20,9 +20,9 @@ class Orcamentos(models.Model):
     
     
 class ItensOrcamento(models.Model):
-    iped_empr = models.IntegerField(primary_key=True, db_column='iped_empr')  
+    iped_empr = models.IntegerField( db_column='iped_empr')  
     iped_fili = models.IntegerField(unique=True)
-    iped_pedi = models.CharField(db_column='iped_pedi', max_length=50)
+    iped_pedi = models.CharField(db_column='iped_pedi', max_length=50, primary_key=True)
     iped_item = models.IntegerField()
     iped_prod = models.CharField(max_length=60, db_column='iped_prod') 
     iped_quan = models.DecimalField(max_digits=15, decimal_places=5, blank=True, null=True)
