@@ -3,11 +3,13 @@ from django.urls import path, include
 from .views import DashboardAPIView, DashboardEstoqueView, DashboardVendasView, EnviarEmail, EnviarWhats
 from .views_financeiro import DashboardFinanceiroView, OrcamentoAnaliticoViewSet
 from .view_extratocaixa import ExtratoCaixaViewSet
+from .view_balancete_cc import BalanceteCCViewSet
 from rest_framework import routers
 
 router = routers.DefaultRouter()
 router.register(r'orcamento-analitico', OrcamentoAnaliticoViewSet, basename='orcamento-analitico')
 router.register(r'extrato-caixa', ExtratoCaixaViewSet, basename='extrato-caixa')
+router.register(r'balancete-cc', BalanceteCCViewSet, basename='balancete-cc')
 
 
 urlpatterns = [

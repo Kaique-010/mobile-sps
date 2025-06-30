@@ -22,7 +22,13 @@
     "db_name": "savexml1014",
     "db_host": "base.rtalmeida.com.br",
     "db_port": "5432",
-    "modulos": ["dashboards", "listacasamento", "Entidades", "Produtos"]
+    "modulos": [
+      "dashboards",
+      "listacasamento",
+      "Entidades",
+      "Produtos",
+      "Financeiro"
+    ]
   },
   {
     "slug": "operario",

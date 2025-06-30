@@ -1,6 +1,7 @@
 # dashboards/serializers.py
 from rest_framework import serializers
-from .models import OrcamentoAnaliticoView, ExtratoCaixa
+from .models import OrcamentoAnaliticoView, ExtratoCaixa, BalanceteCC
+
 
 
 class SaldoProdutoSerializer(serializers.Serializer):
@@ -29,4 +30,9 @@ class OrcamentoAnaliticoSerializer(serializers.ModelSerializer):
 class ExtratoCaixaSerializer(serializers.ModelSerializer):
     class Meta:
         model = ExtratoCaixa
+        fields = '__all__'
+
+class BalanceteCCSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BalanceteCC
         fields = '__all__'

@@ -33,3 +33,23 @@ class ExtratoCaixa(models.Model):
     class Meta:
         managed = False
         db_table = 'extrato_caixa'
+
+
+
+class BalanceteCC(models.Model):
+    empr = models.IntegerField()
+    fili = models.IntegerField()
+    cecu_redu = models.CharField(max_length=10)
+    centro_nome = models.CharField(max_length=100, primary_key=True)
+    tipo_cc = models.CharField(max_length=1, default='Sem') 
+    mes_num = models.CharField(max_length=2)
+    mes_nome = models.CharField(max_length=15)
+    ano = models.IntegerField()    
+    mes_ordem = models.IntegerField()
+    valor_recebido = models.DecimalField(max_digits=15, decimal_places=2)
+    valor_pago = models.DecimalField(max_digits=15, decimal_places=2)
+    resultado = models.DecimalField(max_digits=15, decimal_places=2)
+
+    class Meta:
+        managed = False
+        db_table = 'balancete_cc'
