@@ -8,7 +8,7 @@ from Entidades.models import Entidades
 from contas_a_receber.models import Titulosreceber
 from core.serializers import BancoContextMixin
 from .models import (
-    Os, PecasOs, ServicosOs
+    Os, PecasOs, ServicosOs, OrdemServicoGeral
 )
 
 logger = logging.getLogger(__name__)
@@ -295,3 +295,10 @@ class OsSerializer(BancoModelSerializer):
         ).exclude(serv_item__in=ids_enviados).delete()
 
 
+
+
+
+class OrdemServicoGeralSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrdemServicoGeral
+        fields = '__all__'

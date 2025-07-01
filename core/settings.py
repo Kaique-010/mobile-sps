@@ -84,6 +84,7 @@ INSTALLED_APPS = [
     "auditoria",
     "notificacoes",
     "Sdk_recebimentos",
+    "SpsComissoes",
 ]
 
 # Middleware

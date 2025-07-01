@@ -103,6 +103,15 @@
       "name": "web999",
       "database": "savexml2015",
       "username": "savexml2015"
+    },
+    {
+      "previewLimit": 50,
+      "server": "base.rtalmeida.com.br",
+      "port": 5432,
+      "driver": "PostgreSQL",
+      "name": "impar",
+      "database": "savexml689",
+      "username": "savexml689"
     }
   ]
 }

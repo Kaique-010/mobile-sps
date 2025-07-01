@@ -206,3 +206,12 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
         except Exception as e:
             logger.warning(f"Erro ao buscar nome do produto: {e}")
             return None
+    
+    
+    
+from .models import PedidosGeral
+
+class PedidosGeralSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PedidosGeral
+        fields = '__all__'

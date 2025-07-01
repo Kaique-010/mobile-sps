@@ -36,6 +36,8 @@ urlpatterns = [
     path('api/<slug>/auditoria/', include('auditoria.urls')),
     path('api/<slug>/notificacoes/', include('notificacoes.urls')),
     path('api/<slug>/Sdk_recebimentos/', include('Sdk_recebimentos.urls')),
+    path('api/<slug>/comissoes/', include('SpsComissoes.urls')),
+    
     
     
 ]

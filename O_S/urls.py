@@ -6,11 +6,13 @@ from .views_financeiro import (
     RemoverTitulosOSView,
     ConsultarTitulosOSView
 )
+from .view_dash import OrdemServicoGeralViewSet
 
 router = routers.DefaultRouter()
 router.register(r'ordens', OsViewSet, basename='ordens')
 router.register(r'pecas', PecasOsViewSet, basename='pecas')
 router.register(r'servicos', ServicosOsViewSet, basename='servicos')
+router.register(r'os-geral', OrdemServicoGeralViewSet, basename='os-geral')
 
 urlpatterns = router.urls
 

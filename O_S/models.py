@@ -128,3 +128,29 @@ class ServicosOs(models.Model):
         managed = False
         db_table = 'servicosos'
         unique_together = (('serv_empr', 'serv_fili', 'serv_os', 'serv_item'),)
+        
+
+
+
+#Os_geral view para o dashboard de os
+class OrdemServicoGeral(models.Model):
+    empresa = models.IntegerField()
+    filial = models.IntegerField()
+    ordem_de_servico = models.IntegerField(primary_key=True)
+    cliente = models.IntegerField()
+    nome_cliente = models.CharField(max_length=100)
+    data_abertura = models.DateField()
+    data_fim = models.DateField(null=True)
+    situacao_os = models.CharField(max_length=50)
+    vendedor = models.IntegerField()
+    nome_vendedor = models.CharField(max_length=100)
+    pecas = models.TextField()
+    servicos = models.TextField()
+    total_os = models.DecimalField(max_digits=12, decimal_places=2)
+    status_os = models.CharField(max_length=50)  # já vem como label
+    responsavel = models.IntegerField()
+    atendente = models.CharField(max_length=100)
+
+    class Meta:
+        managed = False
+        db_table = 'os_geral'

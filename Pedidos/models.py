@@ -65,3 +65,22 @@ class Itenspedidovenda(models.Model):
         unique_together = (('iped_empr', 'iped_fili', 'iped_pedi', 'iped_item'),)
         managed = 'false'
 
+
+
+
+class PedidosGeral(models.Model):
+    empresa = models.IntegerField()
+    filial = models.IntegerField()
+    numero_pedido = models.IntegerField(primary_key=True)
+    codigo_cliente = models.IntegerField()
+    nome_cliente = models.CharField(max_length=100)
+    data_pedido = models.DateField()
+    quantidade_total = models.DecimalField(max_digits=10, decimal_places=2)
+    itens_do_pedido = models.TextField()
+    valor_total = models.DecimalField(max_digits=12, decimal_places=2)
+    tipo_financeiro = models.CharField(max_length=50)
+    nome_vendedor = models.CharField(max_length=100)
+
+    class Meta:
+        managed = False
+        db_table = 'pedidos_geral'
