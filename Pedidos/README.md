@@ -45,16 +45,16 @@ class PedidoVenda(models.Model):
     pedi_empr = models.IntegerField()  # Empresa
     pedi_fili = models.IntegerField()  # Filial
     pedi_nume = models.BigAutoField(primary_key=True)  # Número do pedido
-    
+
     # Cliente e Vendedor
     pedi_forn = models.CharField(max_length=60)  # Cliente/Fornecedor
     pedi_vend = models.CharField(max_length=15)  # Vendedor
-    
+
     # Dados do Pedido
     pedi_data = models.DateField()  # Data do pedido
     pedi_tota = models.DecimalField(max_digits=15, decimal_places=2)  # Total
     pedi_fina = models.CharField(choices=TIPO_FINANCEIRO)  # Tipo financeiro
-    
+
     # Controle
     pedi_stat = models.CharField(choices=STATUS_CHOICES)  # Status
     pedi_canc = models.BooleanField()  # Cancelado
@@ -70,23 +70,23 @@ class Itenspedidovenda(models.Model):
     iped_fili = models.IntegerField()  # Filial
     iped_pedi = models.CharField(max_length=50)  # Número do pedido
     iped_item = models.IntegerField()  # Sequencial do item
-    
+
     # Produto
     iped_prod = models.CharField(max_length=60)  # Código do produto
     iped_unme = models.CharField(max_length=6)  # Unidade de medida
-    
+
     # Quantidades e Preços
     iped_quan = models.DecimalField(max_digits=15, decimal_places=5)  # Quantidade
     iped_unit = models.DecimalField(max_digits=15, decimal_places=5)  # Preço unitário
     iped_unli = models.DecimalField(max_digits=15, decimal_places=5)  # Preço líquido
     iped_tota = models.DecimalField(max_digits=15, decimal_places=2)  # Total do item
-    
+
     # Descontos e Custos
     iped_desc = models.DecimalField(max_digits=15, decimal_places=2)  # Desconto
     iped_perc_desc = models.DecimalField(max_digits=5, decimal_places=2)  # % Desconto
     iped_cust = models.DecimalField(max_digits=15, decimal_places=4)  # Custo
     iped_fret = models.DecimalField(max_digits=15, decimal_places=2)  # Frete
-    
+
     # Controle
     iped_vend = models.IntegerField()  # Vendedor
     iped_tipo = models.IntegerField()  # Tipo do item
@@ -247,6 +247,7 @@ vendedores = PedidoVenda.objects.values('pedi_vend').annotate(
 ## API Endpoints
 
 ### Pedidos
+
 ```
 GET /api/{licenca}/pedidos/pedidos/
 POST /api/{licenca}/pedidos/pedidos/
@@ -257,6 +258,7 @@ DELETE /api/{licenca}/pedidos/pedidos/{numero}/
 ```
 
 ### Itens do Pedido
+
 ```
 GET /api/{licenca}/pedidos/itens/
 POST /api/{licenca}/pedidos/itens/
@@ -268,6 +270,7 @@ DELETE /api/{licenca}/pedidos/itens/{id}/
 ### Filtros Disponíveis
 
 #### Pedidos
+
 - `pedi_empr`: Filtrar por empresa
 - `pedi_fili`: Filtrar por filial
 - `pedi_forn`: Filtrar por cliente
@@ -279,12 +282,14 @@ DELETE /api/{licenca}/pedidos/itens/{id}/
 - `search`: Busca geral
 
 #### Itens
+
 - `iped_pedi`: Filtrar por pedido
 - `iped_prod`: Filtrar por produto
 - `iped_vend`: Filtrar por vendedor
 - `data_range`: Filtrar por período
 
 ### Exemplos de Requisições
+
 ```
 GET /api/empresa123/pedidos/pedidos/?pedi_stat=0&pedi_data__gte=2024-01-01
 GET /api/empresa123/pedidos/pedidos/?pedi_vend=001&pedi_fina=0
@@ -295,11 +300,13 @@ GET /api/empresa123/pedidos/pedidos/?search=cliente123
 ## Considerações Técnicas
 
 ### Banco de Dados
+
 - **Tabelas**: `pedidosvenda`, `itenspedidovenda`
 - **Managed**: False (tabelas não gerenciadas pelo Django)
 - **Chaves Compostas**: Empresa + Filial + Pedido + Item
 
 ### Índices Recomendados
+
 ```sql
 -- Pedidos
 CREATE INDEX idx_pedidos_empresa_filial ON pedidosvenda (pedi_empr, pedi_fili);
@@ -326,15 +333,15 @@ def clean(self):
     # Validar total do pedido
     if self.pedi_tota < 0:
         raise ValidationError('Total do pedido não pode ser negativo')
-    
+
     # Validar status
     if self.pedi_canc and self.pedi_stat not in ['4']:
         raise ValidationError('Pedido cancelado deve ter status cancelado')
-    
+
     # Validar quantidades nos itens
     if hasattr(self, 'iped_quan') and self.iped_quan <= 0:
         raise ValidationError('Quantidade deve ser maior que zero')
-    
+
     # Validar preços
     if hasattr(self, 'iped_unit') and self.iped_unit < 0:
         raise ValidationError('Preço unitário não pode ser negativo')
@@ -348,10 +355,10 @@ CREATE TRIGGER trg_atualiza_total_pedido
 AFTER INSERT OR UPDATE OR DELETE ON itenspedidovenda
 FOR EACH ROW
 BEGIN
-    UPDATE pedidosvenda 
+    UPDATE pedidosvenda
     SET pedi_tota = (
         SELECT COALESCE(SUM(iped_tota), 0)
-        FROM itenspedidovenda 
+        FROM itenspedidovenda
         WHERE iped_pedi = NEW.iped_pedi
     )
     WHERE pedi_nume = NEW.iped_pedi;
@@ -360,7 +367,7 @@ END;
 -- Procedure para cancelar pedido
 CREATE PROCEDURE sp_cancelar_pedido(IN p_pedido VARCHAR(50))
 BEGIN
-    UPDATE pedidosvenda 
+    UPDATE pedidosvenda
     SET pedi_stat = '4', pedi_canc = TRUE
     WHERE pedi_nume = p_pedido;
 END;
@@ -427,19 +434,23 @@ def calcular_comissao(pedido):
 ### Problemas Comuns
 
 1. **Erro de chave duplicada em itens**
+
    - Verificar sequencial do item
    - Usar `get_or_create()` com cuidado
 
 2. **Total do pedido inconsistente**
+
    - Implementar recálculo automático
    - Validar antes de salvar
 
 3. **Performance lenta em relatórios**
+
    - Criar índices apropriados
    - Usar agregações no banco
    - Implementar cache
 
 4. **Problemas de concorrência**
+
    - Usar transações atômicas
    - Implementar locks quando necessário
 
@@ -484,3 +495,44 @@ class Command(BaseCommand):
         # Arquivar pedidos antigos
         pass
 ```
+
+CREATE OR REPLACE VIEW Pedidos_geral as(
+WITH itens_agrupados AS (
+SELECT
+i.iped_empr,
+i.iped_fili,
+i.iped_pedi,
+SUM(i.iped_quan) AS quantidade,
+STRING_AGG(p.prod_nome, ', ' ORDER BY i.iped_item) AS produtos
+FROM itenspedidovenda i
+LEFT JOIN produtos p
+ON i.iped_prod = p.prod_codi
+AND i.iped_empr = p.prod_empr
+GROUP BY i.iped_empr, i.iped_fili, i.iped_pedi
+)
+
+SELECT
+p.pedi_empr AS Empresa,
+p.pedi_fili AS Filial,
+p.pedi_nume AS Numero_Pedido,
+c.enti_clie AS Codigo_Cliente,
+c.enti_nome AS Nome_Cliente,
+p.pedi_data AS Data_Pedido,
+COALESCE(i.quantidade, 0) AS Quantidade_Total,
+COALESCE(i.produtos, 'Sem itens') AS Itens_do_Pedido,
+p.pedi_tota AS Valor_Total,
+CASE
+WHEN CAST(p.pedi_fina AS INTEGER) = 0 THEN 'À VISTA'
+WHEN CAST(p.pedi_fina AS INTEGER) = 1 THEN 'A PRAZO'
+WHEN CAST(p.pedi_fina AS INTEGER) = 2 THEN 'SEM FINANCEIRO'
+ELSE 'OUTRO'
+END AS Tipo_Financeiro,
+v.enti_nome AS Nome_Vendedor
+FROM pedidosvenda p
+LEFT JOIN entidades c
+ON p.pedi_forn = c.enti_clie AND p.pedi_empr = c.enti_empr
+LEFT JOIN entidades v
+ON p.pedi_vend = v.enti_clie AND p.pedi_empr = v.enti_empr
+LEFT JOIN itens_agrupados i
+ON p.pedi_nume = i.iped_pedi AND p.pedi_empr = i.iped_empr AND p.pedi_fili = i.iped_fili
+ORDER BY p.pedi_data DESC, p.pedi_nume DESC)

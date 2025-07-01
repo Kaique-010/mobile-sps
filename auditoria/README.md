@@ -21,11 +21,13 @@ Este sistema de auditoria captura e registra todas as alterações realizadas na
 ### 3. Dupla Captura
 
 #### Via Middleware (API)
+
 - Captura ações realizadas através da API REST
 - Inclui informações da requisição HTTP
 - Rastreia IP, navegador, e dados da requisição
 
 #### Via Signals (Banco de Dados)
+
 - Captura alterações diretas no banco de dados
 - Funciona mesmo para operações que não passam pela API
 - Útil para scripts, admin do Django, etc.
@@ -43,17 +45,17 @@ class LogAcao(models.Model):
     url = models.TextField()
     ip = models.GenericIPAddressField(null=True)
     navegador = models.CharField(max_length=255)
-    
+
     # Dados da alteração
     dados = JSONField(null=True)  # Dados da requisição original
     dados_antes = JSONField(null=True)  # Estado anterior
     dados_depois = JSONField(null=True)  # Estado posterior
     campos_alterados = JSONField(null=True)  # Campos modificados
-    
+
     # Identificação do objeto
     objeto_id = models.CharField(max_length=100, null=True)
     modelo = models.CharField(max_length=100, null=True)
-    
+
     # Contexto
     empresa = models.CharField(max_length=100, null=True)
     licenca = models.CharField(max_length=100, null=True)
@@ -142,11 +144,13 @@ for log in logs_com_alteracoes:
 ## API Endpoints
 
 ### Listar Logs (Usuários Comuns)
+
 ```
 GET /api/auditoria/logs/
 ```
 
 ### Listar Todos os Logs (Administradores)
+
 ```
 GET /api/auditoria/logs/admin/
 ```
@@ -163,6 +167,7 @@ GET /api/auditoria/logs/admin/
 - `objeto_id`: ID do objeto
 
 ### Exemplo de Requisição
+
 ```
 GET /api/auditoria/logs/?data_inicio=2024-01-01&metodo=DELETE&usuario=admin
 ```
@@ -191,13 +196,15 @@ python manage.py migrate
 ### 3. Configurar Permissões
 
 Apenas usuários com perfis específicos podem acessar logs completos:
+
 - `admin`
-- `supervisor` 
+- `supervisor`
 - `root`
 
 ## Considerações de Performance
 
 ### Índices Criados
+
 - `(empresa, licenca, data_hora)`
 - `(usuario, data_hora)`
 - `(modelo, objeto_id)`
@@ -219,7 +226,9 @@ LogAcao.objects.filter(data_hora__lt=data_limite).delete()
 ## Segurança
 
 ### Dados Sensíveis
+
 O sistema automaticamente remove campos sensíveis dos logs:
+
 - `password`
 - `senha`
 - `token`
@@ -227,6 +236,7 @@ O sistema automaticamente remove campos sensíveis dos logs:
 - `secret`
 
 ### Controle de Acesso
+
 - Usuários comuns só veem logs da própria licença
 - Administradores podem ver todos os logs
 - Logs são somente leitura via API
@@ -361,29 +371,34 @@ comparacao = comparar_objetos_detalhado(
 ### Problemas Comuns
 
 1. **Logs não estão sendo criados**
+
    - Verifique se o middleware está configurado
    - Confirme se as migrações foram aplicadas
    - Verifique as permissões do usuário
    - Confirme que os signals estão sendo importados
 
 2. **Performance lenta**
+
    - Execute as migrações para criar os índices
    - Use o comando de limpeza regularmente
    - Monitore o tamanho da tabela de logs
    - Configure tarefas agendadas para limpeza automática
 
 3. **Dados sensíveis nos logs**
+
    - Verifique a lista `CAMPOS_SENSIVEIS` no serializer
    - Adicione novos campos sensíveis conforme necessário
    - Revise os dados capturados nos signals
 
 4. **Signals não funcionando**
+
    - Confirme que `auditoria` está em `INSTALLED_APPS`
    - Verifique se o método `ready()` está sendo chamado
    - Confirme que os signals estão sendo importados
    - Verifique se o middleware de signals está ativo
 
 5. **Muitos logs sendo gerados**
+
    - Configure filtros no middleware para excluir endpoints desnecessários
    - Use o comando de limpeza com frequência maior
    - Considere arquivar logs antigos antes de removê-los
@@ -415,22 +430,24 @@ LOGGING = {
 }
 ```
 
+--Criação da Tabela para auditoria
+
 CREATE TABLE auditoria_logacao (
-    id SERIAL PRIMARY KEY,
-    usuario_id INTEGER REFERENCES usuarios(usua_codi) ON DELETE SET NULL,
-    data_hora TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    tipo_acao VARCHAR(10) NOT NULL,
-    url TEXT NOT NULL,
-    ip INET,
-    navegador VARCHAR(255) NOT NULL,
-    dados JSONB,
-    dados_antes JSONB,
-    dados_depois JSONB,
-    campos_alterados JSONB,
-    objeto_id VARCHAR(100),
-    modelo VARCHAR(100),
-    empresa VARCHAR(100),
-    licenca VARCHAR(100)
+id SERIAL PRIMARY KEY,
+usuario_id INTEGER REFERENCES usuarios(usua_codi) ON DELETE SET NULL,
+data_hora TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+tipo_acao VARCHAR(10) NOT NULL,
+url TEXT NOT NULL,
+ip INET,
+navegador VARCHAR(255) NOT NULL,
+dados JSONB,
+dados_antes JSONB,
+dados_depois JSONB,
+campos_alterados JSONB,
+objeto_id VARCHAR(100),
+modelo VARCHAR(100),
+empresa VARCHAR(100),
+licenca VARCHAR(100)
 );
 
 CREATE INDEX idx_auditoria_empresa_licenca_datahora ON auditoria_logacao (empresa, licenca, data_hora);

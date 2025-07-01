@@ -1,4 +1,11 @@
- create or REPLACE view nalancete_cc as(
+
+
+-- Balançete por Centro de Custo
+-- By: Leonardo Sousa
+
+-- Criação da View Balançete por Centro de Custo
+
+ create or REPLACE view balancete_cc as(
  WITH recebimentos AS (
          SELECT baretitulos.bare_empr AS empr,
             baretitulos.bare_fili AS fili,
