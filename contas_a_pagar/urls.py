@@ -21,6 +21,11 @@ historico_baixas = TitulospagarViewSet.as_view({
     'get': 'historico_baixas'
 })
 
+# Ação para excluir baixa
+excluir_baixa = TitulospagarViewSet.as_view({
+    'delete': 'excluir_baixa'
+})
+
 urlpatterns = [
     path('', include(router.urls)),
     path(
@@ -37,5 +42,10 @@ urlpatterns = [
         'titulos-pagar/<int:titu_empr>/<int:titu_fili>/<int:titu_forn>/<str:titu_titu>/<str:titu_seri>/<str:titu_parc>/<str:titu_emis>/<str:titu_venc>/historico_baixas/',
         historico_baixas,
         name='titulospagar-historico-baixas'
+    ),
+    path(
+        'titulos-pagar/<int:titu_empr>/<int:titu_fili>/<int:titu_forn>/<str:titu_titu>/<str:titu_seri>/<str:titu_parc>/<str:titu_emis>/<str:titu_venc>/excluir_baixa/',
+        excluir_baixa,
+        name='titulospagar-excluir-baixa'
     ),
 ]

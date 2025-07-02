@@ -10,7 +10,7 @@ from Entidades.models import Entidades
 from core.middleware import get_licenca_slug
 from core.decorator import ModuloRequeridoMixin
 from .models import Titulosreceber, Baretitulos
-from .serializers import TitulosreceberSerializer, BaixaTitulosReceberSerializer, BaretitulosSerializer
+from .serializers import TitulosreceberSerializer, BaixaTitulosReceberSerializer, BaretitulosSerializer, ExcluirBaixaSerializer
 from decimal import Decimal
 from datetime import date
 
@@ -121,10 +121,7 @@ class TitulosreceberViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
                         status=status.HTTP_400_BAD_REQUEST
                     )
                 
-                # Títulos com status 'P' (parcial) podem receber baixas adicionais
-                # Títulos com status 'A' (aberto) podem ser baixados normalmente
-                
-                # Calcular valores
+            
                 valor_titulo = titulo.titu_valo or Decimal('0')
                 valor_recebido = data['valor_recebido']
                 valor_juros = data.get('valor_juros', Decimal('0'))
@@ -220,9 +217,40 @@ class TitulosreceberViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
             )
     
     @action(detail=True, methods=['get'])
+    def get_titulo_for_historico(self):
+        """Método para buscar título sem filtrar por status - usado para histórico e exclusão de baixas"""
+        banco = get_licenca_db_config(self.request)
+        try:
+            queryset = Titulosreceber.objects.using(banco).filter(
+                titu_empr=self.kwargs["titu_empr"],
+                titu_fili=self.kwargs["titu_fili"],
+                titu_clie=self.kwargs["titu_clie"],
+                titu_titu=self.kwargs["titu_titu"],
+                titu_seri=self.kwargs["titu_seri"],
+                titu_parc=self.kwargs["titu_parc"],
+                titu_emis=self.kwargs["titu_emis"], 
+                titu_venc=self.kwargs["titu_venc"]
+                
+            )
+            
+            if queryset.count() == 0:
+                raise Http404("Título não encontrado")
+            elif queryset.count() > 1:
+                logger.warning(f"Múltiplos títulos encontrados para {self.kwargs}, usando o primeiro")
+                return queryset.first()
+            else:
+                return queryset.get()
+        except KeyError as e:
+            logger.error(f"Parâmetro obrigatório ausente: {e}")
+            raise Http404(f"Parâmetro obrigatório ausente: {e}")
+        except Exception as e:
+            logger.error(f"Erro ao buscar título: {e}")
+            raise Http404("Erro ao buscar título")
+
+    @action(detail=True, methods=['get'])
     def historico_baixas(self, request, *args, **kwargs):
         """Endpoint para consultar histórico de baixas de um título"""
-        titulo = self.get_object()
+        titulo = self.get_titulo_for_historico()  # Usar o novo método
         banco = get_licenca_db_config(request)
         
         baixas = Baretitulos.objects.using(banco).filter(
@@ -236,3 +264,92 @@ class TitulosreceberViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
         
         serializer = BaretitulosSerializer(baixas, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['delete'])
+    def excluir_baixa(self, request, *args, **kwargs):
+        """Endpoint para excluir uma baixa específica"""
+        titulo = self.get_titulo_for_historico()  # Usar o novo método
+        banco = get_licenca_db_config(request)
+        
+        # Obter ID da baixa dos parâmetros
+        baixa_id = request.query_params.get('baixa_id')
+        if not baixa_id:
+            return Response(
+                {'error': 'ID da baixa é obrigatório'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validar dados do request body
+        serializer = ExcluirBaixaSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            with transaction.atomic(using=banco):
+                # Buscar a baixa específica
+                baixa = Baretitulos.objects.using(banco).get(
+                    bare_sequ=baixa_id,
+                    bare_empr=titulo.titu_empr,
+                    bare_fili=titulo.titu_fili,
+                    bare_clie=titulo.titu_clie,
+                    bare_titu=titulo.titu_titu,
+                    bare_seri=titulo.titu_seri,
+                    bare_parc=titulo.titu_parc
+                )
+                
+                
+                # Excluir a baixa
+                baixa.delete()
+                
+                # Recalcular status do título
+                baixas_restantes = Baretitulos.objects.using(banco).filter(
+                    bare_empr=titulo.titu_empr,
+                    bare_fili=titulo.titu_fili,
+                    bare_clie=titulo.titu_clie,
+                    bare_titu=titulo.titu_titu,
+                    bare_seri=titulo.titu_seri,
+                    bare_parc=titulo.titu_parc
+                )
+                
+                if baixas_restantes.exists():
+                    # Verificar se o valor total das baixas restantes cobre o título
+                    valor_total_baixas = baixas_restantes.aggregate(
+                        total=models.Sum('bare_pago')
+                    )['total'] or Decimal('0')
+                    
+                    if valor_total_baixas >= titulo.titu_valo:
+                        novo_status = 'T'  # Total
+                    else:
+                        novo_status = 'P'  # Parcial
+                else:
+                    novo_status = 'A'  # Aberto
+                
+                # Atualizar status do título
+                Titulosreceber.objects.using(banco).filter(
+                    titu_empr=titulo.titu_empr,
+                    titu_fili=titulo.titu_fili,
+                    titu_clie=titulo.titu_clie,
+                    titu_titu=titulo.titu_titu,
+                    titu_seri=titulo.titu_seri,
+                    titu_parc=titulo.titu_parc,
+                    titu_emis=titulo.titu_emis,
+                    titu_venc=titulo.titu_venc
+                ).update(titu_aber=novo_status)
+                
+                return Response({
+                    'message': 'Baixa excluída com sucesso',
+                    'baixa_excluida': baixa_id,
+                    'novo_status_titulo': novo_status,
+                    'motivo': serializer.validated_data.get('motivo_exclusao', '')
+                }, status=status.HTTP_200_OK)
+                
+        except Baretitulos.DoesNotExist:
+            return Response(
+                {'error': 'Baixa não encontrada'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'Erro ao excluir baixa: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

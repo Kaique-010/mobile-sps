@@ -15,36 +15,7 @@ class ComissaoSpsSerializer(serializers.ModelSerializer):
         model = ComissaoSps
         fields = '__all__'
     
-    def validate(self, data):
-        parcelas = data.get('comi_parc', 1)
-        if parcelas < 1:
-            raise serializers.ValidationError("O número de parcelas deve ser maior que zero.")
-        
-        # Validar valores monetários
-        valor_total = data.get('comi_valo_tota', 0)
-        if valor_total <= 0:
-            raise serializers.ValidationError("O valor total deve ser maior que zero.")
-        
-        impostos = data.get('comi_impo', 0)
-        if impostos < 0:
-            raise serializers.ValidationError("O valor dos impostos não pode ser negativo.")
-        
-        # Validar se cliente e funcionário são valores válidos
-        cliente = data.get('comi_clie', '')
-        if not cliente:
-            raise serializers.ValidationError("O campo cliente é obrigatório.")
-        
-        funcionario = data.get('comi_func', '')
-        if not funcionario:
-            raise serializers.ValidationError("O campo funcionário é obrigatório.")
-        
-        # Validar categoria
-        categoria = data.get('comi_cate', '')
-        categorias_validas = ['1', '2', '3', '4', '5']
-        if categoria not in categorias_validas:
-            raise serializers.ValidationError("Categoria inválida. Deve ser uma das opções: 1-Melhoria, 2-Implantação, 3-Dashboards, 4-Mobile, 5-Vendas.")
-        
-        return data
+    
 
     def get_percentual_categoria(self, codigo):
         return {
@@ -69,14 +40,12 @@ class ComissaoSpsSerializer(serializers.ModelSerializer):
         return validated_data
 
     def gerar_titulos(self, instancia, banco):
-
         try:
             data_base = instancia.comi_data_entr
             parcelas = instancia.comi_parc
             func = instancia.comi_func
             cliente = instancia.comi_clie
             comissao_id = str(instancia.comi_id)
-            timestamp = str(int(time.time()))[-6:]
 
             valor_parcela_receber = round(instancia.comi_valo_tota / max(parcelas, 1), 2)
             valor_parcela_pagar = instancia.comi_comi_parc
@@ -88,70 +57,80 @@ class ComissaoSpsSerializer(serializers.ModelSerializer):
                 cliente_id = int(cliente) if cliente.isdigit() else 1
             except (ValueError, AttributeError):
                 cliente_id = 1
-                logger.warning(f"Cliente '{cliente}' não é um número válido, usando ID padrão 1")
-                
+                logger.warning(f"Cliente '{cliente}' inválido. Usando ID padrão 1")
+
             try:
                 func_id = int(func) if func.isdigit() else 1
             except (ValueError, AttributeError):
                 func_id = 1
-                logger.warning(f"Funcionário '{func}' não é um número válido, usando ID padrão 1")
+                logger.warning(f"Funcionário '{func}' inválido. Usando ID padrão 1")
 
-            # TÍTULOS A RECEBER DO CLIENTE
+            categorias_prefixos = {
+                '1': 'MEL',
+                '2': 'IMP',
+                '3': 'DAS',
+                '4': 'MOB',
+                '5': 'VEN',
+            }
+
+            prefixo_categoria = categorias_prefixos.get(instancia.comi_cate, 'UNK')
+            comissao_id_str = str(instancia.comi_id).zfill(2)
+            codigo_base = f"{prefixo_categoria}{comissao_id_str}"
+
+            # TÍTULOS A RECEBER
             for i in range(parcelas):
-                titulo_numero = f"R{timestamp}{i+1:02d}"
-                # Garantir que o título não exceda 13 caracteres
-                if len(titulo_numero) > 13:
-                    titulo_numero = titulo_numero[:13]
-                    
+                sufixo = str(i + 1).zfill(3)
+                titulo_receber = f"{codigo_base}-{sufixo}"
+
                 try:
-                    titulo_receber = Titulosreceber.objects.using(banco).create(
+                    titulo_obj = Titulosreceber.objects.using(banco).create(
                         titu_empr=instancia.comi_empr,
                         titu_fili=instancia.comi_fili,
                         titu_clie=cliente_id,
-                        titu_titu=titulo_numero,
-                        titu_parc=str(i + 1).zfill(3),  # Garantir 3 dígitos
-                        titu_seri='CMS',
+                        titu_titu=titulo_receber,
+                        titu_parc=sufixo,
+                        titu_seri=prefixo_categoria,
                         titu_valo=valor_parcela_receber,
                         titu_venc=data_base + timedelta(days=30 * i),
                         titu_emis=data_base,
                         titu_hist=f"Parcela {i+1}/{parcelas} - Recebimento por {instancia.comi_cate} - {cliente}",
-                        titu_form_reci='54' 
+                        titu_form_reci='54'
                     )
-                    titulos_receber_criados.append(titulo_receber.titu_titu)
+                    titulos_receber_criados.append(titulo_obj.titu_titu)
                 except IntegrityError as e:
-                    logger.error(f"Erro de integridade ao criar título a receber {titulo_numero}: {str(e)}")
+                    logger.error(f"Erro ao criar título a receber {titulo_receber}: {str(e)}")
                     raise Exception(f"Erro ao criar título a receber: título duplicado ou dados inválidos")
 
-            # TÍTULOS A PAGAR PARA O FUNCIONÁRIO
+            # TÍTULOS A PAGAR
             for i in range(parcelas):
-                titulo_numero = f"P{timestamp}{i+1:02d}"
-                # Garantir que o título não exceda 13 caracteres
-                if len(titulo_numero) > 13:
-                    titulo_numero = titulo_numero[:13]
-                    
+                sufixo = str(i + 1).zfill(3)
+                titulo_pagar = f"{codigo_base}-{sufixo}"
+
                 try:
-                    titulo_pagar = Titulospagar.objects.using(banco).create(
+                    titulo_obj = Titulospagar.objects.using(banco).create(
                         titu_empr=instancia.comi_empr,
                         titu_fili=instancia.comi_fili,
                         titu_forn=func_id,
-                        titu_titu=titulo_numero,
-                        titu_parc=str(i + 1).zfill(4),  
-                        titu_seri='CMS',
+                        titu_titu=titulo_pagar,
+                        titu_parc=sufixo,
+                        titu_seri=prefixo_categoria,
                         titu_valo=valor_parcela_pagar,
                         titu_venc=data_base + timedelta(days=30 * i),
                         titu_emis=data_base,
-                        titu_hist=f"Parcela {i+1}/{parcelas} - Comissão {instancia.comi_cate} - {func}"
+                        titu_hist=f"Parcela {i+1}/{parcelas} - Comissão {instancia.comi_cate} - {func}",
+                        
                     )
-                    titulos_pagar_criados.append(titulo_pagar.titu_titu)
+                    titulos_pagar_criados.append(titulo_obj.titu_titu)
                 except IntegrityError as e:
-                    logger.error(f"Erro de integridade ao criar título a pagar {titulo_numero}: {str(e)}")
+                    logger.error(f"Erro ao criar título a pagar {titulo_pagar}: {str(e)}")
                     raise Exception(f"Erro ao criar título a pagar: título duplicado ou dados inválidos")
 
             logger.info(f"Títulos criados para comissão {comissao_id}: {len(titulos_receber_criados)} a receber, {len(titulos_pagar_criados)} a pagar")
-            
+
         except Exception as e:
             logger.error(f"Erro ao gerar títulos para comissão {instancia.comi_id}: {str(e)}")
-            raise  # Re-raise para ser capturado pela transação atômica
+            raise
+
 
     def create(self, validated_data):
         banco = self.context.get('banco', 'default')
@@ -183,14 +162,9 @@ class ComissaoSpsSerializer(serializers.ModelSerializer):
         except Exception as e:
             error_msg = str(e)
             logger.error(f"Erro inesperado ao criar comissão: {error_msg}")
-            
-            # Verificar se é um erro específico dos títulos
-            if 'título' in error_msg.lower():
-                raise serializers.ValidationError(f"Erro ao gerar títulos: {error_msg}")
-            elif 'cliente' in error_msg.lower() or 'funcionário' in error_msg.lower():
-                raise serializers.ValidationError("Dados de cliente ou funcionário inválidos. Verifique se os códigos estão corretos.")
-            else:
-                raise serializers.ValidationError("Erro interno. Verifique os dados informados e tente novamente.")
+
+            # Diagnóstico explícito no front com erro real:
+            raise serializers.ValidationError(f"Erro inesperado: {error_msg}")
 
     def update(self, instance, validated_data):
         banco = self.context.get('banco', 'default')
@@ -199,3 +173,6 @@ class ComissaoSpsSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save(using=banco)
         return instance
+
+    
+    
