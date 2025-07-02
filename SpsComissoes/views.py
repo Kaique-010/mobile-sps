@@ -18,11 +18,11 @@ class ComissaoSpsViewSet(ModuloRequeridoMixin, ModelViewSet):
 
     def perform_create(self, serializer):
         banco = get_licenca_db_config(self.request) or 'default'
-        serializer.save(using=banco)
+        serializer.save()
 
     def perform_update(self, serializer):
         banco = get_licenca_db_config(self.request) or 'default'
-        serializer.save(using=banco)
+        serializer.save()
 
     def perform_destroy(self, instance):
         banco = get_licenca_db_config(self.request) or 'default'
