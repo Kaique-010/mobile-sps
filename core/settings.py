@@ -86,6 +86,7 @@ INSTALLED_APPS = [
     "Sdk_recebimentos",
     "SpsComissoes",
     "EnvioCobranca",
+    "DRE",
 ]
 
 # Middleware

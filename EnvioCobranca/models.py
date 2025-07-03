@@ -8,6 +8,7 @@ class EnviarCobranca(models.Model):
     cliente_nome = models.CharField(max_length=100)
     cliente_celular = models.CharField(max_length=20, blank=True, null=True)
     cliente_telefone = models.CharField(max_length=20, blank=True, null=True)
+    cliente_email = models.CharField(max_length=100, blank=True, null=True)
     numero_titulo = models.CharField(max_length=13, primary_key=True)
     serie = models.CharField(max_length=5)
     parcela = models.CharField(max_length=3)

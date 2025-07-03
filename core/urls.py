@@ -38,6 +38,8 @@ urlpatterns = [
     path('api/<slug>/Sdk_recebimentos/', include('Sdk_recebimentos.urls')),
     path('api/<slug>/comissoes/', include('SpsComissoes.urls')),
     path('api/<slug>/enviar-cobranca/', include('EnvioCobranca.urls')),
+    path('api/<slug>/dre/', include('DRE.urls')),
+    
     
     
     
