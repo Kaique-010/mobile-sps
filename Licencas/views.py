@@ -45,8 +45,9 @@ class LoginView(APIView):
         except Usuarios.DoesNotExist:
             return Response({'error': 'Usuário não encontrado.'}, status=404)
 
-        if usuario.password == password:
-            return Response({'login': 'Login Ok.'}, status=200)
+        # Usar o método check_password melhorado para validação segura
+        if not usuario.check_password(password):
+            return Response({'error': 'Senha incorreta.'}, status=401)
 
         refresh = RefreshToken.for_user(usuario)
         refresh['username'] = usuario.usua_nome
@@ -116,18 +117,36 @@ class FiliaisPorEmpresaView(APIView):
 
 
 class AlterarSenhaView(APIView):
-    permission_classes = [IsAuthenticated]  # Ou outra permissão que precisar
+    permission_classes = [IsAuthenticated]
 
-    def post(self, request):
+    def post(self, request, slug=None):
         usuarioname = request.data.get('usuarioname')
         nova_senha = request.data.get('nova_senha')
+        senha_atual = request.data.get('senha_atual')  # Para validação adicional
 
         if not usuarioname or not nova_senha:
             return Response({"error": "usuarioname e nova senha são obrigatórios."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Validação básica da nova senha
+        if len(nova_senha) < 4:
+            return Response({"error": "A nova senha deve ter pelo menos 4 caracteres."}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
+            # Verificar se o usuário existe e se a senha atual está correta (se fornecida)
+            banco = get_licenca_db_config(request)
+            if banco:
+                try:
+                    usuario = Usuarios.objects.using(banco).get(usua_nome=usuarioname)
+                    
+                    # Se senha atual foi fornecida, validar
+                    if senha_atual and not usuario.check_password(senha_atual):
+                        return Response({"error": "Senha atual incorreta."}, status=status.HTTP_400_BAD_REQUEST)
+                        
+                except Usuarios.DoesNotExist:
+                    return Response({"error": "Usuário não encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
             # Chama a função de utilitário para alterar a senha
-            atualizar_senha(usuarioname, nova_senha)
+            atualizar_senha(usuarioname, nova_senha, request)
             return Response({"message": "Senha alterada com sucesso."}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

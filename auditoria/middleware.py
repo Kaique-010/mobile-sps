@@ -8,8 +8,25 @@ from django.utils import timezone
 import logging
 import json
 import re
+from datetime import date, datetime
+from decimal import Decimal
 
 logger = logging.getLogger(__name__)
+
+def converter_para_json_serializavel(obj):
+    """Converte objetos Python para tipos serializáveis em JSON"""
+    if isinstance(obj, (date, datetime)):
+        return obj.isoformat()
+    elif isinstance(obj, Decimal):
+        return float(obj)
+    elif hasattr(obj, '__dict__'):
+        return str(obj)
+    elif isinstance(obj, dict):
+        return {k: converter_para_json_serializavel(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [converter_para_json_serializavel(item) for item in obj]
+    else:
+        return obj
 
 class AuditoriaMiddleware:
     def __init__(self, get_response):
@@ -263,6 +280,12 @@ class AuditoriaMiddleware:
             logger.debug(f'  - dados_depois: {"Sim" if dados_depois else "Não"} ({len(dados_depois) if dados_depois else 0} campos)')
             logger.debug(f'  - campos_alterados: {"Sim" if campos_alterados else "Não"} ({len(campos_alterados) if campos_alterados else 0} campos)')
             
+            # Converter dados para tipos serializáveis em JSON
+            data_serializavel = converter_para_json_serializavel(data) if data else None
+            dados_antes_serializavel = converter_para_json_serializavel(dados_antes) if dados_antes else None
+            dados_depois_serializavel = converter_para_json_serializavel(dados_depois) if dados_depois else None
+            campos_alterados_serializavel = converter_para_json_serializavel(campos_alterados) if campos_alterados else None
+            
             # Criar o log
             log = LogAcao.objects.create(
                 usuario=user,
@@ -271,10 +294,10 @@ class AuditoriaMiddleware:
                 url=url,
                 ip=ip,
                 navegador=user_agent,
-                dados=data,
-                dados_antes=dados_antes,
-                dados_depois=dados_depois,
-                campos_alterados=campos_alterados,
+                dados=data_serializavel,
+                dados_antes=dados_antes_serializavel,
+                dados_depois=dados_depois_serializavel,
+                campos_alterados=campos_alterados_serializavel,
                 objeto_id=objeto_id,
                 modelo=modelo.__name__ if modelo else None,
                 empresa=empresa,

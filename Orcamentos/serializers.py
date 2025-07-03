@@ -17,6 +17,20 @@ class ItemOrcamentoSerializer(BancoContextMixin,serializers.ModelSerializer):
         model = ItensOrcamento
         exclude = ['iped_empr', 'iped_fili', 'iped_item', 'iped_pedi', 'iped_data', 'iped_forn']
     
+    def to_internal_value(self, data):
+        # Garante que iped_desc seja sempre um valor decimal
+        if 'iped_desc' in data:
+            if isinstance(data['iped_desc'], bool):
+                data['iped_desc'] = 0.00 if not data['iped_desc'] else 0.00
+            elif data['iped_desc'] is None:
+                data['iped_desc'] = 0.00
+            else:
+                try:
+                    data['iped_desc'] = round(float(data['iped_desc']), 2)
+                except (ValueError, TypeError):
+                    data['iped_desc'] = 0.00
+        return super().to_internal_value(data)
+    
     
     def get_produto_nome(self, obj):
         banco = self.context.get('banco')
@@ -47,6 +61,15 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
             'itens', 'itens_input',
             'valor_total', 'cliente_nome', 'empresa_nome', 'pedi_nume'
         ]
+    
+    def to_internal_value(self, data):
+       
+        if 'pedi_tota' in data:
+            try:
+                data['pedi_tota'] = round(float(data['pedi_tota']), 2)
+            except (ValueError, TypeError):
+                pass  # Deixa o Django validar o erro
+        return super().to_internal_value(data)
     
     def get_itens(self, obj):
         banco = self.context.get('banco')
@@ -99,6 +122,12 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
 
         total = 0
         for idx, item_data in enumerate(itens_data, start=1):
+            # Garante que iped_desc seja um valor decimal válido
+            if 'iped_desc' not in item_data or item_data['iped_desc'] is None:
+                item_data['iped_desc'] = 0.00
+            elif isinstance(item_data['iped_desc'], bool):
+                item_data['iped_desc'] = 0.00
+            
             ItensOrcamento.objects.using(banco).create(
                 iped_empr=orcamento.pedi_empr,
                 iped_fili=orcamento.pedi_fili,
@@ -110,7 +139,7 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
             )
             total += item_data.get('iped_quan', 0) * item_data.get('iped_unit', 0)
 
-        orcamento.pedi_tota = total
+        orcamento.pedi_tota = round(total, 2)
         orcamento.save(using=banco)
 
         return orcamento
@@ -140,6 +169,12 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
         # Recria os itens
         total = 0
         for idx, item_data in enumerate(itens_data, start=1):
+            # Garante que iped_desc seja um valor decimal válido
+            if 'iped_desc' not in item_data or item_data['iped_desc'] is None:
+                item_data['iped_desc'] = 0.00
+            elif isinstance(item_data['iped_desc'], bool):
+                item_data['iped_desc'] = 0.00
+            
             ItensOrcamento.objects.using(banco).create(
                 iped_empr=instance.pedi_empr,
                 iped_fili=instance.pedi_fili,
@@ -151,7 +186,7 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
             )
             total += item_data.get('iped_quan', 0) * item_data.get('iped_unit', 0)
 
-        instance.pedi_tota = total
+        instance.pedi_tota = round(total, 2)
         instance.save(using=banco)
         return instance
 

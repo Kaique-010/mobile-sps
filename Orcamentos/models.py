@@ -31,7 +31,6 @@ class ItensOrcamento(models.Model):
     iped_desc = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
     iped_unli = models.DecimalField(max_digits=15, decimal_places=5, blank=True, null=True)
     iped_forn = models.IntegerField(blank=True, null=True)
-    iped_desc = models.BooleanField(blank=True, null=True)
     iped_pdes_item = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
     iped_data = models.DateField()
 

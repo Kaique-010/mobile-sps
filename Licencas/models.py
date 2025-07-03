@@ -1,8 +1,7 @@
-from pyexpat import model
 from django.db import models
 import json
 from django.db import connection
-from django.contrib.auth.hashers import make_password, check_password
+from django.contrib.auth.hashers import make_password, check_password as django_check_password
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 
 
@@ -52,32 +51,29 @@ class Usuarios(AbstractBaseUser, PermissionsMixin):
         return self.usua_nome
 
     def check_password(self, raw_password):
-        # Comparação direta, sem hash
-        return self.password == raw_password
+        
+        if not self.password:
+            return False
+        password_stripped = self.password.strip()
+        if password_stripped.startswith(('pbkdf2_', 'bcrypt', 'argon2')):
+            try:
+                return django_check_password(raw_password, password_stripped)
+            except:
+                return False
+        else:
+            return password_stripped == raw_password
 
     def set_password(self, raw_password):
-        # Salva direto, sem hash
+       
         self.password = raw_password
         self._password = raw_password
 
 
 
     def atualizar_senha(self, nova_senha):
-        """
-        Atualiza a senha do usuário diretamente no banco de dados.
-
-        :param nova_senha: A nova senha a ser definida para o usuário.
-        """
-        senha_hash = make_password(nova_senha)  # Cria o hash da senha
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "UPDATE usuarios SET usua_senh_mobi = %s WHERE usua_nome = %s",
-                    [senha_hash, self.usua_nome]
-                )
-            print(f"Senha do usuário {self.usua_nome} atualizada com sucesso.")
-        except Exception as e:
-            print(f"Erro ao atualizar a senha do usuário {self.usua_nome}: {e}")
+       
+        from .utils import atualizar_senha
+        return atualizar_senha(self.usua_nome, nova_senha)
 
     def has_perm(self, perm, obj=None):
         return True

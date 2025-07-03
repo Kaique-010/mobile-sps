@@ -24,12 +24,12 @@ class UserBackend(ModelBackend):
                 print(f'[AUTH] Licença expirada para o CNPJ {docu}.')
                 return None
 
-            if user.password == password:  # Se a senha estiver em texto simples, compará-la diretamente
+            # Usar o método check_password melhorado para validação segura
+            if user.check_password(password):
                 print(f'[AUTH] Senha válida para: {username}')
                 return user 
             else:
                 print(f'[AUTH] Senha fornecida: {password}')
-                print(f'[AUTH] Senha no banco: {user.password}')
                 print('[AUTH] Senha incorreta.')
                 return None
 

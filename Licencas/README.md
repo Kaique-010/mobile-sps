@@ -2,11 +2,13 @@
 
 O app **Licenças** é responsável pelo gerenciamento de usuários, empresas, filiais e licenças do sistema. Ele controla a autenticação, autorização e licenciamento de funcionalidades para diferentes empresas e filiais.
 
+# App Licenças
 ## Funcionalidades Principais
-
 ### 🔐 Gestão de Usuários
-- Sistema de autenticação customizado
-- Gerenciamento de senhas
+- Sistema de autenticação customizado com segurança melhorada
+- Gerenciamento seguro de senhas
+- Suporte a senhas em hash e texto plano (compatibilidade)
+- Funcionalidade de alteração de senha via API
 - Controle de setores por usuário
 - Integração com sistema de permissões
 
@@ -89,6 +91,19 @@ class Licencas(models.Model):
 - `lice_nume_empr`: Número máximo de empresas
 - `lice_nume_fili`: Número máximo de filiais
 
+## Melhorias de Segurança
+
+### Autenticação Aprimorada
+- **Método `check_password` melhorado**: Suporta tanto senhas em hash quanto em texto plano para compatibilidade
+- **Validação segura**: Primeiro tenta verificar hash do Django, depois fallback para texto plano
+- **Logs de segurança**: Sistema de logs para tentativas de autenticação
+
+### Alteração de Senha
+- **Validação de senha atual**: Opção de validar senha atual antes da alteração
+- **Validação de força**: Senha mínima de 4 caracteres
+- **Suporte multi-banco**: Funciona com diferentes bancos de dados por licença
+- **Tratamento de erros**: Mensagens de erro específicas e seguras
+
 ## Exemplos de Uso
 
 ### Criar Usuário
@@ -105,10 +120,21 @@ usuario = Usuarios.objects.create_user(
 
 ### Autenticar Usuário
 ```python
-# Verificar senha
+# Verificar senha (método melhorado)
 usuario = Usuarios.objects.get(usua_nome='joao.silva')
 if usuario.check_password('senha123'):
     print('Senha correta')
+```
+
+### Alterar Senha
+```python
+# Usando método de instância
+usuario = Usuarios.objects.get(usua_nome='joao.silva')
+usuario.atualizar_senha('nova_senha_123')
+
+# Usando função utilitária
+from Licencas.utils import atualizar_senha
+atualizar_senha('joao.silva', 'nova_senha_123', request)
 ```
 
 ### Gerenciar Empresas
@@ -151,8 +177,8 @@ modulos = licenca.get_modu_libe()
 print(f'Módulos liberados: {modulos}')
 ```
 
+# App Licenças
 ## Endpoints da API
-
 ### Usuários
 ```http
 GET /api/usuarios/
@@ -161,6 +187,42 @@ POST /api/usuarios/
 PUT /api/usuarios/{id}/
 DELETE /api/usuarios/{id}/
 ```
+
+### Autenticação e Segurança
+```http
+POST /api/licencas/login/
+POST /api/licencas/alterar-senha/
+```
+
+#### Alterar Senha
+**Endpoint:** `POST /api/licencas/alterar-senha/`
+
+**Headers:**
+```
+Authorization: Bearer {token}
+Content-Type: application/json
+```
+
+**Body:**
+```json
+{
+  "usuarioname": "nome_do_usuario",
+  "nova_senha": "nova_senha_123",
+  "senha_atual": "senha_atual_opcional"
+}
+```
+
+**Resposta de Sucesso:**
+```json
+{
+  "message": "Senha alterada com sucesso."
+}
+```
+
+**Validações:**
+- Nova senha deve ter pelo menos 4 caracteres
+- Se `senha_atual` for fornecida, será validada
+- Usuário deve existir no sistema
 
 ### Empresas
 ```http
