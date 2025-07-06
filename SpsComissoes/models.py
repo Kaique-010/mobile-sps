@@ -5,8 +5,10 @@ class ComissaoSps(models.Model):
     comi_id = models.AutoField(primary_key=True)
     comi_empr = models.IntegerField()
     comi_fili = models.IntegerField()
-    comi_func = models.CharField(max_length=255)
-    comi_clie = models.CharField(max_length=255)
+    comi_func = models.CharField(max_length=255)  # ID do funcionário
+    comi_func_nome = models.CharField(max_length=100, blank=True, null=True)  # Nome do funcionário
+    comi_clie = models.CharField(max_length=255)  # ID do cliente
+    comi_clie_nome = models.CharField(max_length=100, blank=True, null=True)  # Nome do cliente
     comi_cate = models.CharField(max_length=50, choices=[
         ('1', 'Melhoria'),
         ('2', 'Implantação'),

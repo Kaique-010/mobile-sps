@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt',
+    'sklearn',
     'Licencas',
     'Produtos',
     'Entidades',
@@ -87,6 +88,7 @@ INSTALLED_APPS = [
     "SpsComissoes",
     "EnvioCobranca",
     "DRE",
+    "Gerencial"
 ]
 
 # Middleware

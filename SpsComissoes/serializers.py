@@ -7,6 +7,7 @@ import time
 from .models import ComissaoSps
 from contas_a_pagar.models import Titulospagar
 from contas_a_receber.models import Titulosreceber
+from Entidades.models import Entidades
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +15,49 @@ class ComissaoSpsSerializer(serializers.ModelSerializer):
     class Meta:
         model = ComissaoSps
         fields = '__all__'
+        
+    def to_representation(self, instance):
+        """Sobrescreve a representação para garantir que os nomes sejam incluídos"""
+        data = super().to_representation(instance)
+        return data
+    
+    def preencher_nomes_entidades(self, validated_data, banco='default'):
+        """Busca e preenche os nomes do cliente e funcionário baseado nos IDs"""
+        try:
+            # Buscar nome do cliente
+            if 'comi_clie' in validated_data and validated_data['comi_clie']:
+                try:
+                    cliente_id = int(validated_data['comi_clie'])
+                    cliente = Entidades.objects.using(banco).filter(
+                        enti_clie=cliente_id,
+                        enti_tipo_enti__in=['CL', 'AM']
+                    ).first()
+                    if cliente:
+                        validated_data['comi_clie_nome'] = cliente.enti_nome
+                    else:
+                        logger.warning(f"Cliente com ID {cliente_id} não encontrado")
+                except (ValueError, TypeError):
+                    logger.warning(f"ID do cliente inválido: {validated_data['comi_clie']}")
+            
+            # Buscar nome do funcionário
+            if 'comi_func' in validated_data and validated_data['comi_func']:
+                try:
+                    func_id = int(validated_data['comi_func'])
+                    funcionario = Entidades.objects.using(banco).filter(
+                        enti_clie=func_id,
+                        enti_tipo_enti__in=['FU', 'VE']
+                    ).first()
+                    if funcionario:
+                        validated_data['comi_func_nome'] = funcionario.enti_nome
+                    else:
+                        logger.warning(f"Funcionário com ID {func_id} não encontrado")
+                except (ValueError, TypeError):
+                    logger.warning(f"ID do funcionário inválido: {validated_data['comi_func']}")
+                    
+        except Exception as e:
+            logger.error(f"Erro ao buscar nomes das entidades: {str(e)}")
+        
+        return validated_data
     
     
 
@@ -135,6 +179,7 @@ class ComissaoSpsSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         banco = self.context.get('banco', 'default')
         validated_data = self.calcular_campos(validated_data)
+        validated_data = self.preencher_nomes_entidades(validated_data, banco)
         
         try:
             with transaction.atomic(using=banco):
@@ -169,6 +214,7 @@ class ComissaoSpsSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         banco = self.context.get('banco', 'default')
         validated_data = self.calcular_campos(validated_data)
+        validated_data = self.preencher_nomes_entidades(validated_data, banco)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save(using=banco)
