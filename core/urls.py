@@ -40,6 +40,8 @@ urlpatterns = [
     path('api/<slug>/enviar-cobranca/', include('EnvioCobranca.urls')),
     path('api/<slug>/dre/', include('DRE.urls')),
     path('api/<slug>/gerencial/', include('Gerencial.urls')),
+    path('api/<slug>/ordemproducao/', include('OrdemProducao.urls')),
+    
     
     
     

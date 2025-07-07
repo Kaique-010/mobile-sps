@@ -88,7 +88,8 @@ INSTALLED_APPS = [
     "SpsComissoes",
     "EnvioCobranca",
     "DRE",
-    "Gerencial"
+    "Gerencial",
+    "OrdemProducao"
 ]
 
 # Middleware

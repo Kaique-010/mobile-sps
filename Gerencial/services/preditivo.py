@@ -3,6 +3,7 @@
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 import numpy as np
+from decimal import Decimal
 
 def gerar_previsao_linear(df, coluna_data, coluna_valor, meses_prever=6):
     if df.empty or len(df) < 3:
@@ -10,6 +11,10 @@ def gerar_previsao_linear(df, coluna_data, coluna_valor, meses_prever=6):
 
     try:
         df[coluna_data] = pd.to_datetime(df[coluna_data])
+        
+        # Convert Decimal values to float to avoid type mismatch
+        df[coluna_valor] = df[coluna_valor].apply(lambda x: float(x) if isinstance(x, Decimal) else x)
+        
         df['mes_num'] = (df[coluna_data].dt.year - df[coluna_data].dt.year.min()) * 12 + df[coluna_data].dt.month
         df['mes_num'] -= df['mes_num'].min()
 
@@ -24,7 +29,7 @@ def gerar_previsao_linear(df, coluna_data, coluna_valor, meses_prever=6):
         for i in range(1, meses_prever + 1):
             prox_mes = ult_mes + pd.DateOffset(months=i)
             prox_mes_num = df['mes_num'].max() + i
-            valor_previsto = modelo.predict([[prox_mes_num]])[0]
+            valor_previsto = modelo.predict(pd.DataFrame([[prox_mes_num]], columns=['mes_num']))[0]
             previsoes.append({
                 "mes": prox_mes.strftime("%Y-%m"),
                 "valor": round(valor_previsto, 2)
