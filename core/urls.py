@@ -41,6 +41,7 @@ urlpatterns = [
     path('api/<slug>/dre/', include('DRE.urls')),
     path('api/<slug>/gerencial/', include('Gerencial.urls')),
     path('api/<slug>/ordemproducao/', include('OrdemProducao.urls')),
+    path('api/<slug:slug>/parametros-admin/', include('parametros_admin.urls')),
     
     
     

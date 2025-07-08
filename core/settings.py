@@ -89,7 +89,8 @@ INSTALLED_APPS = [
     "EnvioCobranca",
     "DRE",
     "Gerencial",
-    "OrdemProducao"
+    "OrdemProducao",
+    'parametros_admin',
 ]
 
 # Middleware
@@ -102,10 +103,39 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'auditoria.signals.AuditoriaSignalMiddleware',  # Para capturar contexto nos signals
+    'auditoria.signals.AuditoriaSignalMiddleware', 
     'auditoria.middleware.AuditoriaMiddleware',
-    'core.middleware.LicencaMiddleware'
+    'core.middleware.LicencaMiddleware',
+    'parametros_admin.middleware.ParametrosMiddleware',
 ]
+
+# Configuração de cache (se não existir)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}
+
+# Logging
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': 'parametros_admin.log',
+        },
+    },
+    'loggers': {
+        'parametros_admin': {
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
+}
 
 # Configurações de CORS
 if DEBUG:

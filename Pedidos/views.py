@@ -10,8 +10,8 @@ from .serializers import PedidoVendaSerializer
 from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from rest_framework.filters import SearchFilter
 from django_filters.rest_framework import DjangoFilterBackend
-
-
+from parametros_admin.utils import verificar_permissao_estoque, verificar_permissao_financeiro, get_desconto_maximo
+from parametros_admin.permissions import PermissaoAdministrador
 
 import logging
 logger = logging.getLogger(__name__)
