@@ -44,13 +44,13 @@ class Produtos(models.Model):
     prod_empr = models.CharField(max_length=50)  # Empresa
     prod_codi = models.CharField(max_length=50, primary_key=True)  # Código único
     prod_nome = models.CharField(max_length=255)  # Nome do produto
-    
+
     # Classificação
     prod_unme = models.ForeignKey(UnidadeMedida)  # Unidade de medida
     prod_grup = models.ForeignKey(GrupoProduto)  # Grupo
     prod_fami = models.ForeignKey(FamiliaProduto)  # Família
     prod_marc = models.ForeignKey(Marca)  # Marca
-    
+
     # Detalhes
     prod_loca = models.CharField(max_length=255)  # Localização
     prod_ncm = models.CharField(max_length=10)  # NCM
@@ -66,13 +66,13 @@ class Tabelaprecos(models.Model):
     tabe_empr = models.IntegerField()  # Empresa
     tabe_fili = models.IntegerField()  # Filial
     tabe_prod = models.CharField(max_length=60)  # Produto
-    
+
     # Preços
     tabe_prco = models.DecimalField(max_digits=15, decimal_places=2)  # Preço base
     tabe_avis = models.DecimalField(max_digits=15, decimal_places=2)  # Preço à vista
     tabe_apra = models.DecimalField(max_digits=15, decimal_places=2)  # Preço a prazo
     tabe_vare = models.DecimalField(max_digits=15, decimal_places=2)  # Varejo
-    
+
     # Custos e Impostos
     tabe_cust = models.DecimalField(max_digits=15, decimal_places=2)  # Custo
     tabe_cuge = models.DecimalField(max_digits=15, decimal_places=2)  # Custo geral
@@ -81,7 +81,7 @@ class Tabelaprecos(models.Model):
     tabe_pipi = models.DecimalField(max_digits=15, decimal_places=2)  # % IPI
     tabe_valo_st = models.DecimalField(max_digits=15, decimal_places=2)  # Valor ST
     tabe_perc_st = models.DecimalField(max_digits=7, decimal_places=4)  # % ST
-    
+
     # Outros
     tabe_marg = models.DecimalField(max_digits=15, decimal_places=4)  # Margem
     tabe_desc = models.DecimalField(max_digits=15, decimal_places=2)  # Desconto
@@ -204,6 +204,7 @@ produtos_margem = Tabelaprecos.objects.annotate(
 ## API Endpoints
 
 ### Produtos
+
 ```
 GET /api/{licenca}/produtos/produtos/
 POST /api/{licenca}/produtos/produtos/
@@ -214,12 +215,14 @@ DELETE /api/{licenca}/produtos/produtos/{codigo}/
 ```
 
 ### Grupos de Produtos
+
 ```
 GET /api/{licenca}/produtos/grupos/
 POST /api/{licenca}/produtos/grupos/
 ```
 
 ### Tabela de Preços
+
 ```
 GET /api/{licenca}/produtos/precos/
 POST /api/{licenca}/produtos/precos/
@@ -228,6 +231,7 @@ PUT /api/{licenca}/produtos/precos/{id}/
 ```
 
 ### Saldos
+
 ```
 GET /api/{licenca}/produtos/saldos/
 GET /api/{licenca}/produtos/saldos/{produto_codigo}/
@@ -236,6 +240,7 @@ GET /api/{licenca}/produtos/saldos/{produto_codigo}/
 ### Filtros Disponíveis
 
 #### Produtos
+
 - `prod_empr`: Filtrar por empresa
 - `prod_grup`: Filtrar por grupo
 - `prod_marc`: Filtrar por marca
@@ -243,6 +248,7 @@ GET /api/{licenca}/produtos/saldos/{produto_codigo}/
 - `search`: Busca geral em nome e código
 
 #### Preços
+
 - `tabe_empr`: Filtrar por empresa
 - `tabe_fili`: Filtrar por filial
 - `tabe_prod`: Filtrar por produto
@@ -250,6 +256,7 @@ GET /api/{licenca}/produtos/saldos/{produto_codigo}/
 - `preco_max`: Preço máximo
 
 ### Exemplo de Requisições
+
 ```
 GET /api/empresa123/produtos/produtos/?prod_grup=1&search=notebook
 GET /api/empresa123/produtos/precos/?tabe_empr=1&preco_min=100&preco_max=500
@@ -259,11 +266,13 @@ GET /api/empresa123/produtos/saldos/?empresa=1&saldo_min=10
 ## Considerações Técnicas
 
 ### Banco de Dados
+
 - **Tabelas**: `produtos`, `tabelaprecos`, `saldosprodutos`, `gruposprodutos`, etc.
 - **Managed**: False (tabelas não gerenciadas pelo Django)
 - **Chaves Compostas**: Empresa + Filial + Produto para preços
 
 ### Índices Recomendados
+
 ```sql
 -- Produtos
 CREATE INDEX idx_produtos_empresa ON produtos (prod_empr);
@@ -294,11 +303,11 @@ def clean(self):
     if self.tabe_prco and self.tabe_cust:
         if self.tabe_prco < self.tabe_cust:
             raise ValidationError('Preço não pode ser menor que o custo')
-    
+
     # Validar margem
     if self.tabe_marg and (self.tabe_marg < 0 or self.tabe_marg > 100):
         raise ValidationError('Margem deve estar entre 0% e 100%')
-    
+
     # Validar NCM
     if self.prod_ncm and len(self.prod_ncm) != 8:
         raise ValidationError('NCM deve ter 8 dígitos')
@@ -365,19 +374,23 @@ valor_estoque = SaldoProduto.objects.aggregate(
 ### Problemas Comuns
 
 1. **Erro de chave duplicada em preços**
+
    - Verificar combinação empresa + filial + produto
    - Usar `update_or_create()` para evitar duplicatas
 
 2. **Imagens não carregando**
+
    - Verificar configuração de MEDIA_URL
    - Implementar método para conversão de BinaryField
 
 3. **Performance lenta em consultas**
+
    - Criar índices apropriados
    - Usar `select_related()` e `prefetch_related()`
    - Implementar cache para consultas frequentes
 
 4. **Problemas de precisão decimal**
+
    - Usar `Decimal` ao invés de `float`
    - Configurar `DECIMAL_PLACES` adequadamente
 
@@ -419,3 +432,32 @@ class Command(BaseCommand):
         # Lógica para sincronização de estoque
         pass
 ```
+
+### SQL: CRIAÇÃO DA VIEW NO BANCO
+
+CREATE OR REPLACE VIEW produtos_detalhados AS
+SELECT
+prod.prod_codi AS codigo,
+prod.prod_nome AS nome,
+prod.prod_unme AS unidade,
+prod.prod_grup AS grupo_id,
+grup.grup_desc AS grupo_nome,
+prod.prod_marc AS marca_id,
+marc.marc_nome AS marca_nome,
+tabe.tabe_cuge AS custo,
+tabe.tabe_avis AS preco_vista,
+tabe.tabe_apra AS preco_prazo,
+sald.sapr_sald AS saldo,
+prod.prod_foto AS foto,
+prod.prod_peso_brut AS peso_bruto,
+prod.prod_peso_liqu AS peso_liquido,
+sald.sapr_empr AS empresa,
+sald.sapr_fili AS filial,
+COALESCE(tabe.tabe_cuge, 0) _ COALESCE(sald.sapr_sald, 0) AS valor_total_estoque,
+COALESCE(tabe.tabe_avis, 0) _ COALESCE(sald.sapr_sald, 0) AS valor_total_venda_vista,
+COALESCE(tabe.tabe_apra, 0) \* COALESCE(sald.sapr_sald, 0) AS valor_total_venda_prazo
+FROM produtos prod
+LEFT JOIN gruposprodutos grup ON prod.prod_grup = grup.grup_codi
+LEFT JOIN marca marc ON prod.prod_marc = marc.marc_codi
+LEFT JOIN tabelaprecos tabe ON prod.prod_codi = tabe.tabe_prod AND prod.prod_empr = tabe.tabe_empr
+LEFT JOIN saldosprodutos sald ON prod.prod_codi = sald.sapr_prod;

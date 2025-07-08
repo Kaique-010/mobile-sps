@@ -237,3 +237,31 @@ class Tabelaprecoshist(models.Model):
     class Meta:
         managed = False
         db_table = 'tabelaprecoshist'
+
+
+
+#Produtos detalhados 
+class ProdutosDetalhados(models.Model):
+    codigo = models.CharField(max_length=20, primary_key=True)
+    nome = models.CharField(max_length=255)
+    unidade = models.CharField(max_length=10)
+    grupo_id = models.CharField(max_length=20, null=True)
+    grupo_nome = models.CharField(max_length=255, null=True)
+    marca_id = models.CharField(max_length=20, null=True)
+    marca_nome = models.CharField(max_length=255, null=True)
+    custo = models.DecimalField(max_digits=12, decimal_places=2, null=True)
+    preco_vista = models.DecimalField(max_digits=12, decimal_places=2, null=True)
+    preco_prazo = models.DecimalField(max_digits=12, decimal_places=2, null=True)
+    saldo = models.DecimalField(max_digits=12, decimal_places=2, null=True)
+    foto = models.TextField(null=True)
+    peso_bruto = models.DecimalField(max_digits=10, decimal_places=3, null=True)
+    peso_liquido = models.DecimalField(max_digits=10, decimal_places=3, null=True)
+    empresa = models.CharField(max_length=20, null=True)
+    filial = models.CharField(max_length=20, null=True)
+    valor_total_estoque = models.DecimalField(max_digits=14, decimal_places=2, null=True)
+    valor_total_venda_vista = models.DecimalField(max_digits=14, decimal_places=2, null=True)
+    valor_total_venda_prazo = models.DecimalField(max_digits=14, decimal_places=2, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'produtos_detalhados'

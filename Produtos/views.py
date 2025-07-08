@@ -18,8 +18,8 @@ from rest_framework.filters import SearchFilter
 from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from core.middleware import get_licenca_slug
 from core.registry import get_licenca_db_config
-from .models import Produtos, SaldoProduto, Tabelaprecos, UnidadeMedida, Tabelaprecoshist
-from .serializers import ProdutoSerializer, TabelaPrecoSerializer, UnidadeMedidaSerializer
+from .models import Produtos, SaldoProduto, Tabelaprecos, UnidadeMedida, Tabelaprecoshist, ProdutosDetalhados
+from .serializers import ProdutoSerializer, TabelaPrecoSerializer, UnidadeMedidaSerializer, ProdutoDetalhadoSerializer
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 
@@ -527,3 +527,32 @@ class TabelaPrecoMobileViewSet(viewsets.ModelViewSet):
         context = super().get_serializer_context()
         context['banco'] = get_licenca_db_config(self.request)
         return context
+
+
+
+
+class ProdutosDetalhadosViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
+    modulo_necessario = 'Produtos'
+    serializer_class = ProdutoDetalhadoSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, SearchFilter]  
+    filterset_fields = ['codigo', 'nome', 'marca_nome']
+    search_fields = ['codigo', 'nome', 'marca_nome']
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['banco'] = get_licenca_db_config(self.request)
+        return context
+
+    def get_queryset(self, slug=None):
+        slug = get_licenca_slug()
+        qs = ProdutosDetalhados.objects.using(slug).all()
+
+        if self.request.query_params.get('com_estoque') == 'true':
+            qs = qs.filter(saldo__gt=0)
+        elif self.request.query_params.get('sem_estoque') == 'true':
+            qs = qs.filter(saldo=0)
+
+        return qs
+
+

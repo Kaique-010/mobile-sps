@@ -1,6 +1,6 @@
 from rest_framework import serializers
 import base64
-from .models import Produtos, UnidadeMedida, Tabelaprecos
+from .models import Produtos, UnidadeMedida, Tabelaprecos, ProdutosDetalhados
 from core.serializers import BancoContextMixin
 from decimal import Decimal, ROUND_HALF_UP
 
@@ -231,3 +231,16 @@ class UnidadeMedidaSerializer(serializers.ModelSerializer):
     class Meta:
         model = UnidadeMedida
         fields = '__all__'
+
+
+class ProdutoDetalhadoSerializer(serializers.ModelSerializer):
+    imagem_base64 = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ProdutosDetalhados
+        fields = '__all__'
+    
+    def get_imagem_base64(self, obj):
+            if obj.foto:
+                return base64.b64encode(obj.foto).decode('utf-8')
+            return None
