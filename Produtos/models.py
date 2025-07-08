@@ -265,3 +265,5 @@ class ProdutosDetalhados(models.Model):
     class Meta:
         managed = False
         db_table = 'produtos_detalhados'
+
+

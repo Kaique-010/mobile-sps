@@ -6,6 +6,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 from django.http import Http404
+from django.db.models import Sum
 from rest_framework.generics import ListAPIView
 from django.db.models import Q, Subquery, OuterRef, DecimalField, Value as V, CharField
 from django.db.models.functions import Coalesce, Cast
@@ -535,7 +536,7 @@ class ProdutosDetalhadosViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
     modulo_necessario = 'Produtos'
     serializer_class = ProdutoDetalhadoSerializer
     permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend, SearchFilter]  
+    filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ['codigo', 'nome', 'marca_nome']
     search_fields = ['codigo', 'nome', 'marca_nome']
 
@@ -548,11 +549,65 @@ class ProdutosDetalhadosViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         slug = get_licenca_slug()
         qs = ProdutosDetalhados.objects.using(slug).all()
 
-        if self.request.query_params.get('com_estoque') == 'true':
+        if marca_nome := self.request.query_params.get('marca_nome'):
+            if marca_nome == '__sem_marca__':
+                qs = qs.filter(Q(marca_nome__isnull=True) | Q(marca_nome=''))
+            else:
+                qs = qs.filter(marca_nome=marca_nome)
+
+
+        # Filtros de estoque (ajustados para corresponder ao frontend)
+        com_saldo = self.request.query_params.get('com_saldo')
+        sem_saldo = self.request.query_params.get('sem_saldo')
+        estoque_minimo = self.request.query_params.get('estoque_minimo')  
+        
+        if com_saldo == 'true':
             qs = qs.filter(saldo__gt=0)
-        elif self.request.query_params.get('sem_estoque') == 'true':
+        elif sem_saldo == 'true':
             qs = qs.filter(saldo=0)
+        elif estoque_minimo == 'true':
+            qs = qs.filter(saldo__lt=F('estoque_minimo'))
 
         return qs
 
 
+
+class EstoqueResumoView(APIView):
+    permission_classes = [IsAuthenticated]
+    modulo_necessario = 'Dash'
+
+    def get(self, request, *args, **kwargs):
+        slug = get_licenca_slug()
+        qs = ProdutosDetalhados.objects.using(slug).all()
+
+        # Filtros opcionais
+        marca = request.query_params.get('marca')
+        grupo = request.query_params.get('grupo')
+        empresa = request.query_params.get('empresa')
+        filial = request.query_params.get('filial')
+
+        if marca == '__sem_marca__':
+            qs = qs.filter(marca_nome__isnull=True)
+        elif marca:
+            qs = qs.filter(marca_nome=marca)
+
+        if grupo:
+            qs = qs.filter(grupo_id=grupo)
+
+        if empresa:
+            qs = qs.filter(empresa=empresa)
+
+        if filial:
+            qs = qs.filter(filial=filial)
+
+        resumo = qs.aggregate(
+            total_estoque=Sum('valor_total_estoque'),
+            total_a_vista=Sum('valor_total_venda_vista'),
+            total_prazo=Sum('valor_total_venda_prazo'),
+        )
+
+        return Response({
+            'total_estoque': float(resumo['total_estoque'] or 0),
+            'total_a_vista': float(resumo['total_a_vista'] or 0),
+            'total_prazo': float(resumo['total_prazo'] or 0),
+        })
