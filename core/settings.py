@@ -106,7 +106,6 @@ MIDDLEWARE = [
     'auditoria.signals.AuditoriaSignalMiddleware', 
     'auditoria.middleware.AuditoriaMiddleware',
     'core.middleware.LicencaMiddleware',
-    'parametros_admin.middleware.ParametrosMiddleware',
 ]
 
 # Configuração de cache (se não existir)

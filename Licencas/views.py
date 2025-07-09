@@ -12,6 +12,7 @@ from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from django.contrib.auth.hashers import check_password
 from core.middleware import get_licenca_slug
 from core.registry import LICENCAS_MAP, get_licenca_db_config, get_modulos_por_docu
+from parametros_admin.utils import get_modulos_liberados_empresa
 
 
 def get_banco_por_docu(docu):
@@ -27,7 +28,8 @@ class LoginView(APIView):
         username = data.get("username")
         password = data.get("password")
         docu = data.get("docu")
-        modulos_disponiveis = [mod.lower().replace("_", "") for mod in get_modulos_por_docu(docu)]
+        empresa_id = data.get("empresa_id", 1)  # Default para empresa 1
+        filial_id = data.get("filial_id", 1)    # Default para filial 1
 
         if not docu:
             return Response({'error': 'CNPJ não informado.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -49,11 +51,21 @@ class LoginView(APIView):
         if not usuario.check_password(password):
             return Response({'error': 'Senha incorreta.'}, status=401)
 
+        # Buscar módulos liberados da tabela de permissões
+        modulos_liberados = get_modulos_liberados_empresa(banco, empresa_id, filial_id)
+        print(modulos_liberados)
+        
+        # Se não há módulos liberados na tabela, usar os da licença (fallback)
+        if not modulos_liberados:
+            modulos_liberados = [mod.lower().replace("_", "") for mod in get_modulos_por_docu(docu)]
+
         refresh = RefreshToken.for_user(usuario)
         refresh['username'] = usuario.usua_nome
         refresh['usuario_id'] = usuario.usua_codi
         refresh['lice_id'] = licenca.lice_id
         refresh['lice_nome'] = licenca.lice_nome
+        refresh['empresa_id'] = empresa_id
+        refresh['filial_id'] = filial_id
 
         return Response({
             'access': str(refresh.access_token),
@@ -61,12 +73,14 @@ class LoginView(APIView):
             'usuario': {
                 'username': usuario.usua_nome,
                 'usuario_id': usuario.usua_codi,
+                'empresa_id': empresa_id,
+                'filial_id': filial_id,
             },
             'licenca': {
                 'lice_id': licenca.lice_id,
                 'lice_nome': licenca.lice_nome,
             },
-            'modulos': modulos_disponiveis,
+            'modulos': modulos_liberados,
         })
 
 

@@ -1,109 +1,79 @@
 from rest_framework import serializers
 from .models import (
-    ParametrosGerais, PermissoesModulos, PermissoesRotas,
+    Modulo, PermissaoModulo,
     ConfiguracaoEstoque, ConfiguracaoFinanceiro, LogParametros
 )
-from core.serializers import BancoContextMixin
-import json
 
-class ParametrosGeraisSerializer(BancoContextMixin, serializers.ModelSerializer):
-    valor_typed = serializers.SerializerMethodField()
+# Removido PermissaoTelaSerializer pois o modelo não existe
+
+class ModuloSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Modulo
+        fields = '__all__'
+        read_only_fields = ['modu_codi']
+
+
+
+class PermissaoModuloSerializer(serializers.ModelSerializer):
+    modulo_nome = serializers.CharField(source='perm_modu.modu_nome', read_only=True)
+    modulo_desc = serializers.CharField(source='perm_modu.modu_desc', read_only=True)
+    is_vencido = serializers.BooleanField(read_only=True)
     
     class Meta:
-        model = ParametrosGerais
+        model = PermissaoModulo
         fields = '__all__'
-        read_only_fields = ('para_codi', 'para_data_cria', 'para_data_alte')
-    
-    def get_valor_typed(self, obj):
-        return obj.get_valor_typed()
-    
-    def validate_para_valo(self, value):
-        """Valida o valor baseado no tipo"""
-        para_tipo = self.initial_data.get('para_tipo', 'string')
-        
-        try:
-            if para_tipo == 'boolean':
-                if value.lower() not in ['true', 'false', '1', '0', 'sim', 'não', 'yes', 'no']:
-                    raise serializers.ValidationError("Valor booleano inválido")
-            elif para_tipo == 'integer':
-                int(value)
-            elif para_tipo == 'decimal':
-                float(value)
-            elif para_tipo == 'json':
-                json.loads(value)
-        except (ValueError, json.JSONDecodeError):
-            raise serializers.ValidationError(f"Valor inválido para o tipo {para_tipo}")
-        
-        return value
+        read_only_fields = ['perm_codi', 'perm_data_libe']
 
-class PermissoesModulosSerializer(BancoContextMixin, serializers.ModelSerializer):
-    is_vencido = serializers.ReadOnlyField()
-    modulos_disponiveis = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = PermissoesModulos
-        fields = '__all__'
-        read_only_fields = ('perm_codi', 'perm_data_libe')
-    
-    def get_modulos_disponiveis(self, obj):
-        """Lista todos os módulos disponíveis no sistema"""
-        from core.licenca_context import LICENCAS_MAP
-        modulos_sistema = set()
-        for licenca in LICENCAS_MAP:
-            modulos_sistema.update(licenca.get('modulos', []))
-        return sorted(list(modulos_sistema))
-
-class PermissoesRotasSerializer(BancoContextMixin, serializers.ModelSerializer):
-    class Meta:
-        model = PermissoesRotas
-        fields = '__all__'
-        read_only_fields = ('rota_codi', 'rota_data_cria')
-
-class ConfiguracaoEstoqueSerializer(BancoContextMixin, serializers.ModelSerializer):
+class ConfiguracaoEstoqueSerializer(serializers.ModelSerializer):
     class Meta:
         model = ConfiguracaoEstoque
         fields = '__all__'
-        read_only_fields = ('conf_codi', 'conf_data_alte')
-    
-    def validate(self, data):
-        """Validações de negócio"""
-        if data.get('conf_custo_medio') and data.get('conf_custo_ulti'):
-            raise serializers.ValidationError(
-                "Não é possível usar custo médio e último custo simultaneamente"
-            )
-        return data
+        read_only_fields = ['conf_codi', 'conf_data_alte']
 
-class ConfiguracaoFinanceiroSerializer(BancoContextMixin, serializers.ModelSerializer):
+class ConfiguracaoFinanceiroSerializer(serializers.ModelSerializer):
     class Meta:
         model = ConfiguracaoFinanceiro
         fields = '__all__'
-        read_only_fields = ('conf_codi', 'conf_data_alte')
-    
-    def validate_conf_desc_maxi_pedi(self, value):
-        if value < 0 or value > 100:
-            raise serializers.ValidationError("Desconto deve estar entre 0 e 100%")
-        return value
+        read_only_fields = ['conf_codi', 'conf_data_alte']
 
 class LogParametrosSerializer(serializers.ModelSerializer):
-    valor_anterior_json = serializers.SerializerMethodField()
-    valor_novo_json = serializers.SerializerMethodField()
-    
     class Meta:
         model = LogParametros
         fields = '__all__'
-        read_only_fields = (
-            'log_codi', 'log_tabe', 'log_regi_codi', 'log_camp', 
-            'log_valo_ante', 'log_valo_novo', 'log_usua', 'log_data'
-        )
+        read_only_fields = ['log_codi', 'log_data']
+
+# Serializers para operações específicas
+class PermissaoModuloCreateSerializer(serializers.ModelSerializer):
+    modulos = serializers.ListField(
+        child=serializers.IntegerField(),
+        write_only=True,
+        help_text="Lista de IDs dos módulos"
+    )
     
-    def get_valor_anterior_json(self, obj):
-        try:
-            return json.loads(obj.log_valo_ante) if obj.log_valo_ante else None
-        except json.JSONDecodeError:
-            return obj.log_valo_ante
+    class Meta:
+        model = PermissaoModulo
+        fields = ['perm_empr', 'perm_fili', 'modulos']
     
-    def get_valor_novo_json(self, obj):
-        try:
-            return json.loads(obj.log_valo_novo) if obj.log_valo_novo else None
-        except json.JSONDecodeError:
-            return obj.log_valo_novo
+    def create(self, validated_data):
+        modulos_ids = validated_data.pop('modulos')
+        banco = self.context.get('banco')
+        
+        permissoes_criadas = []
+        for modulo_id in modulos_ids:
+            try:
+                modulo = Modulo.objects.get(modu_codi=modulo_id)
+                permissao, created = PermissaoModulo.objects.using(banco).get_or_create(
+                    perm_empr=validated_data['perm_empr'],
+                    perm_fili=validated_data['perm_fili'],
+                    perm_modu=modulo,
+                    defaults={
+                        'perm_ativ': True,
+                        'perm_usua_libe': self.context.get('usuario', '')
+                    }
+                )
+                if created:
+                    permissoes_criadas.append(permissao)
+            except Modulo.DoesNotExist:
+                continue
+        
+        return {'permissoes_criadas': len(permissoes_criadas)}

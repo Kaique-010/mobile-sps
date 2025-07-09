@@ -171,6 +171,11 @@ class AuditoriaMiddleware:
             logger.debug(f'Ignorando log para rota: {request.path}')
             return self.get_response(request)
 
+        # Ignorar logs para endpoints de configuração que podem ser acessados sem autenticação
+        if '/parametros-admin/' in request.path and request.method == 'GET':
+            logger.debug(f'Ignorando log para endpoint de configuração: {request.path}')
+            return self.get_response(request)
+
 
         # Capturar dados antes da alteração (para PUT, PATCH, DELETE)
         dados_antes = None
@@ -224,7 +229,9 @@ class AuditoriaMiddleware:
 
             # Verificações detalhadas de usuário e licença
             # Permitir endpoints públicos sem autenticação
-            if request.path.startswith('/api/licencas/mapa/') or '/licencas/login/' in request.path:
+            if (request.path.startswith('/api/licencas/mapa/') or 
+                '/licencas/login/' in request.path or
+                '/parametros-admin/configuracao-inicial/' in request.path):
                 logger.info(f'Endpoint público acessado: {url}')
                 return response
 
