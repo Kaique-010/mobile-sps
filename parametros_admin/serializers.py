@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from .models import (
-    Modulo, PermissaoModulo,
-    ConfiguracaoEstoque, ConfiguracaoFinanceiro, LogParametros
+    Modulo, PermissaoModulo,LogParametroSistema
 )
 
 # Removido PermissaoTelaSerializer pois o modelo não existe
@@ -24,21 +23,12 @@ class PermissaoModuloSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['perm_codi', 'perm_data_libe']
 
-class ConfiguracaoEstoqueSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ConfiguracaoEstoque
-        fields = '__all__'
-        read_only_fields = ['conf_codi', 'conf_data_alte']
 
-class ConfiguracaoFinanceiroSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ConfiguracaoFinanceiro
-        fields = '__all__'
-        read_only_fields = ['conf_codi', 'conf_data_alte']
 
-class LogParametrosSerializer(serializers.ModelSerializer):
+
+class LogParametroSistemaSerializer(serializers.ModelSerializer):
     class Meta:
-        model = LogParametros
+        model = LogParametroSistema
         fields = '__all__'
         read_only_fields = ['log_codi', 'log_data']
 

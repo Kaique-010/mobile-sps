@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class OrcamentoViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
-    modulo_necessario = 'orcamentos'  
+    modulo_necessario = 'Orcamentos'  
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ['pedi_empr', 'pedi_fili']

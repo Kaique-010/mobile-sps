@@ -574,7 +574,7 @@ class ProdutosDetalhadosViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
 
 class EstoqueResumoView(APIView):
     permission_classes = [IsAuthenticated]
-    modulo_necessario = 'Dash'
+    modulo_necessario = 'dash'
 
     def get(self, request, *args, **kwargs):
         slug = get_licenca_slug()

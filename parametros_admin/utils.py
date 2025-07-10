@@ -1,5 +1,7 @@
 from django.core.cache import cache
+from pprint import pprint
 from django.utils import timezone
+from parametros_admin.models import Modulo, PermissaoModulo
 from core.registry import get_licenca_db_config
 import logging
 import json
@@ -27,51 +29,9 @@ def get_parametro(request, nome_parametro, default=None):
     parametros = getattr(request, 'parametros_gerais', {})
     return parametros.get(nome_parametro, default)
 
-def verificar_permissao_modulo(request, modulo_nome):
-    """Verifica se um módulo está liberado para o usuário"""
-    try:
-        banco = get_licenca_db_config(request)
-        if not banco:
-            return True
-        
-        empresa = getattr(request.user, 'usua_empr', 1)
-        filial = getattr(request.user, 'usua_fili', 1)
-        
-        # Cache key
-        cache_key = f"perm_modulo_{banco}_{empresa}_{filial}_{modulo_nome}"
-        cached_result = cache.get(cache_key)
-        if cached_result is not None:
-            return cached_result
-        
-        try:
-            from .models import Modulo, PermissaoModulo
-            modulo = Modulo.objects.get(modu_nome=modulo_nome, modu_ativ=True)
-        except Modulo.DoesNotExist:
-            result = True  # Se não existe no sistema, permite
-        else:
-            permissao = PermissaoModulo.objects.using(banco).filter(
-                perm_empr=empresa,
-                perm_fili=filial,
-                perm_modu=modulo,
-                perm_ativ=True
-            ).first()
-            
-            if not permissao:
-                result = True  # Se não existe configuração específica, permite
-            else:
-                # Verificar se não está vencido
-                if permissao.perm_data_venc:
-                    result = timezone.now() <= permissao.perm_data_venc
-                else:
-                    result = True
-        
-        # Cache por 5 minutos
-        cache.set(cache_key, result, 300)
-        return result
-        
-    except Exception as e:
-        logger.error(f"Erro ao verificar permissão do módulo {modulo_nome}: {e}")
-        return True
+
+
+
 
 def verificar_permissao_tela(request, tela_codigo, operacao_codigo):
     """Verifica se uma operação em uma tela está liberada"""
@@ -482,4 +442,40 @@ def get_modulo_by_name(nome_modulo):
         return None
     except Exception as e:
         logger.error(f"Erro ao buscar módulo {nome_modulo}: {e}")
-        return None
+        
+
+
+def get_modulos_com_status(banco, empresa_id, filial_id):
+    """
+    Retorna todos os módulos com permissão registrada,
+    apenas para módulos ativos no sistema, e se estão ativos (perm_ativ=True).
+    """
+    permissoes = PermissaoModulo.objects.using(banco).filter(
+        perm_empr=empresa_id,
+        perm_fili=filial_id
+    ).select_related('perm_modu')
+
+    lista = []
+    for perm in permissoes:
+        modulo = perm.perm_modu
+     
+        if modulo.modu_ativ:  
+            lista.append({
+                'nome': modulo.modu_nome,
+                'descricao': modulo.modu_desc,
+                'icone': modulo.modu_icon,
+                'ativo': perm.perm_ativ
+            })
+    pprint(lista)
+    return lista
+    
+
+
+
+def get_modulos_liberados(banco, empresa_id, filial_id):
+    """
+    Retorna apenas os módulos com perm_ativ=True
+    """
+    modulos_com_status = get_modulos_com_status(banco, empresa_id, filial_id)
+    pprint(modulos_com_status)
+    return [modulo for modulo in modulos_com_status if modulo['ativo']]

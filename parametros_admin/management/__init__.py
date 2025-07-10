@@ -1,1 +1,0 @@
-# Management commands para parametros_admin 

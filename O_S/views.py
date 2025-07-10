@@ -67,7 +67,7 @@ class BaseMultiDBModelViewSet(ModuloRequeridoMixin, ModelViewSet):
 
 class OsViewSet(BaseMultiDBModelViewSet):
     permission_classes = [IsAuthenticated, PodeVerOrdemDoSetor]
-    modulo_necessario = 'os'
+    modulo_necessario = 'O_S'
     serializer_class = OsSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
     filterset_fields = ['os_stat_os', 'os_clie']
@@ -424,7 +424,7 @@ class PecasOsViewSet(BaseMultiDBModelViewSet,ModelViewSet):
         return response
 
 class ServicosOsViewSet(BaseMultiDBModelViewSet):
-    modulo_necessario = 'os'
+    modulo_necessario = 'O_S'
     serializer_class = ServicosOsSerializer
     permission_classes = [IsAuthenticated]
     parser_classes = [JSONParser]

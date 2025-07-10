@@ -3,18 +3,16 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.views import APIView
+from rest_framework import generics
 from django_filters.rest_framework import DjangoFilterBackend
 from core.decorator import ModuloRequeridoMixin
 from core.middleware import get_licenca_slug
 from core.utils import get_licenca_db_config
-from .models import (
-    PermissaoModulo,
-    ConfiguracaoEstoque, ConfiguracaoFinanceiro, LogParametros
+from .models import (PermissaoModulo,Modulo
 )
 from .serializers import (
-    PermissaoModuloSerializer,
-    ConfiguracaoEstoqueSerializer,
-    ConfiguracaoFinanceiroSerializer, LogParametrosSerializer
+    PermissaoModuloSerializer, ModuloSerializer
+
 )
 from .permissions import PermissaoAdministrador
 from .utils import log_alteracao, get_modulo_by_name
@@ -23,6 +21,30 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+
+class ModulosPorEmpresaView(generics.ListAPIView):
+    serializer_class = ModuloSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        empresa = self.request.user.empresa_id
+        filial = self.request.user.filial_id
+
+        modulos = Modulo.objects.filter(modu_ativ=True).order_by('modu_ordem')
+
+        permissoes = PermissaoModulo.objects.filter(
+            perm_empr=empresa,
+            perm_fili=filial,
+        )
+
+        # Cria um dict rápido para mapear módulo -> permissão
+        permissoes_dict = {p.perm_modu_id: p.perm_ativ for p in permissoes}
+
+        # Anexa a permissão a cada módulo (True/False)
+        for modulo in modulos:
+            modulo.perm_ativ = permissoes_dict.get(modulo.modu_codi, False)
+
+        return modulos
 
 
 
@@ -57,14 +79,12 @@ class PermissaoModuloViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             filial_id = getattr(request.user, 'usua_fili', 1)
             
             banco = get_licenca_db_config(request)
-            modulos = PermissaoModulo.objects.using(banco).filter(
-                perm_empr=empresa_id,
-                perm_fili=filial_id,
-                perm_ativ=True
-            ).values_list('perm_modu__modu_nome', flat=True)
+            from .utils import get_modulos_liberados_empresa
+            
+            modulos = get_modulos_liberados_empresa(banco, empresa_id, filial_id)
             
             return Response({
-                'modulos': list(modulos),
+                'modulos': modulos,
                 'empresa_id': empresa_id,
                 'filial_id': filial_id
             })
@@ -75,123 +95,7 @@ class PermissaoModuloViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
-    @action(detail=False, methods=['get'])
-    def permissoes_usuario(self, request,slug=None):
-        slug = get_licenca_slug()
-
-        """Retorna todas as permissões do usuário atual"""
-        try:
-            empresa_id = getattr(request.user, 'usua_empr', 1)
-            filial_id = getattr(request.user, 'usua_fili', 1)
-            
-            banco = get_licenca_db_config(request)
-            
-            # Módulos liberados
-            modulos = list(PermissaoModulo.objects.using(banco).filter(
-                perm_empr=empresa_id,
-                perm_fili=filial_id,
-                perm_ativ=True
-            ).values_list('perm_modu__modu_nome', flat=True))
-            
-            # Configurações de estoque
-            try:
-                config_estoque = ConfiguracaoEstoque.objects.using(banco).get(
-                    conf_empr=empresa_id,
-                    conf_fili=filial_id
-                )
-                estoque_config = ConfiguracaoEstoqueSerializer(config_estoque).data
-            except ConfiguracaoEstoque.DoesNotExist:
-                estoque_config = {}
-            
-            # Configurações financeiras
-            try:
-                config_financeiro = ConfiguracaoFinanceiro.objects.using(banco).get(
-                    conf_empr=empresa_id,
-                    conf_fili=filial_id
-                )
-                financeiro_config = ConfiguracaoFinanceiroSerializer(config_financeiro).data
-            except ConfiguracaoFinanceiro.DoesNotExist:
-                financeiro_config = {}
-            
-            return Response({
-                'modulos': modulos,
-                'estoque': estoque_config,
-                'financeiro': financeiro_config,
-                'usuario': {
-                    'empresa_id': empresa_id,
-                    'filial_id': filial_id,
-                    'nome': request.user.usua_nome
-                }
-            })
-        except Exception as e:
-            logger.error(f"Erro ao buscar permissões do usuário: {e}")
-            return Response(
-                {'error': 'Erro ao buscar permissões'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
     
-    @action(detail=False, methods=['get'])
-    def configuracao_completa(self, request, slug=None):
-        """Retorna configuração completa do sistema para o usuário"""
-        slug = get_licenca_slug()
-        try:
-            empresa_id = getattr(request.user, 'usua_empr', 1)
-            filial_id = getattr(request.user, 'usua_fili', 1)
-            
-            banco = get_licenca_db_config(request)
-            
-            # Módulos liberados
-            modulos = list(PermissaoModulo.objects.using(banco).filter(
-                perm_empr=empresa_id,
-                perm_fili=filial_id,
-                perm_ativ=True
-            ).values_list('perm_modu__modu_nome', flat=True))
-            
-            # Configurações de estoque
-            try:
-                config_estoque = ConfiguracaoEstoque.objects.using(banco).get(
-                    conf_empr=empresa_id,
-                    conf_fili=filial_id
-                )
-                estoque_config = ConfiguracaoEstoqueSerializer(config_estoque).data
-            except ConfiguracaoEstoque.DoesNotExist:
-                estoque_config = {}
-            
-            # Configurações financeiras
-            try:
-                config_financeiro = ConfiguracaoFinanceiro.objects.using(banco).get(
-                    conf_empr=empresa_id,
-                    conf_fili=filial_id
-                )
-                financeiro_config = ConfiguracaoFinanceiroSerializer(config_financeiro).data
-            except ConfiguracaoFinanceiro.DoesNotExist:
-                financeiro_config = {}
-            
-            # Parâmetros gerais (removido pois o modelo não existe)
-            parametros_data = {}
-            
-            return Response({
-                'modulos_liberados': modulos,
-                'configuracao_estoque': estoque_config,
-                'configuracao_financeiro': financeiro_config,
-                'parametros_gerais': parametros_data,
-                'usuario': {
-                    'empresa_id': empresa_id,
-                    'filial_id': filial_id,
-                    'nome': request.user.usua_nome,
-                    'id': request.user.usua_codi
-                },
-                'licenca': {
-                    'slug': slug,
-                    'banco': banco
-                }
-            })
-        except Exception as e:
-            logger.error(f"Erro ao buscar configuração completa: {e}")
-            return Response(
-                {'error': 'Erro ao buscar configuração completa'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
     
     @action(detail=False, methods=['get'])
     def modulos_disponiveis(self, request, slug=None):
@@ -362,63 +266,99 @@ class PermissaoModuloViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-class ConfiguracaoEstoqueViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
-    modulo_requerido = 'parametros_admin'
-    permission_classes = [IsAuthenticated, PermissaoAdministrador]
-    serializer_class = ConfiguracaoEstoqueSerializer
-    
-    def get_queryset(self):
-        banco = get_licenca_db_config(self.request)
-        return ConfiguracaoEstoque.objects.using(banco).all()
-    
-    def perform_update(self, serializer):
-        banco = get_licenca_db_config(self.request)
-        serializer.save(
-            conf_usua_alte=self.request.user.usua_nome,
-            using=banco
-        )
-        # Limpar cache
-        from django.core.cache import cache
-        cache.delete(f"estoque_config_{banco}")
-    
-    @action(detail=False, methods=['get'])
-    def configuracao_atual(self, request):
-        """Retorna a configuração atual de estoque"""
-        config = getattr(request, 'estoque_config', {})
-        return Response(config)
 
-class ConfiguracaoFinanceiroViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
-    modulo_requerido = 'parametros_admin'
-    permission_classes = [IsAuthenticated, PermissaoAdministrador]
-    serializer_class = ConfiguracaoFinanceiroSerializer
+class AtualizaPermissoesModulosView(APIView):
+    def get(self, request, slug=None):
+        empresa_id = request.GET.get('empr')
+        filial_id = request.GET.get('fili')
+        
+        if not all([empresa_id, filial_id]):
+            return Response({"erro": "Empresa e filial são obrigatórias."}, status=400)
+        
+        banco = get_licenca_db_config(request)
+        if not banco:
+            return Response({"erro": "Banco não encontrado."}, status=404)
+        
+        try:
+            # Converter para inteiro
+            empresa_id = int(empresa_id)
+            filial_id = int(filial_id)
+            
+            # Buscar todos os módulos
+            modulos = Modulo.objects.using(banco).all()
+            
+            modulos_data = []
+            for modulo in modulos:
+                # Verificar se existe permissão para este módulo
+                try:
+                    permissao = PermissaoModulo.objects.using(banco).get(
+                        perm_empr=empresa_id,
+                        perm_fili=filial_id,
+                        perm_modu=modulo
+                    )
+                    ativo = permissao.perm_ativ
+                except PermissaoModulo.DoesNotExist:
+                    # Se não existe permissão, assume como inativo
+                    ativo = False
+                
+                modulos_data.append({
+                    "nome": modulo.modu_nome,
+                    "ativo": ativo
+                })
+            
+            return Response(modulos_data, status=200)
+            
+        except ValueError as e:
+            return Response({"erro": f"Valores inválidos para empresa ou filial: {str(e)}"}, status=400)
+        except Exception as e:
+            return Response({"erro": str(e)}, status=500)
     
-    def get_queryset(self):
-        banco = get_licenca_db_config(self.request)
-        return ConfiguracaoFinanceiro.objects.using(banco).all()
-    
-    def perform_update(self, serializer):
-        banco = get_licenca_db_config(self.request)
-        serializer.save(
-            conf_usua_alte=self.request.user.usua_nome,
-            using=banco
-        )
-        # Limpar cache
-        from django.core.cache import cache
-        cache.delete(f"financeiro_config_{banco}")
-    
-    @action(detail=False, methods=['get'])
-    def configuracao_atual(self, request):
-        """Retorna a configuração atual financeira"""
-        config = getattr(request, 'financeiro_config', {})
-        return Response(config)
+    def patch(self, request, slug=None):
+        data = request.data
+        empresa_id = data.get("empr")
+        filial_id = data.get("fili")
+        usuario = data.get("usuario", "sistema")
+        modulos_data = data.get("modulos", [])
 
-class LogParametrosViewSet(viewsets.ReadOnlyModelViewSet):
-    permission_classes = [IsAuthenticated, PermissaoAdministrador]
-    serializer_class = LogParametrosSerializer
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['log_tabe', 'log_acao', 'log_usua']
-    ordering = ['-log_data']
-    
-    def get_queryset(self):
-        banco = get_licenca_db_config(self.request)
-        return LogParametros.objects.using(banco).all()
+        if not all([empresa_id, filial_id, modulos_data]):
+            return Response({"erro": "Dados incompletos."}, status=400)
+
+        try:
+           
+            
+            empresa_id = int(empresa_id)
+            filial_id = int(filial_id)
+            usuario = int(usuario)
+
+        except ValueError as e:
+            return Response({"erro": f"Valores inválidos para empresa ou filial: {str(e)}"}, status=400)
+
+        banco = get_licenca_db_config(request)
+        if not banco:
+            return Response({"erro": "Banco não encontrado."}, status=404)
+
+        atualizados = 0
+        for item in modulos_data:
+            nome = item.get("nome")
+            ativo = item.get("ativo", False)
+            try:
+                modulo = Modulo.objects.using(banco).get(modu_nome=nome)
+                obj, created = PermissaoModulo.objects.using(banco).update_or_create(
+                    perm_empr=empresa_id,
+                    perm_fili=filial_id,
+                    perm_modu=modulo,
+                    defaults={
+                        "perm_ativ": ativo,
+                        "perm_usua_libe": usuario
+                    }
+                )
+                atualizados += 1
+            except Modulo.DoesNotExist:
+                continue  # ignora se o módulo não existir
+            except Exception as e:
+                logger.error(f"Erro ao atualizar módulo {nome}: {e}")
+                continue
+
+        return Response({
+            "mensagem": f"Permissões atualizadas com sucesso ({atualizados})"
+        }, status=200)

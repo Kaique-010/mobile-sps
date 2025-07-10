@@ -11,7 +11,7 @@ from core.registry import get_licenca_db_config
 from core.decorator import ModuloRequeridoMixin
 
 class OrdemServicoGeralViewSet(ModuloRequeridoMixin, viewsets.ReadOnlyModelViewSet):
-    modulo_necessario = 'os'
+    modulo_necessario = 'O_S'
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_class = OrdemServicoGeralFilter

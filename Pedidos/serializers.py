@@ -38,7 +38,7 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
     empresa_nome = serializers.SerializerMethodField(read_only=True)
     itens = serializers.SerializerMethodField()
     itens_input = ItemPedidoVendaSerializer(many=True, write_only=True, required=True)
-
+    pedi_nume = serializers.IntegerField(read_only=True)  # Resolve a pk sendo o numero pois ele retorna sequencial na mão 
 
     class Meta:
         model = PedidoVenda

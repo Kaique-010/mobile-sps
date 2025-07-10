@@ -90,7 +90,7 @@
     "cnpj": "43131832000155",
     "db_name": "casaa",
     "db_host": "localhost",
-    "db_port": "5433",
+    "db_port": "5432",
     "modulos": [
       "dashboards",
       "dash",

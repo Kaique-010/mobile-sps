@@ -1,4 +1,5 @@
 from Licencas.utils import atualizar_senha
+from pprint import pprint
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -12,7 +13,7 @@ from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from django.contrib.auth.hashers import check_password
 from core.middleware import get_licenca_slug
 from core.registry import LICENCAS_MAP, get_licenca_db_config, get_modulos_por_docu
-from parametros_admin.utils import get_modulos_liberados_empresa
+from parametros_admin.utils import  get_modulos_liberados
 
 
 def get_banco_por_docu(docu):
@@ -28,9 +29,8 @@ class LoginView(APIView):
         username = data.get("username")
         password = data.get("password")
         docu = data.get("docu")
-        empresa_id = data.get("empresa_id", 1)  # Default para empresa 1
-        filial_id = data.get("filial_id", 1)    # Default para filial 1
-
+        empresa_id = data.get("empresa_id", 1)  
+        filial_id = data.get("filial_id", 1)    
         if not docu:
             return Response({'error': 'CNPJ não informado.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -47,13 +47,12 @@ class LoginView(APIView):
         except Usuarios.DoesNotExist:
             return Response({'error': 'Usuário não encontrado.'}, status=404)
 
-        # Usar o método check_password melhorado para validação segura
         if not usuario.check_password(password):
             return Response({'error': 'Senha incorreta.'}, status=401)
 
         # Buscar módulos liberados da tabela de permissões
-        modulos_liberados = get_modulos_liberados_empresa(banco, empresa_id, filial_id)
-        print(modulos_liberados)
+        modulos_liberados = get_modulos_liberados(banco, empresa_id, filial_id)
+        pprint({'Módulos Liberados': modulos_liberados})
         
         # Se não há módulos liberados na tabela, usar os da licença (fallback)
         if not modulos_liberados:

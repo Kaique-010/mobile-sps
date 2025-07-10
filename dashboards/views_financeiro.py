@@ -18,7 +18,7 @@ from core.middleware import get_licenca_slug
 
 #Operario Fluco de caixa 
 class DashboardFinanceiroView(ModuloRequeridoMixin, APIView):
-    modulo_necessario = 'Dashboard'
+    modulo_necessario = 'dashboard'
 
     def get(self, request, slug=None):
         slug = get_licenca_slug()
@@ -107,7 +107,7 @@ class DashboardFinanceiroView(ModuloRequeridoMixin, APIView):
 
 
 class OrcamentoAnaliticoViewSet(ModuloRequeridoMixin, viewsets.ReadOnlyModelViewSet):
-    modulo_necessario = 'Dashboard'
+    modulo_necessario = 'dashboard'
     serializer_class = OrcamentoAnaliticoSerializer
     filterset_fields = ('tipo', 'plan_redu', 'mes')
     

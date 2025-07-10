@@ -22,7 +22,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 class DashboardAPIView(ModuloRequeridoMixin, APIView):
-    modulo_necessario = 'Dashboard'
+    modulo_necessario = 'dashboard'
     def get(self, request, slug=None):
         slug = get_licenca_slug()
 

@@ -11,7 +11,7 @@ TIPO_FINANCEIRO = [
 class PedidoVenda(models.Model):
     pedi_empr = models.IntegerField()
     pedi_fili = models.IntegerField()
-    pedi_nume = models.IntegerField(primary_key=True, unique=True)
+    pedi_nume = models.IntegerField(primary_key=True)
     pedi_forn = models.CharField(db_column='pedi_forn',max_length=60)
     pedi_data = models.DateField()
     pedi_tota = models.DecimalField(decimal_places=2, max_digits=15)

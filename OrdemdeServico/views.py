@@ -70,7 +70,7 @@ class BaseMultiDBModelViewSet(ModuloRequeridoMixin, ModelViewSet):
 
 
 class OrdemServicoViewSet(BaseMultiDBModelViewSet):
-    modulo_necessario = 'ordemservico'
+    modulo_necessario = 'OrdemdeServico'
     serializer_class = OrdemServicoSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
     filterset_fields = ['orde_stat_orde', 'orde_prio', 'orde_tipo', 'orde_enti']
@@ -390,7 +390,7 @@ class OrdemServicoPecasViewSet(BaseMultiDBModelViewSet,ModelViewSet):
 
 
 class OrdemServicoServicosViewSet(BaseMultiDBModelViewSet):
-    modulo_necessario = 'ordemservico'
+    modulo_necessario = 'OrdemdeServico'
     serializer_class = OrdemServicoServicosSerializer
     permission_classes = [IsAuthenticated]
     parser_classes = [JSONParser]
@@ -582,7 +582,7 @@ class FotosViewSet(BaseMultiDBModelViewSet):
 
 
 class ImagemAntesViewSet(BaseMultiDBModelViewSet):
-    modulo_necessario = 'ordemservico'
+    modulo_necessario = 'OrdemdeServico'
     serializer_class = ImagemAntesSerializer
     permission_classes = [IsAuthenticated]
     
@@ -650,7 +650,7 @@ class ImagemAntesViewSet(BaseMultiDBModelViewSet):
 
 
 class ImagemDuranteViewSet(BaseMultiDBModelViewSet):
-    modulo_necessario = 'ordemservico'
+    modulo_necessario = 'OrdemdeServico'
     serializer_class = ImagemDuranteSerializer
     permission_classes = [IsAuthenticated]
     
@@ -719,7 +719,7 @@ class ImagemDuranteViewSet(BaseMultiDBModelViewSet):
 
 
 class ImagemDepoisViewSet(BaseMultiDBModelViewSet):
-    modulo_necessario = 'ordemservico'
+    modulo_necessario = 'OrdemdeServico'
     serializer_class = ImagemDepoisSerializer
     permission_classes = [IsAuthenticated]
     
