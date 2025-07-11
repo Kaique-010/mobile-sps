@@ -158,7 +158,7 @@ class PermissaoEstoque(BasePermission):
         """Verifica permissão de operação de estoque"""
         try:
             from core.utils import get_db_from_slug
-            from .models import ConfiguracaoEstoque
+            from .models import ParametroSistema, Modulo
             
             banco = get_db_from_slug(get_licenca_slug())
             if not banco:
@@ -167,30 +167,87 @@ class PermissaoEstoque(BasePermission):
             empresa = getattr(request.user, 'usua_empr', 1)
             filial = getattr(request.user, 'usua_fili', 1)
             
-            try:
-                config = ConfiguracaoEstoque.objects.using(banco).get(
-                    conf_empr=empresa,
-                    conf_fili=filial
-                )
-            except ConfiguracaoEstoque.DoesNotExist:
-                return True  # Se não existe configuração, permite
-            
-            # Mapear operações para configurações
-            mapeamento = {
-                'pedido_movimenta': config.conf_pedi_move_esto,
-                'orcamento_movimenta': config.conf_orca_move_esto,
-                'os_movimenta': config.conf_os_move_esto,
-                'producao_movimenta': config.conf_prod_move_esto,
-                'estoque_negativo': config.conf_esto_nega,
-                'controle_minimo': config.conf_esto_mini,
-                'controle_maximo': config.conf_esto_maxi
+            # Mapear operações para nomes de parâmetros
+            mapeamento_parametros = {
+                'pedido_movimenta': 'PEDIDO_MOVIMENTA_ESTOQUE',
+                'pedido_volta_estoque': 'PEDIDO_VOLTA_ESTOQUE',
+                'orcamento_movimenta': 'ORCAMENTO_MOVIMENTA_ESTOQUE',
+                'os_movimenta': 'OS_MOVIMENTA_ESTOQUE',
+                'producao_movimenta': 'PRODUCAO_MOVIMENTA_ESTOQUE',
+                'estoque_negativo': 'PERMITE_ESTOQUE_NEGATIVO',
+                'controle_minimo': 'CONTROLE_ESTOQUE_MINIMO',
+                'controle_maximo': 'CONTROLE_ESTOQUE_MAXIMO',
+                'alerta_estoque_minimo': 'ALERTA_ESTOQUE_MINIMO',
+                'usar_preco_prazo': 'USAR_PRECO_PRAZO',
+                'usar_ultimo_preco': 'USAR_ULTIMO_PRECO',
+                'desconto_orcamento': 'DESCONTO_ORCAMENTO',
+                'desconto_pedido': 'DESCONTO_PEDIDO'
             }
             
-            return mapeamento.get(operacao, True)
+            nome_parametro = mapeamento_parametros.get(operacao)
+            if not nome_parametro:
+                return True
+            
+            # Buscar o módulo correspondente baseado na operação
+            modulo_nome = self._get_modulo_by_operacao(operacao)
+            
+            try:
+                modulo = Modulo.objects.get(modu_nome=modulo_nome, modu_ativ=True)
+                
+                parametro = ParametroSistema.objects.using(banco).filter(
+                    para_empr=empresa,
+                    para_fili=filial,
+                    para_modu=modulo,
+                    para_nome=nome_parametro,
+                    para_ativ=True
+                ).first()
+                
+                if parametro:
+                    return parametro.para_valo
+                else:
+                    # Valores padrão se não existe configuração
+                    valores_padrao = {
+                        'PEDIDO_MOVIMENTA_ESTOQUE': True,
+                        'PEDIDO_VOLTA_ESTOQUE': True,
+                        'ORCAMENTO_MOVIMENTA_ESTOQUE': False,
+                        'OS_MOVIMENTA_ESTOQUE': False,
+                        'PRODUCAO_MOVIMENTA_ESTOQUE': False,
+                        'PERMITE_ESTOQUE_NEGATIVO': False,
+                        'CONTROLE_ESTOQUE_MINIMO': True,
+                        'CONTROLE_ESTOQUE_MAXIMO': False,
+                        'ALERTA_ESTOQUE_MINIMO': True,
+                        'USAR_PRECO_PRAZO': False,
+                        'USAR_ULTIMO_PRECO': False,
+                        'DESCONTO_ORCAMENTO': True,
+                        'DESCONTO_PEDIDO': True
+                    }
+                    return valores_padrao.get(nome_parametro, True)
+                    
+            except Modulo.DoesNotExist:
+                return True
             
         except Exception as e:
             logger.error(f"Erro ao verificar permissão de estoque {operacao}: {e}")
             return True
+    
+    def _get_modulo_by_operacao(self, operacao):
+        """Retorna o nome do módulo baseado na operação"""
+        mapeamento_modulos = {
+            'pedido_movimenta': 'Pedidos',
+            'pedido_volta_estoque': 'Pedidos',
+            'orcamento_movimenta': 'Orcamentos',
+            'os_movimenta': 'O_S',
+            'producao_movimenta': 'OrdemProducao',
+            'estoque_negativo': 'Saidas_Estoque',
+            'controle_minimo': 'Entradas_Estoque',
+            'controle_maximo': 'Entradas_Estoque',
+            'alerta_estoque_minimo': 'Entradas_Estoque',
+            'usar_preco_prazo': 'Produtos',
+            'usar_ultimo_preco': 'Produtos',
+            'desconto_orcamento': 'Orcamentos',
+            'desconto_pedido': 'Pedidos'
+        }
+        return mapeamento_modulos.get(operacao, 'parametros_admin')
 
 class PermissaoFinanceiro(BasePermission):
     """Verifica permissões específicas financeiras"""

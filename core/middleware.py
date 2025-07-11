@@ -1,5 +1,6 @@
 from threading import local
 from core.licenca_context import set_current_request, LICENCAS_MAP
+from core.utils import get_licenca_db_config
 
 _local = local()
 
@@ -41,10 +42,32 @@ class LicencaMiddleware:
 
         # Set no contexto local e request
         set_licenca_slug(slug)
-        set_modulos_disponiveis(licenca.get("modulos", []))
-
-        # Joga direto no request também
         request.slug = slug
-        request.modulos_disponiveis = licenca.get("modulos", [])
+        
+        # Sempre usar apenas a API do banco de dados para módulos
+        # Não usar fallback para licencas.json
+        modulos_disponiveis = []
+        try:
+            # Importar aqui para evitar circular import
+            from parametros_admin.utils import get_modulos_liberados_empresa
+            
+            # Simular empresa/filial padrão para obter módulos
+            empresa_id = 1
+            filial_id = 1
+            
+            # Obter configuração do banco
+            banco = get_licenca_db_config(request)
+            if banco:
+                modulos_db = get_modulos_liberados_empresa(banco, empresa_id, filial_id)
+                modulos_disponiveis = modulos_db
+                print(f"Módulos obtidos do banco: {modulos_disponiveis}")
+        except Exception as e:
+            print(f"Erro ao obter módulos do banco: {e}")
+            print("AVISO: Não foi possível obter módulos do banco. Verifique se a tabela modulosmobile está populada.")
+            # Não usar fallback - retornar lista vazia
+            modulos_disponiveis = []
+        
+        set_modulos_disponiveis(modulos_disponiveis)
+        request.modulos_disponiveis = modulos_disponiveis
 
         return self.get_response(request)

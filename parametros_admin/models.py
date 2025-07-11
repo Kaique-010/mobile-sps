@@ -5,11 +5,11 @@ class Modulo(models.Model):
     modu_nome = models.CharField(max_length=50, unique=True, help_text="Nome do módulo")
     modu_desc = models.TextField(help_text="Descrição do módulo")
     modu_ativ = models.BooleanField(default=True, help_text="Módulo ativo no sistema")
-    modu_icon = models.CharField(max_length=50, blank=True, help_text="Ícone do módulo")
+    modu_icon= models.CharField(max_length=50, blank=True, help_text="Ícone do módulo")
     modu_orde = models.IntegerField(default=0, help_text="Ordem de exibição")
 
     class Meta:
-        db_table = 'modulosmobile'
+        db_table = 'modulosmobile'        
         ordering = ['modu_orde', 'modu_nome']
 
 
@@ -42,8 +42,9 @@ class ParametroSistema(models.Model):
     para_usua_alte = models.IntegerField(blank=True, help_text="Usuário que alterou")
 
     class Meta:
-        db_table = 'parametros_sistema'
+        db_table = 'parametrosmobile'
         unique_together = ('para_empr', 'para_fili', 'para_modu', 'para_nome')
+        ordering = ['para_modu', 'para_nome']
 
 
 class LogParametroSistema(models.Model):

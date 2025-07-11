@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import (
-    Modulo, PermissaoModulo,LogParametroSistema
+    Modulo, PermissaoModulo, LogParametroSistema, ParametroSistema
 )
 
 # Removido PermissaoTelaSerializer pois o modelo não existe
@@ -67,3 +67,28 @@ class PermissaoModuloCreateSerializer(serializers.ModelSerializer):
                 continue
         
         return {'permissoes_criadas': len(permissoes_criadas)}
+
+
+class ParametroSistemaSerializer(serializers.ModelSerializer):
+    modulo_nome = serializers.CharField(source='para_modu.modu_nome', read_only=True)
+    modulo_desc = serializers.CharField(source='para_modu.modu_desc', read_only=True)
+    
+    class Meta:
+        model = ParametroSistema
+        fields = '__all__'
+        read_only_fields = ['para_codi', 'para_data_alte']
+
+
+class ParametroSistemaUpdateSerializer(serializers.ModelSerializer):
+    """Serializer para atualização de parâmetros"""
+    
+    class Meta:
+        model = ParametroSistema
+        fields = ['para_valo', 'para_ativ']
+    
+    def update(self, instance, validated_data):
+        instance.para_valo = validated_data.get('para_valo', instance.para_valo)
+        instance.para_ativ = validated_data.get('para_ativ', instance.para_ativ)
+        instance.para_usua_alte = self.context.get('usuario_id', 1)
+        instance.save()
+        return instance

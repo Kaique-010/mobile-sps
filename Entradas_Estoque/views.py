@@ -13,12 +13,14 @@ from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from core.registry import get_licenca_db_config
 from .models import EntradaEstoque
 from .serializers import EntradasEstoqueSerializer
+from parametros_admin.utils_estoque import  verificar_estoque_negativo
 
 
 
 import logging
 
 logger = logging.getLogger(__name__)
+
 
 
 class EntradasEstoqueViewSet(ModuloRequeridoMixin, ModelViewSet):

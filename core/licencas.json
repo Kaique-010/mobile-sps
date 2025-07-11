@@ -6,7 +6,6 @@
     "db_host": "base.rtalmeida.com.br",
     "db_port": "5432",
     "modulos": [
-      "dashboards",
       "Produtos",
       "Pedidos",
       "Entradas_Estoque",
@@ -90,26 +89,7 @@
     "cnpj": "43131832000155",
     "db_name": "casaa",
     "db_host": "localhost",
-    "db_port": "5432",
-    "modulos": [
-      "dashboards",
-      "dash",
-      "Produtos",
-      "Pedidos",
-      "contratos",
-      "Entradas_Estoque",
-      "Saidas_Estoque",
-      "listacasamento",
-      "Entidades",
-      "Orcamentos",
-      "implantacao",
-      "Financeiro",
-      "OrdemdeServico",
-      "Os",
-      "Comissoes",
-      "OrdemProducao",
-      "parametros_admin"
-    ]
+    "db_port": "5432"
   },
 
   {

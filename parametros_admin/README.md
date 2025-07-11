@@ -69,16 +69,16 @@ VALUES
 ('notificacoes', 'Sistema de notificações', TRUE, 'notifications', 26),
 ('planocontas', 'Plano de contas', TRUE, 'account_tree', 27)
 
-##Tabela PermissaoModulo comando sql para criar a tabela 
+##Tabela PermissaoModulo comando sql para criar a tabela
 
 CREATE TABLE IF NOT EXISTS permissoesmodulosmobile (
-    perm_codi SERIAL PRIMARY KEY,
-    perm_empr INT NOT NULL,
-    perm_fili INT NOT NULL,
-    perm_modu INT NOT NULL,
-    perm_ativ BOOLEAN NOT NULL,
-    perm_usua_libe INT NOT NULL,
-    perm_data_alte TIMESTAMP NOT NULL
+perm_codi SERIAL PRIMARY KEY,
+perm_empr INT NOT NULL,
+perm_fili INT NOT NULL,
+perm_modu INT NOT NULL REFERENCES modulosmobile(modu_codi) ON DELETE CASCADE,
+perm_ativ BOOLEAN NOT NULL,
+perm_usua_libe INT NOT NULL,
+perm_data_alte TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 ### Comando sql para popular a tabela de permissões
@@ -86,11 +86,10 @@ CREATE TABLE IF NOT EXISTS permissoesmodulosmobile (
 INSERT INTO permissoesmodulosmobile (perm_empr, perm_fili, perm_modu, perm_ativ, perm_usua_libe, perm_data_alte)
 
 SELECT 1 AS perm_empr,
-       1 AS perm_fili,
-       modu_codi AS perm_modu,
-       TRUE AS perm_ativ,
-       1 AS perm_usua_libe,
-       NOW() AS perm_data_alte
+1 AS perm_fili,
+modu_codi AS perm_modu,
+TRUE AS perm_ativ,
+1 AS perm_usua_libe,
+NOW() AS perm_data_alte
 FROM modulosmobile
-
 

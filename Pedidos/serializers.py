@@ -6,6 +6,7 @@ from Produtos.models import Produtos
 from .models import PedidoVenda, Itenspedidovenda
 from Entidades.models import Entidades
 from core.serializers import BancoContextMixin
+from parametros_admin.integracao_pedidos import processar_saida_estoque_pedido
 import logging
 
 logger = logging.getLogger(__name__)
@@ -115,6 +116,18 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
         pedido.pedi_tota = total
         pedido.save(using=banco)
 
+        # Processar saída de estoque se configurado
+        try:
+            resultado_estoque = processar_saida_estoque_pedido(
+                pedido, itens_data, self.context.get('request')
+            )
+            if not resultado_estoque.get('sucesso', True):
+                logger.warning(f"Erro ao processar estoque: {resultado_estoque.get('erro')}")
+            elif resultado_estoque.get('processado'):
+                logger.info(f"Estoque processado para pedido {pedido.pedi_nume}")
+        except Exception as e:
+            logger.error(f"Erro ao processar saída de estoque: {e}")
+
         return pedido
 
 
@@ -157,6 +170,19 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
 
         instance.pedi_tota = total
         instance.save(using=banco)
+
+        # Processar saída de estoque se configurado
+        try:
+            resultado_estoque = processar_saida_estoque_pedido(
+                instance, itens_data, self.context.get('request')
+            )
+            if not resultado_estoque.get('sucesso', True):
+                logger.warning(f"Erro ao processar estoque: {resultado_estoque.get('erro')}")
+            elif resultado_estoque.get('processado'):
+                logger.info(f"Estoque processado para pedido {instance.pedi_nume}")
+        except Exception as e:
+            logger.error(f"Erro ao processar saída de estoque: {e}")
+
         return instance
 
  

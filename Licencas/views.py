@@ -9,11 +9,12 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 from Licencas.models import Empresas, Filiais, Licencas, Usuarios
 from Licencas.serializers import EmpresaSerializer, FilialSerializer
+from parametros_admin.models import PermissaoModulo, Modulo
 from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from django.contrib.auth.hashers import check_password
 from core.middleware import get_licenca_slug
 from core.registry import LICENCAS_MAP, get_licenca_db_config, get_modulos_por_docu
-from parametros_admin.utils import  get_modulos_liberados
+from parametros_admin.utils import  get_modulos_globais, get_codigos_modulos_liberados
 
 
 def get_banco_por_docu(docu):
@@ -50,13 +51,15 @@ class LoginView(APIView):
         if not usuario.check_password(password):
             return Response({'error': 'Senha incorreta.'}, status=401)
 
-        # Buscar módulos liberados da tabela de permissões
-        modulos_liberados = get_modulos_liberados(banco, empresa_id, filial_id)
-        pprint({'Módulos Liberados': modulos_liberados})
+        # Buscar módulos liberados da tabela de permissões para empresa/filial padrão (1,1)
+        # Durante o login, ainda não sabemos a empresa/filial específica
+        # Por isso, retornamos apenas os módulos globais disponíveis
+        # Os módulos específicos serão carregados após a seleção da filial
+        modulos_globais = list(get_modulos_globais(banco))
         
-        # Se não há módulos liberados na tabela, usar os da licença (fallback)
-        if not modulos_liberados:
-            modulos_liberados = [mod.lower().replace("_", "") for mod in get_modulos_por_docu(docu)]
+        # Para o login, retornamos apenas uma lista vazia ou módulos básicos
+        # Os módulos reais serão carregados após seleção da empresa/filial
+        modulos_login = []  # Não retornar módulos no login
 
         refresh = RefreshToken.for_user(usuario)
         refresh['username'] = usuario.usua_nome
@@ -79,7 +82,7 @@ class LoginView(APIView):
                 'lice_id': licenca.lice_id,
                 'lice_nome': licenca.lice_nome,
             },
-            'modulos': modulos_liberados,
+            'modulos': modulos_login,
         })
 
 
@@ -127,6 +130,22 @@ class FiliaisPorEmpresaView(APIView):
         # Serializar e retornar os dados das filiais
         serializer = FilialSerializer(filiais, many=True)
         return Response(serializer.data)
+
+class ModulosLiberadosView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        banco = get_licenca_db_config(request)
+        empresa_id = request.query_params.get('empresa_id')
+        filial_id = request.query_params.get('filial_id')
+
+        if not empresa_id or not filial_id:
+            return Response({'error': 'Empresa e filial obrigatórias'}, status=400)
+
+        modulos_ids = get_codigos_modulos_liberados(banco, empresa_id, filial_id)
+        pprint(modulos_ids)
+
+        return Response({'modulos_liberados': modulos_ids})
 
 
 class AlterarSenhaView(APIView):

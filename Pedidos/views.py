@@ -3,6 +3,8 @@ from rest_framework import viewsets
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError, NotFound
+from rest_framework.decorators import action
+from django.db import transaction
 from core.registry import get_licenca_db_config
 from .models import Itenspedidovenda, PedidoVenda
 from Entidades.models import Entidades
@@ -10,8 +12,8 @@ from .serializers import PedidoVendaSerializer
 from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from rest_framework.filters import SearchFilter
 from django_filters.rest_framework import DjangoFilterBackend
-from parametros_admin.utils import verificar_permissao_estoque, verificar_permissao_financeiro, get_desconto_maximo
 from parametros_admin.permissions import PermissaoAdministrador
+from parametros_admin.integracao_pedidos import reverter_estoque_pedido, obter_status_estoque_pedido
 
 import logging
 logger = logging.getLogger(__name__)
@@ -99,19 +101,96 @@ class PedidoVendaViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
             logger.error("Banco de dados não encontrado.")
             raise NotFound("Banco de dados não encontrado.")
 
-       
-        if Itenspedidovenda.objects.using(banco).filter(
-            iped_empr=pedido.pedi_empr,
-            iped_fili=pedido.pedi_fili,
-            iped_pedi=pedido.pedi_nume
-        ).exists():
-            return Response(
-                {"detail": "Não é possível excluir a Pedidos , Há itens associados."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        # Reverter estoque antes de excluir
+        try:
+            resultado_estoque = reverter_estoque_pedido(pedido, request)
+            if not resultado_estoque.get('sucesso', True):
+                logger.warning(f"Erro ao reverter estoque: {resultado_estoque.get('erro')}")
+            elif resultado_estoque.get('processado'):
+                logger.info(f"Estoque revertido para pedido {pedido.pedi_nume}")
+        except Exception as e:
+            logger.error(f"Erro ao reverter estoque: {e}")
 
         with transaction.atomic(using=banco):
+            # Excluir itens do pedido
+            Itenspedidovenda.objects.using(banco).filter(
+                iped_empr=pedido.pedi_empr,
+                iped_fili=pedido.pedi_fili,
+                iped_pedi=pedido.pedi_nume
+            ).delete()
+            
+            # Excluir pedido
             pedido.delete()
-            logger.info(f"🗑️ Exclusão Pedido de casamento ID {pedido.pedi_nume} concluída")
+            logger.info(f"🗑️ Exclusão Pedido ID {pedido.pedi_nume} concluída")
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+    @action(detail=True, methods=['post'])
+    def cancelar_pedido(self, request, pedi_nume=None):
+        """
+        Cancela um pedido e reverte o estoque se configurado
+        """
+        try:
+            pedido = self.get_object()
+            banco = get_licenca_db_config(request)
+            
+            if not banco:
+                return Response(
+                    {'erro': 'Banco de dados não encontrado'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Verificar se pedido já está cancelado
+            if pedido.pedi_stat == '4':  # Cancelado
+                return Response(
+                    {'erro': 'Pedido já está cancelado'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            with transaction.atomic(using=banco):
+                # Reverter estoque
+                resultado_estoque = reverter_estoque_pedido(pedido, request)
+                
+                # Atualizar status do pedido
+                pedido.pedi_stat = '4'  # Cancelado
+                pedido.pedi_canc = True
+                pedido.save(using=banco)
+                
+                logger.info(f"Pedido {pedido.pedi_nume} cancelado")
+                
+                return Response({
+                    'sucesso': True,
+                    'mensagem': f'Pedido {pedido.pedi_nume} cancelado com sucesso',
+                    'estoque_revertido': resultado_estoque
+                }, status=status.HTTP_200_OK)
+                
+        except Exception as e:
+            logger.error(f"Erro ao cancelar pedido: {e}")
+            return Response(
+                {'erro': 'Erro interno ao cancelar pedido'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['get'])
+    def status_estoque(self, request, pedi_nume=None):
+        """
+        Obtém status do estoque relacionado ao pedido
+        """
+        try:
+            pedido = self.get_object()
+            
+            status_estoque = obter_status_estoque_pedido(
+                pedido.pedi_nume,
+                pedido.pedi_empr,
+                pedido.pedi_fili,
+                request
+            )
+            
+            return Response(status_estoque, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"Erro ao obter status do estoque: {e}")
+            return Response(
+                {'erro': 'Erro ao obter status do estoque'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
