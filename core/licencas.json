@@ -5,15 +5,7 @@
     "db_name": "savexml839",
     "db_host": "base.rtalmeida.com.br",
     "db_port": "5432",
-    "modulos": [
-      "Produtos",
-      "Pedidos",
-      "Entradas_Estoque",
-      "Saidas_Estoque",
-      "listacasamento",
-      "Entidades",
-      "Orcamentos"
-    ]
+    "modulos": []
   },
   {
     "slug": "casaealma",
@@ -21,14 +13,7 @@
     "db_name": "savexml1014",
     "db_host": "base.rtalmeida.com.br",
     "db_port": "5432",
-    "modulos": [
-      "dashboards",
-      "dash",
-      "listacasamento",
-      "Entidades",
-      "Produtos",
-      "Financeiro"
-    ]
+    "modulos": []
   },
   {
     "slug": "operario",
@@ -36,7 +21,7 @@
     "db_name": "savexml894",
     "db_host": "base.rtalmeida.com.br",
     "db_port": "5432",
-    "modulos": ["dashboards", "Financeiro"]
+    "modulos": []
   },
 
   {
@@ -45,13 +30,7 @@
     "db_name": "savexml140",
     "db_host": "base.rtalmeida.com.br",
     "db_port": "5432",
-    "modulos": [
-      "dashboards",
-      "Entidades",
-      "Produtos",
-      "Entradas_Estoque",
-      "contratos"
-    ]
+    "modulos": []
   },
   {
     "slug": "tratormaq",
@@ -59,15 +38,7 @@
     "db_name": "savexml43",
     "db_host": "base.rtalmeida.com.br",
     "db_port": "5432",
-    "modulos": [
-      "dashboards",
-      "dash",
-      "Entidades",
-      "Produtos",
-      "Entradas_Estoque",
-      "Saidas_Estoque",
-      "OrdemdeServico"
-    ]
+    "modulos": []
   },
   {
     "slug": "dalitz",
@@ -75,14 +46,7 @@
     "db_name": "savexml903",
     "db_host": "base.rtalmeida.com.br",
     "db_port": "5432",
-    "modulos": [
-      "dashboards",
-      "Entidades",
-      "Produtos",
-      "Entradas_Estoque",
-      "Saidas_Estoque",
-      "Pedidos"
-    ]
+    "modulos": []
   },
   {
     "slug": "casaa",
@@ -97,22 +61,13 @@
     "cnpj": "99999999999999",
     "db_name": "alma",
     "db_host": "localhost",
-    "db_port": "5432",
-    "modulos": [
-      "dashboards",
-      "dash",
-      "Produtos",
-      "Pedidos",
-      "contratos",
-      "Entradas_Estoque",
-      "Saidas_Estoque",
-      "listacasamento",
-      "Entidades",
-      "Orcamentos",
-      "implantacao",
-      "Financeiro",
-      "OrdemdeServico",
-      "Os"
-    ]
+    "db_port": "5432"
+  },
+  {
+    "slug": "ola",
+    "cnpj": "00000000000000",
+    "db_name": "ola",
+    "db_host": "localhost",
+    "db_port": "5432"
   }
 ]

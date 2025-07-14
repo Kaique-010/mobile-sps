@@ -384,3 +384,4 @@ python manage.py shell -c "from Licencas.models import *; [print(f'{e.empr_nome}
 ```
 
 update usuarios SET usua_senh_mobi = 'roma3030@' WHERE usua_codi = 1;
+update usuarios SET usua_seto = 'ADM' WHERE usua_codi = 1;
