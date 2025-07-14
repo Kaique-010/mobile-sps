@@ -21,8 +21,19 @@ def aplicar_parametros_estoque(operacao='entrada'):
             try:
                 # Obter dados da requisição
                 data = request.data if hasattr(request, 'data') else {}
-                empresa_id = data.get('empresa_id') or getattr(request.user, 'empresa_id', None)
-                filial_id = data.get('filial_id') or getattr(request.user, 'filial_id', None)
+                
+                # Tentar obter empresa_id e filial_id de diferentes formas
+                # Entradas de estoque usa entr_empr/entr_fili
+                empresa_id = (
+                    data.get('empresa_id') or 
+                    data.get('entr_empr') or 
+                    getattr(request.user, 'empresa_id', None)
+                )
+                filial_id = (
+                    data.get('filial_id') or 
+                    data.get('entr_fili') or 
+                    getattr(request.user, 'filial_id', None)
+                )
                 
                 if not empresa_id or not filial_id:
                     return Response(
@@ -35,7 +46,6 @@ def aplicar_parametros_estoque(operacao='entrada'):
                     obter_parametros_estoque,
                     verificar_entrada_automatica,
                     verificar_saida_automatica,
-                    verificar_estoque_negativo_permitido
                 )
                 
                 # Obter parâmetros de estoque
@@ -115,8 +125,18 @@ def aplicar_parametros_pedidos(func):
         try:
             # Obter dados da requisição
             data = request.data if hasattr(request, 'data') else {}
-            empresa_id = data.get('empresa_id') or getattr(request.user, 'empresa_id', None)
-            filial_id = data.get('filial_id') or getattr(request.user, 'filial_id', None)
+            
+            # Tentar obter empresa_id e filial_id de diferentes formas
+            empresa_id = (
+                data.get('empresa_id') or 
+                data.get('pedi_empr') or 
+                getattr(request.user, 'empresa_id', None)
+            )
+            filial_id = (
+                data.get('filial_id') or 
+                data.get('pedi_fili') or 
+                getattr(request.user, 'filial_id', None)
+            )
             
             if not empresa_id or not filial_id:
                 return Response(
@@ -127,7 +147,7 @@ def aplicar_parametros_pedidos(func):
             # Importar utils de pedidos
             from .utils_pedidos import (
                 obter_parametros_pedidos,
-                verificar_validacao_estoque,
+                verificar_validar_estoque_pedido,  # Corrigido: era verificar_validacao_estoque
                 obter_preco_produto
             )
             
@@ -140,7 +160,7 @@ def aplicar_parametros_pedidos(func):
             request.filial_id = filial_id
             
             # Verificar validação de estoque se necessário
-            if verificar_validacao_estoque(empresa_id, filial_id, request):
+            if verificar_validar_estoque_pedido(empresa_id, filial_id, request):  # Corrigido: era verificar_validacao_estoque
                 itens = data.get('itens', [])
                 for item in itens:
                     produto_codigo = item.get('produto_codigo')
@@ -201,8 +221,19 @@ def aplicar_parametros_orcamentos(func):
         try:
             # Obter dados da requisição
             data = request.data if hasattr(request, 'data') else {}
-            empresa_id = data.get('empresa_id') or getattr(request.user, 'empresa_id', None)
-            filial_id = data.get('filial_id') or getattr(request.user, 'filial_id', None)
+            
+            # Tentar obter empresa_id e filial_id de diferentes formas
+            # Orçamentos usa pedi_empr/pedi_fili (mesmo padrão dos pedidos)
+            empresa_id = (
+                data.get('empresa_id') or 
+                data.get('pedi_empr') or 
+                getattr(request.user, 'empresa_id', None)
+            )
+            filial_id = (
+                data.get('filial_id') or 
+                data.get('pedi_fili') or 
+                getattr(request.user, 'filial_id', None)
+            )
             
             if not empresa_id or not filial_id:
                 return Response(
@@ -225,12 +256,8 @@ def aplicar_parametros_orcamentos(func):
             request.empresa_id = empresa_id
             request.filial_id = filial_id
             
-            # Calcular data de validade se não informada
-            if 'data_validade' not in data or not data['data_validade']:
-                data['data_validade'] = calcular_data_validade_orcamento(
-                    empresa_id, filial_id, request
-                )
-                request.data = data
+            # REMOVIDO: Não tentar modificar request.data diretamente
+            # A data de validade será calculada no serializer se necessário
             
             # Verificar baixa de estoque se habilitada
             if verificar_baixa_estoque_orcamento(empresa_id, filial_id, request):

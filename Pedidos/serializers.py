@@ -37,8 +37,8 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
     valor_total = serializers.FloatField(source='pedi_tota', read_only=True)
     cliente_nome = serializers.SerializerMethodField(read_only=True)
     empresa_nome = serializers.SerializerMethodField(read_only=True)
-    itens = serializers.SerializerMethodField()
-    itens_input = ItemPedidoVendaSerializer(many=True, write_only=True, required=True)
+    itens = serializers.SerializerMethodField()  # Mudança aqui - remover write_only
+    itens_input = ItemPedidoVendaSerializer(many=True, write_only=True, required=False)
     pedi_nume = serializers.IntegerField(read_only=True)  # Resolve a pk sendo o numero pois ele retorna sequencial na mão 
 
     class Meta:
@@ -46,7 +46,7 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
         fields = [
             'pedi_empr', 'pedi_fili', 'pedi_data', 'pedi_tota', 'pedi_forn',
             'itens', 'itens_input',
-            'valor_total', 'cliente_nome', 'empresa_nome', 'pedi_nume', 'pedi_stat'
+            'valor_total', 'cliente_nome', 'empresa_nome', 'pedi_nume', 'pedi_stat', 'pedi_vend'
         ]
     
     def get_itens(self, obj):
@@ -61,11 +61,20 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
 
     #metodo de criacao de pedidos ja olhando se era um pedido criado ou não no update
     def create(self, validated_data):
+        print(f"🆕 [PEDIDO] Iniciando criação de pedido")
+        print(f"🆕 [PEDIDO] Dados validados: {validated_data}")
+        
         banco = self.context.get('banco')
         if not banco:
             raise ValidationError("Banco não definido no contexto.")
 
-        itens_data = validated_data.pop('itens_input', [])
+        # Aceitar tanto 'itens_input' quanto 'itens'
+        itens_data = validated_data.pop('itens_input', None)
+        if not itens_data:
+            itens_data = validated_data.pop('itens', [])
+        
+        print(f"🆕 [PEDIDO] Quantidade de itens recebidos: {len(itens_data)}")
+        
         if not itens_data:
             raise ValidationError("Itens do pedido são obrigatórios.")
 
@@ -117,26 +126,41 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
         pedido.save(using=banco)
 
         # Processar saída de estoque se configurado
+        print(f"🔄 [PEDIDO] Iniciando processamento de estoque para pedido {pedido.pedi_nume}")
         try:
             resultado_estoque = processar_saida_estoque_pedido(
                 pedido, itens_data, self.context.get('request')
             )
+            print(f"🔄 [PEDIDO] Resultado do processamento de estoque: {resultado_estoque}")
+            
             if not resultado_estoque.get('sucesso', True):
+                print(f"❌ [PEDIDO] ERRO ao processar estoque: {resultado_estoque.get('erro')}")
                 logger.warning(f"Erro ao processar estoque: {resultado_estoque.get('erro')}")
             elif resultado_estoque.get('processado'):
+                print(f"✅ [PEDIDO] Estoque processado com SUCESSO para pedido {pedido.pedi_nume}")
                 logger.info(f"Estoque processado para pedido {pedido.pedi_nume}")
+            else:
+                print(f"⚠️ [PEDIDO] Estoque NÃO foi processado: {resultado_estoque.get('motivo', 'Motivo não informado')}")
         except Exception as e:
+            print(f"💥 [PEDIDO] EXCEÇÃO ao processar saída de estoque: {e}")
             logger.error(f"Erro ao processar saída de estoque: {e}")
 
         return pedido
 
 
     def update(self, instance, validated_data):
+        print(f"🔄 [PEDIDO] Iniciando atualização de pedido {instance.pedi_nume}")
+        print(f"🔄 [PEDIDO] Dados validados: {validated_data}")
+        
         banco = self.context.get('banco')
         if not banco:
             raise ValidationError("Banco não definido no contexto.")
 
+        # Aceitar tanto 'itens_input' quanto 'itens'
         itens_data = validated_data.pop('itens_input', None)
+        if itens_data is None:
+            itens_data = validated_data.pop('itens', None)
+        
         if itens_data is None:
             raise ValidationError("Itens do pedido são obrigatórios.")
 
@@ -172,15 +196,23 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
         instance.save(using=banco)
 
         # Processar saída de estoque se configurado
+        print(f"🔄 [PEDIDO] Iniciando processamento de estoque para atualização do pedido {instance.pedi_nume}")
         try:
             resultado_estoque = processar_saida_estoque_pedido(
                 instance, itens_data, self.context.get('request')
             )
+            print(f"🔄 [PEDIDO] Resultado do processamento de estoque: {resultado_estoque}")
+            
             if not resultado_estoque.get('sucesso', True):
+                print(f"❌ [PEDIDO] ERRO ao processar estoque: {resultado_estoque.get('erro')}")
                 logger.warning(f"Erro ao processar estoque: {resultado_estoque.get('erro')}")
             elif resultado_estoque.get('processado'):
+                print(f"✅ [PEDIDO] Estoque processado com SUCESSO para pedido {instance.pedi_nume}")
                 logger.info(f"Estoque processado para pedido {instance.pedi_nume}")
+            else:
+                print(f"⚠️ [PEDIDO] Estoque NÃO foi processado: {resultado_estoque.get('motivo', 'Motivo não informado')}")
         except Exception as e:
+            print(f"💥 [PEDIDO] EXCEÇÃO ao processar saída de estoque: {e}")
             logger.error(f"Erro ao processar saída de estoque: {e}")
 
         return instance

@@ -352,6 +352,129 @@ class AtualizaPermissoesModulosView(APIView):
 
 
 
+class ParametrosPorModuloView(APIView):
+    """View para gerenciar parâmetros organizados por módulo"""
+    permission_classes = [IsAuthenticated, PermissaoAdministrador]
+    
+    def get(self, request, slug=None):
+        """Lista parâmetros organizados por módulo"""
+        empresa_id = request.GET.get('empr')
+        filial_id = request.GET.get('fili')
+        
+        if not all([empresa_id, filial_id]):
+            return Response({"erro": "Empresa e filial são obrigatórias."}, status=400)
+        
+        banco = get_licenca_db_config(request)
+        if not banco:
+            return Response({"erro": "Banco não encontrado."}, status=404)
+        
+        try:
+            empresa_id = int(empresa_id)
+            filial_id = int(filial_id)
+            
+            # Buscar módulos ativos
+            modulos = Modulo.objects.using(banco).filter(modu_ativ=True).order_by('modu_orde')
+            
+            modulos_data = []
+            for modulo in modulos:
+                # Buscar parâmetros deste módulo
+                parametros = ParametroSistema.objects.using(banco).filter(
+                    para_empr=empresa_id,
+                    para_fili=filial_id,
+                    para_modu=modulo
+                ).order_by('para_nome')
+                
+                parametros_data = []
+                for param in parametros:
+                    parametros_data.append({
+                        'id': param.para_codi,
+                        'nome': param.para_nome,
+                        'descricao': param.para_desc,
+                        'valor': param.para_valo,
+                        'ativo': param.para_ativ
+                    })
+                
+                modulos_data.append({
+                    'id': modulo.modu_codi,
+                    'nome': modulo.modu_nome,
+                    'descricao': modulo.modu_desc,
+                    'icone': modulo.modu_icon,
+                    'parametros': parametros_data
+                })
+            
+            return Response(modulos_data, status=200)
+            
+        except ValueError as e:
+            return Response({"erro": f"Valores inválidos: {str(e)}"}, status=400)
+        except Exception as e:
+            logger.error(f"Erro ao buscar parâmetros por módulo: {e}")
+            return Response({"erro": str(e)}, status=500)
+    
+    def patch(self, request, slug=None):
+        """Atualiza status de parâmetros"""
+        data = request.data
+        empresa_id = data.get("empr")
+        filial_id = data.get("fili")
+        usuario = data.get("usuario", "sistema")
+        parametros_data = data.get("parametros", [])
+
+        if not all([empresa_id, filial_id, parametros_data]):
+            return Response({"erro": "Dados incompletos."}, status=400)
+
+        try:
+            empresa_id = int(empresa_id)
+            filial_id = int(filial_id)
+            usuario = int(usuario)
+        except ValueError as e:
+            return Response({"erro": f"Valores inválidos: {str(e)}"}, status=400)
+
+        banco = get_licenca_db_config(request)
+        if not banco:
+            return Response({"erro": "Banco não encontrado."}, status=404)
+
+        atualizados = 0
+        for item in parametros_data:
+            param_id = item.get("id")
+            ativo = item.get("ativo", False)
+            
+            try:
+                parametro = ParametroSistema.objects.using(banco).get(
+                    para_codi=param_id,
+                    para_empr=empresa_id,
+                    para_fili=filial_id
+                )
+                
+                # Atualizar status
+                parametro.para_ativ = ativo
+                parametro.para_usua_alte = usuario
+                parametro.save(using=banco)
+                
+                # Log da alteração
+                from .models import LogParametroSistema
+                LogParametroSistema.objects.using(banco).create(
+                    log_para=parametro,
+                    log_acao='ATIVACAO' if ativo else 'DESATIVACAO',
+                    log_valo_ante=not ativo,
+                    log_valo_novo=ativo,
+                    log_usua=usuario,
+                    log_empr=empresa_id,
+                    log_fili=filial_id
+                )
+                
+                atualizados += 1
+                
+            except ParametroSistema.DoesNotExist:
+                continue
+            except Exception as e:
+                logger.error(f"Erro ao atualizar parâmetro {param_id}: {e}")
+                continue
+
+        return Response({
+            "mensagem": f"Parâmetros atualizados com sucesso ({atualizados})"
+        }, status=200)
+
+
+
 class ModulosPorEmpresaView(generics.ListAPIView):
     serializer_class = ModuloSerializer
     permission_classes = [IsAuthenticated]

@@ -14,6 +14,7 @@ from core.registry import get_licenca_db_config
 from .models import EntradaEstoque
 from .serializers import EntradasEstoqueSerializer
 from parametros_admin.utils_estoque import  verificar_estoque_negativo
+from parametros_admin.decorators import parametros_estoque_completo
 
 
 
@@ -46,6 +47,7 @@ class EntradasEstoqueViewSet(ModuloRequeridoMixin, ModelViewSet):
         return context
         
 
+    @parametros_estoque_completo(operacao='entrada')
     def create(self, request, *args, **kwargs):
         db_alias = getattr(request, 'db_alias', 'default')
         serializer = self.get_serializer(data=request.data)
@@ -72,3 +74,16 @@ class EntradasEstoqueViewSet(ModuloRequeridoMixin, ModelViewSet):
         except Exception as e:
             logger.error(f"❌ Falha ao excluir entrada: {e}")
             return Response({'erro': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @parametros_estoque_completo(operacao='entrada')
+    def update(self, request, *args, **kwargs):
+        db_alias = getattr(request, 'db_alias', 'default')
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            with transaction.atomic(using=db_alias):
+                self.perform_create(serializer)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except IntegrityError as e:
+            logger.error(f"IntegrityError: {e}")
+            raise ValidationError({"detail": "Erro de integridade no banco de dados."})

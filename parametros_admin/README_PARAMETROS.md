@@ -409,3 +409,29 @@ mysql -u usuario -p database_name < parametros_admin/sql_parametros.sql
 - Teste com dados mínimos
 
 Para mais detalhes sobre o uso dos decoradores, consulte o arquivo `GUIA_USO_DECORADORES.md`.
+
+#popular os parametros
+
+# Popular todos os parâmetros
+
+python manage.py populate_parametros
+
+# Listar parâmetros existentes
+
+python manage.py populate_parametros --listar
+
+# Popular para empresa/filial específica
+
+python manage.py populate_parametros --empresa 1 --filial 1
+
+# Listar parâmetros por empresa/filial
+
+python manage.py populate_parametros --empresa 1 --filial 1 --listar
+
+# Atualizar parâmetro específico
+
+python manage.py populate_parametros --empresa 1 --filial 1 --parametro 'nome_parametro' --valor 'novo_valor'
+
+# Desativar módulo para empresa/filial
+
+python manage.py populate_parametros --empresa 1 --filial 1 --desativar 'nome_modulo'

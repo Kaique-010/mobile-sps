@@ -60,7 +60,11 @@ def verificar_usar_preco_prazo(empresa_id, filial_id, request):
     """
     parametros = obter_parametros_pedidos(empresa_id, filial_id, request)
     param = parametros.get('usar_preco_prazo', {})
-    return param.get('ativo', False) and param.get('valor', '').lower() == 'true'
+    valor = param.get('valor', 'false')
+    # Corrigir para tratar tanto string quanto boolean
+    if isinstance(valor, bool):
+        return param.get('ativo', False) and valor
+    return param.get('ativo', False) and str(valor).lower() == 'true'
 
 
 def verificar_usar_ultimo_preco(empresa_id, filial_id, request):
@@ -69,7 +73,11 @@ def verificar_usar_ultimo_preco(empresa_id, filial_id, request):
     """
     parametros = obter_parametros_pedidos(empresa_id, filial_id, request)
     param = parametros.get('usar_ultimo_preco', {})
-    return param.get('ativo', False) and param.get('valor', '').lower() == 'true'
+    valor = param.get('valor', 'false')
+    # Corrigir para tratar tanto string quanto boolean
+    if isinstance(valor, bool):
+        return param.get('ativo', False) and valor
+    return param.get('ativo', False) and str(valor).lower() == 'true'
 
 
 def verificar_desconto_pedido(empresa_id, filial_id, request):
@@ -78,7 +86,11 @@ def verificar_desconto_pedido(empresa_id, filial_id, request):
     """
     parametros = obter_parametros_pedidos(empresa_id, filial_id, request)
     param = parametros.get('desconto_pedido', {})
-    return param.get('ativo', False) and param.get('valor', '').lower() == 'true'
+    valor = param.get('valor', 'false')
+    # Corrigir para tratar tanto string quanto boolean
+    if isinstance(valor, bool):
+        return param.get('ativo', False) and valor
+    return param.get('ativo', False) and str(valor).lower() == 'true'
 
 
 def verificar_volta_estoque_pedido(empresa_id, filial_id, request):
@@ -87,7 +99,11 @@ def verificar_volta_estoque_pedido(empresa_id, filial_id, request):
     """
     parametros = obter_parametros_pedidos(empresa_id, filial_id, request)
     param = parametros.get('pedido_volta_estoque', {})
-    return param.get('ativo', False) and param.get('valor', '').lower() == 'true'
+    valor = param.get('valor', 'false')
+    # Corrigir para tratar tanto string quanto boolean
+    if isinstance(valor, bool):
+        return param.get('ativo', False) and valor
+    return param.get('ativo', False) and str(valor).lower() == 'true'
 
 
 def verificar_validar_estoque_pedido(empresa_id, filial_id, request):
@@ -96,7 +112,11 @@ def verificar_validar_estoque_pedido(empresa_id, filial_id, request):
     """
     parametros = obter_parametros_pedidos(empresa_id, filial_id, request)
     param = parametros.get('validar_estoque_pedido', {})
-    return param.get('ativo', False) and param.get('valor', '').lower() == 'true'
+    valor = param.get('valor', 'false')
+    # Corrigir para tratar tanto string quanto boolean
+    if isinstance(valor, bool):
+        return param.get('ativo', False) and valor
+    return param.get('ativo', False) and str(valor).lower() == 'true'
 
 
 def obter_preco_produto(produto_codigo, empresa_id, filial_id, request, tipo_preco='normal'):

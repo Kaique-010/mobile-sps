@@ -14,6 +14,7 @@ from rest_framework.filters import SearchFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from parametros_admin.permissions import PermissaoAdministrador
 from parametros_admin.integracao_pedidos import reverter_estoque_pedido, obter_status_estoque_pedido
+from parametros_admin.decorators import parametros_pedidos_completo
 
 import logging
 logger = logging.getLogger(__name__)
@@ -64,7 +65,11 @@ class PedidoVendaViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
         context['banco'] = get_licenca_db_config(self.request)
         return context
     
+    @parametros_pedidos_completo
     def create(self, request, *args, **kwargs):
+        print(f"🎯 [VIEW] Recebendo requisição de criação de pedido")
+        print(f"🎯 [VIEW] Dados da requisição: {request.data}")
+        
         try:
             logger.info(f"[PedidoVendaViewSet.create] request.data: {request.data}")
         except Exception as e:
@@ -73,23 +78,29 @@ class PedidoVendaViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data, context=self.get_serializer_context())
         try:
             serializer.is_valid(raise_exception=True)
+            print(f"🎯 [VIEW] Dados validados com sucesso, criando pedido...")
             self.perform_create(serializer)
+            print(f"🎯 [VIEW] Pedido criado com sucesso")
             headers = self.get_success_headers(serializer.data)
             return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
         except ValidationError as e:
+            print(f"❌ [VIEW] Erro de validação: {e.detail}")
             logger.warning(f"[PedidoVendaViewSet.create] Erro de validação: {e.detail}")
             return Response({'errors': e.detail}, status=status.HTTP_400_BAD_REQUEST)
-
-    def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
-        return Response(serializer.data)
     
+    @parametros_pedidos_completo
     def update(self, request, *args, **kwargs):
+        print(f"🎯 [VIEW] Recebendo requisição de atualização de pedido")
+        print(f"🎯 [VIEW] Dados da requisição: {request.data}")
+        
         instance = self.get_object()
+        print(f"🎯 [VIEW] Atualizando pedido {instance.pedi_nume}")
+        
         serializer = self.get_serializer(instance, data=request.data)
         serializer.is_valid(raise_exception=True)
+        print(f"🎯 [VIEW] Dados validados com sucesso, atualizando pedido...")
         pedido = serializer.save()
+        print(f"🎯 [VIEW] Pedido atualizado com sucesso")
         return Response(self.get_serializer(pedido).data, status=status.HTTP_200_OK)
     
     

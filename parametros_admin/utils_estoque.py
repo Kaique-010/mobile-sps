@@ -14,38 +14,42 @@ def obter_parametros_estoque(empresa_id, filial_id, request):
     try:
         banco = get_licenca_db_config(request)
         
-        # Buscar módulo de estoque
-        modulo_estoque = Modulo.objects.using(banco).filter(
-            modu_nome__icontains='estoque'
-        ).first()
-        
-        if not modulo_estoque:
-            logger.warning("Módulo de estoque não encontrado")
-            return {}
-        
-        parametros_nomes = [
-            'entrada_automatica_estoque',
-            'saida_automatica_estoque', 
-            'pedido_volta_estoque',
-            'alerta_estoque_minimo',
-            'permitir_estoque_negativo',
-            'calculo_automatico_custo'
-        ]
+        # Mapeamento dos parâmetros para seus módulos corretos
+        parametros_modulos = {
+            'entrada_automatica_estoque': 'Entradas_Estoque',
+            'saida_automatica_estoque': 'Saidas_Estoque', 
+            'pedido_volta_estoque': 'Pedidos',  # ou 'Entradas_Estoque'
+            'alerta_estoque_minimo': 'Entradas_Estoque',
+            'permitir_estoque_negativo': 'Saidas_Estoque',
+            'calculo_automatico_custo': 'Entradas_Estoque'
+        }
         
         parametros = {}
-        for nome_param in parametros_nomes:
-            param = ParametroSistema.objects.using(banco).filter(
-                para_empr=empresa_id,
-                para_fili=filial_id,
-                para_modu=modulo_estoque,
-                para_nome=nome_param
+        for nome_param, nome_modulo in parametros_modulos.items():
+            # Buscar o módulo específico
+            modulo = Modulo.objects.using(banco).filter(
+                modu_nome=nome_modulo
             ).first()
             
-            parametros[nome_param] = {
-                'valor': param.para_valo if param else 'false',
-                'ativo': param.para_ativ if param else False,
-                'existe': param is not None
-            }
+            if modulo:
+                param = ParametroSistema.objects.using(banco).filter(
+                    para_empr=empresa_id,
+                    para_fili=filial_id,
+                    para_modu=modulo,
+                    para_nome=nome_param
+                ).first()
+                
+                parametros[nome_param] = {
+                    'valor': param.para_valo if param else 'false',
+                    'ativo': param.para_ativ if param else False,
+                    'existe': param is not None
+                }
+            else:
+                parametros[nome_param] = {
+                    'valor': 'false',
+                    'ativo': False,
+                    'existe': False
+                }
         
         return parametros
         
@@ -60,16 +64,39 @@ def verificar_entrada_automatica(empresa_id, filial_id, request):
     """
     parametros = obter_parametros_estoque(empresa_id, filial_id, request)
     param = parametros.get('entrada_automatica_estoque', {})
-    return param.get('ativo', False) and param.get('valor', '').lower() == 'true'
+    valor = param.get('valor', 'false')
+    # Corrigir para tratar tanto string quanto boolean
+    if isinstance(valor, bool):
+        return param.get('ativo', False) and valor
+    return param.get('ativo', False) and str(valor).lower() == 'true'
 
 
 def verificar_saida_automatica(empresa_id, filial_id, request):
     """
     Verifica se saída automática está habilitada
     """
+    print(f"🔍 [DEBUG] Verificando saída automática - Empresa: {empresa_id}, Filial: {filial_id}")
+    
     parametros = obter_parametros_estoque(empresa_id, filial_id, request)
+    print(f"🔍 [DEBUG] Parâmetros obtidos: {parametros}")
+    
     param = parametros.get('saida_automatica_estoque', {})
-    return param.get('ativo', False) and param.get('valor', '').lower() == 'true'
+    print(f"🔍 [DEBUG] Parâmetro saida_automatica_estoque: {param}")
+    
+    valor = param.get('valor', 'false')
+    ativo = param.get('ativo', False)
+    
+    print(f"🔍 [DEBUG] Valor: {valor} (tipo: {type(valor)})")
+    print(f"🔍 [DEBUG] Ativo: {ativo} (tipo: {type(ativo)})")
+    
+    # Corrigir para tratar tanto string quanto boolean
+    if isinstance(valor, bool):
+        resultado = ativo and valor
+    else:
+        resultado = ativo and str(valor).lower() == 'true'
+    
+    print(f"🔍 [DEBUG] Resultado final: {resultado}")
+    return resultado
 
 
 def verificar_volta_estoque(empresa_id, filial_id, request):
@@ -78,7 +105,11 @@ def verificar_volta_estoque(empresa_id, filial_id, request):
     """
     parametros = obter_parametros_estoque(empresa_id, filial_id, request)
     param = parametros.get('pedido_volta_estoque', {})
-    return param.get('ativo', False) and param.get('valor', '').lower() == 'true'
+    valor = param.get('valor', 'false')
+    # Corrigir para tratar tanto string quanto boolean
+    if isinstance(valor, bool):
+        return param.get('ativo', False) and valor
+    return param.get('ativo', False) and str(valor).lower() == 'true'
 
 
 def verificar_alerta_estoque_minimo(empresa_id, filial_id, request):
@@ -87,7 +118,11 @@ def verificar_alerta_estoque_minimo(empresa_id, filial_id, request):
     """
     parametros = obter_parametros_estoque(empresa_id, filial_id, request)
     param = parametros.get('alerta_estoque_minimo', {})
-    return param.get('ativo', False) and param.get('valor', '').lower() == 'true'
+    valor = param.get('valor', 'false')
+    # Corrigir para tratar tanto string quanto boolean
+    if isinstance(valor, bool):
+        return param.get('ativo', False) and valor
+    return param.get('ativo', False) and str(valor).lower() == 'true'
 
 
 def verificar_estoque_negativo(empresa_id, filial_id, request):
@@ -96,7 +131,11 @@ def verificar_estoque_negativo(empresa_id, filial_id, request):
     """
     parametros = obter_parametros_estoque(empresa_id, filial_id, request)
     param = parametros.get('permitir_estoque_negativo', {})
-    return param.get('ativo', False) and param.get('valor', '').lower() == 'true'
+    valor = param.get('valor', 'false')
+    # Corrigir para tratar tanto string quanto boolean
+    if isinstance(valor, bool):
+        return param.get('ativo', False) and valor
+    return param.get('ativo', False) and str(valor).lower() == 'true'
 
 
 def verificar_calculo_automatico_custo(empresa_id, filial_id, request):
@@ -105,7 +144,11 @@ def verificar_calculo_automatico_custo(empresa_id, filial_id, request):
     """
     parametros = obter_parametros_estoque(empresa_id, filial_id, request)
     param = parametros.get('calculo_automatico_custo', {})
-    return param.get('ativo', False) and param.get('valor', '').lower() == 'true'
+    valor = param.get('valor', 'false')
+    # Corrigir para tratar tanto string quanto boolean
+    if isinstance(valor, bool):
+        return param.get('ativo', False) and valor
+    return param.get('ativo', False) and str(valor).lower() == 'true'
 
 
 def calcular_estoque_atual(produto_codigo, empresa_id, filial_id, request):
@@ -115,16 +158,16 @@ def calcular_estoque_atual(produto_codigo, empresa_id, filial_id, request):
     try:
         banco = get_licenca_db_config(request)
         
-        # Importar modelo de estoque
-        from Produtos.models import Estoque
+        # Importar modelo correto de saldo de produto
+        from Produtos.models import SaldoProduto
         
-        estoque = Estoque.objects.using(banco).filter(
-            esto_prod=produto_codigo,
-            esto_empr=empresa_id,
-            esto_fili=filial_id
+        saldo = SaldoProduto.objects.using(banco).filter(
+            produto_codigo=produto_codigo,
+            empresa=str(empresa_id),
+            filial=str(filial_id)
         ).first()
         
-        return estoque.esto_quan if estoque else Decimal('0.00')
+        return saldo.saldo_estoque if saldo else Decimal('0.00')
         
     except Exception as e:
         logger.error(f"Erro ao calcular estoque atual: {e}")

@@ -66,7 +66,11 @@ def verificar_baixa_estoque_orcamento(empresa_id, filial_id, request):
     """
     parametros = obter_parametros_orcamentos(empresa_id, filial_id, request)
     param = parametros.get('baixa_estoque_orcamento', {})
-    return param.get('ativo', False) and param.get('valor', '').lower() == 'true'
+    valor = param.get('valor', '')
+    # Verificar se é booleano antes de aplicar .lower()
+    if isinstance(valor, bool):
+        return param.get('ativo', False) and valor
+    return param.get('ativo', False) and str(valor).lower() == 'true'
 
 
 def verificar_usar_preco_prazo_orcamento(empresa_id, filial_id, request):
@@ -75,7 +79,11 @@ def verificar_usar_preco_prazo_orcamento(empresa_id, filial_id, request):
     """
     parametros = obter_parametros_orcamentos(empresa_id, filial_id, request)
     param = parametros.get('usar_preco_prazo', {})
-    return param.get('ativo', False) and param.get('valor', '').lower() == 'true'
+    valor = param.get('valor', '')
+    # Verificar se é booleano antes de aplicar .lower()
+    if isinstance(valor, bool):
+        return param.get('ativo', False) and valor
+    return param.get('ativo', False) and str(valor).lower() == 'true'
 
 
 def verificar_usar_ultimo_preco_orcamento(empresa_id, filial_id, request):
@@ -84,7 +92,11 @@ def verificar_usar_ultimo_preco_orcamento(empresa_id, filial_id, request):
     """
     parametros = obter_parametros_orcamentos(empresa_id, filial_id, request)
     param = parametros.get('usar_ultimo_preco', {})
-    return param.get('ativo', False) and param.get('valor', '').lower() == 'true'
+    valor = param.get('valor', '')
+    # Verificar se é booleano antes de aplicar .lower()
+    if isinstance(valor, bool):
+        return param.get('ativo', False) and valor
+    return param.get('ativo', False) and str(valor).lower() == 'true'
 
 
 def verificar_desconto_orcamento(empresa_id, filial_id, request):
@@ -93,7 +105,11 @@ def verificar_desconto_orcamento(empresa_id, filial_id, request):
     """
     parametros = obter_parametros_orcamentos(empresa_id, filial_id, request)
     param = parametros.get('desconto_orcamento', {})
-    return param.get('ativo', False) and param.get('valor', '').lower() == 'true'
+    valor = param.get('valor', '')
+    # Verificar se é booleano antes de aplicar .lower()
+    if isinstance(valor, bool):
+        return param.get('ativo', False) and valor
+    return param.get('ativo', False) and str(valor).lower() == 'true'
 
 
 def verificar_conversao_automatica(empresa_id, filial_id, request):
@@ -102,7 +118,11 @@ def verificar_conversao_automatica(empresa_id, filial_id, request):
     """
     parametros = obter_parametros_orcamentos(empresa_id, filial_id, request)
     param = parametros.get('conversao_automatica_pedido', {})
-    return param.get('ativo', False) and param.get('valor', '').lower() == 'true'
+    valor = param.get('valor', '')
+    # Verificar se é booleano antes de aplicar .lower()
+    if isinstance(valor, bool):
+        return param.get('ativo', False) and valor
+    return param.get('ativo', False) and str(valor).lower() == 'true'
 
 
 def obter_validade_orcamento(empresa_id, filial_id, request):

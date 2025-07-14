@@ -50,20 +50,24 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
     valor_total = serializers.FloatField(source='pedi_tota', read_only=True)
     cliente_nome = serializers.SerializerMethodField(read_only=True)
     empresa_nome = serializers.SerializerMethodField(read_only=True)
-    itens = serializers.SerializerMethodField()
-    itens_input = ItemOrcamentoSerializer(many=True, write_only=True, required=True)
-
+    itens = serializers.SerializerMethodField(read_only=True)
+    itens_input = ItemOrcamentoSerializer(many=True, write_only=True, required=False)
+    # Adicionar campo para aceitar lista de dicionários do frontend
+    itens_data = serializers.ListField(child=serializers.DictField(), write_only=True, required=False)
 
     class Meta:
         model = Orcamentos
         fields = [
             'pedi_empr', 'pedi_fili', 'pedi_data', 'pedi_tota', 'pedi_forn', 'pedi_vend',
-            'itens', 'itens_input',
+            'itens', 'itens_input', 'itens_data',  # Adicionado 'itens_data' aqui
             'valor_total', 'cliente_nome', 'empresa_nome', 'pedi_nume'
         ]
     
     def to_internal_value(self, data):
-       
+        # Converte 'itens' para 'itens_input' se necessário
+        if 'itens' in data and 'itens_input' not in data:
+            data['itens_input'] = data.pop('itens')
+        
         if 'pedi_tota' in data:
             try:
                 data['pedi_tota'] = round(float(data['pedi_tota']), 2)
@@ -87,7 +91,8 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
         if not banco:
             raise ValidationError("Banco não definido no contexto.")
 
-        itens_data = validated_data.pop('itens_input', [])
+        # Aceita tanto 'itens_input' quanto 'itens'
+        itens_data = validated_data.pop('itens_input', []) or validated_data.pop('itens', [])
         if not itens_data:
             raise ValidationError("Itens do orcamento são obrigatórios.")
 
@@ -150,7 +155,8 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
         if not banco:
             raise ValidationError("Banco não definido no contexto.")
 
-        itens_data = validated_data.pop('itens_input', None)
+        # Aceita tanto 'itens_input' quanto 'itens'
+        itens_data = validated_data.pop('itens_input', None) or validated_data.pop('itens', None)
         if itens_data is None:
             raise ValidationError("Itens do orcamento são obrigatórios.")
 

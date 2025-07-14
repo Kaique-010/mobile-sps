@@ -5,33 +5,48 @@ from core.utils import get_licenca_db_config
 from .utils_pedidos import verificar_volta_estoque_pedido
 from .utils_estoque import (
     verificar_saida_automatica,
+    verificar_volta_estoque,
     verificar_estoque_disponivel,
-    verificar_estoque_negativo
+    verificar_estoque_negativo,  # Adicionar esta importação
+    calcular_estoque_atual
 )
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-def processar_saida_estoque_pedido(pedido, itens_pedido, request):
+def processar_saida_estoque_pedido(pedido, itens_data, request):
     """
-    Processa saída de estoque ao gravar um pedido
-    
-    Args:
-        pedido: Instância do PedidoVenda
-        itens_pedido: Lista de itens do pedido
-        request: Request object
-    
-    Returns:
-        dict: Resultado do processamento
+    Processa saída automática de estoque para um pedido
     """
+    print(f"🔄 [ESTOQUE] Iniciando processamento de saída para pedido {pedido.pedi_nume}")
+    print(f"🔄 [ESTOQUE] Empresa: {pedido.pedi_empr}, Filial: {pedido.pedi_fili}")
+    print(f"🔄 [ESTOQUE] Quantidade de itens: {len(itens_data)}")
+    
     try:
         banco = get_licenca_db_config(request)
         empresa_id = pedido.pedi_empr
         filial_id = pedido.pedi_fili
         
+        # Verificar se já existem saídas para este pedido (evitar duplicação em updates)
+        from Saidas_Estoque.models import SaidasEstoque
+        saidas_existentes = SaidasEstoque.objects.using(banco).filter(
+            said_empr=empresa_id,
+            said_fili=filial_id,
+            said_obse__icontains=f'Pedido {pedido.pedi_nume}'
+        ).exists()
+        
+        if saidas_existentes:
+            print(f"⚠️ [ESTOQUE] Saídas já existem para pedido {pedido.pedi_nume} - pulando processamento")
+            return {
+                'sucesso': True,
+                'processado': False,
+                'motivo': 'Saídas de estoque já processadas para este pedido'
+            }
+        
         # Verificar se saída automática está habilitada
         if not verificar_saida_automatica(empresa_id, filial_id, request):
+            print(f"⚠️ [ESTOQUE] Saída automática DESABILITADA para empresa {empresa_id}, filial {filial_id}")
             logger.info(f"Saída automática desabilitada para empresa {empresa_id}, filial {filial_id}")
             return {
                 'sucesso': True,
@@ -39,11 +54,13 @@ def processar_saida_estoque_pedido(pedido, itens_pedido, request):
                 'motivo': 'Saída automática desabilitada'
             }
         
+        print(f"✅ [ESTOQUE] Saída automática HABILITADA - processando itens...")
+        
         saidas_criadas = []
         alertas = []
         
         with transaction.atomic(using=banco):
-            for item in itens_pedido:
+            for item in itens_data:
                 produto_codigo = item.get('iped_prod')
                 quantidade = Decimal(str(item.get('iped_quan', 0)))
                 valor_unitario = Decimal(str(item.get('iped_unit', 0)))
@@ -73,22 +90,13 @@ def processar_saida_estoque_pedido(pedido, itens_pedido, request):
                 
                 # Criar saída de estoque
                 saida_data = criar_saida_estoque(
-                    produto_codigo=produto_codigo,
-                    quantidade=quantidade,
-                    valor_total=valor_total,
-                    empresa_id=empresa_id,
-                    filial_id=filial_id,
-                    pedido_numero=pedido.pedi_nume,
-                    cliente_codigo=pedido.pedi_forn,
-                    data_saida=pedido.pedi_data,
-                    usuario_id=getattr(request.user, 'id', 1),
-                    request=request
+                    produto_codigo, quantidade, valor_unitario, pedido, request
                 )
                 
                 if saida_data:
                     saidas_criadas.append(saida_data)
                     
-                    # Atualizar saldo do produto
+                    # Atualizar saldo do produto (ÚNICA chamada)
                     atualizar_saldo_produto(
                         produto_codigo, -quantidade, empresa_id, filial_id, request
                     )
@@ -114,13 +122,19 @@ def processar_saida_estoque_pedido(pedido, itens_pedido, request):
         }
 
 
-def criar_saida_estoque(produto_codigo, quantidade, valor_total, empresa_id, filial_id, 
-                       pedido_numero, cliente_codigo, data_saida, usuario_id, request):
+def criar_saida_estoque(produto_codigo, quantidade, valor_unitario, pedido, request):
     """
     Cria registro de saída de estoque
     """
+    print(f"📝 [SAÍDA] Criando saída de estoque - Produto: {produto_codigo}, Qtd: {quantidade}")
+    
     try:
         banco = get_licenca_db_config(request)
+        empresa_id = pedido.pedi_empr
+        filial_id = pedido.pedi_fili
+        valor_total = quantidade * valor_unitario
+        
+        print(f"📝 [SAÍDA] Valor unitário: {valor_unitario}, Valor total: {valor_total}")
         
         from Saidas_Estoque.models import SaidasEstoque
         
@@ -134,17 +148,19 @@ def criar_saida_estoque(produto_codigo, quantidade, valor_total, empresa_id, fil
         
         # Criar saída
         saida = SaidasEstoque.objects.using(banco).create(
-            said_sequ=proximo_sequencial,
             said_empr=empresa_id,
             said_fili=filial_id,
+            said_sequ=proximo_sequencial,
+            said_data=pedido.pedi_data,
             said_prod=produto_codigo,
-            said_enti=cliente_codigo,
-            said_data=data_saida,
             said_quan=quantidade,
             said_tota=valor_total,
-            said_obse=f'Saída automática - Pedido {pedido_numero}',
-            said_usua=usuario_id
+            said_obse=f'Saída automática - Pedido {pedido.pedi_nume}',
+            said_usua=1,
+            said_enti = pedido.pedi_forn
         )
+        
+        print(f"✅ [SAÍDA] Saída criada com sucesso - Sequencial: {saida.said_sequ}")
         
         logger.info(f"Saída de estoque criada: {saida.said_sequ} - Produto: {produto_codigo}")
         

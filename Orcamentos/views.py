@@ -12,6 +12,7 @@ from .serializers import OrcamentosSerializer
 from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from rest_framework.filters import SearchFilter
 from django_filters.rest_framework import DjangoFilterBackend
+from parametros_admin.decorators import parametros_orcamentos_completo
 
 
 import logging
@@ -75,6 +76,7 @@ class OrcamentoViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
         return context
     
     
+    @parametros_orcamentos_completo
     def create(self, request, *args, **kwargs):
         try:
             logger.info(f"[OrcamentoViewSet.create] request.data: {request.data}")
@@ -100,6 +102,7 @@ class OrcamentoViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
     
     
     
+    @parametros_orcamentos_completo
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data)
