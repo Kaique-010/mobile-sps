@@ -26,6 +26,8 @@ class OrcamentoViewSet(viewsets.ModelViewSet):
     filterset_fields = ['pedi_empr', 'pedi_fili', 'pedi_nume', 'pedi_forn', 'pedi_data']
 
     def get_queryset(self):
+        from datetime import datetime
+        
         banco = get_licenca_db_config(self.request)
         if not banco:
             logger.error("Banco de dados não encontrado.")
@@ -34,11 +36,21 @@ class OrcamentoViewSet(viewsets.ModelViewSet):
         # Base queryset otimizada
         queryset = Orcamentos.objects.using(banco).all()
         
-        # Aplicar filtros de forma otimizada
+        # Obter parâmetros de filtro
         cliente_nome = self.request.query_params.get('cliente_nome')
         numero_orcamento = self.request.query_params.get('pedi_nume')
         empresa_id = self.request.query_params.get('pedi_empr')
         filial_id = self.request.query_params.get('pedi_fili')
+        
+        # NOVA LÓGICA: Filtro por ano atual por padrão
+        # Se não há filtros específicos (nome ou número), mostrar apenas ano atual
+        tem_filtros_especificos = cliente_nome or numero_orcamento
+        
+        if not tem_filtros_especificos:
+            # Filtrar apenas orçamentos do ano atual para melhor performance
+            ano_atual = datetime.now().year
+            queryset = queryset.filter(pedi_data__year=ano_atual)
+            logger.info(f"Aplicando filtro por ano atual: {ano_atual}")
 
         # Filtros mais específicos primeiro
         if empresa_id:
@@ -51,11 +63,13 @@ class OrcamentoViewSet(viewsets.ModelViewSet):
             try:
                 numero = int(numero_orcamento)
                 queryset = queryset.filter(pedi_nume=numero)
+                logger.info(f"Buscando orçamento específico: {numero} (sem filtro de ano)")
             except ValueError:
                 return queryset.none()
 
         # Filtro por nome do cliente (mais custoso, por último)
         if cliente_nome:
+            logger.info(f"Buscando por nome do cliente: {cliente_nome} (sem filtro de ano)")
             # Cache para consultas de entidades
             cache_key = f"entidades_cliente_{cliente_nome}_{empresa_id}"
             entidades_ids = cache.get(cache_key)
