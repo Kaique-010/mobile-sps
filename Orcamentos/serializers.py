@@ -78,7 +78,7 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
         # Cache para entidades e empresas
         self._entidades_cache = {}
         self._empresas_cache = {}
-    
+
     def to_internal_value(self, data):
         # Converte 'itens' para 'itens_input' se necessário
         if 'itens' in data and 'itens_input' not in data:
@@ -225,6 +225,13 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
     
 
     def get_cliente_nome(self, obj):
+        # Primeiro tentar usar o cache do contexto
+        entidades_cache = self.context.get('entidades_cache')
+        if entidades_cache:
+            cache_key = f"{obj.pedi_forn}_{obj.pedi_empr}"
+            return entidades_cache.get(cache_key)
+        
+        # Fallback para consulta individual
         banco = self.context.get('banco')
         if not banco:
             return None
@@ -247,6 +254,12 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
         
 
     def get_empresa_nome(self, obj):
+        # Primeiro tentar usar o cache do contexto
+        empresas_cache = self.context.get('empresas_cache')
+        if empresas_cache:
+            return empresas_cache.get(obj.pedi_empr)
+        
+        # Fallback para consulta individual
         banco = self.context.get('banco')
         if not banco:
             return None

@@ -12,6 +12,7 @@ from datetime import date
 from .models import Orcamentos, ItensOrcamento
 from .serializers import OrcamentosSerializer
 from Entidades.models import Entidades
+from Licencas.models import Empresas
 from Pedidos.models import PedidoVenda, Itenspedidovenda
 from core.utils import get_licenca_db_config
 
@@ -82,6 +83,50 @@ class OrcamentoViewSet(viewsets.ModelViewSet):
         context = super().get_serializer_context()
         context['banco'] = get_licenca_db_config(self.request)
         return context
+
+    def list(self, request, *args, **kwargs):
+        """Override do método list para implementar paginação e otimizações"""
+        try:
+            queryset = self.filter_queryset(self.get_queryset())
+            banco = get_licenca_db_config(request)
+            
+            # Implementar paginação
+            page = self.paginate_queryset(queryset)
+            if page is not None:
+                # Pré-carregar dados relacionados para evitar N+1 queries
+                empresas_cache = {}
+                entidades_cache = {}
+                
+                # Buscar empresas únicas
+                empresas_ids = set(obj.pedi_empr for obj in page)
+                empresas = Empresas.objects.using(banco).filter(empr_codi__in=empresas_ids)
+                for empresa in empresas:
+                    empresas_cache[empresa.empr_codi] = empresa.empr_nome
+                
+                # Buscar entidades únicas - corrigir estrutura do cache
+                entidades_keys = set((obj.pedi_forn, obj.pedi_empr) for obj in page)
+                entidades = Entidades.objects.using(banco).filter(
+                    enti_clie__in=[forn for forn, empr in entidades_keys],
+                    enti_empr__in=[empr for forn, empr in entidades_keys]
+                )
+                for entidade in entidades:
+                    cache_key = f"{entidade.enti_clie}_{entidade.enti_empr}"
+                    entidades_cache[cache_key] = entidade.enti_nome
+                
+                # Adicionar caches ao contexto do serializer
+                context = self.get_serializer_context()
+                context['empresas_cache'] = empresas_cache
+                context['entidades_cache'] = entidades_cache
+                
+                serializer = self.get_serializer(page, many=True, context=context)
+                return self.get_paginated_response(serializer.data)
+            
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
+            
+        except Exception as e:
+            logger.error(f"[OrcamentoViewSet.list] Erro inesperado: {e}")
+            return Response({'error': 'Erro interno do servidor'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def create(self, request, *args, **kwargs):
         try:

@@ -12,6 +12,7 @@ from django.db.models import Prefetch
 from .models import PedidoVenda, Itenspedidovenda
 from .serializers import PedidoVendaSerializer
 from Entidades.models import Entidades
+from Licencas.models import Empresas
 from core.utils import get_licenca_db_config
 from parametros_admin.decorators import parametros_pedidos_completo
 from parametros_admin.integracao_pedidos import reverter_estoque_pedido, obter_status_estoque_pedido
@@ -115,6 +116,61 @@ class PedidoVendaViewSet(viewsets.ModelViewSet):
 
         # Ordenar por número do pedido (mais recentes primeiro)
         return queryset.order_by('-pedi_nume')
+    
+    def list(self, request, *args, **kwargs):
+        """
+        Override do método list para otimizar performance com muitos registros
+        """
+        try:
+            banco = get_licenca_db_config(request)
+            if not banco:
+                logger.error("Banco de dados não encontrado.")
+                raise NotFound("Banco de dados não encontrado.")
+
+            # Obter queryset filtrado
+            queryset = self.filter_queryset(self.get_queryset())
+            
+            # Aplicar paginação
+            page = self.paginate_queryset(queryset)
+            if page is not None:
+                # Pré-carregar dados relacionados para evitar N+1 queries
+                empresas_ids = list(set([p.pedi_empr for p in page]))
+                fornecedores_ids = list(set([p.pedi_forn for p in page]))
+                
+                # Cache de empresas
+                empresas_cache = {}
+                if empresas_ids:
+                    empresas = Empresas.objects.using(banco).filter(empr_codi__in=empresas_ids)
+                    empresas_cache = {emp.empr_codi: emp.empr_nome for emp in empresas}
+                
+                # Cache de entidades (clientes) - corrigir estrutura
+                entidades_cache = {}
+                if fornecedores_ids and empresas_ids:
+                    entidades = Entidades.objects.using(banco).filter(
+                        enti_clie__in=fornecedores_ids,
+                        enti_empr__in=empresas_ids
+                    )
+                    for entidade in entidades:
+                        cache_key = f"{entidade.enti_clie}_{entidade.enti_empr}"
+                        entidades_cache[cache_key] = entidade.enti_nome
+                
+                # Adicionar caches ao contexto do serializer
+                context = self.get_serializer_context()
+                context['empresas_cache'] = empresas_cache
+                context['entidades_cache'] = entidades_cache
+                
+                serializer = self.get_serializer(page, many=True, context=context)
+                return self.get_paginated_response(serializer.data)
+
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
+            
+        except Exception as e:
+            logger.error(f"Erro no método list: {e}")
+            return Response(
+                {'erro': 'Erro interno do servidor'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     def get_serializer_context(self):
         context = super().get_serializer_context()

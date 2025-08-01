@@ -477,3 +477,53 @@ Traceback (most recent call last):
                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 TypeError: OrcamentoViewSet.transformar_em_pedido() got an unexpected keyword argument 'slug'
 [2025-08-01 14:35:29,175] [ERROR] django.server: "POST /api/ola/orcamentos/orcamentos/5/transformar-em-pedido/ HTTP/1.1" 500 22322
+[2025-08-01 14:51:58,442] [ERROR] django.request: Internal Server Error: /api/ola/Os/ordens/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\viewsets.py", line 125, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\core\decorator.py", line 58, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\mixins.py", line 38, in list
+    queryset = self.filter_queryset(self.get_queryset())
+                                    ^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\O_S\views.py", line 88, in get_queryset
+    if user_setor.osfs_codi != 6:
+       ^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'osfs_codi'
+[2025-08-01 14:51:58,442] [ERROR] django.server: "GET /api/ola/Os/ordens/?params[page]=1&params[page_size]=20&empr=1&fili=1&usua=1 HTTP/1.1" 500 22640
+[2025-08-01 15:04:48,323] [ERROR] Pedidos: Erro no método list: name 'Empresas' is not defined
+[2025-08-01 15:04:48,393] [ERROR] django.request: Internal Server Error: /api/ola/pedidos/pedidos/
+[2025-08-01 15:04:48,401] [ERROR] django.server: "GET /api/ola/pedidos/pedidos/?limit=40&offset=0&cliente_nome=&pedi_nume=&pedi_empr=1&pedi_fili=1&pedi_usua=1 HTTP/1.1" 500 35
+[2025-08-01 15:05:07,961] [ERROR] Pedidos: Erro no método list: name 'Empresas' is not defined
+[2025-08-01 15:05:07,975] [ERROR] django.request: Internal Server Error: /api/ola/pedidos/pedidos/
+[2025-08-01 15:05:07,976] [ERROR] django.server: "GET /api/ola/pedidos/pedidos/?limit=40&offset=0&cliente_nome=&pedi_nume=&pedi_empr=1&pedi_fili=1&pedi_usua=1 HTTP/1.1" 500 35
+[2025-08-01 15:06:37,450] [ERROR] Pedidos: Erro no método list: name 'Empresas' is not defined
+[2025-08-01 15:06:37,497] [ERROR] django.request: Internal Server Error: /api/ola/pedidos/pedidos/
+[2025-08-01 15:06:37,497] [ERROR] django.server: "GET /api/ola/pedidos/pedidos/?limit=40&offset=0&cliente_nome=&pedi_nume=&pedi_empr=1&pedi_fili=1&pedi_usua=1 HTTP/1.1" 500 35
+[2025-08-01 15:06:47,532] [ERROR] Orcamentos: [OrcamentoViewSet.list] Erro inesperado: name 'Empresas' is not defined
+[2025-08-01 15:06:47,580] [ERROR] django.request: Internal Server Error: /api/ola/orcamentos/orcamentos/
+[2025-08-01 15:06:47,581] [ERROR] django.server: "GET /api/ola/orcamentos/orcamentos/?limit=50&offset=0&search=&cliente_nome=&pedi_nume=&pedi_empr=1&pedi_fili=1&pedi_usua=1 HTTP/1.1" 500 36
