@@ -240,8 +240,8 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
         except Exception as e:
             logger.warning(f"Erro ao buscar cliente: {e}")
             return None
-        
-
+    
+    
     def get_empresa_nome(self, obj):
         banco = self.context.get('banco')
         if not banco:
