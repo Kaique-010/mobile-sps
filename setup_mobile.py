@@ -12,6 +12,100 @@ LOCAL_DB_HOST = config('LOCAL_DB_HOST')
 LOCAL_DB_PORT = config('LOCAL_DB_PORT')
 
 
+# SQL para criar tabelas essenciais do Django
+SQL_DJANGO_CORE = """
+-- Criar tabelas essenciais do Django se não existirem
+CREATE TABLE IF NOT EXISTS django_content_type (
+    id SERIAL PRIMARY KEY,
+    app_label VARCHAR(100) NOT NULL,
+    model VARCHAR(100) NOT NULL,
+    UNIQUE(app_label, model)
+);
+
+CREATE TABLE IF NOT EXISTS auth_permission (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    content_type_id INTEGER NOT NULL REFERENCES django_content_type(id),
+    codename VARCHAR(100) NOT NULL,
+    UNIQUE(content_type_id, codename)
+);
+
+CREATE TABLE IF NOT EXISTS auth_group (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(150) UNIQUE NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS auth_group_permissions (
+    id SERIAL PRIMARY KEY,
+    group_id INTEGER NOT NULL REFERENCES auth_group(id),
+    permission_id INTEGER NOT NULL REFERENCES auth_permission(id),
+    UNIQUE(group_id, permission_id)
+);
+
+CREATE TABLE IF NOT EXISTS auth_user (
+    id SERIAL PRIMARY KEY,
+    password VARCHAR(128) NOT NULL,
+    last_login TIMESTAMP WITH TIME ZONE,
+    is_superuser BOOLEAN NOT NULL,
+    username VARCHAR(150) UNIQUE NOT NULL,
+    first_name VARCHAR(150) NOT NULL,
+    last_name VARCHAR(150) NOT NULL,
+    email VARCHAR(254) NOT NULL,
+    is_staff BOOLEAN NOT NULL,
+    is_active BOOLEAN NOT NULL,
+    date_joined TIMESTAMP WITH TIME ZONE NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS auth_user_groups (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES auth_user(id),
+    group_id INTEGER NOT NULL REFERENCES auth_group(id),
+    UNIQUE(user_id, group_id)
+);
+
+CREATE TABLE IF NOT EXISTS auth_user_user_permissions (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES auth_user(id),
+    permission_id INTEGER NOT NULL REFERENCES auth_permission(id),
+    UNIQUE(user_id, permission_id)
+);
+
+CREATE TABLE IF NOT EXISTS django_admin_log (
+    id SERIAL PRIMARY KEY,
+    action_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    object_id TEXT,
+    object_repr VARCHAR(200) NOT NULL,
+    action_flag SMALLINT NOT NULL CHECK (action_flag >= 0),
+    change_message TEXT NOT NULL,
+    content_type_id INTEGER REFERENCES django_content_type(id),
+    user_id INTEGER NOT NULL REFERENCES auth_user(id)
+);
+
+CREATE TABLE IF NOT EXISTS django_session (
+    session_key VARCHAR(40) PRIMARY KEY,
+    session_data TEXT NOT NULL,
+    expire_date TIMESTAMP WITH TIME ZONE NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS django_session_expire_date_a5c62663 ON django_session(expire_date);
+
+CREATE TABLE IF NOT EXISTS django_migrations (
+    id SERIAL PRIMARY KEY,
+    app VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    applied TIMESTAMP WITH TIME ZONE NOT NULL
+);
+
+-- Criar tabela modulosmobile se não existir
+CREATE TABLE IF NOT EXISTS modulosmobile (
+    modu_codi SERIAL PRIMARY KEY,
+    modu_nome VARCHAR(100) NOT NULL UNIQUE,
+    modu_desc TEXT,
+    modu_ativ BOOLEAN NOT NULL DEFAULT TRUE,
+    modu_icon VARCHAR(50),
+    modu_orde INTEGER
+);
+"""
 
 # SQL de tabelas e inserções
 SQL_COMMANDS = """
@@ -66,6 +160,7 @@ WHERE NOT EXISTS (
     SELECT 1 FROM modulosmobile m WHERE m.modu_nome = t.modu_nome
 );
 """
+
 # Inserir permissões para o usuário 1
 SQL_INSERT_PERMISSAO = """
 INSERT INTO permissoesmodulosmobile (perm_empr, perm_fili, perm_modu, perm_ativ, perm_usua_libe, perm_data_alte)
@@ -76,9 +171,13 @@ TRUE AS perm_ativ,
 1 AS perm_usua_libe,
 NOW() AS perm_data_alte
 FROM modulosmobile
+WHERE NOT EXISTS (
+    SELECT 1 FROM permissoesmodulosmobile p 
+    WHERE p.perm_modu = modulosmobile.modu_codi 
+    AND p.perm_empr = 1 
+    AND p.perm_fili = 1
+);
 """
-
-
 
 # SQL de views
 SQL_VIEWS = """
@@ -200,9 +299,8 @@ CREATE OR REPLACE VIEW public.os_geral
      LEFT JOIN entidades vend ON os.os_vend = vend.enti_clie AND os.os_empr = vend.enti_empr
   ORDER BY os.os_data_aber DESC, os.os_os DESC;
 
--- View enviarcobranca
-CREATE OR REPLACE VIEW public.enviarcobranca
- AS
+-- view para envio de cobrança 
+
  WITH titulos_abertos AS (
          SELECT t_1.titu_empr,
             t_1.titu_fili,
@@ -225,7 +323,7 @@ CREATE OR REPLACE VIEW public.enviarcobranca
     e.enti_nome AS cliente_nome,
     e.enti_celu AS cliente_celular,
     e.enti_fone AS cliente_telefone,
-    e.enti_emai AS cliente_email,
+	e.enti_emai AS cliente_email,
     t.titu_titu AS numero_titulo,
     t.titu_seri AS serie,
     t.titu_parc AS parcela,
@@ -390,19 +488,27 @@ def executar_sql(sql, titulo="SQL"):
     conn.close()
     print(f"✅ {titulo} executado com sucesso.\n")
 
-def rodar_comando(cmd):
+def rodar_comando(cmd, ignore_errors=False):
     print(f"⚙️ Rodando comando: {cmd}")
-    subprocess.run(cmd, shell=True, check=True)
-    print("✅ Comando executado.\n")
+    try:
+        subprocess.run(cmd, shell=True, check=True)
+        print("✅ Comando executado.\n")
+    except subprocess.CalledProcessError as e:
+        if ignore_errors:
+            print(f"⚠️ Comando falhou mas continuando: {e}\n")
+        else:
+            raise e
+
 
 def main():
-    print("📦 Aplicando migrations...")
-    rodar_comando("python manage.py migrate parametros_admin  --fake-initial")
-    rodar_comando("python manage.py migrate notificacoes  --fake-initial")
-    rodar_comando("python manage.py migrate auditoria  --fake-initial")
-    rodar_comando("python manage.py migrate SpsComissoes  --fake-initial")
-    rodar_comando("python manage.py migrate Sdk_recebimentos  --fake-initial")
-
+    print("🔧 Criando tabelas essenciais do Django...")
+    executar_sql(SQL_DJANGO_CORE, "Criação de tabelas essenciais do Django")
+    
+    print("📦 Marcando todas as migrations como aplicadas...")
+    # Marcar todas as migrations como aplicadas sem executar
+    rodar_comando("python manage.py migrate --fake")
+    
+    print("📦 Executando SQL customizado...")
     executar_sql(SQL_COMMANDS, "Criação e atualização de tabelas")
     executar_sql(SQL_INSERT_PERMISSAO, "Inserção de permissões para usuário 1")
     executar_sql(SQL_VIEWS, "Criação de views")
