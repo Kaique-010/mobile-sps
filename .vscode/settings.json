@@ -112,6 +112,15 @@
       "name": "impar",
       "database": "savexml689",
       "username": "savexml689"
+    },
+    {
+      "previewLimit": 50,
+      "server": "localhost",
+      "port": 5433,
+      "driver": "PostgreSQL",
+      "name": "casaa2",
+      "database": "casaa",
+      "username": "postgres"
     }
   ]
 }

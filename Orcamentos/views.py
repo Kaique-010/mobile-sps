@@ -138,4 +138,33 @@ class OrcamentoViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
     
 
+    @action(detail=True, methods=['post'])
+    def transformar_em_pedido(self, request, *args, **kwargs):
+        orcamento = self.get_object()
+        banco = get_licenca_db_config(self.request)
 
+        try:
+            orcamento = self.get_object()
+            pedido = Pedidos.objects.using(banco).create(
+                pedi_empr=orcamento.pedi_empr,
+                pedi_fili=orcamento.pedi_fili,
+                pedi_nume=orcamento.pedi_nume,
+                pedi_forn=orcamento.pedi_forn,
+                pedi_data=orcamento.pedi_data,
+                pedi_valo=orcamento.pedi_valo,
+                pedi_obs=orcamento.pedi_obs,
+            )
+            ItensPedidos.objects.using(banco).create(
+                iped_empr=pedido.pedi_empr,
+                iped_fili=pedido.pedi_fili,
+                iped_pedi=pedido.pedi_nume,
+                iped_item=item.iped_item,
+                iped_quan=item.iped_qtd,
+                iped_valo=item.iped_valo,
+            )
+        except Exception as e:
+            logger.error(f"Erro ao transformar orcamento em pedido: {e}")
+            return Response({'error': 'Erro ao transformar orcamento em pedido'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'message': 'Orcamento transformado com sucesso'}, status=status.HTTP_200_OK)
+            
+        

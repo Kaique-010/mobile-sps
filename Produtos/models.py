@@ -26,13 +26,13 @@ class GrupoProduto(models.Model):
 
 class SubgrupoProduto(models.Model):
     codigo = models.AutoField(
-        db_column='grup_codi', 
+        db_column='sugr_codi', 
         primary_key=True,
         verbose_name='Código'
     )
     descricao = models.CharField(
         max_length=255, 
-        db_column='grup_desc', 
+        db_column='sugr_desc', 
         verbose_name='Descrição'
     )
 
@@ -47,13 +47,13 @@ class SubgrupoProduto(models.Model):
 
 class FamiliaProduto(models.Model):
     codigo = models.AutoField(
-        db_column='grup_codi', 
+        db_column='fami_codi', 
         primary_key=True,
         verbose_name='Código'
     )
     descricao = models.CharField(
         max_length=255, 
-        db_column='grup_desc', 
+        db_column='fami_desc', 
         verbose_name='Descrição'
     )
 
@@ -68,13 +68,13 @@ class FamiliaProduto(models.Model):
 
 class Marca(models.Model):
     codigo = models.AutoField(
-        db_column='grup_codi', 
+        db_column='marc_codi', 
         primary_key=True,
         verbose_name='Código'
     )
     nome = models.CharField(
         max_length=255, 
-        db_column='grup_desc', 
+        db_column='marc_desc', 
         verbose_name='Nome'
     )
 

@@ -67,7 +67,7 @@ WHERE NOT EXISTS (
 );
 """
 
-# SQL das views (resumido abaixo, cola tudo aqui que você já me mandou)
+# SQL de views
 SQL_VIEWS = """
 -- View produtos_detalhados
 CREATE OR REPLACE VIEW public.produtos_detalhados
@@ -383,20 +383,21 @@ def rodar_comando(cmd):
     print("✅ Comando executado.\n")
 
 def main():
+    print("📦 Aplicando migrations...")
+    rodar_comando("python manage.py migrate parametros_admin  --fake-initial")
+    rodar_comando("python manage.py migrate notificacoes  --fake-initial")
+    rodar_comando("python manage.py migrate auditoria  --fake-initial")
+    rodar_comando("python manage.py migrate SpsComissoes  --fake-initial")
+    rodar_comando("python manage.py migrate Sdk_recebimentos  --fake-initial")
+
     executar_sql(SQL_COMMANDS, "Criação e atualização de tabelas")
     executar_sql(SQL_VIEWS, "Criação de views")
-
-    print("📦 Aplicando migrations...")
-    rodar_comando("python manage.py migrate parametros_admin")
-    rodar_comando("python manage.py migrate notificacoes")
-    rodar_comando("python manage.py migrate auditoria")
-    rodar_comando("python manage.py migrate SpsComissoes")
-    rodar_comando("python manage.py migrate Sdk_recebimentos")
 
     print("📊 Populando parâmetros iniciais...")
     rodar_comando("python manage.py populate_parametros --empresa 1 --filial 1")
 
     print("🎉 Setup do banco finalizado com sucesso.")
+
 
 if __name__ == "__main__":
     main()
