@@ -5,15 +5,14 @@ from rest_framework.filters import SearchFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.permissions import IsAuthenticated
 from core.decorator import modulo_necessario, ModuloRequeridoMixin
-from Pedidos import serializers
-import Produtos
 from rest_framework import status
-from Produtos.serializers import ProdutoSerializer
 from core.middleware import get_licenca_slug
 from core.registry import get_licenca_db_config
 from .models import Entidades
 from .serializers import EntidadesSerializer
 from .utils import buscar_endereco_por_cep
+from django.db.models import Q
+from django.core.cache import cache
 
 class EntidadesViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
     modulo_requerido = 'Entidades'
@@ -28,9 +27,29 @@ class EntidadesViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
         banco = get_licenca_db_config(self.request)
         print(f"\n🔍 Banco de dados selecionado: {banco}")
         
-        if banco:
-            return Entidades.objects.using(banco).all().order_by('enti_nome')
-        return Entidades.objects.none()
+        if not banco:
+            return Entidades.objects.none()
+            
+        # Base queryset otimizada
+        queryset = Entidades.objects.using(banco).all()
+        
+        # Aplicar filtros de forma otimizada
+        empresa_id = self.request.query_params.get('enti_empr')
+        search_query = self.request.query_params.get('search')
+        
+        # Filtro por empresa primeiro (mais eficiente)
+        if empresa_id:
+            queryset = queryset.filter(enti_empr=empresa_id)
+            
+        # Filtro de busca otimizado
+        if search_query:
+            queryset = queryset.filter(
+                Q(enti_nome__icontains=search_query) |
+                Q(enti_nume__icontains=search_query)
+            )
+        
+        # Ordenação otimizada
+        return queryset.order_by('enti_empr', 'enti_nome')
 
     def get_object(self):
         """
@@ -70,7 +89,6 @@ class EntidadesViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
     def get_serializer_class(self):
         return EntidadesSerializer
     
-    
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context['banco'] = get_licenca_db_config(self.request)
@@ -88,7 +106,15 @@ class EntidadesViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
         if not cep:
             return Response({"erro": "CEP não informado"}, status=400)
 
-        endereco = buscar_endereco_por_cep(cep)
+        # Cache para CEPs consultados
+        cache_key = f"endereco_cep_{cep}"
+        endereco = cache.get(cache_key)
+        
+        if not endereco:
+            endereco = buscar_endereco_por_cep(cep)
+            if endereco:
+                cache.set(cache_key, endereco, 3600)  # Cache por 1 hora
+        
         if endereco:
             return Response(endereco)
         else:

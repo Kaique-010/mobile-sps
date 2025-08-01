@@ -16,6 +16,7 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
 USE_LOCAL_DB = config('USE_LOCAL_DB', default=True, cast=bool)
 
+# Configurações de banco de dados com otimizações
 if USE_LOCAL_DB:
     DATABASES = {
         'default': {
@@ -27,7 +28,8 @@ if USE_LOCAL_DB:
             'PORT': config('LOCAL_DB_PORT'),
             'OPTIONS': {
                 'options': '-c timezone=America/Araguaina'
-            }
+            },
+            'CONN_MAX_AGE': 300,  # 5 minutos para local
         }
     }
 else:
@@ -41,17 +43,24 @@ else:
             'PORT': config('REMOTE_DB_PORT'),
             'OPTIONS': {
                 'options': '-c timezone=America/Araguaina'
-            }
+            },
+            'CONN_MAX_AGE': 600,  # 10 minutos para produção
         }
     }
 
-if USE_LOCAL_DB:
-    print("DB_NAME usado =", config('LOCAL_DB_NAME'))
-else:
-    print("DB_NAME usado =", config('REMOTE_DB_NAME'))
-
-
 DATABASE_ROUTERS = ['core.db_router.LicencaDBRouter']
+
+# Cache para consultas frequentes (aplicado globalmente)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+        'TIMEOUT': 300,  # 5 minutos
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000,
+        }
+    }
+}
 
 # Definir aplicativos instalados
 INSTALLED_APPS = [
@@ -96,7 +105,7 @@ INSTALLED_APPS = [
 # Middleware
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'corsheaders.middleware.CorsMiddleware',  # <-- PRIMEIRO EXTERNO
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -107,59 +116,6 @@ MIDDLEWARE = [
     'auditoria.middleware.AuditoriaMiddleware',
     'core.middleware.LicencaMiddleware',
 ]
-
-# Configuração de cache (se não existir)
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'unique-snowflake',
-    }
-}
-
-# Logging
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '[{asctime}] [{levelname}] {name}: {message}',
-            'style': '{',
-        },
-    },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
-        },
-        'file': {
-            'level': 'ERROR',
-            'class': 'logging.FileHandler',
-            'filename': 'django_errors.log',
-            'formatter': 'verbose',
-        },
-    },
-    'root': {
-        'handlers': ['console'],
-        'level': 'INFO',
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['console', 'file'],
-            'level': 'INFO',
-            'propagate': True,
-        },
-        'django.request': {
-            'handlers': ['console', 'file'],
-            'level': 'ERROR',
-            'propagate': False,
-        },
-        'Orcamentos': {
-            'handlers': ['console', 'file'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
-    },
-}
 
 # Configurações de CORS
 if DEBUG:
@@ -209,7 +165,6 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LANGUAGE_CODE = 'pt-br'
-
 TIME_ZONE = 'America/Araguaina'
 USE_TZ = False
 USE_I18N = True
@@ -219,6 +174,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Configurações do Django REST Framework com otimizações
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -230,9 +186,9 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
-    'PAGE_SIZE': 50,
+    'PAGE_SIZE': 25,  # Otimizado para performance
+    'MAX_PAGE_SIZE': 100,
 }
-
 
 SIMPLE_JWT = {
     "USER_ID_FIELD": "usua_codi",
@@ -243,10 +199,13 @@ SIMPLE_JWT = {
 
 APPEND_SLASH = True
 
+# Configurações de timeout para produção
+GUNICORN_TIMEOUT = 120  # 2 minutos
 
+# Configurações de logging consolidadas
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': False,  # mantém os logs padrão do Django
+    'disable_existing_loggers': False,
     'formatters': {
         'verbose': {
             'format': '[{asctime}] [{levelname}] {name}: {message}',
@@ -260,21 +219,56 @@ LOGGING = {
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
-            'formatter': 'verbose',  # troca pra 'simple' se quiser mais limpo
+            'formatter': 'verbose',
+        },
+        'file': {
+            'level': 'ERROR',
+            'class': 'logging.FileHandler',
+            'filename': 'django_errors.log',
+            'formatter': 'verbose',
         },
     },
     'root': {
         'handlers': ['console'],
-        'level': 'DEBUG',  # nível mínimo global
+        'level': 'INFO',
     },
     'loggers': {
         'django': {
-            'handlers': ['console'],
+            'handlers': ['console', 'file'],
             'level': 'INFO',
             'propagate': True,
         },
-        # logger do seu app
-        'listacasamento.views': {  # substitui pelo nome real do seu app, tipo 'listas'
+        'django.request': {
+            'handlers': ['console', 'file'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.db.backends': {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+        },
+        'Orcamentos': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'Entidades': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'Produtos': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'Pedidos': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'listacasamento.views': {
             'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': False,
@@ -282,9 +276,7 @@ LOGGING = {
     },
 }
 
-
-#configurações de E-mail
-
+# Configurações de E-mail
 EMAIL_BACKEND = config('EMAIL_BACKEND')
 EMAIL_HOST = config('EMAIL_HOST') 
 EMAIL_PORT = int(config('EMAIL_PORT'))
@@ -293,7 +285,7 @@ EMAIL_HOST_USER = config('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
 
-
+# Patch para SMTP
 import smtplib
 
 orig_starttls = smtplib.SMTP.starttls

@@ -6,6 +6,7 @@ from Produtos.models import Produtos
 from .models import Orcamentos, ItensOrcamento
 from Entidades.models import Entidades
 from core.serializers import BancoContextMixin
+from django.db.models import Prefetch
 import logging
 
 logger = logging.getLogger(__name__)
@@ -13,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 class ItemOrcamentoSerializer(BancoContextMixin,serializers.ModelSerializer):
     produto_nome = serializers.SerializerMethodField()
+    
     class Meta:
         model = ItensOrcamento
         exclude = ['iped_empr', 'iped_fili', 'iped_item', 'iped_pedi', 'iped_data', 'iped_forn']
@@ -31,23 +33,29 @@ class ItemOrcamentoSerializer(BancoContextMixin,serializers.ModelSerializer):
                     data['iped_desc'] = 0.00
         return super().to_internal_value(data)
     
-    
     def get_produto_nome(self, obj):
         banco = self.context.get('banco')
         if not banco:
             logger.warning("Banco não informado no context.")
             return None
         try:
-            produto = Produtos.objects.using(banco).filter(
-                prod_codi=obj.iped_prod,
-                prod_empr=obj.iped_empr
-            ).first()
-            return produto.prod_nome if produto else None
+            # Cache de produtos para evitar consultas repetidas
+            if not hasattr(self, '_produtos_cache'):
+                self._produtos_cache = {}
+            
+            cache_key = f"{obj.iped_prod}_{obj.iped_empr}"
+            if cache_key not in self._produtos_cache:
+                produto = Produtos.objects.using(banco).filter(
+                    prod_codi=obj.iped_prod,
+                    prod_empr=obj.iped_empr
+                ).first()
+                self._produtos_cache[cache_key] = produto.prod_nome if produto else None
+            
+            return self._produtos_cache[cache_key]
         except Exception as e:
             logger.error(f"Erro ao buscar produto: {e}")
             return None
 
-            
             
 class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
     valor_total = serializers.FloatField(source='pedi_tota', read_only=True)
@@ -55,16 +63,21 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
     empresa_nome = serializers.SerializerMethodField(read_only=True)
     itens = serializers.SerializerMethodField(read_only=True)
     itens_input = ItemOrcamentoSerializer(many=True, write_only=True, required=False)
-    # Adicionar campo para aceitar lista de dicionários do frontend
     itens_data = serializers.ListField(child=serializers.DictField(), write_only=True, required=False)
 
     class Meta:
         model = Orcamentos
         fields = [
             'pedi_empr', 'pedi_fili', 'pedi_data', 'pedi_tota', 'pedi_forn', 'pedi_vend',
-            'itens', 'itens_input', 'itens_data',  # Adicionado 'itens_data' aqui
+            'itens', 'itens_input', 'itens_data',
             'valor_total', 'cliente_nome', 'empresa_nome', 'pedi_nume'
         ]
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Cache para entidades e empresas
+        self._entidades_cache = {}
+        self._empresas_cache = {}
     
     def to_internal_value(self, data):
         # Converte 'itens' para 'itens_input' se necessário
@@ -75,16 +88,23 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
             try:
                 data['pedi_tota'] = round(float(data['pedi_tota']), 2)
             except (ValueError, TypeError):
-                pass  # Deixa o Django validar o erro
+                pass
         return super().to_internal_value(data)
     
     def get_itens(self, obj):
         banco = self.context.get('banco')
-        itens = ItensOrcamento.objects.using(banco).filter(
-            iped_empr=obj.pedi_empr,
-            iped_fili=obj.pedi_fili,
-            iped_pedi=str(obj.pedi_nume)
-        )
+        
+        # Usar itens prefetched se disponível
+        if hasattr(obj, 'itens_prefetched'):
+            itens = obj.itens_prefetched
+        else:
+            # Fallback para consulta direta (otimizada)
+            itens = ItensOrcamento.objects.using(banco).filter(
+                iped_empr=obj.pedi_empr,
+                iped_fili=obj.pedi_fili,
+                iped_pedi=str(obj.pedi_nume)
+            ).order_by('iped_item')
+        
         return ItemOrcamentoSerializer(itens, many=True, context=self.context).data
 
 
@@ -210,12 +230,16 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
             return None
 
         try:
-            entidades = Entidades.objects.using(banco).filter(
-                enti_clie=obj.pedi_forn,
-                enti_empr=obj.pedi_empr,
-            ).first()
+            # Cache para evitar consultas repetidas
+            cache_key = f"{obj.pedi_forn}_{obj.pedi_empr}"
+            if cache_key not in self._entidades_cache:
+                entidade = Entidades.objects.using(banco).filter(
+                    enti_clie=obj.pedi_forn,
+                    enti_empr=obj.pedi_empr,
+                ).first()
+                self._entidades_cache[cache_key] = entidade.enti_nome if entidade else None
 
-            return entidades.enti_nome if entidades else None
+            return self._entidades_cache[cache_key]
 
         except Exception as e:
             logger.warning(f"Erro ao buscar cliente: {e}")
@@ -228,8 +252,12 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
             return None
 
         try:
-            empresa = Empresas.objects.using(banco).filter(empr_codi=obj.pedi_empr).first()
-            return empresa.empr_nome if empresa else None
+            # Cache para evitar consultas repetidas
+            if obj.pedi_empr not in self._empresas_cache:
+                empresa = Empresas.objects.using(banco).filter(empr_codi=obj.pedi_empr).first()
+                self._empresas_cache[obj.pedi_empr] = empresa.empr_nome if empresa else None
+            
+            return self._empresas_cache[obj.pedi_empr]
         except Exception as e:
             logger.warning(f"Erro ao buscar empresa: {e}")
             return None

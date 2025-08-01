@@ -1,94 +1,120 @@
-from rest_framework.response import Response
-from rest_framework import viewsets
-from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import ValidationError, NotFound
-from rest_framework.decorators import action
+import logging
 from django.db import transaction
-from core.registry import get_licenca_db_config
-from .models import Itenspedidovenda, PedidoVenda
-from Entidades.models import Entidades
-from .serializers import PedidoVendaSerializer
-from core.decorator import modulo_necessario, ModuloRequeridoMixin
+from django.core.cache import cache
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.filters import SearchFilter
 from django_filters.rest_framework import DjangoFilterBackend
-from parametros_admin.permissions import PermissaoAdministrador
-from parametros_admin.integracao_pedidos import reverter_estoque_pedido, obter_status_estoque_pedido
+from django.db.models import Prefetch
+
+from .models import PedidoVenda, Itenspedidovenda
+from .serializers import PedidoVendaSerializer
+from Entidades.models import Entidades
+from core.utils import get_licenca_db_config
 from parametros_admin.decorators import parametros_pedidos_completo
+from parametros_admin.integracao_pedidos import reverter_estoque_pedido, obter_status_estoque_pedido
 
-import logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('Pedidos')
 
-
-class PedidoVendaViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
-    modeulo_necessario = 'Pedidos'  
-    permission_classes = [IsAuthenticated]
+class PedidoVendaViewSet(viewsets.ModelViewSet):
     serializer_class = PedidoVendaSerializer
-    filter_backends = [DjangoFilterBackend, SearchFilter]
     lookup_field = 'pedi_nume'
-    search_fields = ['pedi_nume', 'pedi_forn']
-    filterset_fields = ['pedi_empr', 'pedi_fili']
-    
+    filter_backends = [SearchFilter, DjangoFilterBackend]
+    search_fields = ['pedi_forn', 'pedi_nume']
+    filterset_fields = ['pedi_empr', 'pedi_fili', 'pedi_nume', 'pedi_forn', 'pedi_data', 'pedi_stat']
+
     def get_object(self):
         """
-        Override para lidar com registros duplicados
+        Sobrescreve get_object para lidar com registros duplicados
         """
         banco = get_licenca_db_config(self.request)
-        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
-        lookup_value = self.kwargs[lookup_url_kwarg]
+        if not banco:
+            logger.error("Banco de dados não encontrado.")
+            raise NotFound("Banco de dados não encontrado.")
+
+        lookup_value = self.kwargs[self.lookup_field]
         
-        # Filtrar por empresa e filial também para evitar duplicados
-        empresa_id = self.request.query_params.get('empr') or self.request.query_params.get('pedi_empr')
-        filial_id = self.request.query_params.get('fili') or self.request.query_params.get('pedi_fili')
+        # Obter parâmetros adicionais para filtrar duplicatas
+        pedi_empr = self.request.query_params.get('pedi_empr')
+        pedi_fili = self.request.query_params.get('pedi_fili')
         
         queryset = self.get_queryset()
         
-        # Aplicar filtros adicionais se disponíveis
-        if empresa_id:
-            queryset = queryset.filter(pedi_empr=empresa_id)
-        if filial_id:
-            queryset = queryset.filter(pedi_fili=filial_id)
+        # Filtrar por empresa e filial se fornecidos
+        if pedi_empr:
+            queryset = queryset.filter(pedi_empr=pedi_empr)
+        if pedi_fili:
+            queryset = queryset.filter(pedi_fili=pedi_fili)
             
-        # Buscar o primeiro registro que corresponde aos critérios
-        obj = queryset.filter(**{self.lookup_field: lookup_value}).first()
+        # Filtrar pelo lookup_field
+        queryset = queryset.filter(**{self.lookup_field: lookup_value})
+        
+        # Retornar o primeiro resultado para evitar erro de múltiplos objetos
+        obj = queryset.first()
         
         if not obj:
-            raise NotFound(f"Pedido {lookup_value} não encontrado")
+            raise NotFound("Pedido não encontrado.")
             
         # Verificar permissões
         self.check_object_permissions(self.request, obj)
+        
         return obj
     
     def get_queryset(self):
         banco = get_licenca_db_config(self.request)
-        queryset = PedidoVenda.objects.using(banco).all().order_by('pedi_nume')
-        if banco:       
-            cliente_nome = self.request.query_params.get('cliente_nome')
-            numero_pedido = self.request.query_params.get('pedi_nume')
-            empresa_id = self.request.query_params.get('pedi_empr')
-
-            if cliente_nome:
-                ent_qs = Entidades.objects.using(banco).filter(enti_nome__icontains=cliente_nome)
-                if empresa_id:
-                    ent_qs = ent_qs.filter(enti_empr=empresa_id)
-                clientes_ids = list(ent_qs.values_list('enti_clie', flat=True))
-                if clientes_ids:
-                    queryset = queryset.filter(pedi_forn__in=clientes_ids)
-                else:
-                    queryset = queryset.none()
-
-            if numero_pedido:
-                try:
-                    numero = int(numero_pedido)
-                    queryset = queryset.filter(pedi_nume=numero)
-                except ValueError:
-                    queryset = queryset.none()
-
-            return queryset 
-        else:
+        if not banco:
             logger.error("Banco de dados não encontrado.")
             raise NotFound("Banco de dados não encontrado.")
+            
+        # Base queryset otimizada
+        queryset = PedidoVenda.objects.using(banco).all()
+        
+        # Aplicar filtros de forma otimizada
+        cliente_nome = self.request.query_params.get('cliente_nome')
+        numero_pedido = self.request.query_params.get('pedi_nume')
+        empresa_id = self.request.query_params.get('pedi_empr')
+        filial_id = self.request.query_params.get('pedi_fili')
 
+        # Filtros mais específicos primeiro
+        if empresa_id:
+            queryset = queryset.filter(pedi_empr=empresa_id)
+            
+        if filial_id:
+            queryset = queryset.filter(pedi_fili=filial_id)
+
+        if numero_pedido:
+            try:
+                numero = int(numero_pedido)
+                queryset = queryset.filter(pedi_nume=numero)
+            except ValueError:
+                return queryset.none()
+
+        # Filtro por nome do cliente (mais custoso, por último)
+        if cliente_nome:
+            # Cache para consultas de entidades
+            cache_key = f"entidades_cliente_{cliente_nome}_{empresa_id}"
+            entidades_ids = cache.get(cache_key)
+            
+            if entidades_ids is None:
+                # Otimizar consulta de entidades
+                entidades_ids = list(
+                    Entidades.objects.using(banco)
+                    .filter(enti_nome__icontains=cliente_nome)
+                    .filter(enti_empr=empresa_id if empresa_id else None)
+                    .values_list('enti_clie', flat=True)[:100]  # Limitar resultados
+                )
+                # Cache por 5 minutos
+                cache.set(cache_key, entidades_ids, 300)
+            
+            if entidades_ids:
+                queryset = queryset.filter(pedi_forn__in=entidades_ids)
+            else:
+                return queryset.none()
+
+        # Ordenar por número do pedido (mais recentes primeiro)
+        return queryset.order_by('-pedi_nume')
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -117,55 +143,68 @@ class PedidoVendaViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
             print(f"❌ [VIEW] Erro de validação: {e.detail}")
             logger.warning(f"[PedidoVendaViewSet.create] Erro de validação: {e.detail}")
             return Response({'errors': e.detail}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"[PedidoVendaViewSet.create] Erro inesperado: {e}")
+            return Response({'error': 'Erro interno do servidor'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     @parametros_pedidos_completo
     def update(self, request, *args, **kwargs):
         print(f"🎯 [VIEW] Recebendo requisição de atualização de pedido")
         print(f"🎯 [VIEW] Dados da requisição: {request.data}")
         
-        instance = self.get_object()
-        print(f"🎯 [VIEW] Atualizando pedido {instance.pedi_nume}")
-        
-        serializer = self.get_serializer(instance, data=request.data)
-        serializer.is_valid(raise_exception=True)
-        print(f"🎯 [VIEW] Dados validados com sucesso, atualizando pedido...")
-        pedido = serializer.save()
-        print(f"🎯 [VIEW] Pedido atualizado com sucesso")
-        return Response(self.get_serializer(pedido).data, status=status.HTTP_200_OK)
-    
+        try:
+            instance = self.get_object()
+            print(f"🎯 [VIEW] Atualizando pedido {instance.pedi_nume}")
+            
+            serializer = self.get_serializer(instance, data=request.data)
+            serializer.is_valid(raise_exception=True)
+            print(f"🎯 [VIEW] Dados validados com sucesso, atualizando pedido...")
+            pedido = serializer.save()
+            print(f"🎯 [VIEW] Pedido atualizado com sucesso")
+            return Response(self.get_serializer(pedido).data, status=status.HTTP_200_OK)
+        except ValidationError as e:
+            logger.warning(f"[PedidoVendaViewSet.update] Erro de validação: {e.detail}")
+            return Response({'errors': e.detail}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"[PedidoVendaViewSet.update] Erro inesperado: {e}")
+            return Response({'error': 'Erro interno do servidor'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     def destroy(self, request, *args, **kwargs):
-        pedido = self.get_object()
-        banco = get_licenca_db_config(self.request)
-        
-        if not banco:
-            logger.error("Banco de dados não encontrado.")
-            raise NotFound("Banco de dados não encontrado.")
-
-        # Reverter estoque antes de excluir
         try:
-            resultado_estoque = reverter_estoque_pedido(pedido, request)
-            if not resultado_estoque.get('sucesso', True):
-                logger.warning(f"Erro ao reverter estoque: {resultado_estoque.get('erro')}")
-            elif resultado_estoque.get('processado'):
-                logger.info(f"Estoque revertido para pedido {pedido.pedi_nume}")
-        except Exception as e:
-            logger.error(f"Erro ao reverter estoque: {e}")
-
-        with transaction.atomic(using=banco):
-            # Excluir itens do pedido
-            Itenspedidovenda.objects.using(banco).filter(
-                iped_empr=pedido.pedi_empr,
-                iped_fili=pedido.pedi_fili,
-                iped_pedi=pedido.pedi_nume
-            ).delete()
+            pedido = self.get_object()
+            banco = get_licenca_db_config(self.request)
             
-            # Excluir pedido
-            pedido.delete()
-            logger.info(f"🗑️ Exclusão Pedido ID {pedido.pedi_nume} concluída")
+            if not banco:
+                logger.error("Banco de dados não encontrado.")
+                raise NotFound("Banco de dados não encontrado.")
 
-        return Response(status=status.HTTP_204_NO_CONTENT)
-    
+            # Reverter estoque antes de excluir
+            try:
+                resultado_estoque = reverter_estoque_pedido(pedido, request)
+                if not resultado_estoque.get('sucesso', True):
+                    logger.warning(f"Erro ao reverter estoque: {resultado_estoque.get('erro')}")
+                elif resultado_estoque.get('processado'):
+                    logger.info(f"Estoque revertido para pedido {pedido.pedi_nume}")
+            except Exception as e:
+                logger.error(f"Erro ao reverter estoque: {e}")
+
+            with transaction.atomic(using=banco):
+                # Excluir itens do pedido - corrigindo o filtro
+                Itenspedidovenda.objects.using(banco).filter(
+                    iped_empr=pedido.pedi_empr,
+                    iped_fili=pedido.pedi_fili,
+                    iped_pedi=str(pedido.pedi_nume)  # Convertendo para string
+                ).delete()
+                
+                # Excluir pedido
+                pedido.delete()
+                logger.info(f"🗑️ Exclusão Pedido ID {pedido.pedi_nume} concluída")
+
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            logger.error(f"[PedidoVendaViewSet.destroy] Erro inesperado: {e}")
+            return Response({'error': 'Erro interno do servidor'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     @action(detail=True, methods=['post'])
     def cancelar_pedido(self, request, pedi_nume=None):
         """

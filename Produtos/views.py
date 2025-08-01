@@ -23,22 +23,32 @@ from .models import Produtos, SaldoProduto, Tabelaprecos, UnidadeMedida, Tabelap
 from .serializers import ProdutoSerializer, TabelaPrecoSerializer, UnidadeMedidaSerializer, ProdutoDetalhadoSerializer
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
+from django.core.cache import cache
 
 
 class UnidadeMedidaListView(ModuloRequeridoMixin, ListAPIView):
     modulo_necessario = 'Produtos'
     serializer_class = UnidadeMedidaSerializer
+    
     def get(self, request, slug=None):
         slug = get_licenca_slug()
 
         if not slug:
             return Response({"error": "Licença não encontrada."}, status=status.HTTP_404_NOT_FOUND)
+            
         banco = get_licenca_db_config(self.request)
         print(f"\n🔍 Banco de dados selecionado: {banco}")
         
         if banco:
-            queryset = UnidadeMedida.objects.using(banco).all().order_by('unid_desc')
-            print(f"📦 Total de unidades encontradas: {queryset.count()}")
+            # Cache para unidades de medida
+            cache_key = f"unidades_medida_{banco}"
+            queryset = cache.get(cache_key)
+            
+            if not queryset:
+                queryset = list(UnidadeMedida.objects.using(banco).all().order_by('unid_desc'))
+                cache.set(cache_key, queryset, 1800)  # Cache por 30 minutos
+                
+            print(f"📦 Total de unidades encontradas: {len(queryset)}")
             serializer = UnidadeMedidaSerializer(queryset, many=True)
             return Response(serializer.data)
     
@@ -46,7 +56,6 @@ class UnidadeMedidaListView(ModuloRequeridoMixin, ListAPIView):
         context = super().get_serializer_context()
         context['banco'] = get_licenca_db_config(self.request)
         return context
-
 
 
 class ProdutoListView(ModuloRequeridoMixin, APIView):
@@ -59,12 +68,7 @@ class ProdutoListView(ModuloRequeridoMixin, APIView):
         if not banco:
             return Response({"error": "Banco não encontrado."}, status=400)
 
-        if banco:
-            queryset = Produtos.objects.using(banco).all().order_by('-prod_codi')
-            print(f"📦 Total de entidades encontradas: {queryset.count()}")
-            serializer = ProdutoSerializer(queryset, many=True)
-            return Response(serializer.data)
-
+        # Otimizar consulta com select_related e prefetch_related
         saldo_subquery = Subquery(
             SaldoProduto.objects.using(banco).filter(
                 produto_codigo=OuterRef('pk')
@@ -74,17 +78,16 @@ class ProdutoListView(ModuloRequeridoMixin, APIView):
 
         queryset = Produtos.objects.using(banco).annotate(
             saldo_estoque=Coalesce(saldo_subquery, V(0), output_field=DecimalField())
-        )
-
-        serializer = ProdutoSerializer(queryset, many=True)
+        ).order_by('-prod_codi')[:100]  # Limitar resultados iniciais
+        
+        print(f"📦 Total de produtos encontrados: {queryset.count()}")
+        serializer = ProdutoSerializer(queryset, many=True, context={'banco': banco})
         return Response(serializer.data)
-
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context['banco'] = get_licenca_db_config(self.request)
         return context
-        
         
         
 class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
@@ -100,6 +103,10 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         banco = get_licenca_db_config(self.request)
         print(f"\n🔍 Banco de dados selecionado: {banco}")
 
+        if not banco:
+            return Produtos.objects.none()
+
+        # Otimizar subqueries
         saldo_subquery = Subquery(
             SaldoProduto.objects.using(banco).filter(
                 produto_codigo=OuterRef('pk')
@@ -123,12 +130,18 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             output_field=DecimalField()
         )
 
-        return Produtos.objects.using(banco).annotate(
+        queryset = Produtos.objects.using(banco).annotate(
             saldo_estoque=Coalesce(saldo_subquery, V(0), output_field=DecimalField()),
             prod_preco_vista=Coalesce(preco_vista_subquery, V(0), output_field=DecimalField()),
             prod_preco_normal=Coalesce(preco_normal_subquery, V(0), output_field=DecimalField())
-        ).order_by('prod_codi')
-
+        )
+        
+        # Aplicar filtros de forma otimizada
+        empresa_id = self.request.query_params.get('prod_empr')
+        if empresa_id:
+            queryset = queryset.filter(prod_empr=empresa_id)
+            
+        return queryset.order_by('prod_empr', 'prod_codi')
 
     @action(detail=False, methods=["get"])
     def busca(self, request, slug=None):
@@ -140,8 +153,19 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         try:
             banco = get_licenca_db_config(self.request)
             print(f"\n🔍 Banco de dados selecionado: {banco}")
-            q = request.query_params.get("q", "")
+            q = request.query_params.get("q", "").strip()
+            
+            if not q:
+                return Response([], status=200)
 
+            # Cache para buscas frequentes
+            cache_key = f"produto_busca_{banco}_{q}"
+            cached_result = cache.get(cache_key)
+            
+            if cached_result:
+                return Response(cached_result)
+
+            # Otimizar subqueries (mesmo código anterior)
             saldo_subquery = Subquery(
                 SaldoProduto.objects.using(banco).filter(
                     produto_codigo=OuterRef('pk')
@@ -174,10 +198,15 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                 Q(prod_nome__icontains=q) |
                 Q(prod_coba_str__icontains=q) |
                 Q(prod_codi__icontains=q.lstrip("0"))  
-            )
+            )[:50]  # Limitar resultados
 
             serializer = self.get_serializer(produtos, many=True)
-            return Response(serializer.data)
+            result_data = serializer.data
+            
+            # Cache por 5 minutos
+            cache.set(cache_key, result_data, 300)
+            
+            return Response(result_data)
 
         except Exception as e:
             import traceback
