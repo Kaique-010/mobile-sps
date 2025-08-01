@@ -3,6 +3,7 @@ from django.db import transaction
 from rest_framework import viewsets
 from rest_framework import status
 from rest_framework.views import APIView
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError, NotFound
 from core.registry import get_licenca_db_config
@@ -13,7 +14,7 @@ from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from rest_framework.filters import SearchFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from parametros_admin.decorators import parametros_orcamentos_completo
-
+from Pedidos.models import PedidoVenda, Itenspedidovenda
 
 import logging
 logger = logging.getLogger(__name__)
@@ -138,33 +139,97 @@ class OrcamentoViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
     
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], url_path='transformar-em-pedido')
     def transformar_em_pedido(self, request, *args, **kwargs):
         orcamento = self.get_object()
         banco = get_licenca_db_config(self.request)
+        
+        if not banco:
+            logger.error("Banco de dados não encontrado.")
+            return Response(
+                {'error': 'Banco de dados não encontrado'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         try:
-            orcamento = self.get_object()
-            pedido = Pedidos.objects.using(banco).create(
-                pedi_empr=orcamento.pedi_empr,
-                pedi_fili=orcamento.pedi_fili,
-                pedi_nume=orcamento.pedi_nume,
-                pedi_forn=orcamento.pedi_forn,
-                pedi_data=orcamento.pedi_data,
-                pedi_valo=orcamento.pedi_valo,
-                pedi_obs=orcamento.pedi_obs,
-            )
-            ItensPedidos.objects.using(banco).create(
-                iped_empr=pedido.pedi_empr,
-                iped_fili=pedido.pedi_fili,
-                iped_pedi=pedido.pedi_nume,
-                iped_item=item.iped_item,
-                iped_quan=item.iped_qtd,
-                iped_valo=item.iped_valo,
-            )
+            with transaction.atomic(using=banco):
+                # Importar os modelos necessários
+                from Pedidos.models import PedidoVenda, Itenspedidovenda
+                
+                # Buscar o último número de pedido para gerar sequencial
+                ultimo_pedido = PedidoVenda.objects.using(banco).filter(
+                    pedi_empr=orcamento.pedi_empr,
+                    pedi_fili=orcamento.pedi_fili
+                ).order_by('-pedi_nume').first()
+                
+                novo_numero = (ultimo_pedido.pedi_nume + 1) if ultimo_pedido else 1
+                
+                # Criar o pedido espelhando os dados do orçamento
+                pedido = PedidoVenda.objects.using(banco).create(
+                    pedi_empr=orcamento.pedi_empr,
+                    pedi_fili=orcamento.pedi_fili,
+                    pedi_nume=novo_numero,
+                    pedi_forn=orcamento.pedi_forn,
+                    pedi_data=orcamento.pedi_data,
+                    pedi_tota=orcamento.pedi_tota,
+                    pedi_vend=orcamento.pedi_vend or '0',
+                    pedi_obse=orcamento.pedi_obse or '',
+                    pedi_canc=False,
+                    pedi_fina='0',  # À vista por padrão
+                    pedi_stat=0     # Pendente por padrão
+                )
+                
+                # Buscar todos os itens do orçamento
+                itens_orcamento = ItensOrcamento.objects.using(banco).filter(
+                    iped_empr=orcamento.pedi_empr,
+                    iped_fili=orcamento.pedi_fili,
+                    iped_pedi=str(orcamento.pedi_nume)
+                )
+                
+                # Criar os itens do pedido espelhando os itens do orçamento
+                for item in itens_orcamento:
+                    Itenspedidovenda.objects.using(banco).create(
+                        iped_empr=pedido.pedi_empr,
+                        iped_fili=pedido.pedi_fili,
+                        iped_pedi=str(pedido.pedi_nume),
+                        iped_item=item.iped_item,
+                        iped_prod=item.iped_prod,
+                        iped_quan=item.iped_quan,
+                        iped_unit=item.iped_unit,
+                        iped_tota=item.iped_tota,
+                        iped_desc=item.iped_desc,
+                        iped_unli=item.iped_unli,
+                        iped_forn=item.iped_forn,
+                        iped_data=item.iped_data,
+                        iped_suto=0.00,  # Valor padrão
+                        iped_fret=0.00,  # Valor padrão
+                        iped_vend=int(orcamento.pedi_vend) if orcamento.pedi_vend and orcamento.pedi_vend.isdigit() else None,
+                        iped_cust=0.00,  # Valor padrão
+                        iped_tipo=1,     # Valor padrão
+                        iped_desc_item=False,  # Valor padrão
+                        iped_perc_desc=0.00,   # Valor padrão
+                        iped_unme=None   # Valor padrão
+                    )
+                
+                # VINCULAR O NÚMERO DO PEDIDO NO ORÇAMENTO
+                orcamento.pedi_nume_pedi = pedido.pedi_nume
+                orcamento.save(using=banco)
+                
+                logger.info(f"Orçamento {orcamento.pedi_nume} transformado em pedido {pedido.pedi_nume} e vinculado")
+                
+                return Response({
+                    'message': 'Orçamento transformado em pedido com sucesso',
+                    'pedido_numero': pedido.pedi_nume,
+                    'orcamento_numero': orcamento.pedi_nume,
+                    'vinculacao': f'Orçamento {orcamento.pedi_nume} agora está vinculado ao pedido {pedido.pedi_nume}'
+                }, status=status.HTTP_201_CREATED)
+                
         except Exception as e:
-            logger.error(f"Erro ao transformar orcamento em pedido: {e}")
-            return Response({'error': 'Erro ao transformar orcamento em pedido'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.error(f"Erro ao transformar orçamento em pedido: {str(e)}")
+            return Response({
+                'error': 'Erro ao transformar orçamento em pedido',
+                'details': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         return Response({'message': 'Orcamento transformado com sucesso'}, status=status.HTTP_200_OK)
             
         

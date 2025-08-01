@@ -66,6 +66,19 @@ WHERE NOT EXISTS (
     SELECT 1 FROM modulosmobile m WHERE m.modu_nome = t.modu_nome
 );
 """
+# Inserir permissões para o usuário 1
+SQL_INSERT_PERMISSAO = """
+INSERT INTO permissoesmodulosmobile (perm_empr, perm_fili, perm_modu, perm_ativ, perm_usua_libe, perm_data_alte)
+SELECT 1 AS perm_empr,
+1 AS perm_fili,
+modu_codi AS perm_modu,
+TRUE AS perm_ativ,
+1 AS perm_usua_libe,
+NOW() AS perm_data_alte
+FROM modulosmobile
+"""
+
+
 
 # SQL de views
 SQL_VIEWS = """
