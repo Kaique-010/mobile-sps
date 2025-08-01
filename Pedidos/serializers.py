@@ -253,21 +253,6 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
         except Exception as e:
             logger.warning(f"Erro ao buscar empresa: {e}")
             return None
-
-    def get_produto_nome(self, obj):
-        banco = self.context.get('banco')
-        if not banco:
-            return None
-        try:
-            produto = Produtos.objects.using(banco).filter(
-                prod_codi=obj.iped_prod,
-                prod_empr=obj.iped_empr
-            ).first()
-            return produto.prod_nome if produto else None
-        except Exception as e:
-            logger.warning(f"Erro ao buscar nome do produto: {e}")
-            return None
-    
     
     
 from .models import PedidosGeral
