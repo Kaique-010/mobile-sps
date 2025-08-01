@@ -38,8 +38,11 @@ class ItemOrcamentoSerializer(BancoContextMixin,serializers.ModelSerializer):
             logger.warning("Banco não informado no context.")
             return None
         try:
-            produto = Produtos.objects.using(banco).get(prod_codi=obj.iped_prod)
-            return produto.prod_nome
+            produto = Produtos.objects.using(banco).filter(
+                prod_codi=obj.iped_prod,
+                prod_empr=obj.iped_empr
+            ).first()
+            return produto.prod_nome if produto else None
         except Exception as e:
             logger.error(f"Erro ao buscar produto: {e}")
             return None
@@ -225,21 +228,8 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
             return None
 
         try:
-            return Empresas.objects.using(banco).get(empr_codi=obj.pedi_empr).empr_nome
-        except Empresas.DoesNotExist:
-            logger.warning(f"Empresa com ID {obj.pedi_empr} não encontrada.")
-            return None
-
-    def get_produto_nome(self, obj):
-        banco = self.context.get('banco')
-        if not banco:
-            return None
-        try:
-            produto = Produtos.objects.using(banco).filter(
-                prod_codi=obj.iped_prod,
-                prod_empr=obj.iped_empr
-            ).first()
-            return produto.prod_nome if produto else None
+            empresa = Empresas.objects.using(banco).filter(empr_codi=obj.pedi_empr).first()
+            return empresa.empr_nome if empresa else None
         except Exception as e:
-            logger.warning(f"Erro ao buscar nome do produto: {e}")
+            logger.warning(f"Erro ao buscar empresa: {e}")
             return None

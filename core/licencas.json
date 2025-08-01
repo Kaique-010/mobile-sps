@@ -74,8 +74,8 @@
   {
     "slug": "g2",
     "cnpj": "86887486000147",
-    "db_name": "g2",
-    "db_host": "localhost",
+    "db_name": "savexml69",
+    "db_host": "base.rtalmeida.com.br",
     "db_port": "5432"
   }
 ]

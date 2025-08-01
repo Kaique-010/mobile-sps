@@ -70,8 +70,9 @@ class EntidadesSerializer(serializers.ModelSerializer):
             return None
         try:
             if obj and obj.enti_empr is not None:
-                return Empresas.objects.using(banco).get(empr_codi=obj.enti_empr).empr_nome
-        except Empresas.DoesNotExist:
+                empresa = Empresas.objects.using(banco).filter(empr_codi=obj.enti_empr).first()
+                return empresa.empr_nome if empresa else None
+        except Exception as e:
             return None
         return None
 

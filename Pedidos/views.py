@@ -29,6 +29,36 @@ class PedidoVendaViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
     search_fields = ['pedi_nume', 'pedi_forn']
     filterset_fields = ['pedi_empr', 'pedi_fili']
     
+    def get_object(self):
+        """
+        Override para lidar com registros duplicados
+        """
+        banco = get_licenca_db_config(self.request)
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        lookup_value = self.kwargs[lookup_url_kwarg]
+        
+        # Filtrar por empresa e filial também para evitar duplicados
+        empresa_id = self.request.query_params.get('empr') or self.request.query_params.get('pedi_empr')
+        filial_id = self.request.query_params.get('fili') or self.request.query_params.get('pedi_fili')
+        
+        queryset = self.get_queryset()
+        
+        # Aplicar filtros adicionais se disponíveis
+        if empresa_id:
+            queryset = queryset.filter(pedi_empr=empresa_id)
+        if filial_id:
+            queryset = queryset.filter(pedi_fili=filial_id)
+            
+        # Buscar o primeiro registro que corresponde aos critérios
+        obj = queryset.filter(**{self.lookup_field: lookup_value}).first()
+        
+        if not obj:
+            raise NotFound(f"Pedido {lookup_value} não encontrado")
+            
+        # Verificar permissões
+        self.check_object_permissions(self.request, obj)
+        return obj
+    
     def get_queryset(self):
         banco = get_licenca_db_config(self.request)
         queryset = PedidoVenda.objects.using(banco).all().order_by('pedi_nume')

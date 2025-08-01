@@ -404,6 +404,7 @@ def main():
     rodar_comando("python manage.py migrate Sdk_recebimentos  --fake-initial")
 
     executar_sql(SQL_COMMANDS, "Criação e atualização de tabelas")
+    executar_sql(SQL_INSERT_PERMISSAO, "Inserção de permissões para usuário 1")
     executar_sql(SQL_VIEWS, "Criação de views")
 
     print("📊 Populando parâmetros iniciais...")

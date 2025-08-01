@@ -201,14 +201,11 @@ class OsSerializer(BancoModelSerializer):
             return None
             
         try:
-            entidade = Entidades.objects.using(banco).get(
+            entidade = Entidades.objects.using(banco).filter(
                 enti_clie=obj.os_clie,
                 enti_empr=obj.os_empr
-            )
-            return entidade.enti_nome
-        except Entidades.DoesNotExist:
-            logger.warning(f"Entidade não encontrada: empresa {obj.os_empr}, código {obj.os_clie}")
-            return None
+            ).first()
+            return entidade.enti_nome if entidade else None
         except Exception as e:
             logger.error(f"Erro ao buscar cliente: {e}")
             return None

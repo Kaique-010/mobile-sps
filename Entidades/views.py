@@ -32,6 +32,41 @@ class EntidadesViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
             return Entidades.objects.using(banco).all().order_by('enti_nome')
         return Entidades.objects.none()
 
+    def get_object(self):
+        """
+        Override get_object to handle duplicate records properly
+        """
+        queryset = self.filter_queryset(self.get_queryset())
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        
+        assert lookup_url_kwarg in self.kwargs, (
+            'Expected view %s to be called with a URL keyword argument '
+            'named "%s". Fix your URL conf, or set the `.lookup_field` '
+            'attribute on the view correctly.' %
+            (self.__class__.__name__, lookup_url_kwarg)
+        )
+
+        filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
+        
+        # Get additional filters from request parameters
+        empr = self.request.GET.get('empr')
+        fili = self.request.GET.get('fili')
+        
+        if empr:
+            filter_kwargs['enti_empr'] = empr
+        
+        # Use filter().first() instead of get() to handle duplicates
+        obj = queryset.filter(**filter_kwargs).first()
+        
+        if not obj:
+            from django.http import Http404
+            raise Http404('No %s matches the given query.' % queryset.model._meta.object_name)
+        
+        # May raise a permission denied
+        self.check_object_permissions(self.request, obj)
+        
+        return obj
+
     def get_serializer_class(self):
         return EntidadesSerializer
     

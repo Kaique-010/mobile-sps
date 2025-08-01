@@ -191,14 +191,11 @@ class OrdemServicoSerializer(BancoModelSerializer):
             return None
             
         try:
-            entidade = Entidades.objects.using(banco).get(
+            entidade = Entidades.objects.using(banco).filter(
                 enti_clie=obj.orde_enti,
                 enti_empr=obj.orde_empr
-            )
-            return entidade.enti_nome
-        except Entidades.DoesNotExist:
-            logger.warning(f"Entidade não encontrada: empresa {obj.orde_empr}, código {obj.orde_enti}")
-            return None
+            ).first()
+            return entidade.enti_nome if entidade else None
         except Exception as e:
             logger.error(f"Erro ao buscar cliente: {e}")
             return None
