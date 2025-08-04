@@ -527,3 +527,119 @@ AttributeError: 'NoneType' object has no attribute 'osfs_codi'
 [2025-08-01 15:06:47,532] [ERROR] Orcamentos: [OrcamentoViewSet.list] Erro inesperado: name 'Empresas' is not defined
 [2025-08-01 15:06:47,580] [ERROR] django.request: Internal Server Error: /api/ola/orcamentos/orcamentos/
 [2025-08-01 15:06:47,581] [ERROR] django.server: "GET /api/ola/orcamentos/orcamentos/?limit=50&offset=0&search=&cliente_nome=&pedi_nume=&pedi_empr=1&pedi_fili=1&pedi_usua=1 HTTP/1.1" 500 36
+[2025-08-04 15:56:22,828] [ERROR] django.request: Internal Server Error: /api/ola/mcp-agent/consulta
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\utils\deprecation.py", line 93, in __call__
+    response = self.process_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\middleware\common.py", line 53, in process_request
+    path = self.get_full_path_with_slash(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\middleware\common.py", line 86, in get_full_path_with_slash
+    raise RuntimeError(
+RuntimeError: You called this URL via POST, but the URL doesn't end in a slash and you have APPEND_SLASH set. Django can't redirect to the slash URL while maintaining POST data. Change your form to point to 192.168.20.80:8000/api/ola/mcp-agent/consulta/ (note the trailing slash), or set APPEND_SLASH=False in your Django settings.
+[2025-08-04 15:56:22,842] [ERROR] django.server: "POST /api/ola/mcp-agent/consulta HTTP/1.1" 500 76505
+[2025-08-04 15:56:43,022] [ERROR] django.request: Internal Server Error: /api/ola/mcp-agent/consulta/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\http.py", line 40, in inner
+    return func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: consulta_view() got an unexpected keyword argument 'slug'
+[2025-08-04 15:56:43,023] [ERROR] django.server: "POST /api/ola/mcp-agent/consulta/ HTTP/1.1" 500 82890
+[2025-08-04 15:58:28,205] [ERROR] django.request: Internal Server Error: /api/ola/mcp-agent/consulta/
+[2025-08-04 15:58:28,205] [ERROR] django.server: "POST /api/ola/mcp-agent/consulta/ HTTP/1.1" 500 90
+[2025-08-04 15:59:44,412] [ERROR] django.request: Internal Server Error: /api/ola/mcp-agent/consulta/
+[2025-08-04 15:59:44,412] [ERROR] django.server: "POST /api/ola/mcp-agent/consulta/ HTTP/1.1" 500 90
+[2025-08-04 16:02:14,984] [ERROR] django.request: Internal Server Error: /api/ola/mcp-agent/consulta/
+[2025-08-04 16:02:14,985] [ERROR] django.server: "POST /api/ola/mcp-agent/consulta/ HTTP/1.1" 500 90
+[2025-08-04 16:08:22,832] [ERROR] django.request: Internal Server Error: /api/ola/mcp-agent/consulta/
+[2025-08-04 16:08:22,832] [ERROR] django.server: "POST /api/ola/mcp-agent/consulta/ HTTP/1.1" 500 56
+[2025-08-04 16:14:26,584] [ERROR] django.request: Internal Server Error: /api/ola/mcp-agent/consulta/
+[2025-08-04 16:14:26,584] [ERROR] django.server: "POST /api/ola/mcp-agent/consulta/ HTTP/1.1" 500 58
+[2025-08-04 16:19:39,898] [ERROR] django.request: Internal Server Error: /api/ola/mcp-agent/consulta/
+[2025-08-04 16:19:39,898] [ERROR] django.server: "POST /api/ola/mcp-agent/consulta/ HTTP/1.1" 500 58
+[2025-08-04 16:21:03,265] [ERROR] django.request: Internal Server Error: /api/ola/mcp-agent/consulta/
+[2025-08-04 16:21:03,266] [ERROR] django.server: "POST /api/ola/mcp-agent/consulta/ HTTP/1.1" 500 58
+[2025-08-04 16:25:17,099] [ERROR] django.request: Internal Server Error: /api/ola/mcp-agent/consulta/
+[2025-08-04 16:25:17,099] [ERROR] django.server: "POST /api/ola/mcp-agent/consulta/ HTTP/1.1" 500 58
+[2025-08-04 16:27:43,879] [ERROR] django.request: Internal Server Error: /api/ola/mcp-agent/consulta/
+[2025-08-04 16:27:43,879] [ERROR] django.server: "POST /api/ola/mcp-agent/consulta/ HTTP/1.1" 500 58
+[2025-08-04 16:29:44,553] [ERROR] django.request: Internal Server Error: /api/ola/mcp-agent/consulta/
+[2025-08-04 16:29:44,553] [ERROR] django.server: "POST /api/ola/mcp-agent/consulta/ HTTP/1.1" 500 58
+[2025-08-04 16:39:14,308] [ERROR] django.request: Internal Server Error: /api/ola/mcp-agent/consulta/
+[2025-08-04 16:39:14,309] [ERROR] django.server: "POST /api/ola/mcp-agent/consulta/ HTTP/1.1" 500 58
+[2025-08-04 16:40:47,613] [ERROR] django.request: Internal Server Error: /api/ola/mcp-agent/consulta/
+[2025-08-04 16:40:47,613] [ERROR] django.server: "POST /api/ola/mcp-agent/consulta/ HTTP/1.1" 500 58
+[2025-08-04 16:40:50,598] [ERROR] django.request: Internal Server Error: /api/ola/mcp-agent/consulta/
+[2025-08-04 16:40:50,598] [ERROR] django.server: "POST /api/ola/mcp-agent/consulta/ HTTP/1.1" 500 58
+[2025-08-04 16:42:05,622] [ERROR] django.request: Internal Server Error: /api/ola/mcp-agent/consulta/
+[2025-08-04 16:42:05,622] [ERROR] django.server: "POST /api/ola/mcp-agent/consulta/ HTTP/1.1" 500 58
+[2025-08-04 16:47:16,703] [ERROR] django.request: Internal Server Error: /api/casaa/mcp-agent/docs/
+Traceback (most recent call last):
+  File "C:\mobile-sps\mcp_agent_db\views.py", line 271, in docs_view
+    return render(request, 'mcp_agent_db/docs.html', context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\shortcuts.py", line 36, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\template\loader.py", line 61, in render_to_string
+    template = get_template(template_name, using=using)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\template\loader.py", line 19, in get_template
+    raise TemplateDoesNotExist(template_name, chain=chain)
+django.template.exceptions.TemplateDoesNotExist: mcp_agent_db/docs.html
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\mcp_agent_db\views.py", line 278, in docs_view
+    return render(request, 'mcp_agent_db/docs.html', context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\shortcuts.py", line 36, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\template\loader.py", line 61, in render_to_string
+    template = get_template(template_name, using=using)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\template\loader.py", line 19, in get_template
+    raise TemplateDoesNotExist(template_name, chain=chain)
+django.template.exceptions.TemplateDoesNotExist: mcp_agent_db/docs.html
+[2025-08-04 16:47:16,710] [ERROR] django.server: "GET /api/casaa/mcp-agent/docs/ HTTP/1.1" 500 111189
+[2025-08-04 16:48:21,993] [ERROR] django.request: Internal Server Error: /api/ola/mcp-agent/consulta/
+[2025-08-04 16:48:22,024] [ERROR] django.server: "POST /api/ola/mcp-agent/consulta/ HTTP/1.1" 500 58
+[2025-08-04 16:48:26,384] [ERROR] django.request: Internal Server Error: /api/ola/mcp-agent/consulta/
+[2025-08-04 16:48:26,404] [ERROR] django.server: "POST /api/ola/mcp-agent/consulta/ HTTP/1.1" 500 58
+[2025-08-04 17:23:42,014] [ERROR] django.request: Internal Server Error: /api/ola/mcp-agent/historico/
+[2025-08-04 17:23:42,014] [ERROR] django.server: "GET /api/ola/mcp-agent/historico/ HTTP/1.1" 500 89
+[2025-08-04 17:24:39,476] [ERROR] django.server: "POST /api/ola/mcp-agent/consulta-streaming/ HTTP/1.1" 500 59
+[2025-08-04 17:30:06,126] [ERROR] django.request: Internal Server Error: /api/ola/mcp-agent/historico/
+[2025-08-04 17:30:06,126] [ERROR] django.server: "GET /api/ola/mcp-agent/historico/ HTTP/1.1" 500 89
+[2025-08-04 17:31:59,741] [ERROR] django.server: "POST /api/ola/mcp-agent/consulta-streaming/ HTTP/1.1" 500 59
+[2025-08-04 17:32:39,369] [ERROR] django.request: Internal Server Error: /api/ola/mcp-agent/grafico/
+[2025-08-04 17:32:39,386] [ERROR] django.server: "POST /api/ola/mcp-agent/grafico/ HTTP/1.1" 500 71
+[2025-08-04 17:43:27,536] [ERROR] django.request: Internal Server Error: /api/ola/mcp-agent/limpar-cache/
+[2025-08-04 17:43:27,537] [ERROR] django.server: "POST /api/ola/mcp-agent/limpar-cache/ HTTP/1.1" 500 79

@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agente de Banco de Dados</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #16204a 0%, #966e8c 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .chat-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            height: 600px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #16204a 0%, #e1cef4 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .message.user {
+            text-align: right;
+        }
+
+        .message.ai {
+            text-align: left;
+        }
+
+        .message-bubble {
+            display: inline-block;
+            max-width: 80%;
+            padding: 12px 18px;
+            border-radius: 20px;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-bubble {
+            background: linear-gradient(135deg, #16204a 0%, #e1cef4 100%);
+            color: white;
+        }
+
+        .message.ai .message-bubble {
+            background: #e9ecef;
+            color: #333;
+            border: 1px solid #dee2e6;
+        }
+
+        .chat-input {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 10px;
+            color: #6c757d;
+        }
+
+        .feature-card {
+            background: linear-gradient(#16204a, #5e5d60);
+            color: aliceblue;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+            max-width: 100%;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4aff08;
+            display: inline-block;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        .streaming-indicator {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            margin-left: 8px;
+            animation: pulse 1.5s infinite;
+            display: inline-block;
+        }
+
+        .streaming-text {
+            margin-top: 8px;
+            padding: 8px;
+            background: rgba(76, 175, 80, 0.1);
+            border-left: 3px solid #4caf50;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .typing-indicator {
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        .progress {
+            height: 4px !important;
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-bar {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            transition: width 0.3s ease;
+        }
+
+        .agent-logo {
+            width: 35px;
+            height: 35px;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        .agent-logo-title {
+            width: 35px;
+            height: 35px;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        @keyframes typing {
+
+            0%,
+            20% {
+                content: '';
+            }
+
+            25% {
+                content: '.';
+            }
+
+            50% {
+                content: '..';
+            }
+
+            75% {
+                content: '...';
+            }
+        }
+
+        .typing-indicator::after {
+            content: '';
+            animation: typing 1.5s infinite;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container-fluid py-4">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-4">
+                <div class="feature-card">
+                    <h4><img src="logo.png" alt="Logo" class="agent-logo-title"> Agente de Banco de Dados</h4>
+                    <p>Agente especializado em consultas e otimização de consultas SQL</p>
+                    <div class="mb-3">
+                        <span class="status-indicator"></span>
+                        <small class="text-success">Online e pronto para ajudar</small>
+                    </div>
+                </div>
+
+                <div class="feature-card">
+                    <h5><i class="fas fa-cogs text-info" aria-hidden="true"></i> Funcionalidades</h5>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check text-success" aria-hidden="true"></i> Consultas otimizadas ao banco
+                        </li>
+                        <li><i class="fas fa-check text-success" aria-hidden="true"></i> Insights de dados</li>
+                        <li><i class="fas fa-check text-success" aria-hidden="true"></i> Relatórios personalizados</li>
+                        <li><i class="fas fa-check text-success" aria-hidden="true"></i> Otimização de consultas</li>
+                        <li><i class="fas fa-stream text-warning" aria-hidden="true"></i> Modo streaming (novo!)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Chat -->
+            <div class="col-md-8">
+                <div class="chat-container">
+                    <div class="chat-header">
+                        <h3><i class="fas fa-comments" aria-hidden="true"></i> Chat Interativo</h3>
+                        <p class="mb-0">Converse com o agente</p>
+                    </div>
+
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="message ai">
+                            <div class="message-bubble">
+                                <strong><img src="logo.png" alt="Logo" class="agent-logo">Agente:</strong> Olá! Sou seu
+                                agente especializado em banco de dados.
+                                <ul class="mt-2 mb-0">
+                                    <li>Consultas otimizadas ao banco</li>
+                                    <li>Insights de dados</li>
+                                    <li>Relatórios personalizados</li>
+                                    <li><strong>🎬 Modo streaming:</strong> Veja meu processo de raciocínio!</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="loading" id="loading">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                        <span class="ms-2" id="loadingText">Agente processando...</span>
+                    </div>
+
+                    <div class="chat-input">
+                        <form id="chatForm">
+                            <div class="input-group mb-2">
+                                <input type="text" class="form-control" id="messageInput"
+                                    placeholder="Digite sua mensagem..." required>
+                                <button class="btn btn-primary" type="submit" id="sendButton">
+                                    <i class="fas fa-paper-plane"></i> Enviar
+                                </button>
+                                <button class="btn btn-success" type="button" id="streamButton">
+                                    <i class="fas fa-stream"></i> Streaming
+                                </button>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <button class="btn btn-outline-danger btn-sm" type="button" onclick="clearSession()">
+                                    <i class="fas fa-trash"></i> Limpar Conversa
+                                </button>
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle"></i>
+                                    Use "Streaming" para ver o processo de raciocínio do agente
+                                </small>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById('chatMessages');
+        const messageInput = document.getElementById('messageInput');
+        const chatForm = document.getElementById('chatForm');
+        const loading = document.getElementById('loading');
+        const loadingText = document.getElementById('loadingText');
+        const sendButton = document.getElementById('sendButton');
+        const streamButton = document.getElementById('streamButton');
+
+        function addMessage(content, isUser = false, isStreaming = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'ai'}`;
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.className = 'message-bubble';
+
+            // Garante que content seja string antes do replace
+            const text = typeof content === 'string' ? content : JSON.stringify(content);
+
+            const streamingBadge = isStreaming ? '<span class="streaming-indicator">🎬 STREAMING</span>' : '';
+            const agentLabel = isUser ? '👤 Você' : '<img src="logo.png" alt="Logo" class="agent-logo">Agente';
+
+            bubbleDiv.innerHTML = `<strong>${agentLabel}:</strong>${streamingBadge} ${text.replace(/\n/g, '<br>')}`;
+            messageDiv.appendChild(bubbleDiv);
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            return bubbleDiv; // Retorna para poder atualizar depois
+        }
+
+        function addStreamingMessage() {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message ai';
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.className = 'message-bubble';
+            bubbleDiv.innerHTML = '<strong><img src="logo.png" alt="Logo" class="agent-logo">Agente:</strong><span class="streaming-indicator">🎬 STREAMING</span> <span class="typing-indicator">Iniciando...</span>';
+            messageDiv.appendChild(bubbleDiv);
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return bubbleDiv;
+        }
+
+        function showLoading(isStreaming = false) {
+            loading.style.display = 'block';
+            loadingText.textContent = isStreaming ? 'Agente processando com streaming...' : 'Agente processando...';
+        }
+
+        function hideLoading() {
+            loading.style.display = 'none';
+        }
+
+        async function sendMessage(useStreaming = false) {
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            addMessage(message, true);
+            messageInput.value = '';
+            messageInput.focus();
+            sendButton.disabled = true;
+            streamButton.disabled = true;
+
+            if (useStreaming) {
+                await sendStreamingMessage(message);
+            } else {
+                await sendRegularMessage(message);
+            }
+        }
+
+        async function sendRegularMessage(message) {
+            showLoading(false);
+
+            try {
+                const response = await fetch('/api/consulta', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        pergunta: message,
+                        slug: 'default'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    addMessage(data.resposta || data.response || 'Resposta vazia');
+                } else {
+                    addMessage(`❌ Erro: ${data.error || data.resposta || 'Erro desconhecido'}`);
+                }
+            } catch (error) {
+                addMessage(`❌ Erro de conexão: ${error.message}`);
+            } finally {
+                hideLoading();
+                sendButton.disabled = false;
+                streamButton.disabled = false;
+            }
+        }
+
+        async function sendStreamingMessage(message) {
+            const streamingBubble = addStreamingMessage();
+            let currentText = '';
+
+            try {
+                const response = await fetch('/api/consulta-streaming', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        pergunta: message,
+                        slug: 'default'
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+
+                                switch (data.tipo) {
+                                    case 'inicio':
+                                        streamingBubble.innerHTML = `<strong><img src="logo.png" alt="Logo" class="agent-logo">Agente:</strong><span class="streaming-indicator">🎬 STREAMING</span> ${data.mensagem}`;
+                                        break;
+
+                                    case 'etapa':
+                                        streamingBubble.innerHTML = `<strong><img src="logo.png" alt="Logo" class="agent-logo">Agente:</strong><span class="streaming-indicator">🎬 STREAMING</span> <div class="mb-2">${data.mensagem}</div>`;
+                                        break;
+
+                                    case 'resposta_inicio':
+                                        streamingBubble.innerHTML = `<strong><img src="logo.png" alt="Logo" class="agent-logo">Agente:</strong><span class="streaming-indicator">🎬 STREAMING</span> <div class="mb-2">${data.mensagem}</div><div class="streaming-text">`;
+                                        break;
+
+                                    case 'resposta_chunk':
+                                        const progressBar = `<div class="progress mb-2" style="height: 4px;"><div class="progress-bar" style="width: ${data.progresso}%"></div></div>`;
+                                        streamingBubble.innerHTML = `<strong><img src="logo.png" alt="Logo" class="agent-logo">Agente:</strong><span class="streaming-indicator">🎬 STREAMING</span> ${progressBar}<div class="streaming-text">${data.texto.replace(/\n/g, '<br>')}</div>`;
+                                        break;
+
+                                    case 'concluido':
+                                        streamingBubble.innerHTML = `<strong><img src="logo.png" alt="Logo" class="agent-logo">Agente:</strong><span class="streaming-indicator">✅ CONCLUÍDO</span> <div class="mt-2">${data.resposta_final.replace(/\n/g, '<br>')}</div>`;
+                                        break;
+
+                                    case 'erro':
+                                        streamingBubble.innerHTML = `<strong><img src="logo.png" alt="Logo" class="agent-logo">Agente:</strong><span class="streaming-indicator">❌ ERRO</span> ${data.mensagem}`;
+                                        break;
+                                }
+
+                                chatMessages.scrollTop = chatMessages.scrollHeight;
+
+                            } catch (parseError) {
+                                console.log('Erro ao parsear JSON:', parseError);
+                            }
+                        }
+                    }
+                }
+
+            } catch (error) {
+                streamingBubble.innerHTML = `<strong><img src="logo.png" alt="Logo" class="agent-logo">Agente:</strong><span class="streaming-indicator">❌ ERRO</span> Erro de conexão: ${error.message}`;
+            } finally {
+                sendButton.disabled = false;
+                streamButton.disabled = false;
+            }
+        }
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await sendMessage(false);
+        });
+
+        streamButton.addEventListener('click', async () => {
+            await sendMessage(true);
+        });
+
+        async function clearSession() {
+            if (!confirm('Tem certeza que deseja limpar a conversa?')) return;
+            try {
+                chatMessages.innerHTML = `
+                    <div class="message ai">
+                        <div class="message-bubble">
+                            <strong><img src="logo.png" alt="Logo" class="agent-logo">Agente:</strong> Olá! Sou seu agente especializado em banco de dados.
+                            <ul class="mt-2 mb-0">
+                                <li>Consultas otimizadas ao banco</li>
+                                <li>Insights de dados</li>
+                                <li>Relatórios personalizados</li>
+                                <li><strong>🎬 Modo streaming:</strong> Veja meu processo de raciocínio!</li>
+                            </ul>
+                        </div>
+                    </div>`;
+            } catch (error) {
+                alert('Erro ao limpar sessão: ' + error.message);
+            }
+        }
+
+        messageInput.focus();
+    </script>
+</body>
+
+</html>

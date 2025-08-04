@@ -100,6 +100,7 @@ INSTALLED_APPS = [
     "Gerencial",
     "OrdemProducao",
     'parametros_admin',
+    'mcp_agent_db',  
 ]
 
 # Middleware
