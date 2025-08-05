@@ -1,0 +1,55 @@
+flyctl secrets set `
+SECRET_KEY="django-insecure-5k*!z0aj1xyc*l(%uv!a6@x5dviogez-aoj7lf-iwp1o!_m2" `
+DEBUG="True" `
+USE_LOCAL_DB="True" `
+ALLOWED_HOSTS="localhost,127.0.0.1,192.168.10.35,192.168.20.80,192.168.0.13,192.168.20.84,192.168.10.59,192.168.10.78,mobile-sps.fly.dev" `
+CORS_ALLOWED_ORIGINS="http://localhost:8081,http://192.168.10.35:8081,http://192.168.20.80:8081,http://192.168.20.46:8081,https://mobile-sps.fly.dev" `
+
+flyctl secrets set `
+LOCAL_DB_NAME="savexml1014" `
+LOCAL_DB_USER="savexml1014" `
+LOCAL_DB_PASSWORD="llnnnnnnpppp" `
+LOCAL_DB_HOST="base.rtalmeida.com.br" `
+LOCAL_DB_PORT="5432" `
+REMOTE_DB_NAME="casaa" `
+REMOTE_DB_USER="postgres" `
+REMOTE_DB_PASSWORD="@spartacus201@" `
+REMOTE_DB_HOST="localhost" `
+REMOTE_DB_PORT="5432"
+
+flyctl secrets set `
+DEMONSTRACAO_DB_USER="savexml839" `
+DEMONSTRACAO_DB_PASSWORD="eikkmoqqssuv" `
+TRATORMAQ_DB_USER="savexml43" `
+TRATORMAQ_DB_PASSWORD="RTUUWWYYaaac" `
+DALITZ_DB_USER="savexml903" `
+DALITZ_DB_PASSWORD="99AAAAAAACCC" `
+CASAEALMA_DB_USER="savexml1014" `
+CASAEALMA_DB_PASSWORD="llnnnnnnpppp"
+
+flyctl secrets set `
+CASAA_DB_USER="postgres" `
+CASAA_DB_PASSWORD="@spartacus201@" `
+ALMA_DB_USER="postgres" `
+ALMA_DB_PASSWORD="@spartacus201@" `
+OLA_DB_USER="postgres" `
+OLA_DB_PASSWORD="@spartacus201@" `
+G2_DB_USER="savexml69" `
+G2_DB_PASSWORD="ikkmooqqqssu"
+
+flyctl secrets set `
+SAVE6_DB_USER="savexml6" `
+SAVE6_DB_PASSWORD="ikkmooqqssuu" `
+ITAJARA_DB_USER="savexml140" `
+ITAJARA_DB_PASSWORD="VVVVXXXXXXXX" `
+OPERARIO_DB_USER="savexml894" `
+OPERARIO_DB_PASSWORD="rita2413" `
+EMAIL_BACKEND="django.core.mail.backends.smtp.EmailBackend" `
+EMAIL_HOST="smtp.savexml.com.br" `
+EMAIL_PORT="587" `
+EMAIL_USE_TLS="True" `
+EMAIL_HOST_USER="notas@savexml.com.br" `
+EMAIL_HOST_PASSWORD="sps@nfe" `
+DEFAULT_FROM_EMAIL="notas@savexml.com.br" `
+GOOGLE_API_KEY="AIzaSyClqK7mb-TNIL8eFCMSyQm6x3w94qUBCsk" `
+SMITHERY_API_KEY="5aa32046-6caf-4f75-b2c2-a403b4c0c886"
