@@ -225,10 +225,11 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
     
 
     def get_cliente_nome(self, obj):
-        # Tentar usar cache primeiro
+        # Primeiro tentar usar o cache do contexto
         entidades_cache = self.context.get('entidades_cache')
         if entidades_cache:
-            return entidades_cache.get((obj.pedi_forn, obj.pedi_empr))
+            cache_key = f"{obj.pedi_forn}_{obj.pedi_empr}"
+            return entidades_cache.get(cache_key)
         
         # Fallback para consulta individual
         banco = self.context.get('banco')

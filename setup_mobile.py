@@ -427,6 +427,63 @@ CREATE OR REPLACE VIEW public.balancete_cc
      FULL JOIN pagamentos p ON r.cecu_redu = p.cecu_redu AND r.mes_num = p.mes_num AND r.empr = p.empr AND r.fili = p.fili
   ORDER BY (COALESCE(r.mes_ordem, p.mes_ordem));
 
+--view aniversariantes
+CREATE OR REPLACE VIEW public.aniversariantes
+ AS
+ WITH dados_validos AS (
+                    SELECT 
+                        DISTINCT enti_empr, 
+                        enti_clie AS codigo,
+                        enti_nome AS nome,
+                        enti_tipo_enti AS tipo,
+                        enti_dana,
+                        CASE 
+                            WHEN enti_dana IS NOT NULL AND EXTRACT(YEAR FROM enti_dana) BETWEEN 1900 AND 2100 
+                            THEN TO_CHAR(enti_dana, 'DD/MM') 
+                            ELSE 'Data inválida' 
+                        END AS aniversario,
+                        CASE 
+                            WHEN enti_dana IS NOT NULL AND EXTRACT(YEAR FROM enti_dana) BETWEEN 1900 AND 2100 
+                            THEN EXTRACT(MONTH FROM enti_dana)
+                            ELSE 99 
+                        END AS mes_nascimento,
+                        CASE 
+                            WHEN enti_dana IS NOT NULL AND EXTRACT(YEAR FROM enti_dana) BETWEEN 1900 AND 2100 
+                            THEN EXTRACT(DAY FROM enti_dana)    
+                            ELSE 99
+                        END AS dia_nascimento,
+                        COALESCE(enti_fone, enti_celu, 'Sem telefone') AS contato,
+                        enti_emai AS email
+                    FROM entidades
+                    WHERE enti_dana IS NOT NULL
+                    AND EXTRACT(YEAR FROM enti_dana) BETWEEN 1900 AND 2100
+                ),
+                aniversarios_validos AS (
+                    SELECT *,
+                        MAKE_DATE(EXTRACT(YEAR FROM CURRENT_DATE)::int, 
+                                    mes_nascimento::int, 
+                                    dia_nascimento::int) AS aniversario_deste_ano
+                    FROM dados_validos
+                    WHERE
+                    enti_empr = 1 AND
+                    mes_nascimento BETWEEN 1 AND 12
+                    AND dia_nascimento BETWEEN 1 AND 31
+                    -- Filtra combinações impossíveis
+                    AND (mes_nascimento, dia_nascimento) NOT IN ((2,30), (2,31), (4,31), (6,31), (9,31), (11,31))
+                    -- Exclui 29/02 em ano não bissexto
+                    AND NOT (
+                        mes_nascimento = 2 AND dia_nascimento = 29 AND
+                        NOT (
+                            (EXTRACT(YEAR FROM CURRENT_DATE)::int % 4 = 0 AND EXTRACT(YEAR FROM CURRENT_DATE)::int % 100 != 0)
+                            OR (EXTRACT(YEAR FROM CURRENT_DATE)::int % 400 = 0)
+                        )
+                    )
+                )
+                SELECT 
+                    enti_empr, codigo,  nome, tipo, aniversario, mes_nascimento, dia_nascimento, contato, email
+                FROM aniversarios_validos
+                ORDER BY aniversario_deste_ano
+
 
 -- View extrato_caixa
 CREATE OR REPLACE VIEW public.extrato_caixa

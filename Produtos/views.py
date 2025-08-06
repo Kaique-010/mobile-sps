@@ -37,7 +37,6 @@ class UnidadeMedidaListView(ModuloRequeridoMixin, ListAPIView):
             return Response({"error": "Licença não encontrada."}, status=status.HTTP_404_NOT_FOUND)
             
         banco = get_licenca_db_config(self.request)
-        print(f"\n🔍 Banco de dados selecionado: {banco}")
         
         if banco:
             # Cache para unidades de medida
@@ -48,7 +47,6 @@ class UnidadeMedidaListView(ModuloRequeridoMixin, ListAPIView):
                 queryset = list(UnidadeMedida.objects.using(banco).all().order_by('unid_desc'))
                 cache.set(cache_key, queryset, 1800)  # Cache por 30 minutos
                 
-            print(f"📦 Total de unidades encontradas: {len(queryset)}")
             serializer = UnidadeMedidaSerializer(queryset, many=True)
             return Response(serializer.data)
     
@@ -68,7 +66,6 @@ class ProdutoListView(ModuloRequeridoMixin, APIView):
         if not banco:
             return Response({"error": "Banco não encontrado."}, status=400)
 
-        # Otimizar consulta com select_related e prefetch_related
         saldo_subquery = Subquery(
             SaldoProduto.objects.using(banco).filter(
                 produto_codigo=OuterRef('pk')
@@ -78,9 +75,8 @@ class ProdutoListView(ModuloRequeridoMixin, APIView):
 
         queryset = Produtos.objects.using(banco).annotate(
             saldo_estoque=Coalesce(saldo_subquery, V(0), output_field=DecimalField())
-        ).order_by('-prod_codi')[:100]  # Limitar resultados iniciais
-        
-        print(f"📦 Total de produtos encontrados: {queryset.count()}")
+        ).order_by('-prod_codi')[:100]  
+    
         serializer = ProdutoSerializer(queryset, many=True, context={'banco': banco})
         return Response(serializer.data)
 
@@ -101,7 +97,6 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         banco = get_licenca_db_config(self.request)
-        print(f"\n🔍 Banco de dados selecionado: {banco}")
 
         if not banco:
             return Produtos.objects.none()
@@ -152,7 +147,7 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         
         try:
             banco = get_licenca_db_config(self.request)
-            print(f"\n🔍 Banco de dados selecionado: {banco}")
+
             q = request.query_params.get("q", "").strip()
             
             if not q:

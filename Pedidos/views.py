@@ -129,7 +129,14 @@ class PedidoVendaViewSet(viewsets.ModelViewSet):
                 return queryset.none()
 
         # Ordenar por número do pedido (mais recentes primeiro)
+        print(f"nome do cliente: {cliente_nome}")
+
         return queryset.order_by('-pedi_nume')
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['banco'] = get_licenca_db_config(self.request)
+        return context
 
     def list(self, request, *args, **kwargs):
         """
@@ -186,11 +193,7 @@ class PedidoVendaViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context['banco'] = get_licenca_db_config(self.request)
-        return context
-    
+
     @parametros_pedidos_completo
     def create(self, request, *args, **kwargs):
         print(f"🎯 [VIEW] Recebendo requisição de criação de pedido")
