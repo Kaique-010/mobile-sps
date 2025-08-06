@@ -8,6 +8,8 @@ from Entidades.models import Entidades
 from core.serializers import BancoContextMixin
 from django.db.models import Prefetch
 import logging
+from parametros_admin.utils_pedidos import aplicar_descontos
+
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +110,6 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
         return ItemOrcamentoSerializer(itens, many=True, context=self.context).data
 
 
-   
     def create(self, validated_data):
         banco = self.context.get('banco')
         if not banco:
@@ -117,7 +118,9 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
         # Aceita tanto 'itens_input' quanto 'itens'
         itens_data = validated_data.pop('itens_input', []) or validated_data.pop('itens', [])
         if not itens_data:
-            raise ValidationError("Itens do orcamento são obrigatórios.")
+            raise ValidationError("Itens do orçamento são obrigatórios.")
+
+        parametros = validated_data.pop('parametros', {})
 
         orcamentos = None
         if 'pedi_nume' in validated_data:
@@ -148,15 +151,12 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
 
             orcamento = Orcamentos.objects.using(banco).create(**validated_data)
 
-        total = 0
+        itens_objs = []
         for idx, item_data in enumerate(itens_data, start=1):
-            # Garante que iped_desc seja um valor decimal válido
-            if 'iped_desc' not in item_data or item_data['iped_desc'] is None:
+            if 'iped_desc' not in item_data or item_data['iped_desc'] is None or isinstance(item_data['iped_desc'], bool):
                 item_data['iped_desc'] = 0.00
-            elif isinstance(item_data['iped_desc'], bool):
-                item_data['iped_desc'] = 0.00
-            
-            ItensOrcamento.objects.using(banco).create(
+
+            item = ItensOrcamento.objects.using(banco).create(
                 iped_empr=orcamento.pedi_empr,
                 iped_fili=orcamento.pedi_fili,
                 iped_item=idx,
@@ -165,12 +165,18 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
                 iped_forn=orcamento.pedi_forn,
                 **item_data
             )
-            total += item_data.get('iped_quan', 0) * item_data.get('iped_unit', 0)
+            itens_objs.append(item)
 
-        orcamento.pedi_tota = round(total, 2)
+        aplicar_descontos(
+            pedido=orcamento,
+            itens=itens_objs,
+            usar_desconto_item=parametros.get('usar_desconto_item', False),
+            usar_desconto_total=parametros.get('usar_desconto_total', False)
+        )
+
         orcamento.save(using=banco)
-
         return orcamento
+
 
 
     def update(self, instance, validated_data):
@@ -178,33 +184,33 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
         if not banco:
             raise ValidationError("Banco não definido no contexto.")
 
-        # Aceita tanto 'itens_input' quanto 'itens'
+        parametros = validated_data.pop('parametros', {})
+        usar_desconto_item = parametros.get('usar_desconto_item', False)
+        usar_desconto_total = parametros.get('usar_desconto_total', False)
+
+        if usar_desconto_item and usar_desconto_total:
+            raise ValidationError("Não é permitido aplicar desconto por item e por pedido ao mesmo tempo.")
+
         itens_data = validated_data.pop('itens_input', None) or validated_data.pop('itens', None)
         if itens_data is None:
             raise ValidationError("Itens do orcamento são obrigatórios.")
 
-        # Atualiza campos do orcamento
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save(using=banco)
 
-        # Remove todos os itens antigos do orcamento
         ItensOrcamento.objects.using(banco).filter(
             iped_empr=instance.pedi_empr,
             iped_fili=instance.pedi_fili,
             iped_pedi=str(instance.pedi_nume)
         ).delete()
 
-        # Recria os itens
-        total = 0
+        itens_objs = []
         for idx, item_data in enumerate(itens_data, start=1):
-            # Garante que iped_desc seja um valor decimal válido
-            if 'iped_desc' not in item_data or item_data['iped_desc'] is None:
+            if 'iped_desc' not in item_data or item_data['iped_desc'] is None or isinstance(item_data['iped_desc'], bool):
                 item_data['iped_desc'] = 0.00
-            elif isinstance(item_data['iped_desc'], bool):
-                item_data['iped_desc'] = 0.00
-            
-            ItensOrcamento.objects.using(banco).create(
+
+            item = ItensOrcamento.objects.using(banco).create(
                 iped_empr=instance.pedi_empr,
                 iped_fili=instance.pedi_fili,
                 iped_item=idx,
@@ -213,16 +219,19 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
                 iped_forn=instance.pedi_forn,
                 **item_data
             )
-            total += item_data.get('iped_quan', 0) * item_data.get('iped_unit', 0)
+            itens_objs.append(item)
 
-        instance.pedi_tota = round(total, 2)
+        aplicar_descontos(
+            pedido=instance,
+            itens=itens_objs,
+            usar_desconto_item=usar_desconto_item,
+            usar_desconto_total=usar_desconto_total
+        )
+
         instance.save(using=banco)
         return instance
 
- 
-    
-
-    
+   
 
     def get_cliente_nome(self, obj):
         # Primeiro tentar usar o cache do contexto

@@ -467,3 +467,68 @@ def cancelar_pedido_com_volta_estoque(pedido_id, request):
             'cancelamento_ok': False,
             'erro': f'Erro interno: {str(e)}'
         }
+        
+        
+        
+#Parametros para aplicar desconto no total do pedido
+
+def arredondar(valor):
+    return valor.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+
+def desconto_no_total(pedido):
+    """
+    Aplica desconto no total do pedido, se configurado.
+    """
+    total = pedido.pedi_tota or Decimal('0.00')
+    desconto = pedido.pedi_desc or Decimal('0.00')
+
+    total_liquido = max(total - desconto, Decimal('0.00'))
+    pedido.pedi_tota = arredondar(total_liquido)
+    # pedido.save() → deixa o save fora, quem chama é que decide
+
+
+def desconto_no_item(item):
+    """
+    Aplica desconto no item de orçamento/pedido.
+    """
+    unitario = item.iped_unit or Decimal('0.00')
+    quantidade = item.iped_quan or Decimal('0.00')
+    desconto = item.iped_desc or Decimal('0.00')
+
+    total = unitario * quantidade
+    total_liquido = max(total - desconto, Decimal('0.00'))
+
+    item.iped_tota = arredondar(total_liquido)
+    # item.save() → mesmo esquema, deixa fora
+
+def aplicar_descontos(pedido, itens, usar_desconto_item=False, usar_desconto_total=False):
+    """
+    Aplica os descontos no pedido ou nos itens com base nos parâmetros.
+    """
+
+    if usar_desconto_item and usar_desconto_total:
+        raise ValueError("Não pode aplicar desconto no item e no total ao mesmo tempo.")
+
+    if usar_desconto_item:
+        for item in itens:
+            desconto_no_item(item)
+            item.save()
+        # Atualiza o total do pedido baseado nos totais dos itens já com desconto
+        pedido.pedi_tota = arredondar(sum([item.iped_tota or Decimal('0.00') for item in itens]))
+
+    elif usar_desconto_total:
+        # Calcula o total bruto (sem aplicar desconto por item)
+        total_bruto = arredondar(sum([
+            (item.iped_quan or Decimal('0.00')) * (item.iped_unit or Decimal('0.00'))
+            for item in itens
+        ]))
+        pedido.pedi_tota = total_bruto
+        desconto_no_total(pedido)
+
+    else:
+        # Sem desconto nenhum, só calcula total normal
+        pedido.pedi_tota = arredondar(sum([
+            (item.iped_quan or Decimal('0.00')) * (item.iped_unit or Decimal('0.00'))
+            for item in itens
+        ]))

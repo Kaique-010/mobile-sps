@@ -26,6 +26,8 @@ class PedidoVenda(models.Model):
         (4, 'Cancelado'),
     ], default=0)
     pedi_obse = models.TextField(blank=True, null=True)
+    pedi_desc = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+
 
     class Meta:
         db_table = 'pedidosvenda'
