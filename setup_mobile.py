@@ -16,11 +16,11 @@ LOCAL_DB_PORT = config('LOCAL_DB_PORT')
 SQL_DJANGO_CORE = """
 -- Criar tabelas essenciais do Django se não existirem
 CREATE TABLE IF NOT EXISTS django_content_type (
-    id SERIAL PRIMARY KEY,
-    app_label VARCHAR(100) NOT NULL,
-    model VARCHAR(100) NOT NULL,
-    UNIQUE(app_label, model)
-);
+        id SERIAL PRIMARY KEY,
+        app_label VARCHAR(100) NOT NULL,
+        model VARCHAR(100) NOT NULL,
+        UNIQUE (app_label, model)
+    );
 
 CREATE TABLE IF NOT EXISTS auth_permission (
     id SERIAL PRIMARY KEY,
@@ -105,6 +105,21 @@ CREATE TABLE IF NOT EXISTS modulosmobile (
     modu_icon VARCHAR(50),
     modu_orde INTEGER
 );
+ 
+-- Cria a tabela de parâmetros se não existir
+CREATE TABLE IF NOT EXISTS parametrosmobile (
+    para_codi SERIAL PRIMARY KEY,
+    para_empr INT NOT NULL,
+    para_fili INT NOT NULL,
+    para_modu_id INT NOT NULL REFERENCES modulosmobile(modu_codi) ON DELETE CASCADE,
+    para_nome VARCHAR(100) NOT NULL,
+    para_desc TEXT,
+    para_valo VARCHAR(255),
+    para_ativ BOOLEAN NOT NULL DEFAULT TRUE,
+    para_data_alte TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    para_usua_alte INT REFERENCES usuarios(usua_codi)
+);
+
 """
 
 # SQL de tabelas e inserções
@@ -124,6 +139,7 @@ CREATE TABLE IF NOT EXISTS permissoesmodulosmobile (
   perm_usua_libe INT NOT NULL,
   perm_data_alte TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
 
 -- Popula modulos
 INSERT INTO modulosmobile (modu_nome, modu_desc, modu_ativ, modu_icon, modu_orde)
@@ -482,12 +498,12 @@ CREATE OR REPLACE VIEW public.aniversariantes
                 SELECT 
                     enti_empr, codigo,  nome, tipo, aniversario, mes_nascimento, dia_nascimento, contato, email
                 FROM aniversarios_validos
-                ORDER BY aniversario_deste_ano
+                ORDER BY aniversario_deste_ano;
 
 
 -- View extrato_caixa
 CREATE OR REPLACE VIEW public.extrato_caixa
- AS
+ AS(
  SELECT x.iped_pedi AS "Pedido",
     x.pedi_forn AS "Cliente",
     x.enti_nome AS "Nome Cliente",
@@ -527,7 +543,7 @@ CREATE OR REPLACE VIEW public.extrato_caixa
              JOIN entidades e ON e.enti_clie = p.pedi_forn AND e.enti_empr = p.pedi_empr
           WHERE m.movi_data >= '2020-01-01'::date AND m.movi_data <= '2025-12-31'::date AND m.movi_nume_vend > 0 AND i.iped_empr = 1 AND i.iped_fili = 1) x
   GROUP BY x.pedi_forn, x.enti_nome, x."Forma de Recebimento", x.iped_empr, x.iped_fili, x.iped_pedi, x.iped_prod, x.prod_nome, x.movi_data, x.iped_quan
-  ORDER BY x.iped_pedi;
+  ORDER BY x.iped_pedi);
 """
 
 def executar_sql(sql, titulo="SQL"):

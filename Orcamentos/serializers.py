@@ -8,6 +8,7 @@ from Entidades.models import Entidades
 from core.serializers import BancoContextMixin
 from django.db.models import Prefetch
 import logging
+from decimal import Decimal, ROUND_HALF_UP
 from parametros_admin.utils_pedidos import aplicar_descontos
 
 
@@ -66,13 +67,15 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
     itens = serializers.SerializerMethodField(read_only=True)
     itens_input = ItemOrcamentoSerializer(many=True, write_only=True, required=False)
     itens_data = serializers.ListField(child=serializers.DictField(), write_only=True, required=False)
+    parametros = serializers.DictField(write_only=True, required=False)
 
     class Meta:
         model = Orcamentos
         fields = [
             'pedi_empr', 'pedi_fili', 'pedi_data', 'pedi_tota', 'pedi_forn', 'pedi_vend',
             'itens', 'itens_input', 'itens_data',
-            'valor_total', 'cliente_nome', 'empresa_nome', 'pedi_nume'
+            'valor_total', 'cliente_nome', 'empresa_nome', 'pedi_nume',
+            'parametros'  # ADICIONAR AQUI
         ]
     
     def __init__(self, *args, **kwargs):

@@ -9,7 +9,7 @@ class Orcamentos(models.Model):
     pedi_tota = models.DecimalField(decimal_places=2, max_digits=15)
     pedi_vend = models.CharField( db_column='pedi_vend', max_length=15,blank=True, null=True)  
     pedi_obse = models.TextField(blank=True, null=True)
-    pedi_nume_pedi = models.IntegerField(db_column='pedi_nume_pedi', max_length=50, blank=True, null=True)
+    pedi_nume_pedi = models.IntegerField(db_column='pedi_nume_pedi',blank=True, null=True)
     pedi_desc = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
 
 

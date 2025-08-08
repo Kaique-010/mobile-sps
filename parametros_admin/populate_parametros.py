@@ -83,14 +83,38 @@ class PopulateParametros:
                     },
                     {
                         'nome': 'usar_ultimo_preco',
-                        'descricao': 'Usar último preço aplicado',
+                        'descricao': 'Usar último preço aplicado nos pedidos',
                         'valor_padrao': False,
                         'ativo': True
                     },
                     {
                         'nome': 'desconto_pedido',
-                        'descricao': 'Permite desconto em pedidos',
+                        'descricao': 'Permite desconto em pedidos (geral)',
                         'valor_padrao': True,
+                        'ativo': True
+                    },
+                    {
+                        'nome': 'desconto_item_pedido',
+                        'descricao': 'Permite desconto por item em pedidos',
+                        'valor_padrao': True,
+                        'ativo': True
+                    },
+                    {
+                        'nome': 'desconto_total_pedido',
+                        'descricao': 'Permite desconto no total do pedido',
+                        'valor_padrao': True,
+                        'ativo': True
+                    },
+                    {
+                        'nome': 'desconto_maximo_item',
+                        'descricao': 'Limite máximo de desconto por item (usar para configurar %)',
+                        'valor_padrao': False,  # False = sem limite, True = com limite
+                        'ativo': True
+                    },
+                    {
+                        'nome': 'desconto_maximo_total',
+                        'descricao': 'Limite máximo de desconto no total (usar para configurar %)',
+                        'valor_padrao': False,  # False = sem limite, True = com limite
                         'ativo': True
                     },
                     {
@@ -138,11 +162,30 @@ class PopulateParametros:
                         'ativo': True
                     },
                     {
-                        'nome': 'desconto_orcamento',
-                        'descricao': 'Permite desconto em orçamentos',
+                        'nome': 'desconto_item_orcamento',
+                        'descricao': 'Permite desconto por item em orçamentos',
                         'valor_padrao': True,
                         'ativo': True
                     },
+                    {
+                        'nome': 'desconto_total_orcamento',
+                        'descricao': 'Permite desconto no total do orçamento',
+                        'valor_padrao': True,
+                        'ativo': True
+                    },
+                    {
+                        'nome': 'desconto_maximo_item_orcamento',
+                        'descricao': 'Limite máximo de desconto por item em orçamentos',
+                        'valor_padrao': False,
+                        'ativo': True
+                    },
+                    {
+                        'nome': 'desconto_maximo_total_orcamento',
+                        'descricao': 'Limite máximo de desconto no total do orçamento',
+                        'valor_padrao': False,
+                        'ativo': True
+                    },
+
                     {
                         'nome': 'validade_orcamento_dias',
                         'descricao': 'Dias de validade do orçamento (valor numérico)',
@@ -353,6 +396,8 @@ def main():
     args = parser.parse_args()
     
     populate = PopulateParametros()
+    print('parametros ', populate.modulos_parametros)
+
     
     if args.acao == 'popular':
         populate.executar_populacao_completa()

@@ -8,13 +8,14 @@ from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.filters import SearchFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from datetime import date
-
+from decimal import Decimal, ROUND_HALF_UP
 from .models import Orcamentos, ItensOrcamento
 from .serializers import OrcamentosSerializer
 from Entidades.models import Entidades
 from Licencas.models import Empresas
 from Pedidos.models import PedidoVenda, Itenspedidovenda
 from core.utils import get_licenca_db_config
+from parametros_admin.utils_pedidos import obter_parametros_pedidos, atualizar_parametros_pedidos
 
 logger = logging.getLogger('Orcamentos')
 
@@ -303,4 +304,101 @@ class OrcamentoViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
             
-        
+
+    @action(detail=False, methods=['get', 'patch'], url_path='parametros-desconto')
+    def parametros_desconto(self, request, slug=None):
+        """
+        GET → retorna os parâmetros de desconto
+        PATCH → atualiza os parâmetros de desconto
+        """
+        try:
+            if request.method == 'GET':
+                empresa_id = request.query_params.get('empresa_id') or request.query_params.get('empr')
+                filial_id = request.query_params.get('filial_id') or request.query_params.get('fili')
+
+                if not empresa_id or not filial_id:
+                    return Response(
+                        {'error': 'empresa_id/empr e filial_id/fili são obrigatórios'}, 
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                parametros = obter_parametros_pedidos(empresa_id, filial_id, request)
+
+                # Função auxiliar para obter valor booleano do parâmetro
+                def obter_valor_parametro(param_dict):
+                    """Obtém o valor booleano do parâmetro, considerando tanto 'valor' quanto 'ativo'"""
+                    if not param_dict.get('existe', False):
+                        return False
+                    
+                    valor = param_dict.get('valor', False)
+                    ativo = param_dict.get('ativo', False)
+                    
+                    # Se o parâmetro não está ativo no sistema, retorna False
+                    if not ativo:
+                        return False
+                    
+                    # Converter valor para boolean se necessário
+                    if isinstance(valor, str):
+                        return valor.lower() in ('true', '1', 'yes', 'on')
+                    elif isinstance(valor, bool):
+                        return valor
+                    else:
+                        return bool(valor)
+
+                # Mapeamento correto: frontend_field → banco_field
+                parametros_desconto = {
+                    # Campos de desconto - mapeamento correto
+                    'desconto_item_disponivel': obter_valor_parametro(parametros.get('desconto_item_pedido', {})),
+                    'desconto_total_disponivel': obter_valor_parametro(parametros.get('desconto_total_disponivel', {})),
+                    'desconto_item_orcamento': obter_valor_parametro(parametros.get('desconto_item_orcamento', {})),
+                    'desconto_item_pedido': obter_valor_parametro(parametros.get('desconto_item_pedido', {})),
+                    'desconto_total_pedido': obter_valor_parametro(parametros.get('desconto_total_pedido', {})),
+                    'desconto_pedido': obter_valor_parametro(parametros.get('desconto_pedido', {})),
+                    
+                    # Campos adicionais que o frontend espera
+                    'usar_preco_prazo': obter_valor_parametro(parametros.get('usar_preco_prazo', {})),
+                    'usar_ultimo_preco': obter_valor_parametro(parametros.get('usar_ultimo_preco', {})),
+                    'pedido_volta_estoque': obter_valor_parametro(parametros.get('pedido_volta_estoque', {})),
+                    'validar_estoque_pedido': obter_valor_parametro(parametros.get('validar_estoque_pedido', {})),
+                    'calcular_frete_automatico': obter_valor_parametro(parametros.get('calcular_frete_automatico', {})),
+                }
+
+                return Response(parametros_desconto, status=status.HTTP_200_OK)
+
+            elif request.method == 'PATCH':
+                empresa_id = request.data.get('empresa_id') or request.data.get('empr')
+                filial_id = request.data.get('filial_id') or request.data.get('fili')
+
+                if not empresa_id or not filial_id:
+                    return Response(
+                        {'error': 'empresa_id/empr e filial_id/fili são obrigatórios'}, 
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                # Mapear campos do frontend para os campos corretos do banco
+                dados_mapeados = {}
+                
+                # Copiar todos os dados primeiro
+                for key, value in request.data.items():
+                    dados_mapeados[key] = value
+                
+                # Aplicar mapeamentos específicos
+                if 'desconto_item_disponivel' in request.data:
+                    dados_mapeados['desconto_item_pedido'] = request.data['desconto_item_disponivel']
+                    # Remover o campo original para evitar confusão
+                    dados_mapeados.pop('desconto_item_disponivel', None)
+                
+                # desconto_total_disponivel já tem o nome correto no banco
+                
+                sucesso = atualizar_parametros_pedidos(empresa_id, filial_id, dados_mapeados)
+                if not sucesso:
+                    return Response({'error': 'Erro ao atualizar'}, status=500)
+
+                return Response({'success': True}, status=status.HTTP_200_OK)
+
+            else:
+                return Response({'error': 'Método não suportado'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+        except Exception as e:
+            logger.error(f"Erro geral nos parâmetros de desconto: {e}")
+            return Response({'error': 'Erro interno'}, status=500)

@@ -1,7 +1,7 @@
 from .models import ParametroSistema, Modulo
 from core.utils import get_licenca_db_config
 from django.core.exceptions import ValidationError
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 import logging
 
 logger = logging.getLogger(__name__)
@@ -24,12 +24,23 @@ def obter_parametros_pedidos(empresa_id, filial_id, request):
             return {}
         
         parametros_nomes = [
+            'desconto_orcamento',
+            'desconto_item_orcamento',
+            'desconto_total_orcamento',
+            'desconto_total_pedido',
+            'desconto_total_disponivel',
             'usar_preco_prazo',
             'usar_ultimo_preco',
             'desconto_pedido',
+            'desconto_item_pedido',
+            'desconto_maximo_item',
+            'desconto_maximo_total',
             'pedido_volta_estoque',
             'validar_estoque_pedido',
-            'calcular_frete_automatico'
+            'calcular_frete_automatico', 
+            'baixa_estoque_orcamento',
+            'baixa_estoque_pedido',
+            'pedido_volta_esatoque'
         ]
         
         parametros = {}
@@ -532,3 +543,187 @@ def aplicar_descontos(pedido, itens, usar_desconto_item=False, usar_desconto_tot
             (item.iped_quan or Decimal('0.00')) * (item.iped_unit or Decimal('0.00'))
             for item in itens
         ]))
+
+
+def atualizar_parametros_pedidos(empresa_id, filial_id, dados_parametros, modulos_busca=None):
+    """
+    Atualiza parâmetros específicos de pedidos
+    
+    Args:
+        empresa_id: ID da empresa
+        filial_id: ID da filial
+        dados_parametros: Dicionário com os parâmetros a serem atualizados
+        modulos_busca: Lista de nomes de módulos para buscar (opcional)
+                      Default: ['pedido', 'orcamento']
+    """
+    try:
+        from core.utils import get_licenca_db_config
+        from django.http import HttpRequest
+        
+        # Criar request mock se necessário
+        request = HttpRequest()
+        banco = get_licenca_db_config(request)
+        
+        if not banco:
+            logger.error("Banco de dados não encontrado")
+            return False
+        
+        # Buscar módulo de pedidos
+        from django.db.models import Q
+        
+        # Usar lista padrão se não foi fornecida
+        if modulos_busca is None:
+            modulos_busca = ['pedido', 'orcamento']
+        
+        # Construir query dinâmica com base na lista de módulos
+        query = Q()
+        for modulo_nome in modulos_busca:
+            query |= Q(modu_nome__icontains=modulo_nome)
+        
+        modulo_pedidos = Modulo.objects.using(banco).filter(query).first()
+        
+        if not modulo_pedidos:
+            logger.error("Módulo de pedidos não encontrado")
+            return False
+        
+        # Parâmetros que podem ser atualizados
+        parametros_permitidos = [
+            'desconto_item_disponivel',
+            'desconto_total_disponivel', 
+            'desconto_maximo_item',
+            'desconto_maximo_total',
+            'usar_preco_prazo',
+            'usar_ultimo_preco',
+            'desconto_total_pedido',
+            'desconto_total_orcamento',
+            'desconto_item_pedido',
+            'desconto_item_orcamento',
+            'pedido_volta_estoque',
+            'validar_estoque_pedido',
+            'calcular_frete_automatico'
+        ]
+        
+        # Atualizar cada parâmetro
+        for nome_param, valor in dados_parametros.items():
+            logger.info(f"Processando parâmetro: {nome_param} = {valor} (tipo: {type(valor)})")
+            
+            if nome_param not in parametros_permitidos:
+                logger.warning(f"Parâmetro {nome_param} não está na lista de permitidos")
+                continue
+                
+            try:
+                # Converter valor para boolean
+                if isinstance(valor, str):
+                    valor_bool = valor.lower() in ('true', '1', 'yes', 'on')
+                elif isinstance(valor, (int, float)):
+                    valor_bool = bool(valor)
+                elif isinstance(valor, bool):
+                    valor_bool = valor
+                else:
+                    valor_bool = False
+                
+                logger.info(f"Valor convertido para boolean: {valor_bool}")
+                
+                # Buscar ou criar parâmetro
+                parametro, created = ParametroSistema.objects.using(banco).get_or_create(
+                    para_empr=empresa_id,
+                    para_fili=filial_id,
+                    para_modu=modulo_pedidos,
+                    para_nome=nome_param,
+                    defaults={
+                        'para_desc': f'Parâmetro {nome_param} para pedidos',
+                        'para_valo': valor_bool,
+                        'para_ativ': True,
+                        'para_usua_alte': 1  # Usuário sistema
+                    }
+                )
+                
+                if created:
+                    logger.info(f"Parâmetro {nome_param} criado com valor: {valor_bool}")
+                else:
+                    # Atualizar parâmetro existente
+                    valor_anterior = parametro.para_valo
+                    parametro.para_valo = valor_bool
+                    parametro.para_usua_alte = 1
+                    parametro.save(using=banco)
+                    logger.info(f"Parâmetro {nome_param} atualizado de {valor_anterior} para {valor_bool}")
+                
+            except Exception as e:
+                logger.error(f"Erro ao atualizar parâmetro {nome_param}: {e}")
+                continue
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"Erro ao atualizar parâmetros de pedidos: {e}")
+        return False
+
+
+def validar_desconto_item_pedido(desconto_percentual, empresa_id, filial_id, request):
+    """
+    Valida desconto específico por item em pedidos
+    """
+    try:
+        # Verificar se desconto por item é permitido
+        parametros = obter_parametros_pedidos(empresa_id, filial_id, request)
+        
+        # Verificar se desconto por item está habilitado
+        desconto_item_param = parametros.get('desconto_item_pedido', {})
+        if not desconto_item_param.get('ativo', False) or not desconto_item_param.get('valor', False):
+            raise ValidationError("Desconto por item não permitido para esta empresa/filial")
+        
+        # Validações básicas
+        if desconto_percentual < 0 or desconto_percentual > 100:
+            raise ValidationError("Desconto deve estar entre 0% e 100%")
+        
+        # Verificar limite máximo se configurado
+        limite_param = parametros.get('desconto_maximo_item', {})
+        if limite_param.get('ativo', False):
+            # Para limites numéricos, seria necessário um campo adicional no modelo
+            # Por enquanto, usar validação padrão de 50%
+            limite_maximo = 50.0
+            if desconto_percentual > limite_maximo:
+                raise ValidationError(f"Desconto por item não pode exceder {limite_maximo}%")
+        
+        return True
+        
+    except ValidationError:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao validar desconto por item: {e}")
+        raise ValidationError("Erro interno ao validar desconto por item")
+
+
+def validar_desconto_total_pedido(desconto_percentual, empresa_id, filial_id, request):
+    """
+    Valida desconto específico no total do pedido
+    """
+    try:
+        # Verificar se desconto no total é permitido
+        parametros = obter_parametros_pedidos(empresa_id, filial_id, request)
+        
+        # Verificar se desconto no total está habilitado
+        desconto_total_param = parametros.get('desconto_total_pedido', {})
+        if not desconto_total_param.get('ativo', False) or not desconto_total_param.get('valor', False):
+            raise ValidationError("Desconto no total não permitido para esta empresa/filial")
+        
+        # Validações básicas
+        if desconto_percentual < 0 or desconto_percentual > 100:
+            raise ValidationError("Desconto deve estar entre 0% e 100%")
+        
+        # Verificar limite máximo se configurado
+        limite_param = parametros.get('desconto_maximo_total', {})
+        if limite_param.get('ativo', False):
+            # Para limites numéricos, seria necessário um campo adicional no modelo
+            # Por enquanto, usar validação padrão de 30%
+            limite_maximo = 30.0
+            if desconto_percentual > limite_maximo:
+                raise ValidationError(f"Desconto no total não pode exceder {limite_maximo}%")
+        
+        return True
+        
+    except ValidationError:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao validar desconto no total: {e}")
+        raise ValidationError("Erro interno ao validar desconto no total")

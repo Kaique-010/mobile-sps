@@ -7,6 +7,7 @@ from .models import PedidoVenda, Itenspedidovenda
 from Entidades.models import Entidades
 from core.serializers import BancoContextMixin
 from parametros_admin.integracao_pedidos import processar_saida_estoque_pedido
+from parametros_admin.utils_pedidos import aplicar_descontos
 import logging
 
 logger = logging.getLogger(__name__)
@@ -42,12 +43,13 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
     itens = serializers.SerializerMethodField()  # Mudança aqui - remover write_only
     itens_input = ItemPedidoVendaSerializer(many=True, write_only=True, required=False)
     pedi_nume = serializers.IntegerField(read_only=True)  # Resolve a pk sendo o numero pois ele retorna sequencial na mão 
+    parametros = serializers.DictField(write_only=True, required=False)  # Para receber parâmetros de desconto
 
     class Meta:
         model = PedidoVenda
         fields = [
             'pedi_empr', 'pedi_fili', 'pedi_data', 'pedi_tota', 'pedi_forn',
-            'itens', 'itens_input',
+            'itens', 'itens_input', 'parametros',
             'valor_total', 'cliente_nome', 'empresa_nome', 'pedi_nume', 'pedi_stat', 'pedi_vend'
         ]
     
@@ -75,7 +77,17 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
         if not itens_data:
             itens_data = validated_data.pop('itens', [])
         
+        # Extrair parâmetros de desconto
+        parametros = validated_data.pop('parametros', {})
+        usar_desconto_item = parametros.get('usar_desconto_item', False)
+        usar_desconto_total = parametros.get('usar_desconto_total', False)
+        
+        # Validação para impedir aplicação simultânea de desconto por item e por pedido
+        if usar_desconto_item and usar_desconto_total:
+            raise ValidationError("Não é possível aplicar desconto por item e desconto no total simultaneamente.")
+        
         print(f"🆕 [PEDIDO] Quantidade de itens recebidos: {len(itens_data)}")
+        print(f"🆕 [PEDIDO] Parâmetros de desconto: usar_item={usar_desconto_item}, usar_total={usar_desconto_total}")
         
         if not itens_data:
             raise ValidationError("Itens do pedido são obrigatórios.")
@@ -109,9 +121,11 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
 
             pedido = PedidoVenda.objects.using(banco).create(**validated_data)
 
+        # Criar itens do pedido
+        itens_criados = []
         total = 0
         for idx, item_data in enumerate(itens_data, start=1):
-            Itenspedidovenda.objects.using(banco).create(
+            item = Itenspedidovenda.objects.using(banco).create(
                 iped_empr=pedido.pedi_empr,
                 iped_fili=pedido.pedi_fili,
                 iped_item=idx,
@@ -122,10 +136,21 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
                 iped_suto=pedido.pedi_tota,
                 **item_data
             )
+            itens_criados.append(item)
             total += item_data.get('iped_quan', 0) * item_data.get('iped_unit', 0)
 
         pedido.pedi_tota = total
         pedido.save(using=banco)
+
+        # Aplicar descontos se configurado
+        if usar_desconto_item or usar_desconto_total:
+            print(f"🆕 [PEDIDO] Aplicando descontos no pedido {pedido.pedi_nume}")
+            try:
+                aplicar_descontos(pedido, itens_criados, usar_desconto_item, usar_desconto_total)
+                print(f"✅ [PEDIDO] Descontos aplicados com sucesso")
+            except Exception as e:
+                print(f"❌ [PEDIDO] Erro ao aplicar descontos: {e}")
+                logger.error(f"Erro ao aplicar descontos: {e}")
 
         # Processar saída de estoque se configurado
         print(f"🔄 [PEDIDO] Iniciando processamento de estoque para pedido {pedido.pedi_nume}")
@@ -163,6 +188,17 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
         if itens_data is None:
             itens_data = validated_data.pop('itens', None)
         
+        # Extrair parâmetros de desconto
+        parametros = validated_data.pop('parametros', {})
+        usar_desconto_item = parametros.get('usar_desconto_item', False)
+        usar_desconto_total = parametros.get('usar_desconto_total', False)
+        
+        # Validação para impedir aplicação simultânea de desconto por item e por pedido
+        if usar_desconto_item and usar_desconto_total:
+            raise ValidationError("Não é possível aplicar desconto por item e desconto no total simultaneamente.")
+        
+        print(f"🔄 [PEDIDO] Parâmetros de desconto: usar_item={usar_desconto_item}, usar_total={usar_desconto_total}")
+        
         if itens_data is None:
             raise ValidationError("Itens do pedido são obrigatórios.")
 
@@ -179,9 +215,10 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
         ).delete()
 
         # Recria os itens
+        itens_criados = []
         total = 0
         for idx, item_data in enumerate(itens_data, start=1):
-            Itenspedidovenda.objects.using(banco).create(
+            item = Itenspedidovenda.objects.using(banco).create(
                 iped_empr=instance.pedi_empr,
                 iped_fili=instance.pedi_fili,
                 iped_item=idx,
@@ -192,10 +229,21 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
                 iped_suto=instance.pedi_tota,
                 **item_data
             )
+            itens_criados.append(item)
             total += item_data.get('iped_quan', 0) * item_data.get('iped_unit', 0)
 
         instance.pedi_tota = total
         instance.save(using=banco)
+
+        # Aplicar descontos se configurado
+        if usar_desconto_item or usar_desconto_total:
+            print(f"🔄 [PEDIDO] Aplicando descontos na atualização do pedido {instance.pedi_nume}")
+            try:
+                aplicar_descontos(instance, itens_criados, usar_desconto_item, usar_desconto_total)
+                print(f"✅ [PEDIDO] Descontos aplicados com sucesso na atualização")
+            except Exception as e:
+                print(f"❌ [PEDIDO] Erro ao aplicar descontos na atualização: {e}")
+                logger.error(f"Erro ao aplicar descontos na atualização: {e}")
 
         # Processar saída de estoque se configurado
         print(f"🔄 [PEDIDO] Iniciando processamento de estoque para atualização do pedido {instance.pedi_nume}")

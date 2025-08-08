@@ -802,3 +802,175 @@ LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
                                           ^
 
 [2025-08-06 14:43:46,429] [ERROR] django.server: "GET /api/dalitz/notificacoes/listar/ HTTP/1.1" 500 27
+[2025-08-07 15:04:54,201] [ERROR] django.request: Internal Server Error: /api/ola/parametros-admin/permissoes-usuario/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\viewsets.py", line 117, in view
+    handler = getattr(self, action)
+              ^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'PermissaoModuloViewSet' object has no attribute 'permissoes_usuario'
+[2025-08-07 15:04:54,201] [ERROR] django.request: Internal Server Error: /api/ola/parametros-admin/configuracao-completa/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\viewsets.py", line 117, in view
+    handler = getattr(self, action)
+              ^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'PermissaoModuloViewSet' object has no attribute 'configuracao_completa'
+[2025-08-07 15:04:54,213] [ERROR] django.server: "GET /api/ola/parametros-admin/permissoes-usuario/?empr=1&fili=1&usua=1 HTTP/1.1" 500 27
+[2025-08-07 15:04:54,221] [ERROR] django.server: "GET /api/ola/parametros-admin/configuracao-completa/?empr=1&fili=1&usua=1 HTTP/1.1" 500 27
+[2025-08-07 15:06:46,643] [ERROR] django.request: Internal Server Error: /api/ola/parametros-admin/permissoes-usuario/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\viewsets.py", line 117, in view
+    handler = getattr(self, action)
+              ^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'PermissaoModuloViewSet' object has no attribute 'permissoes_usuario'
+[2025-08-07 15:06:46,653] [ERROR] django.server: "GET /api/ola/parametros-admin/permissoes-usuario/?empr=1&fili=1&usua=1 HTTP/1.1" 500 27
+[2025-08-07 15:06:46,681] [ERROR] django.request: Internal Server Error: /api/ola/parametros-admin/configuracao-completa/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\viewsets.py", line 117, in view
+    handler = getattr(self, action)
+              ^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'PermissaoModuloViewSet' object has no attribute 'configuracao_completa'
+[2025-08-07 15:06:46,691] [ERROR] django.server: "GET /api/ola/parametros-admin/configuracao-completa/?empr=1&fili=1&usua=1 HTTP/1.1" 500 27
+[2025-08-07 16:03:49,547] [ERROR] Orcamentos: [OrcamentoViewSet.list] Erro inesperado: The field 'parametros' was declared on serializer OrcamentosSerializer, but has not been included in the 'fields' option.
+[2025-08-07 16:03:49,565] [ERROR] django.request: Internal Server Error: /api/ola/orcamentos/orcamentos/
+[2025-08-07 16:03:49,565] [ERROR] django.server: "GET /api/ola/orcamentos/orcamentos/?limit=50&offset=0&search=&cliente_nome=&pedi_nume=&pedi_empr=1&pedi_fili=1&pedi_usua=1 HTTP/1.1" 500 36
+[2025-08-07 16:03:55,585] [ERROR] Orcamentos: [OrcamentoViewSet.list] Erro inesperado: The field 'parametros' was declared on serializer OrcamentosSerializer, but has not been included in the 'fields' option.
+[2025-08-07 16:03:55,589] [ERROR] django.request: Internal Server Error: /api/ola/orcamentos/orcamentos/
+[2025-08-07 16:03:55,591] [ERROR] django.server: "GET /api/ola/orcamentos/orcamentos/?limit=50&offset=0&search=&cliente_nome=&pedi_nume=&pedi_empr=1&pedi_fili=1&pedi_usua=1 HTTP/1.1" 500 36
+[2025-08-07 16:04:41,773] [ERROR] Orcamentos: [OrcamentoViewSet.list] Erro inesperado: The field 'parametros' was declared on serializer OrcamentosSerializer, but has not been included in the 'fields' option.
+[2025-08-07 16:04:41,778] [ERROR] django.request: Internal Server Error: /api/ola/orcamentos/orcamentos/
+[2025-08-07 16:04:41,779] [ERROR] django.server: "GET /api/ola/orcamentos/orcamentos/?limit=50&offset=0&search=&cliente_nome=&pedi_nume=&pedi_empr=1&pedi_fili=1&pedi_usua=1 HTTP/1.1" 500 36
+[2025-08-07 16:06:47,845] [ERROR] Orcamentos: [OrcamentoViewSet.create] Erro inesperado: name 'ROUND_HALF_UP' is not defined
+[2025-08-07 16:06:47,858] [ERROR] django.request: Internal Server Error: /api/ola/orcamentos/orcamentos/
+[2025-08-07 16:06:47,858] [ERROR] django.server: "POST /api/ola/orcamentos/orcamentos/ HTTP/1.1" 500 36
+[2025-08-07 16:08:18,299] [ERROR] Orcamentos: [OrcamentoViewSet.create] Erro inesperado: name 'ROUND_HALF_UP' is not defined
+[2025-08-07 16:08:18,310] [ERROR] django.request: Internal Server Error: /api/ola/orcamentos/orcamentos/
+[2025-08-07 16:08:18,312] [ERROR] django.server: "POST /api/ola/orcamentos/orcamentos/ HTTP/1.1" 500 36
+[2025-08-07 16:08:59,635] [ERROR] Orcamentos: [OrcamentoViewSet.create] Erro inesperado: name 'ROUND_HALF_UP' is not defined
+[2025-08-07 16:08:59,651] [ERROR] django.request: Internal Server Error: /api/ola/orcamentos/orcamentos/
+[2025-08-07 16:08:59,651] [ERROR] django.server: "POST /api/ola/orcamentos/orcamentos/ HTTP/1.1" 500 36
+[2025-08-07 16:09:00,016] [ERROR] Orcamentos: [OrcamentoViewSet.create] Erro inesperado: name 'ROUND_HALF_UP' is not defined
+[2025-08-07 16:09:00,045] [ERROR] django.request: Internal Server Error: /api/ola/orcamentos/orcamentos/
+[2025-08-07 16:09:00,062] [ERROR] django.server: "POST /api/ola/orcamentos/orcamentos/ HTTP/1.1" 500 36
+[2025-08-07 16:46:44,229] [ERROR] Orcamentos: [OrcamentoViewSet.create] Erro inesperado: name 'ROUND_HALF_UP' is not defined
+[2025-08-07 16:46:44,252] [ERROR] django.request: Internal Server Error: /api/ola/orcamentos/orcamentos/
+[2025-08-07 16:46:44,252] [ERROR] django.server: "POST /api/ola/orcamentos/orcamentos/ HTTP/1.1" 500 36
+[2025-08-07 17:27:05,853] [ERROR] django.request: Internal Server Error: /api/ola/orcamentos/orcamentos/parametros-desconto/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\viewsets.py", line 125, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: OrcamentoViewSet.parametros_desconto() got an unexpected keyword argument 'slug'
+[2025-08-07 17:27:05,873] [ERROR] django.server: "GET /api/ola/orcamentos/orcamentos/parametros-desconto/?empr=1&fili=1&usua=1 HTTP/1.1" 500 27
+[2025-08-07 17:40:26,701] [ERROR] django.request: Internal Server Error: /api/ola/orcamentos/orcamentos/parametros-desconto/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\viewsets.py", line 125, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: OrcamentoViewSet.parametros_desconto() got an unexpected keyword argument 'slug'
+[2025-08-07 17:40:26,756] [ERROR] django.server: "GET /api/ola/orcamentos/orcamentos/parametros-desconto/?empr=1&fili=1&usua=1 HTTP/1.1" 500 27
+[2025-08-07 17:51:34,150] [ERROR] Orcamentos: Erro ao buscar parâmetros de desconto: name 'empresa_id' is not defined
+[2025-08-07 17:51:34,164] [ERROR] django.request: Internal Server Error: /api/ola/orcamentos/orcamentos/parametros-desconto/
+[2025-08-07 17:51:34,164] [ERROR] django.server: "PATCH /api/ola/orcamentos/orcamentos/parametros-desconto/ HTTP/1.1" 500 36
+[2025-08-07 17:58:33,910] [ERROR] Orcamentos: [OrcamentoViewSet.retrieve] Erro inesperado: 
+[2025-08-07 17:58:33,956] [ERROR] django.request: Internal Server Error: /api/ola/orcamentos/orcamentos/parametros-desconto/
+[2025-08-07 17:58:33,957] [ERROR] django.server: "GET /api/ola/orcamentos/orcamentos/parametros-desconto/?empr=1&fili=1&usua=1 HTTP/1.1" 500 36
+[2025-08-07 17:59:08,167] [ERROR] Orcamentos: [OrcamentoViewSet.retrieve] Erro inesperado: 
+[2025-08-07 17:59:08,213] [ERROR] django.request: Internal Server Error: /api/ola/orcamentos/orcamentos/parametros-desconto/
+[2025-08-07 17:59:08,214] [ERROR] django.server: "GET /api/ola/orcamentos/orcamentos/parametros-desconto/?empr=1&fili=1&usua=1 HTTP/1.1" 500 36
+[2025-08-07 18:00:57,223] [ERROR] Orcamentos: Erro geral nos parâmetros de desconto: name 'atualizar_parametros_pedidos' is not defined
+[2025-08-07 18:00:57,280] [ERROR] django.request: Internal Server Error: /api/ola/orcamentos/orcamentos/parametros-desconto/
+[2025-08-07 18:00:57,284] [ERROR] django.server: "PATCH /api/ola/orcamentos/orcamentos/parametros-desconto/ HTTP/1.1" 500 24
+[2025-08-08 10:41:27,238] [ERROR] django.request: Internal Server Error: /api/ola/orcamentos/orcamentos/parametros-desconto/
+[2025-08-08 10:41:27,239] [ERROR] django.server: "PATCH /api/ola/orcamentos/orcamentos/parametros-desconto/ HTTP/1.1" 500 29

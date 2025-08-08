@@ -33,7 +33,7 @@ class ParametroSistema(models.Model):
     para_codi = models.AutoField(primary_key=True)
     para_empr = models.IntegerField(help_text="Código da empresa")
     para_fili = models.IntegerField(help_text="Código da filial")
-    para_modu = models.ForeignKey(Modulo, on_delete=models.CASCADE, related_name='parametros')
+    para_modu = models.ForeignKey(Modulo, on_delete=models.CASCADE, related_name='parametros', db_column='para_modu_id')
     para_nome = models.CharField(max_length=50, help_text="Nome do parâmetro")
     para_desc = models.TextField(help_text="Descrição do parâmetro")
     para_valo = models.BooleanField(default=False, help_text="Valor do parâmetro (True/False)")

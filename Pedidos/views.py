@@ -16,6 +16,7 @@ from Licencas.models import Empresas
 from core.utils import get_licenca_db_config
 from parametros_admin.decorators import parametros_pedidos_completo
 from parametros_admin.integracao_pedidos import reverter_estoque_pedido, obter_status_estoque_pedido
+from parametros_admin.utils_pedidos import obter_parametros_pedidos, atualizar_parametros_pedidos
 
 logger = logging.getLogger('Pedidos')
 
@@ -347,3 +348,76 @@ class PedidoVendaViewSet(viewsets.ModelViewSet):
                 {'erro': 'Erro ao obter status do estoque'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+    @action(detail=False, methods=['get', 'patch'], url_path='parametros-desconto')
+    def parametros_desconto(self, request, slug=None):
+        """
+        GET → retorna os parâmetros de desconto para pedidos
+        PATCH → atualiza os parâmetros de desconto para pedidos
+        """
+        try:
+            if request.method == 'GET':
+                empresa_id = request.query_params.get('empresa_id') or request.query_params.get('empr')
+                filial_id = request.query_params.get('filial_id') or request.query_params.get('fili')
+
+                if not empresa_id or not filial_id:
+                    return Response(
+                        {'error': 'empresa_id/empr e filial_id/fili são obrigatórios'}, 
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                parametros = obter_parametros_pedidos(empresa_id, filial_id, request)
+
+                parametros_desconto = {
+                    'desconto_item_disponivel': parametros.get('desconto_item_pedido', {}).get('valor', False),
+                    'desconto_total_disponivel': parametros.get('desconto_total_disponivel', {}).get('valor', False),
+                    'desconto_maximo_item': parametros.get('desconto_maximo_item', {}).get('valor', 50),
+                    'desconto_maximo_total': parametros.get('desconto_maximo_total', {}).get('valor', 30),
+                }
+
+                return Response(parametros_desconto, status=status.HTTP_200_OK)
+
+            elif request.method == 'PATCH':
+                empresa_id = request.data.get('empresa_id') or request.data.get('empr')
+                filial_id = request.data.get('filial_id') or request.data.get('fili')
+
+                logger.info(f"[PATCH parametros_desconto] Recebendo dados: {request.data}")
+                logger.info(f"[PATCH parametros_desconto] empresa_id: {empresa_id}, filial_id: {filial_id}")
+
+                if not empresa_id or not filial_id:
+                    return Response(
+                        {'error': 'empresa_id/empr e filial_id/fili são obrigatórios'}, 
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                # Mapear parâmetros do frontend para os nomes corretos no banco
+                dados_mapeados = {}
+                
+                # Mapear desconto_item_disponivel para desconto_item_pedido
+                if 'desconto_item_disponivel' in request.data:
+                    dados_mapeados['desconto_item_pedido'] = request.data['desconto_item_disponivel']
+                
+                # Os outros parâmetros mantêm o mesmo nome
+                for param in ['desconto_total_disponivel', 'desconto_maximo_item', 'desconto_maximo_total']:
+                    if param in request.data:
+                        dados_mapeados[param] = request.data[param]
+                
+                logger.info(f"[PATCH parametros_desconto] Dados originais: {request.data}")
+                logger.info(f"[PATCH parametros_desconto] Dados mapeados: {dados_mapeados}")
+                
+                # Atualizar parâmetros no banco
+                logger.info(f"[PATCH parametros_desconto] Chamando atualizar_parametros_pedidos...")
+                sucesso = atualizar_parametros_pedidos(empresa_id, filial_id, dados_mapeados)
+                logger.info(f"[PATCH parametros_desconto] Resultado da atualização: {sucesso}")
+                
+                if not sucesso:
+                    return Response({'error': 'Erro ao atualizar parâmetros'}, status=500)
+
+                return Response({'success': True}, status=status.HTTP_200_OK)
+
+            else:
+                return Response({'error': 'Método não suportado'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+        except Exception as e:
+            logger.error(f"Erro geral nos parâmetros de desconto: {e}")
+            return Response({'error': 'Erro interno'}, status=500)
