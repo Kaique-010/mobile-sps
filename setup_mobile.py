@@ -112,7 +112,8 @@ CREATE TABLE IF NOT EXISTS parametrosmobile (
     para_codi SERIAL PRIMARY KEY,
     para_empr INT NOT NULL,
     para_fili INT NOT NULL,
-    para_modu INT NOT NULL REFERENCES modulosmobile(modu_codi) ON DELETE CASCADE,
+    para_modu_id INT NOT NULL REFERENCES modulosmobile(modu_codi) ON DELETE CASCADE,
+
     para_nome VARCHAR(100) NOT NULL,
     para_desc TEXT,
     para_valo VARCHAR(255),

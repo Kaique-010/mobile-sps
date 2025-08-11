@@ -87,3 +87,4 @@ class PedidosGeral(models.Model):
     class Meta:
         managed = False
         db_table = 'pedidos_geral'
+

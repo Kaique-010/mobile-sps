@@ -11,6 +11,7 @@ from django.db.models import Prefetch
 
 from .models import PedidoVenda, Itenspedidovenda
 from .serializers import PedidoVendaSerializer
+
 from Entidades.models import Entidades
 from Licencas.models import Empresas
 from core.utils import get_licenca_db_config
@@ -421,3 +422,4 @@ class PedidoVendaViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.error(f"Erro geral nos parâmetros de desconto: {e}")
             return Response({'error': 'Erro interno'}, status=500)
+        

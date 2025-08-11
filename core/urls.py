@@ -42,6 +42,8 @@ urlpatterns = [
     path('api/<slug>/gerencial/', include('Gerencial.urls')),
     path('api/<slug>/ordemproducao/', include('OrdemProducao.urls')),
     path('api/<slug:slug>/parametros-admin/', include('parametros_admin.urls')),
+    path('api/<slug>/controledevisitas/', include('controledevisitas.urls')),
+    
     
     # MCP Agent DB - Nova rota adicionada
     path('api/<slug>/mcp-agent/', include('mcp_agent_db.urls')),

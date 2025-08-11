@@ -1213,3 +1213,2147 @@ Traceback (most recent call last):
        ^^^^^^^^^^^^^^^^^^^^
 AttributeError: 'NoneType' object has no attribute 'osfs_codi'
 [2025-08-11 14:06:52,672] [ERROR] django.server: "GET /api/ola/Os/ordens/?params[page]=1&params[page_size]=20&empr=1&fili=1&usua=1 HTTP/1.1" 500 27
+[2025-08-11 15:47:55,269] [ERROR] django.request: Internal Server Error: /api/ola/controledevisitas/controle-visitas/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\viewsets.py", line 125, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\core\decorator.py", line 57, in dispatch
+    raise PermissionDenied(f"Módulo '{self.modulo_requerido}' não está liberado para este cliente.")
+rest_framework.exceptions.PermissionDenied: Módulo 'controlevisitas' não está liberado para este cliente.
+[2025-08-11 15:47:55,279] [ERROR] django.server: "GET /api/ola/controledevisitas/controle-visitas/?etapa=&vendedor=&data_inicio=&data_fim=&cliente_nome=&search=&ordering=-ctrl_data&empr=1&fili=1&usua=1 HTTP/1.1" 500 27
+[2025-08-11 15:48:59,716] [ERROR] django.request: Internal Server Error: /api/ola/controledevisitas/controle-visitas/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\viewsets.py", line 125, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\core\decorator.py", line 57, in dispatch
+    raise PermissionDenied(f"Módulo '{self.modulo_requerido}' não está liberado para este cliente.")
+rest_framework.exceptions.PermissionDenied: Módulo 'pedidos' não está liberado para este cliente.
+[2025-08-11 15:48:59,733] [ERROR] django.server: "GET /api/ola/controledevisitas/controle-visitas/?etapa=&vendedor=&data_inicio=&data_fim=&cliente_nome=&search=&ordering=-ctrl_data&empr=1&fili=1&usua=1 HTTP/1.1" 500 27
+[2025-08-11 16:08:56,479] [ERROR] django.request: Internal Server Error: /api/indus/notificacoes/listar/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedTable: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\generic\base.py", line 71, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\notificacoes\views.py", line 319, in get
+    total = Notificacao.objects.using(banco).filter(usuario=usuario).count()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\query.py", line 392, in count
+    return self.query.get_count(using=self.db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 513, in get_count
+    number = obj.get_aggregation(using, ['__count'])['__count']
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 498, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1142, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 67, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 76, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 80, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\utils.py", line 89, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+[2025-08-11 16:08:56,521] [ERROR] django.server: "GET /api/indus/notificacoes/listar/ HTTP/1.1" 500 27
+[2025-08-11 16:09:26,250] [ERROR] django.request: Internal Server Error: /api/indus/notificacoes/listar/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedTable: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\generic\base.py", line 71, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\notificacoes\views.py", line 319, in get
+    total = Notificacao.objects.using(banco).filter(usuario=usuario).count()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\query.py", line 392, in count
+    return self.query.get_count(using=self.db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 513, in get_count
+    number = obj.get_aggregation(using, ['__count'])['__count']
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 498, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1142, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 67, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 76, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 80, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\utils.py", line 89, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+[2025-08-11 16:09:26,254] [ERROR] django.server: "GET /api/indus/notificacoes/listar/ HTTP/1.1" 500 27
+[2025-08-11 16:09:56,269] [ERROR] django.request: Internal Server Error: /api/indus/notificacoes/listar/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedTable: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\generic\base.py", line 71, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\notificacoes\views.py", line 319, in get
+    total = Notificacao.objects.using(banco).filter(usuario=usuario).count()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\query.py", line 392, in count
+    return self.query.get_count(using=self.db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 513, in get_count
+    number = obj.get_aggregation(using, ['__count'])['__count']
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 498, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1142, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 67, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 76, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 80, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\utils.py", line 89, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+[2025-08-11 16:09:56,276] [ERROR] django.server: "GET /api/indus/notificacoes/listar/ HTTP/1.1" 500 27
+[2025-08-11 16:10:26,385] [ERROR] django.request: Internal Server Error: /api/indus/notificacoes/listar/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedTable: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\generic\base.py", line 71, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\notificacoes\views.py", line 319, in get
+    total = Notificacao.objects.using(banco).filter(usuario=usuario).count()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\query.py", line 392, in count
+    return self.query.get_count(using=self.db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 513, in get_count
+    number = obj.get_aggregation(using, ['__count'])['__count']
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 498, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1142, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 67, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 76, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 80, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\utils.py", line 89, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+[2025-08-11 16:10:26,390] [ERROR] django.server: "GET /api/indus/notificacoes/listar/ HTTP/1.1" 500 27
+[2025-08-11 16:10:56,267] [ERROR] django.request: Internal Server Error: /api/indus/notificacoes/listar/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedTable: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\generic\base.py", line 71, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\notificacoes\views.py", line 319, in get
+    total = Notificacao.objects.using(banco).filter(usuario=usuario).count()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\query.py", line 392, in count
+    return self.query.get_count(using=self.db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 513, in get_count
+    number = obj.get_aggregation(using, ['__count'])['__count']
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 498, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1142, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 67, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 76, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 80, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\utils.py", line 89, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+[2025-08-11 16:10:56,269] [ERROR] django.server: "GET /api/indus/notificacoes/listar/ HTTP/1.1" 500 27
+[2025-08-11 16:11:26,295] [ERROR] django.request: Internal Server Error: /api/indus/notificacoes/listar/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedTable: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\generic\base.py", line 71, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\notificacoes\views.py", line 319, in get
+    total = Notificacao.objects.using(banco).filter(usuario=usuario).count()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\query.py", line 392, in count
+    return self.query.get_count(using=self.db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 513, in get_count
+    number = obj.get_aggregation(using, ['__count'])['__count']
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 498, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1142, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 67, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 76, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 80, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\utils.py", line 89, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+[2025-08-11 16:11:26,298] [ERROR] django.server: "GET /api/indus/notificacoes/listar/ HTTP/1.1" 500 27
+[2025-08-11 16:11:56,343] [ERROR] django.request: Internal Server Error: /api/indus/notificacoes/listar/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedTable: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\generic\base.py", line 71, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\notificacoes\views.py", line 319, in get
+    total = Notificacao.objects.using(banco).filter(usuario=usuario).count()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\query.py", line 392, in count
+    return self.query.get_count(using=self.db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 513, in get_count
+    number = obj.get_aggregation(using, ['__count'])['__count']
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 498, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1142, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 67, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 76, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 80, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\utils.py", line 89, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+[2025-08-11 16:11:56,346] [ERROR] django.server: "GET /api/indus/notificacoes/listar/ HTTP/1.1" 500 27
+[2025-08-11 16:12:26,309] [ERROR] django.request: Internal Server Error: /api/indus/notificacoes/listar/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedTable: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\generic\base.py", line 71, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\notificacoes\views.py", line 319, in get
+    total = Notificacao.objects.using(banco).filter(usuario=usuario).count()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\query.py", line 392, in count
+    return self.query.get_count(using=self.db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 513, in get_count
+    number = obj.get_aggregation(using, ['__count'])['__count']
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 498, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1142, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 67, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 76, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 80, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\utils.py", line 89, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+[2025-08-11 16:12:26,313] [ERROR] django.server: "GET /api/indus/notificacoes/listar/ HTTP/1.1" 500 27
+[2025-08-11 16:12:56,324] [ERROR] django.request: Internal Server Error: /api/indus/notificacoes/listar/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedTable: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\generic\base.py", line 71, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\notificacoes\views.py", line 319, in get
+    total = Notificacao.objects.using(banco).filter(usuario=usuario).count()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\query.py", line 392, in count
+    return self.query.get_count(using=self.db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 513, in get_count
+    number = obj.get_aggregation(using, ['__count'])['__count']
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 498, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1142, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 67, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 76, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 80, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\utils.py", line 89, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+[2025-08-11 16:12:56,333] [ERROR] django.server: "GET /api/indus/notificacoes/listar/ HTTP/1.1" 500 27
+[2025-08-11 16:13:26,312] [ERROR] django.request: Internal Server Error: /api/indus/notificacoes/listar/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedTable: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\generic\base.py", line 71, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\notificacoes\views.py", line 319, in get
+    total = Notificacao.objects.using(banco).filter(usuario=usuario).count()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\query.py", line 392, in count
+    return self.query.get_count(using=self.db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 513, in get_count
+    number = obj.get_aggregation(using, ['__count'])['__count']
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 498, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1142, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 67, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 76, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 80, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\utils.py", line 89, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+[2025-08-11 16:13:26,315] [ERROR] django.server: "GET /api/indus/notificacoes/listar/ HTTP/1.1" 500 27
+[2025-08-11 16:13:56,398] [ERROR] django.request: Internal Server Error: /api/indus/notificacoes/listar/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedTable: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\generic\base.py", line 71, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\notificacoes\views.py", line 319, in get
+    total = Notificacao.objects.using(banco).filter(usuario=usuario).count()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\query.py", line 392, in count
+    return self.query.get_count(using=self.db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 513, in get_count
+    number = obj.get_aggregation(using, ['__count'])['__count']
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 498, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1142, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 67, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 76, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 80, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\utils.py", line 89, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+[2025-08-11 16:13:56,400] [ERROR] django.server: "GET /api/indus/notificacoes/listar/ HTTP/1.1" 500 27
+[2025-08-11 16:14:26,323] [ERROR] django.request: Internal Server Error: /api/indus/notificacoes/listar/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedTable: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\generic\base.py", line 71, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\notificacoes\views.py", line 319, in get
+    total = Notificacao.objects.using(banco).filter(usuario=usuario).count()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\query.py", line 392, in count
+    return self.query.get_count(using=self.db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 513, in get_count
+    number = obj.get_aggregation(using, ['__count'])['__count']
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 498, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1142, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 67, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 76, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 80, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\utils.py", line 89, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+[2025-08-11 16:14:26,328] [ERROR] django.server: "GET /api/indus/notificacoes/listar/ HTTP/1.1" 500 27
+[2025-08-11 16:14:56,339] [ERROR] django.request: Internal Server Error: /api/indus/notificacoes/listar/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedTable: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\generic\base.py", line 71, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\notificacoes\views.py", line 319, in get
+    total = Notificacao.objects.using(banco).filter(usuario=usuario).count()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\query.py", line 392, in count
+    return self.query.get_count(using=self.db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 513, in get_count
+    number = obj.get_aggregation(using, ['__count'])['__count']
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 498, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1142, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 67, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 76, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 80, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\utils.py", line 89, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+[2025-08-11 16:14:56,343] [ERROR] django.server: "GET /api/indus/notificacoes/listar/ HTTP/1.1" 500 27
+[2025-08-11 16:15:26,352] [ERROR] django.request: Internal Server Error: /api/indus/notificacoes/listar/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedTable: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\generic\base.py", line 71, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\notificacoes\views.py", line 319, in get
+    total = Notificacao.objects.using(banco).filter(usuario=usuario).count()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\query.py", line 392, in count
+    return self.query.get_count(using=self.db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 513, in get_count
+    number = obj.get_aggregation(using, ['__count'])['__count']
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 498, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1142, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 67, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 76, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 80, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\utils.py", line 89, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+[2025-08-11 16:15:26,354] [ERROR] django.server: "GET /api/indus/notificacoes/listar/ HTTP/1.1" 500 27
+[2025-08-11 16:15:56,463] [ERROR] django.request: Internal Server Error: /api/indus/notificacoes/listar/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedTable: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\generic\base.py", line 71, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\notificacoes\views.py", line 319, in get
+    total = Notificacao.objects.using(banco).filter(usuario=usuario).count()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\query.py", line 392, in count
+    return self.query.get_count(using=self.db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 513, in get_count
+    number = obj.get_aggregation(using, ['__count'])['__count']
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 498, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1142, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 67, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 76, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 80, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\utils.py", line 89, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+[2025-08-11 16:15:56,465] [ERROR] django.server: "GET /api/indus/notificacoes/listar/ HTTP/1.1" 500 27
+[2025-08-11 16:16:26,383] [ERROR] django.request: Internal Server Error: /api/indus/notificacoes/listar/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedTable: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\generic\base.py", line 71, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\notificacoes\views.py", line 319, in get
+    total = Notificacao.objects.using(banco).filter(usuario=usuario).count()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\query.py", line 392, in count
+    return self.query.get_count(using=self.db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 513, in get_count
+    number = obj.get_aggregation(using, ['__count'])['__count']
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 498, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1142, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 67, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 76, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 80, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\utils.py", line 89, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+[2025-08-11 16:16:26,389] [ERROR] django.server: "GET /api/indus/notificacoes/listar/ HTTP/1.1" 500 27
+[2025-08-11 16:59:56,941] [ERROR] django.request: Internal Server Error: /api/indus/notificacoes/listar/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedTable: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\generic\base.py", line 71, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\notificacoes\views.py", line 319, in get
+    total = Notificacao.objects.using(banco).filter(usuario=usuario).count()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\query.py", line 392, in count
+    return self.query.get_count(using=self.db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 513, in get_count
+    number = obj.get_aggregation(using, ['__count'])['__count']
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 498, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1142, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 67, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 76, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 80, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\utils.py", line 89, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+[2025-08-11 16:59:56,947] [ERROR] django.server: "GET /api/indus/notificacoes/listar/ HTTP/1.1" 500 27
+[2025-08-11 17:00:25,775] [ERROR] django.request: Internal Server Error: /api/indus/notificacoes/listar/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedTable: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\generic\base.py", line 71, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\notificacoes\views.py", line 319, in get
+    total = Notificacao.objects.using(banco).filter(usuario=usuario).count()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\query.py", line 392, in count
+    return self.query.get_count(using=self.db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 513, in get_count
+    number = obj.get_aggregation(using, ['__count'])['__count']
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 498, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1142, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 67, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 76, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 80, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\utils.py", line 89, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+[2025-08-11 17:00:25,780] [ERROR] django.server: "GET /api/indus/notificacoes/listar/ HTTP/1.1" 500 27
+[2025-08-11 17:00:55,783] [ERROR] django.request: Internal Server Error: /api/indus/notificacoes/listar/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedTable: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\generic\base.py", line 71, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\notificacoes\views.py", line 319, in get
+    total = Notificacao.objects.using(banco).filter(usuario=usuario).count()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\query.py", line 392, in count
+    return self.query.get_count(using=self.db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 513, in get_count
+    number = obj.get_aggregation(using, ['__count'])['__count']
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 498, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1142, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 67, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 76, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 80, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\utils.py", line 89, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+[2025-08-11 17:00:55,787] [ERROR] django.server: "GET /api/indus/notificacoes/listar/ HTTP/1.1" 500 27
+[2025-08-11 17:01:25,825] [ERROR] django.request: Internal Server Error: /api/indus/notificacoes/listar/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedTable: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\generic\base.py", line 71, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\notificacoes\views.py", line 319, in get
+    total = Notificacao.objects.using(banco).filter(usuario=usuario).count()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\query.py", line 392, in count
+    return self.query.get_count(using=self.db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 513, in get_count
+    number = obj.get_aggregation(using, ['__count'])['__count']
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 498, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1142, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 67, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 76, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 80, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\utils.py", line 89, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+[2025-08-11 17:01:25,829] [ERROR] django.server: "GET /api/indus/notificacoes/listar/ HTTP/1.1" 500 27
+[2025-08-11 17:01:55,797] [ERROR] django.request: Internal Server Error: /api/indus/notificacoes/listar/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedTable: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\generic\base.py", line 71, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\notificacoes\views.py", line 319, in get
+    total = Notificacao.objects.using(banco).filter(usuario=usuario).count()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\query.py", line 392, in count
+    return self.query.get_count(using=self.db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 513, in get_count
+    number = obj.get_aggregation(using, ['__count'])['__count']
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 498, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1142, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 67, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 76, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 80, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\utils.py", line 89, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+[2025-08-11 17:01:55,803] [ERROR] django.server: "GET /api/indus/notificacoes/listar/ HTTP/1.1" 500 27
+[2025-08-11 17:02:26,040] [ERROR] django.request: Internal Server Error: /api/indus/notificacoes/listar/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedTable: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\generic\base.py", line 71, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\notificacoes\views.py", line 319, in get
+    total = Notificacao.objects.using(banco).filter(usuario=usuario).count()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\query.py", line 392, in count
+    return self.query.get_count(using=self.db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 513, in get_count
+    number = obj.get_aggregation(using, ['__count'])['__count']
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 498, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1142, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 67, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 76, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 80, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\utils.py", line 89, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+[2025-08-11 17:02:26,044] [ERROR] django.server: "GET /api/indus/notificacoes/listar/ HTTP/1.1" 500 27
+[2025-08-11 17:02:56,040] [ERROR] django.request: Internal Server Error: /api/indus/notificacoes/listar/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedTable: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\generic\base.py", line 71, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\notificacoes\views.py", line 319, in get
+    total = Notificacao.objects.using(banco).filter(usuario=usuario).count()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\query.py", line 392, in count
+    return self.query.get_count(using=self.db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 513, in get_count
+    number = obj.get_aggregation(using, ['__count'])['__count']
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 498, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1142, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 67, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 76, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 80, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\utils.py", line 89, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+[2025-08-11 17:02:56,046] [ERROR] django.server: "GET /api/indus/notificacoes/listar/ HTTP/1.1" 500 27
+[2025-08-11 17:03:25,821] [ERROR] django.request: Internal Server Error: /api/indus/notificacoes/listar/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedTable: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\generic\base.py", line 71, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\notificacoes\views.py", line 319, in get
+    total = Notificacao.objects.using(banco).filter(usuario=usuario).count()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\query.py", line 392, in count
+    return self.query.get_count(using=self.db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 513, in get_count
+    number = obj.get_aggregation(using, ['__count'])['__count']
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 498, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1142, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 67, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 76, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 80, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\utils.py", line 89, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+[2025-08-11 17:03:25,827] [ERROR] django.server: "GET /api/indus/notificacoes/listar/ HTTP/1.1" 500 27
+[2025-08-11 17:03:55,807] [ERROR] django.request: Internal Server Error: /api/indus/notificacoes/listar/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedTable: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\generic\base.py", line 71, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\notificacoes\views.py", line 319, in get
+    total = Notificacao.objects.using(banco).filter(usuario=usuario).count()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\query.py", line 392, in count
+    return self.query.get_count(using=self.db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 513, in get_count
+    number = obj.get_aggregation(using, ['__count'])['__count']
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 498, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1142, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 67, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 76, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 80, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\utils.py", line 89, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+[2025-08-11 17:03:55,810] [ERROR] django.server: "GET /api/indus/notificacoes/listar/ HTTP/1.1" 500 27
+[2025-08-11 17:05:01,592] [ERROR] django.request: Internal Server Error: /api/indus/notificacoes/listar/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedTable: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\generic\base.py", line 71, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\notificacoes\views.py", line 319, in get
+    total = Notificacao.objects.using(banco).filter(usuario=usuario).count()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\query.py", line 392, in count
+    return self.query.get_count(using=self.db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 513, in get_count
+    number = obj.get_aggregation(using, ['__count'])['__count']
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\query.py", line 498, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1142, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 67, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 76, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 80, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\utils.py", line 89, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: relation "notificacoes" does not exist
+LINE 1: SELECT COUNT(*) AS "__count" FROM "notificacoes" WHERE "noti...
+                                          ^
+
+[2025-08-11 17:05:01,597] [ERROR] django.server: "GET /api/indus/notificacoes/listar/ HTTP/1.1" 500 27
+[2025-08-11 17:13:50,943] [ERROR] django.request: Internal Server Error: /api/indus/controledevisitas/controle-visitas/estatisticas/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\viewsets.py", line 125, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\core\decorator.py", line 58, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: ControleVisitaViewSet.estatisticas() got an unexpected keyword argument 'slug'
+[2025-08-11 17:13:50,950] [ERROR] django.server: "GET /api/indus/controledevisitas/controle-visitas/estatisticas/?empr=1&fili=1&usua=1 HTTP/1.1" 500 27
+[2025-08-11 17:13:51,536] [ERROR] django.request: Internal Server Error: /api/indus/controledevisitas/controle-visitas/proximas/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\viewsets.py", line 125, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\core\decorator.py", line 58, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: ControleVisitaViewSet.proximas_visitas() got an unexpected keyword argument 'slug'
+[2025-08-11 17:13:51,549] [ERROR] django.server: "GET /api/indus/controledevisitas/controle-visitas/proximas/?empr=1&fili=1&usua=1 HTTP/1.1" 500 27
+[2025-08-11 17:14:14,506] [ERROR] django.request: Internal Server Error: /api/indus/controledevisitas/controle-visitas/estatisticas/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\viewsets.py", line 125, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\core\decorator.py", line 58, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: ControleVisitaViewSet.estatisticas() got an unexpected keyword argument 'slug'
+[2025-08-11 17:14:14,513] [ERROR] django.server: "GET /api/indus/controledevisitas/controle-visitas/estatisticas/?empr=1&fili=1&usua=1 HTTP/1.1" 500 27
+[2025-08-11 17:14:16,466] [ERROR] django.request: Internal Server Error: /api/indus/controledevisitas/controle-visitas/proximas/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\viewsets.py", line 125, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\core\decorator.py", line 58, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: ControleVisitaViewSet.proximas_visitas() got an unexpected keyword argument 'slug'
+[2025-08-11 17:14:16,471] [ERROR] django.server: "GET /api/indus/controledevisitas/controle-visitas/proximas/?empr=1&fili=1&usua=1 HTTP/1.1" 500 27
+[2025-08-11 17:26:35,730] [ERROR] django.request: Internal Server Error: /api/indus/controledevisitas/controle-visitas/estatisticas/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\viewsets.py", line 125, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\core\decorator.py", line 58, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: ControleVisitaViewSet.estatisticas() got an unexpected keyword argument 'slug'
+[2025-08-11 17:26:35,737] [ERROR] django.server: "GET /api/indus/controledevisitas/controle-visitas/estatisticas/?empr=1&fili=1&usua=1 HTTP/1.1" 500 27
+[2025-08-11 17:26:36,930] [ERROR] django.request: Internal Server Error: /api/indus/controledevisitas/controle-visitas/proximas/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\viewsets.py", line 125, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\core\decorator.py", line 58, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: ControleVisitaViewSet.proximas_visitas() got an unexpected keyword argument 'slug'
+[2025-08-11 17:26:36,964] [ERROR] django.server: "GET /api/indus/controledevisitas/controle-visitas/proximas/?empr=1&fili=1&usua=1 HTTP/1.1" 500 27
+[2025-08-11 17:53:50,009] [ERROR] django.request: Internal Server Error: /api/indus/controledevisitas/controle-visitas/estatisticas/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\viewsets.py", line 125, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\core\decorator.py", line 58, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: ControleVisitaViewSet.estatisticas() got an unexpected keyword argument 'slug'
+[2025-08-11 17:53:50,015] [ERROR] django.server: "GET /api/indus/controledevisitas/controle-visitas/estatisticas/?empr=1&fili=1&usua=1 HTTP/1.1" 500 27
+[2025-08-11 17:53:50,223] [ERROR] django.request: Internal Server Error: /api/indus/controledevisitas/controle-visitas/proximas/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\viewsets.py", line 125, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\core\decorator.py", line 58, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: ControleVisitaViewSet.proximas_visitas() got an unexpected keyword argument 'slug'
+[2025-08-11 17:53:50,233] [ERROR] django.server: "GET /api/indus/controledevisitas/controle-visitas/proximas/?empr=1&fili=1&usua=1 HTTP/1.1" 500 27

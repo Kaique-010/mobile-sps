@@ -70,6 +70,13 @@
     "db_host": "localhost",
     "db_port": "5432"
   },
+  {
+    "slug": "indus",
+    "cnpj": "82223207000270",
+    "db_name": "indus",
+    "db_host": "localhost",
+    "db_port": "5432"
+  },
 
   {
     "slug": "g2",

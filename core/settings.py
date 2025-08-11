@@ -108,6 +108,8 @@ INSTALLED_APPS = [
     "OrdemProducao",
     'parametros_admin',
     'mcp_agent_db',  
+    'controledevisitas',
+
 ]
 
 # Middleware
