@@ -15,5 +15,10 @@ def buscar_endereco_por_cep(cep):
                 "bairro": data.get("bairro"),
                 "cidade": data.get("localidade"),
                 "estado": data.get("uf"),
+                "pais": data.get("pais") or '1058',
+                "codi_pais": data.get("pais") or '1058',
+
             }
+   
+
     return None

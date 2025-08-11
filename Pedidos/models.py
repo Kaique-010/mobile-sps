@@ -14,6 +14,7 @@ class PedidoVenda(models.Model):
     pedi_nume = models.IntegerField(primary_key=True)
     pedi_forn = models.CharField(db_column='pedi_forn',max_length=60)
     pedi_data = models.DateField()
+    pedi_topr = models.DecimalField(db_column='pedi_topr', max_digits=15, decimal_places=2, blank=True, null=True)  # Subtotal
     pedi_tota = models.DecimalField(decimal_places=2, max_digits=15)
     pedi_canc = models.BooleanField(default=False)
     pedi_fina = models.CharField(max_length=100, choices=TIPO_FINANCEIRO, default='0')

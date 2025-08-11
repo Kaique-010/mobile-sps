@@ -14,7 +14,8 @@ from .serializers import OrcamentosSerializer
 from Entidades.models import Entidades
 from Licencas.models import Empresas
 from Pedidos.models import PedidoVenda, Itenspedidovenda
-from core.utils import get_licenca_db_config
+from core.utils import get_licenca_db_config, calcular_subtotal_item_bruto, calcular_total_item_com_desconto
+
 from parametros_admin.utils_pedidos import obter_parametros_pedidos, atualizar_parametros_pedidos
 
 logger = logging.getLogger('Orcamentos')
@@ -324,43 +325,22 @@ class OrcamentoViewSet(viewsets.ModelViewSet):
 
                 parametros = obter_parametros_pedidos(empresa_id, filial_id, request)
 
-                # Função auxiliar para obter valor booleano do parâmetro
-                def obter_valor_parametro(param_dict):
-                    """Obtém o valor booleano do parâmetro, considerando tanto 'valor' quanto 'ativo'"""
-                    if not param_dict.get('existe', False):
-                        return False
-                    
-                    valor = param_dict.get('valor', False)
-                    ativo = param_dict.get('ativo', False)
-                    
-                    # Se o parâmetro não está ativo no sistema, retorna False
-                    if not ativo:
-                        return False
-                    
-                    # Converter valor para boolean se necessário
-                    if isinstance(valor, str):
-                        return valor.lower() in ('true', '1', 'yes', 'on')
-                    elif isinstance(valor, bool):
-                        return valor
-                    else:
-                        return bool(valor)
-
                 # Mapeamento correto: frontend_field → banco_field
                 parametros_desconto = {
                     # Campos de desconto - mapeamento correto
-                    'desconto_item_disponivel': obter_valor_parametro(parametros.get('desconto_item_pedido', {})),
-                    'desconto_total_disponivel': obter_valor_parametro(parametros.get('desconto_total_disponivel', {})),
-                    'desconto_item_orcamento': obter_valor_parametro(parametros.get('desconto_item_orcamento', {})),
-                    'desconto_item_pedido': obter_valor_parametro(parametros.get('desconto_item_pedido', {})),
-                    'desconto_total_pedido': obter_valor_parametro(parametros.get('desconto_total_pedido', {})),
-                    'desconto_pedido': obter_valor_parametro(parametros.get('desconto_pedido', {})),
+                    'desconto_item_disponivel': parametros.get('desconto_item_pedido', {}).get('ativo', False),
+                    'desconto_total_disponivel': parametros.get('desconto_total_disponivel', {}).get('ativo', False),
+                    'desconto_item_orcamento': parametros.get('desconto_item_orcamento', {}).get('ativo', False),
+                    'desconto_item_pedido': parametros.get('desconto_item_pedido', {}).get('ativo', False),
+                    'desconto_total_pedido': parametros.get('desconto_total_pedido', {}).get('ativo', False),
+                    'desconto_pedido': parametros.get('desconto_pedido', {}).get('ativo', False),
                     
                     # Campos adicionais que o frontend espera
-                    'usar_preco_prazo': obter_valor_parametro(parametros.get('usar_preco_prazo', {})),
-                    'usar_ultimo_preco': obter_valor_parametro(parametros.get('usar_ultimo_preco', {})),
-                    'pedido_volta_estoque': obter_valor_parametro(parametros.get('pedido_volta_estoque', {})),
-                    'validar_estoque_pedido': obter_valor_parametro(parametros.get('validar_estoque_pedido', {})),
-                    'calcular_frete_automatico': obter_valor_parametro(parametros.get('calcular_frete_automatico', {})),
+                    'usar_preco_prazo': parametros.get('usar_preco_prazo', {}).get('ativo', False),
+                    'usar_ultimo_preco': parametros.get('usar_ultimo_preco', {}).get('ativo', False),
+                    'pedido_volta_estoque': parametros.get('pedido_volta_estoque', {}).get('ativo', False),
+                    'validar_estoque_pedido': parametros.get('validar_estoque_pedido', {}).get('ativo', False),
+                    'calcular_frete_automatico': parametros.get('calcular_frete_automatico', {}).get('ativo', False),
                 }
 
                 return Response(parametros_desconto, status=status.HTTP_200_OK)

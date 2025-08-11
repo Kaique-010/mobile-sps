@@ -6,6 +6,7 @@ from Produtos.models import Produtos
 from .models import PedidoVenda, Itenspedidovenda
 from Entidades.models import Entidades
 from core.serializers import BancoContextMixin
+from core.utils import calcular_valores_pedido, calcular_subtotal_item_bruto, calcular_total_item_com_desconto  # Atualizada importação
 from parametros_admin.integracao_pedidos import processar_saida_estoque_pedido
 from parametros_admin.utils_pedidos import aplicar_descontos
 import logging
@@ -15,10 +16,14 @@ logger = logging.getLogger(__name__)
 
 class ItemPedidoVendaSerializer(BancoContextMixin,serializers.ModelSerializer):
     produto_nome = serializers.SerializerMethodField()
+    
     class Meta:
         model = Itenspedidovenda
-        exclude = ['iped_empr', 'iped_fili', 'iped_item', 'iped_pedi', 'iped_data', 'iped_forn', 'iped_vend', 'iped_suto']
-    
+        fields = [
+            'iped_prod', 'iped_quan', 'iped_unit', 'iped_suto', 'iped_tota', 
+            'iped_fret', 'iped_desc', 'iped_unli', 'iped_cust', 'iped_tipo',
+            'iped_desc_item', 'iped_perc_desc', 'iped_unme', 'produto_nome'
+        ]
     
     def get_produto_nome(self, obj):
         banco = self.context.get('banco')
@@ -38,6 +43,8 @@ class ItemPedidoVendaSerializer(BancoContextMixin,serializers.ModelSerializer):
             
 class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
     valor_total = serializers.FloatField(source='pedi_tota', read_only=True)
+    valor_subtotal = serializers.FloatField(source='pedi_topr', read_only=True)  # Novo campo
+    valor_desconto = serializers.FloatField(source='pedi_desc', read_only=True)  # Novo campo
     cliente_nome = serializers.SerializerMethodField(read_only=True)
     empresa_nome = serializers.SerializerMethodField(read_only=True)
     itens = serializers.SerializerMethodField()  # Mudança aqui - remover write_only
@@ -48,9 +55,9 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
     class Meta:
         model = PedidoVenda
         fields = [
-            'pedi_empr', 'pedi_fili', 'pedi_data', 'pedi_tota', 'pedi_forn',
-            'itens', 'itens_input', 'parametros',
-            'valor_total', 'cliente_nome', 'empresa_nome', 'pedi_nume', 'pedi_stat', 'pedi_vend'
+            'pedi_empr', 'pedi_fili', 'pedi_data', 'pedi_tota', 'pedi_topr', 'pedi_forn',
+            'itens', 'itens_input', 'parametros','pedi_desc','pedi_obse',
+            'valor_total', 'valor_subtotal', 'valor_desconto', 'cliente_nome', 'empresa_nome', 'pedi_nume', 'pedi_stat', 'pedi_vend'
         ]
     
     def get_itens(self, obj):
@@ -92,6 +99,18 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
         if not itens_data:
             raise ValidationError("Itens do pedido são obrigatórios.")
 
+        # Calcular valores antes de criar o pedido
+        valores = calcular_valores_pedido(
+            itens_data, 
+            desconto_total=validated_data.get('pedi_desc'),
+            desconto_percentual=parametros.get('desconto_percentual')
+        )
+        
+        # Atualizar valores calculados
+        validated_data['pedi_topr'] = valores['subtotal']  # Subtotal
+        validated_data['pedi_desc'] = valores['desconto']  # Desconto
+        validated_data['pedi_tota'] = valores['total']     # Total
+
         pedidos_existente = None
         if 'pedi_nume' in validated_data:
             pedidos_existente = PedidoVenda.objects.using(banco).filter(
@@ -123,8 +142,25 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
 
         # Criar itens do pedido
         itens_criados = []
-        total = 0
         for idx, item_data in enumerate(itens_data, start=1):
+            # Calcular subtotal bruto (quantidade × valor unitário)
+            subtotal_bruto = calcular_subtotal_item_bruto(
+                item_data.get('iped_quan', 0),
+                item_data.get('iped_unit', 0)
+            )
+            
+            # Calcular total do item com desconto
+            total_item = calcular_total_item_com_desconto(
+                item_data.get('iped_quan', 0),
+                item_data.get('iped_unit', 0),
+                item_data.get('iped_desc', 0)
+            )
+
+            # Remover campos que serão definidos explicitamente para evitar conflitos
+            item_data_clean = item_data.copy()
+            item_data_clean.pop('iped_suto', None)  # Remove se existir
+            item_data_clean.pop('iped_tota', None)  # Remove se existir
+
             item = Itenspedidovenda.objects.using(banco).create(
                 iped_empr=pedido.pedi_empr,
                 iped_fili=pedido.pedi_fili,
@@ -133,14 +169,11 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
                 iped_data=pedido.pedi_data,
                 iped_forn=pedido.pedi_forn,
                 iped_vend=pedido.pedi_vend,
-                iped_suto=pedido.pedi_tota,
-                **item_data
+                iped_suto=subtotal_bruto,  # Subtotal bruto (quantidade × valor unitário)
+                iped_tota=total_item,      # Total com desconto aplicado
+                **item_data_clean
             )
             itens_criados.append(item)
-            total += item_data.get('iped_quan', 0) * item_data.get('iped_unit', 0)
-
-        pedido.pedi_tota = total
-        pedido.save(using=banco)
 
         # Aplicar descontos se configurado
         if usar_desconto_item or usar_desconto_total:
@@ -202,6 +235,18 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
         if itens_data is None:
             raise ValidationError("Itens do pedido são obrigatórios.")
 
+        # Calcular valores antes de atualizar
+        valores = calcular_valores_pedido(
+            itens_data, 
+            desconto_total=validated_data.get('pedi_desc'),
+            desconto_percentual=parametros.get('desconto_percentual')
+        )
+        
+        # Atualizar valores calculados
+        validated_data['pedi_topr'] = valores['subtotal']  # Subtotal
+        validated_data['pedi_desc'] = valores['desconto']  # Desconto
+        validated_data['pedi_tota'] = valores['total']     # Total
+
         # Atualiza campos do pedido
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
@@ -216,8 +261,25 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
 
         # Recria os itens
         itens_criados = []
-        total = 0
         for idx, item_data in enumerate(itens_data, start=1):
+            # Calcular subtotal bruto (quantidade × valor unitário)
+            subtotal_bruto = calcular_subtotal_item_bruto(
+                item_data.get('iped_quan', 0),
+                item_data.get('iped_unit', 0)
+            )
+            
+            # Calcular total do item com desconto
+            total_item = calcular_total_item_com_desconto(
+                item_data.get('iped_quan', 0),
+                item_data.get('iped_unit', 0),
+                item_data.get('iped_desc', 0)
+            )
+
+            # Remover campos que serão definidos explicitamente para evitar conflitos
+            item_data_clean = item_data.copy()
+            item_data_clean.pop('iped_suto', None)  # Remove se existir
+            item_data_clean.pop('iped_tota', None)  # Remove se existir
+
             item = Itenspedidovenda.objects.using(banco).create(
                 iped_empr=instance.pedi_empr,
                 iped_fili=instance.pedi_fili,
@@ -226,14 +288,11 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
                 iped_data=instance.pedi_data,
                 iped_forn=instance.pedi_forn,
                 iped_vend=instance.pedi_vend,
-                iped_suto=instance.pedi_tota,
-                **item_data
+                iped_suto=subtotal_bruto,  # Subtotal bruto (quantidade × valor unitário)
+                iped_tota=total_item,      # Total com desconto aplicado
+                **item_data_clean
             )
             itens_criados.append(item)
-            total += item_data.get('iped_quan', 0) * item_data.get('iped_unit', 0)
-
-        instance.pedi_tota = total
-        instance.save(using=banco)
 
         # Aplicar descontos se configurado
         if usar_desconto_item or usar_desconto_total:

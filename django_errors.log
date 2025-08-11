@@ -974,3 +974,242 @@ TypeError: OrcamentoViewSet.parametros_desconto() got an unexpected keyword argu
 [2025-08-07 18:00:57,284] [ERROR] django.server: "PATCH /api/ola/orcamentos/orcamentos/parametros-desconto/ HTTP/1.1" 500 24
 [2025-08-08 10:41:27,238] [ERROR] django.request: Internal Server Error: /api/ola/orcamentos/orcamentos/parametros-desconto/
 [2025-08-08 10:41:27,239] [ERROR] django.server: "PATCH /api/ola/orcamentos/orcamentos/parametros-desconto/ HTTP/1.1" 500 29
+[2025-08-11 08:57:47,456] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '192.168.10.39:8000'. You may need to add '192.168.10.39' to ALLOWED_HOSTS.
+[2025-08-11 08:58:14,137] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '192.168.10.39:8000'. You may need to add '192.168.10.39' to ALLOWED_HOSTS.
+[2025-08-11 09:22:20,064] [ERROR] Orcamentos: [OrcamentoViewSet.update] Erro inesperado: The field 'parametros' was declared on serializer OrcamentosSerializer, but has not been included in the 'fields' option.
+[2025-08-11 09:22:20,080] [ERROR] django.request: Internal Server Error: /api/ola/orcamentos/orcamentos/12/
+[2025-08-11 09:22:20,081] [ERROR] django.server: "PUT /api/ola/orcamentos/orcamentos/12/ HTTP/1.1" 500 36
+[2025-08-11 09:22:30,919] [ERROR] Orcamentos: [OrcamentoViewSet.list] Erro inesperado: The field 'parametros' was declared on serializer OrcamentosSerializer, but has not been included in the 'fields' option.
+[2025-08-11 09:22:30,949] [ERROR] django.request: Internal Server Error: /api/ola/orcamentos/orcamentos/
+[2025-08-11 09:22:30,963] [ERROR] django.server: "GET /api/ola/orcamentos/orcamentos/?limit=50&offset=0&search=&cliente_nome=&pedi_nume=&pedi_empr=1&pedi_fili=1&pedi_usua=1 HTTP/1.1" 500 36
+[2025-08-11 10:54:33,577] [ERROR] Orcamentos: [OrcamentoViewSet.update] Erro inesperado: name 'calcular_subtotal_item' is not defined
+[2025-08-11 10:54:33,587] [ERROR] django.request: Internal Server Error: /api/ola/orcamentos/orcamentos/14/
+[2025-08-11 10:54:33,588] [ERROR] django.server: "PUT /api/ola/orcamentos/orcamentos/14/ HTTP/1.1" 500 36
+[2025-08-11 10:55:40,550] [ERROR] Orcamentos: [OrcamentoViewSet.update] Erro inesperado: name 'calcular_subtotal_item' is not defined
+[2025-08-11 10:55:40,559] [ERROR] django.request: Internal Server Error: /api/ola/orcamentos/orcamentos/14/
+[2025-08-11 10:55:40,561] [ERROR] django.server: "PUT /api/ola/orcamentos/orcamentos/14/ HTTP/1.1" 500 36
+[2025-08-11 10:57:38,165] [ERROR] Orcamentos: [OrcamentoViewSet.update] Erro inesperado: django.db.models.query.QuerySet.create() got multiple values for keyword argument 'iped_tota'
+[2025-08-11 10:57:38,188] [ERROR] django.request: Internal Server Error: /api/ola/orcamentos/orcamentos/14/
+[2025-08-11 10:57:38,189] [ERROR] django.server: "PUT /api/ola/orcamentos/orcamentos/14/ HTTP/1.1" 500 36
+[2025-08-11 10:58:49,998] [ERROR] Orcamentos: [OrcamentoViewSet.update] Erro inesperado: django.db.models.query.QuerySet.create() got multiple values for keyword argument 'iped_suto'
+[2025-08-11 10:58:50,051] [ERROR] django.request: Internal Server Error: /api/ola/orcamentos/orcamentos/14/
+[2025-08-11 10:58:50,054] [ERROR] django.server: "PUT /api/ola/orcamentos/orcamentos/14/ HTTP/1.1" 500 36
+[2025-08-11 11:55:46,937] [ERROR] Pedidos: [PedidoVendaViewSet.create] Erro inesperado: django.db.models.query.QuerySet.create() got multiple values for keyword argument 'iped_tota'
+[2025-08-11 11:55:46,959] [ERROR] django.request: Internal Server Error: /api/ola/pedidos/pedidos/
+[2025-08-11 11:55:46,960] [ERROR] django.server: "POST /api/ola/pedidos/pedidos/ HTTP/1.1" 500 564
+[2025-08-11 14:04:19,701] [ERROR] django.request: Internal Server Error: /api/ola/listacasamento/listas-casamento/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.NotNullViolation: null value in column "list_nome" violates not-null constraint
+DETAIL:  Failing row contains (1, 1, 1, 556, null, 2025-08-11, 0, 1, 2025-08-11, 14:04:19.517774).
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\viewsets.py", line 125, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\core\decorator.py", line 58, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\mixins.py", line 19, in create
+    self.perform_create(serializer)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\mixins.py", line 24, in perform_create
+    serializer.save()
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\serializers.py", line 205, in save
+    self.instance = self.create(validated_data)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\listacasamento\serializers.py", line 112, in create
+    return ListaCasamento.objects.using(banco).create(**validated_data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\query.py", line 422, in create
+    obj.save(force_insert=True, using=self.db)
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\base.py", line 743, in save
+    self.save_base(using=using, force_insert=force_insert,
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\base.py", line 780, in save_base
+    updated = self._save_table(
+              ^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\base.py", line 873, in _save_table
+    result = self._do_insert(cls._base_manager, using, fields, update_pk, raw)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\base.py", line 910, in _do_insert
+    return manager._insert([self], fields=fields, return_id=update_pk,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\manager.py", line 82, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\query.py", line 1186, in _insert
+    return query.get_compiler(using=using).execute_sql(return_id)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1377, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 67, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 76, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 80, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\utils.py", line 89, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.IntegrityError: null value in column "list_nome" violates not-null constraint
+DETAIL:  Failing row contains (1, 1, 1, 556, null, 2025-08-11, 0, 1, 2025-08-11, 14:04:19.517774).
+
+[2025-08-11 14:04:19,935] [ERROR] django.server: "POST /api/ola/listacasamento/listas-casamento/ HTTP/1.1" 500 27
+[2025-08-11 14:04:23,405] [ERROR] django.request: Internal Server Error: /api/ola/listacasamento/listas-casamento/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.NotNullViolation: null value in column "list_nome" violates not-null constraint
+DETAIL:  Failing row contains (1, 1, 1, 556, null, 2025-08-11, 0, 1, 2025-08-11, 14:04:23.404243).
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\viewsets.py", line 125, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\core\decorator.py", line 58, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\mixins.py", line 19, in create
+    self.perform_create(serializer)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\mixins.py", line 24, in perform_create
+    serializer.save()
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\serializers.py", line 205, in save
+    self.instance = self.create(validated_data)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\listacasamento\serializers.py", line 112, in create
+    return ListaCasamento.objects.using(banco).create(**validated_data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\query.py", line 422, in create
+    obj.save(force_insert=True, using=self.db)
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\base.py", line 743, in save
+    self.save_base(using=using, force_insert=force_insert,
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\base.py", line 780, in save_base
+    updated = self._save_table(
+              ^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\base.py", line 873, in _save_table
+    result = self._do_insert(cls._base_manager, using, fields, update_pk, raw)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\base.py", line 910, in _do_insert
+    return manager._insert([self], fields=fields, return_id=update_pk,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\manager.py", line 82, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\query.py", line 1186, in _insert
+    return query.get_compiler(using=using).execute_sql(return_id)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1377, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 67, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 76, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 80, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\utils.py", line 89, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\mobile-sps\venv\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.IntegrityError: null value in column "list_nome" violates not-null constraint
+DETAIL:  Failing row contains (1, 1, 1, 556, null, 2025-08-11, 0, 1, 2025-08-11, 14:04:23.404243).
+
+[2025-08-11 14:04:23,456] [ERROR] django.server: "POST /api/ola/listacasamento/listas-casamento/ HTTP/1.1" 500 27
+[2025-08-11 14:06:52,666] [ERROR] django.request: Internal Server Error: /api/ola/Os/ordens/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\viewsets.py", line 125, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\core\decorator.py", line 58, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\mixins.py", line 38, in list
+    queryset = self.filter_queryset(self.get_queryset())
+                                    ^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\O_S\views.py", line 88, in get_queryset
+    if user_setor.osfs_codi != 6:
+       ^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'osfs_codi'
+[2025-08-11 14:06:52,672] [ERROR] django.server: "GET /api/ola/Os/ordens/?params[page]=1&params[page_size]=20&empr=1&fili=1&usua=1 HTTP/1.1" 500 27

@@ -16,11 +16,12 @@ LOCAL_DB_PORT = config('LOCAL_DB_PORT')
 SQL_DJANGO_CORE = """
 -- Criar tabelas essenciais do Django se não existirem
 CREATE TABLE IF NOT EXISTS django_content_type (
-        id SERIAL PRIMARY KEY,
-        app_label VARCHAR(100) NOT NULL,
-        model VARCHAR(100) NOT NULL,
-        UNIQUE (app_label, model)
-    );
+    id SERIAL PRIMARY KEY,
+    app_label VARCHAR(100) NOT NULL,
+    model VARCHAR(100) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    UNIQUE(app_label, model)
+);
 
 CREATE TABLE IF NOT EXISTS auth_permission (
     id SERIAL PRIMARY KEY,
@@ -111,7 +112,7 @@ CREATE TABLE IF NOT EXISTS parametrosmobile (
     para_codi SERIAL PRIMARY KEY,
     para_empr INT NOT NULL,
     para_fili INT NOT NULL,
-    para_modu_id INT NOT NULL REFERENCES modulosmobile(modu_codi) ON DELETE CASCADE,
+    para_modu INT NOT NULL REFERENCES modulosmobile(modu_codi) ON DELETE CASCADE,
     para_nome VARCHAR(100) NOT NULL,
     para_desc TEXT,
     para_valo VARCHAR(255),

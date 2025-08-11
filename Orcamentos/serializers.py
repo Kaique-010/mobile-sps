@@ -6,6 +6,7 @@ from Produtos.models import Produtos
 from .models import Orcamentos, ItensOrcamento
 from Entidades.models import Entidades
 from core.serializers import BancoContextMixin
+from core.utils import calcular_valores_pedido, calcular_subtotal_item_bruto, calcular_total_item_com_desconto  # Atualizada importação
 from django.db.models import Prefetch
 import logging
 from decimal import Decimal, ROUND_HALF_UP
@@ -20,7 +21,10 @@ class ItemOrcamentoSerializer(BancoContextMixin,serializers.ModelSerializer):
     
     class Meta:
         model = ItensOrcamento
-        exclude = ['iped_empr', 'iped_fili', 'iped_item', 'iped_pedi', 'iped_data', 'iped_forn']
+        fields = [
+            'iped_prod', 'iped_quan', 'iped_suto', 'iped_unit', 'iped_tota', 
+            'iped_desc', 'iped_unli', 'iped_pdes_item', 'produto_nome'
+        ]
     
     def to_internal_value(self, data):
         # Garante que iped_desc seja sempre um valor decimal
@@ -62,6 +66,8 @@ class ItemOrcamentoSerializer(BancoContextMixin,serializers.ModelSerializer):
             
 class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
     valor_total = serializers.FloatField(source='pedi_tota', read_only=True)
+    valor_subtotal = serializers.FloatField(source='pedi_topr', read_only=True)  # Novo campo
+    valor_desconto = serializers.FloatField(source='pedi_desc', read_only=True)  # Novo campo
     cliente_nome = serializers.SerializerMethodField(read_only=True)
     empresa_nome = serializers.SerializerMethodField(read_only=True)
     itens = serializers.SerializerMethodField(read_only=True)
@@ -73,9 +79,10 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
         model = Orcamentos
         fields = [
             'pedi_empr', 'pedi_fili', 'pedi_data', 'pedi_tota', 'pedi_forn', 'pedi_vend',
+            'pedi_topr', 'pedi_desc',
             'itens', 'itens_input', 'itens_data',
-            'valor_total', 'cliente_nome', 'empresa_nome', 'pedi_nume',
-            'parametros'  # ADICIONAR AQUI
+            'valor_total', 'valor_subtotal', 'valor_desconto', 'cliente_nome', 'empresa_nome', 'pedi_nume',
+            'parametros'
         ]
     
     def __init__(self, *args, **kwargs):
@@ -125,6 +132,18 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
 
         parametros = validated_data.pop('parametros', {})
 
+        # Calcular valores antes de criar o orçamento
+        valores = calcular_valores_pedido(
+            itens_data, 
+            desconto_total=validated_data.get('pedi_desc'),
+            desconto_percentual=parametros.get('desconto_percentual')
+        )
+        
+        # Atualizar valores calculados
+        validated_data['pedi_topr'] = valores['subtotal']  # Subtotal
+        validated_data['pedi_desc'] = valores['desconto']  # Desconto
+        validated_data['pedi_tota'] = valores['total']     # Total
+
         orcamentos = None
         if 'pedi_nume' in validated_data:
             orcamentos = Orcamentos.objects.using(banco).filter(
@@ -159,6 +178,25 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
             if 'iped_desc' not in item_data or item_data['iped_desc'] is None or isinstance(item_data['iped_desc'], bool):
                 item_data['iped_desc'] = 0.00
 
+            # Calcular subtotal bruto (quantidade × valor unitário)
+            subtotal_bruto = calcular_subtotal_item_bruto(
+                item_data.get('iped_quan', 0),
+                item_data.get('iped_unit', 0)
+            )
+            
+            # Calcular total do item com desconto
+            total_item = calcular_total_item_com_desconto(
+                item_data.get('iped_quan', 0),
+                item_data.get('iped_unit', 0),
+                item_data.get('iped_desc', 0)
+            )
+
+
+           # Remover campos que serão definidos explicitamente para evitar conflitos
+            item_data_clean = item_data.copy()
+            item_data_clean.pop('iped_suto', None)  # Remove se existir
+            item_data_clean.pop('iped_tota', None)  # Remove se existir
+
             item = ItensOrcamento.objects.using(banco).create(
                 iped_empr=orcamento.pedi_empr,
                 iped_fili=orcamento.pedi_fili,
@@ -166,7 +204,9 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
                 iped_pedi=str(orcamento.pedi_nume),
                 iped_data=orcamento.pedi_data,
                 iped_forn=orcamento.pedi_forn,
-                **item_data
+                iped_suto=subtotal_bruto,  # Subtotal bruto (quantidade × valor unitário)
+                iped_tota=total_item,      # Total com desconto aplicado
+                **item_data_clean
             )
             itens_objs.append(item)
 
@@ -198,6 +238,18 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
         if itens_data is None:
             raise ValidationError("Itens do orcamento são obrigatórios.")
 
+        # Calcular valores antes de atualizar
+        valores = calcular_valores_pedido(
+            itens_data, 
+            desconto_total=validated_data.get('pedi_desc'),
+            desconto_percentual=parametros.get('desconto_percentual')
+        )
+        
+        # Atualizar valores calculados
+        validated_data['pedi_topr'] = valores['subtotal']  # Subtotal
+        validated_data['pedi_desc'] = valores['desconto']  # Desconto
+        validated_data['pedi_tota'] = valores['total']     # Total
+
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save(using=banco)
@@ -213,6 +265,24 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
             if 'iped_desc' not in item_data or item_data['iped_desc'] is None or isinstance(item_data['iped_desc'], bool):
                 item_data['iped_desc'] = 0.00
 
+            # Calcular subtotal bruto (quantidade × valor unitário)
+            subtotal_bruto = calcular_subtotal_item_bruto(
+                item_data.get('iped_quan', 0),
+                item_data.get('iped_unit', 0)
+            )
+            
+            # Calcular total do item com desconto
+            total_item = calcular_total_item_com_desconto(
+                item_data.get('iped_quan', 0),
+                item_data.get('iped_unit', 0),
+                item_data.get('iped_desc', 0)
+            )
+
+            # Remover campos que serão definidos explicitamente para evitar conflitos
+            item_data_clean = item_data.copy()
+            item_data_clean.pop('iped_suto', None)  # Remove se existir
+            item_data_clean.pop('iped_tota', None)  # Remove se existir
+
             item = ItensOrcamento.objects.using(banco).create(
                 iped_empr=instance.pedi_empr,
                 iped_fili=instance.pedi_fili,
@@ -220,7 +290,9 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
                 iped_pedi=str(instance.pedi_nume),
                 iped_data=instance.pedi_data,
                 iped_forn=instance.pedi_forn,
-                **item_data
+                iped_suto=subtotal_bruto,  # Subtotal bruto (quantidade × valor unitário)
+                iped_tota=total_item,      # Total com desconto aplicado
+                **item_data_clean
             )
             itens_objs.append(item)
 
