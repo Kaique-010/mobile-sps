@@ -3357,3 +3357,48 @@ Traceback (most recent call last):
                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 TypeError: ControleVisitaViewSet.proximas_visitas() got an unexpected keyword argument 'slug'
 [2025-08-11 17:53:50,233] [ERROR] django.server: "GET /api/indus/controledevisitas/controle-visitas/proximas/?empr=1&fili=1&usua=1 HTTP/1.1" 500 27
+[2025-08-12 11:27:02,836] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '192.168.10.39:8000'. You may need to add '192.168.10.39' to ALLOWED_HOSTS.
+[2025-08-12 11:27:24,084] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '192.168.10.39:8000'. You may need to add '192.168.10.39' to ALLOWED_HOSTS.
+[2025-08-12 11:27:32,432] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '192.168.10.39:8000'. You may need to add '192.168.10.39' to ALLOWED_HOSTS.
+[2025-08-12 11:28:02,516] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '192.168.10.39:8000'. You may need to add '192.168.10.39' to ALLOWED_HOSTS.
+[2025-08-12 11:28:32,468] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '192.168.10.39:8000'. You may need to add '192.168.10.39' to ALLOWED_HOSTS.
+[2025-08-12 11:29:02,481] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '192.168.10.39:8000'. You may need to add '192.168.10.39' to ALLOWED_HOSTS.
+[2025-08-12 11:29:32,473] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '192.168.10.39:8000'. You may need to add '192.168.10.39' to ALLOWED_HOSTS.
+[2025-08-12 15:21:59,852] [ERROR] django.request: Internal Server Error: /api/ola/Os/ordens/
+Traceback (most recent call last):
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\exception.py", line 34, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\core\handlers\base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\django\views\decorators\csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\viewsets.py", line 125, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\core\decorator.py", line 58, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\venv\Lib\site-packages\rest_framework\mixins.py", line 38, in list
+    queryset = self.filter_queryset(self.get_queryset())
+                                    ^^^^^^^^^^^^^^^^^^^
+  File "C:\mobile-sps\O_S\views.py", line 88, in get_queryset
+    if user_setor.osfs_codi != 6:
+       ^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'osfs_codi'
+[2025-08-12 15:21:59,920] [ERROR] django.server: "GET /api/ola/Os/ordens/?params[page]=1&params[page_size]=20&empr=1&fili=1&usua=1 HTTP/1.1" 500 27

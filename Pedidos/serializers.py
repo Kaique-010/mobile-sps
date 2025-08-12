@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
+from datetime import datetime
 from Licencas.models import Empresas
 from Produtos.models import Produtos
 from .models import PedidoVenda, Itenspedidovenda
@@ -9,6 +10,7 @@ from core.serializers import BancoContextMixin
 from core.utils import calcular_valores_pedido, calcular_subtotal_item_bruto, calcular_total_item_com_desconto  # Atualizada importação
 from parametros_admin.integracao_pedidos import processar_saida_estoque_pedido
 from parametros_admin.utils_pedidos import aplicar_descontos
+from .views_financeiro import GerarTitulosPedidoView, RemoverTitulosPedidoView, ConsultarTitulosPedidoView, RelatorioFinanceiroPedidoView
 import logging
 
 logger = logging.getLogger(__name__)
@@ -51,13 +53,16 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
     itens_input = ItemPedidoVendaSerializer(many=True, write_only=True, required=False)
     pedi_nume = serializers.IntegerField(read_only=True)  # Resolve a pk sendo o numero pois ele retorna sequencial na mão 
     parametros = serializers.DictField(write_only=True, required=False)  # Para receber parâmetros de desconto
+    gerar_titulos = serializers.BooleanField(write_only=True, required=False, default=False)  # Para gerar títulos automaticamente
+    financeiro_titulos = serializers.DictField(write_only=True, required=False)  # Parâmetros para geração de títulos
 
     class Meta:
         model = PedidoVenda
         fields = [
             'pedi_empr', 'pedi_fili', 'pedi_data', 'pedi_tota', 'pedi_topr', 'pedi_forn',
             'itens', 'itens_input', 'parametros','pedi_desc','pedi_obse',
-            'valor_total', 'valor_subtotal', 'valor_desconto', 'cliente_nome', 'empresa_nome', 'pedi_nume', 'pedi_stat', 'pedi_vend'
+            'valor_total', 'valor_subtotal', 'valor_desconto', 'cliente_nome', 'empresa_nome', 'pedi_nume', 'pedi_stat', 'pedi_vend',
+            'gerar_titulos', 'financeiro_titulos'
         ]
     
     def get_itens(self, obj):
@@ -88,6 +93,10 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
         parametros = validated_data.pop('parametros', {})
         usar_desconto_item = parametros.get('usar_desconto_item', False)
         usar_desconto_total = parametros.get('usar_desconto_total', False)
+        
+        # Extrair parâmetros financeiros
+        gerar_titulos = validated_data.pop('gerar_titulos', False)
+        financeiro_titulos = validated_data.pop('financeiro_titulos', {})
         
         # Validação para impedir aplicação simultânea de desconto por item e por pedido
         if usar_desconto_item and usar_desconto_total:
@@ -185,6 +194,11 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
                 print(f"❌ [PEDIDO] Erro ao aplicar descontos: {e}")
                 logger.error(f"Erro ao aplicar descontos: {e}")
 
+        # Salvar pedido após aplicar descontos (se aplicados)
+        if usar_desconto_item or usar_desconto_total:
+            pedido.save(using=banco)
+            print(f"💾 [PEDIDO] Pedido salvo após aplicar descontos")
+
         # Processar saída de estoque se configurado
         print(f"🔄 [PEDIDO] Iniciando processamento de estoque para pedido {pedido.pedi_nume}")
         try:
@@ -204,6 +218,48 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
         except Exception as e:
             print(f"💥 [PEDIDO] EXCEÇÃO ao processar saída de estoque: {e}")
             logger.error(f"Erro ao processar saída de estoque: {e}")
+
+        # Gerar títulos automaticamente se configurado
+        if gerar_titulos and pedido.pedi_fina == '1':  # A PRAZO
+            print(f"💰 [PEDIDO] Iniciando geração de títulos para pedido {pedido.pedi_nume}")
+            try:
+                from .views_financeiro import GerarTitulosPedidoView
+                from rest_framework.test import APIRequestFactory
+                
+                # Preparar dados para geração de títulos
+                titulos_data = {
+                    "pedi_nume": pedido.pedi_nume,
+                    "pedi_forn": pedido.pedi_forn,
+                    "pedi_tota": str(pedido.pedi_tota),
+                    "forma_pagamento": financeiro_titulos.get('forma_pagamento', ''),
+                    "parcelas": financeiro_titulos.get('parcelas', 1),
+                    "data_base": financeiro_titulos.get('data_base', datetime.now().date().isoformat())
+                }
+                
+                # Criar request simulada para a view financeira
+                factory = APIRequestFactory()
+                request = factory.post('/gerar-titulos-pedido/', titulos_data, format='json')
+                request.data = titulos_data
+                
+                # Configurar contexto da request
+                from core.registry import get_licenca_db_config
+                request.licenca_slug = self.context.get('request').licenca_slug if self.context.get('request') else None
+                
+                # Chamar a view de geração de títulos
+                view = GerarTitulosPedidoView()
+                view.request = request
+                response = view.post(request)
+                
+                if response.status_code == 201:
+                    print(f"✅ [PEDIDO] Títulos gerados com sucesso para pedido {pedido.pedi_nume}")
+                    logger.info(f"Títulos gerados para pedido {pedido.pedi_nume}")
+                else:
+                    print(f"❌ [PEDIDO] Erro ao gerar títulos: {response.data}")
+                    logger.warning(f"Erro ao gerar títulos para pedido {pedido.pedi_nume}: {response.data}")
+                    
+            except Exception as e:
+                print(f"💥 [PEDIDO] EXCEÇÃO ao gerar títulos: {e}")
+                logger.error(f"Erro ao gerar títulos para pedido {pedido.pedi_nume}: {e}")
 
         return pedido
 
@@ -225,6 +281,10 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
         parametros = validated_data.pop('parametros', {})
         usar_desconto_item = parametros.get('usar_desconto_item', False)
         usar_desconto_total = parametros.get('usar_desconto_total', False)
+        
+        # Extrair parâmetros financeiros
+        gerar_titulos = validated_data.pop('gerar_titulos', False)
+        financeiro_titulos = validated_data.pop('financeiro_titulos', {})
         
         # Validação para impedir aplicação simultânea de desconto por item e por pedido
         if usar_desconto_item and usar_desconto_total:
@@ -304,6 +364,11 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
                 print(f"❌ [PEDIDO] Erro ao aplicar descontos na atualização: {e}")
                 logger.error(f"Erro ao aplicar descontos na atualização: {e}")
 
+        # Salvar pedido após aplicar descontos (se aplicados)
+        if usar_desconto_item or usar_desconto_total:
+            instance.save(using=banco)
+            print(f"💾 [PEDIDO] Pedido salvo após aplicar descontos na atualização")
+
         # Processar saída de estoque se configurado
         print(f"🔄 [PEDIDO] Iniciando processamento de estoque para atualização do pedido {instance.pedi_nume}")
         try:
@@ -323,6 +388,48 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
         except Exception as e:
             print(f"💥 [PEDIDO] EXCEÇÃO ao processar saída de estoque: {e}")
             logger.error(f"Erro ao processar saída de estoque: {e}")
+
+        # Gerar títulos automaticamente se configurado (apenas se for a prazo)
+        if gerar_titulos and instance.pedi_fina == '1':  # A PRAZO
+            print(f"💰 [PEDIDO] Iniciando geração de títulos para atualização do pedido {instance.pedi_nume}")
+            try:
+                from .views_financeiro import GerarTitulosPedidoView
+                from rest_framework.test import APIRequestFactory
+                
+                # Preparar dados para geração de títulos
+                titulos_data = {
+                    "pedi_nume": instance.pedi_nume,
+                    "pedi_forn": instance.pedi_forn,
+                    "pedi_tota": str(instance.pedi_tota),
+                    "forma_pagamento": financeiro_titulos.get('forma_pagamento', ''),
+                    "parcelas": financeiro_titulos.get('parcelas', 1),
+                    "data_base": financeiro_titulos.get('data_base', datetime.now().date().isoformat())
+                }
+                
+                # Criar request simulada para a view financeira
+                factory = APIRequestFactory()
+                request = factory.post('/gerar-titulos-pedido/', titulos_data, format='json')
+                request.data = titulos_data
+                
+                # Configurar contexto da request
+                from core.registry import get_licenca_db_config
+                request.licenca_slug = self.context.get('request').licenca_slug if self.context.get('request') else None
+                
+                # Chamar a view de geração de títulos
+                view = GerarTitulosPedidoView()
+                view.request = request
+                response = view.post(request)
+                
+                if response.status_code == 201:
+                    print(f"✅ [PEDIDO] Títulos gerados com sucesso para atualização do pedido {instance.pedi_nume}")
+                    logger.info(f"Títulos gerados para atualização do pedido {instance.pedi_nume}")
+                else:
+                    print(f"❌ [PEDIDO] Erro ao gerar títulos na atualização: {response.data}")
+                    logger.warning(f"Erro ao gerar títulos para atualização do pedido {instance.pedi_nume}: {response.data}")
+                    
+            except Exception as e:
+                print(f"💥 [PEDIDO] EXCEÇÃO ao gerar títulos na atualização: {e}")
+                logger.error(f"Erro ao gerar títulos para atualização do pedido {instance.pedi_nume}: {e}")
 
         return instance
 

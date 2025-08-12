@@ -246,6 +246,8 @@ class OrcamentoViewSet(viewsets.ModelViewSet):
                     pedi_forn=orcamento.pedi_forn,
                     pedi_data=date.today(),
                     pedi_tota=orcamento.pedi_tota,
+                    pedi_desc=orcamento.pedi_desc,
+                    pedi_topr=orcamento.pedi_topr,
                     pedi_canc=False,
                     pedi_fina='0',  # À vista por padrão
                     pedi_vend=orcamento.pedi_vend or '0',
