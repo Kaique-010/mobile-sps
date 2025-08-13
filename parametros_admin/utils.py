@@ -65,6 +65,9 @@ def get_modulos_liberados_empresa(banco, empresa_id, filial_id):
     Busca módulos liberados para uma empresa/filial específica no banco de dados
     """
     try:
+        # Adicionar debug temporário
+        debug_modulo_pisos(banco, empresa_id, filial_id)
+        
         from .models import PermissaoModulo
         
         # Buscar permissões ativas para a empresa/filial
@@ -79,12 +82,48 @@ def get_modulos_liberados_empresa(banco, empresa_id, filial_id):
         for permissao in permissoes:
             if permissao.perm_modu.modu_ativ:  # Verificar se o módulo está ativo
                 modulos_liberados.append(permissao.perm_modu.modu_nome)
-        
+       
+
         return modulos_liberados
         
     except Exception as e:
         logger.error(f"Erro ao buscar módulos liberados para empresa {empresa_id}/filial {filial_id}: {e}")
         return []
+
+
+def debug_modulo_pisos(banco, empresa_id=1, filial_id=1):
+    """
+    Função de debug para verificar o status do módulo Pisos
+    """
+    try:
+        from .models import Modulo, PermissaoModulo
+        
+        
+        # Verificar se o módulo Pisos existe
+        try:
+            modulo_pisos = Modulo.objects.using(banco).get(modu_nome='Pisos')
+        
+          
+        except Modulo.DoesNotExist:
+            print("✗ Módulo Pisos NÃO encontrado na tabela modulosmobile")
+            return
+        
+        # Verificar permissões
+        try:
+            permissao = PermissaoModulo.objects.using(banco).get(
+                perm_empr=empresa_id,
+                perm_fili=filial_id,
+                perm_modu=modulo_pisos
+            )
+      
+        except PermissaoModulo.DoesNotExist:
+            print(f"✗ Permissão NÃO encontrada para empresa {empresa_id}/filial {filial_id}")
+            
+       
+            
+    except Exception as e:
+        print(f"Erro no debug: {e}")
+        logger.error(f"Erro no debug do módulo Pisos: {e}")
 
 
 

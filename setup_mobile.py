@@ -145,7 +145,7 @@ CREATE TABLE IF NOT EXISTS permissoesmodulosmobile (
 
 -- Popula modulos
 INSERT INTO modulosmobile (modu_nome, modu_desc, modu_ativ, modu_icon, modu_orde)
-SELECT * FROM (VALUES
+VALUES
 ('dashboards', 'Dashboards e relatórios gerenciais', TRUE, 'dashboard', 1),
 ('dash', 'Dashboard principal', TRUE, 'dashboard', 2),
 ('Produtos', 'Gestão de produtos e serviços', TRUE, 'inventory', 3),
@@ -172,7 +172,8 @@ SELECT * FROM (VALUES
 ('Sdk_recebimentos', 'SDK de recebimentos', TRUE, 'account_balance', 24),
 ('auditoria', 'Sistema de auditoria', TRUE, 'security', 25),
 ('notificacoes', 'Sistema de notificações', TRUE, 'notifications', 26),
-('planocontas', 'Plano de contas', TRUE, 'account_tree', 27)
+('planocontas', 'Plano de contas', TRUE, 'account_tree', 27),
+('Pisos', 'Rotinas de pisos', TRUE, 'home', 28);
 ) AS t(modu_nome, modu_desc, modu_ativ, modu_icon, modu_orde)
 WHERE NOT EXISTS (
     SELECT 1 FROM modulosmobile m WHERE m.modu_nome = t.modu_nome

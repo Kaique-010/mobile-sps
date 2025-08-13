@@ -109,6 +109,8 @@ INSTALLED_APPS = [
     'parametros_admin',
     'mcp_agent_db',  
     'controledevisitas',
+    'Pisos',
+
 
 ]
 

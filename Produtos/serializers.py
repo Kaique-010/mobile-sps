@@ -2,7 +2,7 @@ from rest_framework import serializers
 import base64
 from .models import Produtos, UnidadeMedida, Tabelaprecos, ProdutosDetalhados
 from core.serializers import BancoContextMixin
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 
 class TabelaPrecoSerializer(BancoContextMixin, serializers.ModelSerializer):
     percentual_avis = serializers.FloatField(write_only=True, required=False)
@@ -88,25 +88,62 @@ class TabelaPrecoSerializer(BancoContextMixin, serializers.ModelSerializer):
 
 class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
     precos = serializers.SerializerMethodField()
-    prod_preco_vista = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
-    prod_preco_normal = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
-    saldo_estoque = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
+    prod_preco_vista = serializers.SerializerMethodField()
+    prod_preco_normal = serializers.SerializerMethodField()
+    saldo_estoque = serializers.SerializerMethodField()
     imagem_base64 = serializers.SerializerMethodField()
     preco_principal = serializers.SerializerMethodField()
+    # Sobrescrever campos decimais problemáticos
+    prod_cera_m2cx = serializers.SerializerMethodField()
+    prod_cera_pccx = serializers.SerializerMethodField()
 
     class Meta:
         model = Produtos
         fields = '__all__'
         read_only_fields = ['prod_codi']
+    
+    def safe_decimal_conversion(self, value, default=None):
+        """Converte valores para Decimal de forma segura"""
+        if value is None:
+            return default
         
+        try:
+            # Remove espaços em branco
+            if isinstance(value, str):
+                value = value.strip()
+                if not value:  # String vazia
+                    return default
+            
+            return Decimal(str(value))
+        except (InvalidOperation, ValueError, TypeError):
+            return default
+    
+    def get_prod_preco_vista(self, obj):
+        """Retorna preço à vista de forma segura"""
+        return self.safe_decimal_conversion(getattr(obj, 'prod_preco_vista', None), Decimal('0.00'))
+    
+    def get_prod_preco_normal(self, obj):
+        """Retorna preço normal de forma segura"""
+        return self.safe_decimal_conversion(getattr(obj, 'prod_preco_normal', None), Decimal('0.00'))
+        
+    def get_saldo_estoque(self, obj):
+        """Retorna saldo de estoque de forma segura"""
+        saldo = getattr(obj, 'saldo_estoque', 0)
+        return self.safe_decimal_conversion(saldo, Decimal('0.00'))
+    
+    def get_prod_cera_m2cx(self, obj):
+        """Retorna m²/caixa de forma segura"""
+        return self.safe_decimal_conversion(obj.prod_cera_m2cx, Decimal('0.00'))
+    
+    def get_prod_cera_pccx(self, obj):
+        """Retorna peças/caixa de forma segura"""
+        return self.safe_decimal_conversion(obj.prod_cera_pccx, Decimal('0.00'))
+
     def validate(self, attrs):
         if not attrs.get("prod_codi") and Produtos.objects.filter(prod_codi='', prod_empr=attrs.get("prod_empr")).exists():
             raise serializers.ValidationError("Produto com código vazio já existe para esta empresa.")
         return attrs
 
-
-    def get_saldo_estoque(self, obj):
-        return getattr(obj, 'saldo_estoque', 0)
 
     def get_imagem_base64(self, obj):
         if obj.prod_foto:
@@ -139,8 +176,8 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
         precos = Tabelaprecos.objects.using(banco).filter(
             tabe_prod=obj.prod_codi,
             tabe_empr=obj.prod_empr
-        )
-        return TabelaPrecoSerializer(precos, many=True, context=self.context).data
+        ).values('tabe_avis', 'tabe_apra', 'tabe_prco')
+        return list(precos)
 
     def create(self, validated_data):
         banco = self.context.get('banco')

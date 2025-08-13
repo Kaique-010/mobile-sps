@@ -43,6 +43,7 @@ urlpatterns = [
     path('api/<slug>/ordemproducao/', include('OrdemProducao.urls')),
     path('api/<slug:slug>/parametros-admin/', include('parametros_admin.urls')),
     path('api/<slug>/controledevisitas/', include('controledevisitas.urls')),
+    path('api/<slug>/pisos/', include('Pisos.urls')),
     
     
     # MCP Agent DB - Nova rota adicionada

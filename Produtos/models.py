@@ -155,6 +155,8 @@ class Produtos(models.Model):
     prod_marc = models.ForeignKey(Marca, on_delete=models.DO_NOTHING, db_column='prod_marc', related_name='produtos', blank= True, null= True) 
     prod_coba = models.CharField(max_length=50, db_column='prod_coba', blank= True, null= True)
     prod_foto = models.BinaryField(db_column='prod_foto', blank=True, null=True) 
+    prod_cera_m2cx = models.DecimalField(max_digits=15, decimal_places=2, db_column='prod_cera_m2cx', blank=True, null=True)
+    prod_cera_pccx = models.DecimalField(max_digits=15, decimal_places=2, db_column='prod_cera_pccx', blank=True, null=True)
 
 
 

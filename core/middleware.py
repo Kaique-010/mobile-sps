@@ -22,7 +22,6 @@ class LicencaMiddleware:
 
     def __call__(self, request):
         path_parts = request.path.strip('/').split('/')
-        print(f"URL dividida em partes: {path_parts}")
         
         if not path_parts or path_parts [0] != 'api':
             return self.get_response(request)
@@ -34,7 +33,7 @@ class LicencaMiddleware:
             raise Exception("URL malformada. Esperado /api/<slug>/...")
 
         slug = path_parts[1]
-        print(f"Slug extraído: {slug}")
+      
 
         licenca = next((lic for lic in LICENCAS_MAP if lic["slug"] == slug), None)
         if not licenca:
@@ -57,10 +56,11 @@ class LicencaMiddleware:
             
             # Obter configuração do banco
             banco = get_licenca_db_config(request)
+
             if banco:
                 modulos_db = get_modulos_liberados_empresa(banco, empresa_id, filial_id)
                 modulos_disponiveis = modulos_db
-                print(f"Módulos obtidos do banco: {modulos_disponiveis}")
+             
         except Exception as e:
             print(f"Erro ao obter módulos do banco: {e}")
             print("AVISO: Não foi possível obter módulos do banco. Verifique se a tabela modulosmobile está populada.")
