@@ -50,8 +50,4 @@ urlpatterns = [
     path('api/<slug>/mcp-agent/', include('mcp_agent_db.urls')),
     
     
-    
-    
-    
-    
 ]

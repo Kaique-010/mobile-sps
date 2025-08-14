@@ -16,6 +16,14 @@ class Etapavisita(models.Model):
         managed = False
         db_table = 'etapavisita'
         unique_together = (('etap_empr', 'etap_nume'), ('etap_id', 'etap_empr'),)
+        verbose_name = 'Etapa de Visita'
+        verbose_name_plural = 'Etapas de Visitas'
+        db_table = 'etapavisita'
+        unique_together = (('etap_empr', 'etap_nume'), ('etap_id', 'etap_empr'),)
+    
+    def __str__(self):
+        return self.etap_descricao
+
 
 class Controlevisita(models.Model):
     
@@ -136,4 +144,9 @@ class Controlevisita(models.Model):
     def km_percorrido(self):
         if self.ctrl_km_inic and self.ctrl_km_fina:
             return self.ctrl_km_fina - self.ctrl_km_inic
+        return None
+    
+    def get_ctrl_etapa_display(self):
+        if self.ctrl_etapa:
+            return self.ctrl_etapa.etap_descricao
         return None

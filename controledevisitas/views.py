@@ -1,6 +1,6 @@
 from django.shortcuts import render
-from .models import Controlevisita
-from .serializers import ControleVisitaSerializer
+from .models import Controlevisita, Etapavisita
+from .serializers import ControleVisitaSerializer, EtapaVisitaSerializer
 from rest_framework import viewsets, status
 from core.utils import get_licenca_db_config
 from core.decorator import ModuloRequeridoMixin
@@ -42,7 +42,8 @@ class ControleVisitaViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
     ordering = ['-ctrl_data', 'ctrl_numero']
     lookup_field = 'ctrl_id'
 
-    def get_queryset(self):
+    def get_queryset(self, slug=None):
+
         banco = get_licenca_db_config(self.request)
         if not banco:
             logger.error("Banco de dados não encontrado.")
@@ -109,7 +110,7 @@ class ControleVisitaViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             )
 
     @action(detail=False, methods=['get'], url_path='estatisticas')
-    def estatisticas(self, request):
+    def estatisticas(self, request, slug=None):
         """
         Endpoint para retornar estatísticas pré-calculadas das visitas
         """
@@ -142,10 +143,18 @@ class ControleVisitaViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             visitas_ano_atual = queryset.filter(ctrl_data__gte=inicio_ano).count()
             
             # Estatísticas por etapa
+            # Na linha 142, substituir:
+            # for etapa_id, etapa_nome in Controlevisita.ETAPA_CHOICES:
+            
+            # Por:
             etapas_stats = {}
-            for etapa_id, etapa_nome in Controlevisita.ETAPA_CHOICES:
-                count = queryset.filter(ctrl_etapa=etapa_id).count()
-                etapas_stats[etapa_nome] = count
+            etapas = Etapavisita.objects.using(banco).all()
+            if empresa_id:
+                etapas = etapas.filter(etap_empr=empresa_id)
+            
+            for etapa in etapas:
+                count = queryset.filter(ctrl_etapa=etapa.etap_id).count()
+                etapas_stats[etapa.etap_descricao] = count
             
             # Visitas por vendedor (top 5)
             vendedores_stats = list(
@@ -207,7 +216,7 @@ class ControleVisitaViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             )
 
     @action(detail=False, methods=['get'], url_path='proximas')
-    def proximas_visitas(self, request):
+    def proximas_visitas(self, request, slug=None):
         """
         Endpoint para retornar lista das próximas visitas agendadas
         """
@@ -239,10 +248,10 @@ class ControleVisitaViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                 queryset = queryset.filter(ctrl_filial=filial_id)
             
             # Ordenar por data da próxima visita
-            queryset = queryset.order_by('ctrl_prox_visi', 'ctrl_numero')
+            queryset = queryset.order_by('ctrl_prox_visi')
             
             # Limitar a 50 próximas visitas para performance
-            limit = int(request.query_params.get('limit', 50))
+            limit = int(request.query_params.get('limit', 1000))
             queryset = queryset[:limit]
             
             # Serializar os dados
@@ -257,16 +266,16 @@ class ControleVisitaViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                     'ctrl_prox_visi': visita.ctrl_prox_visi.isoformat(),
                     'dias_restantes': dias_restantes,
                     'cliente': {
-                        'id': visita.ctrl_cliente.enti_id if visita.ctrl_cliente else None,
+                        'id': visita.ctrl_cliente.enti_clie if visita.ctrl_cliente else None,
                         'nome': visita.ctrl_cliente.enti_nome if visita.ctrl_cliente else 'Cliente não informado'
                     },
                     'vendedor': {
-                        'id': visita.ctrl_vendedor.enti_id if visita.ctrl_vendedor else None,
+                        'id': visita.ctrl_vendedor.enti_clie if visita.ctrl_vendedor else None,
                         'nome': visita.ctrl_vendedor.enti_nome if visita.ctrl_vendedor else 'Vendedor não informado'
                     },
                     'etapa': {
-                        'id': visita.ctrl_etapa,
-                        'nome': visita.get_ctrl_etapa_display() if visita.ctrl_etapa else 'Não informado'
+                        'id': visita.ctrl_etapa.etap_id if visita.ctrl_etapa else None,
+                        'nome': visita.ctrl_etapa.etap_descricao if visita.ctrl_etapa else 'Não informado'
                     },
                     'contato': visita.ctrl_contato,
                     'telefone': visita.ctrl_fone,
@@ -290,6 +299,39 @@ class ControleVisitaViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                 {"detail": "Erro ao buscar próximas visitas."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class EtapaVisitaViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    modulo_requerido = 'Pedidos'
+    serializer_class = EtapaVisitaSerializer
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['etap_empr', 'etap_nume']
+    search_fields = ['etap_descricao', 'etap_obse']
+    ordering_fields = ['etap_nume', 'etap_descricao']
+    ordering = ['etap_nume']
+    lookup_field = 'etap_id'
+    
+    def get_queryset(self):
+        banco = get_licenca_db_config(self.request)
+        if not banco:
+            logger.error("Banco de dados não encontrado.")
+            raise NotFound("Banco de dados não encontrado.")
+        
+        empresa_id = self.request.headers.get("X-Empresa")
+        
+        queryset = Etapavisita.objects.using(banco).select_related('etap_empr').all()
+        
+        if empresa_id:
+            queryset = queryset.filter(etap_empr=empresa_id)
+        
+        return queryset.order_by('etap_nume')
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['banco'] = get_licenca_db_config(self.request)
+        return context
+
 
 
         
