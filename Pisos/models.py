@@ -80,9 +80,9 @@ class Orcamentopisos(models.Model):
 
 
 class Pedidospisos(models.Model):
-    pedi_empr = models.IntegerField(primary_key=True)
+    pedi_empr = models.IntegerField()
     pedi_fili = models.IntegerField()
-    pedi_nume = models.IntegerField()
+    pedi_nume = models.IntegerField(primary_key=True)
     pedi_clie = models.IntegerField(blank=True, null=True)
     pedi_ende = models.CharField(max_length=60, blank=True, null=True)
     pedi_nume_ende = models.CharField(max_length=10, blank=True, null=True)
@@ -146,9 +146,9 @@ class Pedidospisos(models.Model):
 
 
 class Itensorcapisos(models.Model):
-    item_empr = models.IntegerField(primary_key=True)
+    item_empr = models.IntegerField()
     item_fili = models.IntegerField()
-    item_orca = models.IntegerField()
+    item_orca = models.IntegerField(primary_key=True)
     item_ambi = models.IntegerField()
     item_prod = models.CharField(max_length=20)
     item_m2 = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
@@ -168,15 +168,15 @@ class Itensorcapisos(models.Model):
     class Meta:
         managed = False
         db_table = 'itensorcapisos'
-        unique_together = (('item_empr', 'item_fili', 'item_orca', 'item_ambi', 'item_prod'),)
+
 
 
 
 
 class Itenspedidospisos(models.Model):
-    item_empr = models.IntegerField(primary_key=True)
+    item_empr = models.IntegerField()
     item_fili = models.IntegerField()
-    item_pedi = models.IntegerField()
+    item_pedi = models.IntegerField(max_length=50, unique=True, primary_key=True)
     item_ambi = models.IntegerField()
     item_prod = models.CharField(max_length=20)
     item_m2 = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
@@ -208,6 +208,8 @@ class Itenspedidospisos(models.Model):
         managed = False
         db_table = 'itenspedidospisos'
         unique_together = (('item_empr', 'item_fili', 'item_pedi', 'item_ambi', 'item_prod'),)
+
+
 
 
 

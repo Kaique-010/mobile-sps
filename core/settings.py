@@ -284,7 +284,30 @@ LOGGING = {
             'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': False,
+            'formatter': 'verbose',
+
         },
+        'Pisos': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+            'formatter': 'verbose',
+        },
+        'PedidosPisos': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+            'formatter': 'verbose',
+        },
+        'ItensPedidosPisos': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+            'formatter': 'verbose',
+        },
+
+
+
     },
 }
 
