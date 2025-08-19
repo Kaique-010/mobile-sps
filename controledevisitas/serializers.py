@@ -22,11 +22,12 @@ class ControleVisitaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Controlevisita
         fields = [
-            'ctrl_id',
+            'ctrl_id',  # Adicionar esta linha
             'ctrl_empresa',
             'ctrl_filial', 
-            'ctrl_numero',
             'ctrl_cliente',
+            'ctrl_numero',
+
             'ctrl_data',
             'ctrl_novo',
             'ctrl_base',
@@ -48,9 +49,8 @@ class ControleVisitaSerializer(serializers.ModelSerializer):
             'km_percorrido',
             'etapa_display',
             'etapa_descricao',
-           
         ]
-        read_only_fields = ['ctrl_id', 'field_log_data', 'field_log_time']
+        read_only_fields = ['field_log_data', 'field_log_time', 'ctrl_id', ]  
 
 
     def validate(self, data):
@@ -88,12 +88,21 @@ class ControleVisitaSerializer(serializers.ModelSerializer):
             ).aggregate(Max('ctrl_numero'))['ctrl_numero__max'] or 0
             validated_data['ctrl_numero'] = max_numero + 1
         
+        if not validated_data.get('ctrl_id'):
+            max_id = Controlevisita.objects.using(banco).aggregate(Max('ctrl_id'))['ctrl_id__max'] or 0
+            validated_data['ctrl_id'] = max_id + 1 
+
+        
         return Controlevisita.objects.using(banco).create(**validated_data)
     
     def update(self, instance, validated_data):
         banco = self.context.get('banco')
         if not banco:
             raise serializers.ValidationError("Banco não encontrado")
+        
+        # Preservar ctrl_numero se não fornecido
+        if 'ctrl_numero' not in validated_data:
+            validated_data['ctrl_numero'] = instance.ctrl_numero
         
         for attr, value in validated_data.items():
             setattr(instance, attr, value)

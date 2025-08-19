@@ -26,7 +26,16 @@ class LicencaMiddleware:
         if not path_parts or path_parts [0] != 'api':
             return self.get_response(request)
 
+        # Rotas públicas que não precisam de validação
         if request.path.startswith('/api/licencas/mapa/'):
+            return self.get_response(request)
+            
+        # Nova exceção para login de clientes
+        if len(path_parts) >= 3 and path_parts[2] == 'entidades-login':
+            # Extrair slug e definir no request sem validação completa
+            slug = path_parts[1]
+            request.slug = slug
+            set_licenca_slug(slug)
             return self.get_response(request)
 
         if len(path_parts) < 3 or path_parts[0] != "api":

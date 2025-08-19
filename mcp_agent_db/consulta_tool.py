@@ -174,7 +174,7 @@ def gerar_insights(dados: list, pergunta: str) -> str:
 def formatar_resposta_consulta(sql: str, dados: list, insights: str, sugestoes: list) -> str:
     """Formata a resposta da consulta de forma estruturada"""
     resposta = f"📊 **Resultados da consulta:**\n\n"
-    resposta += f"```sql\n{sql}\n```\n\n"
+   
     
     # Mostrar dados
     if len(dados) <= 10:

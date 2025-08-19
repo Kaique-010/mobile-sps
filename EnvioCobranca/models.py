@@ -16,8 +16,9 @@ class EnviarCobranca(models.Model):
     valor = models.DecimalField(max_digits=15, decimal_places=2)
     forma_recebimento_codigo = models.CharField(max_length=2)
     forma_recebimento_nome = models.CharField(max_length=50)
-    linha_digitavel = models.CharField(max_length=255, blank=True, null=True)
     url_boleto = models.CharField(max_length=255, blank=True, null=True)
+    boleto = models.BinaryField(blank=True, null=True)
+
 
     class Meta:
         managed = False

@@ -113,9 +113,14 @@ CREATE TABLE IF NOT EXISTS parametrosmobile (
     para_empr INT NOT NULL,
     para_fili INT NOT NULL,
     para_modu_id INT NOT NULL REFERENCES modulosmobile(modu_codi) ON DELETE CASCADE,
-
     para_nome VARCHAR(100) NOT NULL,
     para_desc TEXT,
+    para_valo BOOLEAN NOT NULL DEFAULT FALSE,
+    para_ativ BOOLEAN NOT NULL DEFAULT TRUE,
+    para_data_alte TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    para_usua_alte INT
+);
+
     para_valo VARCHAR(255),
     para_ativ BOOLEAN NOT NULL DEFAULT TRUE,
     para_data_alte TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -145,35 +150,37 @@ CREATE TABLE IF NOT EXISTS permissoesmodulosmobile (
 
 -- Popula modulos
 INSERT INTO modulosmobile (modu_nome, modu_desc, modu_ativ, modu_icon, modu_orde)
-VALUES
-('dashboards', 'Dashboards e relatórios gerenciais', TRUE, 'dashboard', 1),
-('dash', 'Dashboard principal', TRUE, 'dashboard', 2),
-('Produtos', 'Gestão de produtos e serviços', TRUE, 'inventory', 3),
-('Pedidos', 'Gestão de pedidos de venda', TRUE, 'shopping_cart', 4),
-('Entradas_Estoque', 'Controle de entradas no estoque', TRUE, 'input', 5),
-('Saidas_Estoque', 'Controle de saídas do estoque', TRUE, 'output', 6),
-('listacasamento', 'Lista de casamento', TRUE, 'list', 7),
-('Entidades', 'Gestão de clientes e fornecedores', TRUE, 'people', 8),
-('Orcamentos', 'Gestão de orçamentos', TRUE, 'description', 9),
-('contratos', 'Gestão de contratos', TRUE, 'assignment', 10),
-('implantacao', 'Gestão de implantações', TRUE, 'build', 11),
-('Financeiro', 'Gestão financeira', TRUE, 'account_balance', 12),
-('OrdemdeServico', 'Gestão de ordens de serviço', TRUE, 'work', 13),
-('O_S', 'Ordens de serviço', TRUE, 'work', 14),
-('SpsComissoes', 'Gestão de comissões', TRUE, 'monetization_on', 15),
-('OrdemProducao', 'Gestão de ordens de produção', TRUE, 'factory', 16),
-('parametros_admin', 'Administração de parâmetros do sistema', TRUE, 'settings', 17),
-('CaixaDiario', 'Controle de caixa diário', TRUE, 'account_balance_wallet', 18),
-('contas_a_pagar', 'Gestão de contas a pagar', TRUE, 'payment', 19),
-('contas_a_receber', 'Gestão de contas a receber', TRUE, 'receipt', 20),
-('Gerencial', 'Relatórios gerenciais', TRUE, 'analytics', 21),
-('DRE', 'Demonstração do resultado do exercício', TRUE, 'assessment', 22),
-('EnvioCobranca', 'Envio de cobrança', TRUE, 'email', 23),
-('Sdk_recebimentos', 'SDK de recebimentos', TRUE, 'account_balance', 24),
-('auditoria', 'Sistema de auditoria', TRUE, 'security', 25),
-('notificacoes', 'Sistema de notificações', TRUE, 'notifications', 26),
-('planocontas', 'Plano de contas', TRUE, 'account_tree', 27),
-('Pisos', 'Rotinas de pisos', TRUE, 'home', 28);
+SELECT t.modu_nome, t.modu_desc, t.modu_ativ, t.modu_icon, t.modu_orde
+FROM (
+    VALUES
+    ('dashboards', 'Dashboards e relatórios gerenciais', TRUE, 'dashboard', 1),
+    ('dash', 'Dashboard principal', TRUE, 'dashboard', 2),
+    ('Produtos', 'Gestão de produtos e serviços', TRUE, 'inventory', 3),
+    ('Pedidos', 'Gestão de pedidos de venda', TRUE, 'shopping_cart', 4),
+    ('Entradas_Estoque', 'Controle de entradas no estoque', TRUE, 'input', 5),
+    ('Saidas_Estoque', 'Controle de saídas do estoque', TRUE, 'output', 6),
+    ('listacasamento', 'Lista de casamento', TRUE, 'list', 7),
+    ('Entidades', 'Gestão de clientes e fornecedores', TRUE, 'people', 8),
+    ('Orcamentos', 'Gestão de orçamentos', TRUE, 'description', 9),
+    ('contratos', 'Gestão de contratos', TRUE, 'assignment', 10),
+    ('implantacao', 'Gestão de implantações', TRUE, 'build', 11),
+    ('Financeiro', 'Gestão financeira', TRUE, 'account_balance', 12),
+    ('OrdemdeServico', 'Gestão de ordens de serviço', TRUE, 'work', 13),
+    ('O_S', 'Ordens de serviço', TRUE, 'work', 14),
+    ('SpsComissoes', 'Gestão de comissões', TRUE, 'monetization_on', 15),
+    ('OrdemProducao', 'Gestão de ordens de produção', TRUE, 'factory', 16),
+    ('parametros_admin', 'Administração de parâmetros do sistema', TRUE, 'settings', 17),
+    ('CaixaDiario', 'Controle de caixa diário', TRUE, 'account_balance_wallet', 18),
+    ('contas_a_pagar', 'Gestão de contas a pagar', TRUE, 'payment', 19),
+    ('contas_a_receber', 'Gestão de contas a receber', TRUE, 'receipt', 20),
+    ('Gerencial', 'Relatórios gerenciais', TRUE, 'analytics', 21),
+    ('DRE', 'Demonstração do resultado do exercício', TRUE, 'assessment', 22),
+    ('EnvioCobranca', 'Envio de cobrança', TRUE, 'email', 23),
+    ('Sdk_recebimentos', 'SDK de recebimentos', TRUE, 'account_balance', 24),
+    ('auditoria', 'Sistema de auditoria', TRUE, 'security', 25),
+    ('notificacoes', 'Sistema de notificações', TRUE, 'notifications', 26),
+    ('planocontas', 'Plano de contas', TRUE, 'account_tree', 27),
+    ('Pisos', 'Rotinas de pisos', TRUE, 'home', 28)
 ) AS t(modu_nome, modu_desc, modu_ativ, modu_icon, modu_orde)
 WHERE NOT EXISTS (
     SELECT 1 FROM modulosmobile m WHERE m.modu_nome = t.modu_nome
@@ -445,6 +452,58 @@ CREATE OR REPLACE VIEW public.balancete_cc
    FROM recebimentos r
      FULL JOIN pagamentos p ON r.cecu_redu = p.cecu_redu AND r.mes_num = p.mes_num AND r.empr = p.empr AND r.fili = p.fili
   ORDER BY (COALESCE(r.mes_ordem, p.mes_ordem));
+
+-- view para envio de cobrança 
+CREATE OR REPLACE VIEW public.enviarcobranca
+ AS
+ WITH titulos_abertos AS (
+         SELECT t_1.titu_empr,
+            t_1.titu_fili,
+            t_1.titu_clie,
+            t_1.titu_titu,
+            t_1.titu_seri,
+            t_1.titu_parc,
+            t_1.titu_venc,
+            t_1.titu_valo,
+            t_1.titu_bole, 
+            t_1.titu_form_reci
+           FROM titulosreceber t_1
+             LEFT JOIN baretitulos b ON b.bare_titu::text = t_1.titu_titu::text AND b.bare_parc::text = t_1.titu_parc::text AND b.bare_seri::text = t_1.titu_seri::text AND b.bare_clie = t_1.titu_clie AND b.bare_empr = t_1.titu_empr
+          WHERE t_1.titu_aber::text = 'A'::text AND b.bare_titu IS NULL AND t_1.titu_venc >= '2025-07-01'::date AND t_1.titu_venc <= '2025-07-31'::date
+        )
+ SELECT t.titu_empr AS empresa,
+    t.titu_fili AS filial,
+    t.titu_clie AS cliente_id,
+    e.enti_nome AS cliente_nome,
+    e.enti_celu AS cliente_celular,
+    e.enti_fone AS cliente_telefone,
+	  e.enti_emai AS cliente_email,
+    t.titu_titu AS numero_titulo,
+    t.titu_seri AS serie,
+    t.titu_parc AS parcela,
+    t.titu_venc AS vencimento,
+    t.titu_valo AS valor,
+    t.titu_bole AS boleto,
+    t.titu_form_reci AS forma_recebimento_codigo,
+        CASE t.titu_form_reci
+            WHEN '00'::text THEN 'DUPLICATA'::text
+            WHEN '01'::text THEN 'CHEQUE'::text
+            WHEN '02'::text THEN 'PROMISSÓRIA'::text
+            WHEN '03'::text THEN 'RECIBO'::text
+            WHEN '50'::text THEN 'CHEQUE PRÉ'::text
+            WHEN '51'::text THEN 'CARTÃO DE CRÉDITO'::text
+            WHEN '52'::text THEN 'CARTÃO DE DÉBITO'::text
+            WHEN '53'::text THEN 'BOLETO BANCÁRIO'::text
+            WHEN '54'::text THEN 'DINHEIRO'::text
+            WHEN '55'::text THEN 'DEPÓSITO EM CONTA'::text
+            WHEN '56'::text THEN 'VENDA À VISTA'::text
+            WHEN '60'::text THEN 'PIX'::text
+            ELSE 'OUTRO'::text
+        END AS forma_recebimento_nome,
+    t.titu_bole AS url_boleto
+   FROM titulos_abertos t
+     LEFT JOIN entidades e ON e.enti_clie = t.titu_clie AND e.enti_empr = t.titu_empr
+  ORDER BY t.titu_venc;
 
 --view aniversariantes
 CREATE OR REPLACE VIEW public.aniversariantes

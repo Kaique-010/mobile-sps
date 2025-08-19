@@ -9,8 +9,7 @@
             t_1.titu_parc,
             t_1.titu_venc,
             t_1.titu_valo,
-            t_1.titu_linh_digi,
-            t_1.titu_url_bole,
+            t_1.titu_bole, 
             t_1.titu_form_reci
            FROM titulosreceber t_1
              LEFT JOIN baretitulos b ON b.bare_titu::text = t_1.titu_titu::text AND b.bare_parc::text = t_1.titu_parc::text AND b.bare_seri::text = t_1.titu_seri::text AND b.bare_clie = t_1.titu_clie AND b.bare_empr = t_1.titu_empr
@@ -22,12 +21,13 @@
     e.enti_nome AS cliente_nome,
     e.enti_celu AS cliente_celular,
     e.enti_fone AS cliente_telefone,
-	e.enti_emai AS cliente_email,
+	  e.enti_emai AS cliente_email,
     t.titu_titu AS numero_titulo,
     t.titu_seri AS serie,
     t.titu_parc AS parcela,
     t.titu_venc AS vencimento,
     t.titu_valo AS valor,
+    t.titu_bole AS boleto,
     t.titu_form_reci AS forma_recebimento_codigo,
         CASE t.titu_form_reci
             WHEN '00'::text THEN 'DUPLICATA'::text
@@ -44,8 +44,7 @@
             WHEN '60'::text THEN 'PIX'::text
             ELSE 'OUTRO'::text
         END AS forma_recebimento_nome,
-    t.titu_linh_digi AS linha_digitavel,
-    t.titu_url_bole AS url_boleto
+    t.titu_bole AS url_boleto
    FROM titulos_abertos t
      LEFT JOIN entidades e ON e.enti_clie = t.titu_clie AND e.enti_empr = t.titu_empr
   ORDER BY t.titu_venc;

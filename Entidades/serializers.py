@@ -101,3 +101,4 @@ class EntidadesSerializer(serializers.ModelSerializer):
                     print(f"💥 Erro: {inner_e}")
                     break
             raise e  # Relevanta o erro original depois de logar
+

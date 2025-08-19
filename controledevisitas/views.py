@@ -58,6 +58,7 @@ class ControleVisitaViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             'ctrl_vendedor', 
             'ctrl_empresa'
         ).all()
+
         
         # Filtros por headers
         if empresa_id:
@@ -88,6 +89,7 @@ class ControleVisitaViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             queryset = queryset.filter(ctrl_etapa=etapa)
         
         return queryset.order_by('-ctrl_data', 'ctrl_numero')
+
 
     def get_serializer_context(self):
         context = super().get_serializer_context()

@@ -84,5 +84,12 @@
     "db_name": "savexml69",
     "db_host": "base.rtalmeida.com.br",
     "db_port": "5432"
+  },
+  {
+    "slug": "ipa",
+    "cnpj": "37413384000184",
+    "db_name": "ipa",
+    "db_host": "localhost",
+    "db_port": "5432"
   }
 ]

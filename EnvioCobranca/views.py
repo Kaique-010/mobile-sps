@@ -14,8 +14,9 @@ class EnviarCobrancaViewSet(ReadOnlyModelViewSet, ModuloRequeridoMixin):
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ('empresa', 'filial', 'cliente_id', 'vencimento')
-    search_fields = ('cliente_nome', 'numero_titulo', 'linha_digitavel')
+    search_fields = ('cliente_nome', 'numero_titulo')
     ordering_fields = ('vencimento', 'valor', 'cliente_nome')
+    
 
     def get_queryset(self):
         slug = get_licenca_slug()
@@ -31,3 +32,5 @@ class EnviarCobrancaViewSet(ReadOnlyModelViewSet, ModuloRequeridoMixin):
             qs = qs.filter(vencimento__range=[data_ini, data_fim])
 
         return qs
+
+    

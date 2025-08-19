@@ -12,6 +12,8 @@ urlpatterns = [
     
     # Rota pública (sem slug)
     path('api/licencas/mapa/', licencas_mapa, name='licencas-mapa'),
+    # Nova rota pública para login de clientes
+    path('api/<slug>/entidades-login/', include('Entidades.urls')),
 
     # Rotas privadas (com slug automático)
     path('api/<slug>/licencas/', include('Licencas.urls')),
