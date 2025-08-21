@@ -12,6 +12,7 @@ class Orcamentos(models.Model):
     pedi_obse = models.TextField(blank=True, null=True)
     pedi_nume_pedi = models.IntegerField(db_column='pedi_nume_pedi',blank=True, null=True)
     pedi_desc = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+ 
 
 
     class Meta:

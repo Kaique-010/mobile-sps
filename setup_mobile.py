@@ -120,13 +120,6 @@ CREATE TABLE IF NOT EXISTS parametrosmobile (
     para_data_alte TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     para_usua_alte INT
 );
-
-    para_valo VARCHAR(255),
-    para_ativ BOOLEAN NOT NULL DEFAULT TRUE,
-    para_data_alte TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    para_usua_alte INT REFERENCES usuarios(usua_codi)
-);
-
 """
 
 # SQL de tabelas e inserções

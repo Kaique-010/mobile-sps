@@ -73,8 +73,13 @@ class PedidoVendaViewSet(viewsets.ModelViewSet):
             logger.error("Banco de dados não encontrado.")
             raise NotFound("Banco de dados não encontrado.")
             
-        # Base queryset otimizada
-        queryset = PedidoVenda.objects.using(banco).all()
+        # Base queryset otimizada COM PREFETCH DOS ITENS
+        queryset = PedidoVenda.objects.using(banco).prefetch_related(
+            Prefetch(
+                'itenspedidovenda_set',
+                queryset=Itenspedidovenda.objects.using(banco).all()
+            )
+        )
         
         # Obter parâmetros de filtro
         cliente_nome = self.request.query_params.get('cliente_nome')

@@ -38,6 +38,15 @@ class LicencaMiddleware:
             set_licenca_slug(slug)
             return self.get_response(request)
 
+        # Adicionar no método __call__ após linha 34:
+        
+        # Login simplificado para clientes
+        if len(path_parts) >= 3 and path_parts[2] == 'entidades-login-simple':
+            slug = path_parts[1]
+            request.slug = slug
+            set_licenca_slug(slug)
+            return self.get_response(request)
+
         if len(path_parts) < 3 or path_parts[0] != "api":
             raise Exception("URL malformada. Esperado /api/<slug>/...")
 
