@@ -127,9 +127,9 @@ class BaseClienteViewSet(viewsets.ModelViewSet):
     permission_classes = [IsCliente]
     
     cliente_field_map = {
-        "pedidovenda": "pedi_forn",  # Corrigido: era "pedidosvenda": "pedi_forn"
+        "pedidovenda": "pedi_forn",
         "itenspedidosvenda": "iped_forn",
-        "orcamentos": "pedi_forn",  # Corrigido: era "orcamentosvenda": "pedi_forn"
+        "orcamentos": "pedi_forn",
         "itensorcamentovenda": "iped_forn",
         "entidades": "enti_clie",
         "titulosreceber": "titu_clie",
@@ -142,6 +142,11 @@ class BaseClienteViewSet(viewsets.ModelViewSet):
         "os": "os_clie",
         "vfevv": "nota_clie",
     }
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['banco'] = self.request.banco
+        return context
 
     def get_queryset(self):
         cliente_id = self.request.cliente_id
