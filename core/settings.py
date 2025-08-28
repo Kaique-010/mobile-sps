@@ -104,7 +104,7 @@ INSTALLED_APPS = [
     "SpsComissoes",
     "EnvioCobranca",
     "DRE",
-    "Gerencial",
+    #"Gerencial",
     "OrdemProducao",
     'parametros_admin',
     'mcp_agent_db',  
