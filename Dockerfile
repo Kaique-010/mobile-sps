@@ -21,10 +21,12 @@ RUN apk add --no-cache postgresql-client curl \
 # Copiar dependências do builder
 COPY --from=builder /root/.local /home/appuser/.local
 
+# Copiar docker-entrypoint.sh ANTES de mudar usuário
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
 # Copiar código
 COPY --chown=appuser:appuser . .
-COPY --chown=appuser:appuser docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
 
 # Configurar PATH e usuário
 ENV PATH=/home/appuser/.local/bin:$PATH \
