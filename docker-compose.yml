@@ -1,0 +1,75 @@
+version: "3.9"
+
+services:
+  # Redis para cache de permissões
+  redis:
+    image: redis:7-alpine
+    container_name: mobile_sps_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+
+  # Backend Django
+  backend:
+    build: .
+    container_name: mobile_sps_backend
+    restart: unless-stopped
+    env_file: .env
+    expose:
+      - "8000"
+    depends_on:
+      - redis
+    environment:
+      - REDIS_URL=redis://redis:6379/1
+      - CELERY_BROKER_URL=redis://redis:6379/0
+
+  # Celery Worker para auditoria assíncrona
+  celery_worker:
+    build: .
+    container_name: mobile_sps_celery_worker
+    restart: unless-stopped
+    env_file: .env
+    command: celery -A core worker --loglevel=info
+    depends_on:
+      - redis
+      - backend
+    environment:
+      - REDIS_URL=redis://redis:6379/1
+      - CELERY_BROKER_URL=redis://redis:6379/0
+
+  # Celery Beat para tarefas agendadas
+  celery_beat:
+    build: .
+    container_name: mobile_sps_celery_beat
+    restart: unless-stopped
+    env_file: .env
+    command: celery -A core beat --loglevel=info
+    depends_on:
+      - redis
+      - backend
+    environment:
+      - REDIS_URL=redis://redis:6379/1
+      - CELERY_BROKER_URL=redis://redis:6379/0
+
+  # Caddy (sem alterações)
+  caddy:
+    image: caddy:2
+    container_name: mobile_sps_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+
+volumes:
+  caddy_data:
+  caddy_config:
+  redis_data:

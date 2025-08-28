@@ -15347,3 +15347,302 @@ LINE 1: ...nome" FROM "entidades" U0 WHERE U0."enti_clie" = ("pedidosve...
 
 [2025-08-21 17:17:07,089] [ERROR] django.server: "GET /api/operario/dashboards/dashboard/?empresa_id=1&filial_id=1&usuario_id=1&cliente_id=177&userType=funcionario&accessToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzU1ODA4MDIxLCJqdGkiOiJlODU3OWY3ZGM5OGU0MjExOWVkYmU4NmVkMzJjZTBlNCIsInVzdWFfY29kaSI6MTAwLCJ1c2VybmFtZSI6Im1vYmlsZSIsInVzdWFyaW9faWQiOjEwMCwibGljZV9pZCI6MiwibGljZV9ub21lIjoiT1BFUlx1MDBjMVJJTyBGRVJST1ZJXHUwMGMxUklPIEVTUE9SVEUgQ0xVQkUgLSBPRkVDIiwiZW1wcmVzYV9pZCI6MSwiZmlsaWFsX2lkIjoxfQ.6p-6iEN0V5fsMh_cKNiMR84niM3474WhXZypapoaHx0&refreshToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc1NjQxMjIyMSwianRpIjoiYzU5ZmM1NGYwYjNlNGEzNTkyOTY0ZGMxMmVkZTNlNTAiLCJ1c3VhX2NvZGkiOjEwMCwidXNlcm5hbWUiOiJtb2JpbGUiLCJ1c3VhcmlvX2lkIjoxMDAsImxpY2VfaWQiOjIsImxpY2Vfbm9tZSI6Ik9QRVJcdTAwYzFSSU8gRkVSUk9WSVx1MDBjMVJJTyBFU1BPUlRFIENMVUJFIC0gT0ZFQyIsImVtcHJlc2FfaWQiOjEsImZpbGlhbF9pZCI6MX0.lUaIkIepV1xgK8fFbB4BdRNOcQenm9uJ2_7IQYGerWE&empr=1&fili=1&usua=100 HTTP/1.1" 500 30864
 [2025-08-21 17:42:01,008] [ERROR] Entidades.entilogin_view: [LOGIN FAILED] Documento 3600000000 n�o encontrado
+[2025-08-26 21:45:52,321] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '168.75.73.117'. You may need to add '168.75.73.117' to ALLOWED_HOSTS.
+[2025-08-26 21:45:52,669] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '168.75.73.117'. You may need to add '168.75.73.117' to ALLOWED_HOSTS.
+[2025-08-26 21:45:56,237] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '168.75.73.117'. You may need to add '168.75.73.117' to ALLOWED_HOSTS.
+[2025-08-26 21:45:56,367] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '168.75.73.117'. You may need to add '168.75.73.117' to ALLOWED_HOSTS.
+[2025-08-26 21:46:18,317] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '168.75.73.117'. You may need to add '168.75.73.117' to ALLOWED_HOSTS.
+[2025-08-26 21:46:18,448] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '168.75.73.117'. You may need to add '168.75.73.117' to ALLOWED_HOSTS.
+[2025-08-26 21:46:19,194] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '168.75.73.117'. You may need to add '168.75.73.117' to ALLOWED_HOSTS.
+[2025-08-26 21:46:19,334] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '168.75.73.117'. You may need to add '168.75.73.117' to ALLOWED_HOSTS.
+[2025-08-26 21:46:19,335] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '168.75.73.117'. You may need to add '168.75.73.117' to ALLOWED_HOSTS.
+[2025-08-26 21:46:19,446] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '168.75.73.117'. You may need to add '168.75.73.117' to ALLOWED_HOSTS.
+[2025-08-26 21:46:19,541] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '168.75.73.117'. You may need to add '168.75.73.117' to ALLOWED_HOSTS.
+[2025-08-26 21:46:19,643] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '168.75.73.117'. You may need to add '168.75.73.117' to ALLOWED_HOSTS.
+[2025-08-26 21:46:24,042] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '168.75.73.117'. You may need to add '168.75.73.117' to ALLOWED_HOSTS.
+[2025-08-26 21:46:24,153] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '168.75.73.117'. You may need to add '168.75.73.117' to ALLOWED_HOSTS.
+[2025-08-26 21:46:29,727] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '168.75.73.117'. You may need to add '168.75.73.117' to ALLOWED_HOSTS.
+[2025-08-26 21:46:29,827] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '168.75.73.117'. You may need to add '168.75.73.117' to ALLOWED_HOSTS.
+[2025-08-26 22:00:27,487] [ERROR] django.request: Internal Server Error: /api
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 34, in inner
+    response = get_response(request)
+  File "/home/ubuntu/mobile-sps/core/middleware.py", line 51, in __call__
+    raise Exception("URL malformada. Esperado /api/<slug>/...")
+Exception: URL malformada. Esperado /api/<slug>/...
+[2025-08-26 22:01:21,369] [ERROR] django.request: Internal Server Error: /api/
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 34, in inner
+    response = get_response(request)
+  File "/home/ubuntu/mobile-sps/core/middleware.py", line 51, in __call__
+    raise Exception("URL malformada. Esperado /api/<slug>/...")
+Exception: URL malformada. Esperado /api/<slug>/...
+[2025-08-26 22:01:34,806] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '168.75.73.117'. You may need to add '168.75.73.117' to ALLOWED_HOSTS.
+[2025-08-26 22:01:34,952] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '168.75.73.117'. You may need to add '168.75.73.117' to ALLOWED_HOSTS.
+[2025-08-26 22:01:39,004] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '168.75.73.117'. You may need to add '168.75.73.117' to ALLOWED_HOSTS.
+[2025-08-26 22:01:39,120] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '168.75.73.117'. You may need to add '168.75.73.117' to ALLOWED_HOSTS.
+[2025-08-26 22:01:42,870] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '168.75.73.117'. You may need to add '168.75.73.117' to ALLOWED_HOSTS.
+[2025-08-26 22:01:43,016] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '168.75.73.117'. You may need to add '168.75.73.117' to ALLOWED_HOSTS.
+[2025-08-26 22:01:48,248] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '168.75.73.117'. You may need to add '168.75.73.117' to ALLOWED_HOSTS.
+[2025-08-26 22:01:48,369] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '168.75.73.117'. You may need to add '168.75.73.117' to ALLOWED_HOSTS.
+[2025-08-26 22:01:56,325] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '168.75.73.117'. You may need to add '168.75.73.117' to ALLOWED_HOSTS.
+[2025-08-26 22:01:56,448] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '168.75.73.117'. You may need to add '168.75.73.117' to ALLOWED_HOSTS.
+[2025-08-26 22:02:29,213] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '168.75.73.117'. You may need to add '168.75.73.117' to ALLOWED_HOSTS.
+[2025-08-26 22:02:29,370] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '168.75.73.117'. You may need to add '168.75.73.117' to ALLOWED_HOSTS.
+[2025-08-26 22:02:37,201] [ERROR] django.request: Internal Server Error: /api/
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 34, in inner
+    response = get_response(request)
+  File "/home/ubuntu/mobile-sps/core/middleware.py", line 51, in __call__
+    raise Exception("URL malformada. Esperado /api/<slug>/...")
+Exception: URL malformada. Esperado /api/<slug>/...
+[2025-08-26 22:06:02,152] [ERROR] django.request: Internal Server Error: /api
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 34, in inner
+    response = get_response(request)
+  File "/home/ubuntu/mobile-sps/core/middleware.py", line 51, in __call__
+    raise Exception("URL malformada. Esperado /api/<slug>/...")
+Exception: URL malformada. Esperado /api/<slug>/...
+[2025-08-26 22:06:06,493] [ERROR] django.request: Internal Server Error: /api/casa
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 34, in inner
+    response = get_response(request)
+  File "/home/ubuntu/mobile-sps/core/middleware.py", line 51, in __call__
+    raise Exception("URL malformada. Esperado /api/<slug>/...")
+Exception: URL malformada. Esperado /api/<slug>/...
+[2025-08-26 22:06:09,572] [ERROR] django.request: Internal Server Error: /api/casaa
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 34, in inner
+    response = get_response(request)
+  File "/home/ubuntu/mobile-sps/core/middleware.py", line 51, in __call__
+    raise Exception("URL malformada. Esperado /api/<slug>/...")
+Exception: URL malformada. Esperado /api/<slug>/...
+[2025-08-26 22:07:49,515] [ERROR] django.request: Internal Server Error: /api/
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 34, in inner
+    response = get_response(request)
+  File "/home/ubuntu/mobile-sps/core/middleware.py", line 51, in __call__
+    raise Exception("URL malformada. Esperado /api/<slug>/...")
+Exception: URL malformada. Esperado /api/<slug>/...
+[2025-08-26 22:07:59,509] [ERROR] django.request: Internal Server Error: /api/casaa
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 34, in inner
+    response = get_response(request)
+  File "/home/ubuntu/mobile-sps/core/middleware.py", line 51, in __call__
+    raise Exception("URL malformada. Esperado /api/<slug>/...")
+Exception: URL malformada. Esperado /api/<slug>/...
+[2025-08-26 22:08:03,663] [ERROR] django.request: Internal Server Error: /api/casaa/
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 34, in inner
+    response = get_response(request)
+  File "/home/ubuntu/mobile-sps/core/middleware.py", line 51, in __call__
+    raise Exception("URL malformada. Esperado /api/<slug>/...")
+Exception: URL malformada. Esperado /api/<slug>/...
+[2025-08-26 22:08:11,299] [ERROR] django.request: Internal Server Error: /api/
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 34, in inner
+    response = get_response(request)
+  File "/home/ubuntu/mobile-sps/core/middleware.py", line 51, in __call__
+    raise Exception("URL malformada. Esperado /api/<slug>/...")
+Exception: URL malformada. Esperado /api/<slug>/...
+[2025-08-26 22:23:58,018] [ERROR] django.request: Internal Server Error: /api
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 34, in inner
+    response = get_response(request)
+  File "/home/ubuntu/mobile-sps/core/middleware.py", line 51, in __call__
+    raise Exception("URL malformada. Esperado /api/<slug>/...")
+Exception: URL malformada. Esperado /api/<slug>/...
+[2025-08-26 22:24:00,748] [ERROR] django.request: Internal Server Error: /api
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 34, in inner
+    response = get_response(request)
+  File "/home/ubuntu/mobile-sps/core/middleware.py", line 51, in __call__
+    raise Exception("URL malformada. Esperado /api/<slug>/...")
+Exception: URL malformada. Esperado /api/<slug>/...
+[2025-08-27 09:14:16,347] [ERROR] django.request: Internal Server Error: /api/casaa/licencas/login/
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/db/backends/base/base.py", line 217, in ensure_connection
+    self.connect()
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/db/backends/base/base.py", line 195, in connect
+    self.connection = self.get_new_connection(conn_params)
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/db/backends/postgresql/base.py", line 178, in get_new_connection
+    connection = Database.connect(**conn_params)
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "localhost" (127.0.0.1), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 34, in inner
+    response = get_response(request)
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/base.py", line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/base.py", line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/views/decorators/csrf.py", line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/views/generic/base.py", line 71, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/rest_framework/views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/rest_framework/views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/rest_framework/views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/rest_framework/views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "/home/ubuntu/mobile-sps/Licencas/views.py", line 42, in post
+    licenca = Licencas.objects.using(banco).filter(lice_docu=docu).first()
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/db/models/query.py", line 653, in first
+    for obj in (self if self.ordered else self.order_by('pk'))[:1]:
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/db/models/query.py", line 274, in __iter__
+    self._fetch_all()
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/db/models/query.py", line 1242, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/db/models/query.py", line 55, in __iter__
+    results = compiler.execute_sql(chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size)
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/db/models/sql/compiler.py", line 1140, in execute_sql
+    cursor = self.connection.cursor()
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/db/backends/base/base.py", line 256, in cursor
+    return self._cursor()
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/db/backends/base/base.py", line 233, in _cursor
+    self.ensure_connection()
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/db/backends/base/base.py", line 216, in ensure_connection
+    with self.wrap_database_errors:
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/db/utils.py", line 89, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/db/backends/base/base.py", line 217, in ensure_connection
+    self.connect()
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/db/backends/base/base.py", line 195, in connect
+    self.connection = self.get_new_connection(conn_params)
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/db/backends/postgresql/base.py", line 178, in get_new_connection
+    connection = Database.connect(**conn_params)
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+django.db.utils.OperationalError: connection to server at "localhost" (127.0.0.1), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+[2025-08-27 11:22:41,751] [ERROR] django.request: Internal Server Error: /api/null/notificacoes/listar/
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 34, in inner
+    response = get_response(request)
+  File "/home/ubuntu/mobile-sps/core/middleware.py", line 58, in __call__
+    raise Exception(f"Licença com slug '{slug}' não encontrada.")
+Exception: Licença com slug 'null' não encontrada.
+[2025-08-27 11:23:11,697] [ERROR] django.request: Internal Server Error: /api/null/notificacoes/listar/
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 34, in inner
+    response = get_response(request)
+  File "/home/ubuntu/mobile-sps/core/middleware.py", line 58, in __call__
+    raise Exception(f"Licença com slug '{slug}' não encontrada.")
+Exception: Licença com slug 'null' não encontrada.
+[2025-08-27 11:23:41,692] [ERROR] django.request: Internal Server Error: /api/null/notificacoes/listar/
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 34, in inner
+    response = get_response(request)
+  File "/home/ubuntu/mobile-sps/core/middleware.py", line 58, in __call__
+    raise Exception(f"Licença com slug '{slug}' não encontrada.")
+Exception: Licença com slug 'null' não encontrada.
+[2025-08-27 11:24:11,695] [ERROR] django.request: Internal Server Error: /api/null/notificacoes/listar/
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 34, in inner
+    response = get_response(request)
+  File "/home/ubuntu/mobile-sps/core/middleware.py", line 58, in __call__
+    raise Exception(f"Licença com slug '{slug}' não encontrada.")
+Exception: Licença com slug 'null' não encontrada.
+[2025-08-27 11:24:41,700] [ERROR] django.request: Internal Server Error: /api/null/notificacoes/listar/
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 34, in inner
+    response = get_response(request)
+  File "/home/ubuntu/mobile-sps/core/middleware.py", line 58, in __call__
+    raise Exception(f"Licença com slug '{slug}' não encontrada.")
+Exception: Licença com slug 'null' não encontrada.
+[2025-08-27 11:25:11,692] [ERROR] django.request: Internal Server Error: /api/null/notificacoes/listar/
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 34, in inner
+    response = get_response(request)
+  File "/home/ubuntu/mobile-sps/core/middleware.py", line 58, in __call__
+    raise Exception(f"Licença com slug '{slug}' não encontrada.")
+Exception: Licença com slug 'null' não encontrada.
+[2025-08-27 11:25:41,694] [ERROR] django.request: Internal Server Error: /api/null/notificacoes/listar/
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 34, in inner
+    response = get_response(request)
+  File "/home/ubuntu/mobile-sps/core/middleware.py", line 58, in __call__
+    raise Exception(f"Licença com slug '{slug}' não encontrada.")
+Exception: Licença com slug 'null' não encontrada.
+[2025-08-27 11:26:11,690] [ERROR] django.request: Internal Server Error: /api/null/notificacoes/listar/
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 34, in inner
+    response = get_response(request)
+  File "/home/ubuntu/mobile-sps/core/middleware.py", line 58, in __call__
+    raise Exception(f"Licença com slug '{slug}' não encontrada.")
+Exception: Licença com slug 'null' não encontrada.
+[2025-08-27 11:26:41,701] [ERROR] django.request: Internal Server Error: /api/null/notificacoes/listar/
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 34, in inner
+    response = get_response(request)
+  File "/home/ubuntu/mobile-sps/core/middleware.py", line 58, in __call__
+    raise Exception(f"Licença com slug '{slug}' não encontrada.")
+Exception: Licença com slug 'null' não encontrada.
+[2025-08-27 11:27:11,699] [ERROR] django.request: Internal Server Error: /api/null/notificacoes/listar/
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 34, in inner
+    response = get_response(request)
+  File "/home/ubuntu/mobile-sps/core/middleware.py", line 58, in __call__
+    raise Exception(f"Licença com slug '{slug}' não encontrada.")
+Exception: Licença com slug 'null' não encontrada.
+[2025-08-27 11:27:41,696] [ERROR] django.request: Internal Server Error: /api/null/notificacoes/listar/
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 34, in inner
+    response = get_response(request)
+  File "/home/ubuntu/mobile-sps/core/middleware.py", line 58, in __call__
+    raise Exception(f"Licença com slug '{slug}' não encontrada.")
+Exception: Licença com slug 'null' não encontrada.
+[2025-08-27 11:28:11,699] [ERROR] django.request: Internal Server Error: /api/null/notificacoes/listar/
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 34, in inner
+    response = get_response(request)
+  File "/home/ubuntu/mobile-sps/core/middleware.py", line 58, in __call__
+    raise Exception(f"Licença com slug '{slug}' não encontrada.")
+Exception: Licença com slug 'null' não encontrada.
+[2025-08-27 11:28:41,703] [ERROR] django.request: Internal Server Error: /api/null/notificacoes/listar/
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 34, in inner
+    response = get_response(request)
+  File "/home/ubuntu/mobile-sps/core/middleware.py", line 58, in __call__
+    raise Exception(f"Licença com slug '{slug}' não encontrada.")
+Exception: Licença com slug 'null' não encontrada.
+[2025-08-27 11:29:11,705] [ERROR] django.request: Internal Server Error: /api/null/notificacoes/listar/
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 34, in inner
+    response = get_response(request)
+  File "/home/ubuntu/mobile-sps/core/middleware.py", line 58, in __call__
+    raise Exception(f"Licença com slug '{slug}' não encontrada.")
+Exception: Licença com slug 'null' não encontrada.
+[2025-08-27 15:51:26,432] [ERROR] django.request: Internal Server Error: /api/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 34, in inner
+    response = get_response(request)
+  File "/home/ubuntu/mobile-sps/core/middleware.py", line 58, in __call__
+    raise Exception(f"Licença com slug '{slug}' não encontrada.")
+Exception: Licença com slug 'vendor' não encontrada.
+[2025-08-27 17:47:47,951] [ERROR] django.request: Internal Server Error: /api/
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 34, in inner
+    response = get_response(request)
+  File "/home/ubuntu/mobile-sps/core/middleware.py", line 51, in __call__
+    raise Exception("URL malformada. Esperado /api/<slug>/...")
+Exception: URL malformada. Esperado /api/<slug>/...
+[2025-08-27 17:58:41,946] [ERROR] django.request: Internal Server Error: /api/
+Traceback (most recent call last):
+  File "/home/ubuntu/mobile-sps/venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 34, in inner
+    response = get_response(request)
+  File "/home/ubuntu/mobile-sps/core/middleware.py", line 51, in __call__
+    raise Exception("URL malformada. Esperado /api/<slug>/...")
+Exception: URL malformada. Esperado /api/<slug>/...
+[2025-08-27 18:00:15,143] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '117.73.75.168'. You may need to add '117.73.75.168' to ALLOWED_HOSTS.
+[2025-08-27 18:00:15,491] [ERROR] django.security.DisallowedHost: Invalid HTTP_HOST header: '117.73.75.168'. You may need to add '117.73.75.168' to ALLOWED_HOSTS.
