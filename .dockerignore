@@ -1,10 +1,48 @@
-__pycache__
-*.pyc
-*.pyo
-*.pyd
-*.sqlite3
-.env
-*.git
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+.tox/
+
+# Django
 *.log
+db.sqlite3
+media/
+staticfiles/
+
+# Development
+.git/
+.github/
+.vscode/
+.idea/
 *.md
+README*
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Environment
+.env*
+!.env
+
+# Node
+node_modules/
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary
+*.tmp
+*.temp
+/tmp/
 gunicorn.sock

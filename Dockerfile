@@ -1,52 +1,41 @@
-FROM python:3.11-slim
+# Stage 1: Build dependencies
+FROM python:3.11-alpine as builder
+WORKDIR /build
 
-# Otimizações de sistema
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+# Instalar dependências de build
+RUN apk add --no-cache gcc musl-dev postgresql-dev libffi-dev
 
-# Instalar dependências do sistema OTIMIZADAS
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    g++ \
-    postgresql-client \
-    netcat-openbsd \
-    curl \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && rm -rf /tmp/* \
-    && rm -rf /var/tmp/*
+# Copiar e instalar requirements
+COPY requirements.txt .
+RUN pip install --user --no-cache-dir -r requirements.txt
 
-# Definir diretório de trabalho
+# Stage 2: Runtime MÍNIMO
+FROM python:3.11-alpine
 WORKDIR /app
 
-# Copiar e instalar requirements PRIMEIRO (cache Docker)
-COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt \
-    && pip install --no-cache-dir gevent gunicorn[gevent]
+# Instalar apenas runtime essencial
+RUN apk add --no-cache postgresql-client curl \
+    && addgroup -g 1000 appuser \
+    && adduser -D -u 1000 -G appuser appuser
 
-# Copiar código da aplicação
-COPY . .
+# Copiar dependências do builder
+COPY --from=builder /root/.local /home/appuser/.local
 
-# Copiar e dar permissão ao script de entrada
-COPY docker-entrypoint.sh /docker-entrypoint.sh
+# Copiar código
+COPY --chown=appuser:appuser . .
+COPY --chown=appuser:appuser docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
-# Criar usuário não-root para segurança
-RUN groupadd -r appuser && useradd -r -g appuser appuser \
-    && chown -R appuser:appuser /app
+# Configurar PATH e usuário
+ENV PATH=/home/appuser/.local/bin:$PATH \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
 
-# Expor porta
+USER appuser
 EXPOSE 8000
 
-# Mudar para usuário não-root
-USER appuser
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+# Health check otimizado
+HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=2 \
     CMD curl -f http://localhost:8000/health/ || exit 1
 
-# Definir entrypoint
 ENTRYPOINT ["/docker-entrypoint.sh"]
