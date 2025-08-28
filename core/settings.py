@@ -116,17 +116,17 @@ INSTALLED_APPS = [
 
 # Middleware
 MIDDLEWARE = [
+    'core.performance_middleware.PerformanceMiddleware',  # PRIMEIRO
     'django.middleware.security.SecurityMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'auditoria.signals.AuditoriaSignalMiddleware', 
-    'auditoria.middleware.AuditoriaMiddleware',
     'core.middleware.LicencaMiddleware',
+    # 'auditoria.middleware.AuditoriaMiddleware',  # DESABILITADO
 ]
 
 # Configurações de CORS
