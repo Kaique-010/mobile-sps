@@ -7,6 +7,12 @@ from decimal import Decimal, ROUND_HALF_UP
 
 
 def get_db_from_slug(slug):
+    import time
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    start_time = time.time()
+    
     if not slug:
         return "default"
 
@@ -15,8 +21,12 @@ def get_db_from_slug(slug):
         raise Exception(f"Licença com slug '{slug}' não encontrada.")
 
     if slug in settings.DATABASES:
+        logger.info(f"🔄 Conexão {slug} já existe (reutilizada)")
         return slug
 
+    # Log de diagnóstico de rede
+    logger.warning(f"🌐 Criando nova conexão para {slug} -> {licenca['db_host']}:{licenca['db_port']}")
+    
     prefixo = slug.upper()
     db_user = config(f"{prefixo}_DB_USER")
     db_password = config(f"{prefixo}_DB_PASSWORD")
@@ -28,10 +38,20 @@ def get_db_from_slug(slug):
         'PASSWORD': db_password,
         'HOST': licenca["db_host"],
         'PORT': licenca["db_port"],
+        'OPTIONS': {
+            'options': '-c timezone=America/Araguaina',
+            'connect_timeout': 30,  # Aumentado de 10 para 30
+            'application_name': 'mobile_sps',
+        },
+        'CONN_MAX_AGE': 600,
+        'CONN_HEALTH_CHECKS': True,
     }
 
     connections.ensure_defaults(slug)
     connections.prepare_test_settings(slug)
+    
+    total_time = (time.time() - start_time) * 1000
+    logger.warning(f"⏱️  Conexão {slug} criada em {total_time:.2f}ms")
 
     return slug
 

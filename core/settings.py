@@ -65,6 +65,7 @@ DATABASE_ROUTERS = ['core.db_router.LicencaDBRouter']
 
 # Definir aplicativos instalados
 INSTALLED_APPS = [
+    'core',  # Adicionar core como app
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -335,11 +336,11 @@ CACHES = {
             'CONNECTION_POOL_KWARGS': {
                 'max_connections': 50,
                 'retry_on_timeout': True,
-                'socket_connect_timeout': 5,  # Timeout de conexão mais rápido
-                'socket_timeout': 5,  # Timeout de socket mais rápido
-                'health_check_interval': 30,  # Verificar saúde das conexões
+                'socket_connect_timeout': 15,  # Aumentado de 5 para 15
+                'socket_timeout': 15,  # Aumentado de 5 para 15
+                'health_check_interval': 30,
             },
-            'IGNORE_EXCEPTIONS': True,  # Não falhar se Redis estiver indisponível
+            'IGNORE_EXCEPTIONS': True,
         },
         'KEY_PREFIX': 'mobile_sps',
         'TIMEOUT': 3600,
