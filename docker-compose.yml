@@ -1,18 +1,26 @@
 version: "3.9"
 
 services:
-  # Redis para cache de permissões
+  # Redis OTIMIZADO para cache agressivo
   redis:
     image: redis:7-alpine
     container_name: mobile_sps_redis
     restart: unless-stopped
-    command: redis-server --appendonly yes
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --save 60 1000
+      --tcp-keepalive 60
     volumes:
       - redis_data:/data
     ports:
       - "6379:6379"
+    sysctls:
+      - net.core.somaxconn=65535
 
-  # Backend Django
+  # Backend Django ULTRA-OTIMIZADO
   backend:
     build: .
     container_name: mobile_sps_backend
@@ -25,22 +33,46 @@ services:
     environment:
       - REDIS_URL=redis://redis:6379/1
       - CELERY_BROKER_URL=redis://redis:6379/0
+      - DJANGO_SETTINGS_MODULE=core.settings
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  # Celery Worker para auditoria assíncrona
+  # Celery Worker OTIMIZADO
   celery_worker:
     build: .
     container_name: mobile_sps_celery_worker
     restart: unless-stopped
     env_file: .env
-    command: celery -A core worker --loglevel=info
+    command: >
+      celery -A core worker
+      --loglevel=info
+      --concurrency=4
+      --prefetch-multiplier=1
+      --max-tasks-per-child=1000
     depends_on:
       - redis
       - backend
     environment:
       - REDIS_URL=redis://redis:6379/1
       - CELERY_BROKER_URL=redis://redis:6379/0
+      - PYTHONUNBUFFERED=1
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
-  # Celery Beat para tarefas agendadas
+  # Celery Beat
   celery_beat:
     build: .
     container_name: mobile_sps_celery_beat
@@ -53,8 +85,12 @@ services:
     environment:
       - REDIS_URL=redis://redis:6379/1
       - CELERY_BROKER_URL=redis://redis:6379/0
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
-  # Caddy (sem alterações)
+  # Caddy com cache agressivo
   caddy:
     image: caddy:2
     container_name: mobile_sps_caddy
@@ -68,8 +104,19 @@ services:
       - caddy_config:/config
     depends_on:
       - backend
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
 volumes:
   caddy_data:
   caddy_config:
   redis_data:
+
+networks:
+  default:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
