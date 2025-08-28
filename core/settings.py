@@ -234,12 +234,7 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
-        'file': {
-            'level': 'ERROR',
-            'class': 'logging.FileHandler',
-            'filename': 'django_errors.log',
-            'formatter': 'verbose',
-        },
+        # Removido o handler 'file' que causava erro de permissão
     },
     'root': {
         'handlers': ['console'],
@@ -247,12 +242,12 @@ LOGGING = {
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],  # Removido 'file'
             'level': 'INFO',
             'propagate': True,
         },
         'django.request': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],  # Removido 'file'
             'level': 'ERROR',
             'propagate': False,
         },
@@ -262,22 +257,22 @@ LOGGING = {
             'propagate': False,
         },
         'Orcamentos': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],  # Removido 'file'
             'level': 'DEBUG',
             'propagate': False,
         },
         'Entidades': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],  # Removido 'file'
             'level': 'DEBUG',
             'propagate': False,
         },
         'Produtos': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],  # Removido 'file'
             'level': 'DEBUG',
             'propagate': False,
         },
         'Pedidos': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],  # Removido 'file'
             'level': 'DEBUG',
             'propagate': False,
         },
@@ -286,7 +281,6 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': False,
             'formatter': 'verbose',
-
         },
         'Pisos': {
             'handlers': ['console'],
