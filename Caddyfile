@@ -1,0 +1,6 @@
+mobile-sps.site {
+    reverse_proxy backend:8000
+    encode gzip
+    tls leokaique7@gmail.com
+}
+

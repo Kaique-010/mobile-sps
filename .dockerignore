@@ -7,3 +7,4 @@ __pycache__
 *.git
 *.log
 *.md
+gunicorn.sock
