@@ -6,25 +6,22 @@
 -- =====================================================
 
 -- Entrada automática de estoque
-INSERT INTO parametro_sistema (para_empr, para_fili, para_modu, para_nome, para_valo, para_desc, para_ativ, para_tipo, para_obri, para_cria, para_alte)
-SELECT 
-    1 as para_empr,  -- Ajustar conforme empresa
-    1 as para_fili,  -- Ajustar conforme filial
-    m.modu_codi as para_modu,
-    'entrada_automatica_estoque' as para_nome,
-    'true' as para_valo,
-    'Permite entrada automática de estoque ao receber mercadorias' as para_desc,
-    1 as para_ativ,
-    'BOOLEAN' as para_tipo,
-    1 as para_obri,
-    NOW() as para_cria,
-    NOW() as para_alte
-FROM modulo m 
-WHERE m.modu_nome LIKE '%estoque%' OR m.modu_nome LIKE '%Estoque%'
-LIMIT 1;
+insert into parametrosmobile (para_empr, para_fili, para_modu, para_nome, para_desc, para_ativ, para_data_alte, para_usua_alte)
+select
+1 as para_empr,
+1 as para_fili,
+modu_codi as para_modu,
+'entrada_automatica_estoque' as para_nome,
+'Permite entrada automática de estoque ao receber mercadorias' as para_desc,
+true as para_ativ,
+now() as para_data_alte,
+1 as para_usua_alte
+from modulosmobile
+where modu_nome = 'Entradas_Estoque'
+
 
 -- Saída automática de estoque
-INSERT INTO parametro_sistema (para_empr, para_fili, para_modu, para_nome, para_valo, para_desc, para_ativ, para_tipo, para_obri, para_cria, para_alte)
+insert into parametrosmobile (para_empr, para_fili, para_modu, para_nome, para_desc, para_ativ, para_data_alte, para_usua_alte)
 SELECT 
     1 as para_empr,
     1 as para_fili,
