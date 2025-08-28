@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from threading import local
 from core.licenca_context import set_current_request, LICENCAS_MAP
 from core.utils import get_licenca_db_config
@@ -65,19 +66,32 @@ class LicencaMiddleware:
         # Não usar fallback para licencas.json
         modulos_disponiveis = []
         try:
-            # Importar aqui para evitar circular import
-            from parametros_admin.utils import get_modulos_liberados_empresa
+            # Cache de módulos por licença (5 minutos)
+            cache_key = f"modulos_licenca_{slug}_{empresa_id}_{filial_id}"
+            modulos_disponiveis = cache.get(cache_key)
             
-            # Simular empresa/filial padrão para obter módulos
-            empresa_id = 1
-            filial_id = 1
+            if modulos_disponiveis is None:
+                try:
+                    # Importar aqui para evitar circular import
+                    from parametros_admin.utils import get_modulos_liberados_empresa
+                    
+                    # Obter configuração do banco
+                    banco = get_licenca_db_config(request)
             
-            # Obter configuração do banco
-            banco = get_licenca_db_config(request)
-
-            if banco:
-                modulos_db = get_modulos_liberados_empresa(banco, empresa_id, filial_id)
-                modulos_disponiveis = modulos_db
+                    if banco:
+                        modulos_db = get_modulos_liberados_empresa(banco, empresa_id, filial_id)
+                        modulos_disponiveis = modulos_db
+                        # Cache por 5 minutos
+                        cache.set(cache_key, modulos_disponiveis, 300)
+                    else:
+                        modulos_disponiveis = []
+                     
+                except Exception as e:
+                    print(f"Erro ao obter módulos do banco: {e}")
+                    print("AVISO: Não foi possível obter módulos do banco. Verifique se a tabela modulosmobile está populada.")
+                    modulos_disponiveis = []
+                    # Cache vazio por 1 minuto para evitar queries repetidas em caso de erro
+                    cache.set(cache_key, modulos_disponiveis, 60)
              
         except Exception as e:
             print(f"Erro ao obter módulos do banco: {e}")

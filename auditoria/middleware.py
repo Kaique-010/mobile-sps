@@ -36,7 +36,11 @@ class AuditoriaMiddleware:
         # DESABILITADO TEMPORARIAMENTE PARA OTIMIZAÇÃO DE LOGIN
         # TODO: Implementar auditoria assíncrona com Celery
         return self.get_response(request)
-    
+        
+        # CÓDIGO ORIGINAL COMENTADO ABAIXO:
+        # if not request.path.startswith('/api/'):
+        #     return self.get_response(request)
+
     def extrair_modelo_e_id_da_url(self, url):
         """Extrai o nome do modelo e ID do objeto da URL"""
         # Padrões comuns de URL da API REST
