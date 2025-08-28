@@ -46,3 +46,16 @@ Thumbs.db
 *.temp
 /tmp/
 gunicorn.sock
+
+# Adicione estas linhas para reduzir o contexto
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.git/
+.vscode/
+.github/
+node_modules/
+*.log
+.env
+.env.*

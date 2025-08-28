@@ -3,7 +3,12 @@ FROM python:3.11-slim-bookworm AS builder
 WORKDIR /build
 
 # Instalar dependências de build
-RUN apk add --no-cache gcc musl-dev postgresql-dev libffi-dev
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libc6-dev \
+    libpq-dev \
+    libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copiar e instalar requirements
 COPY requirements.txt .
@@ -14,9 +19,12 @@ FROM python:3.11-slim-bookworm
 WORKDIR /app
 
 # Instalar apenas runtime essencial
-RUN apk add --no-cache postgresql-client curl \
-    && addgroup -g 1000 appuser \
-    && adduser -D -u 1000 -G appuser appuser
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    postgresql-client \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd -g 1000 appuser \
+    && useradd -d /home/appuser -s /bin/bash -m -u 1000 -g appuser appuser
 
 # Copiar dependências do builder
 COPY --from=builder /root/.local /home/appuser/.local
