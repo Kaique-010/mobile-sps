@@ -32,6 +32,11 @@ class AuditoriaMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
     
+    def __call__(self, request):
+        # DESABILITADO TEMPORARIAMENTE PARA OTIMIZAÇÃO DE LOGIN
+        # TODO: Implementar auditoria assíncrona com Celery
+        return self.get_response(request)
+    
     def extrair_modelo_e_id_da_url(self, url):
         """Extrai o nome do modelo e ID do objeto da URL"""
         # Padrões comuns de URL da API REST
