@@ -27,9 +27,12 @@ if USE_LOCAL_DB:
             'HOST': config('LOCAL_DB_HOST'),
             'PORT': config('LOCAL_DB_PORT'),
             'OPTIONS': {
-                'options': '-c timezone=America/Araguaina'
+                'options': '-c timezone=America/Araguaina',
+                'connect_timeout': 10,
+                'application_name': 'mobile_sps',
             },
             'CONN_MAX_AGE': 300,  # 5 minutos para local
+            'CONN_HEALTH_CHECKS': True,  # Verificar saúde das conexões
         }
     }
 else:
@@ -42,9 +45,12 @@ else:
             'HOST': config('REMOTE_DB_HOST'),
             'PORT': config('REMOTE_DB_PORT'),
             'OPTIONS': {
-                'options': '-c timezone=America/Araguaina'
+                'options': '-c timezone=America/Araguaina',
+                'connect_timeout': 10,
+                'application_name': 'mobile_sps',
             },
             'CONN_MAX_AGE': 600,  # 10 minutos para produção
+            'CONN_HEALTH_CHECKS': True,  # Verificar saúde das conexões
         }
     }
 
@@ -56,18 +62,6 @@ logger.warning("🔗 CONFIGURAÇÃO DO BANCO: %s", DATABASES['default'])
 
 
 DATABASE_ROUTERS = ['core.db_router.LicencaDBRouter']
-
-# Cache para consultas frequentes (aplicado globalmente)
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'unique-snowflake',
-        'TIMEOUT': 300,  # 5 minutos
-        'OPTIONS': {
-            'MAX_ENTRIES': 1000,
-        }
-    }
-}
 
 # Definir aplicativos instalados
 INSTALLED_APPS = [
@@ -331,7 +325,7 @@ def starttls_patch(self, *args, **kwargs):
 smtplib.SMTP.starttls = starttls_patch
 
 
-# Cache Redis no container
+# Cache Redis no container - configuração otimizada
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
@@ -341,7 +335,11 @@ CACHES = {
             'CONNECTION_POOL_KWARGS': {
                 'max_connections': 50,
                 'retry_on_timeout': True,
-            }
+                'socket_connect_timeout': 5,  # Timeout de conexão mais rápido
+                'socket_timeout': 5,  # Timeout de socket mais rápido
+                'health_check_interval': 30,  # Verificar saúde das conexões
+            },
+            'IGNORE_EXCEPTIONS': True,  # Não falhar se Redis estiver indisponível
         },
         'KEY_PREFIX': 'mobile_sps',
         'TIMEOUT': 3600,
