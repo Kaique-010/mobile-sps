@@ -1,1 +1,54 @@
-#!/bin/bash\nset -e\n\n# Função para log com timestamp\nlog() {\n    echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1"\n}\n\nlog "🚀 Iniciando container ULTRA-OTIMIZADO..."\n\n# Aguardar Redis (máximo 10s)\nlog "⏳ Aguardando Redis..."\nfor i in {1..10}; do\n    if nc -z redis 6379; then\n        log "✅ Redis conectado!"\n        break\n    fi\n    sleep 1\ndone\n\n# Pré-aquecimento PARALELO\nlog "🔥 Iniciando pré-aquecimento paralelo..."\n(\n    # Coletar arquivos estáticos em background\n    python manage.py collectstatic --noinput --clear &\n    \n    # Aquecer cache em background\n    python -c "\n    import django\n    django.setup()\n    from django.core.cache import cache\n    cache.set('warmup', 'ready', 3600)\n    print('✅ Cache aquecido')\n    " &\n    \n    wait\n) &\n\n# Aguardar pré-aquecimento\nwait\n\nlog "🚀 Iniciando Gunicorn OTIMIZADO..."\nexec gunicorn core.wsgi:application \\n    --bind 0.0.0.0:8000 \\n    --workers ${GUNICORN_WORKERS:-2} \\n    --threads ${GUNICORN_THREADS:-4} \\n    --worker-class gevent \\n    --worker-connections 1000 \\n    --max-requests 1000 \\n    --max-requests-jitter 100 \\n    --preload \\n    --timeout 30 \\n    --keep-alive 5 \\n    --log-level info\n
+#!/bin/bash
+set -e
+
+# Função para log com timestamp
+log() {
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1"
+}
+
+log "🚀 Iniciando container ULTRA-OTIMIZADO..."
+
+# Aguardar Redis (máximo 10s)
+log "⏳ Aguardando Redis..."
+for i in {1..10}; do
+    if nc -z redis 6379; then
+        log "✅ Redis conectado!"
+        break
+    fi
+    sleep 1
+done
+
+# Pré-aquecimento PARALELO
+log "🔥 Iniciando pré-aquecimento paralelo..."
+(
+    # Coletar arquivos estáticos em background
+    python manage.py collectstatic --noinput --clear &
+    
+    # Aquecer cache em background
+    python -c "
+    import django
+    django.setup()
+    from django.core.cache import cache
+    cache.set('warmup', 'ready', 3600)
+    print('✅ Cache aquecido')
+    " &
+    
+    wait
+) &
+
+# Aguardar pré-aquecimento
+wait
+
+log "🚀 Iniciando Gunicorn OTIMIZADO..."
+exec gunicorn core.wsgi:application \
+    --bind 0.0.0.0:8000 \
+    --workers ${GUNICORN_WORKERS:-2} \
+    --threads ${GUNICORN_THREADS:-4} \
+    --worker-class gevent \
+    --worker-connections 1000 \
+    --max-requests 1000 \
+    --max-requests-jitter 100 \
+    --preload \
+    --timeout 120 \
+    --keep-alive 300 \
+    --log-level info
