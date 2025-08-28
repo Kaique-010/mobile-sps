@@ -6,11 +6,12 @@ from Licencas.views import LoginView, licencas_mapa
 from django.contrib import admin
 from django.urls import path, include
 from Licencas.views import licencas_mapa
-from .views import health_check  # Adicionar import
+from . import views
 
 urlpatterns = [
     # Endpoint de health para Docker
-    path('health/', health_check, name='health-check'),
+    path('health/', views.health_check, name='health'),
+    path('api/warm-cache/', views.warm_cache_endpoint, name='warm_cache'),
     
     # Rota pública (sem slug)
     path('api/licencas/mapa/', licencas_mapa, name='licencas-mapa'),

@@ -8,7 +8,30 @@ class CoreConfig(AppConfig):
     name = 'core'
     
     def ready(self):
-        """Executado quando Django termina de carregar"""
+        """Executado quando o Django está pronto"""
+        # Importar aqui para evitar circular imports
+        import os
+        
+        # Só executar no processo principal (não nos workers)
+        if os.environ.get('RUN_MAIN') != 'true':
+            return
+            
+        logger.info("🚀 Core app inicializado - preparando cache warming")
+        
+        # Executar cache warming após 2 segundos (dar tempo para tudo inicializar)
+        import threading
+        import time
+        
+        def delayed_warming():
+            time.sleep(2)
+            try:
+                from core.cache_warming import warm_cache_async
+                warm_cache_async()
+            except Exception as e:
+                logger.error(f"❌ Erro ao iniciar cache warming: {e}")
+        
+        thread = threading.Thread(target=delayed_warming, daemon=True)
+        thread.start()
         try:
             from .connection_preloader import preload_database_connections
             preload_database_connections()
