@@ -32,8 +32,12 @@ class CoreConfig(AppConfig):
         
         thread = threading.Thread(target=delayed_warming, daemon=True)
         thread.start()
-        try:
-            from .connection_preloader import preload_database_connections
-            preload_database_connections()
-        except Exception as e:
-            logger.error(f"Erro no pré-carregamento: {e}")
+        
+        # REMOVIDO: pré-carregamento de conexões (causa do delay)
+        # try:
+        #     from .connection_preloader import preload_database_connections
+        #     preload_database_connections()
+        # except Exception as e:
+        #     logger.error(f"Erro no pré-carregamento: {e}")
+        
+        logger.info("✅ Core inicializado SEM pré-carregamento de conexões")
