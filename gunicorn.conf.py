@@ -1,4 +1,4 @@
-bind = "127.0.0.1:8000"
+wsgi_app = "core.wsgi:application"
 workers = 4
 worker_class = "sync"
 worker_connections = 1000
