@@ -1,5 +1,5 @@
 # Stage 1: Build dependencies
-FROM python:3.11-alpine as builder
+FROM python:3.11-slim-bookworm AS builder
 WORKDIR /build
 
 # Instalar dependências de build
@@ -10,7 +10,7 @@ COPY requirements.txt .
 RUN pip install --user --no-cache-dir -r requirements.txt
 
 # Stage 2: Runtime MÍNIMO
-FROM python:3.11-alpine
+FROM python:3.11-slim-bookworm
 WORKDIR /app
 
 # Instalar apenas runtime essencial
@@ -23,6 +23,7 @@ COPY --from=builder /root/.local /home/appuser/.local
 
 # Copiar docker-entrypoint.sh ANTES de mudar usuário
 COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN sed -i 's/\r$//' /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
 # Copiar código
