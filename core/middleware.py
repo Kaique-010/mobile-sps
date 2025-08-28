@@ -67,7 +67,7 @@ class LicencaMiddleware:
         # Medição do tempo de cache/banco
         cache_start = time.time()
         
-        # Cache de módulos por licença (5 minutos)
+        # Cache de módulos por licença (30 minutos - mais tempo)
         empresa_id = 1
         filial_id = 1
         cache_key = f"modulos_licenca_{slug}_{empresa_id}_{filial_id}"
@@ -79,16 +79,28 @@ class LicencaMiddleware:
             db_start = time.time()
             try:
                 # Importar aqui para evitar circular import
-                from parametros_admin.utils import get_modulos_liberados_empresa
+                from parametros_admin.models import PermissaoModulo
                 
                 # Obter configuração do banco
                 banco = get_licenca_db_config(request)
 
                 if banco:
-                    modulos_db = get_modulos_liberados_empresa(banco, empresa_id, filial_id)
-                    modulos_disponiveis = modulos_db
-                    # Cache por 5 minutos
-                    cache.set(cache_key, modulos_disponiveis, 300)
+                    # Query otimizada: buscar apenas campos necessários
+                    permissoes = PermissaoModulo.objects.using(banco).filter(
+                        perm_empr=empresa_id,
+                        perm_fili=filial_id,
+                        perm_ativ=True,
+                        perm_modu__modu_ativ=True  # Filtrar módulos ativos na query
+                    ).select_related('perm_modu').only(
+                        'perm_modu__modu_nome',  # Apenas o campo necessário
+                        'perm_modu__modu_ativ'
+                    )
+                    
+                    # Converter para lista de nomes
+                    modulos_disponiveis = [p.perm_modu.modu_nome for p in permissoes]
+                    
+                    # Cache por 30 minutos (mais tempo)
+                    cache.set(cache_key, modulos_disponiveis, 1800)
                 else:
                     modulos_disponiveis = []
                      
@@ -96,8 +108,8 @@ class LicencaMiddleware:
                 print(f"Erro ao obter módulos do banco: {e}")
                 print("AVISO: Não foi possível obter módulos do banco. Verifique se a tabela modulosmobile está populada.")
                 modulos_disponiveis = []
-                # Cache vazio por 1 minuto para evitar queries repetidas em caso de erro
-                cache.set(cache_key, modulos_disponiveis, 60)
+                # Cache vazio por 5 minutos para evitar queries repetidas em caso de erro
+                cache.set(cache_key, modulos_disponiveis, 300)
             
             db_time = (time.time() - db_start) * 1000
         else:
