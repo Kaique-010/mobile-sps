@@ -22,6 +22,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     curl \
+    netcat-traditional \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd -g 1000 appuser \
     && useradd -d /home/appuser -s /bin/bash -m -u 1000 -g appuser appuser
