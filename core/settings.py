@@ -81,7 +81,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt',
-    'sklearn',
+    #'sklearn',
     'Licencas',
     'Produtos',
     'Entidades',
