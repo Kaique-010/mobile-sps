@@ -13,6 +13,8 @@ from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from core.middleware import get_licenca_slug
 from .serializers import DashboardSerializer
 from django.db.models import Sum, F, OuterRef, Subquery, Max, Count
+from django.db.models.functions import Cast
+from django.db.models import BigIntegerField
 from decimal import Decimal
 from datetime import datetime
 from .utils import enviar_email, enviar_whatsapp
@@ -38,7 +40,7 @@ class DashboardAPIView(ModuloRequeridoMixin, APIView):
         )
 
         cliente_nome = Entidades.objects.filter(
-            enti_clie=OuterRef('pedi_forn')
+            enti_clie=Cast(OuterRef('pedi_forn'), BigIntegerField())
         ).values('enti_nome')[:1]
 
         pedidos = (

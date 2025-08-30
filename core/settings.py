@@ -57,8 +57,8 @@ else:
 
 import logging
 logger = logging.getLogger("django")
-logger.warning("🧠 BASE USADA: %s", "LOCAL" if USE_LOCAL_DB else "REMOTA")
-logger.warning("🔗 CONFIGURAÇÃO DO BANCO: %s", DATABASES['default'])
+logger.warning("🧠 BASE USADA: %s", "LOCAL" if USE_LOCAL_DB else "REMOTA")  # ← SEMPRE APARECE
+logger.warning("🔗 CONFIGURAÇÃO DO BANCO: %s", DATABASES['default'])  # ← SEMPRE APARECE
 
 
 DATABASE_ROUTERS = ['core.db_router.LicencaDBRouter']
@@ -214,32 +214,26 @@ GUNICORN_TIMEOUT = 120  # 2 minutos
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '[{asctime}] [{levelname}] {name}: {message}',
-            'style': '{',
-        },
-        'simple': {
-            'format': '{levelname}: {message}',
-            'style': '{',
-        },
-    },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
         },
-        # Removido o handler 'file' que causava erro de permissão
-    },
-    'root': {
-        'handlers': ['console'],
-        'level': 'INFO',
     },
     'loggers': {
-        'django': {
-            'handlers': ['console'],  # Removido 'file'
-            'level': 'INFO',
-            'propagate': True,
+        'django.server': {
+            'handlers': ['console'],
+            'level': 'ERROR' if not DEBUG else 'WARNING',  # Reduce server logs
+            'propagate': False,
+        },
+        'performance': {
+            'handlers': ['console'],
+            'level': 'WARNING' if not DEBUG else 'INFO',  # Only slow requests in production
+            'propagate': False,
+        },
+        'core.utils': {
+            'handlers': ['console'],
+            'level': 'ERROR' if not DEBUG else 'WARNING',  # Reduce connection logs
+            'propagate': False,
         },
         'django.request': {
             'handlers': ['console'],  # Removido 'file'
@@ -252,46 +246,52 @@ LOGGING = {
             'propagate': False,
         },
         'Orcamentos': {
-            'handlers': ['console'],  # Removido 'file'
-            'level': 'DEBUG',
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': False,
         },
         'Entidades': {
-            'handlers': ['console'],  # Removido 'file'
-            'level': 'DEBUG',
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': False,
         },
         'Produtos': {
-            'handlers': ['console'],  # Removido 'file'
-            'level': 'DEBUG',
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': False,
         },
         'Pedidos': {
-            'handlers': ['console'],  # Removido 'file'
-            'level': 'DEBUG',
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': False,
         },
         'listacasamento.views': {
             'handlers': ['console'],
-            'level': 'DEBUG',
+            'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': False,
             'formatter': 'verbose',
         },
         'Pisos': {
             'handlers': ['console'],
-            'level': 'DEBUG',
+            'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': False,
             'formatter': 'verbose',
         },
         'PedidosPisos': {
             'handlers': ['console'],
-            'level': 'DEBUG',
+            'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': False,
             'formatter': 'verbose',
         },
         'ItensPedidosPisos': {
             'handlers': ['console'],
-            'level': 'DEBUG',
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+            'formatter': 'verbose',
+        },
+        'performance': {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'WARNING',
             'propagate': False,
             'formatter': 'verbose',
         },
@@ -327,25 +327,36 @@ smtplib.SMTP.starttls = starttls_patch
 
 
 # Cache Redis no container - configuração otimizada
-CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': os.getenv('REDIS_URL', 'redis://redis:6379/1'),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            'CONNECTION_POOL_KWARGS': {
-                'max_connections': 50,
-                'retry_on_timeout': True,
-                'socket_connect_timeout': 15,  # Aumentado de 5 para 15
-                'socket_timeout': 15,  # Aumentado de 5 para 15
-                'health_check_interval': 30,
-            },
-            'IGNORE_EXCEPTIONS': True,
-        },
-        'KEY_PREFIX': 'mobile_sps',
-        'TIMEOUT': 3600,
+if USE_LOCAL_DB:
+    # Cache em memória para desenvolvimento local
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'mobile-sps-cache',
+            'TIMEOUT': 3600,
+        }
     }
-}
+else:
+    # Redis para produção
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': os.getenv('REDIS_URL', 'redis://redis:6379/1'),
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                'CONNECTION_POOL_KWARGS': {
+                    'max_connections': 50,
+                    'retry_on_timeout': True,
+                    'socket_connect_timeout': 15,
+                    'socket_timeout': 15,
+                    'health_check_interval': 30,
+                },
+                'IGNORE_EXCEPTIONS': True,
+            },
+            'KEY_PREFIX': 'mobile_sps',
+            'TIMEOUT': 3600,
+        }
+    }
 
 # Celery no container
 CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://redis:6379/0')

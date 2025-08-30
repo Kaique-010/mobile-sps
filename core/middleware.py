@@ -1,5 +1,6 @@
 import time
 from django.core.cache import cache
+from django.conf import settings
 from threading import local
 from core.licenca_context import set_current_request, LICENCAS_MAP
 from core.utils import get_licenca_db_config
@@ -122,13 +123,14 @@ class LicencaMiddleware:
         
         middleware_total = (time.time() - start_time) * 1000
         
-        # Log detalhado da performance
-        print(f"🔍 LICENÇA MIDDLEWARE:")
-        print(f"   📋 Licença check: {licenca_check_time:.2f}ms")
-        print(f"   💾 Cache {'HIT' if cache_hit else 'MISS'}: {cache_total_time:.2f}ms")
-        if not cache_hit:
-            print(f"   🗄️  Query DB: {db_time:.2f}ms")
-        print(f"   ⏱️  Total middleware: {middleware_total:.2f}ms")
-        print(f"   📊 Módulos encontrados: {len(modulos_disponiveis)}")
+        # Log detalhado da performance apenas em DEBUG
+        if settings.DEBUG:
+            print(f"🔍 LICENÇA MIDDLEWARE:")
+            print(f"   📋 Licença check: {licenca_check_time:.2f}ms")
+            print(f"   💾 Cache {'HIT' if cache_hit else 'MISS'}: {cache_total_time:.2f}ms")
+            if not cache_hit:
+                print(f"   🗄️  Query DB: {db_time:.2f}ms")
+            print(f"   ⏱️  Total middleware: {middleware_total:.2f}ms")
+            print(f"   📊 Módulos encontrados: {len(modulos_disponiveis)}")
 
         return self.get_response(request)
