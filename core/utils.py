@@ -25,9 +25,6 @@ def get_db_from_slug(slug):
         return slug
 
     # Log de diagnóstico de rede
-    if settings.DEBUG:
-        logger.warning(f"🌐 Criando nova conexão para {alias} -> {host}:{port}")
-        logger.warning(f"⏱️  Conexão {alias} criada em {tempo:.2f}ms")
     logger.warning(f"🌐 Criando nova conexão para {slug} -> {licenca['db_host']}:{licenca['db_port']}")
     
     prefixo = slug.upper()

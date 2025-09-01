@@ -26,6 +26,21 @@ class LicencaMiddleware:
     def __call__(self, request):
         start_time = time.time()
         
+        # Rotas que devem ser ignoradas pelo middleware
+        ignored_paths = [
+            '/api/warm-cache/',
+            '/api/licencas/mapa/',
+            '/admin/',
+            '/static/',
+            '/media/',
+            '/ws/',
+        ]
+        
+        # Verificar se a rota deve ser ignorada
+        for ignored_path in ignored_paths:
+            if request.path.startswith(ignored_path):
+                return self.get_response(request)
+        
         path_parts = request.path.strip('/').split('/')
         
         if not path_parts or path_parts[0] != 'api':

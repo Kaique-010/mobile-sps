@@ -1,6 +1,13 @@
 from django.shortcuts import render
-from .models import Controlevisita, Etapavisita
-from .serializers import ControleVisitaSerializer, EtapaVisitaSerializer
+from .models import Controlevisita, Etapavisita, ItensVisita
+from Orcamentos.models import Orcamentos, ItensOrcamento
+from .serializers import ControleVisitaSerializer, EtapaVisitaSerializer, ExportarVisitaParaOrcamentoSerializer, ItensVisitaSerializer
+from .services import (
+    exportar_visita_para_orcamento, 
+    exportar_visita_para_orcamento_pisos, 
+    verificar_modulo_pisos_liberado
+)
+from Pisos.views import BaseMultiDBModelViewSet
 from rest_framework import viewsets, status
 from core.utils import get_licenca_db_config
 from core.decorator import ModuloRequeridoMixin
@@ -10,7 +17,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from django.db.models import Q, Count, Avg
+from django.db.models import Q, Count, Avg, Max
 from datetime import datetime, date, timedelta
 import logging
 
@@ -302,10 +309,145 @@ class ControleVisitaViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+class ItensVisitaViewSet(BaseMultiDBModelViewSet):
+    modulo_necessario = 'Controle de Visitas'
+    serializer_class = ItensVisitaSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['item_empr', 'item_fili', 'item_visita', 'item_prod']
+    
+    def get_queryset(self):
+        banco = self.get_banco()
+        return ItensVisita.objects.using(banco).all().order_by('-item_data')
+    
+    @action(detail=False, methods=['post'], url_path='calcular-metragem-pisos')
+    def calcular_metragem_pisos(self, request, slug=None):
+        """Calcula metragem para produtos de pisos"""
+        try:
+            banco = self.get_banco()
+            
+            produto_id = request.data.get('produto_id')
+            tamanho_m2 = request.data.get('tamanho_m2')
+            percentual_quebra = request.data.get('percentual_quebra', 10)
+            condicao = request.data.get('condicao', '0')
+            
+            if not produto_id or not tamanho_m2:
+                return Response({
+                    'error': 'produto_id e tamanho_m2 são obrigatórios'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Importar modelo de produtos
+            from Produtos.models import Produtos
+            
+            # Verificar se produto existe no banco correto
+            try:
+                produto = Produtos.objects.using(banco).get(prod_codi=produto_id)
+            except Produtos.DoesNotExist:
+                return Response({
+                    'error': f'Produto {produto_id} não encontrado'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Usar a função de cálculo do módulo Pisos
+            from Pisos.views import ProdutosPisosViewSet
+            
+            pisos_viewset = ProdutosPisosViewSet()
+            pisos_viewset.request = request
+            
+            # Preparar dados para o cálculo
+            dados_calculo = {
+                'produto_id': int(produto_id),
+                'tamanho_m2': float(tamanho_m2),
+                'percentual_quebra': float(percentual_quebra),
+                'condicao': str(condicao)
+            }
+            
+            # Simular request
+            class MockRequest:
+                def __init__(self, data, headers):
+                    self.data = data
+                    self.headers = headers
+            
+            mock_request = MockRequest(dados_calculo, request.headers)
+            
+            # Chamar função de cálculo
+            response = pisos_viewset.calcular_metragem(mock_request)
+            
+            return response
+            
+        except ValueError as ve:
+            return Response({
+                'error': f'Dados inválidos: {str(ve)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"Erro no cálculo de metragem: {e}")
+            return Response({
+                'error': f'Erro interno: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['banco'] = get_licenca_db_config(self.request)
+        return context
+
+    @action(detail=False, methods=['post'], url_path='exportar-para-orcamento')
+    def exportar_para_orcamento(self, request, slug=None):
+        """Exporta itens de uma visita para um novo orçamento (normal ou pisos)"""
+        try:
+            banco = get_licenca_db_config(request)
+            serializer = ExportarVisitaParaOrcamentoSerializer(data=request.data, context={'banco': banco})
+            
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+            visita_id = serializer.validated_data['visita_id']
+            
+            # Buscar visita
+            visita = Controlevisita.objects.using(banco).get(ctrl_id=visita_id)
+            
+            # Verificar se há itens com cálculo de pisos na visita
+            tem_itens_pisos = ItensVisita.objects.using(banco).filter(
+                item_visita=visita_id,
+                item_tipo_calculo='pisos'
+            ).exists()
+            
+            # Verificar se o módulo de Pisos está liberado
+            tem_modulo_pisos = verificar_modulo_pisos_liberado(request)
+            
+            # Só gera orçamento de pisos se tiver itens de pisos E módulo liberado
+            if tem_itens_pisos and tem_modulo_pisos:
+                # Gerar orçamento de pisos
+                orcamento = exportar_visita_para_orcamento_pisos(visita, banco)
+                tipo_orcamento = "pisos"
+                numero_orcamento = orcamento.orca_nume
+                valor_total = orcamento.orca_tota
+            else:
+                # Gerar orçamento normal
+                orcamento = exportar_visita_para_orcamento(visita, banco)
+                tipo_orcamento = "normal"
+                numero_orcamento = orcamento.pedi_nume
+                valor_total = orcamento.pedi_tota
+            
+            return Response({
+                'detail': f'Orçamento de {tipo_orcamento} criado com sucesso',
+                'tipo_orcamento': tipo_orcamento,
+                'orcamento_numero': numero_orcamento,
+                'valor_total': valor_total
+            }, status=status.HTTP_201_CREATED)
+            
+        except ValueError as e:
+            return Response(
+                {'detail': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            logger.error(f"Erro ao exportar visita para orçamento: {e}")
+            return Response(
+                {'detail': 'Erro interno do servidor'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 
 class EtapaVisitaViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
-    modulo_requerido = 'Pedidos'
+ 
     serializer_class = EtapaVisitaSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['etap_empr', 'etap_nume']

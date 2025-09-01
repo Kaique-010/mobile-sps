@@ -1,0 +1,120 @@
+import { StyleSheet } from 'react-native'
+
+export const styles = StyleSheet.create({
+  tabContent: {
+    flex: 1,
+  },
+  tabTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  fieldGroup: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+    backgroundColor: '#1a252f',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#2a3441',
+  },
+  fieldIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#2a3441',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  fieldContent: {
+    flex: 1,
+  },
+  fieldLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+    marginBottom: 8,
+  },
+  textInput: {
+    backgroundColor: '#0d1421',
+    borderRadius: 12,
+    padding: 16,
+    color: '#fff',
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#2a3441',
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  input: {
+    backgroundColor: '#0d1421',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#2a3441',
+  },
+  pickerContainer: {
+    backgroundColor: '#0d1421',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#2a3441',
+  },
+  picker: {
+    color: '#fff',
+    backgroundColor: 'transparent',
+  },
+  dateButton: {
+    backgroundColor: '#0d1421',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#2a3441',
+  },
+  dateButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    marginLeft: 12,
+  },
+  switchContainer: {
+    marginBottom: 16,
+    backgroundColor: '#1a252f',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#2a3441',
+    overflow: 'hidden',
+  },
+  switchContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+  switchIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#2a3441',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  switchInfo: {
+    flex: 1,
+  },
+  switchLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  switchDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+  },
+})
