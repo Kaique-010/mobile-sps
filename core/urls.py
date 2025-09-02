@@ -7,6 +7,7 @@ from django.contrib import admin
 from django.urls import path, include
 from Licencas.views import licencas_mapa
 from . import views
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView # Adicionar esta importação
 
 urlpatterns = [
     path('', views.index, name='index'),
@@ -56,4 +57,7 @@ urlpatterns = [
     path('api/<slug>/mcp-agent/', include('mcp_agent_db.urls')),
     
     
+    # Rotas de documentação do DRF-Spectacular
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
 ]

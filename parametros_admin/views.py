@@ -44,27 +44,38 @@ class PermissaoModuloViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'])
     def modulos_liberados(self, request, slug=None):
-        slug = get_licenca_slug()
         """Retorna módulos liberados para a empresa do usuário"""
         try:
-            # Obter empresa_id e filial_id dos query parameters ou do usuário
-            empresa_id = request.query_params.get('empr') or getattr(request.user, 'usua_empr', 1)
-            filial_id = request.query_params.get('fili') or getattr(request.user, 'usua_fili', 1)
+            # Priorizar cabeçalhos sobre query params
+            empresa_id = request.META.get('HTTP_X_EMPRESA') or request.query_params.get('empr')
+            filial_id = request.META.get('HTTP_X_FILIAL') or request.query_params.get('fili')
             
-            # Converter para inteiro se necessário
+            # Fallback para valores do usuário
+            if not empresa_id:
+                empresa_id = getattr(request.user, 'usua_empr', 1)
+            if not filial_id:
+                filial_id = getattr(request.user, 'usua_fili', 1)
+            
+            # Converter para inteiro
             empresa_id = int(empresa_id)
             filial_id = int(filial_id)
+            
+            print(f"🔍 [VIEW] modulos_liberados - Empresa: {empresa_id}, Filial: {filial_id}")
             
             banco = get_licenca_db_config(request)
             from .utils import get_codigos_modulos_liberados
             
             modulos_liberados = get_codigos_modulos_liberados(banco, empresa_id, filial_id)
             
-            return Response({
+            response_data = {
                 'modulos_liberados': modulos_liberados,
                 'empresa_id': empresa_id,
                 'filial_id': filial_id
-            })
+            }
+            
+            print(f"🔍 [VIEW] Retornando: {response_data}")
+            
+            return Response(response_data)
         except Exception as e:
             logger.error(f"Erro ao buscar módulos liberados: {e}")
             return Response(
@@ -297,8 +308,8 @@ class AtualizaPermissoesModulosView(APIView):
     
     def patch(self, request, slug=None):
         data = request.data
-        empresa_id = data.get("empr")
-        filial_id = data.get("fili")
+        empresa_id = data.get("empresa_id")  # ✅ Corrigido
+        filial_id = data.get("filial_id")    # ✅ Corrigido
         usuario = data.get("usuario", "sistema")
         modulos_data = data.get("modulos", [])
 

@@ -5,6 +5,8 @@ from parametros_admin.models import Modulo, PermissaoModulo
 from core.registry import get_licenca_db_config
 import logging
 import json
+from Licencas.models import Empresas, Filiais
+from .models import PermissaoModulo
 
 logger = logging.getLogger(__name__)
 
@@ -124,6 +126,61 @@ def debug_modulo_pisos(banco, empresa_id=1, filial_id=1):
     except Exception as e:
         print(f"Erro no debug: {e}")
         logger.error(f"Erro no debug do módulo Pisos: {e}")
+
+
+def get_empresas_usuario(usuario_id, banco):
+    """Retorna empresas que o usuário tem acesso"""
+    cache_key = f"empresas_usuario_{usuario_id}_{banco}"
+    empresas = cache.get(cache_key)
+    
+    if empresas is None:
+        # Implementar lógica de negócio para determinar empresas do usuário
+        # Por enquanto, retorna todas
+        empresas_qs = Empresas.objects.using(banco).all()
+        empresas = []
+        
+        for empresa in empresas_qs:
+            filiais = Filiais.objects.using(banco).filter(empr_codi=empresa.empr_codi)
+            
+            for filial in filiais:
+                empresas.append({
+                    'empresa_id': empresa.empr_codi,
+                    'empresa_nome': empresa.empr_nome,
+                    'filial_id': filial.empr_empr,
+                    'filial_nome': filial.empr_nome
+                })
+        
+        cache.set(cache_key, empresas, 300)  # Cache por 5 minutos
+    
+    return empresas
+
+def verificar_permissao_modulo(usuario_id, empresa_id, filial_id, modulo_nome, banco):
+    """Verifica se usuário tem permissão para módulo específico"""
+    try:
+        from .models import Modulo
+        
+        modulo = Modulo.objects.using(banco).get(modu_nome=modulo_nome)
+        
+        permissao = PermissaoModulo.objects.using(banco).get(
+            perm_empr=empresa_id,
+            perm_fili=filial_id,
+            perm_modu=modulo
+        )
+        
+        return permissao.perm_ativ and not permissao.is_vencido
+        
+    except (Modulo.DoesNotExist, PermissaoModulo.DoesNotExist):
+        return False
+
+def limpar_cache_permissoes(empresa_id=None, filial_id=None):
+    """Limpa cache de permissões"""
+    if empresa_id and filial_id:
+        cache_pattern = f"*empresa_{empresa_id}_filial_{filial_id}*"
+    else:
+        cache_pattern = "*empresas_usuario_*"
+    
+    # Implementar limpeza de cache baseada no padrão
+    cache.clear()
 
 
 

@@ -34,6 +34,8 @@ class LicencaMiddleware:
             '/static/',
             '/media/',
             '/ws/',
+            '/api/schema/', 
+            '/api/schema/swagger-ui/',  
         ]
         
         # Verificar se a rota deve ser ignorada
@@ -84,8 +86,15 @@ class LicencaMiddleware:
         cache_start = time.time()
         
         # Cache de módulos por licença (30 minutos - mais tempo)
-        empresa_id = 1
-        filial_id = 1
+        empresa_id = request.headers.get("X-Empresa", 1)
+        filial_id = request.headers.get("X-Filial", 1)
+        
+        # Log para debug
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"MIDDLEWARE DEBUG - Slug: {slug}, Empresa: {empresa_id}, Filial: {filial_id}")
+        logger.info(f"MIDDLEWARE DEBUG - Headers X-Empresa: {request.headers.get('X-Empresa')}, X-Filial: {request.headers.get('X-Filial')}")
+        
         cache_key = f"modulos_licenca_{slug}_{empresa_id}_{filial_id}"
         modulos_disponiveis = cache.get(cache_key)
         
@@ -149,3 +158,25 @@ class LicencaMiddleware:
             print(f"   📊 Módulos encontrados: {len(modulos_disponiveis)}")
 
         return self.get_response(request)
+
+    def process_request(self, request):
+        # Priorizar cabeçalhos sobre token JWT
+        empresa_id = request.META.get('HTTP_X_EMPRESA')
+        filial_id = request.META.get('HTTP_X_FILIAL')
+        
+        # Se não há cabeçalhos, usar valores do token
+        if not empresa_id and hasattr(request, 'user') and hasattr(request.user, 'usua_empr'):
+            empresa_id = getattr(request.user, 'usua_empr', 1)
+        if not filial_id and hasattr(request, 'user') and hasattr(request.user, 'usua_fili'):
+            filial_id = getattr(request.user, 'usua_fili', 1)
+        
+        # Converter para inteiro
+        try:
+            empresa_id = int(empresa_id) if empresa_id else 1
+            filial_id = int(filial_id) if filial_id else 1
+        except (ValueError, TypeError):
+            empresa_id = 1
+            filial_id = 1
+        
+        print(f"🔍 [MIDDLEWARE] Empresa: {empresa_id}, Filial: {filial_id}")
+        print(f"🔍 [MIDDLEWARE] Headers - X-Empresa: {request.META.get('HTTP_X_EMPRESA')}, X-Filial: {request.META.get('HTTP_X_FILIAL')}")

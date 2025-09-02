@@ -105,6 +105,8 @@ INSTALLED_APPS = [
     'mcp_agent_db',  
     'controledevisitas',
     'Pisos',
+    'drf_spectacular',
+    
 
 
 ]
@@ -131,6 +133,21 @@ else:
     CORS_ALLOW_ALL_ORIGINS = False
     CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='').split(',')
 
+# Adicionar configurações específicas para headers
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    'x-cnpj',
+]
+
+CORS_ALLOW_CREDENTIALS = True
 ROOT_URLCONF = 'core.urls'
 
 TEMPLATES = [
@@ -185,7 +202,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-        # 'Entidades.authentication.EntidadeJWTAuthentication',  # Remover esta linha
+        #'Entidades.authentication.EntidadeJWTAuthentication', 
     ],
     'DEFAULT_PARSER_CLASSES': [
         'rest_framework.parsers.JSONParser',        
@@ -196,13 +213,37 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
     'PAGE_SIZE': 25,  # Otimizado para performance
     'MAX_PAGE_SIZE': 100,
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
+
 
 SIMPLE_JWT = {
     "USER_ID_FIELD": "usua_codi",
     "USER_ID_CLAIM": "usua_codi",
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=10),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+}
+
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Mobile SPS API',
+    'DESCRIPTION': 'Documentação da API para o sistema Mobile SPS',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        'displayRequestDuration': True,
+        'filter': True,
+        'showExtensions': True,
+        'showCommonExtensions': True,
+        'tryItOutEnabled': True,
+    },
+    'ENUM_NAME_OVERRIDES': {
+        'PatchedMobileSpsUserRequestStatusEnum': 'MobileSpsUserRequestStatusEnum',
+        'PatchedMobileSpsUserRequestTypeEnum': 'MobileSpsUserRequestTypeEnum',
+        'ClientEnum': 'core.utils.ClientEnum',
+    },
+    
 }
 
 APPEND_SLASH = True
@@ -371,3 +412,4 @@ CELERY_TIMEZONE = 'America/Sao_Paulo'
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 SESSION_CACHE_ALIAS = 'default'
 SESSION_COOKIE_AGE = 3600  # 1 hora
+

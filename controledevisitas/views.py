@@ -7,6 +7,7 @@ from .services import (
     exportar_visita_para_orcamento_pisos, 
     verificar_modulo_pisos_liberado
 )
+from core.serializers import BancoContextMixin
 from Pisos.views import BaseMultiDBModelViewSet
 from rest_framework import viewsets, status
 from core.utils import get_licenca_db_config
@@ -24,7 +25,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class ControleVisitaViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
+class ControleVisitaViewSet(BancoContextMixin, ModuloRequeridoMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     modulo_requerido = 'Pedidos'
     serializer_class = ControleVisitaSerializer
@@ -100,7 +101,26 @@ class ControleVisitaViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        context['banco'] = get_licenca_db_config(self.request)
+        try:
+            context['banco'] = get_licenca_db_config(self.request)
+        except Exception:
+            context['banco'] = 'default'
+        
+        # Pegar empresa_id do header X-Empresa (prioridade)
+        empresa_id = self.request.headers.get("X-Empresa")
+        
+        # Fallback: pegar do usuário logado
+        if not empresa_id and hasattr(self.request.user, 'empresa_id'):
+            empresa_id = self.request.user.empresa_id
+        
+        # Fallback: pegar dos dados da requisição
+        if not empresa_id and self.request.data.get('ctrl_empresa'):
+            empresa_id = self.request.data.get('ctrl_empresa')
+        
+        if empresa_id:
+            context['empresa_id'] = int(empresa_id)
+        
+        print(f"🔍 CONTEXTO EMPRESA_ID: {context.get('empresa_id')}")
         return context
 
     def destroy(self, request, *args, **kwargs):
@@ -475,6 +495,20 @@ class EtapaVisitaViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         context = super().get_serializer_context()
         context['banco'] = get_licenca_db_config(self.request)
         return context
+
+    def create(self, request, *args, **kwargs):
+        print(f"🔍 VIEW - DADOS RECEBIDOS: {request.data}")
+        print(f"🔍 VIEW - MÉTODO: {request.method}")
+        print(f"🔍 VIEW - CONTENT TYPE: {request.content_type}")
+        
+        try:
+            response = super().create(request, *args, **kwargs)
+            print(f"✅ VIEW - SUCESSO: {response.status_code}")
+            return response
+        except Exception as e:
+            print(f"🚨 VIEW - ERRO: {e}")
+            print(f"🚨 VIEW - TIPO DO ERRO: {type(e)}")
+            raise
 
 
 
