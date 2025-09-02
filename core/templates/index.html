@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <link rel="icon" type="image/png" href="./logo.png">
+    <title>Servidor no Ar - Spartacus Mobile</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fauna&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+        body {
+            margin: 0;
+            font-family: 'Roboto Mono', monospace;
+            background-color: #0a0a0d;
+            color: #00e6e6;
+            /* Azul ciano vibrante para texto */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 32px 0;
+            background: linear-gradient(135deg, #0f1419, #1a1a2e);
+            border-radius: 16px;
+            border: 1px solid rgba(100, 255, 218, 0.1);
+        }
+
+        .header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            color: #64ffda;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: #8892b0;
+            margin: 0;
+            font-weight: 400;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            padding: 20px 0;
+        }
+
+        .card {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border: 1px solid rgba(100, 255, 218, 0.2);
+            border-radius: 12px;
+            padding: 24px 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            text-align: left;
+            transition: all 0.3s ease;
+            opacity: 0;
+            transform: translateY(30px);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(0, 230, 230, 0.2) 0%, rgba(255, 0, 255, 0.2) 100%);
+            transform: rotate(45deg);
+            z-index: 0;
+            transition: opacity 0.4s ease;
+            opacity: 0;
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 8px 30px rgba(100, 255, 218, 0.2);
+            border-color: rgba(100, 255, 218, 0.4);
+        }
+
+        .card h2 {
+            font-family: 'Orbitron', sans-serif;
+            color: #64ffda;
+            margin: 12px 0 8px 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+            position: relative;
+            z-index: 1;
+        }
+
+        .card p {
+            color: #8892b0;
+            line-height: 1.5;
+            font-size: 0.9rem;
+            margin: 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .card .icon {
+            font-size: 2.5rem;
+            margin-bottom: 0;
+            color: #64ffda;
+            position: relative;
+            z-index: 1;
+            display: inline-block;
+        }
+
+        .glitch-text {
+            animation: glitch 1s linear infinite;
+        }
+
+        @keyframes glitch {
+            0% {
+                text-shadow: 0.05em 0 0 #00e6e6, -0.05em -0.025em 0 #ff00ff, -0.025em 0.05em 0 #a0a0b0;
+            }
+
+            15% {
+                text-shadow: -0.05em -0.025em 0 #00e6e6, 0.025em 0.025em 0 #ff00ff, -0.05em 0.025em 0 #a0a0b0;
+            }
+
+            30% {
+                text-shadow: 0.025em 0.05em 0 #00e6e6, 0.05em 0 0 #ff00ff, 0em -0.05em 0 #a0a0b0;
+            }
+
+            45% {
+                text-shadow: -0.025em 0 0 #00e6e6, -0.05em -0.025em 0 #ff00ff, 0.05em 0.05em 0 #a0a0b0;
+            }
+
+            60% {
+                text-shadow: 0.05em 0.025em 0 #00e6e6, 0.025em 0.025em 0 #ff00ff, -0.05em 0em 0 #a0a0b0;
+            }
+
+            75% {
+                text-shadow: -0.05em 0.05em 0 #00e6e6, -0.025em -0.05em 0 #ff00ff, 0.05em -0.025em 0 #a0a0b0;
+            }
+
+            90% {
+                text-shadow: 0.025em -0.025em 0 #00e6e6, 0em 0.05em 0 #ff00ff, -0.025em -0.05em 0 #a0a0b0;
+            }
+
+            100% {
+                text-shadow: 0.05em 0 0 #00e6e6, -0.05em -0.025em 0 #ff00ff, -0.025em 0.05em 0 #a0a0b0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="./logo.png" alt="Logo" style="width: 58px; height:68px; margin-right: 16px;">
+            <h1>STATUS DO SERVIDOR: ONLINE</h1>
+            <p>Spartacus Mobile - Online</p>
+        </div>
+
+        <div class="card-grid">
+            <!-- Módulos Comerciais -->
+            <div class="card">
+                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                    <div class="icon" style="margin-right: 12px;">🛒</div>
+                    <h2>Pedidos</h2>
+                </div>
+                <p>Gestão completa de pedidos de venda, controle de status e integração financeira.</p>
+            </div>
+            <div class="card">
+                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                    <div class="icon" style="margin-right: 12px;">💰</div>
+                    <h2>Orçamentos</h2>
+                </div>
+                <p>Criação e gerenciamento de orçamentos com conversão para pedidos.</p>
+            </div>
+            <div class="card">
+                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                    <div class="icon" style="margin-right: 12px;">👥</div>
+                    <h2>Entidades</h2>
+                </div>
+                <p>Cadastro de clientes, fornecedores, vendedores e funcionários.</p>
+            </div>
+
+            <!-- Módulos Operacionais -->
+            <div class="card">
+                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                    <div class="icon" style="margin-right: 12px;">🔧</div>
+                    <h2>Ordem de Serviço</h2>
+                </div>
+                <p>Controle e acompanhamento de ordens de serviço e manutenções.</p>
+            </div>
+            <div class="card">
+                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                    <div class="icon" style="margin-right: 12px;">📦</div>
+                    <h2>Produtos</h2>
+                </div>
+                <p>Gestão de catálogo de produtos, preços e especificações técnicas.</p>
+            </div>
+            <div class="card">
+                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                    <div class="icon" style="margin-right: 12px;">🏗️</div>
+                    <h2>Pisos</h2>
+                </div>
+                <p>Módulo especializado para orçamentos e pedidos de pisos com cálculo de metragem.</p>
+            </div>
+
+            <!-- Módulos Financeiros -->
+            <div class="card">
+                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                    <div class="icon" style="margin-right: 12px;">💳</div>
+                    <h2>Contas a Receber</h2>
+                </div>
+                <p>Controle de títulos, cobranças e recebimentos de clientes.</p>
+            </div>
+            <div class="card">
+                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                    <div class="icon" style="margin-right: 12px;">💸</div>
+                    <h2>Contas a Pagar</h2>
+                </div>
+                <p>Gestão de pagamentos a fornecedores e controle de despesas.</p>
+            </div>
+            <div class="card">
+                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                    <div class="icon" style="margin-right: 12px;">💰</div>
+                    <h2>Caixa Diário</h2>
+                </div>
+                <p>Controle de movimentação diária de caixa e fluxo financeiro.</p>
+            </div>
+
+            <!-- Módulos Gerenciais -->
+            <div class="card">
+                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                    <div class="icon" style="margin-right: 12px;">📊</div>
+                    <h2>Dashboards</h2>
+                </div>
+                <p>Painéis gerenciais com métricas e indicadores de performance.</p>
+            </div>
+            <div class="card">
+                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                    <div class="icon" style="margin-right: 12px;">📈</div>
+                    <h2>DRE</h2>
+                </div>
+                <p>Demonstrativo de Resultado do Exercício e análises financeiras.</p>
+            </div>
+            <div class="card">
+                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                    <div class="icon" style="margin-right: 12px;">💼</div>
+                    <h2>Comissões</h2>
+                </div>
+                <p>Cálculo e controle de comissões de vendedores e representantes.</p>
+            </div>
+
+            <!-- Módulos de Controle -->
+            <div class="card">
+                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                    <div class="icon" style="margin-right: 12px;">🔐</div>
+                    <h2>Licenças</h2>
+                </div>
+                <p>Gestão de usuários, empresas, filiais e controle de licenciamento.</p>
+            </div>
+            <div class="card">
+                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                    <div class="icon" style="margin-right: 12px;">🔍</div>
+                    <h2>Auditoria</h2>
+                </div>
+                <p>Rastreamento de alterações e logs de atividades do sistema.</p>
+            </div>
+            <div class="card">
+                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                    <div class="icon" style="margin-right: 12px;">📋</div>
+                    <h2>Contratos</h2>
+                </div>
+                <p>Gestão de contratos comerciais e acompanhamento de vigências.</p>
+            </div>
+
+            <!-- Módulos Especializados -->
+            <div class="card">
+                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                    <div class="icon" style="margin-right: 12px;">🤖</div>
+                    <h2>Agente IA</h2>
+                </div>
+                <p>Assistente virtual inteligente para automação e suporte.</p>
+            </div>
+            <div class="card">
+                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                    <div class="icon" style="margin-right: 12px;">⚙️</div>
+                    <h2>Implantação</h2>
+                </div>
+                <p>Ferramentas para configuração e implantação do sistema.</p>
+            </div>
+            <div class="card">
+                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                    <div class="icon" style="margin-right: 12px;">📱</div>
+                    <h2>Controle de Visitas</h2>
+                </div>
+                <p>Registro e acompanhamento de visitas comerciais e técnicas.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Animação de entrada dos cards
+        window.addEventListener('load', function () {
+            const cards = document.querySelectorAll('.card');
+            cards.forEach((card, index) => {
+                setTimeout(() => {
+                    card.style.animation = 'fadeInUp 0.6s ease forwards';
+                }, index * 80);
+            });
+        });
+    </script>
+</body>
+
+</html>

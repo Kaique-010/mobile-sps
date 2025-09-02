@@ -1,4 +1,5 @@
 from django.http import JsonResponse
+from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 import logging
@@ -30,3 +31,6 @@ def warm_cache_endpoint(request):
 def health_check(request):
     """Health check endpoint"""
     return JsonResponse({'status': 'ok'})
+
+def index(request):
+    return render(request, 'index.html')

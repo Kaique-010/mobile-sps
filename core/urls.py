@@ -9,6 +9,7 @@ from Licencas.views import licencas_mapa
 from . import views
 
 urlpatterns = [
+    path('', views.index, name='index'),
     # Endpoint de health para Docker
     path('health/', views.health_check, name='health'),
     path('api/warm-cache/', views.warm_cache_endpoint, name='warm_cache'),
