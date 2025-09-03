@@ -22,10 +22,49 @@ logger = logging.getLogger('Orcamentos')
 
 class OrcamentoViewSet(viewsets.ModelViewSet):
     serializer_class = OrcamentosSerializer
-    lookup_field = 'pedi_nume'
+    lookup_field = 'pedi_nume'  # Manter, mas ViewSet usará chave composta internamente
     filter_backends = [SearchFilter, DjangoFilterBackend]
     search_fields = ['pedi_forn', 'pedi_nume']
     filterset_fields = ['pedi_empr', 'pedi_fili', 'pedi_nume', 'pedi_forn', 'pedi_data']
+
+    def get_object(self):
+        banco = get_licenca_db_config(self.request)
+        if not banco:
+            logger.error("Banco de dados não encontrado.")
+            raise NotFound("Banco de dados não encontrado.")
+
+        # Verificar se é URL com chave composta
+        if 'empresa' in self.kwargs:
+            empresa = self.kwargs['empresa']
+            filial = self.kwargs['filial']
+            numero = self.kwargs['numero']
+        else:
+            # Fallback para lookup padrão
+            lookup_value = self.kwargs.get(self.lookup_field)
+            empresa = self.request.query_params.get('empr') or self.request.query_params.get('pedi_empr')
+            filial = self.request.query_params.get('fili') or self.request.query_params.get('pedi_fili')
+            numero = lookup_value
+
+        if not all([empresa, filial, numero]):
+            raise ValidationError("Parâmetros empresa, filial e número são obrigatórios")
+
+        try:
+            queryset = self.get_queryset().filter(
+                pedi_empr=empresa,
+                pedi_fili=filial,
+                pedi_nume=numero
+            )
+            
+            obj = queryset.first()
+            if not obj:
+                raise NotFound(f"Orçamento {numero} não encontrado para empresa {empresa}, filial {filial}")
+                
+            self.check_object_permissions(self.request, obj)
+            return obj
+            
+        except Exception as e:
+            logger.error(f"Erro ao buscar orçamento: {e}")
+            raise NotFound("Orçamento não encontrado")
 
     def get_queryset(self):
         from datetime import datetime
@@ -211,7 +250,7 @@ class OrcamentoViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Erro interno do servidor'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=True, methods=['post'], url_path='transformar-em-pedido')
-    def transformar_em_pedido(self, request, pedi_nume=None, slug=None):
+    def transformar_em_pedido(self, request, empresa=None, filial=None, numero=None, pedi_nume=None, slug=None):
         """
         Transforma um orçamento em pedido de venda
         """

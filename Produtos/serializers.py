@@ -26,6 +26,21 @@ class TabelaPrecoSerializer(BancoContextMixin, serializers.ModelSerializer):
             'field_log_time': {'read_only': True},
         }
 
+    def to_internal_value(self, data):
+        # Converter strings vazias para None antes da validação
+        decimal_fields = [
+            'tabe_prco', 'tabe_icms', 'tabe_desc', 'tabe_vipi', 'tabe_pipi',
+            'tabe_fret', 'tabe_desp', 'tabe_cust', 'tabe_marg', 'tabe_impo',
+            'tabe_avis', 'tabe_praz', 'tabe_apra', 'tabe_vare', 'tabe_valo_st',
+            'tabe_perc_reaj', 'tabe_cuge', 'tabe_perc_st'
+        ]
+        
+        for field in decimal_fields:
+            if field in data and (data[field] == '' or data[field] is None):
+                data[field] = None
+                
+        return super().to_internal_value(data)
+
     def validate(self, data):
         campos_preco = ['tabe_prco', 'tabe_avis', 'tabe_apra', 'tabe_cuge', 'tabe_vare']
         for campo in campos_preco:
@@ -142,6 +157,20 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
     def validate(self, attrs):
         if not attrs.get("prod_codi") and Produtos.objects.filter(prod_codi='', prod_empr=attrs.get("prod_empr")).exists():
             raise serializers.ValidationError("Produto com código vazio já existe para esta empresa.")
+        
+        # Converter strings vazias em None para todos os campos decimais possíveis
+        decimal_fields = [
+            'prod_cera_m2cx', 'prod_cera_pccx',
+            # Campos de preço que podem vir no request
+            'preco_vista', 'preco_prazo', 'custo', 'saldo',
+            'peso_bruto', 'peso_liquido', 'valor_total_estoque',
+            'valor_total_venda_vista', 'valor_total_venda_prazo'
+        ]
+        
+        for field in decimal_fields:
+            if field in attrs and (attrs[field] == '' or attrs[field] is None):
+                attrs[field] = None
+                
         return attrs
 
 
@@ -234,33 +263,33 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
 
 
     def update(self, instance, validated_data):
-        banco = self.context.get('banco')
-        if not banco:
-            raise serializers.ValidationError("Banco não encontrado")
-
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save(using=banco)
-
-        precos_data = self.context.get('precos_data')
-        if precos_data:
-            try:
-                tabela_preco = Tabelaprecos.objects.using(banco).get(
-                    tabe_empr=instance.prod_empr,
-                    tabe_fili=instance.prod_fili,
-                    tabe_prod=instance.prod_codi
-                )
-                TabelaPrecoSerializer(tabela_preco, data=precos_data, context=self.context).update(
-                    tabela_preco, precos_data
-                )
-            except Tabelaprecos.DoesNotExist:
-                TabelaPrecoSerializer(context=self.context).create({
-                    'tabe_empr': instance.prod_empr,
-                    'tabe_fili': instance.prod_fili,
-                    'tabe_prod': instance.prod_codi,
-                    **precos_data
-                })
-
+        banco = self.get_banco()
+        
+        # Limpar campos decimais que podem vir como string vazia
+        if validated_data.get('prod_cera_m2cx') == '':
+            validated_data['prod_cera_m2cx'] = None
+            instance.prod_cera_m2cx = None
+        
+        if validated_data.get('prod_cera_pccx') == '':
+            validated_data['prod_cera_pccx'] = None
+            instance.prod_cera_pccx = None
+        
+        print("=== ANTES DO SAVE ===")
+        print(f"Campo decimal prod_cera_m2cx: {instance.prod_cera_m2cx} (type: {type(instance.prod_cera_m2cx)})")
+        print(f"Campo decimal prod_cera_pccx: {instance.prod_cera_pccx} (type: {type(instance.prod_cera_pccx)})")
+        
+        # CORREÇÃO: Usar update() direto no queryset para chave composta
+        from .models import Produtos
+        Produtos.objects.using(banco).filter(
+            prod_codi=instance.prod_codi,
+            prod_empr=instance.prod_empr
+        ).update(**validated_data)
+        
+        # Recarregar a instância especificando os campos da chave composta
+        instance = Produtos.objects.using(banco).get(
+            prod_codi=instance.prod_codi,
+            prod_empr=instance.prod_empr
+        )
         return instance
 
 
@@ -281,3 +310,17 @@ class ProdutoDetalhadoSerializer(serializers.ModelSerializer):
             if obj.foto:
                 return base64.b64encode(obj.foto).decode('utf-8')
             return None
+
+    def to_internal_value(self, data):
+        # Converter strings vazias para None antes da validação
+        decimal_fields = [
+            'prod_cera_m2cx', 'prod_cera_pccx',
+            'preco_vista', 'preco_prazo', 'custo', 'saldo',
+            'peso_bruto', 'peso_liquido'
+        ]
+        
+        for field in decimal_fields:
+            if field in data and data[field] == '':
+                data[field] = None
+                
+        return super().to_internal_value(data)

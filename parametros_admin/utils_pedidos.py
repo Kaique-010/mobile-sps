@@ -513,7 +513,7 @@ def desconto_no_item(item):
     item.iped_tota = arredondar(total_liquido)
     # item.save() → mesmo esquema, deixa fora
 
-def aplicar_descontos(pedido, itens, usar_desconto_item=False, usar_desconto_total=False):
+def aplicar_descontos(pedido, itens, usar_desconto_item=False, usar_desconto_total=False, banco=None):
     """
     Aplica os descontos no pedido ou nos itens com base nos parâmetros.
     """
@@ -524,12 +524,13 @@ def aplicar_descontos(pedido, itens, usar_desconto_item=False, usar_desconto_tot
     if usar_desconto_item:
         for item in itens:
             desconto_no_item(item)
-            item.save()
-        # Atualiza o total do pedido baseado nos totais dos itens já com desconto
+            if banco:
+                item.save(using=banco)
+            else:
+                item.save()
         pedido.pedi_tota = arredondar(sum([item.iped_tota or Decimal('0.00') for item in itens]))
 
     elif usar_desconto_total:
-        # Calcula o total bruto (sem aplicar desconto por item)
         total_bruto = arredondar(sum([
             (item.iped_quan or Decimal('0.00')) * (item.iped_unit or Decimal('0.00'))
             for item in itens
@@ -538,7 +539,6 @@ def aplicar_descontos(pedido, itens, usar_desconto_item=False, usar_desconto_tot
         desconto_no_total(pedido)
 
     else:
-        # Sem desconto nenhum, só calcula total normal
         pedido.pedi_tota = arredondar(sum([
             (item.iped_quan or Decimal('0.00')) * (item.iped_unit or Decimal('0.00'))
             for item in itens

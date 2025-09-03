@@ -94,7 +94,39 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
     search_fields = ['prod_nome', 'prod_codi', 'prod_coba']
     filterset_fields = ['prod_empr']
     
-
+    def get_object(self):
+        banco = get_licenca_db_config(self.request)
+        if not banco:
+            raise Http404("Banco de dados não encontrado")
+        
+        # Verificar se é URL com chave composta
+        if 'empresa' in self.kwargs and 'codigo' in self.kwargs:
+            empresa = self.kwargs['empresa']
+            codigo = self.kwargs['codigo']
+        else:
+            # Fallback para lookup padrão
+            lookup_value = self.kwargs.get(self.lookup_field)
+            empresa = self.request.query_params.get('prod_empr')
+            codigo = lookup_value
+        
+        if not empresa or not codigo:
+            raise Http404("Empresa e código do produto são obrigatórios")
+        
+        try:
+            queryset = self.get_queryset().filter(
+                prod_empr=empresa,
+                prod_codi=codigo
+            )
+            
+            obj = queryset.first()
+            if not obj:
+                raise Http404(f"Produto {codigo} não encontrado para empresa {empresa}")
+                
+            self.check_object_permissions(self.request, obj)
+            return obj
+            
+        except Exception as e:
+            raise Http404(f"Erro ao buscar produto: {str(e)}")
     def get_queryset(self):
         banco = get_licenca_db_config(self.request)
 
@@ -336,8 +368,12 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                 preco_serializer.is_valid(raise_exception=True)
                 preco_serializer.save()
 
-        # Buscar o objeto atualizado
-        instance.refresh_from_db()
+        # Buscar o objeto atualizado usando chave composta
+        banco = get_licenca_db_config(self.request)
+        instance = Produtos.objects.using(banco).get(
+            prod_codi=instance.prod_codi,
+            prod_empr=instance.prod_empr
+        )
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
     

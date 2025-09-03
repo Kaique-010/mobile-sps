@@ -10,7 +10,13 @@ router.register(r'produtosdetalhados', ProdutosDetalhadosViewSet, basename='prod
 urlpatterns = [
     path('unidadesmedida/', UnidadeMedidaListView.as_view(), name='unidade-list'),
     path('estoqueresumo/', EstoqueResumoView.as_view(), name='estoque-resumo'),
-
+    # URL para chave composta empresa/codigo
+    path('produtos/<int:empresa>/<str:codigo>/', ProdutoViewSet.as_view({
+        'get': 'retrieve',
+        'put': 'update', 
+        'patch': 'partial_update',
+        'delete': 'destroy'
+    }), name='produto-detail-composto'),
 ]
 
 urlpatterns += router.urls

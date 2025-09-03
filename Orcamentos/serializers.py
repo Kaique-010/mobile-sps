@@ -74,6 +74,7 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
     itens_input = ItemOrcamentoSerializer(many=True, write_only=True, required=False)
     itens_data = serializers.ListField(child=serializers.DictField(), write_only=True, required=False)
     parametros = serializers.DictField(write_only=True, required=False)
+    pedi_nume = serializers.IntegerField(read_only=True)  # ADICIONADO: read_only=True
 
     class Meta:
         model = Orcamentos
@@ -84,6 +85,9 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
             'valor_total', 'valor_subtotal', 'valor_desconto', 'cliente_nome', 'empresa_nome', 'pedi_nume',
             'parametros'
         ]
+        extra_kwargs = {
+            'pedi_nume': {'read_only': True},  # ADICIONADO: Garantir que seja read_only
+        }
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -144,6 +148,7 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
         validated_data['pedi_desc'] = valores['desconto']  # Desconto
         validated_data['pedi_tota'] = valores['total']     # Total
 
+        # Verificar se é edição (orçamento existente)
         orcamentos = None
         if 'pedi_nume' in validated_data:
             orcamentos = Orcamentos.objects.using(banco).filter(
@@ -153,7 +158,7 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
             ).first()
 
         if orcamentos:
-            # edição disfarçada
+            # Edição: atualizar orçamento existente
             ItensOrcamento.objects.using(banco).filter(
                 iped_empr=orcamentos.pedi_empr,
                 iped_fili=orcamentos.pedi_fili,
@@ -165,12 +170,23 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
             orcamentos.save(using=banco)
             orcamento = orcamentos
         else:
+            # Criação: buscar próximo número por empresa/filial
             ultimo = Orcamentos.objects.using(banco).filter(
                 pedi_empr=validated_data['pedi_empr'],
                 pedi_fili=validated_data['pedi_fili']
             ).order_by('-pedi_nume').first()
-            validated_data['pedi_nume'] = (ultimo.pedi_nume + 1) if ultimo else 1
-
+            
+            proximo_numero = (ultimo.pedi_nume + 1) if ultimo else 1
+            
+            # Verificar se o número já existe (loop de segurança)
+            while Orcamentos.objects.using(banco).filter(
+                pedi_empr=validated_data['pedi_empr'],
+                pedi_fili=validated_data['pedi_fili'],
+                pedi_nume=proximo_numero
+            ).exists():
+                proximo_numero += 1
+            
+            validated_data['pedi_nume'] = proximo_numero
             orcamento = Orcamentos.objects.using(banco).create(**validated_data)
 
         itens_objs = []
@@ -214,97 +230,13 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
             pedido=orcamento,
             itens=itens_objs,
             usar_desconto_item=parametros.get('usar_desconto_item', False),
-            usar_desconto_total=parametros.get('usar_desconto_total', False)
+            usar_desconto_total=parametros.get('usar_desconto_total', False),
+            banco=banco
         )
 
-        orcamento.save(using=banco)
         return orcamento
 
-
-
-    def update(self, instance, validated_data):
-        banco = self.context.get('banco')
-        if not banco:
-            raise ValidationError("Banco não definido no contexto.")
-
-        parametros = validated_data.pop('parametros', {})
-        usar_desconto_item = parametros.get('usar_desconto_item', False)
-        usar_desconto_total = parametros.get('usar_desconto_total', False)
-
-        if usar_desconto_item and usar_desconto_total:
-            raise ValidationError("Não é permitido aplicar desconto por item e por pedido ao mesmo tempo.")
-
-        itens_data = validated_data.pop('itens_input', None) or validated_data.pop('itens', None)
-        if itens_data is None:
-            raise ValidationError("Itens do orcamento são obrigatórios.")
-
-        # Calcular valores antes de atualizar
-        valores = calcular_valores_pedido(
-            itens_data, 
-            desconto_total=validated_data.get('pedi_desc'),
-            desconto_percentual=parametros.get('desconto_percentual')
-        )
-        
-        # Atualizar valores calculados
-        validated_data['pedi_topr'] = valores['subtotal']  # Subtotal
-        validated_data['pedi_desc'] = valores['desconto']  # Desconto
-        validated_data['pedi_tota'] = valores['total']     # Total
-
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save(using=banco)
-
-        ItensOrcamento.objects.using(banco).filter(
-            iped_empr=instance.pedi_empr,
-            iped_fili=instance.pedi_fili,
-            iped_pedi=str(instance.pedi_nume)
-        ).delete()
-
-        itens_objs = []
-        for idx, item_data in enumerate(itens_data, start=1):
-            if 'iped_desc' not in item_data or item_data['iped_desc'] is None or isinstance(item_data['iped_desc'], bool):
-                item_data['iped_desc'] = 0.00
-
-            # Calcular subtotal bruto (quantidade × valor unitário)
-            subtotal_bruto = calcular_subtotal_item_bruto(
-                item_data.get('iped_quan', 0),
-                item_data.get('iped_unit', 0)
-            )
-            
-            # Calcular total do item com desconto
-            total_item = calcular_total_item_com_desconto(
-                item_data.get('iped_quan', 0),
-                item_data.get('iped_unit', 0),
-                item_data.get('iped_desc', 0)
-            )
-
-            # Remover campos que serão definidos explicitamente para evitar conflitos
-            item_data_clean = item_data.copy()
-            item_data_clean.pop('iped_suto', None)  # Remove se existir
-            item_data_clean.pop('iped_tota', None)  # Remove se existir
-
-            item = ItensOrcamento.objects.using(banco).create(
-                iped_empr=instance.pedi_empr,
-                iped_fili=instance.pedi_fili,
-                iped_item=idx,
-                iped_pedi=str(instance.pedi_nume),
-                iped_data=instance.pedi_data,
-                iped_forn=instance.pedi_forn,
-                iped_suto=subtotal_bruto,  # Subtotal bruto (quantidade × valor unitário)
-                iped_tota=total_item,      # Total com desconto aplicado
-                **item_data_clean
-            )
-            itens_objs.append(item)
-
-        aplicar_descontos(
-            pedido=instance,
-            itens=itens_objs,
-            usar_desconto_item=usar_desconto_item,
-            usar_desconto_total=usar_desconto_total
-        )
-
-        instance.save(using=banco)
-        return instance
+       
 
    
 

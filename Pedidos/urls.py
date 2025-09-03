@@ -16,8 +16,19 @@ router = DefaultRouter()
 router.register(r'pedidos', PedidoVendaViewSet, basename='pedidos')
 router.register(r'pedidos-geral', PedidosGeralViewSet, basename='pedidos-geral')
 
+# URLs customizadas para chave composta
+custom_patterns = [
+    path('pedidos/<int:empresa>/<int:filial>/<int:numero>/', 
+         PedidoVendaViewSet.as_view({
+             'get': 'retrieve',
+             'put': 'update', 
+             'patch': 'partial_update',
+             'delete': 'destroy'
+         }), name='pedido-detail-composto'),
+]
+
 # URLs para funcionalidades financeiras
-urlpatterns = [
+urlpatterns = custom_patterns + [
     path('gerar-titulos-pedido/', GerarTitulosPedidoView.as_view(), name='gerar-titulos-pedido'),
     path('remover-titulos-pedido/', RemoverTitulosPedidoView.as_view(), name='remover-titulos-pedido'),
     path('consultar-titulos-pedido/<int:pedi_nume>/', ConsultarTitulosPedidoView.as_view(), name='consultar-titulos-pedido'),

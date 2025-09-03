@@ -3,7 +3,7 @@ from django.db import models
 class Orcamentos(models.Model):
     pedi_empr = models.IntegerField()
     pedi_fili = models.IntegerField()
-    pedi_nume = models.BigAutoField(primary_key=True, unique=True)
+    pedi_nume = models.IntegerField(primary_key=True, unique=True, db_column='pedi_nume')
     pedi_forn = models.CharField(db_column='pedi_forn',max_length=60)
     pedi_data = models.DateField()
     pedi_topr = models.DecimalField(db_column='pedi_topr', max_digits=15, decimal_places=2,blank=True, null=True)

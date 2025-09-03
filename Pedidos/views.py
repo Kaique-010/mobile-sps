@@ -30,40 +30,45 @@ class PedidoVendaViewSet(viewsets.ModelViewSet):
 
     def get_object(self):
         """
-        Sobrescreve get_object para lidar com registros duplicados
+        Sobrescreve get_object para lidar com chaves compostas e registros duplicados
         """
         banco = get_licenca_db_config(self.request)
         if not banco:
             logger.error("Banco de dados não encontrado.")
             raise NotFound("Banco de dados não encontrado.")
 
-        lookup_value = self.kwargs[self.lookup_field]
-        
-        # Obter parâmetros adicionais para filtrar duplicatas
-        pedi_empr = self.request.query_params.get('pedi_empr')
-        pedi_fili = self.request.query_params.get('pedi_fili')
-        
-        queryset = self.get_queryset()
-        
-        # Filtrar por empresa e filial se fornecidos
-        if pedi_empr:
-            queryset = queryset.filter(pedi_empr=pedi_empr)
-        if pedi_fili:
-            queryset = queryset.filter(pedi_fili=pedi_fili)
+        # Verificar se é URL com chave composta
+        if 'empresa' in self.kwargs:
+            empresa = self.kwargs['empresa']
+            filial = self.kwargs['filial']
+            numero = self.kwargs['numero']
+        else:
+            # Fallback para lookup padrão
+            lookup_value = self.kwargs.get(self.lookup_field)
+            empresa = self.request.query_params.get('pedi_empr')
+            filial = self.request.query_params.get('pedi_fili')
+            numero = lookup_value
+
+        if not all([empresa, filial, numero]):
+            raise ValidationError("Parâmetros empresa, filial e número são obrigatórios")
+
+        try:
+            queryset = self.get_queryset().filter(
+                pedi_empr=empresa,
+                pedi_fili=filial,
+                pedi_nume=numero
+            )
             
-        # Filtrar pelo lookup_field
-        queryset = queryset.filter(**{self.lookup_field: lookup_value})
-        
-        # Retornar o primeiro resultado para evitar erro de múltiplos objetos
-        obj = queryset.first()
-        
-        if not obj:
-            raise NotFound("Pedido não encontrado.")
+            obj = queryset.first()
+            if not obj:
+                raise NotFound(f"Pedido {numero} não encontrado para empresa {empresa}, filial {filial}")
+                
+            self.check_object_permissions(self.request, obj)
+            return obj
             
-        # Verificar permissões
-        self.check_object_permissions(self.request, obj)
-        
-        return obj
+        except Exception as e:
+            logger.error(f"Erro ao buscar pedido: {e}")
+            raise NotFound("Pedido não encontrado")
     
     def get_queryset(self):
         from datetime import datetime
@@ -73,13 +78,8 @@ class PedidoVendaViewSet(viewsets.ModelViewSet):
             logger.error("Banco de dados não encontrado.")
             raise NotFound("Banco de dados não encontrado.")
             
-        # Base queryset otimizada COM PREFETCH DOS ITENS
-        queryset = PedidoVenda.objects.using(banco).prefetch_related(
-            Prefetch(
-                'itenspedidovenda_set',
-                queryset=Itenspedidovenda.objects.using(banco).all()
-            )
-        )
+        # Remover o prefetch_related problemático
+        queryset = PedidoVenda.objects.using(banco)
         
         # Obter parâmetros de filtro
         cliente_nome = self.request.query_params.get('cliente_nome')
@@ -88,11 +88,9 @@ class PedidoVendaViewSet(viewsets.ModelViewSet):
         filial_id = self.request.query_params.get('pedi_fili')
         
         # NOVA LÓGICA: Filtro por ano atual por padrão
-        # Se não há filtros específicos (nome ou número), mostrar apenas ano atual
         tem_filtros_especificos = cliente_nome or numero_pedido
         
         if not tem_filtros_especificos:
-            # Filtrar apenas pedidos do ano atual para melhor performance
             ano_atual = datetime.now().year
             queryset = queryset.filter(pedi_data__year=ano_atual)
             logger.info(f"Aplicando filtro por ano atual: {ano_atual}")
