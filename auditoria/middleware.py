@@ -32,14 +32,12 @@ class AuditoriaMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
     
+   
     def __call__(self, request):
-        # DESABILITADO TEMPORARIAMENTE PARA OTIMIZAÇÃO DE LOGIN
-        # TODO: Implementar auditoria assíncrona com Celery
-        return self.get_response(request)
-        
-        # CÓDIGO ORIGINAL COMENTADO ABAIXO:
-        # if not request.path.startswith('/api/'):
-        #     return self.get_response(request)
+        if not request.path.startswith('/api/'):
+            return self.get_response(request)
+    # REMOVER ESTE RETURN DUPLICADO:
+    # return self.get_response(request)  # <- Esta linha está causando o problema
 
     def extrair_modelo_e_id_da_url(self, url):
         """Extrai o nome do modelo e ID do objeto da URL"""
@@ -72,6 +70,9 @@ class AuditoriaMiddleware:
                 'contratos': 'contratos',
                 'dashboards': 'dashboards',
                 'auditoria': 'auditoria',
+                'parametros_admin': 'parametros_admin',
+                'permissoes_modulos': 'permissoes_modulos',
+                'pisos': 'Pisos',
 
             }
             
@@ -260,7 +261,6 @@ class AuditoriaMiddleware:
                     data = request.body.decode('utf-8') if request.body else None
 
                 if isinstance(data, str):
-                    import json
                     data = json.loads(data)
             except Exception as e:
                 logger.warning(f'Erro ao processar dados da requisição: {str(e)}')
@@ -297,10 +297,11 @@ class AuditoriaMiddleware:
             logger.debug(f'  - campos_alterados: {"Sim" if campos_alterados else "Não"} ({len(campos_alterados) if campos_alterados else 0} campos)')
             
             # Converter dados para tipos serializáveis em JSON
-            data_serializavel = converter_para_json_serializavel(data) if data else None
-            dados_antes_serializavel = converter_para_json_serializavel(dados_antes) if dados_antes else None
-            dados_depois_serializavel = converter_para_json_serializavel(dados_depois) if dados_depois else None
-            campos_alterados_serializavel = converter_para_json_serializavel(campos_alterados) if campos_alterados else None
+            # Serializar explicitamente com ensure_ascii=False para evitar problemas de codificação Unicode
+            data_serializavel = json.dumps(converter_para_json_serializavel(data), ensure_ascii=False) if data else None
+            dados_antes_serializavel = json.dumps(converter_para_json_serializavel(dados_antes), ensure_ascii=False) if dados_antes else None
+            dados_depois_serializavel = json.dumps(converter_para_json_serializavel(dados_depois), ensure_ascii=False) if dados_depois else None
+            campos_alterados_serializavel = json.dumps(converter_para_json_serializavel(campos_alterados), ensure_ascii=False) if campos_alterados else None
             
             # Criar o log
             log = LogAcao.objects.create(

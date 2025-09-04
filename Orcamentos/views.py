@@ -9,6 +9,7 @@ from rest_framework.filters import SearchFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
+from django.shortcuts import get_object_or_404
 from .models import Orcamentos, ItensOrcamento
 from .serializers import OrcamentosSerializer
 from Entidades.models import Entidades
@@ -44,6 +45,20 @@ class OrcamentoViewSet(viewsets.ModelViewSet):
             empresa = self.request.query_params.get('empr') or self.request.query_params.get('pedi_empr')
             filial = self.request.query_params.get('fili') or self.request.query_params.get('pedi_fili')
             numero = lookup_value
+
+        # Início do bloco de extração de parâmetros existente
+        numero = self.kwargs.get('numero') or self.request.query_params.get('numero')
+        empresa = self.kwargs.get('empresa') or self.request.query_params.get('empresa')
+        filial = self.kwargs.get('filial') or self.request.query_params.get('filial')
+
+        if not empresa:
+            empresa = self.request.data.get('pedi_empr')
+        if not filial:
+            filial = self.request.data.get('pedi_fili')
+        if not numero:
+            numero = self.request.data.get('pedi_nume')
+
+        logger.debug(f"[get_object] Parametros recebidos: Empresa={empresa}, Filial={filial}, Numero={numero}")
 
         if not all([empresa, filial, numero]):
             raise ValidationError("Parâmetros empresa, filial e número são obrigatórios")
@@ -197,14 +212,43 @@ class OrcamentoViewSet(viewsets.ModelViewSet):
             logger.error(f"[OrcamentoViewSet.create] Erro inesperado: {e}")
             return Response({'error': 'Erro interno do servidor'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
     def retrieve(self, request, *args, **kwargs):
         try:
             return super().retrieve(request, *args, **kwargs)
         except Exception as e:
             logger.error(f"[OrcamentoViewSet.retrieve] Erro inesperado: {e}")
             return Response({'error': 'Erro interno do servidor'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        
+
+    '''def get_object(self):
+        numero = self.kwargs.get('pedi_nume') # Assumindo que a URL usa 'pk' para o numero do orçamento
+        if not numero:
+            numero = self.kwargs.get('numero') # Em caso de url customizada usando 'numero'
+        if not numero:
+            numero = self.request.query_params.get('numero')
+        if not numero:
+            numero = self.request.data.get('pedi_nume') 
+
+        empresa = self.request.query_params.get('empresa') or self.request.query_params.get('empr') or self.request.data.get('pedi_empr')
+        filial = self.request.query_params.get('filial') or self.request.query_params.get('fili') or self.request.data.get('pedi_fili')
+        
+
+        logger.debug(f"[get_object] Parametros para busca: Empresa={empresa}, Filial={filial}, Numero={numero}")
+
+        if not all([empresa, filial, numero]):
+            raise ValidationError("Parâmetros empresa, filial e número são obrigatórios")
+
+        queryset = self.filter_queryset(self.get_queryset())
+        obj = get_object_or_404(queryset, pedi_empr=empresa, pedi_fili=filial, pedi_nume=numero)
+        self.check_object_permissions(self.request, obj)
+        return obj'''
 
     def update(self, request, *args, **kwargs):
+        logger.debug(f"[OrcamentoViewSet.update] Dados da requisição: {request.data}")
+        logger.debug(f"[OrcamentoViewSet.update] Args: {args}")
+        logger.debug(f"[OrcamentoViewSet.update] Kwargs: {kwargs}")
         try:
             return super().update(request, *args, **kwargs)
         except ValidationError as e:
@@ -250,12 +294,13 @@ class OrcamentoViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Erro interno do servidor'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=True, methods=['post'], url_path='transformar-em-pedido')
-    def transformar_em_pedido(self, request, empresa=None, filial=None, numero=None, pedi_nume=None, slug=None):
+    def transformar_em_pedido(self, request,slug=None, *args, **kwargs):
         """
         Transforma um orçamento em pedido de venda
         """
         try:
             orcamento = self.get_object()
+            logger.debug(f"[transformar_em_pedido] Orçamento: {orcamento}")
             banco = get_licenca_db_config(request)
             
             if not banco:

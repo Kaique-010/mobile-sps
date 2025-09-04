@@ -145,6 +145,10 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             Tabelaprecos.objects.using(banco).filter(
                 tabe_prod=OuterRef('prod_codi'),
                 tabe_empr=OuterRef('prod_empr')
+            ).exclude(
+                tabe_entr__year__lt=1900
+            ).exclude(
+                tabe_entr__year__gt=2100
             ).values('tabe_avis')[:1],
             output_field=DecimalField()
         )
@@ -153,6 +157,10 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             Tabelaprecos.objects.using(banco).filter(
                 tabe_prod=OuterRef('prod_codi'),
                 tabe_empr=OuterRef('prod_empr')
+            ).exclude(
+                tabe_entr__year__lt=1900
+            ).exclude(
+                tabe_entr__year__gt=2100
             ).values('tabe_prco')[:1],
             output_field=DecimalField()
         )
@@ -204,6 +212,10 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                 Tabelaprecos.objects.using(banco).filter(
                     tabe_prod=OuterRef('prod_codi'),
                     tabe_empr=OuterRef('prod_empr')
+                ).exclude(
+                    tabe_entr__year__lt=1900
+                ).exclude(
+                    tabe_entr__year__gt=2100
                 ).values('tabe_avis')[:1],
                 output_field=DecimalField()
             )
@@ -212,6 +224,10 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                 Tabelaprecos.objects.using(banco).filter(
                     tabe_prod=OuterRef('prod_codi'),
                     tabe_empr=OuterRef('prod_empr')
+                ).exclude(
+                    tabe_entr__year__lt=1900
+                ).exclude(
+                    tabe_entr__year__gt=2100
                 ).values('tabe_prco')[:1],
                 output_field=DecimalField()
             )

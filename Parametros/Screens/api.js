@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { getStoredData } from '../services/storageService'
 // NetInfo removido - não está instalado
 
-export const BASE_URL = 'http://192.168.10.16:8000' //'http://168.75.73.117'//'https://mobile-sps.site' //'https://mobile-sps.onrender.com' //'http://192.168.0.39:8000' //http://192.168.10.59:8000
+export const BASE_URL = 'http://192.168.10.16:8000' //'http://168.75.73.117'//'https://mobile-sps.site' //'http://192.168.10.16:8000' //'http://192.168.0.39:8000' //http://192.168.10.59:8000
 import licencasLocal from '../licencas.json'
 
 // Função para renovar o token
@@ -59,18 +59,18 @@ export const getAuthHeaders = async () => {
     const usuario_id = await AsyncStorage.getItem('usuario_id')
     const username = await AsyncStorage.getItem('username')
     const cliente_id = await AsyncStorage.getItem('cliente_id')
-    
+
     console.log('🔍 [AUTH-HEADERS] empresaId:', empresaId)
     console.log('🔍 [AUTH-HEADERS] filialId:', filialId)
-    
+
     const headers = {
       'X-Empresa': empresaId || '1',
       'X-Filial': filialId || '1',
       'X-Docu': docu || '',
     }
-    
+
     console.log('🔍 [AUTH-HEADERS] Headers enviados:', headers)
-    
+
     return headers
   } catch (error) {
     console.error('Erro ao obter headers de autenticação:', error)
@@ -193,8 +193,10 @@ const apiFetch = async (
   }
 }
 
-// Funções auxiliares
+// Exportar a função
+export { apiFetch }
 
+// Funções auxiliares
 export const apiGet = async (endpoint, params = {}) => {
   const response = await apiFetch(endpoint, 'get', null, params)
   return response.data
@@ -223,9 +225,14 @@ export const addContexto = async (obj = {}, prefixo = '') => {
 
   return {
     ...obj,
+    // Formato antigo (compatibilidade)
     ...(empresaId && { [`${prefixo}empr`]: empresaId }),
     ...(filialId && { [`${prefixo}fili`]: filialId }),
     ...(usuario_id && { [`${prefixo}usua`]: usuario_id }),
+    // Formato novo (padrão)
+    ...(empresaId && { [`${prefixo}empresa_id`]: empresaId }),
+    ...(filialId && { [`${prefixo}filial_id`]: filialId }),
+    ...(usuario_id && { [`${prefixo}usuario_id`]: usuario_id }),
   }
 }
 
@@ -235,8 +242,12 @@ export const addContextoSemFili = async (obj = {}, prefixo = '') => {
 
   return {
     ...obj,
+    // Formato antigo (compatibilidade)
     ...(empresaId && { [`${prefixo}empr`]: empresaId }),
     ...(usuario_id && { [`${prefixo}usua`]: usuario_id }),
+    // Formato novo (padrão)
+    ...(empresaId && { [`${prefixo}empresa_id`]: empresaId }),
+    ...(usuario_id && { [`${prefixo}usuario_id`]: usuario_id }),
   }
 }
 

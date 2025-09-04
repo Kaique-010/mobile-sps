@@ -119,7 +119,7 @@ CREATE TABLE IF NOT EXISTS parametrosmobile (
     para_ativ BOOLEAN NOT NULL DEFAULT TRUE,
     para_data_alte TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     para_usua_alte INT
-);
+);                    
 """
 
 # SQL de tabelas e inserções
@@ -196,6 +196,49 @@ WHERE NOT EXISTS (
     AND p.perm_empr = 1 
     AND p.perm_fili = 1
 );
+"""
+
+# SQL para parâmetros de controle de lote
+SQL_PARAMETROS_LOTE = """
+-- Ajustes na tabela de lotes
+ALTER TABLE lotesvenda ADD COLUMN IF NOT EXISTS lote_ativ BOOLEAN DEFAULT TRUE;
+ALTER TABLE lotesvenda ADD COLUMN IF NOT EXISTS lote_data_fabr DATE;
+ALTER TABLE lotesvenda ADD COLUMN IF NOT EXISTS lote_obse TEXT;
+
+-- Parâmetros de controle de lote para produtos
+INSERT INTO parametrosmobile (para_empr, para_fili, para_modu_id, para_nome, para_desc, para_valo, para_ativ, para_data_alte, para_usua_alte)
+SELECT 1, 1, 3, 'controla_lote', 'Controla lotes de produtos', false, true, CURRENT_TIMESTAMP, 1
+WHERE NOT EXISTS (SELECT 1 FROM parametrosmobile WHERE para_empr = 1 AND para_fili = 1 AND para_modu_id = 3 AND para_nome = 'controla_lote');
+
+INSERT INTO parametrosmobile (para_empr, para_fili, para_modu_id, para_nome, para_desc, para_valo, para_ativ, para_data_alte, para_usua_alte)
+SELECT 1, 1, 3, 'lote_sequencial', 'Gera lotes sequenciais automaticamente', false, false, CURRENT_TIMESTAMP, 1
+WHERE NOT EXISTS (SELECT 1 FROM parametrosmobile WHERE para_empr = 1 AND para_fili = 1 AND para_modu_id = 3 AND para_nome = 'lote_sequencial');
+
+INSERT INTO parametrosmobile (para_empr, para_fili, para_modu_id, para_nome, para_desc, para_valo, para_ativ, para_data_alte, para_usua_alte)
+SELECT 1, 1, 3, 'obriga_validade', 'Obriga informar data de validade', false, false, CURRENT_TIMESTAMP, 1
+WHERE NOT EXISTS (SELECT 1 FROM parametrosmobile WHERE para_empr = 1 AND para_fili = 1 AND para_modu_id = 3 AND para_nome = 'obriga_validade');
+
+INSERT INTO parametrosmobile (para_empr, para_fili, para_modu_id, para_nome, para_desc, para_valo, para_ativ, para_data_alte, para_usua_alte)
+SELECT 1, 1, 3, 'dias_vencimento_padrao', 'Dias padrão para vencimento', false, false, CURRENT_TIMESTAMP, 1
+WHERE NOT EXISTS (SELECT 1 FROM parametrosmobile WHERE para_empr = 1 AND para_fili = 1 AND para_modu_id = 3 AND para_nome = 'dias_vencimento_padrao');
+
+-- Parâmetros de controle de lote para entradas de estoque
+INSERT INTO parametrosmobile (para_empr, para_fili, para_modu_id, para_nome, para_desc, para_valo, para_ativ, para_data_alte, para_usua_alte)
+SELECT 1, 1, 5, 'controla_lote_entrada', 'Controla lotes nas entradas de estoque', false, false, CURRENT_TIMESTAMP, 1
+WHERE NOT EXISTS (SELECT 1 FROM parametrosmobile WHERE para_empr = 1 AND para_fili = 1 AND para_modu_id = 5 AND para_nome = 'controla_lote_entrada');
+
+INSERT INTO parametrosmobile (para_empr, para_fili, para_modu_id, para_nome, para_desc, para_valo, para_ativ, para_data_alte, para_usua_alte)
+SELECT 1, 1, 5, 'obriga_lote_entrada', 'Obriga informar lote nas entradas', false, false, CURRENT_TIMESTAMP, 1
+WHERE NOT EXISTS (SELECT 1 FROM parametrosmobile WHERE para_empr = 1 AND para_fili = 1 AND para_modu_id = 5 AND para_nome = 'obriga_lote_entrada');
+
+-- Parâmetros de controle de lote para saídas de estoque
+INSERT INTO parametrosmobile (para_empr, para_fili, para_modu_id, para_nome, para_desc, para_valo, para_ativ, para_data_alte, para_usua_alte)
+SELECT 1, 1, 6, 'controla_lote_saida', 'Controla lotes nas saídas de estoque', false, false, CURRENT_TIMESTAMP, 1
+WHERE NOT EXISTS (SELECT 1 FROM parametrosmobile WHERE para_empr = 1 AND para_fili = 1 AND para_modu_id = 6 AND para_nome = 'controla_lote_saida');
+
+INSERT INTO parametrosmobile (para_empr, para_fili, para_modu_id, para_nome, para_desc, para_valo, para_ativ, para_data_alte, para_usua_alte)
+SELECT 1, 1, 6, 'obriga_lote_saida', 'Obriga informar lote nas saídas', false, false, CURRENT_TIMESTAMP, 1
+WHERE NOT EXISTS (SELECT 1 FROM parametrosmobile WHERE para_empr = 1 AND para_fili = 1 AND para_modu_id = 6 AND para_nome = 'obriga_lote_saida');
 """
 
 # SQL de views
@@ -639,6 +682,7 @@ def main():
     print("📦 Executando SQL customizado...")
     executar_sql(SQL_COMMANDS, "Criação e atualização de tabelas")
     executar_sql(SQL_INSERT_PERMISSAO, "Inserção de permissões para usuário 1")
+    executar_sql(SQL_PARAMETROS_LOTE, "Inserção de parâmetros de controle de lote")
     executar_sql(SQL_VIEWS, "Criação de views")
 
     print("📊 Populando parâmetros iniciais...")

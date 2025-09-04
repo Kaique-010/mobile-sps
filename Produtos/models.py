@@ -2,6 +2,83 @@ from django.db import models
 from django.utils.html import mark_safe
 
 
+
+
+class Lote(models.Model):
+    lote_empr = models.IntegerField()
+    lote_prod = models.CharField(max_length=60)
+    lote_lote = models.IntegerField()
+    lote_unit = models.DecimalField(max_digits=15, decimal_places=2, help_text="Preço unitário") 
+    lote_sald = models.DecimalField(max_digits=15, decimal_places=2, help_text="Saldo") 
+    lote_usua = models.IntegerField()
+    lote_data_alt = models.DateTimeField(auto_now=True, help_text="Data de alteração")
+    lote_data_venc = models.DateField(help_text="Data de vencimento")
+    lote_ativ = models.BooleanField(default=True, help_text="Lote ativo")
+    lote_data_fabr = models.DateField(blank=True, null=True, help_text="Data de fabricação")
+    lote_obse= models.TextField(blank=True, null=True, help_text="Observações do lote")
+    
+    class Meta:
+        db_table = 'lotesvenda'
+        verbose_name = 'Lote de Venda'
+        verbose_name_plural = 'Lotes de Venda'
+        ordering = ['lote_empr','lote_prod', 'lote_lote']
+        unique_together = ('lote_empr', 'lote_prod', 'lote_lote')
+        managed = False
+
+    def __str__(self):
+        return f'{self.lote_lote} - {self.lote_prod}'
+    
+    @property
+    def dias_para_vencimento(self):
+        """Calcula quantos dias faltam para o vencimento"""
+        if self.lote_data_venc:
+            delta = self.lote_data_venc - date.today()
+            return delta.days
+        return None
+    
+    @property
+    def vencido(self):
+        """Verifica se o lote está vencido"""
+        dias = self.dias_para_vencimento
+        return dias is not None and dias < 0
+    
+    @property
+    def proximo_vencimento(self):
+        """Verifica se o lote está próximo do vencimento (30 dias)"""
+        dias = self.dias_para_vencimento
+        return dias is not None and 0 <= dias <= 30
+    
+    @property
+    def status_vencimento(self):
+        """Retorna status do vencimento"""
+        if self.vencido:
+            return 'VENCIDO'
+        elif self.proximo_vencimento:
+            return 'PRÓXIMO_VENCIMENTO'
+        return 'VÁLIDO'
+    
+    @classmethod
+    def proximo_numero_lote(cls, empresa, produto):
+        """Gera próximo número de lote sequencial"""
+        ultimo_lote = cls.objects.filter(
+            lote_empr=empresa,
+            lote_prod=produto
+        ).aggregate(models.Max('lote_lote'))['lote_lote__max']
+        
+        return (ultimo_lote or 0) + 1
+    
+    def save(self, *args, **kwargs):
+        """Override save para validações"""
+        if not self.lote_data_fabr:
+            self.lote_data_fabr = date.today()
+        
+        # Se não tem data de vencimento, calcula baseado na fabricação
+        if not self.lote_data_venc and self.lote_data_fabr:
+            self.lote_data_venc = self.lote_data_fabr + timedelta(days=365)
+        
+        super().save(*args, **kwargs)
+
+
 class GrupoProduto(models.Model):
     codigo = models.AutoField(
         db_column='grup_codi', 
@@ -157,6 +234,8 @@ class Produtos(models.Model):
     prod_foto = models.BinaryField(db_column='prod_foto', blank=True, null=True) 
     prod_cera_m2cx = models.DecimalField(max_digits=15, decimal_places=2, db_column='prod_cera_m2cx', blank=True, null=True)
     prod_cera_pccx = models.DecimalField(max_digits=15, decimal_places=2, db_column='prod_cera_pccx', blank=True, null=True)
+    #prod_lote = models.CharField(max_length=50, blank=True, null=True, help_text="Lote de produção")
+    #prod_lote_venc = models.DateField(blank=True, null=True, help_text="Data de vencimento do lote")
 
 
 

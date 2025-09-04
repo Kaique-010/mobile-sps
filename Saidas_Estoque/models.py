@@ -13,6 +13,7 @@ class SaidasEstoque(models.Model):
     said_tota = models.DecimalField(max_digits=10, decimal_places=2)
     said_obse = models.CharField(max_length=100, blank=True, null=True)
     said_usua = models.IntegerField()
+    said_lote_vend = models.IntegerField(blank=True, null=True)
 
     class Meta:
         db_table = 'saidasestoque'

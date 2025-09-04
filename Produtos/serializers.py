@@ -1,12 +1,17 @@
+from datetime import datetime
 from rest_framework import serializers
 import base64
 from .models import Produtos, UnidadeMedida, Tabelaprecos, ProdutosDetalhados
 from core.serializers import BancoContextMixin
 from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
+import logging
+
+logger = logging.getLogger(__name__)
 
 class TabelaPrecoSerializer(BancoContextMixin, serializers.ModelSerializer):
     percentual_avis = serializers.FloatField(write_only=True, required=False)
     percentual_apra = serializers.FloatField(write_only=True, required=False)
+    
 
     class Meta:
         model = Tabelaprecos
@@ -16,7 +21,7 @@ class TabelaPrecoSerializer(BancoContextMixin, serializers.ModelSerializer):
             'tabe_desc', 'tabe_marg', 'tabe_vare',
             'tabe_cust', 'tabe_icms', 'tabe_valo_st',
             'percentual_avis', 'percentual_apra',
-            'field_log_data', 'field_log_time', 'tabe_hist'
+            'field_log_data', 'field_log_time', 'tabe_hist', 'tabe_entr'
         ]
         extra_kwargs = {
             'tabe_empr': {'read_only': True},
@@ -100,7 +105,23 @@ class TabelaPrecoSerializer(BancoContextMixin, serializers.ModelSerializer):
         instance.save(using=using, force_update=True)
         return instance
 
+    
 
+    
+    def to_representation(self, instance):
+        """Validar dados antes da serialização"""
+        # Verificar se tabe_entr tem data válida
+        if hasattr(instance, 'tabe_entr') and instance.tabe_entr:
+            try:
+                year = instance.tabe_entr.year
+                if year < 1900 or year > 2100:
+                    logger.warning(f"Data inválida em tabe_entr: {instance.tabe_entr} - Produto: {instance.tabe_prod}")
+                    instance.tabe_entr = None
+            except (ValueError, AttributeError) as e:
+                logger.warning(f"Erro na data tabe_entr: {e} - Produto: {instance.tabe_prod}")
+                instance.tabe_entr = None
+        
+        return super().to_representation(instance)
 class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
     precos = serializers.SerializerMethodField()
     prod_preco_vista = serializers.SerializerMethodField()

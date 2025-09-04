@@ -51,8 +51,8 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
     empresa_nome = serializers.SerializerMethodField(read_only=True)
     itens = serializers.SerializerMethodField()  # Mudança aqui - remover write_only
     itens_input = ItemPedidoVendaSerializer(many=True, write_only=True, required=False)
-    pedi_nume = serializers.IntegerField(read_only=True)  # Resolve a pk sendo o numero pois ele retorna sequencial na mão 
-    parametros = serializers.DictField(write_only=True, required=False)  # Para receber parâmetros de desconto
+    pedi_nume = serializers.IntegerField(read_only=True)  
+    parametros = serializers.DictField(write_only=True, required=False)
     gerar_titulos = serializers.BooleanField(write_only=True, required=False, default=False)  # Para gerar títulos automaticamente
     financeiro_titulos = serializers.DictField(write_only=True, required=False)  # Parâmetros para geração de títulos
 
@@ -75,6 +75,8 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
         return ItemPedidoVendaSerializer(itens, many=True, context=self.context).data
 
 
+    
+    
     #metodo de criacao de pedidos ja olhando se era um pedido criado ou não no update
     def create(self, validated_data):
         print(f"🆕 [PEDIDO] Iniciando criação de pedido")

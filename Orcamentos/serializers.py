@@ -6,7 +6,7 @@ from Produtos.models import Produtos
 from .models import Orcamentos, ItensOrcamento
 from Entidades.models import Entidades
 from core.serializers import BancoContextMixin
-from core.utils import calcular_valores_pedido, calcular_subtotal_item_bruto, calcular_total_item_com_desconto  # Atualizada importação
+from core.utils import calcular_valores_pedido, calcular_subtotal_item_bruto, calcular_total_item_com_desconto 
 from django.db.models import Prefetch
 import logging
 from decimal import Decimal, ROUND_HALF_UP
@@ -74,7 +74,7 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
     itens_input = ItemOrcamentoSerializer(many=True, write_only=True, required=False)
     itens_data = serializers.ListField(child=serializers.DictField(), write_only=True, required=False)
     parametros = serializers.DictField(write_only=True, required=False)
-    pedi_nume = serializers.IntegerField(read_only=True)  # ADICIONADO: read_only=True
+    pedi_nume = serializers.IntegerField(read_only=True)  
 
     class Meta:
         model = Orcamentos
@@ -86,7 +86,7 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
             'parametros'
         ]
         extra_kwargs = {
-            'pedi_nume': {'read_only': True},  # ADICIONADO: Garantir que seja read_only
+            'pedi_nume': {'read_only': False},
         }
     
     def __init__(self, *args, **kwargs):

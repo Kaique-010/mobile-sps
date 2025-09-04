@@ -21,11 +21,12 @@ class PermissaoModulo(models.Model):
     perm_ativ = models.BooleanField(default=True, help_text="Módulo liberado")
     perm_usua_libe = models.IntegerField(blank=True, help_text="Usuário que liberou")
     perm_data_alte = models.DateTimeField(auto_now=True, help_text="Data de alteração")
+    
 
     class Meta:
         db_table = 'permissoesmodulosmobile'
         unique_together = ('perm_empr', 'perm_fili', 'perm_modu')
-
+        ordering = ['perm_empr', 'perm_fili', 'perm_modu']
 
 
 
@@ -36,6 +37,7 @@ class ParametroSistema(models.Model):
     para_modu = models.ForeignKey(Modulo, on_delete=models.CASCADE, related_name='parametros', db_column='para_modu_id')
     para_nome = models.CharField(max_length=50, help_text="Nome do parâmetro")
     para_desc = models.TextField(help_text="Descrição do parâmetro")
+    para_valo = models.BooleanField(default=False, help_text="Valor do parâmetro")
     para_ativ = models.BooleanField(default=True, help_text="Parâmetro ativo")
     para_data_alte = models.DateTimeField(auto_now=True, help_text="Data de alteração")
     para_usua_alte = models.IntegerField(blank=True, help_text="Usuário que alterou")

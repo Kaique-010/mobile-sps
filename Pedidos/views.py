@@ -8,7 +8,7 @@ from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.filters import SearchFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Prefetch
-
+from django.shortcuts import get_object_or_404
 from .models import PedidoVenda, Itenspedidovenda
 from .serializers import PedidoVendaSerializer
 
@@ -30,45 +30,50 @@ class PedidoVendaViewSet(viewsets.ModelViewSet):
 
     def get_object(self):
         """
-        Sobrescreve get_object para lidar com chaves compostas e registros duplicados
+        Obtém o objeto pedido usando chave composta empresa/filial/numero
         """
-        banco = get_licenca_db_config(self.request)
-        if not banco:
-            logger.error("Banco de dados não encontrado.")
-            raise NotFound("Banco de dados não encontrado.")
-
-        # Verificar se é URL com chave composta
-        if 'empresa' in self.kwargs:
-            empresa = self.kwargs['empresa']
-            filial = self.kwargs['filial']
-            numero = self.kwargs['numero']
-        else:
-            # Fallback para lookup padrão
-            lookup_value = self.kwargs.get(self.lookup_field)
-            empresa = self.request.query_params.get('pedi_empr')
-            filial = self.request.query_params.get('pedi_fili')
-            numero = lookup_value
-
-        if not all([empresa, filial, numero]):
-            raise ValidationError("Parâmetros empresa, filial e número são obrigatórios")
-
         try:
-            queryset = self.get_queryset().filter(
+            # Priorizar parâmetros da URL (self.kwargs) primeiro
+            empresa = self.kwargs.get('empresa') or self.kwargs.get('pedi_empr')
+            filial = self.kwargs.get('filial') or self.kwargs.get('pedi_fili') 
+            numero = self.kwargs.get('numero') or self.kwargs.get('pedi_nume')
+            
+            # Se não encontrou na URL, tentar query_params como fallback
+            if not empresa:
+                empresa = self.request.query_params.get('empresa') or self.request.query_params.get('pedi_empr')
+            if not filial:
+                filial = self.request.query_params.get('filial') or self.request.query_params.get('pedi_fili')
+            if not numero:
+                numero = self.request.query_params.get('numero') or self.request.query_params.get('pedi_nume')
+                
+            # Se ainda não encontrou, tentar request.data como último recurso
+            if not empresa and hasattr(self.request, 'data'):
+                empresa = self.request.data.get('empresa') or self.request.data.get('pedi_empr')
+            if not filial and hasattr(self.request, 'data'):
+                filial = self.request.data.get('filial') or self.request.data.get('pedi_fili')
+            if not numero and hasattr(self.request, 'data'):
+                numero = self.request.data.get('numero') or self.request.data.get('pedi_nume')
+            
+            logger.debug(f"Parâmetros recebidos - Empresa: {empresa}, Filial: {filial}, Numero: {numero}")
+            
+            if not all([empresa, filial, numero]):
+                raise ValidationError("Empresa, filial e número são obrigatórios")
+            
+            banco = get_licenca_db_config(self.request)
+            pedido = get_object_or_404(
+                PedidoVenda.objects.using(banco),
                 pedi_empr=empresa,
                 pedi_fili=filial,
                 pedi_nume=numero
             )
             
-            obj = queryset.first()
-            if not obj:
-                raise NotFound(f"Pedido {numero} não encontrado para empresa {empresa}, filial {filial}")
-                
-            self.check_object_permissions(self.request, obj)
-            return obj
+            return pedido
             
+        except PedidoVenda.DoesNotExist:
+            raise NotFound("Pedido não encontrado")
         except Exception as e:
             logger.error(f"Erro ao buscar pedido: {e}")
-            raise NotFound("Pedido não encontrado")
+            raise ValidationError(f"Erro ao buscar pedido: {str(e)}")
     
     def get_queryset(self):
         from datetime import datetime
@@ -225,27 +230,35 @@ class PedidoVendaViewSet(viewsets.ModelViewSet):
             logger.error(f"[PedidoVendaViewSet.create] Erro inesperado: {e}")
             return Response({'error': 'Erro interno do servidor'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-    @parametros_pedidos_completo
-    def update(self, request, *args, **kwargs):
-        print(f"🎯 [VIEW] Recebendo requisição de atualização de pedido")
-        print(f"🎯 [VIEW] Dados da requisição: {request.data}")
-        
+    # @parametros_pedidos_completo  # Comentado temporariamente devido ao erro de permissão
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Recupera um pedido específico
+        """
         try:
             instance = self.get_object()
-            print(f"🎯 [VIEW] Atualizando pedido {instance.pedi_nume}")
-            
-            serializer = self.get_serializer(instance, data=request.data)
-            serializer.is_valid(raise_exception=True)
-            print(f"🎯 [VIEW] Dados validados com sucesso, atualizando pedido...")
-            pedido = serializer.save()
-            print(f"🎯 [VIEW] Pedido atualizado com sucesso")
-            return Response(self.get_serializer(pedido).data, status=status.HTTP_200_OK)
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data)
+        except Exception as e:
+            logger.error(f"Erro ao recuperar pedido: {e}")
+            return Response(
+                {'erro': 'Erro interno do servidor'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def update(self, request, *args, **kwargs):
+        logger.debug(f"[PedidoVendaViewSet.update] Dados da requisição: {request.data}")
+        logger.debug(f"[PedidoVendaViewSet.update] Args: {args}")
+        logger.debug(f"[PedidoVendaViewSet.update] Kwargs: {kwargs}")
+        try:
+            return super().update(request, *args, **kwargs)
         except ValidationError as e:
             logger.warning(f"[PedidoVendaViewSet.update] Erro de validação: {e.detail}")
             return Response({'errors': e.detail}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            logger.error(f"[PedidoVendaViewSet.update] Erro inesperado: {e}")
+            logger.error(f"[PedidoVendaViewSet.update] Erro inesperado: {e}")   
             return Response({'error': 'Erro interno do servidor'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     
     def destroy(self, request, *args, **kwargs):
         try:

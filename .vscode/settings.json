@@ -2,15 +2,6 @@
   "sqltools.connections": [
     {
       "previewLimit": 50,
-      "server": "base.rtalmeida.com.br",
-      "port": 5432,
-      "driver": "PostgreSQL",
-      "name": "savexml839",
-      "database": "savexml839",
-      "username": "savexml839"
-    },
-    {
-      "previewLimit": 50,
       "server": "localhost",
       "port": 5433,
       "askForPassword": true,
@@ -130,6 +121,26 @@
       "name": "savexml69",
       "database": "savexml69",
       "username": "savexml69"
+    },
+    {
+      "previewLimit": 50,
+      "server": "base.rtalmeida.com.br",
+      "port": 5432,
+      "driver": "PostgreSQL",
+      "name": "granada",
+      "database": "savexml980",
+      "username": "savexml980"
+    },
+    {
+      "ssh": "Disabled",
+      "previewLimit": 50,
+      "server": "base.rtalmeida.com.br",
+      "port": 5432,
+      "askForPassword": true,
+      "driver": "PostgreSQL",
+      "name": "savexml839",
+      "database": "savexml839",
+      "username": "savexml839"
     }
   ]
 }

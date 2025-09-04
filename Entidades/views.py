@@ -69,7 +69,7 @@ class EntidadesViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
         
         # Get additional filters from request parameters
         empr = self.request.GET.get('empr')
-        fili = self.request.GET.get('fili')
+   
         
         if empr:
             filter_kwargs['enti_empr'] = empr

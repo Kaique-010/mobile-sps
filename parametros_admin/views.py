@@ -519,97 +519,137 @@ class ParametroSistemaViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return ParametroSistema.objects.none()
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get', 'patch'])
     def parametros_estoque(self, request, slug=None):
-        """Lista parâmetros de estoque para uma empresa/filial"""
-        try:
-            empresa_id = request.GET.get('empresa_id')
-            filial_id = request.GET.get('filial_id')
-            
-            if not empresa_id or not filial_id:
-                return Response(
-                    {'error': 'empresa_id e filial_id são obrigatórios'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            banco = get_licenca_db_config(request)
-            
-            # Buscar módulo de estoque
-            modulo_estoque = Modulo.objects.using(banco).filter(
-                modu_nome__icontains='estoque'
-            ).first()
-            
-            if not modulo_estoque:
-                return Response(
-                    {'error': 'Módulo de estoque não encontrado'},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-            
-            # Parâmetros de estoque
-            parametros_estoque = [
-                'baixa_estoque_pedido',
-                'baixa_estoque_orcamento', 
-                'permitir_estoque_negativo',
-                'pedido_volta_estoque',
-                'alerta_estoque_minimo'
-            ]
-            
-            parametros = []
-            for nome_param in parametros_estoque:
-                try:
-                    param = ParametroSistema.objects.using(banco).get(
-                        para_empr=empresa_id,
-                        para_fili=filial_id,
-                        para_modu=modulo_estoque,
-                        para_nome=nome_param
+        """Lista e atualiza parâmetros de estoque para uma empresa/filial"""
+        if request.method == 'GET':
+            try:
+                empresa_id = request.GET.get('empr') or request.GET.get('empresa_id')
+                filial_id = request.GET.get('fili') or request.GET.get('filial_id')
+                
+                if not empresa_id or not filial_id:
+                    return Response(
+                        {'error': 'empresa_id e filial_id são obrigatórios'},
+                        status=status.HTTP_400_BAD_REQUEST
                     )
+                
+                banco = get_licenca_db_config(request)
+                
+                # Buscar módulos relacionados ao estoque
+                modulos_estoque = Modulo.objects.using(banco).filter(
+                    modu_nome__in=['Produtos', 'Entradas_Estoque', 'Saidas_Estoque'],
+                    modu_ativ=True
+                )
+                
+                if not modulos_estoque.exists():
+                    return Response(
+                        {'error': 'Módulos de estoque não encontrados'},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+                
+                # Buscar TODOS os parâmetros dos módulos de estoque
+                parametros_db = ParametroSistema.objects.using(banco).filter(
+                    para_empr=empresa_id,
+                    para_fili=filial_id,
+                    para_modu__in=modulos_estoque,
+                    para_ativ=True
+                ).order_by('para_nome')
+                
+                parametros = []
+                for param in parametros_db:
                     parametros.append({
                         'nome': param.para_nome,
                         'descricao': param.para_desc,
                         'valor': param.para_valo,
-                        'ativo': param.para_ativ
+                        'ativo': param.para_ativ,
+                        'modulo': param.para_modu.modu_nome
                     })
-                except ParametroSistema.DoesNotExist:
-                    # Criar parâmetro com valor padrão
-                    descricoes = {
-                        'baixa_estoque_pedido': 'Baixar estoque automaticamente ao gravar pedido de venda',
-                        'baixa_estoque_orcamento': 'Baixar estoque automaticamente ao gravar orçamento',
-                        'permitir_estoque_negativo': 'Permitir estoque negativo em pedidos de venda',
-                        'pedido_volta_estoque': 'Retornar estoque ao excluir pedido de venda',
-                        'alerta_estoque_minimo': 'Exibir alerta quando estoque atingir o mínimo'
-                    }
-                    
-                    param = ParametroSistema.objects.using(banco).create(
-                        para_empr=empresa_id,
-                        para_fili=filial_id,
-                        para_modu=modulo_estoque,
-                        para_nome=nome_param,
-                        para_desc=descricoes.get(nome_param, nome_param),
-                        para_valo=False,
-                        para_ativ=True,
-                        para_usua_alte=request.user.usua_codi if hasattr(request.user, 'usua_codi') else 1
+                
+                return Response({
+                    'empresa_id': empresa_id,
+                    'filial_id': filial_id,
+                    'modulos': [m.modu_nome for m in modulos_estoque],
+                    'parametros': parametros
+                })
+                
+            except Exception as e:
+                logger.error(f"Erro ao buscar parâmetros de estoque: {e}")
+                return Response(
+                    {'error': 'Erro ao buscar parâmetros de estoque'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+            
+        elif request.method == 'PATCH':
+            try:
+                # Buscar empresa_id e filial_id no request.data para PATCH
+                empresa_id = request.data.get('empresa_id') or request.GET.get('empr') or request.GET.get('empresa_id')
+                filial_id = request.data.get('filial_id') or request.GET.get('fili') or request.GET.get('filial_id')
+                
+                if not empresa_id or not filial_id:
+                    return Response(
+                        {'error': 'empresa_id e filial_id são obrigatórios'},
+                        status=status.HTTP_400_BAD_REQUEST
                     )
+                
+                banco = get_licenca_db_config(request)
+                
+                # Definir módulos de estoque
+                modulos_estoque = Modulo.objects.using(banco).filter(
+                    modu_nome__in=['Produtos', 'Entradas_Estoque', 'Saidas_Estoque']
+                )
+                
+                if not modulos_estoque.exists():
+                    return Response(
+                        {'error': 'Módulos de estoque não encontrados'},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+                
+                # Atualizar parâmetros
+                parametros_atualizados = []
+                for chave, valor in request.data.items():
+                    # Pular campos de controle
+                    if chave in ['empresa_id', 'filial_id']:
+                        continue
+                        
+                    try:
+                        # Buscar em todos os módulos de estoque
+                        param = ParametroSistema.objects.using(banco).filter(
+                            para_empr=empresa_id,
+                            para_fili=filial_id,
+                            para_modu__in=modulos_estoque,
+                            para_nome=chave
+                        ).first()
+                        
+                        if param:
+                            param.para_valo = bool(valor)
+                            param.para_usua_alte = request.user.usua_codi if hasattr(request.user, 'usua_codi') else 1
+                            param.save(using=banco)
+                            
+                            parametros_atualizados.append({
+                                'nome': param.para_nome,
+                                'valor': param.para_valo,
+                                'modulo': param.para_modu.modu_nome
+                            })
+                        else:
+                            logger.warning(f"Parâmetro {chave} não encontrado nos módulos de estoque")
+                            
+                    except Exception as e:
+                        logger.error(f"Erro ao atualizar parâmetro {chave}: {e}")
+                        continue
                     
-                    parametros.append({
-                        'nome': param.para_nome,
-                        'descricao': param.para_desc,
-                        'valor': param.para_valo,
-                        'ativo': param.para_ativ
-                    })
-            
-            return Response({
-                'empresa_id': empresa_id,
-                'filial_id': filial_id,
-                'modulo': modulo_estoque.modu_nome,
-                'parametros': parametros
-            })
-            
-        except Exception as e:
-            logger.error(f"Erro ao buscar parâmetros de estoque: {e}")
-            return Response(
-                {'error': 'Erro ao buscar parâmetros de estoque'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+                return Response({
+                    'message': 'Parâmetros atualizados com sucesso',
+                    'parametros_atualizados': parametros_atualizados,
+                    'empresa_id': empresa_id,
+                    'filial_id': filial_id
+                })
+                
+            except Exception as e:
+                logger.error(f"Erro ao atualizar parâmetros de estoque: {e}")
+                return Response(
+                    {'error': 'Erro ao atualizar parâmetros de estoque'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
     
     @action(detail=False, methods=['get'])
     def parametros_preco(self, request, slug=None):
@@ -841,5 +881,6 @@ class ParametroSistemaViewSet(viewsets.ModelViewSet):
                 {'error': 'Erro ao atualizar parâmetro'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
 
 

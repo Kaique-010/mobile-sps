@@ -61,6 +61,7 @@ class Itenspedidovenda(models.Model):
     iped_perc_desc = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
     iped_unme = models.CharField(max_length=6, blank=True, null=True)
     iped_data = models.DateField(auto_now=True)
+    iped_lote_vend = models.IntegerField(blank=True, null=True)
 
 
     class Meta:

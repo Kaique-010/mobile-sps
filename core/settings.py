@@ -123,7 +123,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'core.middleware.LicencaMiddleware',
-    # 'auditoria.middleware.AuditoriaMiddleware',  # DESABILITADO
+    #'auditoria.middleware.AuditoriaMiddleware',  # REATIVAR ESTE
 ]
 
 # Configurações de CORS

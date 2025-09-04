@@ -17,10 +17,9 @@ custom_patterns = [
              'delete': 'destroy'
          }), name='orcamento-detail-composto'),
     # Adicionar URL para transformar-em-pedido
-    path('orcamentos/<int:empresa>/<int:filial>/<int:numero>/transformar-em-pedido/', 
-         OrcamentoViewSet.as_view({
-             'post': 'transformar_em_pedido'
-         }), name='orcamento-transformar-pedido'),
+    path('orcamentos/<int:empresa>/<int:filial>/<int:numero>/transformar-em-pedido/',
+         OrcamentoViewSet.as_view({'post': 'transformar_em_pedido'}),
+         name='orcamentos-transformar-em-pedido'),
 ]
 
 urlpatterns = custom_patterns + router.urls

@@ -6,6 +6,7 @@ from .models import SaidasEstoque
 from Produtos.models import Produtos
 from Licencas.models import Empresas
 from core.serializers import BancoContextMixin  # nosso mixin
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -24,15 +25,39 @@ class SaidasEstoqueSerializer(BancoContextMixin, serializers.ModelSerializer):
         banco = self.context.get('banco')
         if not banco:
             return None
+        
         try:
+            # Validar se obj tem data válida antes de fazer a query
+            if hasattr(obj, 'said_data') and obj.said_data:
+                try:
+                    # Tentar converter a data para verificar se é válida
+                    if isinstance(obj.said_data, str):
+                        datetime.strptime(obj.said_data, '%Y-%m-%d')
+                    elif hasattr(obj.said_data, 'year') and obj.said_data.year < 1:
+                        logger.warning(f"Data inválida encontrada para saída {obj.said_sequ}: {obj.said_data}")
+                        return "Produto com data inválida"
+                except (ValueError, TypeError) as date_error:
+                    logger.warning(f"Erro de data na saída {obj.said_sequ}: {date_error}")
+                    return "Produto com data inválida"
+            
             produto = Produtos.objects.using(banco).filter(
                 prod_codi=obj.said_prod,
                 prod_empr=obj.said_empr, 
               
             ).first()
             return produto.prod_nome if produto else None
+            
+        except ValueError as ve:
+            if "year" in str(ve) and "out of range" in str(ve):
+                logger.error(f"Erro de data inválida na saída {obj.said_sequ}: {ve}")
+                return "Produto com data inválida"
+            logger.error(f"Erro de valor na saída {obj.said_sequ}: {ve}")
+            return None
         except Produtos.DoesNotExist:
             logger.warning(f"Produto com ID {obj.said_prod} não encontrado.")
+            return None
+        except Exception as e:
+            logger.error(f"Erro inesperado ao buscar produto para saída {obj.said_sequ}: {e}")
             return None
         
 
