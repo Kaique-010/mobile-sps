@@ -17,6 +17,13 @@ urlpatterns = [
         'patch': 'partial_update',
         'delete': 'destroy'
     }), name='produto-detail-composto'),
+    # 
+    path('tabelapreco/<str:chave_composta>/', TabelaPrecoMobileViewSet.as_view({
+        'get': 'retrieve',
+        'put': 'update',
+        'patch': 'partial_update',
+        'delete': 'destroy'
+    }), name='tabelapreco-detail-composto'),
 ]
 
 urlpatterns += router.urls

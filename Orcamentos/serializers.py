@@ -124,19 +124,19 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
         return ItemOrcamentoSerializer(itens, many=True, context=self.context).data
 
 
-    def create(self, validated_data):
+    def update(self, instance, validated_data):
         banco = self.context.get('banco')
         if not banco:
             raise ValidationError("Banco não definido no contexto.")
-
+    
         # Aceita tanto 'itens_input' quanto 'itens'
         itens_data = validated_data.pop('itens_input', []) or validated_data.pop('itens', [])
         if not itens_data:
             raise ValidationError("Itens do orçamento são obrigatórios.")
-
+    
         parametros = validated_data.pop('parametros', {})
-
-        # Calcular valores antes de criar o orçamento
+    
+        # Calcular valores antes de atualizar
         valores = calcular_valores_pedido(
             itens_data, 
             desconto_total=validated_data.get('pedi_desc'),
@@ -144,57 +144,29 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
         )
         
         # Atualizar valores calculados
-        validated_data['pedi_topr'] = valores['subtotal']  # Subtotal
-        validated_data['pedi_desc'] = valores['desconto']  # Desconto
-        validated_data['pedi_tota'] = valores['total']     # Total
-
-        # Verificar se é edição (orçamento existente)
-        orcamentos = None
-        if 'pedi_nume' in validated_data:
-            orcamentos = Orcamentos.objects.using(banco).filter(
-                pedi_empr=validated_data['pedi_empr'],
-                pedi_fili=validated_data['pedi_fili'],
-                pedi_nume=validated_data['pedi_nume'],
-            ).first()
-
-        if orcamentos:
-            # Edição: atualizar orçamento existente
-            ItensOrcamento.objects.using(banco).filter(
-                iped_empr=orcamentos.pedi_empr,
-                iped_fili=orcamentos.pedi_fili,
-                iped_pedi=str(orcamentos.pedi_nume)
-            ).delete()
-
-            for attr, value in validated_data.items():
-                setattr(orcamentos, attr, value)
-            orcamentos.save(using=banco)
-            orcamento = orcamentos
-        else:
-            # Criação: buscar próximo número por empresa/filial
-            ultimo = Orcamentos.objects.using(banco).filter(
-                pedi_empr=validated_data['pedi_empr'],
-                pedi_fili=validated_data['pedi_fili']
-            ).order_by('-pedi_nume').first()
-            
-            proximo_numero = (ultimo.pedi_nume + 1) if ultimo else 1
-            
-            # Verificar se o número já existe (loop de segurança)
-            while Orcamentos.objects.using(banco).filter(
-                pedi_empr=validated_data['pedi_empr'],
-                pedi_fili=validated_data['pedi_fili'],
-                pedi_nume=proximo_numero
-            ).exists():
-                proximo_numero += 1
-            
-            validated_data['pedi_nume'] = proximo_numero
-            orcamento = Orcamentos.objects.using(banco).create(**validated_data)
-
+        validated_data['pedi_topr'] = valores['subtotal']
+        validated_data['pedi_desc'] = valores['desconto']
+        validated_data['pedi_tota'] = valores['total']
+    
+        # Atualizar campos do orçamento
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save(using=banco)
+    
+        # Remover todos os itens antigos
+        ItensOrcamento.objects.using(banco).filter(
+            iped_empr=instance.pedi_empr,
+            iped_fili=instance.pedi_fili,
+            iped_pedi=str(instance.pedi_nume)
+        ).delete()
+    
+        # Criar novos itens
         itens_objs = []
         for idx, item_data in enumerate(itens_data, start=1):
             if 'iped_desc' not in item_data or item_data['iped_desc'] is None or isinstance(item_data['iped_desc'], bool):
                 item_data['iped_desc'] = 0.00
-
-            # Calcular subtotal bruto (quantidade × valor unitário)
+    
+            # Calcular subtotal bruto
             subtotal_bruto = calcular_subtotal_item_bruto(
                 item_data.get('iped_quan', 0),
                 item_data.get('iped_unit', 0)
@@ -206,35 +178,35 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
                 item_data.get('iped_unit', 0),
                 item_data.get('iped_desc', 0)
             )
-
-
-           # Remover campos que serão definidos explicitamente para evitar conflitos
+    
+            # Remover campos conflitantes
             item_data_clean = item_data.copy()
-            item_data_clean.pop('iped_suto', None)  # Remove se existir
-            item_data_clean.pop('iped_tota', None)  # Remove se existir
-
+            item_data_clean.pop('iped_suto', None)
+            item_data_clean.pop('iped_tota', None)
+    
             item = ItensOrcamento.objects.using(banco).create(
-                iped_empr=orcamento.pedi_empr,
-                iped_fili=orcamento.pedi_fili,
+                iped_empr=instance.pedi_empr,
+                iped_fili=instance.pedi_fili,
                 iped_item=idx,
-                iped_pedi=str(orcamento.pedi_nume),
-                iped_data=orcamento.pedi_data,
-                iped_forn=orcamento.pedi_forn,
-                iped_suto=subtotal_bruto,  # Subtotal bruto (quantidade × valor unitário)
-                iped_tota=total_item,      # Total com desconto aplicado
+                iped_pedi=str(instance.pedi_nume),
+                iped_data=instance.pedi_data,
+                iped_forn=instance.pedi_forn,
+                iped_suto=subtotal_bruto,
+                iped_tota=total_item,
                 **item_data_clean
             )
             itens_objs.append(item)
-
+    
+        # Aplicar descontos
         aplicar_descontos(
-            pedido=orcamento,
+            pedido=instance,
             itens=itens_objs,
             usar_desconto_item=parametros.get('usar_desconto_item', False),
             usar_desconto_total=parametros.get('usar_desconto_total', False),
             banco=banco
         )
-
-        return orcamento
+    
+        return instance
 
        
 

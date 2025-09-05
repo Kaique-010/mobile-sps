@@ -133,10 +133,15 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         if not banco:
             return Produtos.objects.none()
 
-        # Otimizar subqueries
+        # Otimizar subqueries - CORRIGIDO com empresa e filial
+        empresa_id = self.request.query_params.get('prod_empr') or self.request.META.get('HTTP_X_EMPRESA', 1)
+        filial_id = self.request.query_params.get('prod_fili') or self.request.META.get('HTTP_X_FILIAL', 1)
+        
         saldo_subquery = Subquery(
             SaldoProduto.objects.using(banco).filter(
-                produto_codigo=OuterRef('pk')
+                produto_codigo=OuterRef('pk'),
+                empresa=empresa_id,
+                filial=filial_id
             ).values('saldo_estoque')[:1],
             output_field=DecimalField()
         )
@@ -472,6 +477,50 @@ class TabelaPrecoMobileViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(tabe_prod=produto)
             
         return queryset
+
+    def create(self, request, *args, **kwargs):
+        banco = get_licenca_db_config(request)
+        if not banco:
+            return Response(
+                {"detail": "Banco de dados não especificado"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Processar percentuais se fornecidos
+        if 'percentual_avis' in request.data and 'tabe_prco' in request.data:
+            preco_base = float(request.data['tabe_prco'])
+            percentual = float(request.data.pop('percentual_avis'))
+            request.data['tabe_avis'] = round(preco_base * (1 + percentual / 100), 2)
+
+        if 'percentual_apra' in request.data and 'tabe_prco' in request.data:
+            preco_base = float(request.data['tabe_prco'])
+            percentual = float(request.data.pop('percentual_apra'))
+            request.data['tabe_apra'] = round(preco_base * (1 + percentual / 100), 2)
+
+        # Remover campos virtuais antes da criação
+        create_data = {k: v for k, v in request.data.items() 
+                      if k in [f.name for f in Tabelaprecos._meta.fields]}
+
+        # Criar o registro
+        instance = Tabelaprecos.objects.using(banco).create(**create_data)
+        
+        # Criar histórico
+        hist_data = {
+            'tabe_empr': instance.tabe_empr,
+            'tabe_fili': instance.tabe_fili,
+            'tabe_prod': instance.tabe_prod,
+            'tabe_data_hora': timezone.now(),
+            'tabe_hist': "Criação de preços via API",
+            'tabe_perc_reaj': request.data.get('tabe_perc_reaj'),
+            'tabe_prco_novo': instance.tabe_prco,
+            'tabe_avis_novo': instance.tabe_avis,
+            'tabe_apra_novo': instance.tabe_apra,
+        }
+        
+        Tabelaprecoshist.objects.using(banco).create(**hist_data)
+        
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def get_object(self):
         # Extrair os componentes da chave composta
