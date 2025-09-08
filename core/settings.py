@@ -14,6 +14,10 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 
 # Hosts permitidos
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
+
+
+
+
 USE_LOCAL_DB = config('USE_LOCAL_DB', default=True, cast=bool)
 
 # Configurações de banco de dados com otimizações
