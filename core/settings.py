@@ -106,9 +106,12 @@ INSTALLED_APPS = [
     'controledevisitas',
     'Pisos',
     'drf_spectacular',
+<<<<<<< Updated upstream
     
 
 
+=======
+>>>>>>> Stashed changes
 ]
 
 # Middleware
@@ -413,3 +416,27 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 SESSION_CACHE_ALIAS = 'default'
 SESSION_COOKIE_AGE = 3600  # 1 hora
 
+<<<<<<< Updated upstream
+=======
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Mobile SPS API',
+    'DESCRIPTION': 'Documentação da API do Mobile SPS',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        'displayRequestDuration': True,
+        'filter': True,
+        'showExtensions': True,
+        'showCommonExtensions': True,
+        'tryItOutEnabled': True,
+    },
+    'POSTPROCESSING_HOOKS': [
+        'drf_spectacular.contrib.postprocessing.sanitizer_spec_postprocessor',
+    ],
+    'ENUM_NAME_OVERRIDES': { 
+        'ClientEnum': 'core.utils.ClientEnum',
+    },
+}
+>>>>>>> Stashed changes

@@ -7,7 +7,11 @@ from django.contrib import admin
 from django.urls import path, include
 from Licencas.views import licencas_mapa
 from . import views
+<<<<<<< Updated upstream
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView # Adicionar esta importação
+=======
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+>>>>>>> Stashed changes
 
 urlpatterns = [
     path('', views.index, name='index'),
