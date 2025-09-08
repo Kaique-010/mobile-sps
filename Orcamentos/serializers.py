@@ -11,7 +11,8 @@ from django.db.models import Prefetch
 import logging
 from decimal import Decimal, ROUND_HALF_UP
 from parametros_admin.utils_pedidos import aplicar_descontos
-
+from django.db import transaction
+from django.db.models import Max
 
 logger = logging.getLogger(__name__)
 
@@ -122,6 +123,49 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
             ).order_by('iped_item')
         
         return ItemOrcamentoSerializer(itens, many=True, context=self.context).data
+    
+
+    def create(self, validated_data):
+        banco = self.context.get('banco')
+        if not banco:
+            raise ValidationError("Banco não definido no contexto.")
+
+        with transaction.atomic(using=banco):
+            itens_data = validated_data.pop('itens_input', [])
+            validated_data.pop('parametros', None)
+            validated_data.pop('itens_data', None)
+
+            # --- LÓGICA PARA GERAR O NOVO pedi_nume ---
+            # 1. Encontra o maior 'pedi_nume' existente no banco
+            ultimo_orcamento = Orcamentos.objects.using(banco).aggregate(max_nume=Max('pedi_nume'))
+            
+            # 2. Calcula o novo número (se não houver nenhum, começa com 1)
+            novo_nume = (ultimo_orcamento['max_nume'] or 0) + 1
+            
+            # 3. Adiciona o novo número aos dados a serem salvos
+            validated_data['pedi_nume'] = novo_nume
+            # -----------------------------------------------
+
+            # Cria o objeto Orcamento principal, agora com o pedi_nume correto
+            orcamento = Orcamentos.objects.using(banco).create(**validated_data)
+
+            # Itera sobre os itens e cria cada um deles
+            for idx, item_data in enumerate(itens_data, start=1):
+                item_data.pop('iped_suto', None)
+                item_data.pop('iped_tota', None)
+                
+                ItensOrcamento.objects.using(banco).create(
+                    iped_empr=orcamento.pedi_empr,
+                    iped_fili=orcamento.pedi_fili,
+                    iped_pedi=orcamento.pedi_nume, # Usa o número do orçamento que acabamos de gerar
+                    iped_item=idx,
+                    iped_data=orcamento.pedi_data,
+                    iped_forn=orcamento.pedi_forn,
+                    **item_data
+                )
+        
+        return orcamento
+
 
 
     def update(self, instance, validated_data):
