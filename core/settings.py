@@ -110,13 +110,7 @@ INSTALLED_APPS = [
     'controledevisitas',
     'Pisos',
     'drf_spectacular',
-<<<<<<< Updated upstream
-    
 
-
-=======
->>>>>>> Stashed changes
-]
 
 # Middleware
 MIDDLEWARE = [
@@ -420,8 +414,6 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 SESSION_CACHE_ALIAS = 'default'
 SESSION_COOKIE_AGE = 3600  # 1 hora
 
-<<<<<<< Updated upstream
-=======
 
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Mobile SPS API',
@@ -443,4 +435,4 @@ SPECTACULAR_SETTINGS = {
         'ClientEnum': 'core.utils.ClientEnum',
     },
 }
->>>>>>> Stashed changes
+
