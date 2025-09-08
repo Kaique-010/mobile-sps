@@ -14,4 +14,5 @@ from pathlib import Path
 
 # Carrega apenas os dados. Nada de settings, nada de imports cruzados.
 json_path = Path(__file__).resolve().parent / 'licencas.json'
-LICENCAS_MAP = json.load(open(json_path))
+with open(json_path, 'r', encoding='utf-8') as f:
+    LICENCAS_MAP = json.load(f)

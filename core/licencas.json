@@ -7,7 +7,7 @@
     "db_port": "5432",
     "modulos": []
   },
-  
+
   {
     "slug": "casaealma",
     "cnpj": "43131832000150",
@@ -89,8 +89,8 @@
   {
     "slug": "ipa",
     "cnpj": "37413384000184",
-    "db_name": "ipa",
-    "db_host": "localhost",
+    "db_name": "savexml952",
+    "db_host": "base.rtalmeida.com.br",
     "db_port": "5432"
   }
 ]
