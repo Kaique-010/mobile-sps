@@ -15,8 +15,8 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 # Hosts permitidos
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
 
-
-
+# Configuração do ASGI e Channels
+ASGI_APPLICATION = 'core.routing.application'
 
 USE_LOCAL_DB = config('USE_LOCAL_DB', default=True, cast=bool)
 
@@ -80,6 +80,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt',
+    'channels',
     #'sklearn',
     'Licencas',
     'Produtos',
@@ -111,7 +112,7 @@ INSTALLED_APPS = [
     'Pisos',
     'drf_spectacular',
 
-
+]
 # Middleware
 MIDDLEWARE = [
     'core.performance_middleware.PerformanceMiddleware',  # PRIMEIRO
