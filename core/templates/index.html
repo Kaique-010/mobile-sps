@@ -1,10 +1,11 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="pt-br">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="./logo.png">
+    <link rel="icon" type="image/png" href="{% static 'logo.png' %}">
     <title>Servidor no Ar - Spartacus Mobile</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet"
@@ -359,7 +360,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <img src="./logo.png" alt="Logo" style="width: 58px; height:68px; margin-right: 16px;">
+
+            <img src="{% static 'logo.png' %}" alt="Logo" style="width: 58px; height:68px; margin-right: 16px;">
             <h1>STATUS DO SERVIDOR: ONLINE</h1>
             <p>Spartacus Mobile - Online</p>
 
