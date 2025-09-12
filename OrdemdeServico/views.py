@@ -89,7 +89,7 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
         qs = Ordemservico.objects.using(banco)
         if user_setor.osfs_codi != 6:
             qs = qs.filter(orde_seto=user_setor.osfs_codi)
-        return qs.order_by('orde_data_aber')
+        return qs.order_by('orde_nume', 'orde_data_aber')
 
     def get_next_ordem_numero(self, empre, fili):
         banco = self.get_banco()

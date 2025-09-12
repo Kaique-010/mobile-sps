@@ -8,7 +8,7 @@ from rest_framework.exceptions import ValidationError
 from django.http import Http404
 from django.db.models import Sum
 from rest_framework.generics import ListAPIView
-from django.db.models import Q, Subquery, OuterRef, DecimalField, Value as V, CharField
+from django.db.models import Q, Subquery, OuterRef, DecimalField, Value as V, CharField, IntegerField
 from django.db.models.functions import Coalesce, Cast
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -173,7 +173,8 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         queryset = Produtos.objects.using(banco).annotate(
             saldo_estoque=Coalesce(saldo_subquery, V(0), output_field=DecimalField()),
             prod_preco_vista=Coalesce(preco_vista_subquery, V(0), output_field=DecimalField()),
-            prod_preco_normal=Coalesce(preco_normal_subquery, V(0), output_field=DecimalField())
+            prod_preco_normal=Coalesce(preco_normal_subquery, V(0), output_field=DecimalField()),
+            prod_codi_int=Cast('prod_codi', output_field=IntegerField())
         )
         
         # Aplicar filtros de forma otimizada
@@ -181,7 +182,7 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         if empresa_id:
             queryset = queryset.filter(prod_empr=empresa_id)
             
-        return queryset.order_by('prod_empr', 'prod_codi')
+        return queryset.order_by('prod_empr', 'prod_codi_int')
 
     @action(detail=False, methods=["get"])
     def busca(self, request, slug=None):
@@ -241,12 +242,13 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                 saldo_estoque=Coalesce(saldo_subquery, V(0), output_field=DecimalField()),
                 prod_preco_vista=Coalesce(preco_vista_subquery, V(0), output_field=DecimalField()),
                 prod_preco_normal=Coalesce(preco_normal_subquery, V(0), output_field=DecimalField()),
-                prod_coba_str=Coalesce(Cast('prod_coba', CharField()), V(''))
+                prod_coba_str=Coalesce(Cast('prod_coba', CharField()), V('')),
+                prod_codi_int=Cast('prod_codi', IntegerField())
             ).filter(
                 Q(prod_nome__icontains=q) |
-                Q(prod_coba_str__icontains=q) |
-                Q(prod_codi__icontains=q.lstrip("0"))  
-            )[:50]  # Limitar resultados
+                Q(prod_coba_str__exact=q) |
+                Q(prod_codi__exact=q.lstrip("0"))
+            ).order_by('prod_empr', 'prod_codi_int')[:50]  # Limitar resultados
 
             serializer = self.get_serializer(produtos, many=True)
             result_data = serializer.data

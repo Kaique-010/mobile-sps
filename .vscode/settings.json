@@ -141,6 +141,17 @@
       "name": "savexml839",
       "database": "savexml839",
       "username": "savexml839"
+    },
+    {
+      "ssh": "Disabled",
+      "previewLimit": 50,
+      "server": "base.rtalmeida.com.br",
+      "port": 5432,
+      "askForPassword": true,
+      "driver": "PostgreSQL",
+      "name": "indusparquet",
+      "database": "savexml963",
+      "username": "savexml963"
     }
   ]
 }

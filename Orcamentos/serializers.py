@@ -132,8 +132,20 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
 
         with transaction.atomic(using=banco):
             itens_data = validated_data.pop('itens_input', [])
-            validated_data.pop('parametros', None)
+            parametros = validated_data.pop('parametros', {})
             validated_data.pop('itens_data', None)
+
+            # Calcular valores antes de criar
+            valores = calcular_valores_pedido(
+                itens_data, 
+                desconto_total=validated_data.get('pedi_desc'),
+                desconto_percentual=parametros.get('desconto_percentual')
+            )
+            
+            # Atualizar valores calculados
+            validated_data['pedi_topr'] = valores['subtotal']
+            validated_data['pedi_desc'] = valores['desconto']
+            validated_data['pedi_tota'] = valores['total']
 
             # --- LÓGICA PARA GERAR O NOVO pedi_nume ---
             # 1. Encontra o maior 'pedi_nume' existente no banco
@@ -149,20 +161,51 @@ class OrcamentosSerializer(BancoContextMixin, serializers.ModelSerializer):
             # Cria o objeto Orcamento principal, agora com o pedi_nume correto
             orcamento = Orcamentos.objects.using(banco).create(**validated_data)
 
-            # Itera sobre os itens e cria cada um deles
+            # Criar itens com cálculos
+            itens_objs = []
             for idx, item_data in enumerate(itens_data, start=1):
-                item_data.pop('iped_suto', None)
-                item_data.pop('iped_tota', None)
+                if 'iped_desc' not in item_data or item_data['iped_desc'] is None or isinstance(item_data['iped_desc'], bool):
+                    item_data['iped_desc'] = 0.00
+
+                # Calcular subtotal bruto
+                subtotal_bruto = calcular_subtotal_item_bruto(
+                    item_data.get('iped_quan', 0),
+                    item_data.get('iped_unit', 0)
+                )
                 
-                ItensOrcamento.objects.using(banco).create(
+                # Calcular total do item com desconto
+                total_item = calcular_total_item_com_desconto(
+                    item_data.get('iped_quan', 0),
+                    item_data.get('iped_unit', 0),
+                    item_data.get('iped_desc', 0)
+                )
+
+                # Remover campos conflitantes
+                item_data_clean = item_data.copy()
+                item_data_clean.pop('iped_suto', None)
+                item_data_clean.pop('iped_tota', None)
+                
+                item = ItensOrcamento.objects.using(banco).create(
                     iped_empr=orcamento.pedi_empr,
                     iped_fili=orcamento.pedi_fili,
-                    iped_pedi=orcamento.pedi_nume, # Usa o número do orçamento que acabamos de gerar
+                    iped_pedi=orcamento.pedi_nume, 
                     iped_item=idx,
                     iped_data=orcamento.pedi_data,
                     iped_forn=orcamento.pedi_forn,
-                    **item_data
+                    iped_suto=subtotal_bruto,
+                    iped_tota=total_item,
+                    **item_data_clean
                 )
+                itens_objs.append(item)
+
+            # Aplicar descontos
+            aplicar_descontos(
+                pedido=orcamento,
+                itens=itens_objs,
+                usar_desconto_item=parametros.get('usar_desconto_item', False),
+                usar_desconto_total=parametros.get('usar_desconto_total', False),
+                banco=banco
+            )
         
         return orcamento
 

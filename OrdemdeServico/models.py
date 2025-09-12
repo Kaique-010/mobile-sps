@@ -11,6 +11,7 @@ ORDEM_STATUS_CHOICES = (
     (4, "Finalizada"),
     (5, "Reprovada"),
     (20, "Faturada_parcial"),
+    (21, "Em atraso"),
 )
 
 

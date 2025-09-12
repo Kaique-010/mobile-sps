@@ -4,8 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <link rel="icon" type="image/png" href="./logo.png">
+    <link rel="icon" type="image/png" href="./logo.png">
     <title>Servidor no Ar - Spartacus Mobile</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/material-design-iconic-font/2.2.0/css/material-design-iconic-font.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Fauna&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
@@ -13,9 +16,8 @@
         body {
             margin: 0;
             font-family: 'Roboto Mono', monospace;
-            background-color: #0a0a0d;
+            background: linear-gradient(135deg, #0f1419, #406569);
             color: #00e6e6;
-            /* Azul ciano vibrante para texto */
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -28,7 +30,7 @@
 
         .container {
             width: 100%;
-            max-width: 1200px;
+            max-width: 1800px;
             margin: auto;
         }
 
@@ -36,9 +38,10 @@
             text-align: center;
             margin-bottom: 40px;
             padding: 32px 0;
-            background: linear-gradient(135deg, #0f1419, #1a1a2e);
+            background: linear-gradient(135deg, #0f1419, #2f4b52);
             border-radius: 16px;
             border: 1px solid rgba(100, 255, 218, 0.1);
+            box-shadow: 0 4px 20px rgba(159, 193, 185, 0.471);
         }
 
         .header h1 {
@@ -56,6 +59,35 @@
             font-weight: 400;
         }
 
+        /* Novo estilo para vídeo geral */
+        .general-video {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .general-video-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            background: linear-gradient(135deg, #ff6b6b, #ff4757);
+            color: white;
+            padding: 16px 32px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            box-shadow: 0 4px 20px rgba(255, 107, 107, 0.3);
+        }
+
+        .general-video-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(255, 107, 107, 0.5);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
         @keyframes fadeInUp {
             from {
                 opacity: 0;
@@ -70,7 +102,7 @@
 
         .card-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 30px;
             padding: 20px 0;
         }
@@ -128,7 +160,7 @@
             color: #8892b0;
             line-height: 1.5;
             font-size: 0.9rem;
-            margin: 0;
+            margin: 0 0 16px 0;
             position: relative;
             z-index: 1;
         }
@@ -140,6 +172,36 @@
             position: relative;
             z-index: 1;
             display: inline-block;
+        }
+
+        /* Estilos para botões de vídeo */
+        .video-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, #ff6b6b, #ff4757);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 2;
+            border: 1px solid transparent;
+        }
+
+        .video-btn:hover {
+            background: linear-gradient(135deg, #ff4757, #ff3742);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .video-btn::before {
+            content: '▶';
+            font-size: 0.8rem;
         }
 
         .glitch-text {
@@ -179,6 +241,118 @@
                 text-shadow: 0.05em 0 0 #00e6e6, -0.05em -0.025em 0 #ff00ff, -0.025em 0.05em 0 #a0a0b0;
             }
         }
+
+        /* Estilos do Footer */
+        footer {
+            width: 100%;
+            max-width: 1800px;
+            margin: 40px auto 0;
+
+            border: 1px solid rgba(100, 255, 218, 0.1);
+            border-radius: 16px;
+            padding: 32px 24px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        footer::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(0, 230, 230, 0.1) 0%, rgba(255, 0, 255, 0.1) 100%);
+            transform: rotate(45deg);
+            z-index: 0;
+            opacity: 0.5;
+        }
+
+        footer p {
+            color: #8892b0;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            margin: 0 0 20px 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .elementor-widget-container {
+            position: relative;
+            z-index: 1;
+        }
+
+        .ct-icon1.style2 {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .ct-icon1.style2 a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border: 1px solid rgba(100, 255, 218, 0.2);
+            border-radius: 50%;
+            color: #64ffda;
+            font-size: 1.2rem;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .ct-icon1.style2 a:hover {
+            transform: translateY(-3px);
+            background: linear-gradient(135deg, #64ffda, #00e6e6);
+            color: #0a0a0d;
+            border-color: rgba(100, 255, 218, 0.6);
+            box-shadow: 0 8px 25px rgba(100, 255, 218, 0.3);
+        }
+
+        .ct-icon1.style2 a i {
+            transition: all 0.3s ease;
+        }
+
+        .ct-icon1.style2 a:hover i {
+            transform: scale(1.1);
+        }
+
+        @media (max-width: 768px) {
+            .card-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .general-video-btn {
+                padding: 12px 24px;
+                font-size: 1rem;
+            }
+
+            footer {
+                margin: 30px 20px 0;
+                padding: 24px 16px;
+            }
+
+            .ct-icon1.style2 {
+                gap: 15px;
+            }
+
+            .ct-icon1.style2 a {
+                width: 45px;
+                height: 45px;
+                font-size: 1.1rem;
+            }
+        }
     </style>
 </head>
 
@@ -188,6 +362,12 @@
             <img src="./logo.png" alt="Logo" style="width: 58px; height:68px; margin-right: 16px;">
             <h1>STATUS DO SERVIDOR: ONLINE</h1>
             <p>Spartacus Mobile - Online</p>
+
+            <div class="general-video">
+                <a href="https://youtu.be/iMvPEE0lNzs" target="_blank" class="general-video-btn">
+                    🎬 Apresentação Geral do Sistema
+                </a>
+            </div>
         </div>
 
         <div class="card-grid">
@@ -198,20 +378,31 @@
                     <h2>Pedidos</h2>
                 </div>
                 <p>Gestão completa de pedidos de venda, controle de status e integração financeira.</p>
+                <a href="https://youtube.com/shorts/yV5WhPfY6ic?feature=share" target="_blank" class="video-btn">
+                    Ver demonstração
+                </a>
             </div>
+
             <div class="card">
                 <div style="display: flex; align-items: center; margin-bottom: 12px;">
                     <div class="icon" style="margin-right: 12px;">💰</div>
                     <h2>Orçamentos</h2>
                 </div>
                 <p>Criação e gerenciamento de orçamentos com conversão para pedidos.</p>
+                <a href="https://youtube.com/shorts/h3pgU37Ylyg?feature=share" target="_blank" class="video-btn">
+                    Ver demonstração
+                </a>
             </div>
+
             <div class="card">
                 <div style="display: flex; align-items: center; margin-bottom: 12px;">
                     <div class="icon" style="margin-right: 12px;">👥</div>
                     <h2>Entidades</h2>
                 </div>
                 <p>Cadastro de clientes, fornecedores, vendedores e funcionários.</p>
+                <a href="https://youtube.com/shorts/YUYyx8PEiMc?feature=share" target="_blank" class="video-btn">
+                    Ver demonstração
+                </a>
             </div>
 
             <!-- Módulos Operacionais -->
@@ -221,14 +412,22 @@
                     <h2>Ordem de Serviço</h2>
                 </div>
                 <p>Controle e acompanhamento de ordens de serviço e manutenções.</p>
+                <a href="https://youtube.com/shorts/JPbYpcS54ks?feature=share" target="_blank" class="video-btn">
+                    Ver demonstração
+                </a>
             </div>
+
             <div class="card">
                 <div style="display: flex; align-items: center; margin-bottom: 12px;">
                     <div class="icon" style="margin-right: 12px;">📦</div>
                     <h2>Produtos</h2>
                 </div>
                 <p>Gestão de catálogo de produtos, preços e especificações técnicas.</p>
+                <a href="https://youtube.com/shorts/H9bVHpSdU3I?feature=share" target="_blank" class="video-btn">
+                    Ver demonstração
+                </a>
             </div>
+
             <div class="card">
                 <div style="display: flex; align-items: center; margin-bottom: 12px;">
                     <div class="icon" style="margin-right: 12px;">🏗️</div>
@@ -244,20 +443,31 @@
                     <h2>Contas a Receber</h2>
                 </div>
                 <p>Controle de títulos, cobranças e recebimentos de clientes.</p>
+                <a href="https://youtube.com/shorts/XU7SxD1Unwc?feature=share" target="_blank" class="video-btn">
+                    Ver demonstração
+                </a>
             </div>
+
             <div class="card">
                 <div style="display: flex; align-items: center; margin-bottom: 12px;">
                     <div class="icon" style="margin-right: 12px;">💸</div>
                     <h2>Contas a Pagar</h2>
                 </div>
                 <p>Gestão de pagamentos a fornecedores e controle de despesas.</p>
+                <a href="https://youtube.com/shorts/XU7SxD1Unwc?feature=share" target="_blank" class="video-btn">
+                    Ver demonstração
+                </a>
             </div>
+
             <div class="card">
                 <div style="display: flex; align-items: center; margin-bottom: 12px;">
                     <div class="icon" style="margin-right: 12px;">💰</div>
                     <h2>Caixa Diário</h2>
                 </div>
                 <p>Controle de movimentação diária de caixa e fluxo financeiro.</p>
+                <a href="https://youtube.com/shorts/7L5z0CTXvCA?feature=share" target="_blank" class="video-btn">
+                    Ver demonstração
+                </a>
             </div>
 
             <!-- Módulos Gerenciais -->
@@ -267,20 +477,31 @@
                     <h2>Dashboards</h2>
                 </div>
                 <p>Painéis gerenciais com métricas e indicadores de performance.</p>
+                <a href="https://youtube.com/shorts/No9zTC-Oz2A?feature=share" target="_blank" class="video-btn">
+                    Ver demonstração
+                </a>
             </div>
+
             <div class="card">
                 <div style="display: flex; align-items: center; margin-bottom: 12px;">
                     <div class="icon" style="margin-right: 12px;">📈</div>
                     <h2>DRE</h2>
                 </div>
                 <p>Demonstrativo de Resultado do Exercício e análises financeiras.</p>
+                <a href="https://youtube.com/shorts/lQczr3J9Krg?feature=share" target="_blank" class="video-btn">
+                    Balancete por Centro de Custos
+                </a>
             </div>
+
             <div class="card">
                 <div style="display: flex; align-items: center; margin-bottom: 12px;">
                     <div class="icon" style="margin-right: 12px;">💼</div>
                     <h2>Comissões</h2>
                 </div>
                 <p>Cálculo e controle de comissões de vendedores e representantes.</p>
+                <a href="https://youtube.com/shorts/k4FBGCnD8dU?feature=share" target="_blank" class="video-btn">
+                    Ver demonstração
+                </a>
             </div>
 
             <!-- Módulos de Controle -->
@@ -291,6 +512,7 @@
                 </div>
                 <p>Gestão de usuários, empresas, filiais e controle de licenciamento.</p>
             </div>
+
             <div class="card">
                 <div style="display: flex; align-items: center; margin-bottom: 12px;">
                     <div class="icon" style="margin-right: 12px;">🔍</div>
@@ -298,6 +520,7 @@
                 </div>
                 <p>Rastreamento de alterações e logs de atividades do sistema.</p>
             </div>
+
             <div class="card">
                 <div style="display: flex; align-items: center; margin-bottom: 12px;">
                     <div class="icon" style="margin-right: 12px;">📋</div>
@@ -314,6 +537,7 @@
                 </div>
                 <p>Assistente virtual inteligente para automação e suporte.</p>
             </div>
+
             <div class="card">
                 <div style="display: flex; align-items: center; margin-bottom: 12px;">
                     <div class="icon" style="margin-right: 12px;">⚙️</div>
@@ -321,12 +545,83 @@
                 </div>
                 <p>Ferramentas para configuração e implantação do sistema.</p>
             </div>
+
             <div class="card">
                 <div style="display: flex; align-items: center; margin-bottom: 12px;">
                     <div class="icon" style="margin-right: 12px;">📱</div>
                     <h2>Controle de Visitas</h2>
                 </div>
                 <p>Registro e acompanhamento de visitas comerciais e técnicas.</p>
+                <a href="https://youtu.be/ATQiAdjhKZw" target="_blank" class="video-btn">
+                    Ver demonstração
+                </a>
+            </div>
+
+            <!-- Cards adicionais para vídeos sem card específico -->
+            <div class="card">
+                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                    <div class="icon" style="margin-right: 12px;">📱</div>
+                    <h2>CRM Mobile</h2>
+                </div>
+                <p>Sistema de relacionamento com cliente otimizado para dispositivos móveis.</p>
+                <a href="https://youtu.be/ATQiAdjhKZw" target="_blank" class="video-btn">
+                    Ver demonstração
+                </a>
+            </div>
+
+            <div class="card">
+                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                    <div class="icon" style="margin-right: 12px;">📧</div>
+                    <h2>Cobrança Digital</h2>
+                </div>
+                <p>Envio de cobrança com boleto por E-mail e WhatsApp automatizado.</p>
+                <a href="https://youtu.be/Bu7TsDk66Yc" target="_blank" class="video-btn">
+                    Ver demonstração
+                </a>
+            </div>
+
+            <div class="card">
+                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                    <div class="icon" style="margin-right: 12px;">📈</div>
+                    <h2>Relatórios Preditivos</h2>
+                </div>
+                <p>Relatórios de regressão linear e previsões baseadas em IA.</p>
+                <a href="https://youtu.be/HUhuczvqKbg" target="_blank" class="video-btn">
+                    Ver demonstração
+                </a>
+            </div>
+
+            <div class="card">
+                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                    <div class="icon" style="margin-right: 12px;">🏭</div>
+                    <h2>Ordens de Produção</h2>
+                </div>
+                <p>Controle completo de ordens de produção e fluxo de manufatura.</p>
+                <a href="https://youtube.com/shorts/qa3_T7iuudU?feature=share" target="_blank" class="video-btn">
+                    Ver demonstração
+                </a>
+            </div>
+            <div class="card">
+                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                    <div class="icon" style="margin-right: 12px;">📸</div>
+                    <h2>Coletor de estoque</h2>
+                </div>
+                <p>Listagem e controle de coletas de estoque via leitor de código de barras.</p>
+                <a href="https://youtube.com/shorts/Zo-VYB1BNnY?feature=share" target="_blank" class="video-btn">
+                    Ver demonstração
+                </a>
+            </div>
+
+
+            <div class="card">
+                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                    <div class="icon" style="margin-right: 12px;">📊</div>
+                    <h2>Controle de Estoque</h2>
+                </div>
+                <p>Gestão completa de entrada e saída de estoque com rastreabilidade.</p>
+                <a href="https://youtube.com/shorts/-uJjYB1kC4M?feature=share" target="_blank" class="video-btn">
+                    Ver demonstração
+                </a>
             </div>
         </div>
     </div>
@@ -343,5 +638,22 @@
         });
     </script>
 </body>
+<footer>
+    <p>&copy; 2025 Spartacus Sistemas. Todos os direitos reservados.</p>
+    <div class="elementor-widget-container">
+        <div class="ct-icon1 style2">
+            <a href="https://www.facebook.com/Spartacus.sistemas/?rf=220514235038325" target="_blank">
+                <i aria-hidden="true" class="fab fa-facebook-f"></i> </a>
+            <a href="https://twitter.com/spartacusgestao" target="_blank">
+                <i aria-hidden="true" class="fab fa-twitter"></i> </a>
+            <a href="https://www.instagram.com/spartacus.sistemas/" target="_blank">
+                <i aria-hidden="true" class="fab fa-instagram"></i> </a>
+            <a href="https://www.youtube.com/channel/UCLYrLJ6tgej7ScLQj2ONKOA" target="_blank">
+                <i aria-hidden="true" class="fab fa-youtube"></i> </a>
+            <a href="https://api.whatsapp.com/send?phone=5542988018764">
+                <i aria-hidden="true" class="material zmdi zmdi-whatsapp"></i> </a>
+        </div>
+    </div>
+</footer>
 
 </html>

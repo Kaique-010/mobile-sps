@@ -111,7 +111,7 @@ INSTALLED_APPS = [
     'controledevisitas',
     'Pisos',
     'drf_spectacular',
-
+    'coletaestoque',
 ]
 # Middleware
 MIDDLEWARE = [
@@ -147,6 +147,15 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
     'x-requested-with',
     'x-cnpj',
+    'x-username', 
+    'x-email',
+    'x-cpf',
+    'x-Docu',
+    'x-Empresa',
+    'x-EmpresaID',
+    'x-Filial',
+    'x-FilialID',
+    'x-Entidade',
 ]
 
 CORS_ALLOW_CREDENTIALS = True

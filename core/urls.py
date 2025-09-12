@@ -56,6 +56,7 @@ urlpatterns = [
     
     # MCP Agent DB - Nova rota adicionada
     path('api/<slug>/mcp-agent/', include('mcp_agent_db.urls')),
+    path('api/<slug>/coletaestoque/', include('coletaestoque.urls')),
     
     
     # Rotas de documentação do DRF-Spectacular

@@ -72,6 +72,39 @@ class LicencaMiddleware:
 
         slug = path_parts[1]
         
+        # Se slug for 'null' ou 'undefined', tentar extrair do JWT
+        if slug in ['null', 'undefined']:
+            try:
+                import jwt
+                
+                auth_header = request.headers.get('Authorization', '')
+                if auth_header.startswith('Bearer '):
+                    token = auth_header.split(' ')[1]
+                    decoded = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+                    jwt_slug = decoded.get('lice_slug')
+                    
+                    if jwt_slug:
+                        slug = jwt_slug
+                        path_parts[1] = slug  # Atualizar o path
+                    else:
+                        from django.http import JsonResponse
+                        return JsonResponse(
+                            {'error': 'Slug não encontrado no token. Faça login novamente.'},
+                            status=401
+                        )
+                else:
+                    from django.http import JsonResponse
+                    return JsonResponse(
+                        {'error': 'Token de autorização não encontrado.'},
+                        status=401
+                    )
+            except Exception as e:
+                from django.http import JsonResponse
+                return JsonResponse(
+                    {'error': f'Erro ao processar token: {str(e)}'},
+                    status=401
+                )
+        
         licenca_check_start = time.time()
         licenca = next((lic for lic in LICENCAS_MAP if lic["slug"] == slug), None)
         if not licenca:

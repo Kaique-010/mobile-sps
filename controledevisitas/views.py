@@ -1,6 +1,10 @@
 from django.shortcuts import render
+from django.db.models import Q, Count, Avg, Max
 from .models import Controlevisita, Etapavisita, ItensVisita
 from Orcamentos.models import Orcamentos, ItensOrcamento
+from Entidades.models import Entidades
+from Licencas.models import Liberar
+from django.shortcuts import get_object_or_404
 from .serializers import ControleVisitaSerializer, EtapaVisitaSerializer, ExportarVisitaParaOrcamentoSerializer, ItensVisitaSerializer
 from .services import (
     exportar_visita_para_orcamento, 
@@ -18,7 +22,6 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from django.db.models import Q, Count, Avg, Max
 from datetime import datetime, date, timedelta
 import logging
 
@@ -50,9 +53,27 @@ class ControleVisitaViewSet(BancoContextMixin, ModuloRequeridoMixin, viewsets.Mo
     ordering = ['-ctrl_data', 'ctrl_numero']
     lookup_field = 'ctrl_id'
 
-    def get_queryset(self, slug=None):
+    
+    def get_entidade_vendedor(self, user, banco):
+        try:
+            empresa_id = self.request.headers.get("X-Empresa")
+            liberar = Liberar.objects.using(banco).get(libe_usua=user.usua_codi)
+            vendedor = Entidades.objects.using(banco).get(
+                enti_clie=liberar.libe_codi_vend,
+                enti_empr=empresa_id
+            )
+            print(f"🔍 DEBUG: Vendedor encontrado: {vendedor.enti_clie} - {vendedor.enti_nome}")
+            return vendedor
+        except (Liberar.DoesNotExist, Entidades.DoesNotExist):
+            return None
+
+
+    
+    def get_queryset(self):
 
         banco = get_licenca_db_config(self.request)
+        print(f"🔍 DEBUG: Banco de dados configurado para licença: {banco}")
+        
         if not banco:
             logger.error("Banco de dados não encontrado.")
             raise NotFound("Banco de dados não encontrado.")
@@ -64,9 +85,27 @@ class ControleVisitaViewSet(BancoContextMixin, ModuloRequeridoMixin, viewsets.Mo
         queryset = Controlevisita.objects.using(banco).select_related(
             'ctrl_cliente',
             'ctrl_vendedor', 
-            'ctrl_empresa'
+            'ctrl_empresa',
+            'ctrl_etapa'
         ).all()
 
+        user = self.request.user
+        
+        # Verificar se usuário é vendedor e filtrar suas visitas
+        print(f"🔍 DEBUG: Iniciando verificação de vendedor para usuário {user.usua_nome} (ID: {user.usua_codi})")
+        entidade_vendedor = self.get_entidade_vendedor(user, banco)
+        print(f"🔍 DEBUG: Resultado _get_entidade_vendedor: {entidade_vendedor}")
+        
+        if entidade_vendedor:
+            print(f"✅ Usuário {user.usua_nome} é vendedor. Filtrando visitas para entidade {entidade_vendedor.enti_clie}.")
+            queryset_antes = queryset.count()
+            queryset = queryset.filter(ctrl_vendedor=entidade_vendedor.enti_clie)
+            queryset_depois = queryset.count()
+            print(f"🎯 Queryset filtrado aplicado: ctrl_vendedor={entidade_vendedor.enti_clie}")
+            print(f"📊 DEBUG: Registros antes do filtro: {queryset_antes}, depois: {queryset_depois}")
+        else:
+            print(f"❌ Usuário {user.usua_nome} não é vendedor. Acesso total permitido.")
+        
         
         # Filtros por headers
         if empresa_id:
@@ -96,7 +135,16 @@ class ControleVisitaViewSet(BancoContextMixin, ModuloRequeridoMixin, viewsets.Mo
         if etapa:
             queryset = queryset.filter(ctrl_etapa=etapa)
         
-        return queryset.order_by('-ctrl_data', 'ctrl_numero')
+        # Debug: Verificar SQL gerada
+        print(f"🔍 DEBUG SQL: {queryset.query}")
+        print(f"📊 DEBUG: Total de registros no queryset final: {queryset.count()}")
+        
+        # Adicionar distinct() para evitar duplicatas
+        queryset = queryset.distinct()
+        print(f"📊 DEBUG: Total após distinct(): {queryset.count()}")
+        
+        return queryset.order_by('-ctrl_numero', 'ctrl_data')
+
 
 
     def get_serializer_context(self):

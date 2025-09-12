@@ -2,7 +2,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from django.db import models
 from django.db.models import Max
-from Produtos.models import Produtos
+from Produtos.models import Produtos, Tabelaprecos
 from .utils import get_next_item_number
 from Licencas.models import Empresas
 from .models import ListaCasamento, ItensListaCasamento
@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 
 class ItensListaCasamentoSerializer(BancoContextMixin, serializers.ModelSerializer):
     produto_nome = serializers.SerializerMethodField(read_only=True)
+    prod_preco_vista = serializers.SerializerMethodField(read_only=True)
+    item_prec = serializers.SerializerMethodField(read_only=True)
     item_item = serializers.IntegerField(read_only=True)
     item_prod = serializers.PrimaryKeyRelatedField(queryset=Produtos.objects.all())
     log_time = serializers.TimeField(read_only=True)
@@ -47,6 +49,32 @@ class ItensListaCasamentoSerializer(BancoContextMixin, serializers.ModelSerializ
         except Produtos.DoesNotExist:
             logger.warning(f"Produto com ID {obj.item_prod} não encontrado.")
             return None
+    
+    def get_prod_preco_vista(self, obj):
+        banco = self.context.get('banco')
+        if not banco:
+            return 0.00
+        try:
+            # Primeiro busca o produto para obter a empresa
+            produto = Produtos.objects.using(banco).get(prod_codi=obj.item_prod)
+            
+            preco = Tabelaprecos.objects.using(banco).filter(
+                tabe_prod=produto.prod_codi,
+                tabe_empr=produto.prod_empr
+            ).values('tabe_avis', 'tabe_prco').first()
+            
+            if preco:
+                # Retorna preço à vista se disponível, senão preço normal
+                return float(preco['tabe_avis'] or preco['tabe_prco'] or 0.00)
+            
+            return 0.00
+        except Produtos.DoesNotExist:
+            logger.warning(f"Produto com ID {obj.item_prod} não encontrado.")
+            return 0.00
+    
+    def get_item_prec(self, obj):
+        """Retorna o preço unitário do item (mesmo que prod_preco_vista)"""
+        return self.get_prod_preco_vista(obj)
 
     def create(self, validated_data):
         banco = self.context.get('banco')

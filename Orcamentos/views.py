@@ -335,7 +335,7 @@ class OrcamentoViewSet(viewsets.ModelViewSet):
                     pedi_canc=False,
                     pedi_fina='0',  # À vista por padrão
                     pedi_vend=orcamento.pedi_vend or '0',
-                    pedi_stat='0',  # Pendente
+                    pedi_stat='0', 
                     pedi_obse=orcamento.pedi_obse or ''
                 )
                 

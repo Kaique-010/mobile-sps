@@ -64,7 +64,7 @@ class LoginView(APIView):
         # Log: Buscar usuário
         user_start = time.time()
         try:
-            usuario = Usuarios.objects.using(banco).get(usua_nome=username)
+            usuario = Usuarios.objects.using(banco).get(usua_nome__iexact=username)
         except Usuarios.DoesNotExist:
             return Response({'error': 'Usuário não encontrado.'}, status=404)
         user_time = (time.time() - user_start) * 1000
