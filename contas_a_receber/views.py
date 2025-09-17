@@ -13,6 +13,7 @@ from .models import Titulosreceber, Baretitulos
 from .serializers import TitulosreceberSerializer, BaixaTitulosReceberSerializer, BaretitulosSerializer, ExcluirBaixaSerializer
 from decimal import Decimal
 from datetime import date
+from Lancamentos_Bancarios.utils import criar_lancamento_bancario_baixa
 
 logger = logging.getLogger(__name__)
 
@@ -140,8 +141,14 @@ class TitulosreceberViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
                         bare_titu=titulo.titu_titu,
                         bare_seri=titulo.titu_seri,
                         bare_parc=titulo.titu_parc
-                    ).aggregate(total=models.Sum('bare_pago'))['total'] or Decimal('0')
-                    valor_ja_recebido = baixas_anteriores
+                    ).aggregate(
+                        total_valo_pago=models.Sum('bare_valo_pago'),
+                        total_sub_tota=models.Sum('bare_sub_tota')
+                    )
+                    # Usar bare_valo_pago como prioridade, se não existir usar bare_sub_tota
+                    valor_ja_recebido = (baixas_anteriores['total_valo_pago'] or 
+                                       baixas_anteriores['total_sub_tota'] or 
+                                       Decimal('0'))
                 
                 logger.info(f"Valores calculados - Título: {valor_titulo}, Já recebido: {valor_ja_recebido}, Novo recebimento: {valor_total_recebido}")
                 
@@ -165,7 +172,7 @@ class TitulosreceberViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
                     bare_empr=titulo.titu_empr,
                     bare_fili=titulo.titu_fili,
                     bare_clie=titulo.titu_clie,
-                    bare_titu=titulo.titu_titu, 
+                    bare_titu=titulo.titu_titu,
                     bare_seri=titulo.titu_seri,
                     bare_parc=titulo.titu_parc,
                     bare_dpag=data['data_recebimento'],
@@ -174,10 +181,13 @@ class TitulosreceberViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
                     bare_vjur=valor_juros,
                     bare_vdes=valor_desconto,
                     bare_pago=valor_total_recebido,
+                    bare_valo_pago=valor_recebido,  # Valor principal recebido
+                    bare_sub_tota=valor_total_recebido,  # Subtotal com juros/multa/desconto
                     bare_topa=tipo_baixa_final,
+                    bare_form=data.get('forma_pagamento', 'D'),  # Forma de pagamento
                     bare_banc=data.get('banco'),
                     bare_cheq=data.get('cheque'),
-                    bare_hist=data.get('historico', f'Baixa do título {titulo.titu_titu}'),
+                    bare_hist=data.get('historico', f'Baixa do título {titulo.titu_titu} feita por Mobile'),
                     bare_emis=titulo.titu_emis,
                     bare_venc=titulo.titu_venc,
                     bare_cont=titulo.titu_cont,
@@ -199,6 +209,29 @@ class TitulosreceberViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
                     titu_emis=titulo.titu_emis,
                     titu_venc=titulo.titu_venc
                 ).update(titu_aber=tipo_baixa_final)
+                
+                # Criar lançamento bancário se forma de pagamento for 'B' (Banco)
+                logger.info(f"DEBUG - forma_pagamento: {data.get('forma_pagamento')}, banco: {data.get('banco')}")
+                if data.get('forma_pagamento') == 'B' and data.get('banco'):
+                    historico_lancamento = f"Recebimento título {titulo.titu_titu} - {data.get('historico', 'Baixa via Mobile')}"
+                    
+                    try:
+                        lancamento = criar_lancamento_bancario_baixa(
+                            empresa=titulo.titu_empr,
+                            filial=titulo.titu_fili,
+                            banco_id=data.get('banco'),
+                            valor=valor_total_recebido,
+                            historico=historico_lancamento,
+                            entidade=titulo.titu_clie,
+                            tipo_baixa='receber',
+                            banco_db=banco
+                        )
+                        logger.info(f"Lançamento bancário criado - ID: {lancamento.laba_ctrl}")
+                    except Exception as e:
+                        logger.error(f"Erro ao criar lançamento bancário: {str(e)}")
+                        # Não falha a baixa por erro no lançamento
+                else:
+                    logger.info("Lançamento bancário não criado - condições não atendidas")
                 
                 logger.info(f"Baixa realizada com sucesso - ID: {baixa.bare_sequ}")
                 
@@ -314,10 +347,15 @@ class TitulosreceberViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
                 if baixas_restantes.exists():
                     # Verificar se o valor total das baixas restantes cobre o título
                     valor_total_baixas = baixas_restantes.aggregate(
-                        total=models.Sum('bare_pago')
-                    )['total'] or Decimal('0')
+                        total_valo_pago=models.Sum('bare_valo_pago'),
+                        total_sub_tota=models.Sum('bare_sub_tota')
+                    )
+                    # Usar bare_valo_pago como prioridade, se não existir usar bare_sub_tota
+                    total_recebido = (valor_total_baixas['total_valo_pago'] or 
+                                    valor_total_baixas['total_sub_tota'] or 
+                                    Decimal('0'))
                     
-                    if valor_total_baixas >= titulo.titu_valo:
+                    if total_recebido >= titulo.titu_valo:
                         novo_status = 'T'  # Total
                     else:
                         novo_status = 'P'  # Parcial

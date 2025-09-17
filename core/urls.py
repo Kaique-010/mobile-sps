@@ -58,6 +58,11 @@ urlpatterns = [
     path('api/<slug>/mcp-agent/', include('mcp_agent_db.urls')),
     path('api/<slug>/coletaestoque/', include('coletaestoque.urls')),
     
+    #Floresta
+    path('api/<slug>/Floresta/', include('Floresta.urls')),
+    
+    #Lançamentos Bancários
+    path('api/<slug>/lctobancario/', include('Lancamentos_Bancarios.urls')),
     
     # Rotas de documentação do DRF-Spectacular
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

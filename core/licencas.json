@@ -92,5 +92,12 @@
     "db_name": "savexml952",
     "db_host": "base.rtalmeida.com.br",
     "db_port": "5432"
+  },
+  {
+    "slug": "savexml1023",
+    "cnpj": "11472996000154",
+    "db_name": "savexml1023",
+    "db_host": "base.rtalmeida.com.br",
+    "db_port": "5432"
   }
 ]

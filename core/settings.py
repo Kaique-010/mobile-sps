@@ -112,6 +112,8 @@ INSTALLED_APPS = [
     'Pisos',
     'drf_spectacular',
     'coletaestoque',
+    'Floresta',
+    'Lancamentos_Bancarios',
 ]
 # Middleware
 MIDDLEWARE = [

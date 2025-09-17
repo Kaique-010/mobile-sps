@@ -18,7 +18,7 @@ class ItensListaCasamentoSerializer(BancoContextMixin, serializers.ModelSerializ
     prod_preco_vista = serializers.SerializerMethodField(read_only=True)
     item_prec = serializers.SerializerMethodField(read_only=True)
     item_item = serializers.IntegerField(read_only=True)
-    item_prod = serializers.PrimaryKeyRelatedField(queryset=Produtos.objects.all())
+    item_prod = serializers.CharField(max_length=60)  # Mudança para CharField
     log_time = serializers.TimeField(read_only=True)
     log_data = serializers.DateField(read_only=True)
 
@@ -45,9 +45,13 @@ class ItensListaCasamentoSerializer(BancoContextMixin, serializers.ModelSerializ
         if not banco:
             return None
         try:
-            return Produtos.objects.using(banco).get(prod_codi=obj.item_prod).prod_nome
-        except Produtos.DoesNotExist:
-            logger.warning(f"Produto com ID {obj.item_prod} não encontrado.")
+            produto = Produtos.objects.using(banco).filter(
+                prod_codi=obj.item_prod,
+                prod_empr=obj.item_empr
+            ).first()
+            return produto.prod_nome if produto else None
+        except Exception as e:
+            logger.warning(f"Erro ao buscar produto {obj.item_prod} empresa {obj.item_empr}: {e}")
             return None
     
     def get_prod_preco_vista(self, obj):
@@ -55,12 +59,19 @@ class ItensListaCasamentoSerializer(BancoContextMixin, serializers.ModelSerializ
         if not banco:
             return 0.00
         try:
-            # Primeiro busca o produto para obter a empresa
-            produto = Produtos.objects.using(banco).get(prod_codi=obj.item_prod)
+            # Busca o produto filtrando por código e empresa do item
+            produto = Produtos.objects.using(banco).filter(
+                prod_codi=obj.item_prod,
+                prod_empr=obj.item_empr
+            ).first()
+            
+            if not produto:
+                logger.warning(f"Produto {obj.item_prod} empresa {obj.item_empr} não encontrado.")
+                return 0.00
             
             preco = Tabelaprecos.objects.using(banco).filter(
                 tabe_prod=produto.prod_codi,
-                tabe_empr=produto.prod_empr
+                tabe_empr=obj.item_empr  # Usa a empresa do item
             ).values('tabe_avis', 'tabe_prco').first()
             
             if preco:
@@ -68,8 +79,8 @@ class ItensListaCasamentoSerializer(BancoContextMixin, serializers.ModelSerializ
                 return float(preco['tabe_avis'] or preco['tabe_prco'] or 0.00)
             
             return 0.00
-        except Produtos.DoesNotExist:
-            logger.warning(f"Produto com ID {obj.item_prod} não encontrado.")
+        except Exception as e:
+            logger.warning(f"Erro ao buscar preço produto {obj.item_prod} empresa {obj.item_empr}: {e}")
             return 0.00
     
     def get_item_prec(self, obj):
@@ -115,9 +126,10 @@ class ListaCasamentoSerializer(BancoContextMixin, serializers.ModelSerializer):
             return None
 
         try:
-            return Empresas.objects.using(banco).get(empr_codi=obj.list_empr).empr_nome
-        except Empresas.DoesNotExist:
-            logger.warning(f"Empresa com ID {obj.list_empr} não encontrada.")
+            empresa = Empresas.objects.using(banco).filter(empr_codi=obj.list_empr).first()
+            return empresa.empr_nome if empresa else None
+        except Exception as e:
+            logger.warning(f"Erro ao buscar empresa {obj.list_empr}: {e}")
             return None
 
     def perform_bulk_create(self, serializer):

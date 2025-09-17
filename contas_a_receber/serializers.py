@@ -59,6 +59,7 @@ class BaixaTitulosReceberSerializer(serializers.Serializer):
     banco = serializers.IntegerField(required=False, allow_null=True)
     cheque = serializers.IntegerField(required=False, allow_null=True)
     tipo_baixa = serializers.CharField(max_length=1, default='T')  # T=Total, P=Parcial
+    forma_pagamento = serializers.CharField(max_length=1, default='D', required=False)  # D=Dinheiro, B=Banco
     
     def validate(self, data):
         valor_recebido = data.get('valor_recebido', 0)
@@ -74,7 +75,13 @@ class BaixaTitulosReceberSerializer(serializers.Serializer):
 class BaretitulosSerializer(serializers.ModelSerializer):
     class Meta:
         model = Baretitulos
-        fields = '__all__'
+        fields = [
+            'bare_sequ', 'bare_ctrl', 'bare_empr', 'bare_fili', 'bare_clie',
+            'bare_titu', 'bare_seri', 'bare_parc', 'bare_dpag', 'bare_apag',
+            'bare_vmul', 'bare_vjur', 'bare_vdes', 'bare_pago', 'bare_valo_pago',
+            'bare_sub_tota', 'bare_topa', 'bare_form', 'bare_banc', 'bare_cheq', 
+            'bare_hist', 'bare_emis', 'bare_venc', 'bare_usua_baix', 'bare_data_baix'
+        ]
 
 class ExcluirBaixaSerializer(serializers.Serializer):
     motivo_exclusao = serializers.CharField(max_length=500, required=False, allow_blank=True)

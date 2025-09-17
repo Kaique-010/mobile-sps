@@ -118,15 +118,6 @@
       "server": "base.rtalmeida.com.br",
       "port": 5432,
       "driver": "PostgreSQL",
-      "name": "savexml69",
-      "database": "savexml69",
-      "username": "savexml69"
-    },
-    {
-      "previewLimit": 50,
-      "server": "base.rtalmeida.com.br",
-      "port": 5432,
-      "driver": "PostgreSQL",
       "name": "granada",
       "database": "savexml980",
       "username": "savexml980"
@@ -138,20 +129,31 @@
       "port": 5432,
       "askForPassword": true,
       "driver": "PostgreSQL",
-      "name": "savexml839",
-      "database": "savexml839",
-      "username": "savexml839"
+      "name": "indusparquet",
+      "database": "savexml963",
+      "username": "savexml963"
     },
     {
       "ssh": "Disabled",
       "previewLimit": 50,
       "server": "base.rtalmeida.com.br",
       "port": 5432,
-      "askForPassword": true,
       "driver": "PostgreSQL",
-      "name": "indusparquet",
-      "database": "savexml963",
-      "username": "savexml963"
+      "name": "savexml69",
+      "database": "savexml69",
+      "username": "savexml69",
+      "password": "ikkmooqqqssu"
+    },
+    {
+      "ssh": "Disabled",
+      "previewLimit": 50,
+      "server": "base.rtalmeida.com.br",
+      "port": 5432,
+      "driver": "PostgreSQL",
+      "name": "savexml839",
+      "database": "savexml839",
+      "username": "savexml839",
+      "password": "eikkmoqqssuv"
     }
   ]
 }

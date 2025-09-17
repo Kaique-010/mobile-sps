@@ -1,15 +1,11 @@
-{% load static %}
 <!DOCTYPE html>
 <html lang="pt-br">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="{% static 'logo.png' %}">
+    <link rel="icon" type="image/png" href="./logo.png">
     <title>Servidor no Ar - Spartacus Mobile</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/material-design-iconic-font/2.2.0/css/material-design-iconic-font.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Fauna&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
@@ -17,7 +13,7 @@
         body {
             margin: 0;
             font-family: 'Roboto Mono', monospace;
-            background: linear-gradient(135deg, #0f1419, #406569);
+            background-color: #0a0a0d;
             color: #00e6e6;
             display: flex;
             flex-direction: column;
@@ -39,10 +35,9 @@
             text-align: center;
             margin-bottom: 40px;
             padding: 32px 0;
-            background: linear-gradient(135deg, #0f1419, #2f4b52);
+            background: linear-gradient(135deg, #0f1419, #1a1a2e);
             border-radius: 16px;
             border: 1px solid rgba(100, 255, 218, 0.1);
-            box-shadow: 0 4px 20px rgba(159, 193, 185, 0.471);
         }
 
         .header h1 {
@@ -248,7 +243,7 @@
             width: 100%;
             max-width: 1800px;
             margin: 40px auto 0;
-
+            background: linear-gradient(135deg, #0f1419, #1a1a2e);
             border: 1px solid rgba(100, 255, 218, 0.1);
             border-radius: 16px;
             padding: 32px 24px;
@@ -360,8 +355,7 @@
 <body>
     <div class="container">
         <div class="header">
-
-            <img src="{% static 'logo.png' %}" alt="Logo" style="width: 58px; height:68px; margin-right: 16px;">
+            <img src="./logo.png" alt="Logo" style="width: 58px; height:68px; margin-right: 16px;">
             <h1>STATUS DO SERVIDOR: ONLINE</h1>
             <p>Spartacus Mobile - Online</p>
 
@@ -643,19 +637,19 @@
 <footer>
     <p>&copy; 2025 Spartacus Sistemas. Todos os direitos reservados.</p>
     <div class="elementor-widget-container">
-        <div class="ct-icon1 style2">
-            <a href="https://www.facebook.com/Spartacus.sistemas/?rf=220514235038325" target="_blank">
-                <i aria-hidden="true" class="fab fa-facebook-f"></i> </a>
-            <a href="https://twitter.com/spartacusgestao" target="_blank">
-                <i aria-hidden="true" class="fab fa-twitter"></i> </a>
-            <a href="https://www.instagram.com/spartacus.sistemas/" target="_blank">
-                <i aria-hidden="true" class="fab fa-instagram"></i> </a>
-            <a href="https://www.youtube.com/channel/UCLYrLJ6tgej7ScLQj2ONKOA" target="_blank">
-                <i aria-hidden="true" class="fab fa-youtube"></i> </a>
-            <a href="https://api.whatsapp.com/send?phone=5542988018764">
-                <i aria-hidden="true" class="material zmdi zmdi-whatsapp"></i> </a>
-        </div>
-    </div>
+					    <div class="ct-icon1 style2">
+                                    <a href="https://www.facebook.com/Spartacus.sistemas/?rf=220514235038325" target="_blank">
+                    <i aria-hidden="true" class="fab fa-facebook-f"></i>                                    </a>
+                                                <a href="https://twitter.com/spartacusgestao" target="_blank">
+                    <i aria-hidden="true" class="fab fa-twitter"></i>                                    </a>
+                                                <a href="https://www.instagram.com/spartacus.sistemas/" target="_blank">
+                    <i aria-hidden="true" class="fab fa-instagram"></i>                                    </a>
+                                                <a href="https://www.youtube.com/channel/UCLYrLJ6tgej7ScLQj2ONKOA" target="_blank">
+                    <i aria-hidden="true" class="fab fa-youtube"></i>                                    </a>
+                                                <a href="https://api.whatsapp.com/send?phone=5542988018764">
+                    <i aria-hidden="true" class="material zmdi zmdi-whatsapp"></i>                                    </a>
+                        </div>
+				</div>
 </footer>
 
 </html>

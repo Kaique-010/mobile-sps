@@ -12,6 +12,7 @@ from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from .serializers import TitulospagarSerializer, BaixaTitulosPagarSerializer, BapatitulosSerializer, ExcluirBaixaSerializer
 from decimal import Decimal
 from datetime import date
+from Lancamentos_Bancarios.utils import criar_lancamento_bancario_baixa
 
 class TitulospagarViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
     modulo_requerido = 'Financeiro'
@@ -195,10 +196,15 @@ class TitulospagarViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                 if baixas_restantes.exists():
                     # Verificar se o valor total das baixas restantes cobre o título
                     valor_total_baixas = baixas_restantes.aggregate(
-                        total=models.Sum('bapa_pago')
-                    )['total'] or Decimal('0')
+                        total_valo_pago=models.Sum('bapa_valo_pago'),
+                        total_sub_tota=models.Sum('bapa_sub_tota')
+                    )
+                    # Usar bapa_valo_pago como prioridade, se não existir usar bapa_sub_tota
+                    total_pago = (valor_total_baixas['total_valo_pago'] or 
+                                valor_total_baixas['total_sub_tota'] or 
+                                Decimal('0'))
                     
-                    if valor_total_baixas >= titulo.titu_valo:
+                    if total_pago >= titulo.titu_valo:
                         novo_status = 'T'  # Total
                     else:
                         novo_status = 'P'  # Parcial
@@ -293,8 +299,14 @@ class TitulospagarViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                         bapa_titu=titulo.titu_titu,
                         bapa_seri=titulo.titu_seri,
                         bapa_parc=titulo.titu_parc
-                    ).aggregate(total=models.Sum('bapa_pago'))['total'] or Decimal('0')
-                    valor_ja_pago = baixas_anteriores
+                    ).aggregate(
+                        total_valo_pago=models.Sum('bapa_valo_pago'),
+                        total_sub_tota=models.Sum('bapa_sub_tota')
+                    )
+                    # Usar bapa_valo_pago como prioridade, se não existir usar bapa_sub_tota
+                    valor_ja_pago = (baixas_anteriores['total_valo_pago'] or 
+                                   baixas_anteriores['total_sub_tota'] or 
+                                   Decimal('0'))
                 
                 import logging
                 logger = logging.getLogger(__name__)
@@ -329,10 +341,13 @@ class TitulospagarViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                     bapa_vjur=valor_juros,
                     bapa_vdes=valor_desconto,
                     bapa_pago=valor_total_pago,
+                    bapa_valo_pago=valor_pago,  # Valor principal pago
+                    bapa_sub_tota=valor_total_pago,  # Subtotal com juros/multa/desconto
                     bapa_topa=tipo_baixa_final,
+                    bapa_form=data.get('forma_pagamento', 'B'),  # Forma de pagamento
                     bapa_banc=data.get('banco'),
                     bapa_cheq=data.get('cheque'),
-                    bapa_hist=data.get('historico', f'Baixa do título {titulo.titu_titu}'),
+                    bapa_hist=data.get('historico', f'Baixa do título {titulo.titu_titu} feita por Mobile'),
                     bapa_emis=titulo.titu_emis,
                     bapa_venc=titulo.titu_venc,
                     bapa_cont=titulo.titu_cont,
@@ -354,6 +369,26 @@ class TitulospagarViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                     titu_emis=titulo.titu_emis,
                     titu_venc=titulo.titu_venc
                 ).update(titu_aber=tipo_baixa_final)
+                
+                # Criar lançamento bancário se forma de pagamento for 'B' (Banco)
+                if data.get('forma_pagamento') == 'B' and data.get('banco'):
+                    historico_lancamento = f"Pagamento título {titulo.titu_titu} - {data.get('historico', 'Baixa via Mobile')}"
+                    
+                    try:
+                        lancamento = criar_lancamento_bancario_baixa(
+                            empresa=titulo.titu_empr,
+                            filial=titulo.titu_fili,
+                            banco_id=data.get('banco'),
+                            valor=valor_total_pago,
+                            historico=historico_lancamento,
+                            entidade=titulo.titu_forn,
+                            tipo_baixa='pagar',
+                            banco_db=banco
+                        )
+                        logger.info(f"Lançamento bancário criado - ID: {lancamento.laba_ctrl}")
+                    except Exception as e:
+                        logger.error(f"Erro ao criar lançamento bancário: {str(e)}")
+                        # Não falha a baixa por erro no lançamento
                 
                 logger.info(f"Baixa realizada com sucesso - ID: {baixa.bapa_sequ}")
                 
