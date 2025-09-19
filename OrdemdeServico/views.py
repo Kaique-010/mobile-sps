@@ -12,15 +12,18 @@ from rest_framework.parsers import JSONParser
 from django.http import HttpResponse
 from OrdemdeServico.utils import get_next_item_number_sequence, get_next_service_id, get_next_image_id
 from listacasamento.utils import get_next_item_number
-from .permissions import PodeVerOrdemDoSetor
+from .permissions import PodeVerOrdemDoSetor, OrdemServicoPermission, WorkflowPermission
 from .models import (
     Ordemservico, Ordemservicopecas, Ordemservicoservicos,
-    Ordemservicoimgantes, Ordemservicoimgdurante, Ordemservicoimgdepois
+    Ordemservicoimgantes, Ordemservicoimgdurante, Ordemservicoimgdepois, 
+    WorkflowSetor, HistoricoWorkflow, OrdemServicoFaseSetor
 )
 from .serializers import (
     OrdemServicoSerializer, OrdemServicoPecasSerializer, OrdemServicoServicosSerializer,
-    ImagemAntesSerializer, ImagemDuranteSerializer, ImagemDepoisSerializer
+    ImagemAntesSerializer, ImagemDuranteSerializer, ImagemDepoisSerializer, 
+    WorkflowSetorSerializer, OrdemServicoFaseSetorSerializer
 )
+from .serializers_historico import HistoricoWorkflowSerializer
 from core.middleware import get_licenca_slug
 from core.registry import get_licenca_db_config
 from core.decorator import modulo_necessario, ModuloRequeridoMixin
@@ -30,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 class BaseMultiDBModelViewSet(ModuloRequeridoMixin, ModelViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, OrdemServicoPermission, PodeVerOrdemDoSetor]
 
     def get_banco(self):
         banco = get_licenca_db_config(self.request)
@@ -49,14 +52,28 @@ class BaseMultiDBModelViewSet(ModuloRequeridoMixin, ModelViewSet):
 
     @transaction.atomic(using='default')
     def create(self, request, *args, **kwargs):
-        banco = self.get_banco()
-        data = request.data
-        is_many = isinstance(data, list)
-        serializer = self.get_serializer(data=data, many=is_many)
-        serializer.is_valid(raise_exception=True)
-        with transaction.atomic(using=banco):
-            serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        try:
+            banco = self.get_banco()
+            # Evita múltiplos acessos ao request.data
+            data = getattr(request, '_cached_data', None)
+            if data is None:
+                data = request.data
+                request._cached_data = data
+            
+            is_many = isinstance(data, list)
+            serializer = self.get_serializer(data=data, many=is_many)
+            serializer.is_valid(raise_exception=True)
+            
+            with transaction.atomic(using=banco):
+                serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except ValidationError as ve:
+            # Captura erros de validação sem acessar request.data novamente
+            logger.error(f"Erro de validação: {ve}")
+            raise
+        except Exception as e:
+            logger.error(f"Erro ao processar requisição: {str(e)}")
+            raise
 
     def update(self, request, *args, **kwargs):
         banco = self.get_banco()
@@ -69,6 +86,55 @@ class BaseMultiDBModelViewSet(ModuloRequeridoMixin, ModelViewSet):
         return Response(serializer.data)
 
 
+class OrdemServicoFaseSetorViewSet(BaseMultiDBModelViewSet):
+    """ViewSet para consultar fases de setores (somente leitura)"""
+    modulo_necessario = 'OrdemdeServico'
+    queryset = OrdemServicoFaseSetor.objects.all()
+    serializer_class = OrdemServicoFaseSetorSerializer
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
+    filterset_fields = ['osfs_codi', 'osfs_nome']
+    ordering_fields = ['osfs_codi', 'osfs_nome']
+    search_fields = ['osfs_nome']
+    http_method_names = ['get']  # Apenas consulta (tabela não gerenciada)
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['banco'] = get_licenca_db_config(self.request)
+        return context
+
+
+class HistoricoWorkflowViewSet(BaseMultiDBModelViewSet):
+    """ViewSet para consultar histórico de movimentações entre setores"""
+    modulo_necessario = 'OrdemdeServico'
+    serializer_class = HistoricoWorkflowSerializer
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
+    filterset_fields = ['hist_empr', 'hist_fili', 'hist_orde', 'hist_seto_orig', 'hist_seto_dest', 'hist_usua']
+    ordering_fields = ['hist_data', 'hist_orde']
+    search_fields = ['hist_orde']
+    http_method_names = ['get', 'post']  # Apenas consulta e criação
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['banco'] = get_licenca_db_config(self.request)
+        return context
+
+
+class WorkflowSetorViewSet(BaseMultiDBModelViewSet):
+    """ViewSet para gerenciar configurações de workflow entre setores"""
+    modulo_necessario = 'OrdemdeServico'
+    queryset = WorkflowSetor.objects.all()
+    serializer_class = WorkflowSetorSerializer
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
+    filterset_fields = ['wkfl_seto_orig', 'wkfl_seto_dest', 'wkfl_ativo']
+    ordering_fields = ['wkfl_orde', 'wkfl_seto_orig', 'wkfl_seto_dest']
+    search_fields = ['wkfl_seto_orig', 'wkfl_seto_dest']
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['banco'] = get_licenca_db_config(self.request)
+        return context
+
+
 class OrdemServicoViewSet(BaseMultiDBModelViewSet):
     modulo_necessario = 'OrdemdeServico'
     serializer_class = OrdemServicoSerializer
@@ -76,7 +142,7 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
     filterset_fields = ['orde_stat_orde', 'orde_prio', 'orde_tipo', 'orde_enti']
     ordering_fields = ['orde_data_aber', 'orde_data_fech', 'orde_prio']
     search_fields = ['orde_prob', 'orde_defe_desc', 'orde_obse']
-    permission_classes = [IsAuthenticated, PodeVerOrdemDoSetor]
+    permission_classes = [IsAuthenticated, OrdemServicoPermission, PodeVerOrdemDoSetor]
     
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -87,7 +153,7 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
         banco = self.get_banco()
         user_setor = self.request.user.setor
         qs = Ordemservico.objects.using(banco)
-        if user_setor.osfs_codi != 6:
+        if user_setor and hasattr(user_setor, 'osfs_codi') and user_setor.osfs_codi is not None:
             qs = qs.filter(orde_seto=user_setor.osfs_codi)
         return qs.order_by('orde_nume', 'orde_data_aber')
 
@@ -121,7 +187,7 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
     @action(
         detail=True, 
         methods=['post'],
-        permission_classes=[IsAuthenticated]  # Removendo a restrição de setor para esta ação específica
+        permission_classes=[IsAuthenticated, OrdemServicoPermission, PodeVerOrdemDoSetor, WorkflowPermission],
     )
     def atualizar_total(self, request, pk=None, slug=None):
         """
@@ -142,6 +208,123 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
             logger.error(f"Erro ao atualizar total da ordem {pk}: {str(e)}")
             return Response(
                 {"error": "Erro ao atualizar total da ordem de serviço"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(
+        detail=True,
+        methods=['post'],
+        permission_classes=[IsAuthenticated, PodeVerOrdemDoSetor, WorkflowPermission],
+        url_path='avancar-setor'
+    )
+    def avancar_setor(self, request, pk=None, slug=None):
+        """
+        Endpoint para avançar ordem para próximo setor do workflow.
+        """
+        try:
+            banco = self.get_banco()
+            ordem = self.get_object()
+            setor_destino = request.data.get('setor_destino')
+            
+            if not setor_destino:
+                return Response(
+                    {"error": "setor_destino é obrigatório"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            with transaction.atomic(using=banco):
+                sucesso = ordem.avancar_setor(setor_destino, request.user, banco)
+                
+                if not sucesso:
+                    return Response(
+                        {"error": "Não é possível avançar para este setor"}, 
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            
+            serializer = self.get_serializer(ordem)
+            return Response(serializer.data)
+            
+        except Exception as e:
+            logger.error(f"Erro ao avançar setor da ordem {pk}: {str(e)}")
+            return Response(
+                {"error": "Erro ao avançar setor da ordem"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(
+        detail=True,
+        methods=['get'],
+        permission_classes=[IsAuthenticated, PodeVerOrdemDoSetor, WorkflowPermission],
+        url_path='proximos-setores'
+    )
+    def proximos_setores(self, request, pk=None, slug=None):
+        """
+        Endpoint para obter próximos setores disponíveis para avançar.
+        Retorna múltiplas opções quando existem setores com a mesma ordem.
+        """
+        try:
+            banco = self.get_banco()
+            logger.info(f"Banco obtido: {banco}")
+            
+            ordem = self.get_object()
+            logger.info(f"Ordem obtida: {ordem.orde_nume}, setor atual: {ordem.orde_seto}")
+            
+            setores = ordem.obter_proximos_setores(banco)
+            logger.info(f"Setores encontrados: {list(setores)}")
+            
+            return Response({
+                "proximos_setores": [
+                    {
+                        "codigo": setor.wkfl_seto_dest, 
+                        "nome": f"Setor {setor.wkfl_seto_dest}",
+                        "ordem": setor.wkfl_orde
+                    }
+                    for setor in setores
+                ]
+            })
+            
+        except Exception as e:
+            import traceback
+            logger.error(f"Erro ao obter próximos setores da ordem {pk}: {str(e)}")
+            logger.error(f"Traceback completo: {traceback.format_exc()}")
+            return Response(
+                {"error": f"Erro ao obter próximos setores: {str(e)}"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(
+        detail=True,
+        methods=['get'],
+        permission_classes=[IsAuthenticated],
+        url_path='historico-workflow'
+    )
+    def historico_workflow(self, request, pk=None, slug=None):
+        """
+        Endpoint para obter histórico de movimentação entre setores.
+        """
+        try:
+            banco = self.get_banco()
+            ordem = self.get_object()
+            
+            historico = ordem.obter_historico_workflow(banco)
+            
+            return Response({
+                "historico": [
+                    {
+                        "setor_origem": h.hist_seto_orig,
+                        "setor_destino": h.hist_seto_dest,
+                        "usuario": h.hist_usua,
+                        "data": h.hist_data,
+                        "observacao": h.hist_observacao
+                    }
+                    for h in historico
+                ]
+            })
+            
+        except Exception as e:
+            logger.error(f"Erro ao obter histórico workflow da ordem {pk}: {str(e)}")
+            return Response(
+                {"error": "Erro ao obter histórico de workflow"}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
 

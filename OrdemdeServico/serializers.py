@@ -9,10 +9,11 @@ from contas_a_receber.models import Titulosreceber
 from core.serializers import BancoContextMixin
 from .models import (
     Ordemservico, Ordemservicopecas, Ordemservicoservicos,
-    Ordemservicoimgantes, Ordemservicoimgdurante, Ordemservicoimgdepois
+    Ordemservicoimgantes, Ordemservicoimgdurante, Ordemservicoimgdepois, WorkflowSetor, OrdemServicoFaseSetor
 )
 
 logger = logging.getLogger(__name__)
+
 
 
 
@@ -34,6 +35,60 @@ class BancoModelSerializer(BancoContextMixin, serializers.ModelSerializer):
         return instance
 
 
+class OrdemServicoFaseSetorSerializer(BancoModelSerializer):
+    class Meta:
+        model = OrdemServicoFaseSetor
+        fields = '__all__'
+    
+    def create(self, validated_data):
+        banco = self.context.get('banco')
+        if not banco:
+            raise ValidationError('Banco não encontrado no contexto')
+        instance = self.Meta.model.objects.using(banco).create(**validated_data)
+        return instance
+
+
+class OrdemServicoFaseSetorSerializer(BancoModelSerializer):
+    """Serializer para fases de setores (tabela não gerenciada)"""
+    class Meta:
+        model = OrdemServicoFaseSetor
+        fields = '__all__'
+
+
+class WorkflowSetorSerializer(BancoModelSerializer):
+    class Meta:
+        model = WorkflowSetor
+        fields = '__all__'
+    
+    def validate(self, data):
+        """Validação customizada para evitar duplicatas"""
+        wkfl_seto_orig = data.get('wkfl_seto_orig')
+        wkfl_seto_dest = data.get('wkfl_seto_dest')
+        
+        if wkfl_seto_orig == wkfl_seto_dest:
+            raise ValidationError("O setor de origem não pode ser igual ao setor de destino.")
+        
+        # Verifica se já existe a combinação
+        banco = self.context.get('banco')
+        if banco and wkfl_seto_orig and wkfl_seto_dest:
+            exists = WorkflowSetor.objects.using(banco).filter(
+                wkfl_seto_orig=wkfl_seto_orig,
+                wkfl_seto_dest=wkfl_seto_dest
+            ).exists()
+            
+            if exists:
+                raise ValidationError(
+                    f"Já existe um workflow do setor {wkfl_seto_orig} para o setor {wkfl_seto_dest}."
+                )
+        
+        return data
+    
+    def create(self, validated_data):
+        banco = self.context.get('banco')
+        if not banco:
+            raise ValidationError('Banco não encontrado no contexto')
+        instance = self.Meta.model.objects.using(banco).create(**validated_data)
+        return instance
 
 class OrdemServicoPecasSerializer(BancoModelSerializer):
     peca_id = serializers.IntegerField(required=False)
@@ -166,7 +221,10 @@ class TituloReceberSerializer(BancoModelSerializer):
 class OrdemServicoSerializer(BancoModelSerializer):
     pecas = OrdemServicoPecasSerializer(many=True, required=False)
     servicos = serializers.SerializerMethodField()
+    setor_nome = serializers.SerializerMethodField(read_only=True)
     cliente_nome = serializers.SerializerMethodField(read_only=True)
+    proximos_setores = serializers.SerializerMethodField(read_only=True)
+    pode_avancar = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Ordemservico
@@ -177,33 +235,92 @@ class OrdemServicoSerializer(BancoModelSerializer):
         if not banco:
             return []
         
-        servicos = Ordemservicoservicos.objects.using(banco).filter(
-            serv_empr=obj.orde_empr,
-            serv_fili=obj.orde_fili,
-            serv_orde=obj.orde_nume
-        ).order_by('serv_sequ')
-        
-        return OrdemServicoServicosSerializer(servicos, many=True, context=self.context).data
+        try:
+            # Usar filtro manual já que não há relacionamento ForeignKey definido
+            servicos = Ordemservicoservicos.objects.using(banco).filter(
+                serv_empr=obj.orde_empr,
+                serv_fili=obj.orde_fili,
+                serv_orde=obj.orde_nume
+            )
+            return OrdemServicoServicosSerializer(servicos, many=True, context=self.context).data
+        except Exception as e:
+            logger.error(f"Erro ao buscar serviços da ordem {obj.orde_nume}: {str(e)}")
+            return []
     
     def get_cliente_nome(self, obj):
         banco = self.context.get('banco')
-        if not banco or not obj.orde_enti or not obj.orde_empr:
+        if not banco:
             return None
-            
+        
         try:
             entidade = Entidades.objects.using(banco).filter(
-                enti_clie=obj.orde_enti,
-                enti_empr=obj.orde_empr
+                enti_empr=obj.orde_empr,
+                enti_clie=obj.orde_enti
             ).first()
             return entidade.enti_nome if entidade else None
         except Exception as e:
-            logger.error(f"Erro ao buscar cliente: {e}")
+            logger.error(f"Erro ao buscar cliente da ordem {obj.orde_nume}: {str(e)}")
             return None
+    
+    def get_setor_nome(self, obj):
+        banco = self.context.get('banco')
+        if not banco:
+            return None
+        
+        try:
+            setor = OrdemServicoFaseSetor.objects.using(banco).filter(
+                osfs_codi=obj.orde_seto
+             ).first()
+            return setor.osfs_nome if setor else None
+        except Exception as e:
+            logger.error(f"Erro ao buscar setor da ordem {obj.orde_nume}: {str(e)}")
+            return None
+
+    def get_proximos_setores(self, obj):
+        """Retorna próximos setores disponíveis no workflow com múltiplas opções"""
+        banco = self.context.get('banco')
+        if not banco:
+            return []
+        
+        try:
+            setores = obj.obter_proximos_setores(banco)
+            return [
+                {
+                    "codigo": setor.wkfl_seto_dest, 
+                    "nome": f"Setor {setor.wkfl_seto_dest}",
+                    "ordem": setor.wkfl_orde
+                }
+                for setor in setores
+            ]
+        except Exception as e:
+            logger.error(f"Erro ao buscar próximos setores da ordem {obj.orde_nume}: {str(e)}")
+            return []
+
+    def get_pode_avancar(self, obj):
+        """Verifica se o usuário atual pode avançar esta ordem"""
+        request = self.context.get('request')
+        if not request or not request.user:
+            return False
+        
+        setor_user = getattr(request.user, "usua_seto", None) or getattr(request.user, "setor", None)
+        
+        # Admin pode mover qualquer ordem
+        if setor_user is None:
+            return True
+        
+        # Converte para int se necessário
+        try:
+            setor_user = int(setor_user)
+        except (ValueError, TypeError):
+            return False
+            
+        # Para outros usuários, só pode mover se estiver no setor atual da ordem
+        return obj.orde_seto == setor_user
         
             
 
     def validate_orde_stat(self, value):
-        VALID_STATUSES = [0, 1, 2, 3, 4, 5, 20]
+        VALID_STATUSES = [0, 1, 2, 3, 4, 5, 20, 21]
         if value not in VALID_STATUSES:
             raise ValidationError('Status inválido.')
         return value

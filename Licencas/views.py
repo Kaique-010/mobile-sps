@@ -89,6 +89,7 @@ class LoginView(APIView):
         refresh = RefreshToken.for_user(usuario)
         refresh['username'] = usuario.usua_nome
         refresh['usuario_id'] = usuario.usua_codi
+        refresh['setor'] = usuario.usua_seto  # Adicionar setor do usuário
         refresh['lice_id'] = licenca.lice_id
         refresh['lice_nome'] = licenca.lice_nome
         refresh['empresa_id'] = empresa_id
@@ -105,6 +106,7 @@ class LoginView(APIView):
             'usuario': {
                 'username': usuario.usua_nome,
                 'usuario_id': usuario.usua_codi,
+                'setor': usuario.usua_seto,  # Adicionar setor na resposta
                 'empresa_id': empresa_id,
                 'filial_id': filial_id,
             },

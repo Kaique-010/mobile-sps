@@ -307,3 +307,9 @@ END IF;
     END IF;
 
 END$$;
+
+##Novos end points
+
+- POST /ordens/{id}/avancar-setor/ - Avança ordem para próximo setor
+- GET /ordens/{id}/proximos-setores/ - Lista setores disponíveis
+- GET /ordens/{id}/historico-workflow/ - Histórico de movimentações

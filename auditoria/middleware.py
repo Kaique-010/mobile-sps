@@ -205,6 +205,25 @@ class AuditoriaMiddleware:
             else:
                 logger.debug(f'Modelo ou ID não encontrado na URL: {request.path}')
 
+        # Tentar obter os dados da requisição ANTES de processar a resposta
+        data = None
+        if request.method in ['POST', 'PUT', 'PATCH']:
+            try:
+                if isinstance(request, Request):
+                    # Capturar dados antes da view processar
+                    data = getattr(request, '_cached_data', None)
+                    if data is None:
+                        data = request.data
+                        request._cached_data = data
+                else:
+                    data = request.body.decode('utf-8') if request.body else None
+
+                if isinstance(data, str):
+                    data = json.loads(data)
+            except Exception as e:
+                logger.warning(f'Erro ao processar dados da requisição: {str(e)}')
+                data = None
+
         # Processar a resposta
         response = self.get_response(request)
 
@@ -252,19 +271,6 @@ class AuditoriaMiddleware:
             if not licenca_slug:
                 logger.warning(f'Log ignorado - Licença não encontrada: {url} (usuário: {user})')
                 return response
-
-            # Tentar obter os dados da requisição
-            try:
-                if isinstance(request, Request):
-                    data = request.data
-                else:
-                    data = request.body.decode('utf-8') if request.body else None
-
-                if isinstance(data, str):
-                    data = json.loads(data)
-            except Exception as e:
-                logger.warning(f'Erro ao processar dados da requisição: {str(e)}')
-                data = None
 
             # Capturar dados depois da alteração
             dados_depois = None

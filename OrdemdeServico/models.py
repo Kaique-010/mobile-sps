@@ -1,6 +1,7 @@
 from django.db import models
 from django.db import transaction
 from django.db.models import Max
+from django.utils import timezone
 
 
 ORDEM_STATUS_CHOICES = (
@@ -36,6 +37,42 @@ class OrdemServicoFaseSetor(models.Model):
 
     def __str__(self):
         return self.osfs_nome
+
+
+class WorkflowSetor(models.Model):
+    """Modelo para definir a sequência de setores no workflow das O.S."""
+    wkfl_id = models.AutoField(primary_key=True)
+    wkfl_seto_orig = models.IntegerField()
+    wkfl_seto_dest = models.IntegerField()
+    wkfl_orde = models.IntegerField(default=1)  # Ordem na sequência
+    wkfl_ativo = models.BooleanField(default=True)
+    
+    class Meta:
+        db_table = 'workflow_setor'
+        unique_together = (('wkfl_seto_orig', 'wkfl_seto_dest'),)
+        ordering = ['wkfl_orde']
+
+    def __str__(self):
+        return f"Setor {self.wkfl_seto_orig} -> Setor {self.wkfl_seto_dest}"
+
+
+class HistoricoWorkflow(models.Model):
+    """Histórico de movimentações entre setores"""
+    hist_id = models.AutoField(primary_key=True)
+    hist_empr = models.IntegerField()
+    hist_fili = models.IntegerField()
+    hist_orde = models.IntegerField()
+    hist_seto_orig = models.IntegerField(null=True, blank=True)
+    hist_seto_dest = models.IntegerField()
+    hist_usua = models.IntegerField()
+    hist_data = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'historico_workflow'
+        ordering = ['-hist_data']
+
+    def __str__(self):
+        return f"O.S. {self.hist_orde} - Setor {self.hist_seto_orig} -> {self.hist_seto_dest}"
 
 
 class Ordemservico(models.Model):
@@ -82,6 +119,66 @@ class Ordemservico(models.Model):
         
         self.orde_tota = total_pecas + total_servicos
         return self.orde_tota
+
+
+    def pode_avancar_setor(self, setor_destino, banco='default'):
+        """Verifica se a O.S. pode avançar para o setor destino"""
+        if not self.orde_seto:
+            return setor_destino == 1  # Primeira movimentação
+        
+        return WorkflowSetor.objects.using(banco).filter(
+            wkfl_seto_orig=self.orde_seto,
+            wkfl_seto_dest=setor_destino,
+            wkfl_ativo=True
+        ).exists()
+
+    def obter_proximos_setores(self, banco='default'):
+        """Retorna lista de setores para onde a O.S. pode avançar"""
+        if not self.orde_seto:
+           
+            return WorkflowSetor.objects.using(banco).filter(
+                wkfl_seto_orig=0, 
+                wkfl_ativo=True
+            ).order_by('wkfl_orde')
+        
+        return WorkflowSetor.objects.using(banco).filter(
+            wkfl_seto_orig=self.orde_seto,
+            wkfl_ativo=True
+        ).order_by('wkfl_orde') 
+
+    def avancar_setor(self, setor_destino, usuario_id,  banco='default'):
+        """Avança a O.S. para o próximo setor"""
+        if not self.pode_avancar_setor(setor_destino, banco):
+            raise ValueError(f"Não é possível avançar do setor {self.orde_seto} para {setor_destino}")
+        
+        # Extrai o ID do usuário se for um objeto User
+        user_id = usuario_id.pk if hasattr(usuario_id, 'pk') else usuario_id
+        
+        setor_origem = self.orde_seto
+        self.orde_seto = setor_destino
+        self.orde_ulti_usua = str(user_id)
+        self.orde_ulti_alte = timezone.now()
+        self.save(using=banco)
+        
+        # Registra no histórico
+        HistoricoWorkflow.objects.using(banco).create(
+            hist_empr=self.orde_empr,
+            hist_fili=self.orde_fili,
+            hist_orde=self.orde_nume,
+            hist_seto_orig=setor_origem,
+            hist_seto_dest=setor_destino,
+            hist_usua=user_id,
+        )
+        
+        return True
+
+    def obter_historico_workflow(self, banco='default'):
+        """Retorna o histórico de movimentações da O.S."""
+        return HistoricoWorkflow.objects.using(banco).filter(
+            hist_empr=self.orde_empr,
+            hist_fili=self.orde_fili,
+            hist_orde=self.orde_nume
+        ).order_by('-hist_data')
     
     @property
     def itens_lista(self):

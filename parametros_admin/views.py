@@ -259,6 +259,100 @@ class PermissaoModuloViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    @action(detail=False, methods=['get'])
+    def permissoes_usuario(self, request, slug=None):
+        """Retorna permissões de módulos para o usuário atual"""
+        try:
+            empresa_id = request.META.get('HTTP_X_EMPRESA') or request.query_params.get('empr')
+            filial_id = request.META.get('HTTP_X_FILIAL') or request.query_params.get('fili')
+            
+            if not empresa_id:
+                empresa_id = getattr(request.user, 'usua_empr', 1)
+            if not filial_id:
+                filial_id = getattr(request.user, 'usua_fili', 1)
+            
+            empresa_id = int(empresa_id)
+            filial_id = int(filial_id)
+            
+            banco = get_licenca_db_config(request)
+            
+            permissoes = PermissaoModulo.objects.using(banco).filter(
+                perm_empr=empresa_id,
+                perm_fili=filial_id,
+                perm_ativ=True
+            ).select_related('perm_modu')
+            
+            modulos_permitidos = []
+            for perm in permissoes:
+                modulos_permitidos.append({
+                    'codigo': perm.perm_modu.modu_codi,
+                    'nome': perm.perm_modu.modu_nome,
+                    'ativo': perm.perm_ativ
+                })
+            
+            return Response({
+                'empresa_id': empresa_id,
+                'filial_id': filial_id,
+                'permissoes': modulos_permitidos
+            })
+            
+        except Exception as e:
+            logger.error(f"Erro ao obter permissões do usuário: {e}")
+            return Response(
+                {'error': 'Erro ao obter permissões do usuário'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=False, methods=['get'])
+    def verificar_permissao(self, request, tela=None, operacao=None, slug=None):
+        """Verifica se o usuário tem permissão para uma tela/operação específica"""
+        try:
+            empresa_id = request.META.get('HTTP_X_EMPRESA') or request.query_params.get('empr')
+            filial_id = request.META.get('HTTP_X_FILIAL') or request.query_params.get('fili')
+            
+            if not empresa_id:
+                empresa_id = getattr(request.user, 'usua_empr', 1)
+            if not filial_id:
+                filial_id = getattr(request.user, 'usua_fili', 1)
+            
+            empresa_id = int(empresa_id)
+            filial_id = int(filial_id)
+            
+            banco = get_licenca_db_config(request)
+            
+            # Buscar módulo pela tela
+            modulo = Modulo.objects.using(banco).filter(
+                modu_nome__icontains=tela
+            ).first()
+            
+            if not modulo:
+                return Response({
+                    'permitido': False,
+                    'motivo': f'Módulo para tela {tela} não encontrado'
+                })
+            
+            # Verificar permissão
+            permissao_existe = PermissaoModulo.objects.using(banco).filter(
+                perm_empr=empresa_id,
+                perm_fili=filial_id,
+                perm_modu=modulo,
+                perm_ativ=True
+            ).exists()
+            
+            return Response({
+                'permitido': permissao_existe,
+                'tela': tela,
+                'operacao': operacao,
+                'modulo': modulo.modu_nome
+            })
+            
+        except Exception as e:
+            logger.error(f"Erro ao verificar permissão: {e}")
+            return Response(
+                {'permitido': False, 'erro': 'Erro ao verificar permissão'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 
 class AtualizaPermissoesModulosView(APIView):
     def get(self, request, slug=None):
@@ -879,50 +973,6 @@ class ParametroSistemaViewSet(viewsets.ModelViewSet):
             logger.error(f"Erro ao atualizar parâmetro: {e}")
             return Response(
                 {'error': 'Erro ao atualizar parâmetro'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-    
-    @action(detail=False, methods=['get'])
-    def permissoes_usuario(self, request, slug=None):
-        """Retorna permissões de módulos para o usuário atual"""
-        try:
-            empresa_id = request.META.get('HTTP_X_EMPRESA') or request.query_params.get('empr')
-            filial_id = request.META.get('HTTP_X_FILIAL') or request.query_params.get('fili')
-            
-            if not empresa_id:
-                empresa_id = getattr(request.user, 'usua_empr', 1)
-            if not filial_id:
-                filial_id = getattr(request.user, 'usua_fili', 1)
-            
-            empresa_id = int(empresa_id)
-            filial_id = int(filial_id)
-            
-            banco = get_licenca_db_config(request)
-            
-            permissoes = PermissaoModulo.objects.using(banco).filter(
-                perm_empr=empresa_id,
-                perm_fili=filial_id,
-                perm_ativ=True
-            ).select_related('perm_modu')
-            
-            modulos_permitidos = []
-            for perm in permissoes:
-                modulos_permitidos.append({
-                    'codigo': perm.perm_modu.modu_codi,
-                    'nome': perm.perm_modu.modu_nome,
-                    'ativo': perm.perm_ativ
-                })
-            
-            return Response({
-                'empresa_id': empresa_id,
-                'filial_id': filial_id,
-                'permissoes': modulos_permitidos
-            })
-            
-        except Exception as e:
-            logger.error(f"Erro ao buscar permissões do usuário: {e}")
-            return Response(
-                {'error': 'Erro ao buscar permissões do usuário'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     

@@ -215,6 +215,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        #'Licencas.authentication.CustomJWTAuthentication',  # Autenticação customizada
         #'Entidades.authentication.EntidadeJWTAuthentication', 
     ],
     'DEFAULT_PARSER_CLASSES': [
@@ -440,9 +441,7 @@ SPECTACULAR_SETTINGS = {
         'showCommonExtensions': True,
         'tryItOutEnabled': True,
     },
-    'POSTPROCESSING_HOOKS': [
-        'drf_spectacular.contrib.postprocessing.sanitizer_spec_postprocessor',
-    ],
+    'POSTPROCESSING_HOOKS': [],
     'ENUM_NAME_OVERRIDES': { 
         'ClientEnum': 'core.utils.ClientEnum',
     },

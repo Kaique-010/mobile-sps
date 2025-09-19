@@ -12,9 +12,9 @@ class LctobancarioSerializer(BancoContextMixin, serializers.ModelSerializer):
     laba_ctrl = serializers.IntegerField(required=False, read_only=True)
     class Meta:
         model = Lctobancario
-        fields = 'laba_empr', 'laba_fili', 'laba_banc',
+        fields = ('laba_empr', 'laba_fili', 'laba_banc',
         'laba_data', 'laba_cecu','laba_valo','laba_hist',
-        'laba_dcbr', 'laba_enti',
+        'laba_dbcr', 'laba_enti', 'laba_ctrl')
 
     def create(self, validated_data):
         banco = self.context.get('banco')
