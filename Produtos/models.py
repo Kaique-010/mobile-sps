@@ -222,6 +222,7 @@ class UnidadeMedida(models.Model):
 class Produtos(models.Model):
     prod_empr = models.CharField(max_length=50, db_column='prod_empr')
     prod_codi = models.CharField(max_length=50, db_column='prod_codi', primary_key=True) 
+    prod_codi_nume = models.CharField(max_length=50, db_column='prod_codi_nume', blank=True, null=True)
     prod_nome = models.CharField(max_length=255, db_column='prod_nome') 
     prod_unme = models.ForeignKey(UnidadeMedida,on_delete=models.PROTECT, db_column='prod_unme') 
     prod_grup= models.ForeignKey(GrupoProduto, on_delete=models.DO_NOTHING, db_column='prod_grup', related_name='produtos', blank= True, null= True) 
@@ -236,7 +237,7 @@ class Produtos(models.Model):
     prod_cera_pccx = models.DecimalField(max_digits=15, decimal_places=2, db_column='prod_cera_pccx', blank=True, null=True)
     #prod_lote = models.CharField(max_length=50, blank=True, null=True, help_text="Lote de produção")
     #prod_lote_venc = models.DateField(blank=True, null=True, help_text="Data de vencimento do lote")
-
+    prod_orig_merc = models.CharField(max_length=1, db_column='prod_orig_merc', blank=True, null=True, default='0')
 
 
     class Meta:

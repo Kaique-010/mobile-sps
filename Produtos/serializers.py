@@ -179,6 +179,13 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
         if not attrs.get("prod_codi") and Produtos.objects.filter(prod_codi='', prod_empr=attrs.get("prod_empr")).exists():
             raise serializers.ValidationError("Produto com código vazio já existe para esta empresa.")
         
+        # Sempre definir prod_orig_merc como '0' (origem nacional)
+        attrs['prod_orig_merc'] = '0'
+        
+        # Sincronizar prod_codi_nume com prod_codi
+        if 'prod_codi' in attrs:
+            attrs['prod_codi_nume'] = attrs['prod_codi']
+        
         # Converter strings vazias em None para todos os campos decimais possíveis
         decimal_fields = [
             'prod_cera_m2cx', 'prod_cera_pccx',
@@ -234,11 +241,17 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
         if not banco:
             raise serializers.ValidationError("Banco não encontrado")
 
+        # Garantir que prod_orig_merc seja sempre '0'
+        validated_data['prod_orig_merc'] = '0'
+
         prod_empr = validated_data.get('prod_empr')
         prod_codi = validated_data.get('prod_codi')
 
         # Se veio código, tenta atualizar
         if prod_codi:
+            # Sincronizar prod_codi_nume com prod_codi
+            validated_data['prod_codi_nume'] = prod_codi
+            
             try:
                 produto_existente = Produtos.objects.using(banco).get(
                     prod_codi=prod_codi,
@@ -262,6 +275,8 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
             proximo_codigo += 1
 
         validated_data['prod_codi'] = str(proximo_codigo)
+        # Sincronizar prod_codi_nume com o novo prod_codi
+        validated_data['prod_codi_nume'] = str(proximo_codigo)
 
         produto = Produtos.objects.using(banco).create(**validated_data)
 
@@ -285,6 +300,13 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         banco = self.get_banco()
+        
+        # Garantir que prod_orig_merc seja sempre '0'
+        validated_data['prod_orig_merc'] = '0'
+        
+        # Sincronizar prod_codi_nume com prod_codi se prod_codi foi alterado
+        if 'prod_codi' in validated_data:
+            validated_data['prod_codi_nume'] = validated_data['prod_codi']
         
         # Limpar campos decimais que podem vir como string vazia
         if validated_data.get('prod_cera_m2cx') == '':

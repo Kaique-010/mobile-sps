@@ -272,6 +272,9 @@ class AuditoriaMiddleware:
                 logger.warning(f'Log ignorado - Licença não encontrada: {url} (usuário: {user})')
                 return response
 
+            # Dados já foram capturados antes do processamento da resposta
+            # Remover a captura duplicada aqui
+
             # Capturar dados depois da alteração
             dados_depois = None
             campos_alterados = None
