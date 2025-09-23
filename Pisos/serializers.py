@@ -201,6 +201,8 @@ class OrcamentopisosSerializer(BancoContextMixin, serializers.ModelSerializer):
 
 class ItenspedidospisosSerializer(BancoContextMixin, serializers.ModelSerializer):
     produto_nome = serializers.SerializerMethodField()
+    item_nume = serializers.IntegerField(read_only=True)  # Sequencial criado pelo backend
+    
     class Meta:
         model = Itenspedidospisos
         fields = '__all__'
@@ -375,6 +377,23 @@ class PedidospisosSerializer(BancoContextMixin, serializers.ModelSerializer):
             # Calcular subtotal do item
             item_subtotal = float(item_data.get('item_quan', 0)) * float(item_data.get('item_unit', 0))
             
+            # Calcular caixas e quantidade corretamente
+            # Buscar dados de cálculo do frontend
+            dados_calculo = item_data.get('dados_calculo', {})
+            metragem_ambiente = float(dados_calculo.get('metragem_total', item_data.get('tamanho_m2', item_data.get('item_m2', 0))))
+            m2_por_caixa = float(dados_calculo.get('m2_por_caixa', item_data.get('m2_por_caixa', 1)))
+            
+            # Se ainda não temos dados, usar valores do item_data diretamente
+            if metragem_ambiente == 0:
+                metragem_ambiente = float(item_data.get('area_m2', 0))
+            
+            # Caixas necessárias (arredondar para cima)
+            import math
+            caixas_necessarias = math.ceil(metragem_ambiente / m2_por_caixa) if m2_por_caixa > 0 else 0
+            
+            # Quantidade = metro quadrado/caixa * total de caixas
+            quantidade = m2_por_caixa * caixas_necessarias
+            
             # Limpar campos que serão passados explicitamente
             item_data_clean = item_data.copy()
             item_data_clean.pop('item_empr', None)
@@ -383,13 +402,22 @@ class PedidospisosSerializer(BancoContextMixin, serializers.ModelSerializer):
             item_data_clean.pop('item_ambi', None)
             item_data_clean.pop('item_nume', None)
             item_data_clean.pop('item_suto', None)
+            item_data_clean.pop('item_quan', None)  # Remove para evitar duplicação
+            item_data_clean.pop('tamanho_m2', None)
+            item_data_clean.pop('m2_por_caixa', None)
+            item_data_clean.pop('caixas_necessarias', None)
 
             Itenspedidospisos.objects.using(banco).create(
                 item_empr=pedido.pedi_empr,
                 item_fili=pedido.pedi_fili,
                 item_pedi=pedido.pedi_nume,
-                item_ambi=item_data.get('item_ambi', idx),
+                item_ambi=idx,  # Sequencial por ambiente
                 item_nume=idx,
+                item_m2=metragem_ambiente,  # Metragem informada
+                item_quan=quantidade,  # Quantidade = metragem
+                item_caix=caixas_necessarias,  # Caixas calculadas
+                item_prod_nome=item_data.get('item_nome_ambi', ''),  # Nome do ambiente
+                item_nome_ambi=item_data.get('item_nome_ambi', ''),  # Nome do ambiente
                 item_suto=item_subtotal,
                 **item_data_clean
             )
@@ -449,16 +477,38 @@ class PedidospisosSerializer(BancoContextMixin, serializers.ModelSerializer):
                 # Calcular subtotal do item
                 item_subtotal = float(item_data.get('item_quan', 0)) * float(item_data.get('item_unit', 0))
                 
+                # Calcular caixas e quantidade corretamente
+                # Buscar dados de cálculo do frontend
+                dados_calculo = item_data.get('dados_calculo', {})
+                metragem_ambiente = float(dados_calculo.get('metragem_total', item_data.get('tamanho_m2', item_data.get('item_m2', 0))))
+                m2_por_caixa = float(dados_calculo.get('m2_por_caixa', item_data.get('m2_por_caixa', 1)))
+                
+                # Se ainda não temos dados, usar valores do item_data diretamente
+                if metragem_ambiente == 0:
+                    metragem_ambiente = float(item_data.get('area_m2', 0))
+                
+                # Caixas necessárias (arredondar para cima)
+                import math
+                caixas_necessarias = math.ceil(metragem_ambiente / m2_por_caixa) if m2_por_caixa > 0 else 0
+                
+                # Quantidade = metro quadrado/caixa * total de caixas
+                quantidade = m2_por_caixa * caixas_necessarias
+                print(f"DEBUG: Item {idx} - Metragem: {metragem_ambiente} m2, M2 por caixa: {m2_por_caixa}, Caixas: {caixas_necessarias}, Quantidade: {quantidade}")
+                
                 # Criar item diretamente sem validação do serializer
                 item = Itenspedidospisos.objects.using(banco).create(
                     item_empr=instance.pedi_empr,
                     item_fili=instance.pedi_fili,
                     item_pedi=instance.pedi_nume,
-                    item_ambi=item_data.get('item_ambi', idx),
+                    item_ambi=idx,  # Sequencial por ambiente
                     item_nume=idx,
+                    item_m2=metragem_ambiente,  # Metragem informada
+                    item_quan=quantidade,  # Quantidade = metragem
+                    item_caix=caixas_necessarias,  # Caixas calculadas
+                    item_prod_nome=item_data.get('item_nome_ambi', ''),  # Nome do ambiente
+                    item_nome_ambi=item_data.get('item_nome_ambi', ''),  # Nome do ambiente
                     item_suto=item_subtotal,
                     item_prod=item_data.get('item_prod'),
-                    item_quan=item_data.get('item_quan', 0),
                     item_unit=item_data.get('item_unit', 0),
                     item_desc=item_data.get('item_desc', 0),
                     item_obse=item_data.get('item_obse', ''),

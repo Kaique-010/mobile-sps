@@ -99,5 +99,12 @@
     "db_name": "savexml1023",
     "db_host": "base.rtalmeida.com.br",
     "db_port": "5432"
+  },
+  {
+    "slug": "eletro",
+    "cnpj": "78776366000144",
+    "db_name": "savexml144",
+    "db_host": "base.rtalmeida.com.br",
+    "db_port": "5432"
   }
 ]

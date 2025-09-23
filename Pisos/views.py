@@ -9,8 +9,7 @@ from django.db import transaction
 import logging
 from decimal import Decimal, InvalidOperation
 import math
-
-from .models import Orcamentopisos, Pedidospisos, Itensorcapisos, Itenspedidospisos
+from .models import Orcamentopisos, Pedidospisos, Itensorcapisos, Itenspedidospisos                            
 from .serializers import (
     OrcamentopisosSerializer, 
     PedidospisosSerializer, 
@@ -362,6 +361,17 @@ class ProdutosPisosViewSet(BaseMultiDBModelViewSet):
             logger.error(f"Erro ao buscar preço: {e}")
             return None
     
+    def item_prod_nome(self, item_prod):
+        try:
+            banco = self.get_banco()
+            produto = Produtos.objects.using(banco).filter(prod_codi=item_prod).first()
+            if produto:
+                return produto.prod_nome
+            return None
+        except Exception as e:
+            logger.error(f"Erro ao buscar nome do produto: {e}")
+            return None
+    
     @action(detail=False, methods=['post'])
     def calcular_metragem(self, request, slug=None):
         try:
@@ -371,7 +381,7 @@ class ProdutosPisosViewSet(BaseMultiDBModelViewSet):
             # Obter dados do request
             produto_id = request.data.get('produto_id')
             tamanho_m2 = request.data.get('tamanho_m2')
-            percentual_quebra = request.data.get('percentual_quebra', 10)
+            percentual_quebra = request.data.get('percentual_quebra', 0)
             condicao = request.data.get('condicao', '0')  # '0' para à vista, outros para prazo
             
             # Log das variáveis extraídas
@@ -423,6 +433,7 @@ class ProdutosPisosViewSet(BaseMultiDBModelViewSet):
             
             # Calcular metragem total (tamanho + percentual de quebra)
             metragem_total = tamanho_m2 * (1 + percentual_quebra / 100)
+            print(f"Metragem total: {metragem_total}")
             
             # Função para conversão segura de Decimal
             def safe_decimal(value, default=0):
@@ -454,6 +465,7 @@ class ProdutosPisosViewSet(BaseMultiDBModelViewSet):
             
             # Calcular quantidade de caixas necessárias
             caixas_necessarias = math.ceil(metragem_total / m2_por_caixa)
+            print(f"Caixas necessárias: {caixas_necessarias}")
             
             # Calcular peças necessárias (only if pecas_por_caixa > 0)
             if pecas_por_caixa > 0:

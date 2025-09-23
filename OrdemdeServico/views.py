@@ -153,6 +153,17 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
         banco = self.get_banco()
         user_setor = self.request.user.setor
         qs = Ordemservico.objects.using(banco)
+        
+        # Filtrar registros com datas válidas para evitar erro de ano inválido
+        qs = qs.extra(
+            where=[
+                "EXTRACT(YEAR FROM orde_data_aber) BETWEEN %s AND %s",
+                "(orde_data_fech IS NULL OR EXTRACT(YEAR FROM orde_data_fech) BETWEEN %s AND %s)",
+                "(orde_ulti_alte IS NULL OR EXTRACT(YEAR FROM orde_ulti_alte) BETWEEN %s AND %s)"
+            ],
+            params=[1900, 2100, 1900, 2100, 1900, 2100]
+        )
+        
         if user_setor and hasattr(user_setor, 'osfs_codi') and user_setor.osfs_codi is not None:
             qs = qs.filter(orde_seto=user_setor.osfs_codi)
         return qs.order_by('orde_nume', 'orde_data_aber')

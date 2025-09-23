@@ -156,8 +156,8 @@ class Itensorcapisos(models.Model):
     item_unit = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
     item_suto = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
     item_obse = models.TextField(blank=True, null=True)
-    field_log_data = models.DateField(db_column='_log_data', blank=True, null=True)  # Field renamed because it started with '_'.
-    field_log_time = models.TimeField(db_column='_log_time', blank=True, null=True)  # Field renamed because it started with '_'.
+    field_log_data = models.DateField(db_column='_log_data', blank=True, null=True)  
+    field_log_time = models.TimeField(db_column='_log_time', blank=True, null=True)  
     item_nome_ambi = models.CharField(max_length=100, blank=True, null=True)
     item_nume = models.IntegerField(blank=True, null=True)
     item_caix = models.IntegerField(blank=True, null=True)
@@ -176,7 +176,7 @@ class Itensorcapisos(models.Model):
 class Itenspedidospisos(models.Model):
     item_empr = models.IntegerField()
     item_fili = models.IntegerField()
-    item_pedi = models.IntegerField(max_length=50, unique=True, primary_key=True)
+    item_pedi = models.IntegerField(max_length=50, unique=True)
     item_ambi = models.IntegerField()
     item_prod = models.CharField(max_length=20)
     item_m2 = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
@@ -184,11 +184,11 @@ class Itenspedidospisos(models.Model):
     item_unit = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
     item_suto = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
     item_obse = models.TextField(blank=True, null=True)
-    field_log_data = models.DateField(db_column='_log_data', blank=True, null=True)  # Field renamed because it started with '_'.
-    field_log_time = models.TimeField(db_column='_log_time', blank=True, null=True)  # Field renamed because it started with '_'.
+    field_log_data = models.DateField(db_column='_log_data', blank=True, null=True)  
+    field_log_time = models.TimeField(db_column='_log_time', blank=True, null=True)  
     item_nome_ambi = models.CharField(max_length=100, blank=True, null=True)
     item_data_entr = models.DateField(blank=True, null=True)
-    item_nume = models.IntegerField(blank=True, null=True)
+    item_nume = models.IntegerField(primary_key=True)
     item_nfe_fatu = models.IntegerField(blank=True, null=True)
     item_nfe_entr = models.IntegerField(blank=True, null=True)
     item_comp_efet = models.DateField(blank=True, null=True)
@@ -208,8 +208,3 @@ class Itenspedidospisos(models.Model):
         managed = False
         db_table = 'itenspedidospisos'
         unique_together = (('item_empr', 'item_fili', 'item_pedi', 'item_ambi', 'item_prod'),)
-
-
-
-
-

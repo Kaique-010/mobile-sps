@@ -99,7 +99,7 @@ INSTALLED_APPS = [
     'CaixaDiario',
     "O_S", 
     "auditoria",
-    "notificacoes",
+    #"notificacoes",
     "Sdk_recebimentos",
     "SpsComissoes",
     "EnvioCobranca",
@@ -114,6 +114,7 @@ INSTALLED_APPS = [
     'coletaestoque',
     'Floresta',
     'Lancamentos_Bancarios',
+    'Notas_Fiscais',
 ]
 # Middleware
 MIDDLEWARE = [

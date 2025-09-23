@@ -44,7 +44,7 @@ urlpatterns = [
     path('api/<slug>/caixadiario/', include('CaixaDiario.urls')),
     path('api/<slug>/Os/', include('O_S.urls')),
     path('api/<slug>/auditoria/', include('auditoria.urls')),
-    path('api/<slug>/notificacoes/', include('notificacoes.urls')),
+    #path('api/<slug>/notificacoes/', include('notificacoes.urls')),
     path('api/<slug>/Sdk_recebimentos/', include('Sdk_recebimentos.urls')),
     path('api/<slug>/comissoes/', include('SpsComissoes.urls')),
     path('api/<slug>/enviar-cobranca/', include('EnvioCobranca.urls')),
@@ -65,6 +65,10 @@ urlpatterns = [
     
     #Lançamentos Bancários
     path('api/<slug>/lctobancario/', include('Lancamentos_Bancarios.urls')),
+    
+    #Notas Fiscais
+    path('api/<slug>/notasfiscais/', include('Notas_Fiscais.urls')),
+    
     
     # Rotas de documentação do DRF-Spectacular
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

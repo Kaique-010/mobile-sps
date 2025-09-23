@@ -1,5 +1,6 @@
 import base64
 import logging
+from datetime import datetime, date
 from django.db.models import Max
 from django.db import transaction,IntegrityError
 from rest_framework import serializers
@@ -325,6 +326,39 @@ class OrdemServicoSerializer(BancoModelSerializer):
             raise ValidationError('Status inválido.')
         return value
 
+    def validate_orde_data_aber(self, value):
+        """Valida data de abertura para evitar anos inválidos"""
+        if value and isinstance(value, date):
+            if value.year < 1900 or value.year > 2100:
+                raise ValidationError('Ano da data de abertura deve estar entre 1900 e 2100.')
+        return value
+
+    def validate_orde_data_fech(self, value):
+        """Valida data de fechamento para evitar anos inválidos"""
+        if value and isinstance(value, date):
+            if value.year < 1900 or value.year > 2100:
+                raise ValidationError('Ano da data de fechamento deve estar entre 1900 e 2100.')
+        return value
+
+    def validate_orde_ulti_alte(self, value):
+        """Valida data de última alteração para evitar anos inválidos"""
+        if value and isinstance(value, datetime):
+            if value.year < 1900 or value.year > 2100:
+                raise ValidationError('Ano da data de última alteração deve estar entre 1900 e 2100.')
+        return value
+
+    def validate(self, data):
+        """Validação geral dos dados"""
+        # Validar se data de fechamento é posterior à data de abertura
+        data_aber = data.get('orde_data_aber')
+        data_fech = data.get('orde_data_fech')
+        
+        if data_aber and data_fech:
+            if data_fech < data_aber:
+                raise ValidationError('Data de fechamento não pode ser anterior à data de abertura.')
+        
+        return data
+
     def create(self, validated_data):
         pecas_data = validated_data.pop('pecas', [])
         servicos_data = validated_data.pop('servicos', [])
@@ -406,6 +440,13 @@ class OrdemServicoSerializer(BancoModelSerializer):
 class ImagemBase64Serializer(BancoModelSerializer):
     imagem_base64 = serializers.SerializerMethodField()
     imagem_upload = serializers.CharField(write_only=True, required=False)
+
+    def validate_img_data(self, value):
+        """Valida data da imagem para evitar anos inválidos"""
+        if value and isinstance(value, datetime):
+            if value.year < 1900 or value.year > 2100:
+                raise ValidationError('Ano da data da imagem deve estar entre 1900 e 2100.')
+        return value
 
     def get_imagem_base64(self, obj):
         campo_imagem = getattr(obj, self.Meta.imagem_field, None)
