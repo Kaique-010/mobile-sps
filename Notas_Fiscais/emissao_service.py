@@ -9,7 +9,7 @@ from pynfe.processamento.comunicacao import ComunicacaoSefaz
 from pynfe.entidades.cliente import Cliente
 from pynfe.entidades.emitente import Emitente
 from pynfe.entidades.notafiscal import NotaFiscal as NFePyNFe
-from pynfe.entidades.fonte_dados import _fonte_dados_nfe
+from pynfe.entidades.fonte_dados import FonteDadosNFe
 from pynfe.utils.flags import CODIGO_BRASIL
 
 logger = logging.getLogger(__name__)
