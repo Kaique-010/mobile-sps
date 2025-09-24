@@ -13,6 +13,7 @@ from django.http import HttpResponse
 from OrdemdeServico.utils import get_next_item_number_sequence, get_next_service_id, get_next_image_id
 from listacasamento.utils import get_next_item_number
 from .permissions import PodeVerOrdemDoSetor, OrdemServicoPermission, WorkflowPermission
+from .pagination import OrdemServicoPagination
 from .models import (
     Ordemservico, Ordemservicopecas, Ordemservicoservicos,
     Ordemservicoimgantes, Ordemservicoimgdurante, Ordemservicoimgdepois, 
@@ -143,6 +144,7 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
     ordering_fields = ['orde_data_aber', 'orde_data_fech', 'orde_prio']
     search_fields = ['orde_prob', 'orde_defe_desc', 'orde_obse']
     permission_classes = [IsAuthenticated, OrdemServicoPermission, PodeVerOrdemDoSetor]
+    pagination_class = OrdemServicoPagination
     
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -150,6 +152,8 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
         return context
 
     def get_queryset(self):
+        from datetime import datetime
+        
         banco = self.get_banco()
         user_setor = self.request.user.setor
         qs = Ordemservico.objects.using(banco)
@@ -164,9 +168,15 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
             params=[1900, 2100, 1900, 2100, 1900, 2100]
         )
         
+        # Filtrar por ano atual por padrão para melhor performance
+        ano_atual = datetime.now().year
+        qs = qs.filter(orde_data_aber__year=ano_atual)
+        
         if user_setor and hasattr(user_setor, 'osfs_codi') and user_setor.osfs_codi is not None:
             qs = qs.filter(orde_seto=user_setor.osfs_codi)
-        return qs.order_by('orde_nume', 'orde_data_aber')
+        
+        # Ordenar por mais recentes primeiro
+        return qs.order_by('-orde_data_aber', '-orde_nume')
 
     def get_next_ordem_numero(self, empre, fili):
         banco = self.get_banco()
