@@ -4,12 +4,14 @@ from rest_framework.response import Response
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
+from django_filters import rest_framework as django_filters
 from django.db import transaction, IntegrityError
 from django.db.models import Max
 from django.utils import timezone
 from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser
 from django.http import HttpResponse
+from Entidades.models import Entidades
 from OrdemdeServico.utils import get_next_item_number_sequence, get_next_service_id, get_next_image_id
 from listacasamento.utils import get_next_item_number
 from .permissions import PodeVerOrdemDoSetor, OrdemServicoPermission, WorkflowPermission
@@ -136,15 +138,74 @@ class WorkflowSetorViewSet(BaseMultiDBModelViewSet):
         return context
 
 
+class OrdemServicoFilter(django_filters.FilterSet):
+    cliente_nome = django_filters.CharFilter(method='filter_cliente_nome')
+    
+    class Meta:
+        model = Ordemservico
+        fields = ['orde_stat_orde', 'orde_prio', 'orde_tipo', 'orde_enti']
+    
+    def filter_cliente_nome(self, queryset, name, value):
+        if not value:
+            logger.info(f"[FILTRO] Nenhum valor fornecido para cliente_nome")
+            return queryset
+        
+        # Obter o banco de dados do contexto da view
+        view = getattr(self, 'view', None)
+        if view and hasattr(view, 'get_banco'):
+            banco = view.get_banco()
+        else:
+            # Fallback para request se disponível
+            request = getattr(self, 'request', None)
+            if request:
+                banco = get_licenca_db_config(request)
+            else:
+                logger.error(f"[FILTRO] Não foi possível obter o banco de dados")
+                return queryset
+        
+        if not banco:
+            logger.error(f"[FILTRO] Banco de dados não encontrado")
+            return queryset
+        
+        logger.info(f"[FILTRO] Filtrando por cliente: '{value}' no banco: {banco}")
+        
+        # Buscar entidades que contenham o nome do cliente (busca parcial)
+        entidades_ids = list(Entidades.objects.using(banco).filter(
+            enti_nome__icontains=value
+        ).values_list('enti_clie', flat=True))
+        
+        logger.info(f"[FILTRO] Entidades encontradas com nome '{value}': {entidades_ids}")
+        
+        if entidades_ids:
+            return queryset.filter(orde_enti__in=entidades_ids)
+        else:
+            logger.info(f"[FILTRO] Nenhuma entidade encontrada com nome '{value}'")
+            return queryset.none()
+        
+        # Filtrar ordens de serviço que tenham essas entidades
+        queryset_filtrado = queryset.filter(orde_enti__in=entidades_ids)
+        count_antes = queryset.count()
+        count_depois = queryset_filtrado.count()
+        
+        logger.info(f"[FILTRO] Ordens antes do filtro: {count_antes}, depois do filtro: {count_depois}")
+        
+        return queryset_filtrado
+
+
 class OrdemServicoViewSet(BaseMultiDBModelViewSet):
     modulo_necessario = 'OrdemdeServico'
     serializer_class = OrdemServicoSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
-    filterset_fields = ['orde_stat_orde', 'orde_prio', 'orde_tipo', 'orde_enti']
+    filterset_class = OrdemServicoFilter
     ordering_fields = ['orde_data_aber', 'orde_data_fech', 'orde_prio']
     search_fields = ['orde_prob', 'orde_defe_desc', 'orde_obse']
     permission_classes = [IsAuthenticated, OrdemServicoPermission, PodeVerOrdemDoSetor]
     pagination_class = OrdemServicoPagination
+    
+    def get_filterset_kwargs(self, filterset_class):
+        kwargs = super().get_filterset_kwargs(filterset_class)
+        kwargs['view'] = self  # Passa a view para o filterset
+        return kwargs
     
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -174,6 +235,22 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
         
         if user_setor and hasattr(user_setor, 'osfs_codi') and user_setor.osfs_codi is not None:
             qs = qs.filter(orde_seto=user_setor.osfs_codi)
+        
+        # Filtro customizado por cliente_nome via query params
+        cliente_nome = self.request.query_params.get('cliente_nome')
+        if cliente_nome:
+            logger.info(f"[QUERYSET] Filtrando por cliente_nome: '{cliente_nome}'")
+            # Buscar entidades que contenham o nome do cliente
+            entidades_ids = list(Entidades.objects.using(banco).filter(
+                enti_nome__icontains=cliente_nome
+            ).values_list('enti_clie', flat=True))
+            
+            if entidades_ids:
+                qs = qs.filter(orde_enti__in=entidades_ids)
+                logger.info(f"[QUERYSET] Encontradas {len(entidades_ids)} entidades para '{cliente_nome}'")
+            else:
+                logger.info(f"[QUERYSET] Nenhuma entidade encontrada para '{cliente_nome}'")
+                return qs.none()
         
         # Ordenar por mais recentes primeiro
         return qs.order_by('-orde_data_aber', '-orde_nume')

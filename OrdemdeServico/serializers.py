@@ -150,7 +150,7 @@ class OrdemServicoPecasSerializer(BancoModelSerializer):
         
    
 
-
+  
 
 class OrdemServicoServicosSerializer(BancoModelSerializer):
     serv_id = serializers.IntegerField(required=False)
