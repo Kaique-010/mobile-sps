@@ -21,10 +21,27 @@ Ordem_Prioridade_Choices = (
     ( "alerta", "Alerta"),
     ( "urgente", "Urgente")
 )
+
+
 OrdensTipos =(
-   ("1", "Manutenção"),
-   ( "2", "Revisão"),
-   ("3", "Upgrade")
+   ("1", "Motor C.A "),
+   ("2", "Motor C.C"),
+   ("3", "Motor E.X"),
+   ("4", "Motor Sincrono"),
+   ("5", "Motor Monofásico"),
+   ("6", "Transformador"),
+   ("7", "Servo Motor"),
+   ("8", "Drives"),
+   ("9", "Campo M.C.A"),
+   ("10", "Campo Transformador"),
+   ("11", "Campo Geral"),
+   ("12", "Motor Bomba"),
+   ("13", "Bomba"),
+   ("14", "Redutor"),
+   ("15", "Gerador"),
+   ("16", "Eixo"),
+   ("17", "Carcaça"),
+   
 )
 
 class OrdemServicoFaseSetor(models.Model):
@@ -79,7 +96,34 @@ class Ordemservico(models.Model):
     orde_empr = models.IntegerField() 
     orde_fili = models.IntegerField()
     orde_nume = models.IntegerField(primary_key=True)  
+    
+    #Abertura da OS no mobile por tipo
     orde_tipo = models.CharField(max_length=20, choices=OrdensTipos, default="1")
+    orde_pote = models.CharField(max_length=100, blank=True, null=True, verbose_name="Potencia")  
+    orde_volt = models.IntegerField(blank=True, null=True, verbose_name="Voltagem")
+    orde_ampe = models.CharField(max_length=50, blank=True, null=True, verbose_name="Amperagem")
+    orde_rpm = models.CharField(max_length=40, blank=True, null=True, verbose_name="Rotação por Minuto")
+    orde_marc = models.IntegerField(blank=True, null=True, verbose_name="Marca")
+    orde_hz = models.CharField(max_length=50, blank=True, null=True, verbose_name="Frequência")
+    orde_seri = models.CharField(max_length=200, blank=True, null=True, verbose_name="NºSerie")
+    orde_mode = models.CharField(max_length=200, blank=True, null=True, verbose_name="Modelo")
+    orde_patr = models.CharField(max_length=100, blank=True, null=True, verbose_name="TAG")
+    orde_cond = models.IntegerField(blank=True, null=True, verbose_name="Condição de recebimento")
+    orde_polo = models.CharField(max_length=100, blank=True, null=True, verbose_name="Polos")
+    orde_foco = models.CharField(max_length=100, blank=True, null=True, verbose_name="Forma Construtiva")
+    orde_esta_chap = models.CharField(max_length=50, blank=True, null=True, verbose_name="Chapas")
+    orde_esta_comp = models.CharField(max_length=50, blank=True, null=True, verbose_name="Componentes")
+    orde_esta_cabo = models.CharField(max_length=50, blank=True, null=True, verbose_name="Cabos")
+    orde_esta_quan_cabo = models.CharField(max_length=50, blank=True, null=True, verbose_name="Quantidade de Cabos")
+    orde_esta_fio = models.CharField(max_length=50, blank=True, null=True, verbose_name="Fios")
+    orde_esta_quan_fio = models.CharField(max_length=50, blank=True, null=True, verbose_name="Quantidade de Fios")
+    orde_esta_larg = models.CharField(max_length=50, blank=True, null=True, verbose_name="Largura")
+    orde_esta_liga = models.CharField(max_length=50, blank=True, null=True, verbose_name="Ligação")
+    orde_esta_mate = models.CharField(max_length=50, blank=True, null=True, verbose_name="Materiais")
+    orde_esta_quan_mate = models.CharField(max_length=50, blank=True, null=True, verbose_name="Quantidade de Materiais")
+    orde_obse = models.TextField(blank=True, null=True, verbose_name="Observações")
+    
+    
     orde_data_aber = models.DateField(auto_now_add=True) 
     orde_hora_aber = models.TimeField(auto_now_add=True)
     orde_stat_orde = models.IntegerField(choices=ORDEM_STATUS_CHOICES, default=0)
@@ -87,7 +131,6 @@ class Ordemservico(models.Model):
     orde_prio = models.CharField(max_length=10, choices=Ordem_Prioridade_Choices, default="alerta")
     orde_prob = models.TextField(blank=True, null=True)  
     orde_defe_desc = models.TextField(blank=True, null=True)  
-    orde_obse = models.TextField(blank=True, null=True) 
     orde_plac = models.CharField(max_length=20, blank=True, null=True)  
     orde_enti = models.IntegerField(blank=True, null=True)
     orde_data_fech = models.DateField(blank=True, null=True)

@@ -1,12 +1,22 @@
 from datetime import datetime
 from rest_framework import serializers
 import base64
-from .models import Produtos, UnidadeMedida, Tabelaprecos, ProdutosDetalhados
+from .models import Produtos, UnidadeMedida, Tabelaprecos, ProdutosDetalhados, Marca
 from core.serializers import BancoContextMixin
 from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+class MarcaSerializer(BancoContextMixin, serializers.ModelSerializer):
+    class Meta:
+        model = Marca
+        fields = ['codigo', 'nome']
+    
+    
+
+
 
 class TabelaPrecoSerializer(BancoContextMixin, serializers.ModelSerializer):
     percentual_avis = serializers.FloatField(write_only=True, required=False)

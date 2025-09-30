@@ -2,16 +2,15 @@ from decimal import Decimal
 from django.db import transaction
 from django.core.exceptions import ValidationError
 from core.utils import get_licenca_db_config
-from .utils_pedidos import verificar_volta_estoque_pedido
+from .utils_pedidos import verificar_volta_estoque_pedido, verificar_baixa_estoque_pedido
 from .utils_estoque import (
-    verificar_saida_automatica,
     verificar_volta_estoque,
     verificar_estoque_disponivel,
     verificar_estoque_negativo,  # Adicionar esta importação
     calcular_estoque_atual
 )
 import logging
-
+ 
 logger = logging.getLogger(__name__)
 
 
@@ -33,7 +32,7 @@ def processar_saida_estoque_pedido(pedido, itens_data, request):
         saidas_existentes = SaidasEstoque.objects.using(banco).filter(
             said_empr=empresa_id,
             said_fili=filial_id,
-            said_obse__icontains=f'Pedido {pedido.pedi_nume}'
+            said_obse__exact=f'Saída automática - Pedido {pedido.pedi_nume}'
         ).exists()
         
         if saidas_existentes:
@@ -44,17 +43,37 @@ def processar_saida_estoque_pedido(pedido, itens_data, request):
                 'motivo': 'Saídas de estoque já processadas para este pedido'
             }
         
-        # Verificar se saída automática está habilitada
-        if not verificar_saida_automatica(empresa_id, filial_id, request):
-            print(f"⚠️ [ESTOQUE] Saída automática DESABILITADA para empresa {empresa_id}, filial {filial_id}")
-            logger.info(f"Saída automática desabilitada para empresa {empresa_id}, filial {filial_id}")
+        # Verificação adicional: contar quantos produtos únicos já têm saída para este pedido
+        produtos_com_saida = set()
+        for item in itens_data:
+            produto_codigo = item.get('iped_prod')
+            if SaidasEstoque.objects.using(banco).filter(
+                said_empr=empresa_id,
+                said_fili=filial_id,
+                said_prod=produto_codigo,
+                said_obse__icontains=f'Pedido {pedido.pedi_nume}'
+            ).exists():
+                produtos_com_saida.add(produto_codigo)
+        
+        if len(produtos_com_saida) == len(itens_data):
+            print(f"⚠️ [ESTOQUE] Todos os produtos já têm saída para pedido {pedido.pedi_nume} - pulando processamento")
             return {
                 'sucesso': True,
                 'processado': False,
-                'motivo': 'Saída automática desabilitada'
+                'motivo': 'Todos os produtos já têm saída de estoque processada'
             }
         
-        print(f"✅ [ESTOQUE] Saída automática HABILITADA - processando itens...")
+        # Verificar se baixa automática de estoque está habilitada para pedidos
+        if not verificar_baixa_estoque_pedido(empresa_id, filial_id, request):
+            print(f"⚠️ [ESTOQUE] Baixa automática de estoque DESABILITADA para empresa {empresa_id}, filial {filial_id}")
+            logger.info(f"Baixa automática de estoque para pedidos desabilitada para empresa {empresa_id}, filial {filial_id}")
+            return {
+                'sucesso': True,
+                'processado': False,
+                'motivo': 'Baixa automática de estoque para pedidos desabilitada'
+            }
+        
+        print(f"✅ [ESTOQUE] Baixa automática de estoque para pedidos HABILITADA - processando itens...")
         
         saidas_criadas = []
         alertas = []
@@ -263,7 +282,7 @@ def reverter_estoque_pedido(pedido, request):
                     said_empr=empresa_id,
                     said_fili=filial_id,
                     said_prod=produto_codigo,
-                    said_obse__icontains=f'Pedido {pedido.pedi_nume}'
+                    said_obse__exact=f'Saída automática - Pedido {pedido.pedi_nume}'
                 )
                 
                 for saida in saidas:
@@ -335,7 +354,7 @@ def obter_status_estoque_pedido(pedido_numero, empresa_id, filial_id, request):
                 said_empr=empresa_id,
                 said_fili=filial_id,
                 said_prod=item.iped_prod,
-                said_obse__icontains=f'Pedido {pedido_numero}'
+                said_obse__exact=f'Saída automática - Pedido {pedido_numero}'
             )
             
             # Verificar estoque atual

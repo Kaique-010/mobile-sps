@@ -230,6 +230,46 @@ class OrdemServicoSerializer(BancoModelSerializer):
     class Meta:
         model = Ordemservico
         fields = '__all__'
+    
+    def validate(self, data):
+        """Validação específica por tipo de ordem"""
+        data = super().validate(data)
+        
+        orde_tipo = data.get('orde_tipo')
+        if not orde_tipo:
+            return data
+            
+        # Configuração de campos obrigatórios por tipo
+        campos_obrigatorios_por_tipo = {
+            "1": ['orde_pote', 'orde_volt', 'orde_ampe', 'orde_hz', 'orde_rpm', 'orde_marc'],  # Motor C.A
+            "2": ['orde_pote', 'orde_volt', 'orde_ampe', 'orde_rpm', 'orde_marc'],  # Motor C.C
+            "3": ['orde_pote', 'orde_volt', 'orde_ampe', 'orde_hz', 'orde_rpm', 'orde_marc'],  # Motor E.X
+            "4": ['orde_pote', 'orde_volt', 'orde_ampe', 'orde_marc'],  # Motor Síncrono
+            "5": ['orde_pote', 'orde_volt', 'orde_ampe', 'orde_hz', 'orde_rpm', 'orde_marc'],  # Motor Monofásico
+            "6": ['orde_pote', 'orde_volt', 'orde_ampe', 'orde_hz', 'orde_marc'],  # Transformador
+            "7": ['orde_pote', 'orde_volt', 'orde_ampe', 'orde_rpm', 'orde_marc'],  # Servo Motor
+            "8": ['orde_pote', 'orde_volt', 'orde_ampe', 'orde_hz', 'orde_marc'],  # Drives
+            "9": ['orde_pote', 'orde_volt', 'orde_ampe', 'orde_hz', 'orde_rpm', 'orde_marc'],  # Campo M.C.A
+            "10": ['orde_pote', 'orde_volt', 'orde_ampe', 'orde_hz', 'orde_marc'],  # Campo Transformador
+            "11": ['orde_pote', 'orde_volt', 'orde_ampe', 'orde_hz', 'orde_rpm', 'orde_marc'],  # Campo Geral
+            "12": ['orde_pote', 'orde_volt', 'orde_ampe', 'orde_hz', 'orde_rpm', 'orde_marc'],  # Motor Bomba
+            "13": ['orde_pote', 'orde_rpm', 'orde_marc'],  # Bomba
+            "14": ['orde_pote', 'orde_rpm', 'orde_marc'],  # Redutor
+            "15": ['orde_pote', 'orde_volt', 'orde_ampe', 'orde_hz', 'orde_rpm', 'orde_marc'],  # Gerador
+            "16": [],  
+            "17": ['orde_pote', 'orde_volt', 'orde_ampe', 'orde_hz', 'orde_rpm', 'orde_marc'],  # Carcaça
+        }
+        
+        campos_obrigatorios = campos_obrigatorios_por_tipo.get(orde_tipo, [])
+        
+        for campo in campos_obrigatorios:
+            valor = data.get(campo)
+            if not valor or (isinstance(valor, str) and valor.strip() == ''):
+                from .models import OrdensTipos
+                tipo_nome = dict(OrdensTipos).get(orde_tipo, f"Tipo {orde_tipo}")
+                raise ValidationError(f"Campo '{campo}' é obrigatório para o tipo de ordem '{tipo_nome}'")
+        
+        return data
 
     def get_servicos(self, obj):
         banco = self.context.get('banco')

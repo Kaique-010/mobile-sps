@@ -151,7 +151,7 @@ class Marca(models.Model):
     )
     nome = models.CharField(
         max_length=255, 
-        db_column='marc_desc', 
+        db_column='marc_nome', 
         verbose_name='Nome'
     )
 

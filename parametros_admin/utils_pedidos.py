@@ -130,6 +130,19 @@ def verificar_validar_estoque_pedido(empresa_id, filial_id, request):
     return param.get('ativo', False) and str(valor).lower() == 'true'
 
 
+def verificar_baixa_estoque_pedido(empresa_id, filial_id, request):
+    """
+    Verifica se deve fazer baixa automática de estoque ao criar pedido
+    """
+    parametros = obter_parametros_pedidos(empresa_id, filial_id, request)
+    param = parametros.get('baixa_estoque_pedido', {})
+    valor = param.get('valor', 'false')
+    # Corrigir para tratar tanto string quanto boolean
+    if isinstance(valor, bool):
+        return param.get('ativo', False) and valor
+    return param.get('ativo', False) and str(valor).lower() == 'true'
+
+
 def obter_preco_produto(produto_codigo, empresa_id, filial_id, request, tipo_preco='normal'):
     """
     Obtém preço do produto baseado nos parâmetros configurados

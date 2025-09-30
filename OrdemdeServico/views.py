@@ -268,19 +268,39 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
         if request.user and request.user.pk:
             data['orde_usua_aber'] = request.user.pk
 
-        empre = data.get('orde_empr') or data.get('empr')
-        fili = data.get('orde_fili') or data.get('fili')
+        empre = data.get('orde_empr') or data.get('os_empr')
+        fili = data.get('orde_fili') or data.get('os_fili')
         if not empre or not fili:
             return Response({"detail": "Empresa e Filial são obrigatórios."}, status=400)
+
+        # Mapear campos do frontend para o backend
+        campo_mapping = {
+            'os_clie': 'orde_enti',
+            'os_data_aber': 'orde_data_aber',
+            'os_empr': 'orde_empr',
+            'os_fili': 'orde_fili',
+            'usua': 'orde_usua_aber'
+        }
+        
+        # Aplicar mapeamento
+        for frontend_field, backend_field in campo_mapping.items():
+            if frontend_field in data:
+                data[backend_field] = data.pop(frontend_field)
 
         data['orde_nume'] = self.get_next_ordem_numero(empre, fili)
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         with transaction.atomic(using=banco):
             instance = serializer.save()
+        
         logger.info(f"O.S. {instance.orde_nume} aberta por user {request.user.pk if request.user else 'anon'}")
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        
+        # Retornar resposta com o número da OS
+        response_data = serializer.data.copy()
+        response_data['os_os'] = instance.orde_nume
+        
+        headers = self.get_success_headers(response_data)
+        return Response(response_data, status=status.HTTP_201_CREATED, headers=headers)
 
     @action(
         detail=True, 

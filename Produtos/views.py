@@ -19,11 +19,31 @@ from rest_framework.filters import SearchFilter
 from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from core.middleware import get_licenca_slug
 from core.registry import get_licenca_db_config
-from .models import Produtos, SaldoProduto, Tabelaprecos, UnidadeMedida, Tabelaprecoshist, ProdutosDetalhados
-from .serializers import ProdutoSerializer, TabelaPrecoSerializer, UnidadeMedidaSerializer, ProdutoDetalhadoSerializer
+from .models import Produtos, SaldoProduto, Tabelaprecos, UnidadeMedida, Tabelaprecoshist, ProdutosDetalhados, Marca
+from .serializers import ProdutoSerializer, TabelaPrecoSerializer, UnidadeMedidaSerializer, ProdutoDetalhadoSerializer, MarcaSerializer
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 from django.core.cache import cache
+
+
+
+class MarcaListView(ModuloRequeridoMixin, ListAPIView):
+    modulo_necessario = 'Produtos'
+    serializer_class = MarcaSerializer
+    filter_backends = [SearchFilter]
+    search_fields = ['nome']
+    
+    def get_queryset(self):
+        banco = get_licenca_db_config(self.request)
+        if banco:
+            return Marca.objects.using(banco).all().order_by('nome')
+        return Marca.objects.none()
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['banco'] = get_licenca_db_config(self.request)
+        return context
+ 
 
 
 class UnidadeMedidaListView(ModuloRequeridoMixin, ListAPIView):
