@@ -5,6 +5,7 @@ O app **Lista Casamento** gerencia listas de presentes para casamentos, permitin
 ## Funcionalidades Principais
 
 ### 💍 Gestão de Listas
+
 - Criação de listas de casamento personalizadas
 - Vinculação com dados da noiva
 - Controle de status da lista
@@ -12,6 +13,7 @@ O app **Lista Casamento** gerencia listas de presentes para casamentos, permitin
 - Usuário responsável
 
 ### 🎁 Controle de Itens
+
 - Cadastro de produtos desejados
 - Controle de quantidades
 - Status de finalização por item
@@ -19,6 +21,7 @@ O app **Lista Casamento** gerencia listas de presentes para casamentos, permitin
 - Rastreamento de usuário
 
 ### 📊 Acompanhamento
+
 - Status da lista (Aberta, Aguardando, Finalizada, Cancelada)
 - Controle por empresa/filial
 - Auditoria de alterações
@@ -27,6 +30,7 @@ O app **Lista Casamento** gerencia listas de presentes para casamentos, permitin
 ## Estrutura dos Modelos
 
 ### Status da Lista
+
 ```python
 STATUS_CHOICES = [
     ('0', 'Aberta'),
@@ -37,6 +41,7 @@ STATUS_CHOICES = [
 ```
 
 ### Modelo `ListaCasamento`
+
 ```python
 class ListaCasamento(models.Model):
     list_empr = models.IntegerField('Empresa')
@@ -50,6 +55,7 @@ class ListaCasamento(models.Model):
 ```
 
 **Campos principais:**
+
 - `list_codi`: Número único da lista
 - `list_nome`: Nome personalizado da lista
 - `list_noiv`: Referência à noiva (Entidades)
@@ -58,6 +64,7 @@ class ListaCasamento(models.Model):
 - `list_usua`: Usuário responsável
 
 ### Modelo `ItensListaCasamento`
+
 ```python
 class ItensListaCasamento(models.Model):
     item_empr = models.IntegerField()
@@ -71,6 +78,7 @@ class ItensListaCasamento(models.Model):
 ```
 
 **Campos principais:**
+
 - `item_item`: Número do item na lista
 - `item_prod`: Código do produto
 - `item_quan`: Quantidade desejada
@@ -80,6 +88,7 @@ class ItensListaCasamento(models.Model):
 ## Exemplos de Uso
 
 ### Criar Lista de Casamento
+
 ```python
 from listacasamento.models import ListaCasamento
 from Entidades.models import Entidades
@@ -103,6 +112,7 @@ lista = ListaCasamento.objects.create(
 ```
 
 ### Adicionar Itens à Lista
+
 ```python
 from listacasamento.models import ItensListaCasamento
 
@@ -121,6 +131,7 @@ item = ItensListaCasamento.objects.create(
 ```
 
 ### Finalizar Item
+
 ```python
 # Marcar item como finalizado
 item.item_fina = True
@@ -131,6 +142,7 @@ print(f"Item {item.item_prod} finalizado!")
 ```
 
 ### Consultar Progresso da Lista
+
 ```python
 # Verificar itens da lista
 itens_total = lista.itens_lista.count()
@@ -141,6 +153,7 @@ print(f"Progresso: {progresso:.1f}% ({itens_finalizados}/{itens_total})")
 ```
 
 ### Relatórios
+
 ```python
 # Listas por status
 listas_abertas = ListaCasamento.objects.filter(list_stat='0')
@@ -156,6 +169,7 @@ itens_populares = ItensListaCasamento.objects.values('item_prod').annotate(
 ## Endpoints da API
 
 ### Listas de Casamento
+
 ```http
 GET /api/listas-casamento/
 GET /api/listas-casamento/{id}/
@@ -165,6 +179,7 @@ DELETE /api/listas-casamento/{id}/
 ```
 
 ### Itens da Lista
+
 ```http
 GET /api/listas-casamento/{id}/itens/
 POST /api/listas-casamento/{id}/itens/
@@ -173,12 +188,14 @@ DELETE /api/itens-lista/{id}/
 ```
 
 **Filtros disponíveis:**
+
 - `?list_stat=0` - Por status
 - `?list_data__gte=2024-01-01` - Por data
 - `?list_noiv=123` - Por noiva
 - `?item_fina=false` - Itens não finalizados
 
 **Exemplo de requisição:**
+
 ```json
 POST /api/listas-casamento/
 {
@@ -195,18 +212,21 @@ POST /api/listas-casamento/
 ## Considerações Técnicas
 
 ### Banco de Dados
+
 - Tabelas: `listacasamento`, `itenslistacasamento`
 - Índices em campos de busca frequente
 - Relacionamentos com Entidades e Usuarios
 - Constraint de unicidade em itens
 
 ### Validações
+
 - Data do casamento não pode ser no passado
 - Quantidade deve ser positiva
 - Produto deve existir no cadastro
 - Status válido conforme choices
 
 ### Performance
+
 - Índices em campos de filtro
 - Paginação em listas grandes
 - Cache de consultas frequentes
@@ -214,21 +234,25 @@ POST /api/listas-casamento/
 ## Integração com Outros Apps
 
 ### Entidades
+
 - Dados da noiva/cliente
 - Informações de contato
 - Endereço de entrega
 
 ### Produtos
+
 - Catálogo de produtos disponíveis
 - Preços e especificações
 - Controle de estoque
 
 ### Pedidos
+
 - Conversão de itens em pedidos
 - Controle de vendas
 - Faturamento
 
 ### Licenças
+
 - Usuários responsáveis
 - Controle de acesso
 - Auditoria
@@ -238,6 +262,7 @@ POST /api/listas-casamento/
 ### Problemas Comuns
 
 **Lista não aparece:**
+
 ```python
 # Verificar se lista existe
 try:
@@ -248,6 +273,7 @@ except ListaCasamento.DoesNotExist:
 ```
 
 **Item duplicado:**
+
 ```python
 # Verificar duplicatas
 duplicatas = ItensListaCasamento.objects.filter(
@@ -260,6 +286,7 @@ if duplicatas > 1:
 ```
 
 **Progresso incorreto:**
+
 ```python
 # Recalcular progresso
 lista = ListaCasamento.objects.get(list_codi=123)
@@ -271,6 +298,7 @@ print(f"Progresso real: {finalizados}/{total}")
 ```
 
 ### Logs de Debug
+
 ```python
 import logging
 logger = logging.getLogger('listacasamento')
@@ -283,6 +311,7 @@ logger.info(f'Item finalizado: {item.item_prod} - Lista {item.item_list}')
 ```
 
 ### Comandos de Manutenção
+
 ```bash
 # Listar listas abertas
 python manage.py shell -c "from listacasamento.models import ListaCasamento; print(ListaCasamento.objects.filter(list_stat='0').count())"
@@ -293,3 +322,46 @@ python manage.py shell -c "from listacasamento.models import ItensListaCasamento
 # Relatório de progresso
 python manage.py shell -c "from listacasamento.models import *; [print(f'Lista {l.list_codi}: {l.itens_lista.filter(item_fina=True).count()}/{l.itens_lista.count()}') for l in ListaCasamento.objects.filter(list_stat='0')]"
 ```
+
+### Endpoints Disponíveis
+
+listacasamento
+
+GET
+/api/{slug}/listacasamento/itens-lista-casamento/
+
+POST
+/api/{slug}/listacasamento/itens-lista-casamento/
+
+GET
+/api/{slug}/listacasamento/itens-lista-casamento/{id}/
+
+PUT
+/api/{slug}/listacasamento/itens-lista-casamento/{id}/
+
+PATCH
+/api/{slug}/listacasamento/itens-lista-casamento/{id}/
+
+DELETE
+/api/{slug}/listacasamento/itens-lista-casamento/{id}/
+
+POST
+/api/{slug}/listacasamento/itens-lista-casamento/update-lista/
+
+GET
+/api/{slug}/listacasamento/listas-casamento/
+
+POST
+/api/{slug}/listacasamento/listas-casamento/
+
+GET
+/api/{slug}/listacasamento/listas-casamento/{id}/
+
+PUT
+/api/{slug}/listacasamento/listas-casamento/{id}/
+
+PATCH
+/api/{slug}/listacasamento/listas-casamento/{id}/
+
+DELETE
+/api/{slug}/listacasamento/listas-casamento/{id}/

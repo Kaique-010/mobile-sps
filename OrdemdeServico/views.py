@@ -230,8 +230,11 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
         )
         
         # Filtrar por ano atual por padrão para melhor performance
-        ano_atual = datetime.now().year
-        qs = qs.filter(orde_data_aber__year=ano_atual)
+        """ano_atual = datetime.now().year
+        qs = qs.filter(orde_data_aber__year=ano_atual)"""
+        
+        # Filtrar apenas ordens com setor válido (diferente de 0 e null)
+        qs = qs.filter(orde_seto__isnull=False).exclude(orde_seto=0)
         
         if user_setor and hasattr(user_setor, 'osfs_codi') and user_setor.osfs_codi is not None:
             qs = qs.filter(orde_seto=user_setor.osfs_codi)
@@ -239,7 +242,7 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
         # Filtro customizado por cliente_nome via query params
         cliente_nome = self.request.query_params.get('cliente_nome')
         if cliente_nome:
-            logger.info(f"[QUERYSET] Filtrando por cliente_nome: '{cliente_nome}'")
+           
             # Buscar entidades que contenham o nome do cliente
             entidades_ids = list(Entidades.objects.using(banco).filter(
                 enti_nome__icontains=cliente_nome
@@ -247,9 +250,9 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
             
             if entidades_ids:
                 qs = qs.filter(orde_enti__in=entidades_ids)
-                logger.info(f"[QUERYSET] Encontradas {len(entidades_ids)} entidades para '{cliente_nome}'")
+                
             else:
-                logger.info(f"[QUERYSET] Nenhuma entidade encontrada para '{cliente_nome}'")
+                
                 return qs.none()
         
         # Ordenar por mais recentes primeiro

@@ -1,3 +1,41 @@
+App Criado PAra controle das comissões da Spartacus 
+
+ENDPOINTS DISPONÍVEIS 
+
+comissoes
+
+
+GET
+/api/{slug}/comissoes/comissoes-sps/
+
+
+
+POST
+/api/{slug}/comissoes/comissoes-sps/
+
+
+
+GET
+/api/{slug}/comissoes/comissoes-sps/{comi_id}/
+
+
+
+PUT
+/api/{slug}/comissoes/comissoes-sps/{comi_id}/
+
+
+
+PATCH
+/api/{slug}/comissoes/comissoes-sps/{comi_id}/
+
+
+
+DELETE
+/api/{slug}/comissoes/comissoes-sps/{comi_id}/
+
+
+
+
 CREATE TABLE comissoes_sps (
         comi_id SERIAL PRIMARY KEY,
         comi_empr INT,
@@ -21,3 +59,5 @@ CREATE TABLE comissoes_sps (
     -- Script para adicionar os novos campos em tabelas existentes:
      -- ALTER TABLE comissoes_sps ADD COLUMN comi_func_nome VARCHAR(100);
      -- ALTER TABLE comissoes_sps ADD COLUMN comi_clie_nome VARCHAR(100);
+
+

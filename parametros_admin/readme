@@ -1,0 +1,217 @@
+###Clonar para outras empresas os parametros 
+
+
+INSERT INTO parametrosmobile (
+    para_empr,
+    para_fili,
+    para_modu_id,
+    para_nome,
+    para_desc,
+    para_valo,
+    para_ativ,
+    para_usua_alte
+)
+SELECT
+    empresas_filiais_destino.para_empr,
+    empresas_filiais_destino.para_fili,
+    parametros_origem.para_modu_id,
+    parametros_origem.para_nome,
+    parametros_origem.para_desc,
+    parametros_origem.para_valo,
+    parametros_origem.para_ativ,
+    parametros_origem.para_usua_alte
+FROM
+    -- 1. A origem dos parâmetros continua a mesma
+    (SELECT * FROM parametrosmobile
+     WHERE para_empr = 1
+       AND para_fili = 1
+       AND para_codi BETWEEN 1 AND 39) AS parametros_origem
+CROSS JOIN
+    -- 2. AQUI ESTÁ A MUDANÇA PRINCIPAL: Criamos a lista de destino na mão
+    (
+        SELECT 2 AS para_empr, 1 AS para_fili UNION ALL
+        SELECT 3, 1 UNION ALL
+        SELECT 4, 1 UNION ALL
+        SELECT 5, 1 UNION ALL
+        SELECT 6, 1 UNION ALL
+        SELECT 7, 1 UNION ALL
+        SELECT 8, 1
+    ) AS empresas_filiais_destino
+LEFT JOIN
+    -- 3. O mecanismo de segurança para não duplicar continua igual
+    parametrosmobile AS parametros_existentes
+    ON empresas_filiais_destino.para_empr = parametros_existentes.para_empr
+    AND empresas_filiais_destino.para_fili = parametros_existentes.para_fili
+    AND parametros_origem.para_codi = parametros_existentes.para_codi
+WHERE
+    -- 4. Insere apenas se o parâmetro ainda não existir no destino
+    parametros_existentes.para_codi IS NULL;
+
+
+
+ENDPOINTS DISPONÍVEIS
+parametros-admin
+
+
+GET
+/api/{slug}/parametros-admin/atualizapermissoes/
+
+
+
+PATCH
+/api/{slug}/parametros-admin/atualizapermissoes/
+
+
+
+GET
+/api/{slug}/parametros-admin/modulos_liberados/
+
+
+
+GET
+/api/{slug}/parametros-admin/parametros-por-modulo/
+
+
+
+PATCH
+/api/{slug}/parametros-admin/parametros-por-modulo/
+
+
+
+GET
+/api/{slug}/parametros-admin/parametros-sistema/
+
+
+
+POST
+/api/{slug}/parametros-admin/parametros-sistema/
+
+
+
+GET
+/api/{slug}/parametros-admin/parametros-sistema/{id}/
+
+
+
+PUT
+/api/{slug}/parametros-admin/parametros-sistema/{id}/
+
+
+
+PATCH
+/api/{slug}/parametros-admin/parametros-sistema/{id}/
+
+
+
+DELETE
+/api/{slug}/parametros-admin/parametros-sistema/{id}/
+
+
+
+POST
+/api/{slug}/parametros-admin/parametros-sistema/atualizar_parametro/
+
+
+
+GET
+/api/{slug}/parametros-admin/parametros-sistema/parametros_desconto/
+
+
+
+GET
+/api/{slug}/parametros-admin/parametros-sistema/parametros_estoque/
+
+
+
+PATCH
+/api/{slug}/parametros-admin/parametros-sistema/parametros_estoque/
+
+
+
+GET
+/api/{slug}/parametros-admin/parametros-sistema/parametros_preco/
+
+
+
+GET
+/api/{slug}/parametros-admin/parametros-sistema/verificar_permissao/
+
+
+
+GET
+/api/{slug}/parametros-admin/permissoes-modulos/
+
+
+
+POST
+/api/{slug}/parametros-admin/permissoes-modulos/
+
+
+
+GET
+/api/{slug}/parametros-admin/permissoes-modulos/{id}/
+
+
+
+PUT
+/api/{slug}/parametros-admin/permissoes-modulos/{id}/
+
+
+
+PATCH
+/api/{slug}/parametros-admin/permissoes-modulos/{id}/
+
+
+
+DELETE
+/api/{slug}/parametros-admin/permissoes-modulos/{id}/
+
+
+
+POST
+/api/{slug}/parametros-admin/permissoes-modulos/configurar_modulos_empresa/
+
+
+
+POST
+/api/{slug}/parametros-admin/permissoes-modulos/liberar_modulos_empresa/
+
+
+
+GET
+/api/{slug}/parametros-admin/permissoes-modulos/modulos_disponiveis/
+
+
+
+GET
+/api/{slug}/parametros-admin/permissoes-modulos/modulos_empresa_filial/
+
+
+
+GET
+/api/{slug}/parametros-admin/permissoes-modulos/modulos_liberados/
+
+
+
+GET
+/api/{slug}/parametros-admin/permissoes-modulos/permissoes_usuario/
+
+
+
+POST
+/api/{slug}/parametros-admin/permissoes-modulos/sincronizar_licenca/
+
+
+
+GET
+/api/{slug}/parametros-admin/permissoes-modulos/verificar_permissao/
+
+
+
+GET
+/api/{slug}/parametros-admin/permissoes_modulos/
+
+
+
+GET
+/api/{slug}/parametros-admin/verificar-permissao/{tela}/{operacao}/

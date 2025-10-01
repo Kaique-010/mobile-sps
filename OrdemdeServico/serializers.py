@@ -10,7 +10,7 @@ from contas_a_receber.models import Titulosreceber
 from core.serializers import BancoContextMixin
 from .models import (
     Ordemservico, Ordemservicopecas, Ordemservicoservicos,
-    Ordemservicoimgantes, Ordemservicoimgdurante, Ordemservicoimgdepois, WorkflowSetor, OrdemServicoFaseSetor
+    Ordemservicoimgantes, Ordemservicoimgdurante, Ordemservicoimgdepois, WorkflowSetor, OrdemServicoFaseSetor, OrdensEletro
 )
 
 logger = logging.getLogger(__name__)
@@ -555,4 +555,19 @@ class ImagemDepoisSerializer(ImagemBase64Serializer):
             'imde_id', 'imde_empr', 'imde_fili', 'imde_orde', 'imde_codi',
             'imde_come', 'imde_obse', 'img_latitude', 'img_longitude',
             'img_data', 'imagem_base64', 'imagem_upload'
+        ]
+
+
+class OrdensEletroSerializer(serializers.ModelSerializer):
+    # Campos com nomes compatíveis com o frontend
+    total_os = serializers.DecimalField(source='total_orde', max_digits=12, decimal_places=2, read_only=True)
+    status_ordem = serializers.CharField(source='status_orde', max_length=50, read_only=True)
+    
+    class Meta:
+        model = OrdensEletro
+        fields = [
+            'empresa', 'filial', 'ordem_de_servico', 'cliente', 'nome_cliente',
+            'data_abertura', 'data_fim', 'setor', 'setor_nome', 'pecas', 'servicos',
+            'total_orde', 'total_os', 'status_orde', 'status_ordem', 'responsavel', 
+            'nome_responsavel', 'potencia', 'ultima_alteracao'
         ]

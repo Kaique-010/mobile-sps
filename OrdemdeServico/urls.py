@@ -12,6 +12,8 @@ from .views_financeiro import (
     RelatorioFinanceiroOSView
 )
 
+from .view_dash import OrdensEletroViewSet
+
 router = routers.DefaultRouter()
 router.register(r'ordens', OrdemServicoViewSet, basename='ordens')
 router.register(r'pecas', OrdemServicoPecasViewSet, basename='pecas')
@@ -22,6 +24,9 @@ router.register(r'imagens-depois', ImagemDepoisViewSet, basename='imagens-depois
 router.register(r'fase-setor', OrdemServicoFaseSetorViewSet, basename='fase-setor')
 router.register(r'workflow-setor', WorkflowSetorViewSet, basename='workflow-setor')
 router.register(r'historico-workflow', HistoricoWorkflowViewSet, basename='historico-workflow')
+router.register(r'ordens-eletro', OrdensEletroViewSet, basename='ordens-eletro')
+
+
 
 urlpatterns = router.urls
 

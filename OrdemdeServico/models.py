@@ -325,3 +325,28 @@ class Ordemservicoimgdepois(models.Model):
     class Meta:
         managed = False
         db_table = 'ordemservicoimgdepois'
+        
+
+
+class OrdensEletro(models.Model):
+    empresa = models.IntegerField()
+    filial = models.IntegerField()
+    ordem_de_servico = models.IntegerField(primary_key=True)
+    cliente = models.IntegerField()
+    nome_cliente = models.CharField(max_length=100)
+    data_abertura = models.DateField()
+    data_fim = models.DateField(null=True)
+    setor = models.IntegerField()
+    setor_nome = models.CharField(max_length=100)
+    pecas = models.TextField()
+    servicos = models.TextField()
+    total_orde = models.DecimalField(max_digits=12, decimal_places=2)
+    status_orde = models.CharField(max_length=50)
+    responsavel = models.IntegerField()
+    nome_responsavel = models.CharField(max_length=100)
+    potencia = models.CharField(max_length=100)
+    ultima_alteracao = models.DateTimeField()
+
+    class Meta:
+        managed = False
+        db_table = 'ordenseletro'

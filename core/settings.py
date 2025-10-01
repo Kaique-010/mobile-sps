@@ -15,8 +15,7 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 # Hosts permitidos
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
 
-# Configuração do ASGI e Channels
-ASGI_APPLICATION = 'core.routing.application'
+# Configuração WSGI padrão (ASGI removido)
 
 USE_LOCAL_DB = config('USE_LOCAL_DB', default=True, cast=bool)
 
@@ -80,7 +79,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt',
-    'channels',
+    # 'channels',  # Removido para eliminar WebSocket
     #'sklearn',
     'Licencas',
     'Produtos',

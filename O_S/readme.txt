@@ -73,3 +73,5 @@ LEFT JOIN entidades vend
 
 ORDER BY os.os_data_aber DESC, os.os_os DESC
 );
+
+

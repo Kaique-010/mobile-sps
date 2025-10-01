@@ -40,7 +40,7 @@ def obter_parametros_pedidos(empresa_id, filial_id, request):
             'calcular_frete_automatico', 
             'baixa_estoque_orcamento',
             'baixa_estoque_pedido',
-            'pedido_volta_esatoque'
+            'pedido_volta_estoque'
         ]
         
         parametros = {}

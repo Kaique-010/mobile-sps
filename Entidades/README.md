@@ -40,19 +40,19 @@ class Entidades(models.Model):
     enti_nome = models.CharField(max_length=100)  # Nome/Razão Social
     enti_tipo_enti = models.CharField(max_length=100, choices=TIPO_ENTIDADES)  # Tipo
     enti_fant = models.CharField(max_length=100)  # Nome fantasia
-    
+
     # Documentos
     enti_cpf = models.CharField(max_length=11)  # CPF
     enti_cnpj = models.CharField(max_length=14)  # CNPJ
     enti_insc_esta = models.CharField(max_length=11)  # Inscrição Estadual
-    
+
     # Endereço
     enti_cep = models.CharField(max_length=8)  # CEP
     enti_ende = models.CharField(max_length=60)  # Endereço
     enti_nume = models.CharField(max_length=4)  # Número
     enti_cida = models.CharField(max_length=60)  # Cidade
     enti_esta = models.CharField(max_length=2)  # Estado (UF)
-    
+
     # Contatos
     enti_fone = models.CharField(max_length=14)  # Telefone
     enti_celu = models.CharField(max_length=15)  # Celular
@@ -131,27 +131,32 @@ com_email = Entidades.objects.filter(
 ## API Endpoints
 
 ### Listar Entidades
+
 ```
 GET /api/{licenca}/entidades/entidades/
 ```
 
 ### Criar Entidade
+
 ```
 POST /api/{licenca}/entidades/entidades/
 ```
 
 ### Obter Entidade Específica
+
 ```
 GET /api/{licenca}/entidades/entidades/{id}/
 ```
 
 ### Atualizar Entidade
+
 ```
 PUT /api/{licenca}/entidades/entidades/{id}/
 PATCH /api/{licenca}/entidades/entidades/{id}/
 ```
 
 ### Excluir Entidade
+
 ```
 DELETE /api/{licenca}/entidades/entidades/{id}/
 ```
@@ -166,6 +171,7 @@ DELETE /api/{licenca}/entidades/entidades/{id}/
 - `search`: Busca geral em nome e fantasia
 
 ### Exemplo de Requisição
+
 ```
 GET /api/empresa123/entidades/entidades/?enti_tipo_enti=CL&enti_esta=SP&search=silva
 ```
@@ -173,11 +179,13 @@ GET /api/empresa123/entidades/entidades/?enti_tipo_enti=CL&enti_esta=SP&search=s
 ## Considerações Técnicas
 
 ### Banco de Dados
+
 - **Tabela**: `entidades`
 - **Managed**: False (tabela não gerenciada pelo Django)
 - **Chave Primária**: `enti_clie` (BigIntegerField)
 
 ### Índices Recomendados
+
 ```sql
 -- Índices para performance
 CREATE INDEX idx_entidades_empresa ON entidades (enti_empr);
@@ -199,7 +207,7 @@ def clean(self):
     if not self.enti_cpf and not self.enti_cnpj:
         if self.enti_tipo_enti in ['CL', 'FO', 'AM']:
             raise ValidationError('CPF ou CNPJ é obrigatório para este tipo de entidade')
-    
+
     # Validar formato do email
     if self.enti_emai:
         from django.core.validators import validate_email
@@ -246,14 +254,17 @@ clientes_com_pedidos = Entidades.objects.filter(
 ### Problemas Comuns
 
 1. **Erro de chave duplicada**
+
    - Verificar se `enti_clie` é único
    - Usar `get_or_create()` para evitar duplicatas
 
 2. **Problemas de encoding**
+
    - Verificar charset da tabela no banco
    - Usar UTF-8 para caracteres especiais
 
 3. **Performance lenta**
+
    - Criar índices apropriados
    - Usar `select_related()` em consultas com relacionamentos
    - Paginar resultados grandes
@@ -276,3 +287,126 @@ LOGGING = {
     },
 }
 ```
+
+ENDPOINT DISPONIVEIS PARA LOGIN DO CLIENTE
+
+Possibilitando que o cliente sendo cadastrado possa fazer login e acessar as funcionalidades do app.
+
+entidades-login
+
+GET
+/api/{slug}/entidades-login/dashboards/cliente-dashboard/
+
+GET
+/api/{slug}/entidades-login/entidades/
+
+POST
+/api/{slug}/entidades-login/entidades/
+
+GET
+/api/{slug}/entidades-login/entidades/{enti_clie}/
+
+PUT
+/api/{slug}/entidades-login/entidades/{enti_clie}/
+
+PATCH
+/api/{slug}/entidades-login/entidades/{enti_clie}/
+
+DELETE
+/api/{slug}/entidades-login/entidades/{enti_clie}/
+
+GET
+/api/{slug}/entidades-login/entidades/buscar-endereco/
+
+POST
+/api/{slug}/entidades-login/login/
+
+GET
+/api/{slug}/entidades-login/orcamentos/
+
+POST
+/api/{slug}/entidades-login/orcamentos/
+
+GET
+/api/{slug}/entidades-login/orcamentos/{pedi_nume}/
+
+PUT
+/api/{slug}/entidades-login/orcamentos/{pedi_nume}/
+
+PATCH
+/api/{slug}/entidades-login/orcamentos/{pedi_nume}/
+
+DELETE
+/api/{slug}/entidades-login/orcamentos/{pedi_nume}/
+
+GET
+/api/{slug}/entidades-login/ordem-servico/
+
+POST
+/api/{slug}/entidades-login/ordem-servico/
+
+GET
+/api/{slug}/entidades-login/ordem-servico/{orde_nume}/
+
+PUT
+/api/{slug}/entidades-login/ordem-servico/{orde_nume}/
+
+PATCH
+/api/{slug}/entidades-login/ordem-servico/{orde_nume}/
+
+DELETE
+/api/{slug}/entidades-login/ordem-servico/{orde_nume}/
+
+GET
+/api/{slug}/entidades-login/os/
+
+POST
+/api/{slug}/entidades-login/os/
+
+GET
+/api/{slug}/entidades-login/os/{os_os}/
+
+PUT
+/api/{slug}/entidades-login/os/{os_os}/
+
+PATCH
+/api/{slug}/entidades-login/os/{os_os}/
+
+DELETE
+/api/{slug}/entidades-login/os/{os_os}/
+
+GET
+/api/{slug}/entidades-login/pedidos/
+
+POST
+/api/{slug}/entidades-login/pedidos/
+
+GET
+/api/{slug}/entidades-login/pedidos-geral/
+
+POST
+/api/{slug}/entidades-login/pedidos-geral/
+
+GET
+/api/{slug}/entidades-login/pedidos-geral/{numero_pedido}/
+
+PUT
+/api/{slug}/entidades-login/pedidos-geral/{numero_pedido}/
+
+PATCH
+/api/{slug}/entidades-login/pedidos-geral/{numero_pedido}/
+
+DELETE
+/api/{slug}/entidades-login/pedidos-geral/{numero_pedido}/
+
+GET
+/api/{slug}/entidades-login/pedidos/{pedi_nume}/
+
+PUT
+/api/{slug}/entidades-login/pedidos/{pedi_nume}/
+
+PATCH
+/api/{slug}/entidades-login/pedidos/{pedi_nume}/
+
+DELETE
+/api/{slug}/entidades-login/pedidos/{pedi_nume}/
