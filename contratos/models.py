@@ -46,3 +46,7 @@ class Contratosvendas(models.Model):
         managed = False
         db_table = 'contratosvendas'
         unique_together = (('cont_empr', 'cont_fili', 'cont_cont'),)
+        ordering = ('-cont_cont','-cont_data')
+        
+    def __str__(self):
+        return f"Empresa{self.cont_empr}/Filial{self.cont_fili}/Contrato{self.cont_cont}/Data{self.cont_data}"

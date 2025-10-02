@@ -24,37 +24,50 @@ class ContratosViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
     filterset_fields = ['cont_cont', 'cont_clie']
     search_fields = ['cont_cont', 'cont_clie']
     ordering_fields = ['cont_cont', 'cont_data']
-    ordering = ['cont_cont']
+    ordering = ['-cont_data', '-cont_cont']
     lookup_field = 'cont_cont'
 
     def get_queryset(self):
+        # Pega qual banco de dados usar (multi-empresa)
         banco = get_licenca_db_config(self.request)
+
+        # Pega empresa e filial do header da requisição
         empresa_id = self.request.headers.get("X-Empresa")
         filial_id = self.request.headers.get("X-Filial")
+
+        # Pega parâmetro opcional de nome do cliente (filtro extra)
         cliente_nome = self.request.query_params.get('cliente_nome')
 
         if banco and empresa_id and filial_id:
+            # Usamos uma data mínima só pra garantir que nunca vem dado vazio
             data_minima = datetime(1900, 1, 1)
 
+            # Query inicial filtrando por empresa, filial e datas válidas
             queryset = Contratosvendas.objects.using(banco).filter(
                 Q(cont_data__gte=data_minima) | Q(cont_venc__gte=data_minima),
                 cont_empr=empresa_id,
                 cont_fili=filial_id
             )
 
+           
             if cliente_nome:
-                
                 clientes = Entidades.objects.using(banco).filter(
                     enti_empr=empresa_id,
                     enti_nome__icontains=cliente_nome
                 ).values_list('enti_clie', flat=True)
 
-                # Filtrar Contratos com base nos códigos dos clientes encontrados
                 queryset = queryset.filter(cont_clie__in=clientes)
+
+            # Aqui entra o ORDER BY como no select:
+    
+            queryset = queryset.order_by('-cont_data', '-cont_cont')
+            print("retornoqueryset", queryset)
 
             return queryset
 
+        # Se não tiver parâmetros básicos, retorna vazio
         return Contratosvendas.objects.none()
+
 
     
     def destroy(self, request, *args, **kwargs):
