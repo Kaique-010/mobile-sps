@@ -92,5 +92,9 @@ class ContratosViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
+        # Banco
         context['banco'] = get_licenca_db_config(self.request)
+        # Empresa/Filial dos headers (usadas no create e validações)
+        context['empresa_id'] = self.request.headers.get("X-Empresa")
+        context['filial_id'] = self.request.headers.get("X-Filial")
         return context

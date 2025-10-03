@@ -73,6 +73,9 @@ urlpatterns = [
     # Rotas de documentação do DRF-Spectacular
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    
+    #Assistente Spart
+    path('api/<slug>/assistente/', include('Assistente_Spart.urls')),
 ]
 
 # Servir arquivos estáticos em desenvolvimento

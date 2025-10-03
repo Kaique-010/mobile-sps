@@ -30,62 +30,79 @@ class ContratosvendasSerializer(serializers.ModelSerializer):
                     'produto_nome', 
                     'cliente_nome', 
                     'empresa_nome'
-                
                 ]
-        read_only_fields = ['cont_cont']
-        
-    
-    
+        read_only_fields = ['cont_cont', 'cont_empr', 'cont_fili']
+
     def validate(self, data):
-        
         banco  = self.context.get ('banco')
-        
         if not banco:
             raise serializers.ValidationError("Banco não encontrado")
         
         erros = {}
-        obrigatorios = ['cont_empr',
-                        'cont_fili',
+        obrigatorios = [
                         'cont_clie',
                         'cont_data',
                         'cont_prod',
                         'cont_unit',
                         'cont_quan',
-                        'cont_tota',]
+                        'cont_tota',
+        ]
 
         for campo in obrigatorios:
             if not data.get(campo):
                 erros[campo] = ['Este Campo é Obrigatório.']
 
-        
-        if 'cont_cont' in data:
-            if Contratosvendas.objects.using(banco).filter(cnt_cont=data['cont_cont']).exists():
-                erros['cont_cont'] = ['Este código já existe.']
-
         if erros:
             raise serializers.ValidationError(erros)
 
         return data
-        
-        
+
     def create(self, validated_data):
         banco = self.context.get('banco')
-        
         if not banco:
             raise serializers.ValidationError("Banco não encontrado")
         
+        # Define empresa/filial a partir do contexto (headers)
+        empresa_id = self.context.get('empresa_id')
+        filial_id = self.context.get('filial_id')
+        if not empresa_id or not filial_id:
+            raise serializers.ValidationError("Empresa/Filial não informadas nos headers")
+        validated_data['cont_empr'] = empresa_id
+        validated_data['cont_fili'] = filial_id
         
         if not validated_data.get('cont_cont'):
             max_cont = Contratosvendas.objects.using(banco).aggregate(Max('cont_cont'))['cont_cont__max'] or 0
             validated_data['cont_cont'] = max_cont + 1
         return Contratosvendas.objects.using(banco).create(**validated_data)
-    
-    
-    
+
     def update(self, instance, validated_data):
-        
+        banco = self.context.get('banco')
+        empresa_id = self.context.get('empresa_id')
+        filial_id = self.context.get('filial_id')
+        if not banco:
+            raise serializers.ValidationError("Banco não encontrado")
+        if not empresa_id or not filial_id:
+            raise serializers.ValidationError("Empresa/Filial não informadas nos headers")
+
+        # Nunca permitir alteração de chave composta
         validated_data.pop('cont_cont', None)
-        return super().update(instance, validated_data)   
+        validated_data.pop('cont_empr', None)
+        validated_data.pop('cont_fili', None)
+
+        # Atualização direta via QuerySet no banco correto e com chave composta
+        Contratosvendas.objects.using(banco).filter(
+            cont_empr=empresa_id,
+            cont_fili=filial_id,
+            cont_cont=instance.cont_cont
+        ).update(**validated_data)
+
+        # Retorna instância atualizada do banco correto
+        instance = Contratosvendas.objects.using(banco).get(
+            cont_empr=empresa_id,
+            cont_fili=filial_id,
+            cont_cont=instance.cont_cont
+        )
+        return instance
         
     def get_cliente_nome(self, obj):
         banco = self.context.get('banco')
@@ -103,7 +120,6 @@ class ContratosvendasSerializer(serializers.ModelSerializer):
         except Exception as e:
             logger.warning(f"Erro ao buscar cliente: {e}")
             return None
-        
 
     def get_empresa_nome(self, obj):
         banco = self.context.get('banco')

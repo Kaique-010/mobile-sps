@@ -10,6 +10,7 @@ import json
 import re
 from datetime import date, datetime
 from decimal import Decimal
+from core.utils import get_licenca_db_config
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +74,7 @@ class AuditoriaMiddleware:
                 'parametros_admin': 'parametros_admin',
                 'permissoes_modulos': 'permissoes_modulos',
                 'pisos': 'Pisos',
+                'Assistente_Spart': 'Assistente_Spart',               
 
             }
             
@@ -80,7 +82,17 @@ class AuditoriaMiddleware:
             modelo_mapping = {
                 'titulos-pagar': 'Titulospagar',
                 'titulos-receber': 'Titulosreceber',
-                # Adicione outros mapeamentos conforme necessário
+                'ordemdeservico': 'OrdemdeServico',
+                'orcamentos': 'Orcamentos',
+                'listacasamento': 'listacasamento',
+                'contratos': 'contratos',
+                'dashboards': 'dashboards',
+                'auditoria': 'auditoria',
+                'parametros_admin': 'parametros_admin',
+                'permissoes_modulos': 'permissoes_modulos',
+                'pisos': 'Pisos',
+                'Assistente_Spart': 'Assistente_Spart',               
+
             }
             
             # Usar o nome real do app
@@ -306,24 +318,31 @@ class AuditoriaMiddleware:
             logger.debug(f'  - campos_alterados: {"Sim" if campos_alterados else "Não"} ({len(campos_alterados) if campos_alterados else 0} campos)')
             
             # Converter dados para tipos serializáveis em JSON
-            # Serializar explicitamente com ensure_ascii=False para evitar problemas de codificação Unicode
-            data_serializavel = json.dumps(converter_para_json_serializavel(data), ensure_ascii=False) if data else None
-            dados_antes_serializavel = json.dumps(converter_para_json_serializavel(dados_antes), ensure_ascii=False) if dados_antes else None
-            dados_depois_serializavel = json.dumps(converter_para_json_serializavel(dados_depois), ensure_ascii=False) if dados_depois else None
-            campos_alterados_serializavel = json.dumps(converter_para_json_serializavel(campos_alterados), ensure_ascii=False) if campos_alterados else None
+            # Serializar objetos Python diretamente (sem json.dumps) para JSONField
+            banco = get_licenca_db_config(request)
+            data_serializavel = converter_para_json_serializavel(data) if data else None
+            dados_antes_serializavel = converter_para_json_serializavel(dados_antes) if dados_antes else None
+            dados_depois_serializavel = converter_para_json_serializavel(dados_depois) if dados_depois else None
+            campos_alterados_serializavel = converter_para_json_serializavel(campos_alterados) if campos_alterados else None
             
-            # Criar o log
-            log = LogAcao.objects.create(
+            # Ajuste: serializar para string JSON para evitar erros de encoding em bancos não UTF8
+            dados_json = json.dumps(data_serializavel, ensure_ascii=False) if data_serializavel is not None else None
+            dados_antes_json = json.dumps(dados_antes_serializavel, ensure_ascii=False) if dados_antes_serializavel is not None else None
+            dados_depois_json = json.dumps(dados_depois_serializavel, ensure_ascii=False) if dados_depois_serializavel is not None else None
+            campos_alterados_json = json.dumps(campos_alterados_serializavel, ensure_ascii=False) if campos_alterados_serializavel is not None else None
+            
+            # Criar o log no banco da licença
+            log = LogAcao.objects.using(banco).create(
                 usuario=user,
                 data_hora=timezone.now(),
                 tipo_acao=method,
                 url=url,
                 ip=ip,
                 navegador=user_agent,
-                dados=data_serializavel,
-                dados_antes=dados_antes_serializavel,
-                dados_depois=dados_depois_serializavel,
-                campos_alterados=campos_alterados_serializavel,
+                dados=dados_json,
+                dados_antes=dados_antes_json,
+                dados_depois=dados_depois_json,
+                campos_alterados=campos_alterados_json,
                 objeto_id=objeto_id,
                 modelo=modelo.__name__ if modelo else None,
                 empresa=empresa,

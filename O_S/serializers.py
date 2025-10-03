@@ -295,7 +295,7 @@ class OsSerializer(BancoModelSerializer):
 
 
 
-class OrdemServicoGeralSerializer(serializers.ModelSerializer):
+class OrdemServicoGeralSerializer(BancoModelSerializer):
     class Meta:
         model = OrdemServicoGeral
         fields = '__all__'

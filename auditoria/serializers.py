@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import LogAcao
 from django.contrib.auth import get_user_model
+import json
 
 User = get_user_model()
 
@@ -28,6 +29,16 @@ class LogAcaoSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
+        
+        # Tentar converter strings JSON para objetos (dict/list)
+        for campo_dados in ['dados', 'dados_antes', 'dados_depois', 'campos_alterados']:
+            valor = data.get(campo_dados)
+            if isinstance(valor, str):
+                try:
+                    data[campo_dados] = json.loads(valor)
+                except (json.JSONDecodeError, TypeError):
+                    # Mantém string se não for JSON válido
+                    pass
         
         # Remove campos sensíveis de todos os campos de dados
         campos_sensiveis = ['password', 'senha', 'token', 'api_key', 'secret']

@@ -1,6 +1,6 @@
 from django.db import models
 from django.conf import settings
-from django.contrib.postgres.fields import JSONField
+# Removido JSONField para evitar erro de encoding no PostgreSQL ao salvar com caracteres Unicode
 
 class LogAcao(models.Model):
     TIPO_ACAO_CHOICES = [
@@ -17,10 +17,11 @@ class LogAcao(models.Model):
     url = models.TextField()
     ip = models.GenericIPAddressField(null=True)
     navegador = models.CharField(max_length=255)
-    dados = JSONField(null=True)  # Dados da requisição original
-    dados_antes = JSONField(null=True, blank=True)  # Estado anterior do objeto
-    dados_depois = JSONField(null=True, blank=True)  # Estado posterior do objeto
-    campos_alterados = JSONField(null=True, blank=True)  # Lista de campos modificados
+    # Alteração: JSONField -> TextField para armazenar JSON serializado manualmente (ensure_ascii=False)
+    dados = models.TextField(null=True, blank=True)  # Dados da requisição original (JSON string)
+    dados_antes = models.TextField(null=True, blank=True)  # Estado anterior do objeto (JSON string)
+    dados_depois = models.TextField(null=True, blank=True)  # Estado posterior do objeto (JSON string)
+    campos_alterados = models.TextField(null=True, blank=True)  # Lista de campos modificados (JSON string)
     objeto_id = models.CharField(max_length=100, null=True, blank=True)  # ID do objeto alterado
     modelo = models.CharField(max_length=100, null=True, blank=True)  # Nome do modelo
     empresa = models.CharField(max_length=100, null=True, db_index=True)
@@ -58,17 +59,7 @@ class LogAcao(models.Model):
         if not self.campos_alterados:
             return None
         
-        if isinstance(self.campos_alterados, list):
-            return f"Campos alterados: {', '.join(self.campos_alterados)}"
-        elif isinstance(self.campos_alterados, dict):
-            alteracoes = []
-            for campo, detalhes in self.campos_alterados.items():
-                if isinstance(detalhes, dict) and 'antes' in detalhes and 'depois' in detalhes:
-                    alteracoes.append(f"{campo}: '{detalhes['antes']}' → '{detalhes['depois']}'")
-                else:
-                    alteracoes.append(f"{campo}: alterado")
-            return "; ".join(alteracoes)
-        
+        # Quando armazenado como string JSON, apenas retorna a string
         return str(self.campos_alterados)
     
     def get_objeto_info(self):

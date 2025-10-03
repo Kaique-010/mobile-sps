@@ -7,6 +7,7 @@ from .models import LogAcao
 from core.middleware import get_licenca_slug
 import threading
 import logging
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -121,15 +122,15 @@ def log_criacao_atualizacao(sender, instance, created, **kwargs):
             ip=request.META.get('REMOTE_ADDR') if request else None,
             navegador=request.META.get('HTTP_USER_AGENT', '') if request else 'Sistema Interno',
             dados=None,  # Dados da requisição não disponíveis nos signals
-            dados_antes=dados_antes,
-            dados_depois=dados_depois,
-            campos_alterados=campos_alterados,
+            dados_antes=json.dumps(dados_antes, ensure_ascii=False) if dados_antes is not None else None,
+            dados_depois=json.dumps(dados_depois, ensure_ascii=False) if dados_depois is not None else None,
+            campos_alterados=json.dumps(campos_alterados, ensure_ascii=False) if campos_alterados is not None else None,
             objeto_id=str(instance.pk),
             modelo=sender.__name__,
             empresa=empresa,
             licenca=licenca_slug
         )
-        
+
         logger.info(f'Log signal criado: {tipo_acao} {sender.__name__} ID {instance.pk}')
         
     except Exception as e:
@@ -175,7 +176,7 @@ def log_exclusao(sender, instance, **kwargs):
             ip=request.META.get('REMOTE_ADDR') if request else None,
             navegador=request.META.get('HTTP_USER_AGENT', '') if request else 'Sistema Interno',
             dados=None,  # Dados da requisição não disponíveis nos signals
-            dados_antes=dados_antes,
+            dados_antes=json.dumps(dados_antes, ensure_ascii=False) if dados_antes is not None else None,
             dados_depois=None,  # Objeto foi excluído
             campos_alterados=None,
             objeto_id=str(instance.pk),
@@ -183,7 +184,7 @@ def log_exclusao(sender, instance, **kwargs):
             empresa=empresa,
             licenca=licenca_slug
         )
-        
+
         logger.info(f'Log signal de exclusão criado: {sender.__name__} ID {instance.pk}')
         
     except Exception as e:

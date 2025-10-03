@@ -3,7 +3,7 @@ from django.urls import path
 from .views import (
     OrdemServicoViewSet, OrdemServicoPecasViewSet, OrdemServicoServicosViewSet,
     ImagemAntesViewSet, ImagemDuranteViewSet, ImagemDepoisViewSet, 
-    WorkflowSetorViewSet, HistoricoWorkflowViewSet, OrdemServicoFaseSetorViewSet
+    WorkflowSetorViewSet, OrdemServicoFaseSetorViewSet
 )
 from .views_financeiro import (
     GerarTitulosOSView, 
@@ -11,6 +11,8 @@ from .views_financeiro import (
     ConsultarTitulosOSView,
     RelatorioFinanceiroOSView
 )
+
+from .view_historico import HistoricoWorkflowViewSet
 
 from .view_dash import OrdensEletroViewSet
 

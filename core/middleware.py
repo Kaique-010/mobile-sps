@@ -114,6 +114,7 @@ class LicencaMiddleware:
         # Set no contexto local e request
         set_licenca_slug(slug)
         request.slug = slug
+        set_current_request(request)
         
         # Medição do tempo de cache/banco
         cache_start = time.time()

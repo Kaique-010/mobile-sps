@@ -106,20 +106,6 @@ class OrdemServicoFaseSetorViewSet(BaseMultiDBModelViewSet):
         return context
 
 
-class HistoricoWorkflowViewSet(BaseMultiDBModelViewSet):
-    """ViewSet para consultar histórico de movimentações entre setores"""
-    modulo_necessario = 'OrdemdeServico'
-    serializer_class = HistoricoWorkflowSerializer
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
-    filterset_fields = ['hist_empr', 'hist_fili', 'hist_orde', 'hist_seto_orig', 'hist_seto_dest', 'hist_usua']
-    ordering_fields = ['hist_data', 'hist_orde']
-    search_fields = ['hist_orde']
-    http_method_names = ['get', 'post']  # Apenas consulta e criação
-
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context['banco'] = get_licenca_db_config(self.request)
-        return context
 
 
 class WorkflowSetorViewSet(BaseMultiDBModelViewSet):
