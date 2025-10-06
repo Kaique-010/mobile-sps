@@ -9,6 +9,8 @@ class ListaCasamento(models.Model):
     list_fili = models.IntegerField('Filial')
     list_codi = models.AutoField('Número Lista', primary_key=True)
     list_nome = models.CharField('Nome da Lista', max_length=60, null=True, blank=True)
+    list_cade = models.IntegerField('Cadeira/Mesa', null=True, blank=True)
+    list_data_casa = models.DateField('Data do Casamento', null=True, blank=True)
     list_noiv = models.ForeignKey(Entidades, verbose_name='Noiva', on_delete=models.CASCADE, db_column='list_noiv')
     list_data = models.DateField('Data')
     list_stat = models.CharField(

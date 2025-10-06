@@ -12,6 +12,9 @@ from .tools.rag_tool import rag_url_resposta_vetorial
 from .tools.inspector_tools import inspector_faiss, rag_url_resposta
 from .tools.qa_tools import faiss_condicional_qa
 from .tools.dataset_tools import salvar_dataset_finetuning
+from .tools.tool_mapa_semantico import plotar_mapa_semantico
+
+
 
 llm = ChatOpenAI(model=CHAT_MODEL, temperature=0)
 memoria = MemorySaver()
@@ -19,6 +22,6 @@ memoria = MemorySaver()
 agenteReact = create_react_agent(
     name="Assistente_Spart",
     model=llm,
-    tools=[identificar_intencao, cadastrar_produtos, consultar_saldo, rag_url_resposta_vetorial, inspector_faiss, rag_url_resposta, faiss_condicional_qa, salvar_dataset_finetuning],
+    tools=[identificar_intencao, cadastrar_produtos, consultar_saldo, rag_url_resposta_vetorial, inspector_faiss, rag_url_resposta, faiss_condicional_qa, salvar_dataset_finetuning, plotar_mapa_semantico],
     checkpointer=memoria
 )

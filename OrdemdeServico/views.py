@@ -199,50 +199,34 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
         return context
 
     def get_queryset(self):
-        from datetime import datetime
-        
         banco = self.get_banco()
-        user_setor = self.request.user.setor
-        qs = Ordemservico.objects.using(banco)
-        
-        # Filtrar registros com datas válidas para evitar erro de ano inválido
-        qs = qs.extra(
-            where=[
-                "EXTRACT(YEAR FROM orde_data_aber) BETWEEN %s AND %s",
-                "(orde_data_fech IS NULL OR EXTRACT(YEAR FROM orde_data_fech) BETWEEN %s AND %s)",
-                "(orde_ulti_alte IS NULL OR EXTRACT(YEAR FROM orde_ulti_alte) BETWEEN %s AND %s)"
-            ],
-            params=[1900, 2100, 1900, 2100, 1900, 2100]
-        )
-        
-        # Filtrar por ano atual por padrão para melhor performance
-        """ano_atual = datetime.now().year
-        qs = qs.filter(orde_data_aber__year=ano_atual)"""
-        
-        # Filtrar apenas ordens com setor válido (diferente de 0 e null)
+        user_setor = getattr(self.request.user, 'setor', None)
+        qs = Ordemservico.objects.using(banco).all()
+
+        # Filtrar por campos válidos
         qs = qs.filter(orde_seto__isnull=False).exclude(orde_seto=0)
-        
-        if user_setor and hasattr(user_setor, 'osfs_codi') and user_setor.osfs_codi is not None:
+        qs = qs.filter(orde_stat_orde__in=[0, 1, 2, 3, 5,21])
+
+        # Garantir que datas inválidas não quebrem
+        qs = qs.filter(orde_data_aber__year__gte=1900, orde_data_aber__year__lte=2100)
+
+        # Filtro por setor do usuário (só se houver)
+        if user_setor and getattr(user_setor, "osfs_codi", None):
             qs = qs.filter(orde_seto=user_setor.osfs_codi)
-        
-        # Filtro customizado por cliente_nome via query params
+
+        # Filtro opcional por cliente
         cliente_nome = self.request.query_params.get('cliente_nome')
         if cliente_nome:
-           
-            # Buscar entidades que contenham o nome do cliente
-            entidades_ids = list(Entidades.objects.using(banco).filter(
-                enti_nome__icontains=cliente_nome
-            ).values_list('enti_clie', flat=True))
-            
+            entidades_ids = list(
+                Entidades.objects.using(banco)
+                .filter(enti_nome__icontains=cliente_nome)
+                .values_list('enti_clie', flat=True)
+            )
             if entidades_ids:
                 qs = qs.filter(orde_enti__in=entidades_ids)
-                
-            else:
-                
-                return qs.none()
-        
-        # Ordenar por mais recentes primeiro
-        return qs.order_by('-orde_data_aber', '-orde_nume')
+
+        return qs.order_by('-orde_data_aber', '-orde_nume')[:200]
+
 
     def get_next_ordem_numero(self, empre, fili):
         banco = self.get_banco()
@@ -460,9 +444,9 @@ class OrdemServicoPecasViewSet(BaseMultiDBModelViewSet,ModelViewSet):
             logger.error("Banco de dados não encontrado.")
             raise NotFound("Banco de dados não encontrado.")
 
-        peca_empr = self.request.query_params.get('peca_empr')
-        peca_fili = self.request.query_params.get('peca_fili')
-        peca_orde = self.request.query_params.get('peca_orde')
+        peca_empr = self.request.query_params.get('peca_empr') or self.request.query_params.get('empr')
+        peca_fili = self.request.query_params.get('peca_fili') or self.request.query_params.get('fili')
+        peca_orde = self.request.query_params.get('peca_orde') or self.request.query_params.get('ordem')
 
         if not all([peca_empr, peca_fili, peca_orde]):
             logger.warning("Parâmetros obrigatórios não fornecidos (peca_empr, peca_fili, peca_orde)")
@@ -485,9 +469,9 @@ class OrdemServicoPecasViewSet(BaseMultiDBModelViewSet,ModelViewSet):
             raise NotFound("Banco de dados não encontrado.")
 
         peca_id = self.kwargs.get('pk')
-        peca_orde = self.request.query_params.get("peca_orde")
-        peca_empr = self.request.query_params.get("peca_empr")
-        peca_fili = self.request.query_params.get("peca_fili")
+        peca_empr = self.request.query_params.get('peca_empr') or self.request.query_params.get('empr')
+        peca_fili = self.request.query_params.get('peca_fili') or self.request.query_params.get('fili')
+        peca_orde = self.request.query_params.get('peca_orde') or self.request.query_params.get('ordem')
 
         if not all([peca_orde, peca_empr, peca_fili, peca_id]):
             raise ValidationError("Parâmetros peca_orde, peca_empr, peca_fili e pk (peca_id) são obrigatórios.")
@@ -551,13 +535,25 @@ class OrdemServicoPecasViewSet(BaseMultiDBModelViewSet,ModelViewSet):
         adicionar = data.get('adicionar', [])
         editar = data.get('editar', [])
         remover = data.get('remover', [])
+        # Aliases/valores padrão vindos do frontend
+        default_empr = data.get('peca_empr') or data.get('empr') or data.get("X-Empresa")
+        default_fili = data.get('peca_fili') or data.get('fili') or data.get("X-Filial")
+        default_orde = data.get('peca_orde') or data.get('ordem')
 
         resposta = {'adicionados': [], 'editados': [], 'removidos': []}
+        affected_orders = set()
 
         try:
             with transaction.atomic(using=banco):
                 # Validar e adicionar novos itens
                 for item in adicionar:
+                    # Preencher com valores padrão quando não enviados por item
+                    if default_empr is not None:
+                         item['peca_empr'] = default_empr
+                    if default_fili is not None:
+                        item['peca_fili'] = default_fili
+                    if default_orde is not None:
+                        item['peca_orde'] = default_orde
                     # Validar campos obrigatórios
                     campos_obrigatorios = ['peca_orde', 'peca_empr', 'peca_fili', 'peca_codi']
                     campos_faltantes = [campo for campo in campos_obrigatorios if not item.get(campo)]
@@ -582,6 +578,22 @@ class OrdemServicoPecasViewSet(BaseMultiDBModelViewSet,ModelViewSet):
                             'item': item
                         })
 
+                    # Garantir que a OS existe antes de inserir (evita violação de FK)
+                    try:
+                        Ordemservico.objects.using(banco).get(
+                            orde_empr=item['peca_empr'],
+                            orde_fili=item['peca_fili'],
+                            orde_nume=item['peca_orde']
+                        )
+                    except Ordemservico.DoesNotExist:
+                        raise ValidationError({
+                            'error': (
+                                f"Ordem de serviço não encontrada para empresa={item['peca_empr']}, "
+                                f"filial={item['peca_fili']}, ordem={item['peca_orde']}"
+                            ),
+                            'item': item
+                        })
+
                     item['peca_id'] = get_next_item_number_sequence(
                         banco, item['peca_orde'], item['peca_empr'], item['peca_fili']
                     )
@@ -598,9 +610,18 @@ class OrdemServicoPecasViewSet(BaseMultiDBModelViewSet,ModelViewSet):
                     resposta['adicionados'].append(
                         OrdemServicoPecasSerializer(obj_refetch, context={'banco': banco}).data
                     )
+                    affected_orders.add((obj.peca_empr, obj.peca_fili, obj.peca_orde))
 
                 # Validar e editar itens existentes
                 for item in editar:
+                    # Preencher com valores padrão (forçar contexto)
+                    if default_empr is not None:
+                        item['peca_empr'] = default_empr
+                    if default_fili is not None:
+                        item['peca_fili'] = default_fili
+                    if default_orde is not None:
+                        item['peca_orde'] = default_orde
+
                     if not all(k in item for k in ['peca_id', 'peca_orde', 'peca_empr', 'peca_fili']):
                         raise ValidationError({
                             'error': "Campos obrigatórios faltando para edição",
@@ -620,11 +641,20 @@ class OrdemServicoPecasViewSet(BaseMultiDBModelViewSet,ModelViewSet):
 
                     serializer = OrdemServicoPecasSerializer(obj, data=item, context={'banco': banco}, partial=True)
                     serializer.is_valid(raise_exception=True)
-                    serializer.save()
+                    obj = serializer.save()
                     resposta['editados'].append(serializer.data)
+                    affected_orders.add((obj.peca_empr, obj.peca_fili, obj.peca_orde))
 
                 # Validar e remover itens
                 for item in remover:
+                    # Preencher com valores padrão (forçar contexto)
+                    if default_empr is not None:
+                        item['peca_empr'] = default_empr
+                    if default_fili is not None:
+                        item['peca_fili'] = default_fili
+                    if default_orde is not None:
+                        item['peca_orde'] = default_orde
+
                     if not all(k in item for k in ['peca_id', 'peca_orde', 'peca_empr', 'peca_fili']):
                         raise ValidationError({
                             'error': "Campos obrigatórios faltando para remoção",
@@ -638,14 +668,22 @@ class OrdemServicoPecasViewSet(BaseMultiDBModelViewSet,ModelViewSet):
                         peca_fili=item['peca_fili']
                     ).delete()
                     resposta['removidos'].append(item['peca_id'])
+                    affected_orders.add((item['peca_empr'], item['peca_fili'], item['peca_orde']))
+
+            # Atualizar totais das ordens afetadas
+            for (empr, fili, orde) in affected_orders:
+                try:
+                    self.atualizar_total_ordem(empr, fili, orde)
+                except Exception as e:
+                    logger.error(f"Falha ao atualizar total da OS (empr={empr}, fili={fili}, orde={orde}): {e}")
 
             return Response(resposta)
 
         except ValidationError as e:
-            logger.error(f"Erro de validação ao processar update_lista: {str(e)}")
+            logger.error(f"Erro de validação ao processar update_lista: {str(e)} | payload={data}")
             return Response(e.detail, status=400)
         except Exception as e:
-            logger.error(f"Erro ao processar update_lista: {str(e)}")
+            logger.error(f"Erro ao processar update_lista: {str(e)} | payload={data}")
             return Response({"error": str(e)}, status=400)
 
     def create(self, request, *args, **kwargs):

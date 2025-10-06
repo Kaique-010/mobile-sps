@@ -1,5 +1,6 @@
 from rest_framework.views import APIView
 from core.utils import get_licenca_db_config
+from core.middleware import get_licenca_slug, get_modulos_disponiveis
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from langchain_core.messages import HumanMessage
@@ -16,6 +17,7 @@ class SpartView(APIView):
         client = OpenAI()
 
         # 1. Pega banco correto (multi-empresa)
+        slug = get_licenca_slug()
         banco = get_licenca_db_config(self.request)
         empresa_id = self.request.META.get("HTTP_X_EMPRESA", 1)
         filial_id = self.request.META.get("HTTP_X_FILIAL", 1)
@@ -30,6 +32,7 @@ class SpartView(APIView):
                 "empresa_id": str(empresa_id),
                 "filial_id": str(filial_id),
                 "banco": banco,
+                "slug": slug,
             }
         }
 

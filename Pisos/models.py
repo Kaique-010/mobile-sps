@@ -176,7 +176,7 @@ class Itensorcapisos(models.Model):
 class Itenspedidospisos(models.Model):
     item_empr = models.IntegerField()
     item_fili = models.IntegerField()
-    item_pedi = models.IntegerField(max_length=50, unique=True)
+    item_pedi = models.IntegerField(unique=True)
     item_ambi = models.IntegerField()
     item_prod = models.CharField(max_length=20)
     item_m2 = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
