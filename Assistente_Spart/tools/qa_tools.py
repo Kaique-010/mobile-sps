@@ -10,7 +10,7 @@ tokenizador = tiktoken.get_encoding(TOKENIZER_ENCODING)
 
 @tool
 def faiss_context_qa(pergunta: str, top_n: int = DEFAULT_TOP_K, limiar_similaridade: float = DEFAULT_SIMILARITY_THRESHOLD, max_chars: int = 1200) -> str:
-    """Retorna apenas o contexto concatenado dos chunks que passam o limiar; sem mensagens auxiliares."""
+    """Retorna contexto concatenado dos chunks relevantes; vazio se não houver índice ou contexto."""
     if rag_memory.index.ntotal == 0:
         return ""
     query_emb = rag_memory.embed_text(pergunta).reshape(1, -1)
@@ -21,7 +21,11 @@ def faiss_context_qa(pergunta: str, top_n: int = DEFAULT_TOP_K, limiar_similarid
             continue
         similaridade = 1 / (1 + dist)
         if similaridade >= limiar_similaridade:
-            chunks.append(rag_memory.meta[i])
+            chunk = rag_memory.meta[i]
+            if isinstance(chunk, str):
+                chunks.append(chunk)
+            else:
+                chunks.append(str(chunk))
     if not chunks:
         return ""
     contexto = "\n\n".join(chunks)

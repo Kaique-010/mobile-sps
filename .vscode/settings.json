@@ -165,6 +165,17 @@
       "database": "savexml144",
       "username": "savexml144",
       "password": "lpprttvvxzz2"
+    },
+    {
+      "ssh": "Disabled",
+      "previewLimit": 50,
+      "server": "base.rtalmeida.com.br",
+      "port": 5432,
+      "driver": "PostgreSQL",
+      "name": "agromusa",
+      "database": "savexml1024",
+      "username": "savexml1024",
+      "password": "kllllnnnnnnn"
     }
   ]
 }

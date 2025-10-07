@@ -174,36 +174,35 @@ def consulta_inteligente_prime(pergunta: str, slug: str = "default") -> str:
 @tool
 def cadastrar_produtos(prod_nome: str, prod_ncm: str, banco: str = "default", empresa_id: str = "1", filial_id: str = "1") -> str:
     """
-    Cadastra produtos no banco de dados respeitando empresa/filial do usuário logado.
+    Cadastra produto no banco atual (slug) respeitando empresa/filial.
     """
-    # Resolver alias do banco a partir do slug do middleware quando vier "default" ou vazio
-    real_banco = get_db_from_slug(get_licenca_slug()) if not banco or banco == "default" else banco
-    # Verificar se a unidade de medida "UN" existe, senão criar
-    unidade_medida, created = UnidadeMedida.objects.using(real_banco).get_or_create(
-        unid_codi="UN",
-        defaults={"unid_desc": "Unidade"}
-    )
+    try:
+        real_banco = get_db_from_slug(get_licenca_slug()) if not banco or banco == "default" else banco
+        unidade_medida, _ = UnidadeMedida.objects.using(real_banco).get_or_create(
+            unid_codi="UN",
+            defaults={"unid_desc": "Unidade"}
+        )
 
-    ultimo_codigo = Produtos.objects.using(real_banco).filter(
-        prod_empr=empresa_id
-    ).order_by('-prod_codi').first()
+        ultimo_codigo = Produtos.objects.using(real_banco).filter(
+            prod_empr=empresa_id
+        ).order_by('-prod_codi').first()
 
-    proximo_codigo = int(ultimo_codigo.prod_codi) + 1 if ultimo_codigo and str(ultimo_codigo.prod_codi).isdigit() else 1
+        proximo_codigo = int(ultimo_codigo.prod_codi) + 1 if ultimo_codigo and str(ultimo_codigo.prod_codi).isdigit() else 1
+        while Produtos.objects.using(real_banco).filter(prod_codi=str(proximo_codigo), prod_empr=empresa_id).exists():
+            proximo_codigo += 1
 
-    while Produtos.objects.using(real_banco).filter(prod_codi=str(proximo_codigo), prod_empr=empresa_id).exists():
-        proximo_codigo += 1
-
-    novo_produto = Produtos.objects.using(real_banco).create(
-        prod_empr=empresa_id,
-        prod_codi=str(proximo_codigo),
-        prod_nome=prod_nome,
-        prod_ncm=prod_ncm,
-        prod_unme=unidade_medida,
-        prod_orig_merc="0",
-        prod_codi_nume=str(proximo_codigo)
-    )
-
-    return f"Produto {novo_produto.prod_nome} cadastrado na empresa {empresa_id}, filial {filial_id}, com código: {novo_produto.prod_codi}"
+        novo = Produtos.objects.using(real_banco).create(
+            prod_empr=empresa_id,
+            prod_codi=str(proximo_codigo),
+            prod_nome=prod_nome,
+            prod_ncm=prod_ncm,
+            prod_unme=unidade_medida,
+            prod_orig_merc="0",
+            prod_codi_nume=str(proximo_codigo)
+        )
+        return f"✅ {novo.prod_nome} criado (cód {novo.prod_codi}) na emp {empresa_id}/fil {filial_id}."
+    except Exception as e:
+        return f"❌ Erro ao cadastrar produto: {e}"
 
 
 @tool

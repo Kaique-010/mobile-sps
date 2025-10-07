@@ -342,6 +342,12 @@ LOGGING = {
             'propagate': False,
             'formatter': 'verbose',
         },
+        'Assistente_Spart': {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+            'formatter': 'verbose',
+        },
         'ItensPedidosPisos': {
             'handlers': ['console'],
             'level': 'DEBUG' if DEBUG else 'INFO',
