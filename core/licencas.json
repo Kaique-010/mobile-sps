@@ -106,5 +106,12 @@
     "db_name": "savexml144",
     "db_host": "base.rtalmeida.com.br",
     "db_port": "5432"
+  },
+  {
+    "slug": "agromusa",
+    "cnpj": "54777413000106",
+    "db_name": "savexml1024",
+    "db_host": "base.rtalmeida.com.br",
+    "db_port": "5432"
   }
 ]

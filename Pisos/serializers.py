@@ -49,7 +49,7 @@ class OrcamentopisosSerializer(BancoContextMixin, serializers.ModelSerializer):
         itens = Itensorcapisos.objects.using(banco).filter(
             item_empr=obj.orca_empr,
             item_fili=obj.orca_fili,
-            item_orca=str(obj.orca_nume)
+            item_orca=obj.orca_nume
         )
         return ItensorcapisosSerializer(itens, many=True, context=self.context).data
 
@@ -150,24 +150,24 @@ class OrcamentopisosSerializer(BancoContextMixin, serializers.ModelSerializer):
             orcamento = Orcamentopisos.objects.using(banco).create(**validated_data)
 
         # Criar itens do orçamento
-        # No loop de criação dos itens
         for idx, item_data in enumerate(itens_data, start=1):
             # Calcular subtotal do item
             item_subtotal = float(item_data.get('item_quan', 0)) * float(item_data.get('item_unit', 0))
-            
+
             item_data_clean = item_data.copy()
             item_data_clean.pop('item_suto', None)
-            
+
             # Mapear campos específicos se necessário
             if 'area_m2' in item_data_clean:
                 item_data_clean['item_m2'] = item_data_clean.pop('area_m2')
             if 'observacoes' in item_data_clean:
                 item_data_clean['item_obse'] = item_data_clean.pop('observacoes')
-        
-            Itenspedidospisos.objects.using(banco).create(
-                item_empr=pedido.pedi_empr,
-                item_fili=pedido.pedi_fili,
-                item_pedi=pedido.pedi_nume,
+
+            # Criar item de orçamento corretamente
+            Itensorcapisos.objects.using(banco).create(
+                item_empr=orcamento.orca_empr,
+                item_fili=orcamento.orca_fili,
+                item_orca=orcamento.orca_nume,
                 item_ambi=item_data.get('item_ambi', idx),
                 item_nume=idx,
                 item_suto=item_subtotal,
@@ -195,9 +195,44 @@ class OrcamentopisosSerializer(BancoContextMixin, serializers.ModelSerializer):
         desconto = sum(float(item.get('item_desc', 0)) for item in itens_data)
         total = subtotal - desconto
 
-        validated_data['orca_tota'] = total
-        validated_data['orca_desc'] = desconto
-        
+        # Atualizar dados do orçamento
+        instance.orca_tota = total
+        instance.orca_desc = desconto
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save(using=banco)
+
+        # Remover itens antigos
+        Itensorcapisos.objects.using(banco).filter(
+            item_empr=instance.orca_empr,
+            item_fili=instance.orca_fili,
+            item_orca=instance.orca_nume
+        ).delete()
+
+        # Recriar itens
+        for idx, item_data in enumerate(itens_data, start=1):
+            item_subtotal = float(item_data.get('item_quan', 0)) * float(item_data.get('item_unit', 0))
+
+            item_data_clean = item_data.copy()
+            item_data_clean.pop('item_suto', None)
+
+            # Mapear campos específicos
+            if 'area_m2' in item_data_clean:
+                item_data_clean['item_m2'] = item_data_clean.pop('area_m2')
+            if 'observacoes' in item_data_clean:
+                item_data_clean['item_obse'] = item_data_clean.pop('observacoes')
+
+            Itensorcapisos.objects.using(banco).create(
+                item_empr=instance.orca_empr,
+                item_fili=instance.orca_fili,
+                item_orca=instance.orca_nume,
+                item_ambi=item_data.get('item_ambi', idx),
+                item_nume=idx,
+                item_suto=item_subtotal,
+                **item_data_clean
+            )
+
+        return instance
 
 class ItenspedidospisosSerializer(BancoContextMixin, serializers.ModelSerializer):
     produto_nome = serializers.SerializerMethodField()
