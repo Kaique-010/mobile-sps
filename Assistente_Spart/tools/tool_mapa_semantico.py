@@ -5,17 +5,23 @@ import plotly.express as px
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from sklearn.metrics.pairwise import cosine_similarity
-from langchain.tools import tool
+from langchain_core.tools import tool
 from ..utils.rag_memory import rag_memory
 from openai import OpenAI
 from ..configuracoes.config import API_KEY
+from ..utils.sqlite_manuais import buscar_manual_por_id
 
 @tool
-def plotar_mapa_semantico(pergunta: str = None, metodo: str = "pca", limite: int = 1000):
+def plotar_mapa_semantico(pergunta: str = None, metodo: str = "pca", limite: int = 1000) -> str:
     """
     Gera um mapa interativo do cérebro semântico do agente.
-    Integra com o SQLite para mostrar ID, título e URL de cada manual.
+    Condições de uso:
+    - Use quando o usuário pedir para visualizar ou analisar o "mapa semântico", "distribuição de chunks" ou "cérebro" do agente.
+    - Não use para responder perguntas de negócio ou buscar dados; prefira `consulta_inteligente_prime` ou ferramentas de RAG.
+    - Parâmetro `metodo`: "pca" ou "tsne".
     """
+    if metodo not in {"pca", "tsne"}:
+        return "Método inválido. Use 'pca' ou 'tsne'."
     print("[INFO] Gerando mapa semântico com dados do SQLite...")
 
     # === 1. Extrai embeddings do FAISS ===
@@ -124,6 +130,10 @@ def plotar_mapa_semantico(pergunta: str = None, metodo: str = "pca", limite: int
 
     # Salva como HTML para abrir no navegador
     fig.write_html("mapa_semantico.html")
-    fig.show()
+    # Evita bloqueio em ambientes sem GUI
+    try:
+        fig.show()
+    except Exception:
+        pass
 
     return "Mapa interativo gerado e salvo em 'mapa_semantico.html'."

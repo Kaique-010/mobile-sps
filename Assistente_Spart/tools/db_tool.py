@@ -172,12 +172,12 @@ def consulta_inteligente_prime(pergunta: str, slug: str = "default") -> str:
         return f"Erro ao executar consulta: {e}"
 
 @tool
-def cadastrar_produtos(prod_nome: str, prod_ncm: str, banco: str = "default", empresa_id: str = "1", filial_id: str = "1") -> str:
-    """
-    Cadastra produto no banco atual (slug) respeitando empresa/filial.
-    """
+def cadastrar_produtos(prod_nome: str, prod_ncm: str, banco: str = "default",
+                       empresa_id: str = "1", filial_id: str = "1") -> str:
+    """Cadastra produto no banco correto."""
     try:
-        real_banco = get_db_from_slug(get_licenca_slug()) if not banco or banco == "default" else banco
+        # Banco real vem direto do agente ou da view
+        real_banco = banco or "default"
         unidade_medida, _ = UnidadeMedida.objects.using(real_banco).get_or_create(
             unid_codi="UN",
             defaults={"unid_desc": "Unidade"}
@@ -200,22 +200,20 @@ def cadastrar_produtos(prod_nome: str, prod_ncm: str, banco: str = "default", em
             prod_orig_merc="0",
             prod_codi_nume=str(proximo_codigo)
         )
-        return f"✅ {novo.prod_nome} criado (cód {novo.prod_codi}) na emp {empresa_id}/fil {filial_id}."
+        return f"✅ {novo.prod_nome} criado (cód {novo.prod_codi}) no banco {real_banco} (emp {empresa_id}/fil {filial_id})."
     except Exception as e:
-        return f"❌ Erro ao cadastrar produto: {e}"
+        return f"❌ Erro ao cadastrar produto no banco {real_banco} (emp {empresa_id}/fil {filial_id}): {e}"
 
 
 @tool
-def consultar_saldo(produto_codigo: str, banco: str = "default", empresa_id: str = "1", filial_id: str = "1") -> str:
-    """
-    Consulta saldo do produto de acordo com empresa/filial do usuário logado.
-    """
-    # Resolver alias do banco a partir do slug do middleware quando vier "default" ou vazio
-    real_banco = get_db_from_slug(get_licenca_slug()) if not banco or banco == "default" else banco
+def consultar_saldo(produto_codigo: str, banco: str = "default",
+                    empresa_id: str = "1", filial_id: str = "1") -> str:
+    """Consulta saldo respeitando o banco recebido."""
     try:
+        real_banco = banco or "default"
         produto = Produtos.objects.using(real_banco).get(prod_codi=produto_codigo, prod_empr=empresa_id)
     except Produtos.DoesNotExist:
-        return f"Produto com código {produto_codigo} não encontrado para empresa {empresa_id}."
+        return f"Produto {produto_codigo} não encontrado na empresa {empresa_id} (banco {real_banco})."
 
     saldo = SaldoProduto.objects.using(real_banco).filter(
         produto_codigo=produto,
@@ -224,6 +222,6 @@ def consultar_saldo(produto_codigo: str, banco: str = "default", empresa_id: str
     ).first()
 
     if not saldo:
-        return f"Nenhum saldo encontrado para o produto {produto.prod_nome} na empresa {empresa_id}, filial {filial_id}."
+        return f"Nenhum saldo encontrado no banco {real_banco} para {produto.prod_nome} (emp {empresa_id}, fil {filial_id})."
 
-    return f"Saldo do produto {produto.prod_nome} (código {produto_codigo}) na empresa {empresa_id}, filial {filial_id}: {saldo.saldo_estoque}"
+    return f"Saldo de {produto.prod_nome} (cód {produto_codigo}) no banco {real_banco}: {saldo.saldo_estoque}"

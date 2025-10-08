@@ -6,28 +6,36 @@ from core.middleware import get_licenca_slug
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
 from openai import OpenAI
-import base64, tempfile, logging
-
-from .agenteReact import agenteReact
+import base64, tempfile, logging, time
+from datetime import datetime
+from .agenteReact import agenteReact, AGENT_TOOLS
+from .tools.describer import gerar_descricao_tools
 from .tools.qa_tools import faiss_context_qa
+from core.utils import configurar_logger_colorido
 
+# === Logger colorido ===
+configurar_logger_colorido()
 logger = logging.getLogger(__name__)
+
+# === Descrição dinâmica das tools ===
+descricao_tools = gerar_descricao_tools(AGENT_TOOLS)
 
 
 class SpartView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, slug=None):
+        inicio_total = time.time()
         client = OpenAI()
 
         # ======== CONTEXTO EMPRESA/FILIAL/BANCO ========
         slug = get_licenca_slug()
-        banco = get_licenca_db_config(self.request)
-        empresa_id = self.request.META.get("HTTP_X_EMPRESA", 1)
-        filial_id = self.request.META.get("HTTP_X_FILIAL", 1)
+        banco = get_licenca_db_config(request)
+        empresa_id = request.META.get("HTTP_X_EMPRESA", 1)
+        filial_id = request.META.get("HTTP_X_FILIAL", 1)
 
         config = RunnableConfig(configurable={
-            "thread_id": str(self.request.user.usua_codi),
+            "thread_id": str(request.user.usua_codi),
             "empresa_id": str(empresa_id),
             "filial_id": str(filial_id),
             "banco": banco,
@@ -36,11 +44,11 @@ class SpartView(APIView):
 
         # ======== ENTRADA DO USUÁRIO ========
         mensagem_usuario = None
-        if "mensagem" in self.request.data:
-            mensagem_usuario = self.request.data.get("mensagem")
+        if "mensagem" in request.data:
+            mensagem_usuario = request.data.get("mensagem")
 
-        elif "audio" in self.request.FILES:
-            audio_file = self.request.FILES["audio"]
+        elif "audio" in request.FILES:
+            audio_file = request.FILES["audio"]
             with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
                 for chunk in audio_file.chunks():
                     tmp.write(chunk)
@@ -59,31 +67,41 @@ class SpartView(APIView):
 
         # ======== CONTEXTO FAISS OPCIONAL ========
         try:
-            contexto_faiss = faiss_context_qa(mensagem_usuario)
+            contexto_faiss = faiss_context_qa.invoke({"pergunta": mensagem_usuario})
         except Exception as e:
             logger.warning(f"[FAISS] Erro ao buscar contexto: {e}")
             contexto_faiss = None
 
-        # ======== MENSAGEM UNIFICADA ========
-        prompt = ""
+        # ======== PROMPT UNIFICADO ========
         if contexto_faiss:
-            prompt += f"Contexto de apoio (use se necessário):\n{contexto_faiss}\n\n"
-        prompt += f"""
-                Você é um assistente corporativo com acesso às seguintes ferramentas:
-                - identificar_intencao(mensagem): analisa o texto e descobre o que o usuário quer fazer.
-                - executar_intencao(mensagem, banco, empresa_id, filial_id): executa ações de cadastro e consulta de produtos.
-                - cadastrar_produtos(prod_nome, prod_ncm, banco, empresa_id, filial_id): cria produtos novos.
-                - consultar_saldo(produto_codigo, banco, empresa_id, filial_id): consulta saldo de um produto.
+            prompt = f"""
+{descricao_tools}
 
-                Sempre que o usuário pedir algo relacionado a produtos, você DEVE chamar
-                'executar_intencao' diretamente. Quando chamar, envie SEMPRE argumentos nomeados:
-                mensagem="{mensagem_usuario}", banco="{banco}", empresa_id="{empresa_id}", filial_id="{filial_id}", slug="{slug}".
-                Essa ferramenta decide internamente se deve chamar cadastrar_produtos ou consultar_saldo.
+📎 Contexto de apoio (FAISS):
+{contexto_faiss}
 
-                Não responda sem usar ferramentas quando o tema for produtos.
+📍 Contexto atual:
+- Empresa: {empresa_id}
+- Filial: {filial_id}
+- Banco: {banco}
+- Slug: {slug}
 
-                Pergunta: {mensagem_usuario}
-                """
+💬 Pergunta: {mensagem_usuario}
+"""
+        else:
+            prompt = f"""
+{descricao_tools}
+
+📍 Contexto atual:
+- Empresa: {empresa_id}
+- Filial: {filial_id}
+- Banco: {banco}
+- Slug: {slug}
+
+💬 Pergunta: {mensagem_usuario}
+"""
+
+        logger.debug(f"[PROMPT_PREVIEW]\n{prompt[:600]}...\n---")
 
         mensagens = [HumanMessage(content=prompt)]
 
@@ -93,50 +111,67 @@ class SpartView(APIView):
             eventos = agenteReact.stream(
                 {"messages": mensagens},
                 config,
-                stream_mode="values"  # mostra tool outputs e erros
+                stream_mode="updates"
             )
 
-            for evento in eventos:
-                # Cada evento é um dicionário ou mensagem intermediária
-                mensagens_evento = evento.get("messages") if isinstance(evento, dict) else getattr(evento, "messages", None)
-                if not mensagens_evento:
-                    continue
+            try:
+                for evento in eventos:
+                    mensagens_evento = (
+                        evento.get("messages")
+                        if isinstance(evento, dict)
+                        else getattr(evento, "messages", None)
+                    )
+                    if not mensagens_evento:
+                        continue
 
-                for msg in mensagens_evento:
-                    if isinstance(msg, AIMessage):
-                        conteudo = msg.content
-                        if isinstance(conteudo, list):
-                            conteudo = "\n".join(
-                                b.get("text") for b in conteudo if isinstance(b, dict) and b.get("type") == "text"
+                    for msg in mensagens_evento:
+                        # === Mensagens da IA ===
+                        if isinstance(msg, AIMessage):
+                            conteudo = msg.content
+                            if isinstance(conteudo, list):
+                                conteudo = "\n".join(
+                                    b.get("text") for b in conteudo
+                                    if isinstance(b, dict) and b.get("type") == "text"
+                                )
+                            if conteudo:
+                                resposta_texto += f"\n{conteudo}"
+
+                            tool_calls = (
+                                getattr(msg, "tool_calls", None)
+                                or getattr(msg, "additional_kwargs", {}).get("tool_calls")
                             )
-                        if conteudo:
-                            resposta_texto += f"\n{conteudo}"
-                        # Log tool_calls
-                        tool_calls = getattr(msg, "tool_calls", None) or getattr(msg, "additional_kwargs", {}).get("tool_calls")
-                        if tool_calls:
-                            for tc in tool_calls:
-                                nome = tc.get("name")
-                                args = tc.get("args")
-                                logger.debug(f"[TOOL_CALL] {nome} args={args}")
+                            if tool_calls:
+                                for tc in tool_calls:
+                                    nome = tc.get("name")
+                                    args = tc.get("args")
+                                    logger.debug(f"🧩 [TOOL_CALL] {nome} args={args}")
 
-                    elif isinstance(msg, ToolMessage):
-                        logger.debug(f"[TOOL_OUTPUT] {msg.content or msg.additional_kwargs}")
-                        if msg.content:
-                            resposta_texto += f"\n{msg.content}"
-                            # Encerrar processamento após primeiro output de ferramenta para evitar duplicidade
-                            eventos.close() if hasattr(eventos, "close") else None
-                            return Response({
-                                "resposta": resposta_texto.strip(),
-                                "resposta_audio": ""
-                            })
+                        # === Retorno das ferramentas ===
+                        elif isinstance(msg, ToolMessage):
+                            conteudo_tool = (
+                                msg.content
+                                or msg.additional_kwargs.get("content")
+                                or msg.additional_kwargs.get("text")
+                                or ""
+                            )
+                            logger.debug(f"⚙️ [TOOL_OUTPUT] {conteudo_tool[:300]}...")
+                            if conteudo_tool:
+                                resposta_texto += f"\n{conteudo_tool}"
+
+            finally:
+                if hasattr(eventos, "close"):
+                    eventos.close()
 
         except Exception as e:
             logger.exception("[SpartView] Falha na execução do agente")
-            resposta_texto = f"Erro interno ao processar: {e}"
+            resposta_texto = f"❌ Erro interno ao processar: {e}"
 
         # ======== RESPOSTA FINAL ========
         if not resposta_texto.strip():
-            resposta_texto = "Desculpe, não consegui gerar uma resposta no momento."
+            resposta_texto = (
+                "⚠️ O agente executou mas não retornou texto visível. "
+                "Verifique os logs de TOOL_OUTPUT."
+            )
 
         # ======== GERAR ÁUDIO TTS ========
         audio_base64 = ""
@@ -147,9 +182,11 @@ class SpartView(APIView):
                 input=resposta_texto
             )
             audio_base64 = base64.b64encode(tts_response.read()).decode("utf-8")
-        except Exception:
-            logger.warning("[SpartView] Falha ao gerar áudio TTS")
-            audio_base64 = ""
+        except Exception as e:
+            logger.warning(f"[SpartView] Falha ao gerar áudio TTS: {e}")
+
+        fim_total = time.time()
+        logger.info(f"✅ Tempo total da requisição: {round(fim_total - inicio_total, 2)}s")
 
         return Response({
             "resposta": resposta_texto.strip(),

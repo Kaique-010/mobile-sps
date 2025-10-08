@@ -10,7 +10,13 @@ tokenizador = tiktoken.get_encoding(TOKENIZER_ENCODING)
 
 @tool
 def faiss_context_qa(pergunta: str, top_n: int = DEFAULT_TOP_K, limiar_similaridade: float = DEFAULT_SIMILARITY_THRESHOLD, max_chars: int = 1200) -> str:
-    """Retorna contexto concatenado dos chunks relevantes; vazio se não houver índice ou contexto."""
+    """
+    Recupera apenas o contexto (chunks) relevantes do FAISS.
+    Condições de uso:
+    - Use para fornecer contexto auxiliar antes de responder.
+    - Não use isoladamente para responder métricas de negócio; combine com DB.
+    - Se índice estiver vazio ou nenhum chunk passar o limiar, retorna vazio.
+    """
     if rag_memory.index.ntotal == 0:
         return ""
     query_emb = rag_memory.embed_text(pergunta).reshape(1, -1)
@@ -35,7 +41,13 @@ def faiss_context_qa(pergunta: str, top_n: int = DEFAULT_TOP_K, limiar_similarid
 
 @tool
 def faiss_condicional_qa(pergunta: str, top_n: int = DEFAULT_TOP_K, limiar_similaridade: float = DEFAULT_SIMILARITY_THRESHOLD, mostrar_chunks: bool = False) -> str:
-    """Busca chunks relevantes no índice FAISS com base em limiar de similaridade para QA"""
+    """
+    Busca chunks relevantes no FAISS com base em limiar para QA.
+    Condições de uso:
+    - Use quando precisar ver/usar os chunks mais próximos para responder.
+    - `mostrar_chunks=True` exibe inspeção com similaridade e preview.
+    - Não é indicado para perguntas estritamente numéricas de banco.
+    """
     query_emb = rag_memory.embed_text(pergunta).reshape(1, -1)
     if rag_memory.index.ntotal == 0:
         return "Índice FAISS vazio. Use 'rag_url_resposta' ou 'rag_url_resposta_vetorial' para popular o índice."

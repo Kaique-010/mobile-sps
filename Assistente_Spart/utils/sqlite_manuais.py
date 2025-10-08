@@ -68,3 +68,14 @@ def buscar_manual_por_pergunta_vetorial(pergunta: str, top_n: int = 3):
 
     resultados.sort(reverse=True, key=lambda x: x[0])
     return resultados[:top_n]
+
+def buscar_manual_por_id(id_: int):
+    with sqlite3.connect(DB_PATH, check_same_thread=False) as conn:
+        c = conn.cursor()
+        c.execute("SELECT id, titulo, url, embedding FROM manuais WHERE id = ?", (id_,))
+        row = c.fetchone()
+        if row:
+            id_, titulo, url, emb_blob = row
+            emb = np.frombuffer(emb_blob, dtype="float32")
+            return {"id": id_, "titulo": titulo, "url": url, "embedding": emb}
+        return None

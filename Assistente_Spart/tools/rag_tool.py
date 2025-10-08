@@ -7,7 +7,18 @@ from ..configuracoes.config import DEFAULT_TOP_K
 
 @tool
 def rag_url_resposta_vetorial(pergunta: str, url: str = None, k: int = DEFAULT_TOP_K) -> str:
-    """Busca manuais relevantes no banco vetorial e extrai conteúdo de URL para responder perguntas usando RAG"""
+    """
+    Responde com RAG usando FAISS e SQLite (manuais).
+    Condições de uso:
+    - Use quando a pergunta indicar necessidade de "manual", "documentação",
+      "como fazer", ou referência a um "link/URL".
+    - Evite usar para métricas de negócio (pedidos, vendas, estoque);
+      prefira `consulta_inteligente_prime`.
+    - Se `url` for fornecido, indexa e usa esse conteúdo; caso contrário,
+      seleciona manual mais relevante do banco vetorial.
+    """
+    if not pergunta or len(pergunta.strip()) < 8:
+        return "Pergunta muito curta para RAG. Seja mais específico."
     # 1) Tenta responder diretamente do FAISS (rápido)
     try:
         contexto = "\n\n".join(rag_memory.query(pergunta, k=k))

@@ -10,7 +10,15 @@ tokenizador = tiktoken.get_encoding(TOKENIZER_ENCODING)
 
 @tool
 def salvar_dataset_finetuning(pergunta: str, resposta: str, chunks_contexto: str, url_origem: str = None) -> str:
-    """Salva pares pergunta-resposta com contexto para dataset de fine-tuning"""
+    """
+    Salva pares pergunta-resposta com contexto para fine-tuning.
+    Condições de uso:
+    - Use após gerar uma resposta que deseje registrar para melhoria futura.
+    - Requer `pergunta`, `resposta` e `chunks_contexto` não vazios.
+    - Opcional: `url_origem` para referenciar conteúdo utilizado.
+    """
+    if not pergunta or not resposta or not chunks_contexto:
+        return "Par inválido: informe pergunta, resposta e contexto."
     registro = {
         "pergunta": pergunta,
         "contexto": chunks_contexto,

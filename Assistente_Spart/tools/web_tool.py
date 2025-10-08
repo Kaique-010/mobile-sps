@@ -6,9 +6,21 @@ from langchain_core.tools import tool
 @tool
 def procura_web(query: str) -> str:
     """
-    Procura a internet usando a api de DuckDuckGo para responder à pergunta do usuário.
-    útil para buscas inteligentes e atualizadas sobre assuntos gerais 
+    Busca na web (DuckDuckGo HTML) para assuntos gerais.
+    Condições de uso:
+    - Use quando a pergunta for sobre notícias, conteúdo geral da internet,
+      ou não houver dados internos (DB/FAISS) suficientes.
+    - Não use para dados empresariais (estoque, pedidos, vendas, produtos);
+      prefira `consulta_inteligente_prime` ou ferramentas de RAG.
+    - Entrada `query` deve ser descritiva (>= 3 palavras) para resultados melhores.
     """
+    termos_internos = [
+        "estoque", "saldo", "pedido", "pedidos", "venda", "vendas",
+        "produto", "produtos", "nota fiscal", "nf", "cliente", "fornecedor"
+    ]
+    if any(t in query.lower() for t in termos_internos):
+        return "Esta ferramenta é para buscas na web. Para dados internos, use consultas ao banco ou RAG."
+
     url = f"https://duckduckgo.com/html/?q={query}"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
