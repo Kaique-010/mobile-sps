@@ -240,6 +240,11 @@ SIMPLE_JWT = {
     "USER_ID_CLAIM": "usua_codi",
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=10),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+   
+    "AUTH_HEADER_TYPES": ("Bearer",),        
+    "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION", 
 }
 
 

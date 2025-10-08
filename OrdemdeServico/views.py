@@ -187,6 +187,7 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
     search_fields = ['orde_prob', 'orde_defe_desc', 'orde_obse']
     permission_classes = [IsAuthenticated, OrdemServicoPermission, PodeVerOrdemDoSetor]
     pagination_class = OrdemServicoPagination
+    lookup_field = "orde_nume"
     
     def get_filterset_kwargs(self, filterset_class):
         kwargs = super().get_filterset_kwargs(filterset_class)
@@ -225,13 +226,27 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
             if entidades_ids:
                 qs = qs.filter(orde_enti__in=entidades_ids)
 
-        return qs.order_by('-orde_data_aber', '-orde_nume')[:200]
+        qs = qs.order_by('-orde_data_aber', '-orde_nume')
+        if getattr(self, 'action', None) == 'list':
+            return qs[:200]
+        return qs
 
 
     def get_next_ordem_numero(self, empre, fili):
         banco = self.get_banco()
-        ultimo = Ordemservico.objects.using(banco).filter(orde_empr=empre, orde_fili=fili).aggregate(Max('orde_nume'))['orde_nume__max']
-        return (ultimo or 0) + 1
+        data = self.request.data.copy()
+        #ultimo = Ordemservico.objects.using(banco).filter(orde_empr=empre, orde_fili=fili).aggregate(Max('orde_nume'))['orde_nume__max'] """Por enquanto será manual depois usaremos o next"""
+        #return (ultimo or 0) + 1
+
+        """
+        Temporário: recebe o número de ordem do frontend.
+        Quando automatizado, voltará a calcular com base no último número do banco.
+        """
+        nova_ordem = data.get('orde_nume')
+        if not nova_ordem:
+            raise ValueError("Número da ordem é obrigatório enquanto o modo manual estiver ativo.")
+        return nova_ordem
+        
 
     def create(self, request, *args, **kwargs):
         banco = self.get_banco()
@@ -280,7 +295,7 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
         methods=['post'],
         permission_classes=[IsAuthenticated, OrdemServicoPermission, PodeVerOrdemDoSetor, WorkflowPermission],
     )
-    def atualizar_total(self, request, pk=None, slug=None):
+    def atualizar_total(self, request, *args, **kwargs):
         """
         Endpoint para atualizar o total da ordem de serviço.
         """
@@ -296,7 +311,7 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
             return Response(serializer.data)
             
         except Exception as e:
-            logger.error(f"Erro ao atualizar total da ordem {pk}: {str(e)}")
+            logger.error(f"Erro ao atualizar total da ordem {self.kwargs.get(self.lookup_url_kwarg or self.lookup_field)}: {str(e)}")
             return Response(
                 {"error": "Erro ao atualizar total da ordem de serviço"}, 
                 status=status.HTTP_400_BAD_REQUEST
@@ -308,7 +323,7 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
         permission_classes=[IsAuthenticated, PodeVerOrdemDoSetor, WorkflowPermission],
         url_path='avancar-setor'
     )
-    def avancar_setor(self, request, pk=None, slug=None):
+    def avancar_setor(self, request, *args, **kwargs):
         """
         Endpoint para avançar ordem para próximo setor do workflow.
         """
@@ -336,7 +351,7 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
             return Response(serializer.data)
             
         except Exception as e:
-            logger.error(f"Erro ao avançar setor da ordem {pk}: {str(e)}")
+            logger.error(f"Erro ao avançar setor da ordem {self.kwargs.get(self.lookup_url_kwarg or self.lookup_field)}: {str(e)}")
             return Response(
                 {"error": "Erro ao avançar setor da ordem"}, 
                 status=status.HTTP_400_BAD_REQUEST
@@ -348,7 +363,7 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
         permission_classes=[IsAuthenticated, PodeVerOrdemDoSetor, WorkflowPermission],
         url_path='proximos-setores'
     )
-    def proximos_setores(self, request, pk=None, slug=None):
+    def proximos_setores(self, request, *args, **kwargs):
         """
         Endpoint para obter próximos setores disponíveis para avançar.
         Retorna múltiplas opções quando existem setores com a mesma ordem.
@@ -376,7 +391,7 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
             
         except Exception as e:
             import traceback
-            logger.error(f"Erro ao obter próximos setores da ordem {pk}: {str(e)}")
+            logger.error(f"Erro ao obter próximos setores da ordem {self.kwargs.get(self.lookup_url_kwarg or self.lookup_field)}: {str(e)}")
             logger.error(f"Traceback completo: {traceback.format_exc()}")
             return Response(
                 {"error": f"Erro ao obter próximos setores: {str(e)}"}, 
@@ -389,7 +404,7 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
         permission_classes=[IsAuthenticated],
         url_path='historico-workflow'
     )
-    def historico_workflow(self, request, pk=None, slug=None):
+    def historico_workflow(self, request, *args, **kwargs):
         """
         Endpoint para obter histórico de movimentação entre setores.
         """
@@ -413,13 +428,62 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
             })
             
         except Exception as e:
-            logger.error(f"Erro ao obter histórico workflow da ordem {pk}: {str(e)}")
+            logger.error(f"Erro ao obter histórico workflow da ordem {self.kwargs.get(self.lookup_url_kwarg or self.lookup_field)}: {str(e)}")
             return Response(
                 {"error": "Erro ao obter histórico de workflow"}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
+            
 
+    @action(
+        detail=True,
+        methods=["patch"],
+        permission_classes=[IsAuthenticated, PodeVerOrdemDoSetor, WorkflowPermission],
+        url_path="atualizar-prioridade"
+    )
+    def atualizar_prioridade(self, request, *args, **kwargs):
+        """
+        Atualiza apenas o campo de prioridade (orde_prio) da ordem.
+        Exemplo JSON:
+        {
+            "orde_prio": 2
+        }
+        """
+        try:
+            banco = self.get_banco()
+            ordem = self.get_object()
 
+            nova_prioridade = request.data.get("orde_prio")
+            if nova_prioridade is None:
+                return Response(
+                    {"erro": "O campo 'orde_prio' é obrigatório."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            with transaction.atomic(using=banco):
+                ordem.orde_prio = int(nova_prioridade)
+                ordem.save(using=banco, update_fields=["orde_prio"])
+
+            logger.info(
+                f"Prioridade da OS {ordem.orde_nume} atualizada para {ordem.orde_prio}"
+            )
+
+            serializer = self.get_serializer(ordem)
+            return Response(
+                {
+                    "mensagem": "Prioridade atualizada com sucesso.",
+                    "nova_prioridade": ordem.orde_prio,
+                    "ordem": serializer.data,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        except Exception as e:
+            logger.error(f"Erro ao atualizar prioridade da OS {self.kwargs.get(self.lookup_url_kwarg or self.lookup_field)}: {str(e)}")
+            return Response(
+                {"erro": f"Erro ao atualizar prioridade: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 class OrdemServicoPecasViewSet(BaseMultiDBModelViewSet,ModelViewSet):
     serializer_class = OrdemServicoPecasSerializer
     permission_classes = [IsAuthenticated]
