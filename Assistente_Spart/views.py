@@ -3,11 +3,10 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from core.utils import get_licenca_db_config
 from core.middleware import get_licenca_slug
-from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
+from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from openai import OpenAI
 import base64, tempfile, logging, time
-from datetime import datetime
 from .agenteReact import agenteReact, AGENT_TOOLS
 from .tools.describer import gerar_descricao_tools
 from .tools.qa_tools import faiss_context_qa
@@ -46,8 +45,11 @@ class SpartView(APIView):
         mensagem_usuario = None
         if "mensagem" in request.data:
             mensagem_usuario = request.data.get("mensagem")
+            logger.info("📝 Entrada via texto")
 
         elif "audio" in request.FILES:
+            inicio_whisper = time.time()
+            logger.info("🎤 Iniciando transcrição de áudio...")
             audio_file = request.FILES["audio"]
             with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
                 for chunk in audio_file.chunks():
@@ -61,15 +63,19 @@ class SpartView(APIView):
                     language="pt"
                 )
             mensagem_usuario = transcript.text
+            logger.info(f"✅ Transcrição concluída em {round(time.time() - inicio_whisper, 2)}s: {mensagem_usuario[:50]}...")
 
         if not isinstance(mensagem_usuario, str):
             return Response({"erro": "mensagem deve ser texto ou áudio"}, status=400)
 
         # ======== CONTEXTO FAISS OPCIONAL ========
+        inicio_faiss = time.time()
         try:
+            logger.info("🔍 Buscando contexto no FAISS...")
             contexto_faiss = faiss_context_qa.invoke({"pergunta": mensagem_usuario})
+            logger.info(f"✅ FAISS concluído em {round(time.time() - inicio_faiss, 2)}s")
         except Exception as e:
-            logger.warning(f"[FAISS] Erro ao buscar contexto: {e}")
+            logger.warning(f"[FAISS] Erro ao buscar contexto em {round(time.time() - inicio_faiss, 2)}s: {e}")
             contexto_faiss = None
 
         # ======== PROMPT UNIFICADO ========
@@ -103,92 +109,62 @@ class SpartView(APIView):
 
         logger.debug(f"[PROMPT_PREVIEW]\n{prompt[:600]}...\n---")
 
-        mensagens = [HumanMessage(content=prompt)]
-
-        # ======== EXECUÇÃO DO AGENTE ========
+        # ======== EXECUÇÃO DO AGENTE (SIMPLES) ========
         resposta_texto = ""
+        inicio_agente = time.time()
         try:
-            eventos = agenteReact.stream(
-                {"messages": mensagens},
-                config,
-                stream_mode="updates"
+            logger.info("🤖 Executando agente ReAct...")
+            resultado = agenteReact.invoke(
+                {"messages": [HumanMessage(content=prompt)]},
+                config
             )
-
-            try:
-                for evento in eventos:
-                    mensagens_evento = (
-                        evento.get("messages")
-                        if isinstance(evento, dict)
-                        else getattr(evento, "messages", None)
-                    )
-                    if not mensagens_evento:
-                        continue
-
-                    for msg in mensagens_evento:
-                        # === Mensagens da IA ===
-                        if isinstance(msg, AIMessage):
-                            conteudo = msg.content
-                            if isinstance(conteudo, list):
-                                conteudo = "\n".join(
-                                    b.get("text") for b in conteudo
-                                    if isinstance(b, dict) and b.get("type") == "text"
-                                )
-                            if conteudo:
-                                resposta_texto += f"\n{conteudo}"
-
-                            tool_calls = (
-                                getattr(msg, "tool_calls", None)
-                                or getattr(msg, "additional_kwargs", {}).get("tool_calls")
-                            )
-                            if tool_calls:
-                                for tc in tool_calls:
-                                    nome = tc.get("name")
-                                    args = tc.get("args")
-                                    logger.debug(f"🧩 [TOOL_CALL] {nome} args={args}")
-
-                        # === Retorno das ferramentas ===
-                        elif isinstance(msg, ToolMessage):
-                            conteudo_tool = (
-                                msg.content
-                                or msg.additional_kwargs.get("content")
-                                or msg.additional_kwargs.get("text")
-                                or ""
-                            )
-                            logger.debug(f"⚙️ [TOOL_OUTPUT] {conteudo_tool[:300]}...")
-                            if conteudo_tool:
-                                resposta_texto += f"\n{conteudo_tool}"
-
-            finally:
-                if hasattr(eventos, "close"):
-                    eventos.close()
-
+            logger.info(f"✅ Agente concluído em {round(time.time() - inicio_agente, 2)}s")
+            
+            # Extrai a resposta final
+            mensagens = resultado.get("messages", [])
+            
+            # Pega a última mensagem do assistente
+            for msg in reversed(mensagens):
+                if hasattr(msg, '__class__') and msg.__class__.__name__ == 'AIMessage':
+                    conteudo = msg.content
+                    if isinstance(conteudo, list):
+                        conteudo = " ".join(
+                            str(b.get("text", "")) for b in conteudo
+                            if isinstance(b, dict) and b.get("type") == "text"
+                        )
+                    if conteudo:
+                        resposta_texto = str(conteudo).strip()
+                        break
+            
+            logger.info(f"✅ Resposta gerada: {resposta_texto[:100]}...")
+            
         except Exception as e:
-            logger.exception("[SpartView] Falha na execução do agente")
-            resposta_texto = f"❌ Erro interno ao processar: {e}"
+            logger.exception("[SpartView] Erro ao executar agente")
+            resposta_texto = f"❌ Erro ao processar sua solicitação: {str(e)}"
 
-        # ======== RESPOSTA FINAL ========
-        if not resposta_texto.strip():
-            resposta_texto = (
-                "⚠️ O agente executou mas não retornou texto visível. "
-                "Verifique os logs de TOOL_OUTPUT."
-            )
+        # ======== FALLBACK ========
+        if not resposta_texto:
+            resposta_texto = "⚠️ O agente não retornou uma resposta. Tente novamente."
 
         # ======== GERAR ÁUDIO TTS ========
         audio_base64 = ""
+        inicio_tts = time.time()
         try:
+            logger.info("🔊 Gerando áudio TTS...")
             tts_response = client.audio.speech.create(
                 model="gpt-4o-mini-tts",
                 voice="alloy",
                 input=resposta_texto
             )
             audio_base64 = base64.b64encode(tts_response.read()).decode("utf-8")
+            logger.info(f"✅ TTS concluído em {round(time.time() - inicio_tts, 2)}s")
         except Exception as e:
-            logger.warning(f"[SpartView] Falha ao gerar áudio TTS: {e}")
+            logger.warning(f"[SpartView] Falha ao gerar áudio TTS em {round(time.time() - inicio_tts, 2)}s: {e}")
 
         fim_total = time.time()
-        logger.info(f"✅ Tempo total da requisição: {round(fim_total - inicio_total, 2)}s")
+        logger.info(f"✅ Tempo total: {round(fim_total - inicio_total, 2)}s")
 
         return Response({
-            "resposta": resposta_texto.strip(),
+            "resposta": resposta_texto,
             "resposta_audio": audio_base64
         })
