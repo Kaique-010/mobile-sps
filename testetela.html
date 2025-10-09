@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Financeiro - Centro de Custo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .delphi-window { 
+      background: #f0f0f0; 
+      border: 2px solid #1b2b38;
+      box-shadow: 0 4px 20px rgba(12, 11, 11, 0.3);
+    }
+    .delphi-titlebar {
+      background: linear-gradient(to bottom, #C5D3E1 0%, #005a9e 100%);
+      color: rgb(3, 3, 3);
+      padding: 8px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .delphi-panel {
+      background: white;
+      border: 1px solid #ccc;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .delphi-card {
+      background: white;
+      border: 2px solid #ddd;
+      border-radius: 4px;
+      padding: 12px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .grid-header {
+      background: linear-gradient(to bottom, #3b82f6 0%, #2563eb 100%);
+      color: white;
+      font-weight: bold;
+      border: 1px solid #1e40af;
+      text-align: center;
+      padding: 8px;
+    }
+    .grid-cell {
+      border: 1px solid #ddd;
+      padding: 8px;
+      background: white;
+    }
+    .grid-row:hover .grid-cell {
+      background: #e8f4ff;
+    }
+    .btn-expand {
+      background: #f0f0f0;
+      border: 1px solid #999;
+      padding: 2px 8px;
+      cursor: pointer;
+      font-weight: bold;
+      border-radius: 2px;
+    }
+    .btn-expand:hover {
+      background: #e0e0e0;
+    }
+    .nivel-1 { background: #f0f0ff !important; font-weight: bold; }
+    .nivel-2 { background: #f8f8ff !important; }
+    .progress-bar {
+      height: 8px;
+      background: #e0e0e0;
+      border-radius: 4px;
+      overflow: hidden;
+      display: inline-block;
+      width: 80px;
+    }
+    .progress-fill {
+      height: 100%;
+      transition: width 0.3s;
+    }
+  </style>
+</head>
+<body class="bg-gray-800">
+
+  <!-- Janela Estilo Delphi -->
+  <div class="delphi-window m-4" style="width: calc(100% - 32px); height: calc(100vh - 32px);">
+    
+    <!-- Barra de Título -->
+    <div class="delphi-titlebar">
+      <span>...RTA9000... Resultado  Financeiro por Centros de Custo</span>
+      <span style="font-family: monospace;">_ ⬜ ✕</span>
+    </div>
+
+    <!-- Conteúdo Principal -->
+    <div class="p-3" style="height: calc(100% - 40px); overflow-y: auto; background: #f0f0f0;">
+      
+      <!-- Painel Superior - Cards -->
+      <div class="delphi-panel p-3 mb-3">
+        <div class="grid grid-cols-4 gap-3">
+          
+          <div class="delphi-card border-l-4 border-blue-600" style="padding: 10px;">
+            <div class="text-xs text-gray-600 font-bold mb-1">ORÇADO TOTAL</div>
+            <div class="text-xl font-bold text-gray-800" id="totalOrcado">R$ 0,00</div>
+          </div>
+          
+          <div class="delphi-card border-l-4 border-green-600" style="padding: 10px;">
+            <div class="text-xs text-gray-600 font-bold mb-1">REALIZADO TOTAL</div>
+            <div class="text-xl font-bold text-gray-800" id="totalRealizado">R$ 0,00</div>
+          </div>
+          
+          <div class="delphi-card border-l-4 border-purple-600" style="padding: 10px;">
+            <div class="text-xs text-gray-600 font-bold mb-1">DIFERENÇA</div>
+            <div class="text-xl font-bold" id="totalDiferenca">R$ 0,00</div>
+          </div>
+          
+          <div class="delphi-card border-l-4 border-orange-600" style="padding: 10px;">
+            <div class="text-xs text-gray-600 font-bold mb-1">% EXECUÇÃO</div>
+            <div class="text-xl font-bold text-gray-800" id="percExecucao">0,0%</div>
+          </div>
+          
+        </div>
+      </div>
+
+      <!-- Painel Filtros -->
+      <div class="delphi-panel p-3 mb-3">
+        <div class="grid grid-cols-6 gap-3">
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1">Data Início:</label>
+            <input type="date" id="dataInicio" value="2025-01-01"
+              class="w-full border border-gray-400 rounded px-2 py-1 bg-white">
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1">Data Fim:</label>
+            <input type="date" id="dataFim" value="2025-03-31"
+              class="w-full border border-gray-400 rounded px-2 py-1 bg-white">
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1">Filtrar por Nível:</label>
+            <select id="filtroNivel" class="w-full border border-gray-400 rounded px-2 py-1 bg-white">
+              <option value="">Todos os Níveis</option>
+              <option value="1">Nível 1</option>
+              <option value="2">Nível 2</option>
+              <option value="3">Nível 3</option>
+              <option value="4">Nível 4</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1">Filtrar por Tipo:</label>
+            <select id="filtroTipo" class="w-full border border-gray-400 rounded px-2 py-1 bg-white">
+              <option value="">Todos os Tipos</option>
+              <option value="S">Sintético</option>
+              <option value="A">Analítico</option>
+            </select>
+          </div>
+          <div class="col-span-2">
+            <label class="block text-sm font-bold text-gray-700 mb-1">Buscar:</label>
+            <input type="text" id="busca" placeholder="Digite código ou nome..." 
+              class="w-full border border-gray-400 rounded px-2 py-1">
+          </div>
+        </div>
+      </div>
+
+      <!-- Grid de Dados -->
+      <div class="delphi-panel p-2 mb-3" style="height: 320px; overflow-y: auto;">
+        <table class="w-full text-sm" style="border-collapse: collapse;">
+          <thead style="position: sticky; top: 0; z-index: 10;">
+            <tr>
+              <th class="grid-header" style="width: 50px;">Exp</th>
+              <th class="grid-header" style="width: 150px;">Código</th>
+              <th class="grid-header" style="width: 300px;">Nome</th>
+              <th class="grid-header" style="width: 80px;">Nível</th>
+              <th class="grid-header" style="width: 80px;">Tipo</th>
+              <th class="grid-header" style="width: 130px;">Orçado</th>
+              <th class="grid-header" style="width: 130px;">Realizado</th>
+              <th class="grid-header" style="width: 130px;">Diferença</th>
+              <th class="grid-header" style="width: 150px;">% Execução</th>
+            </tr>
+          </thead>
+          <tbody id="gridDados"></tbody>
+        </table>
+      </div>
+
+      <!-- Gráficos -->
+      <div class="grid grid-cols-3 gap-3">
+        
+        <div class="delphi-panel p-3">
+          <h3 class="text-sm font-bold text-gray-700 mb-2 text-center">Orçado vs Realizado por Mês</h3>
+          <div style="height: 220px;">
+            <canvas id="graficoMensal"></canvas>
+          </div>
+        </div>
+        
+        <div class="delphi-panel p-3">
+          <h3 class="text-sm font-bold text-gray-700 mb-2 text-center">Variação Orçamentária (%)</h3>
+          <div style="height: 220px;">
+            <canvas id="graficoVariacao"></canvas>
+          </div>
+        </div>
+        
+        <div class="delphi-panel p-3">
+          <h3 class="text-sm font-bold text-gray-700 mb-2 text-center">Top 10 - Maior Diferença</h3>
+          <div style="height: 220px;">
+            <canvas id="graficoTop10"></canvas>
+          </div>
+        </div>
+        
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const dados = [
+      {codigo: "1", expandido: "1", nivel: 1, nome: "CUSTO TOTAL COM INVESTIMENTOS", tipo: "S", expandir: false},
+      {codigo: "2", expandido: "1.01", nivel: 2, nome: "TAXAS E IMPOSTOS", tipo: "S", expandir: false},
+      {codigo: "3", expandido: "1.01.001", nivel: 3, nome: "Contribuicao Social", tipo: "A", expandir: false},
+      {codigo: "4", expandido: "1.01.002", nivel: 3, nome: "Imposto de Renda IRPJ", tipo: "A", expandir: false},
+      {codigo: "5", expandido: "1.01.003", nivel: 3, nome: "PIS", tipo: "A", expandir: false},
+      {codigo: "6", expandido: "1.01.004", nivel: 3, nome: "COFINS", tipo: "A", expandir: false},
+      {codigo: "8", expandido: "1.02", nivel: 2, nome: "TRANSPORTE DE MADEIRA", tipo: "S", expandir: false},
+      {codigo: "9", expandido: "1.02.001", nivel: 3, nome: "Transporte de Madeira", tipo: "A", expandir: false},
+      {codigo: "10", expandido: "1.03", nivel: 2, nome: "CUSTOS VARIAVEIS COLHEITA", tipo: "S", expandir: false},
+      {codigo: "11", expandido: "1.03.001", nivel: 3, nome: "SERVICO TERCEIROS", tipo: "S", expandir: false},
+      {codigo: "12", expandido: "1.03.001.0001", nivel: 4, nome: "M de Obra Empreiteiro Colheita", tipo: "A", expandir: false},
+      {codigo: "85", expandido: "2", nivel: 1, nome: "INVESTIMENTOS FLORESTAS", tipo: "S", expandir: false},
+      {codigo: "86", expandido: "2.01", nivel: 2, nome: "SILVICULTURA", tipo: "S", expandir: false},
+      {codigo: "87", expandido: "2.01.001", nivel: 3, nome: "SILVICULTURA", tipo: "S", expandir: false},
+      {codigo: "88", expandido: "2.01.001.0001", nivel: 4, nome: "Mudas", tipo: "A", expandir: false},
+      {codigo: "89", expandido: "2.01.001.0002", nivel: 4, nome: "Plantio", tipo: "A", expandir: false},
+      {codigo: "114", expandido: "3", nivel: 1, nome: "AGROPECUARIA", tipo: "S", expandir: false},
+      {codigo: "115", expandido: "3.01", nivel: 2, nome: "AGROPECURIA", tipo: "S", expandir: false},
+      {codigo: "116", expandido: "3.01.001", nivel: 3, nome: "Salarios Agropecuaria", tipo: "A", expandir: false},
+      {codigo: "117", expandido: "3.01.002", nivel: 3, nome: "Veterinario", tipo: "A", expandir: false},
+      {codigo: "122", expandido: "3.01.007", nivel: 3, nome: "Adubacao", tipo: "A", expandir: false},
+      {codigo: "133", expandido: "4", nivel: 1, nome: "MOVIMENTACOES FINANCEIRAS", tipo: "S", expandir: false},
+      {codigo: "134", expandido: "4.01", nivel: 2, nome: "PAGAMENTOS", tipo: "S", expandir: false},
+      {codigo: "135", expandido: "4.01.001", nivel: 3, nome: "Aportes", tipo: "A", expandir: false},
+    ];
+
+    let dadosProcessados = [];
+    let expandidos = new Set();
+
+    function processarDados() {
+      dadosProcessados = dados.map(d => {
+        const orc = Math.floor(Math.random() * 80000) + 20000;
+        const real = Math.floor(orc * (0.75 + Math.random() * 0.4));
+        return {
+          ...d,
+          orcado: orc,
+          realizado: real,
+          diferenca: real - orc,
+          percExec: ((real / orc) * 100).toFixed(1)
+        };
+      });
+    }
+
+    function renderGrid() {
+      const tbody = document.getElementById('gridDados');
+      tbody.innerHTML = '';
+
+      const nivel = document.getElementById('filtroNivel').value;
+      const tipo = document.getElementById('filtroTipo').value;
+      const busca = document.getElementById('busca').value.toLowerCase();
+
+      const dadosFiltrados = dadosProcessados.filter(d => {
+        const matchNivel = !nivel || d.nivel == nivel;
+        const matchTipo = !tipo || d.tipo === tipo;
+        const matchBusca = !busca || 
+          d.expandido.toLowerCase().includes(busca) || 
+          d.nome.toLowerCase().includes(busca);
+        return matchNivel && matchTipo && matchBusca;
+      });
+
+      dadosFiltrados.forEach(d => {
+        const tr = document.createElement('tr');
+        tr.className = 'grid-row';
+        if (d.nivel === 1) tr.className += ' nivel-1';
+        if (d.nivel === 2) tr.className += ' nivel-2';
+
+        const indent = '&nbsp;&nbsp;'.repeat(d.nivel - 1);
+        const btnExpand = d.tipo === 'S' ? 
+          `<button class="btn-expand" onclick="toggleExpand('${d.expandido}')">${expandidos.has(d.expandido) ? '−' : '+'}</button>` : 
+          '<span style="display:inline-block;width:30px;"></span>';
+
+        const corDif = d.diferenca >= 0 ? 'green' : 'red';
+        const sinal = d.diferenca >= 0 ? '▲' : '▼';
+
+        const corBarra = d.percExec >= 100 ? '#10b981' : d.percExec >= 80 ? '#3b82f6' : '#f59e0b';
+
+        tr.innerHTML = `
+          <td class="grid-cell text-center">${btnExpand}</td>
+          <td class="grid-cell font-mono text-xs">${indent}${d.expandido}</td>
+          <td class="grid-cell ${d.tipo === 'S' ? 'font-bold' : ''}">${d.nome}</td>
+          <td class="grid-cell text-center">
+            <span style="background: ${d.nivel === 1 ? '#ddd6fe' : d.nivel === 2 ? '#bfdbfe' : d.nivel === 3 ? '#bbf7d0' : '#fde68a'}; 
+              padding: 2px 8px; border-radius: 3px; font-size: 10px; font-weight: bold;">
+              N${d.nivel}
+            </span>
+          </td>
+          <td class="grid-cell text-center">
+            <span style="background: ${d.tipo === 'S' ? '#e0e7ff' : '#f3f4f6'}; 
+              padding: 2px 8px; border-radius: 3px; font-size: 10px; font-weight: bold;">
+              ${d.tipo === 'S' ? 'Sint.' : 'Anal.'}
+            </span>
+          </td>
+          <td class="grid-cell text-right font-semibold">${fmt(d.orcado)}</td>
+          <td class="grid-cell text-right font-semibold">${fmt(d.realizado)}</td>
+          <td class="grid-cell text-right font-bold" style="color: ${corDif}">
+            ${sinal} ${fmt(Math.abs(d.diferenca))}
+          </td>
+          <td class="grid-cell text-right">
+            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: ${Math.min(d.percExec, 100)}%; background: ${corBarra};"></div>
+              </div>
+              <span class="font-semibold text-xs">${d.percExec}%</span>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function toggleExpand(codigo) {
+      if (expandidos.has(codigo)) {
+        expandidos.delete(codigo);
+      } else {
+        expandidos.add(codigo);
+      }
+      renderGrid();
+    }
+
+    function atualizarCards() {
+      const totalOrc = dadosProcessados.reduce((s, d) => s + d.orcado, 0);
+      const totalReal = dadosProcessados.reduce((s, d) => s + d.realizado, 0);
+      const dif = totalReal - totalOrc;
+      const perc = ((totalReal / totalOrc) * 100).toFixed(1);
+
+      document.getElementById('totalOrcado').textContent = fmt(totalOrc);
+      document.getElementById('totalRealizado').textContent = fmt(totalReal);
+      document.getElementById('totalDiferenca').textContent = fmt(dif);
+      document.getElementById('totalDiferenca').style.color = dif >= 0 ? '#16a34a' : '#dc2626';
+      document.getElementById('percExecucao').textContent = perc + '%';
+    }
+
+    function criarGraficos() {
+      // Gráfico Mensal
+      new Chart(document.getElementById('graficoMensal'), {
+        type: 'bar',
+        data: {
+          labels: ['Janeiro', 'Fevereiro', 'Março'],
+          datasets: [
+            {
+              label: 'Orçado', 
+              data: [850000, 920000, 880000], 
+              backgroundColor: 'rgba(59, 130, 246, 0.85)',
+              borderColor: 'rgba(59, 130, 246, 1)',
+              borderWidth: 1
+            },
+            {
+              label: 'Realizado', 
+              data: [780000, 890000, 920000], 
+              backgroundColor: 'rgba(16, 185, 129, 0.85)',
+              borderColor: 'rgba(16, 185, 129, 1)',
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true, 
+          maintainAspectRatio: false, 
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                font: {size: 11},
+                padding: 10
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return context.dataset.label + ': ' + fmt(context.parsed.y);
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function(value) {
+                  return 'R$ ' + (value/1000).toFixed(0) + 'k';
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Gráfico Variação
+      new Chart(document.getElementById('graficoVariacao'), {
+        type: 'line',
+        data: {
+          labels: ['Janeiro', 'Fevereiro', 'Março'],
+          datasets: [{
+            label: 'Variação %',
+            data: [-8.2, -3.3, 4.5],
+            borderColor: 'rgb(139, 92, 246)',
+            backgroundColor: 'rgba(139, 92, 246, 0.15)',
+            fill: true,
+            tension: 0.4,
+            borderWidth: 3,
+            pointRadius: 5,
+            pointBackgroundColor: 'rgb(139, 92, 246)',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true, 
+          maintainAspectRatio: false, 
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                font: {size: 11},
+                padding: 10
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return 'Variação: ' + context.parsed.y + '%';
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              ticks: {
+                callback: function(value) {
+                  return value + '%';
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Top 10
+      const top10 = [...dadosProcessados]
+        .filter(d => d.tipo === 'A')
+        .sort((a, b) => Math.abs(b.diferenca) - Math.abs(a.diferenca))
+        .slice(0, 10);
+
+      new Chart(document.getElementById('graficoTop10'), {
+        type: 'bar',
+        data: {
+          labels: top10.map(d => d.nome.substring(0, 20)),
+          datasets: [{
+            label: 'Diferença',
+            data: top10.map(d => d.diferenca),
+            backgroundColor: top10.map(d => d.diferenca >= 0 ? 'rgba(16, 185, 129, 0.85)' : 'rgba(239, 68, 68, 0.85)'),
+            borderColor: top10.map(d => d.diferenca >= 0 ? 'rgba(16, 185, 129, 1)' : 'rgba(239, 68, 68, 1)'),
+            borderWidth: 1
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {display: false},
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return 'Diferença: ' + fmt(context.parsed.x);
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              ticks: {
+                callback: function(value) {
+                  return 'R$ ' + (value/1000).toFixed(0) + 'k';
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function fmt(v) {
+      return v.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+    }
+
+    // Inicializar
+    processarDados();
+    renderGrid();
+    atualizarCards();
+    criarGraficos();
+
+    // Event listeners
+    document.getElementById('filtroNivel').addEventListener('change', renderGrid);
+    document.getElementById('filtroTipo').addEventListener('change', renderGrid);
+    document.getElementById('busca').addEventListener('input', renderGrid);
+    document.getElementById('dataInicio').addEventListener('change', () => {
+      // Aqui você pode recarregar os dados com base na data
+      console.log('Data início alterada');
+    });
+    document.getElementById('dataFim').addEventListener('change', () => {
+      // Aqui você pode recarregar os dados com base na data
+      console.log('Data fim alterada');
+    });
+  </script>
+</body>
+</html>
