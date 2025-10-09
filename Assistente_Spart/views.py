@@ -1,4 +1,5 @@
 from rest_framework.views import APIView
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.http import StreamingHttpResponse
@@ -27,6 +28,8 @@ class SpartView(APIView):
     - Streaming: Reduz latência percebida
     """
     permission_classes = [IsAuthenticated]
+    # Necessário para uploads de áudio (multipart/form-data)
+    parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request, slug=None):
         inicio_total = time.time()
@@ -270,13 +273,15 @@ Ela já faz o roteamento inteligente para a tool correta.""")
             # Finaliza
             texto_final = "".join(resposta_completa)
             tempo_total = round(time.time() - inicio, 2)
-            
-            yield f"data: {json.dumps({
+
+            # Evita f-string multilinha (quebra parsing). Monta payload antes.
+            payload_fim = {
                 'tipo': 'fim',
                 'resposta': texto_final,
                 'tempo_total': tempo_total,
-                'tools_usadas': tools_usadas
-            })}\n\n"
+                'tools_usadas': tools_usadas,
+            }
+            yield f"data: {json.dumps(payload_fim)}\n\n"
             
             # TTS (opcional)
             audio_base64 = self._gerar_audio_otimizado(client, texto_final)
