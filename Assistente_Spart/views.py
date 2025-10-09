@@ -1,5 +1,5 @@
 from rest_framework.views import APIView
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.http import StreamingHttpResponse
@@ -28,17 +28,27 @@ class SpartView(APIView):
     - Streaming: Reduz latência percebida
     """
     permission_classes = [IsAuthenticated]
-    # Necessário para uploads de áudio (multipart/form-data)
-    parser_classes = [MultiPartParser, FormParser]
+    # Suporta JSON (mensagens) e multipart/form-data (áudio)
+    parser_classes = [JSONParser, FormParser, MultiPartParser]
 
     def post(self, request, slug=None):
         inicio_total = time.time()
         
-        # Detecta se cliente quer streaming
-        if request.META.get('HTTP_ACCEPT') == 'text/event-stream':
+        # Detecta se cliente quer streaming (SSE)
+        accept = request.META.get('HTTP_ACCEPT', '')
+        if 'text/event-stream' in accept:
             return self._streaming_response(request, slug)
         
         return self._standard_response(request, slug)
+
+    def get(self, request, slug=None):
+        """Habilita GET para SSE. Para resposta padrão use POST."""
+        accept = request.META.get('HTTP_ACCEPT', '')
+        if 'text/event-stream' in accept:
+            return self._streaming_response(request, slug)
+        return Response({
+            'detail': 'Use POST para chat padrão ou GET com Accept: text/event-stream para streaming.'
+        }, status=405)
 
     def _standard_response(self, request, slug):
         """Resposta padrão OTIMIZADA com pre-roteador"""
