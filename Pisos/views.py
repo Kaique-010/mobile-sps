@@ -16,10 +16,15 @@ from .serializers import (
     ItensorcapisosSerializer, 
     ItenspedidospisosSerializer
 )
+from types import SimpleNamespace
 from core.registry import get_licenca_db_config
 from core.decorator import ModuloRequeridoMixin
 from Produtos.models import Produtos, Tabelaprecos
 from Entidades.models import Entidades
+from .preco_service import get_preco_produto
+from .utils_service import parse_decimal, arredondar
+from .calculo_services import calcular_item, calcular_ambientes, calcular_total_geral
+import logging
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +111,7 @@ class OrcamentopisosViewSet(BaseMultiDBModelViewSet):
         try:
             orcamento = self.get_object()
             
-            if orcamento.orca_stat == 2:  # Já exportado
+            if orcamento.orca_stat == 2:  
                 return Response(
                     {'error': 'Orçamento já foi exportado para pedido'}, 
                     status=status.HTTP_400_BAD_REQUEST
@@ -333,34 +338,6 @@ class ProdutosPisosViewSet(BaseMultiDBModelViewSet):
         from Produtos.serializers import ProdutoSerializer
         return ProdutoSerializer
     
-    def get_preco_produto(self, produto_id, cliente_id, condicao_pagamento='0'):
-        """Obtém o preço do produto baseado na condição de pagamento"""
-        try:
-            banco = self.get_banco()
-            
-            # Buscar na tabela de preços
-            tabelaprecos = Tabelaprecos.objects.using(banco).filter(
-                tabe_prod=produto_id
-            ).first()
-            
-            if not tabelaprecos:
-                logger.warning(f"Preço não encontrado para produto: {produto_id}")
-                return None
-            
-            # Retornar preço baseado na condição
-            if condicao_pagamento == '0':  # À vista
-                preco = tabelaprecos.tabe_avis
-                logger.info(f"Preço à vista: {preco}")
-            else:  # A prazo
-                preco = tabelaprecos.tabe_apra or tabelaprecos.tabe_prco
-                logger.info(f"Preço a prazo: {preco}")
-            
-            return preco
-            
-        except Exception as e:
-            logger.error(f"Erro ao buscar preço: {e}")
-            return None
-    
     def item_prod_nome(self, item_prod):
         try:
             banco = self.get_banco()
@@ -374,139 +351,51 @@ class ProdutosPisosViewSet(BaseMultiDBModelViewSet):
     
     @action(detail=False, methods=['post'])
     def calcular_metragem(self, request, slug=None):
+        banco = self.get_banco()
+        produto_id = request.data.get('produto_id')
+        tamanho_m2 = request.data.get('tamanho_m2')
+        percentual_quebra = request.data.get('percentual_quebra', 0)
+        condicao = request.data.get('condicao', '0')
+
         try:
-            # Log dos dados recebidos para debug
-            logger.info(f"Dados recebidos: {request.data}")
-            
-            # Obter dados do request
-            produto_id = request.data.get('produto_id')
-            tamanho_m2 = request.data.get('tamanho_m2')
-            percentual_quebra = request.data.get('percentual_quebra', 0)
-            condicao = request.data.get('condicao', '0')  # '0' para à vista, outros para prazo
-            
-            # Log das variáveis extraídas
-            logger.info(f"produto_id: {produto_id}, tamanho_m2: {tamanho_m2}, percentual_quebra: {percentual_quebra}, condicao: {condicao}")
-            
-            # Validações mais detalhadas
-            if not produto_id:
-                logger.warning("produto_id não fornecido")
-                return Response({
-                    'error': 'produto_id é obrigatório',
-                    'details': 'O campo produto_id deve ser fornecido'
-                }, status=status.HTTP_400_BAD_REQUEST)
-                
-            if tamanho_m2 is None:
-                logger.warning("tamanho_m2 não fornecido")
-                return Response({
-                    'error': 'tamanho_m2 é obrigatório',
-                    'details': 'O campo tamanho_m2 deve ser fornecido'
-                }, status=status.HTTP_400_BAD_REQUEST)
-            
-            try:
-                tamanho_m2 = float(tamanho_m2)
-                percentual_quebra = float(percentual_quebra)
-                
-                if tamanho_m2 <= 0:
-                    return Response({
-                        'error': 'tamanho_m2 deve ser maior que zero',
-                        'details': f'Valor fornecido: {tamanho_m2}'
-                    }, status=status.HTTP_400_BAD_REQUEST)
-                    
-            except (ValueError, TypeError) as e:
-                logger.error(f"Erro na conversão de números: {e}")
-                return Response({
-                    'error': 'tamanho_m2 e percentual_quebra devem ser números válidos',
-                    'details': f'tamanho_m2: {request.data.get("tamanho_m2")}, percentual_quebra: {request.data.get("percentual_quebra")}'
-                }, status=status.HTTP_400_BAD_REQUEST)
-            
-            # Buscar produto
-            try:
-                banco = self.get_banco()
-                produto = Produtos.objects.using(banco).get(prod_codi=produto_id)
-                logger.info(f"Produto encontrado: {produto.prod_nome}")
-            except Produtos.DoesNotExist:
-                logger.error(f"Produto não encontrado: {produto_id}")
-                return Response({
-                    'error': 'Produto não encontrado',
-                    'details': f'Produto com código {produto_id} não existe'
-                }, status=status.HTTP_404_NOT_FOUND)
-            
-            # Calcular metragem total (tamanho + percentual de quebra)
-            metragem_total = tamanho_m2 * (1 + percentual_quebra / 100)
-            print(f"Metragem total: {metragem_total}")
-            
-            # Função para conversão segura de Decimal
-            def safe_decimal(value, default=0):
-                if value is None:
-                    return default
-                try:
-                    if isinstance(value, str):
-                        value = value.strip()
-                        if not value:
-                            return default
-                        # Converter formato brasileiro (vírgula) para formato padrão (ponto)
-                        value = value.replace(',', '.')
-                    return float(Decimal(str(value)))
-                except (InvalidOperation, ValueError, TypeError):
-                    logger.warning(f"Erro na conversão decimal: {value}")
-                    return default
-            
-            # Obter valores do produto (verificar se existem e não são None)
-            m2_por_caixa = safe_decimal(produto.prod_cera_m2cx)
-            pecas_por_caixa = safe_decimal(produto.prod_cera_pccx)
-            
-            logger.info(f"m2_por_caixa: {m2_por_caixa}, pecas_por_caixa: {pecas_por_caixa}")
-            
-            if m2_por_caixa <= 0:
-                return Response({
-                    'error': 'Produto não possui informação de m²/caixa válida',
-                    'details': f'Valor atual: {produto.prod_cera_m2cx}'
-                }, status=status.HTTP_400_BAD_REQUEST)
-            
-            # Calcular quantidade de caixas necessárias
-            caixas_necessarias = math.ceil(metragem_total / m2_por_caixa)
-            print(f"Caixas necessárias: {caixas_necessarias}")
-            
-            # Calcular peças necessárias (only if pecas_por_caixa > 0)
-            if pecas_por_caixa > 0:
-                pecas_necessarias = caixas_necessarias * pecas_por_caixa
-            else:
-                pecas_necessarias = 0  # For area-based products or services
-            
-            # Obter preço baseado na condição
-            try:
-                preco_unitario = self.get_preco_produto(produto_id, None, condicao)
-                logger.info(f"Preço unitário encontrado: {preco_unitario}")
-            except Exception as e:
-                logger.error(f"Erro ao obter preço: {e}")
-                preco_unitario = None
-            
-            if preco_unitario is None:
-                return Response({
-                    'error': 'Preço não encontrado para este produto',
-                    'details': f'Produto: {produto_id}, Condição: {condicao}'
-                }, status=status.HTTP_404_NOT_FOUND)
-            
-            # Calcular valor total
-            valor_total = float(preco_unitario) * caixas_necessarias
-            
-            resultado = {
-                'produto_id': produto_id,
-                'produto_nome': produto.prod_nome,
-                'tamanho_ambiente_m2': tamanho_m2,
-                'percentual_quebra': percentual_quebra,
-                'metragem_total': round(metragem_total, 2),
-                'm2_por_caixa': m2_por_caixa,
-                'pecas_por_caixa': int(pecas_por_caixa) if pecas_por_caixa > 0 else 0,
-                'caixas_necessarias': caixas_necessarias,
-                'pecas_necessarias': int(pecas_necessarias),
-                'condicao_pagamento': 'À Vista' if condicao == '0' else 'A Prazo',
-                'preco_unitario': float(preco_unitario),
-                'valor_total': round(valor_total, 2)
-            }
-            
-            logger.info(f"Resultado calculado: {resultado}")
-            return Response(resultado)
-            
+            produto = Produtos.objects.using(banco).get(prod_codi=produto_id)
+        except Produtos.DoesNotExist:
+            return Response({'error': 'Produto não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+        # 1️⃣ cálculo físico
+        calculo = calcular_item(SimpleNamespace(
+            item_m2=tamanho_m2,
+            item_queb=percentual_quebra,
+            item_unit=0,
+        ), produto)
+
+        preco_origem = "tabela"
+        try:
+            preco_unitario = get_preco_produto(banco, produto_id, condicao)
         except Exception as e:
-            logger.error(f"Erro no cálculo de metragem: {str(e)}", exc_info=True)
+            logger.warning(f"[calcular_metragem] Preço não encontrado na tabela: {e}. Usando fallback do produto.")
+            preco_origem = "fallback_produto"
+            # Tentar usar um preço do próprio produto (se existir), senão 0
+            preco_unitario = parse_decimal(getattr(produto, "prod_prec", 0))
+
+        valor_total = arredondar(parse_decimal(calculo["metragem_real"]) * parse_decimal(preco_unitario))
+
+
+        prod_m2cx_attr = getattr(produto, "prod_cera_m2cx", None)
+        m2_por_caixa = parse_decimal(prod_m2cx_attr) if prod_m2cx_attr is not None else None
+        resultado = {
+            **calculo,
+            "produto_id": produto_id,
+            "produto_nome": produto.prod_nome,
+            "condicao_pagamento": "À Vista" if condicao == "0" else "A Prazo",
+            "preco_unitario": preco_unitario,
+            "valor_total": valor_total,
+            "m2_por_caixa": m2_por_caixa,
+            "metragem_total": calculo.get("metragem_real"),
+            "preco_origem": preco_origem,
+        }
+        
+        resultado["total"] = valor_total
+        print(resultado)
+
+        return Response(resultado)

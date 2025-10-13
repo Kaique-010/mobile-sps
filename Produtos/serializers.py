@@ -132,11 +132,14 @@ class TabelaPrecoSerializer(BancoContextMixin, serializers.ModelSerializer):
                 instance.tabe_entr = None
         
         return super().to_representation(instance)
+
+
 class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
     precos = serializers.SerializerMethodField()
     prod_preco_vista = serializers.SerializerMethodField()
     prod_preco_normal = serializers.SerializerMethodField()
     saldo_estoque = serializers.SerializerMethodField()
+    prod_foto = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     imagem_base64 = serializers.SerializerMethodField()
     preco_principal = serializers.SerializerMethodField()
     # Sobrescrever campos decimais problemáticos
@@ -214,7 +217,8 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
 
     def get_imagem_base64(self, obj):
         if obj.prod_foto:
-            return base64.b64encode(obj.prod_foto).decode('utf-8')
+            data = obj.prod_foto.tobytes() if isinstance(obj.prod_foto, memoryview) else obj.prod_foto
+            return base64.b64encode(data).decode('utf-8')
         return None
 
     def get_preco_principal(self, obj):
@@ -344,6 +348,18 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
             prod_empr=instance.prod_empr
         )
         return instance
+    
+    def validate_prod_foto(self, value):
+        """Converte base64 em binário antes de salvar"""
+        if not value or (isinstance(value, str) and not value.strip()):
+            return None
+        try:
+            if isinstance(value, str) and ',' in value:
+                # Remove cabeçalho 'data:image/jpeg;base64,' se existir
+                value = value.split(',', 1)[1]
+            return base64.b64decode(value)
+        except Exception as e:
+            raise serializers.ValidationError(f"Erro ao decodificar imagem: {str(e)}")
 
 
 class UnidadeMedidaSerializer(serializers.ModelSerializer):
