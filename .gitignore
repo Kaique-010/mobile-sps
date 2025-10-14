@@ -6,3 +6,6 @@ _pycache*
 README.md
 .env
 .venv
+..pic
+.pycache
+.pyc

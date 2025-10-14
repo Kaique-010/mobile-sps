@@ -252,9 +252,9 @@ class Liberar(models.Model):
     libe_codi_gere = models.IntegerField(blank=True, null=True)
     libe_tecn_os = models.BooleanField(blank=True, null=True)
     libe_esca_nfe = models.IntegerField(blank=True, null=True)
-    libe_alte_cheq = models.BooleanField(blank=True, null=True)
-    libe_reme = models.BooleanField(blank=True, null=True)
-    libe_alte_peca_os = models.BooleanField(blank=True, null=True)
+    #libe_alte_cheq = models.BooleanField(blank=True, null=True)
+    #libe_reme = models.BooleanField(blank=True, null=True)
+    #libe_alte_peca_os = models.BooleanField(blank=True, null=True)
 
     class Meta:
         managed = False

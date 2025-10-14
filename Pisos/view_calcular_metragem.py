@@ -357,44 +357,82 @@ class ProdutosPisosViewSet(BaseMultiDBModelViewSet):
         percentual_quebra = request.data.get('percentual_quebra', 0)
         condicao = request.data.get('condicao', '0')
 
-        try:
-            produto = Produtos.objects.using(banco).get(prod_codi=produto_id)
-        except Produtos.DoesNotExist:
-            return Response({'error': 'Produto não encontrado'}, status=status.HTTP_404_NOT_FOUND)
-
-        calculo = calcular_item(SimpleNamespace(
-            item_m2=tamanho_m2,
-            item_queb=percentual_quebra,
-            item_unit=0,
-        ), produto)
-
-        preco_origem = "tabela"
-        try:
-            preco_unitario = get_preco_produto(banco, produto_id, condicao)
-        except Exception as e:
-            logger.warning(f"[calcular_metragem] Preço não encontrado na tabela: {e}. Usando fallback do produto.")
-            preco_origem = "fallback_produto"
-            # Tentar usar um preço do próprio produto (se existir), senão 0
-            preco_unitario = parse_decimal(getattr(produto, "prod_prec", 0))
-
-        valor_total = arredondar(parse_decimal(calculo["metragem_real"]) * parse_decimal(preco_unitario))
-
-
-        prod_m2cx_attr = getattr(produto, "prod_cera_m2cx", None)
-        m2_por_caixa = parse_decimal(prod_m2cx_attr) if prod_m2cx_attr is not None else None
-        resultado = {
-            **calculo,
-            "produto_id": produto_id,
-            "produto_nome": produto.prod_nome,
-            "condicao_pagamento": "À Vista" if condicao == "0" else "A Prazo",
-            "preco_unitario": preco_unitario,
-            "valor_total": valor_total,
-            "m2_por_caixa": m2_por_caixa,
-            "metragem_total": calculo.get("metragem_real"),
-            "preco_origem": preco_origem,
-        }
+        #Busca o produto no banco de dados
+        from django.db import connections
+        with connections[banco].cursor() as cursor:
+            cursor.execute("""SELECT prod_codi, 
+                                   prod_nome,
+                                   COALESCE(prod_cera_m2cx, 0) as m2_por_caixa,
+                                   COALESCE(prod_cera_pccx, 0) as pecas_por_caixa,
+                                   COALESCE(prod_prec, 0) AS preco_fallnack
+                           FROM produtos WHERE prod_codi = %s""",[produto_id])
+            prudutos_raw = cursor.fetchone()
+            
+            if not prudutos_raw:
+                return Response({'error': 'Produto não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+            prod_codi, prod_nome, m2_por_caixa, pecas_por_caixa, preco_fallnack = prudutos_raw
+            
+        #Buscar Preço do produto (Tabela de preços)
+        with connections[banco].cursor()as cursor:
+            cursor.execute("""
+            SELECT
+                COALESCE(tabe_avis, 0) AS preco_avista,
+                COALESCE(tabe_apra, 0) AS preco_aprazo,
+            FROM
+                tabelaprecos
+            WHERE
+                tabp_empr = %s
+                AND tabp_prod = %s
+                           """,[prod_empr, prod_codi])
+            preco_raw = cursor.fetchone()
+            if not preco_raw:
+                return Response({'error': 'Preço não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+            preco_avista, preco_aprazo = preco_raw
+            
+            if preco_raw:
+                preco_unitario = preco_raw[0] if condicao == '0' else preco_raw[1]
+                preco_origem = "tabela"
+            else:
+                preco_unitario = preco_fallnack
+                preco_origem = "fallnack_preco"
+            
+            
+        # calculo das metragens e pecas
+        from decimal import Decimal
+        from math import ceil
+        from .calculo_services import parse_decimal, arredondar
         
-        resultado["total"] = valor_total
+        tamanho_m2 = parse_decimal(tamanho_m2)
+        percentual_quebra = parse_decimal(percentual_quebra)
+        
+        metragem_total = tamanho_m2 * (1 + (percentual_quebra/100))
+        m2_por_caixa = parse_decimal(m2_por_caixa)
+        
+        if m2_por_caixa > 0:
+            caixa_necessarias = ceil(metragem_total / m2_por_caixa)
+            metragem_real = caixa_necessarias * m2_por_caixa
+        else:
+            caixa_necessarias = 0
+            metragem_real = metragem_total
+        
+        preco_unitario = parse_decimal(preco_unitario)
+        valor_total = arredondar(preco_unitario * metragem_real)
+    
+    #Montar a REsposta
+        resultado = {
+            'produto_id': produto_id,
+            'produto_nome': prod_nome,
+            'preco_origem': preco_origem,
+            'preco_unitario': str(preco_unitario),
+            'tamanho_m2': str(tamanho_m2),
+            'percentual_quebra': str(percentual_quebra),
+            'condicao': "A vista" if condicao == '0' else "Aprazo",
+            'metragem_total': str(metragem_total),
+            'm2_por_caixa': str(m2_por_caixa),
+            'caixa_necessarias': caixa_necessarias,
+            'metragem_real': str(metragem_real),
+            'pecas_por_caixa': pecas_por_caixa,
+            'valor_total': str(valor_total),
+        }
         print(resultado)
-
-        return Response(resultado)
+        return Response(resultado, status=status.HTTP_200_OK)
