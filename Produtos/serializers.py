@@ -142,14 +142,16 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
     prod_foto = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     imagem_base64 = serializers.SerializerMethodField()
     preco_principal = serializers.SerializerMethodField()
-    # Sobrescrever campos decimais problemáticos
+    # Campos com representação segura (permitindo valores inválidos no banco sem quebrar a listagem)
     prod_cera_m2cx = serializers.SerializerMethodField()
     prod_cera_pccx = serializers.SerializerMethodField()
+    prod_cera_kgcx = serializers.SerializerMethodField()
 
     class Meta:
         model = Produtos
         fields = '__all__'
         read_only_fields = ['prod_codi']
+        extra_kwargs = {}
     
     def safe_decimal_conversion(self, value, default=None):
         """Converte valores para Decimal de forma segura"""
@@ -179,14 +181,32 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
         """Retorna saldo de estoque de forma segura"""
         saldo = getattr(obj, 'saldo_estoque', 0)
         return self.safe_decimal_conversion(saldo, Decimal('0.00'))
-    
+
     def get_prod_cera_m2cx(self, obj):
         """Retorna m²/caixa de forma segura"""
-        return self.safe_decimal_conversion(obj.prod_cera_m2cx, Decimal('0.00'))
-    
+        return self.safe_decimal_conversion(getattr(obj, 'prod_cera_m2cx', None), Decimal('0.00'))
+
     def get_prod_cera_pccx(self, obj):
         """Retorna peças/caixa de forma segura"""
-        return self.safe_decimal_conversion(obj.prod_cera_pccx, Decimal('0.00'))
+        return self.safe_decimal_conversion(getattr(obj, 'prod_cera_pccx', None), Decimal('0.00'))
+
+    def get_prod_cera_kgcx(self, obj):
+        """Retorna kg/caixa de forma segura"""
+        return self.safe_decimal_conversion(getattr(obj, 'prod_cera_kgcx', None), Decimal('0.00'))
+
+    def to_internal_value(self, data):
+        """Normaliza entradas antes da validação de campo (blank -> None)."""
+        decimal_fields = [
+            'prod_cera_m2cx', 'prod_cera_pccx', 'prod_cera_kgcx',
+            # Campos opcionais que podem vir em requests
+            'preco_vista', 'preco_prazo', 'custo', 'saldo',
+            'peso_bruto', 'peso_liquido', 'valor_total_estoque',
+            'valor_total_venda_vista', 'valor_total_venda_prazo'
+        ]
+        for field in decimal_fields:
+            if field in data and (data[field] == '' or data[field] is None):
+                data[field] = None
+        return super().to_internal_value(data)
 
     def validate(self, attrs):
         if not attrs.get("prod_codi") and Produtos.objects.filter(prod_codi='', prod_empr=attrs.get("prod_empr")).exists():
@@ -201,7 +221,7 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
         
         # Converter strings vazias em None para todos os campos decimais possíveis
         decimal_fields = [
-            'prod_cera_m2cx', 'prod_cera_pccx',
+            'prod_cera_m2cx', 'prod_cera_pccx', 'prod_cera_kgcx',
             # Campos de preço que podem vir no request
             'preco_vista', 'preco_prazo', 'custo', 'saldo',
             'peso_bruto', 'peso_liquido', 'valor_total_estoque',
@@ -292,6 +312,28 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
         # Sincronizar prod_codi_nume com o novo prod_codi
         validated_data['prod_codi_nume'] = str(proximo_codigo)
 
+        # Mesclar valores brutos dos campos decimais a partir do request inicial
+        try:
+            raw_m2cx = self.initial_data.get('prod_cera_m2cx', None)
+            if raw_m2cx not in (None, ''):
+                validated_data['prod_cera_m2cx'] = Decimal(str(raw_m2cx).replace(',', '.'))
+        except Exception:
+            validated_data['prod_cera_m2cx'] = None
+
+        try:
+            raw_pccx = self.initial_data.get('prod_cera_pccx', None)
+            if raw_pccx not in (None, ''):
+                validated_data['prod_cera_pccx'] = Decimal(str(raw_pccx).replace(',', '.'))
+        except Exception:
+            validated_data['prod_cera_pccx'] = None
+
+        try:
+            raw_kgcx = self.initial_data.get('prod_cera_kgcx', None)
+            if raw_kgcx not in (None, ''):
+                validated_data['prod_cera_kgcx'] = Decimal(str(raw_kgcx).replace(',', '.'))
+        except Exception:
+            validated_data['prod_cera_kgcx'] = None
+
         produto = Produtos.objects.using(banco).create(**validated_data)
 
         # Cria preços se veio no contexto
@@ -322,19 +364,40 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
         if 'prod_codi' in validated_data:
             validated_data['prod_codi_nume'] = validated_data['prod_codi']
         
-        # Limpar campos decimais que podem vir como string vazia
-        if validated_data.get('prod_cera_m2cx') == '':
+        # Mesclar valores dos campos decimais a partir do request inicial
+        raw_m2cx = self.initial_data.get('prod_cera_m2cx', None)
+        if raw_m2cx == '':
             validated_data['prod_cera_m2cx'] = None
             instance.prod_cera_m2cx = None
-        
-        if validated_data.get('prod_cera_pccx') == '':
+        elif raw_m2cx is not None:
+            try:
+                validated_data['prod_cera_m2cx'] = Decimal(str(raw_m2cx).replace(',', '.'))
+            except Exception:
+                validated_data['prod_cera_m2cx'] = None
+                instance.prod_cera_m2cx = None
+
+        raw_pccx = self.initial_data.get('prod_cera_pccx', None)
+        if raw_pccx == '':
             validated_data['prod_cera_pccx'] = None
             instance.prod_cera_pccx = None
-        
-        print("=== ANTES DO SAVE ===")
-        print(f"Campo decimal prod_cera_m2cx: {instance.prod_cera_m2cx} (type: {type(instance.prod_cera_m2cx)})")
-        print(f"Campo decimal prod_cera_pccx: {instance.prod_cera_pccx} (type: {type(instance.prod_cera_pccx)})")
-        
+        elif raw_pccx is not None:
+            try:
+                validated_data['prod_cera_pccx'] = Decimal(str(raw_pccx).replace(',', '.'))
+            except Exception:
+                validated_data['prod_cera_pccx'] = None
+                instance.prod_cera_pccx = None
+
+        raw_kgcx = self.initial_data.get('prod_cera_kgcx', None)
+        if raw_kgcx == '':
+            validated_data['prod_cera_kgcx'] = None
+            instance.prod_cera_kgcx = None
+        elif raw_kgcx is not None:
+            try:
+                validated_data['prod_cera_kgcx'] = Decimal(str(raw_kgcx).replace(',', '.'))
+            except Exception:
+                validated_data['prod_cera_kgcx'] = None
+                instance.prod_cera_kgcx = None
+
         # CORREÇÃO: Usar update() direto no queryset para chave composta
         from .models import Produtos
         Produtos.objects.using(banco).filter(
@@ -383,7 +446,7 @@ class ProdutoDetalhadoSerializer(serializers.ModelSerializer):
     def to_internal_value(self, data):
         # Converter strings vazias para None antes da validação
         decimal_fields = [
-            'prod_cera_m2cx', 'prod_cera_pccx',
+            'prod_cera_m2cx', 'prod_cera_pccx','prod_cera_kgcx',
             'preco_vista', 'preco_prazo', 'custo', 'saldo',
             'peso_bruto', 'peso_liquido'
         ]

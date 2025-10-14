@@ -122,6 +122,12 @@ class Ordemservico(models.Model):
     orde_esta_mate = models.CharField(max_length=50, blank=True, null=True, verbose_name="Materiais")
     orde_esta_quan_mate = models.CharField(max_length=50, blank=True, null=True, verbose_name="Quantidade de Materiais")
     orde_obse = models.TextField(blank=True, null=True, verbose_name="Observações")
+    orde_tens_camp = models.CharField(max_length=50, blank=True, null=True, verbose_name="Tensão do Campo")
+    orde_tens_arma = models.CharField(max_length=50, blank=True, null=True, verbose_name="Tensão do Armadura")
+    orde_corr_arma = models.CharField(max_length=50, blank=True, null=True, verbose_name="Corrente do Armadura")
+    orde_corr_camp = models.CharField(max_length=50, blank=True, null=True, verbose_name="Corrente do Campo")
+    orde_grau_ip = models.CharField(max_length=50, blank=True, null=True, verbose_name="Grau IP")
+    orde_isol = models.CharField(max_length=50, blank=True, null=True, verbose_name="Isolamento")
     
     
     orde_data_aber = models.DateField(auto_now_add=True) 
