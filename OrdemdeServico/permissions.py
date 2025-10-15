@@ -7,7 +7,6 @@ from core.registry import get_licenca_db_config
 class PodeVerOrdemDoSetor(BasePermission):
     """
     Permission que valida se o usuário pode ver ordens baseado no workflow de setores.
-    - Setor 6 (admin) vê todas as ordens
     - Outros setores só veem ordens do seu setor atual ou que podem receber
     """
     

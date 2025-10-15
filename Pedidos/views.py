@@ -11,17 +11,20 @@ from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 from .models import PedidoVenda, Itenspedidovenda
 from .serializers import PedidoVendaSerializer
-
+from core.mixins.vendedor_mixin import VendedorEntidadeMixin
 from Entidades.models import Entidades
 from Licencas.models import Empresas
 from core.utils import get_licenca_db_config
+from rest_framework.permissions import IsAuthenticated
 from parametros_admin.decorators import parametros_pedidos_completo
 from parametros_admin.integracao_pedidos import reverter_estoque_pedido, obter_status_estoque_pedido
 from parametros_admin.utils_pedidos import obter_parametros_pedidos, atualizar_parametros_pedidos
 
 logger = logging.getLogger('Pedidos')
 
-class PedidoVendaViewSet(viewsets.ModelViewSet):
+class PedidoVendaViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
+    permission_classes = [IsAuthenticated]
+    modulo_requerido = 'Pedidos'
     serializer_class = PedidoVendaSerializer
     lookup_field = 'pedi_nume'
     filter_backends = [SearchFilter, DjangoFilterBackend]
@@ -85,6 +88,7 @@ class PedidoVendaViewSet(viewsets.ModelViewSet):
             
         # Remover o prefetch_related problemático
         queryset = PedidoVenda.objects.using(banco)
+        queryset = self.filter_por_vendedor(queryset, 'pedi_vend')
         
         # Obter parâmetros de filtro
         cliente_nome = self.request.query_params.get('cliente_nome')

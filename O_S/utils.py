@@ -52,24 +52,47 @@ def get_next_item_number_sequence(banco, peca_os, peca_empr, peca_fili):
 
 def get_next_service_id(banco, ordem_id, empresa_id, filial_id):
     """
-    Gera o próximo ID de serviço para uma determinada ordem.
+    Gera o próximo ID de serviço sequencial simples para uma determinada ordem.
     """
     with connections[banco].cursor() as cursor:
+        # Primeiro faz lock das linhas existentes
         cursor.execute(
             """
-            SELECT serv_item 
+            SELECT serv_id, serv_item
             FROM servicosos 
             WHERE serv_os = %s 
               AND serv_empr = %s 
               AND serv_fili = %s 
-            ORDER BY serv_item DESC
+            ORDER BY serv_id
             FOR UPDATE
             """,
             [ordem_id, empresa_id, filial_id]
         )
-        result = cursor.fetchone()
-
-    next_sequ = 1 if result is None else result[0] + 1
-    novo_id = int(f"{ordem_id}{next_sequ:03d}")
+        results = cursor.fetchall()
+        
+        # Encontra o próximo ID disponível
+        if not results:
+            novo_id = 1
+            next_sequ = 1
+        else:
+            # Pega todos os IDs e itens existentes
+            ids = [row[0] for row in results]
+            items = [row[1] for row in results]
+            
+            # Encontra o próximo ID disponível
+            ids_sorted = sorted(ids)
+            novo_id = 1
+            for id_atual in ids_sorted:
+                if novo_id < id_atual:
+                    break
+                novo_id = id_atual + 1
+            
+            # Encontra o próximo item disponível
+            items_sorted = sorted(items)
+            next_sequ = 1
+            for item_atual in items_sorted:
+                if next_sequ < item_atual:
+                    break
+                next_sequ = item_atual + 1
 
     return novo_id, next_sequ

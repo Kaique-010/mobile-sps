@@ -23,12 +23,13 @@ from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from datetime import datetime, date, timedelta
+from core.mixins.vendedor_mixin import VendedorEntidadeMixin
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-class ControleVisitaViewSet(BancoContextMixin, ModuloRequeridoMixin, viewsets.ModelViewSet):
+class ControleVisitaViewSet(BancoContextMixin, ModuloRequeridoMixin, VendedorEntidadeMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     modulo_requerido = 'Pedidos'
     serializer_class = ControleVisitaSerializer
@@ -52,20 +53,6 @@ class ControleVisitaViewSet(BancoContextMixin, ModuloRequeridoMixin, viewsets.Mo
     ordering_fields = ['ctrl_data', 'ctrl_numero', 'ctrl_cliente']
     ordering = ['-ctrl_data', 'ctrl_numero']
     lookup_field = 'ctrl_id'
-
-    
-    def get_entidade_vendedor(self, user, banco):
-        try:
-            empresa_id = self.request.headers.get("X-Empresa")
-            liberar = Liberar.objects.using(banco).get(libe_usua=user.usua_codi)
-            vendedor = Entidades.objects.using(banco).get(
-                enti_clie=liberar.libe_codi_vend,
-                enti_empr=empresa_id
-            )
-            print(f"🔍 DEBUG: Vendedor encontrado: {vendedor.enti_clie} - {vendedor.enti_nome}")
-            return vendedor
-        except (Liberar.DoesNotExist, Entidades.DoesNotExist):
-            return None
 
 
     

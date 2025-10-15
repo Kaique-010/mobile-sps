@@ -16,12 +16,15 @@ from Entidades.models import Entidades
 from Licencas.models import Empresas
 from Pedidos.models import PedidoVenda, Itenspedidovenda
 from core.utils import get_licenca_db_config, calcular_subtotal_item_bruto, calcular_total_item_com_desconto
-
+from core.mixins.vendedor_mixin import VendedorEntidadeMixin
+from rest_framework.permissions import IsAuthenticated
 from parametros_admin.utils_pedidos import obter_parametros_pedidos, atualizar_parametros_pedidos
 
 logger = logging.getLogger('Orcamentos')
 
-class OrcamentoViewSet(viewsets.ModelViewSet):
+class OrcamentoViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
+    permission_classes = [IsAuthenticated]
+    modulo_requerido = 'Pedidos'
     serializer_class = OrcamentosSerializer
     lookup_field = 'pedi_nume'  # Manter, mas ViewSet usará chave composta internamente
     filter_backends = [SearchFilter, DjangoFilterBackend]
@@ -91,6 +94,7 @@ class OrcamentoViewSet(viewsets.ModelViewSet):
             
         # Base queryset otimizada
         queryset = Orcamentos.objects.using(banco).all()
+        queryset = self.filter_por_vendedor(queryset, 'pedi_vend')
         
         # Obter parâmetros de filtro
         cliente_nome = self.request.query_params.get('cliente_nome')

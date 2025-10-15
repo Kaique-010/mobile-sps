@@ -279,10 +279,17 @@ LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-        },
+    'console': {
+        'class': 'logging.StreamHandler',
+        'formatter': 'verbose',
     },
+        },
+        'formatters': {
+            'verbose': {
+                'format': '[{levelname}] {asctime} {name}: {message}',
+                'style': '{',
+            },
+        },
     'loggers': {
         'django.server': {
             'handlers': ['console'],
@@ -294,6 +301,7 @@ LOGGING = {
             'level': 'WARNING' if not DEBUG else 'INFO',  # Only slow requests in production
             'propagate': False,
         },
+
         'core.utils': {
             'handlers': ['console'],
             'level': 'ERROR' if not DEBUG else 'WARNING',  # Reduce connection logs

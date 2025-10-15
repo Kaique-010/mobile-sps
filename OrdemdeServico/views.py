@@ -636,6 +636,9 @@ class OrdemServicoPecasViewSet(BaseMultiDBModelViewSet,ModelViewSet):
                         item['peca_quan'] = float(item.get('peca_quan', 0))
                         item['peca_unit'] = float(item.get('peca_unit', 0))
                         item['peca_tota'] = float(item.get('peca_tota', 0))
+                        
+                        # Remover validação de limite já que agora usamos BigIntegerField
+                            
                     except (ValueError, TypeError) as e:
                         raise ValidationError({
                             'error': f"Erro ao converter valores numéricos: {str(e)}",
@@ -661,6 +664,8 @@ class OrdemServicoPecasViewSet(BaseMultiDBModelViewSet,ModelViewSet):
                     item['peca_id'] = get_next_item_number_sequence(
                         banco, item['peca_orde'], item['peca_empr'], item['peca_fili']
                     )
+                    
+                    # Agora com BigIntegerField, não precisamos validar o limite
                     serializer = OrdemServicoPecasSerializer(data=item, context={'banco': banco})
                     serializer.is_valid(raise_exception=True)
                     obj = serializer.save()

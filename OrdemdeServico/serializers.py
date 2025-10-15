@@ -91,17 +91,17 @@ class WorkflowSetorSerializer(BancoModelSerializer):
         instance = self.Meta.model.objects.using(banco).create(**validated_data)
         return instance
 
-class OrdemServicoPecasSerializer(BancoModelSerializer):
-    peca_id = serializers.IntegerField(required=False)
+class OrdemServicoPecasSerializer(serializers.ModelSerializer):
+    produto_nome = serializers.SerializerMethodField()
+    peca_id = serializers.IntegerField(required=False)  # Será gerado automaticamente
     peca_empr = serializers.IntegerField(required=True)
     peca_fili = serializers.IntegerField(required=True)
     peca_orde = serializers.IntegerField(required=True)
     peca_codi = serializers.CharField(required=True)
     peca_comp = serializers.CharField(required=False, allow_blank=True)
-    peca_quan = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
-    peca_unit = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
-    peca_tota = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
-    produto_nome = serializers.SerializerMethodField()
+    peca_quan = serializers.DecimalField(max_digits=15, decimal_places=4, required=True)
+    peca_unit = serializers.DecimalField(max_digits=15, decimal_places=4, required=True)
+    peca_tota = serializers.DecimalField(max_digits=15, decimal_places=4, required=False)
    
 
     class Meta:
@@ -122,8 +122,6 @@ class OrdemServicoPecasSerializer(BancoModelSerializer):
         if data.get('peca_quan', 0) < 0:
             raise serializers.ValidationError("A quantidade não pode ser negativa.")
         
-        if data.get('peca_unit', 0) < 0:
-            raise serializers.ValidationError("O valor unitário não pode ser negativo.")
 
         # Calcular o total se não fornecido
         if 'peca_tota' not in data and 'peca_quan' in data and 'peca_unit' in data:
@@ -185,8 +183,7 @@ class OrdemServicoServicosSerializer(BancoModelSerializer):
         if data.get('serv_quan', 0) < 0:
             raise serializers.ValidationError("A quantidade não pode ser negativa.")
         
-        if data.get('serv_unit', 0) < 0:
-            raise serializers.ValidationError("O valor unitário não pode ser negativo.")
+
 
         # Calcular o total se não fornecido
         if 'serv_tota' not in data and 'serv_quan' in data and 'serv_unit' in data:

@@ -5,10 +5,10 @@ from OrdemdeServico.models import Ordemservicopecas, Ordemservicoservicos, Ordem
 
 def get_next_sequential_id(banco, model, ordem_id, empresa_id, filial_id, id_field, ordem_field, empresa_field, filial_field):
     """
-    Função genérica para gerar IDs sequenciais
+    Função genérica para gerar IDs sequenciais simples (1, 2, 3, 4, 5...)
     """
     with connections[banco].cursor() as cursor:
-        # Primeiro obtém todos os IDs em lock
+        # Primeiro faz lock das linhas existentes
         cursor.execute(
             f"""
             SELECT {id_field}
@@ -16,22 +16,25 @@ def get_next_sequential_id(banco, model, ordem_id, empresa_id, filial_id, id_fie
             WHERE {ordem_field} = %s 
             AND {empresa_field} = %s 
             AND {filial_field} = %s
+            ORDER BY {id_field}
             FOR UPDATE
             """,
             [ordem_id, empresa_id, filial_id]
         )
         ids = [row[0] for row in cursor.fetchall()]
         
-        # Se não houver IDs, começa do 1
+        # Encontra o próximo ID disponível
         if not ids:
-            ultimo_local = 0
+            novo_id = 1
         else:
-            # Pega o último número local (últimos 3 dígitos do maior ID)
-            ultimo_local = max(int(str(id_)[-3:]) for id_ in ids if id_ is not None)
-
-    novo_local = ultimo_local + 1
-    novo_id = int(f"{ordem_id}{novo_local:03d}")
-
+            # Procura por gaps na sequência ou usa o próximo após o maior
+            ids_sorted = sorted(ids)
+            novo_id = 1
+            for id_atual in ids_sorted:
+                if novo_id < id_atual:
+                    break
+                novo_id = id_atual + 1
+        
     return novo_id
 
 
@@ -54,27 +57,48 @@ def get_next_item_number_sequence(banco, peca_orde, peca_empr, peca_fili):
 
 def get_next_service_id(banco, ordem_id, empresa_id, filial_id):
     """
-    Função para gerar IDs sequenciais de serviços
+    Função para gerar IDs sequenciais simples de serviços
     """
     with connections[banco].cursor() as cursor:
-        # Lock the rows for this order
+        # Primeiro faz lock das linhas existentes
         cursor.execute(
             """
-            SELECT serv_sequ 
+            SELECT serv_id, serv_sequ
             FROM ordemservicoservicos 
             WHERE serv_orde = %s 
             AND serv_empr = %s 
             AND serv_fili = %s 
-            ORDER BY serv_sequ DESC
+            ORDER BY serv_id
             FOR UPDATE
             """,
             [ordem_id, empresa_id, filial_id]
         )
-        result = cursor.fetchone()
-        next_sequ = 1 if result is None else result[0] + 1
+        results = cursor.fetchall()
         
-        # Gera o ID combinando ordem e sequência
-        novo_id = int(f"{ordem_id}{next_sequ:03d}")
+        # Encontra o próximo serv_id disponível
+        if not results:
+            novo_id = 1
+            next_sequ = 1
+        else:
+            # Pega todos os IDs e sequências existentes
+            ids = [row[0] for row in results]
+            sequs = [row[1] for row in results]
+            
+            # Encontra o próximo ID disponível
+            ids_sorted = sorted(ids)
+            novo_id = 1
+            for id_atual in ids_sorted:
+                if novo_id < id_atual:
+                    break
+                novo_id = id_atual + 1
+            
+            # Encontra a próxima sequência disponível
+            sequs_sorted = sorted(sequs)
+            next_sequ = 1
+            for sequ_atual in sequs_sorted:
+                if next_sequ < sequ_atual:
+                    break
+                next_sequ = sequ_atual + 1
         
         return novo_id, next_sequ
 

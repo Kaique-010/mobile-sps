@@ -244,7 +244,7 @@ class Ordemservico(models.Model):
 
 
 class Ordemservicopecas(models.Model):
-    peca_id = models.IntegerField(primary_key=True)
+    peca_id = models.BigIntegerField(primary_key=True)
     peca_empr = models.IntegerField() 
     peca_fili = models.IntegerField()
     peca_orde = models.IntegerField()

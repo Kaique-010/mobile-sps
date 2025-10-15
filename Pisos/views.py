@@ -16,6 +16,8 @@ from .serializers import (
     ItensorcapisosSerializer, 
     ItenspedidospisosSerializer
 )
+from core.mixins.vendedor_mixin import VendedorEntidadeMixin
+
 from types import SimpleNamespace
 from core.registry import get_licenca_db_config
 from core.decorator import ModuloRequeridoMixin
@@ -44,7 +46,7 @@ class BaseMultiDBModelViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         return context
 
 
-class OrcamentopisosViewSet(BaseMultiDBModelViewSet):
+class OrcamentopisosViewSet(BaseMultiDBModelViewSet, VendedorEntidadeMixin):
     modulo_necessario = 'Pisos'
     serializer_class = OrcamentopisosSerializer
     filter_backends = [SearchFilter, DjangoFilterBackend]
@@ -58,6 +60,7 @@ class OrcamentopisosViewSet(BaseMultiDBModelViewSet):
     def get_queryset(self):
         banco = self.get_banco()
         queryset = Orcamentopisos.objects.using(banco).all()
+        queryset = self.filter_por_vendedor(queryset, 'orca_vend')
         
         # Filtros por parâmetros de query
         empresa_id = self.request.query_params.get('orca_empr')
@@ -208,7 +211,8 @@ class OrcamentopisosViewSet(BaseMultiDBModelViewSet):
             )
 
 
-class PedidospisosViewSet(BaseMultiDBModelViewSet):
+class PedidospisosViewSet(BaseMultiDBModelViewSet, VendedorEntidadeMixin):
+    permission_classes = [IsAuthenticated]
     modulo_necessario = 'Pisos'
     serializer_class = PedidospisosSerializer
     filter_backends = [SearchFilter, DjangoFilterBackend]
@@ -222,6 +226,7 @@ class PedidospisosViewSet(BaseMultiDBModelViewSet):
     def get_queryset(self):
         banco = self.get_banco()
         queryset = Pedidospisos.objects.using(banco).all()
+        queryset = self.filter_por_vendedor(queryset, 'pedi_vend')
         
         # Filtros por parâmetros de query
         empresa_id = self.request.query_params.get('pedi_empr')
