@@ -98,7 +98,7 @@ INSTALLED_APPS = [
     'CaixaDiario',
     "O_S", 
     "auditoria",
-    #"notificacoes",
+    "notificacoes",
     "Sdk_recebimentos",
     "SpsComissoes",
     "EnvioCobranca",

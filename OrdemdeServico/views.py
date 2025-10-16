@@ -227,8 +227,6 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
                 qs = qs.filter(orde_enti__in=entidades_ids)
 
         qs = qs.order_by('-orde_data_aber', '-orde_nume')
-        if getattr(self, 'action', None) == 'list':
-            return qs[:200]
         return qs
 
 
