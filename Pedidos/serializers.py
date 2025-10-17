@@ -183,6 +183,7 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
                 iped_data=pedido.pedi_data,
                 iped_forn=pedido.pedi_forn,
                 iped_vend=pedido.pedi_vend,
+                iped_unli=subtotal_bruto,  # Subtotal bruto (quantidade × valor unitário)
                 iped_suto=subtotal_bruto,  # Subtotal bruto (quantidade × valor unitário)
                 iped_tota=total_item,      # Total com desconto aplicado
                 **item_data_clean
@@ -353,6 +354,7 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
                 iped_data=instance.pedi_data,
                 iped_forn=instance.pedi_forn,
                 iped_vend=instance.pedi_vend,
+                iped_unli=subtotal_bruto,  # Subtotal bruto (quantidade × valor unitário)
                 iped_suto=subtotal_bruto,  # Subtotal bruto (quantidade × valor unitário)
                 iped_tota=total_item,      # Total com desconto aplicado
                 **item_data_clean

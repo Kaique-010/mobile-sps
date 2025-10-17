@@ -180,54 +180,104 @@ class PedidosService:
         # Obter empresa e filial dos headers
         empresa = int(request.headers.get('X-Empresa', 1))
         
-        if not PedidosService.pedido_movimenta_estoque(banco, empresa):
-            return "Parâmetro de movimentação de estoque desativado."
+        try:
+            if not PedidosService.pedido_movimenta_estoque(banco, empresa):
+                print("⚠️ [ESTOQUE] Movimentação de estoque desativada para esta empresa.")
+                return {
+                    'sucesso': True,
+                    'processado': False,
+                    'motivo': 'Movimentação de estoque desativada para esta empresa'
+                }
 
-        for item in pedido.itens.all():
-            PedidosService._estornar_item(pedido, item, banco)
+            # Processar cada item
+            for item in pedido.itens.all():
+                resultado_item = PedidosService._estornar_item(pedido, item, banco)
+                
+                if not resultado_item.get('sucesso', True):
+                    return resultado_item
 
-        return "Baixa de estoque revertida com sucesso."
+            print(f"✅ [ESTOQUE] Estoque revertido com sucesso para pedido {pedido.pedi_nume}")
+            return {
+                'sucesso': True,
+                'processado': True,
+                'motivo': 'Estoque revertido com sucesso'
+            }
+            
+        except Exception as e:
+            print(f"❌ [ESTOQUE] Erro ao reverter estoque: {e}")
+            return {
+                'sucesso': False,
+                'processado': False,
+                'erro': str(e)
+            }
 
     @staticmethod
     def _estornar_item(pedido, item, banco):
-        total_movimentacao = item.iped_unit * abs(Decimal(item.iped_quan))
-        
-        # Gerar número sequencial do documento para estorno
-        next_doc_number = PedidosService._get_next_document_number(
-            empresa=pedido.pedi_empr,
-            filial=pedido.pedi_fili,
-            entidade=pedido.pedi_forn,
-            tipo="E",
-            banco=banco
-        )
-        
-        # Criar movimentação de estoque (ENTRADA para estorno)
-        Movimentoestoque.objects.using(banco).create(
-            moes_empr=pedido.pedi_empr,
-            moes_fili=pedido.pedi_fili,
-            moes_prod=item.iped_prod,
-            moes_quan=abs(Decimal(item.iped_quan)),  # Quantidade sempre positiva para entrada
-            moes_unit=item.iped_unit,
-            moes_tota=total_movimentacao,
-            moes_tipo="E",  # Entrada de estoque (estorno)
-            moes_enti=pedido.pedi_forn,   
-            moes_data=pedido.pedi_data,
-            moes_seri="PEV",  # Série do pedido
-            moes_docu=next_doc_number,  # Número sequencial do documento
-            moes_mode="01",  # Modo de operação
-            moes_item=1,  # Número do item
-         
-        )
+        """
+        Estorna um item específico do pedido
+        """
+        try:
+            total_movimentacao = item.iped_unit * abs(Decimal(item.iped_quan))
+            
+            # Gerar número sequencial do documento para estorno
+            next_doc_number = PedidosService._get_next_document_number(
+                empresa=pedido.pedi_empr,
+                filial=pedido.pedi_fili,
+                entidade=pedido.pedi_forn,
+                tipo="E",
+                banco=banco
+            )
+            
+            # Criar movimentação de estoque (ENTRADA para estorno)
+            Movimentoestoque.objects.using(banco).create(
+                moes_empr=pedido.pedi_empr,
+                moes_fili=pedido.pedi_fili,
+                moes_prod=item.iped_prod,
+                moes_quan=abs(Decimal(item.iped_quan)),  # Quantidade sempre positiva para entrada
+                moes_unit=item.iped_unit,
+                moes_tota=total_movimentacao,
+                moes_tipo="E",  # Entrada de estoque (estorno)
+                moes_enti=pedido.pedi_forn,   
+                moes_data=pedido.pedi_data,
+                moes_seri="PEV",  # Série do pedido
+                moes_docu=next_doc_number,  # Número sequencial do documento
+                moes_mode="01",  # Modo de operação
+                moes_item=1,  # Número do item
+             
+            )
 
-        # Atualizar saldo (AUMENTAR para estorno)
-        # Usar get_or_create para evitar duplicatas
-        saldo, created = SaldoProduto.objects.using(banco).get_or_create(
-            produto_codigo=item.iped_prod,
-            empresa=pedido.pedi_empr,
-            filial=pedido.pedi_fili,
-            defaults={'saldo_estoque': 0}
-        )
-        
-        # Somar de volta ao estoque
-        saldo.saldo_estoque += abs(Decimal(item.iped_quan))
-        saldo.save(using=banco, update_fields=["saldo_estoque"])
+            # Atualizar saldo (AUMENTAR para estorno)
+            # Usar get_or_create para evitar duplicatas
+            saldo, created = SaldoProduto.objects.using(banco).get_or_create(
+                produto_codigo=item.iped_prod,
+                empresa=pedido.pedi_empr,
+                filial=pedido.pedi_fili,
+                defaults={'saldo_estoque': 0}
+            )
+            
+            # Somar de volta ao estoque
+            saldo.saldo_estoque += abs(Decimal(item.iped_quan))
+            saldo.save(using=banco, update_fields=["saldo_estoque"])
+            
+            return {'sucesso': True}
+            
+        except Exception as e:
+            return {
+                'sucesso': False,
+                'erro': f"Erro ao estornar item {item.iped_prod}: {str(e)}"
+            }
+
+
+    @staticmethod
+    def pedido_cancela_nao_exclui(banco: str, empresa: int = 1) -> bool:
+        """
+        Verifica se o parâmetro de cancelamento de pedido está ativo para a empresa fornecida.
+        """
+        try:
+            parametro = Parametros.objects.using(banco).get(
+               empresa_id=empresa
+               
+            )
+            return parametro.pedido_cancelamento_habilitado == True
+        except Parametros.DoesNotExist:
+            return False

@@ -25,6 +25,10 @@ custom_patterns = [
              'patch': 'partial_update',
              'delete': 'destroy'
          }), name='pedido-detail-composto'),
+    path('pedidos/<int:empresa>/<int:filial>/<int:numero>/cancelar_pedido/', 
+         PedidoVendaViewSet.as_view({
+             'post': 'cancelar_pedido'
+         }), name='pedido-cancelar-composto'),
 ]
 
 # URLs para funcionalidades financeiras

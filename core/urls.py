@@ -76,6 +76,9 @@ urlpatterns = [
     
     #Assistente Spart
     path('api/<slug>/assistente/', include('Assistente_Spart.urls')),
+
+    #Parametros Spartacus
+    path('api/<slug>/ParametrosSps/', include('ParametrosSps.urls')),
 ]
 
 # Servir arquivos estáticos em desenvolvimento

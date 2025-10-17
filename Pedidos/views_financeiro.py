@@ -62,6 +62,12 @@ class GerarTitulosPedidoView(APIView):
                 titu_form_reci=forma_pagamento or "",
                 titu_emis=datetime.now().date(),
                 titu_hist=f"Título gerado do Pedido {pedi_nume}, pelo app SPS Mobile",
+                titu_cecu="0",
+                titu_port="0",
+                titu_even="0",
+                titu_prov = True,
+                titu_tipo= "RECEBER"
+
             ))
 
         with transaction.atomic(using=banco):

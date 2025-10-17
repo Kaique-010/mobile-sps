@@ -264,7 +264,7 @@ class PedidoVendaViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
 
         # Snapshot antes da atualização
         itens_antes = {
-            (i.ite_prod_id): i.ite_quan
+            (i.iped_prod): i.iped_quan
             for i in instance.itens.all().using(banco)
         }
 
@@ -274,7 +274,7 @@ class PedidoVendaViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
 
         # Snapshot depois da atualização
         itens_depois = {
-            (i.ite_prod_id): i.ite_quan
+            (i.iped_prod): i.iped_quan
             for i in pedido.itens.all().using(banco)
         }
 
@@ -289,24 +289,24 @@ class PedidoVendaViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
         # ↓ Processa só diferenças
         try:
             for prod_id in novos:
-                item = pedido.itens.using(banco).filter(ite_prod_id=prod_id).first()
+                item = pedido.itens.using(banco).filter(iped_prod=prod_id).first()
                 PedidosService._baixar_item(pedido, item, banco)
 
             for prod_id in removidos:
                 quantidade = itens_antes[prod_id]
-                fake_item = type('obj', (), {'ite_prod_id': prod_id, 'ite_quan': quantidade})
+                fake_item = type('obj', (), {'iped_prod': prod_id, 'iped_quan': quantidade})
                 PedidosService._estornar_item(pedido, fake_item, banco)
 
             for prod_id in alterados:
                 diferenca = itens_depois[prod_id] - itens_antes[prod_id]
-                item = pedido.itens.using(banco).filter(ite_prod_id=prod_id).first()
+                item = pedido.itens.using(banco).filter(iped_prod=prod_id).first()
                 if diferenca > 0:
                     # aumentou a quantidade → baixa diferença
-                    item.ite_quan = diferenca
+                    item.iped_quan = diferenca
                     PedidosService._baixar_item(pedido, item, banco)
                 elif diferenca < 0:
                     # reduziu quantidade → devolve diferença
-                    item.ite_quan = abs(diferenca)
+                    item.iped_quan = abs(diferenca)
                     PedidosService._estornar_item(pedido, item, banco)
 
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -328,7 +328,7 @@ class PedidoVendaViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
 
             # Reverter estoque antes de excluir
             try:
-                resultado_estoque = reverter_estoque_pedido(pedido, request)
+                resultado_estoque = PedidosService.estornar_estoque_pedido(pedido, request)
                 if not resultado_estoque.get('sucesso', True):
                     logger.warning(f"Erro ao reverter estoque: {resultado_estoque.get('erro')}")
                 elif resultado_estoque.get('processado'):
@@ -354,29 +354,37 @@ class PedidoVendaViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
             return Response({'error': 'Erro interno do servidor'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=True, methods=['post'])
-    def cancelar_pedido(self, request, pedi_nume=None):
+    def cancelar_pedido(self, request, empresa=None, filial=None, numero=None, **kwargs):
         """
-        Cancela um pedido e reverte o estoque se configurado.
+        Cancela um pedido e reverte o estoque, se o parâmetro de cancelamento estiver habilitado.
         """
         try:
             pedido = self.get_object()
             banco = get_licenca_db_config(request)
+           
 
             if not banco:
                 return Response({'erro': 'Banco de dados não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+            # 🔹 Verifica parâmetro
+            if not PedidosService.pedido_cancela_nao_exclui(banco, pedido.pedi_empr):
+                return Response(
+                    {'erro': 'Cancelamento de pedido não está habilitado nos parâmetros.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
 
             if pedido.pedi_stat == '4':  # já cancelado
                 return Response({'erro': 'Pedido já cancelado'}, status=status.HTTP_400_BAD_REQUEST)
 
             with transaction.atomic(using=banco):
-                # ↓ REVERSÃO DE ESTOQUE
+                # 🔹 Reverte estoque se configurado
                 resultado_estoque = PedidosService.estornar_estoque_pedido(pedido, request)
                 logger.info(f"♻️ Estoque revertido para pedido {pedido.pedi_nume}: {resultado_estoque}")
 
-                # Atualiza status do pedido
+                # 🔹 Atualiza status do pedido
                 pedido.pedi_stat = '4'  # Cancelado
                 pedido.pedi_canc = True
-                pedido.save(using=banco)
+                pedido.save(using=banco, update_fields=['pedi_stat', 'pedi_canc'])
 
                 return Response({
                     'sucesso': True,
@@ -387,6 +395,7 @@ class PedidoVendaViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
         except Exception as e:
             logger.error(f"Erro ao cancelar pedido: {e}")
             return Response({'erro': 'Erro interno ao cancelar pedido'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
     
     @action(detail=True, methods=['get'])
