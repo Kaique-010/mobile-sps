@@ -115,6 +115,7 @@ INSTALLED_APPS = [
     'Lancamentos_Bancarios',
     'Notas_Fiscais',
     'Assistente_Spart',
+    'ParametrosSps',
 ]
 # Middleware
 MIDDLEWARE = [

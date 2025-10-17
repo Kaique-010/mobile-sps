@@ -37,6 +37,17 @@ class PedidoVenda(models.Model):
 
     def __str__(self):
         return f"Pedido {self.pedi_nume} - {self.pedi_forn}"
+    
+    @property
+    def itens(self):
+        """
+        Retorna um queryset dos itens relacionados a este pedido
+        """
+        return Itenspedidovenda.objects.filter(
+            iped_empr=self.pedi_empr,
+            iped_fili=self.pedi_fili,
+            iped_pedi=str(self.pedi_nume)
+        )
 
     
     

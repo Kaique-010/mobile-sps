@@ -8,7 +8,7 @@ from .models import PedidoVenda, Itenspedidovenda
 from Entidades.models import Entidades
 from core.serializers import BancoContextMixin
 from core.utils import calcular_valores_pedido, calcular_subtotal_item_bruto, calcular_total_item_com_desconto  # Atualizada importação
-from parametros_admin.integracao_pedidos import processar_saida_estoque_pedido
+from ParametrosSps.services.pedidos_service import PedidosService
 from parametros_admin.utils_pedidos import aplicar_descontos
 from .views_financeiro import GerarTitulosPedidoView, RemoverTitulosPedidoView, ConsultarTitulosPedidoView, RelatorioFinanceiroPedidoView
 import logging
@@ -204,7 +204,7 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
         # Processar saída de estoque se configurado
         print(f"🔄 [PEDIDO] Iniciando processamento de estoque para pedido {pedido.pedi_nume}")
         try:
-            resultado_estoque = processar_saida_estoque_pedido(
+            resultado_estoque = PedidosService.baixa_estoque_pedido(
                 pedido, itens_data, self.context.get('request')
             )
             print(f"🔄 [PEDIDO] Resultado do processamento de estoque: {resultado_estoque}")
@@ -374,7 +374,7 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
         # Processar saída de estoque se configurado
         print(f"🔄 [PEDIDO] Iniciando processamento de estoque para atualização do pedido {instance.pedi_nume}")
         try:
-            resultado_estoque = processar_saida_estoque_pedido(
+            resultado_estoque = PedidosService.baixa_estoque_pedido(
                 instance, itens_data, self.context.get('request')
             )
             print(f"🔄 [PEDIDO] Resultado do processamento de estoque: {resultado_estoque}")

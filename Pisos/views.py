@@ -23,9 +23,11 @@ from core.registry import get_licenca_db_config
 from core.decorator import ModuloRequeridoMixin
 from Produtos.models import Produtos, Tabelaprecos
 from Entidades.models import Entidades
-from .preco_service import get_preco_produto
-from .utils_service import parse_decimal, arredondar
-from .calculo_services import calcular_item, calcular_ambientes, calcular_total_geral
+from .services.preco_service import get_preco_produto
+from .services.utils_service import parse_decimal, arredondar
+from .services.calculo_services import calcular_item, calcular_ambientes, calcular_total_geral
+from .services.orcamento_service import OrcamentoService
+from .services.pedido_service import PedidoService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -78,34 +80,23 @@ class OrcamentopisosViewSet(BaseMultiDBModelViewSet, VendedorEntidadeMixin):
     
     @transaction.atomic
     def create(self, request, *args, **kwargs):
-        logger.info(f"[OrcamentopisosViewSet.create] Criando orçamento de pisos")
-        
+        logger.info("[OrcamentopisosViewSet.create] Criando orçamento de pisos")
         banco = self.get_banco()
         serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        # O serializer.save() já processa os itens_input e calcula os totais
+        orcamento = serializer.save()
+
+        # Preenche dados adicionais do cliente
+        OrcamentoService.preparar_orcamento(orcamento, request)
+        orcamento.save(using=banco)
+
+        # Retorna o orçamento com todos os dados
+        response_serializer = self.get_serializer(orcamento)
+        headers = self.get_success_headers(response_serializer.data)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
         
-        try:
-            serializer.is_valid(raise_exception=True)
-            
-            # Gerar próximo número do orçamento
-            ultimo = Orcamentopisos.objects.using(banco).filter(
-                orca_empr=serializer.validated_data['orca_empr'],
-                orca_fili=serializer.validated_data['orca_fili']
-            ).order_by('-orca_nume').first()
-            
-            proximo_numero = (ultimo.orca_nume + 1) if ultimo else 1
-            serializer.validated_data['orca_nume'] = proximo_numero
-            
-            self.perform_create(serializer)
-            headers = self.get_success_headers(serializer.data)
-            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-            
-        except ValidationError as e:
-            logger.warning(f"[OrcamentopisosViewSet.create] Erro de validação: {e.detail}")
-            return Response({'errors': e.detail}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            logger.error(f"[OrcamentopisosViewSet.create] Erro inesperado: {e}")
-            return Response({'error': 'Erro interno do servidor'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
     @action(detail=True, methods=['post'])
     def exportar_pedido(self, request, orca_nume=None):
         """Converte orçamento em pedido"""
@@ -244,33 +235,22 @@ class PedidospisosViewSet(BaseMultiDBModelViewSet, VendedorEntidadeMixin):
     
     @transaction.atomic
     def create(self, request, *args, **kwargs):
-        logger.info(f"[PedidospisosViewSet.create] Criando pedido de pisos")
-        
+        logger.info("[PedidospisosViewSet.create] Criando pedido de pisos")
         banco = self.get_banco()
         serializer = self.get_serializer(data=request.data)
-        
-        try:
-            serializer.is_valid(raise_exception=True)
-            
-            # Gerar próximo número do pedido
-            ultimo = Pedidospisos.objects.using(banco).filter(
-                pedi_empr=serializer.validated_data['pedi_empr'],
-                pedi_fili=serializer.validated_data['pedi_fili']
-            ).order_by('-pedi_nume').first()
-            
-            proximo_numero = (ultimo.pedi_nume + 1) if ultimo else 1
-            serializer.validated_data['pedi_nume'] = proximo_numero
-            
-            self.perform_create(serializer)
-            headers = self.get_success_headers(serializer.data)
-            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-            
-        except ValidationError as e:
-            logger.warning(f"[PedidospisosViewSet.create] Erro de validação: {e.detail}")
-            return Response({'errors': e.detail}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            logger.error(f"[PedidospisosViewSet.create] Erro inesperado: {e}")
-            return Response({'error': 'Erro interno do servidor'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        serializer.is_valid(raise_exception=True)
+
+        # O serializer.save() já processa os itens_input e calcula os totais
+        pedido = serializer.save()
+
+        # Preenche dados adicionais do cliente
+        PedidoService.preparar_pedido(pedido, request)
+        pedido.save(using=banco)
+
+        # Retorna o pedido com todos os dados
+        response_serializer = self.get_serializer(pedido)
+        headers = self.get_success_headers(response_serializer.data)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 
 class ItensorcapisosViewSet(BaseMultiDBModelViewSet):
@@ -362,8 +342,13 @@ class ProdutosPisosViewSet(BaseMultiDBModelViewSet):
         percentual_quebra = request.data.get('percentual_quebra', 0)
         condicao = request.data.get('condicao', '0')
 
+        # Log dos dados recebidos
+        print(f"[calcular_metragem] Dados recebidos: {request.data}")
+        print(f"[calcular_metragem] produto_id: {produto_id}, tamanho_m2: {tamanho_m2}, percentual_quebra: {percentual_quebra}")
+
         try:
             produto = Produtos.objects.using(banco).get(prod_codi=produto_id)
+            print(f"[calcular_metragem] Produto encontrado: {produto.prod_nome}, m2_por_caixa: {getattr(produto, 'prod_cera_m2cx', None)}")
         except Produtos.DoesNotExist:
             return Response({'error': 'Produto não encontrado'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -372,6 +357,8 @@ class ProdutosPisosViewSet(BaseMultiDBModelViewSet):
             item_queb=percentual_quebra,
             item_unit=0,
         ), produto)
+
+        print(f"[calcular_metragem] Resultado do cálculo: {calculo}")
 
         preco_origem = "tabela"
         try:
@@ -384,22 +371,24 @@ class ProdutosPisosViewSet(BaseMultiDBModelViewSet):
 
         valor_total = arredondar(parse_decimal(calculo["metragem_real"]) * parse_decimal(preco_unitario))
 
-
         prod_m2cx_attr = getattr(produto, "prod_cera_m2cx", None)
         m2_por_caixa = parse_decimal(prod_m2cx_attr) if prod_m2cx_attr is not None else None
+        
         resultado = {
-            **calculo,
             "produto_id": produto_id,
             "produto_nome": produto.prod_nome,
             "condicao_pagamento": "À Vista" if condicao == "0" else "A Prazo",
             "preco_unitario": preco_unitario,
             "valor_total": valor_total,
+            "total": valor_total,
             "m2_por_caixa": m2_por_caixa,
             "metragem_total": calculo.get("metragem_real"),
+            "metragem_real": calculo.get("metragem_real"),
+            "metragem_com_perda": calculo.get("metragem_com_perda"),
+            "caixas_necessarias": calculo.get("caixas_necessarias"),
             "preco_origem": preco_origem,
         }
         
-        resultado["total"] = valor_total
-        print(resultado)
+        print(f"[calcular_metragem] Resultado final: {resultado}")
 
         return Response(resultado)

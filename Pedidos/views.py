@@ -17,8 +17,8 @@ from Licencas.models import Empresas
 from core.utils import get_licenca_db_config
 from rest_framework.permissions import IsAuthenticated
 from parametros_admin.decorators import parametros_pedidos_completo
-from parametros_admin.integracao_pedidos import reverter_estoque_pedido, obter_status_estoque_pedido
 from parametros_admin.utils_pedidos import obter_parametros_pedidos, atualizar_parametros_pedidos
+from ParametrosSps.services.pedidos_service import PedidosService
 
 logger = logging.getLogger('Pedidos')
 
@@ -210,28 +210,31 @@ class PedidoVendaViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
 
     @parametros_pedidos_completo
     def create(self, request, *args, **kwargs):
-        print(f"🎯 [VIEW] Recebendo requisição de criação de pedido")
-        print(f"🎯 [VIEW] Dados da requisição: {request.data}")
+        """
+        Cria um pedido e realiza baixa automática de estoque conforme parâmetros.
+        """
+        logger.info(f"🎯 [CREATE] Iniciando criação de pedido")
+        serializer = self.get_serializer(data=request.data, context=self.get_serializer_context())
         
         try:
-            logger.info(f"[PedidoVendaViewSet.create] request.data: {request.data}")
-        except Exception as e:
-            logger.error(f"Erro ao acessar request.data: {e}")
-
-        serializer = self.get_serializer(data=request.data, context=self.get_serializer_context())
-        try:
             serializer.is_valid(raise_exception=True)
-            print(f"🎯 [VIEW] Dados validados com sucesso, criando pedido...")
-            self.perform_create(serializer)
-            print(f"🎯 [VIEW] Pedido criado com sucesso")
+            pedido = serializer.save()
+            logger.info(f"✅ Pedido {pedido.pedi_nume} criado com sucesso")
+
+            # ↓ BAIXA DE ESTOQUE JÁ É FEITA AUTOMATICAMENTE NO SERIALIZER
+            # Não precisa fazer aqui para evitar duplicação
+
             headers = self.get_success_headers(serializer.data)
-            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+            return Response(
+                {'pedido': serializer.data},
+                status=status.HTTP_201_CREATED,
+                headers=headers
+            )
         except ValidationError as e:
-            print(f"❌ [VIEW] Erro de validação: {e.detail}")
-            logger.warning(f"[PedidoVendaViewSet.create] Erro de validação: {e.detail}")
+            logger.warning(f"❌ Erro de validação: {e.detail}")
             return Response({'errors': e.detail}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            logger.error(f"[PedidoVendaViewSet.create] Erro inesperado: {e}")
+            logger.error(f"💥 Erro inesperado: {e}")
             return Response({'error': 'Erro interno do servidor'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     # @parametros_pedidos_completo  # Comentado temporariamente devido ao erro de permissão
@@ -251,17 +254,67 @@ class PedidoVendaViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
             )
 
     def update(self, request, *args, **kwargs):
-        logger.debug(f"[PedidoVendaViewSet.update] Dados da requisição: {request.data}")
-        logger.debug(f"[PedidoVendaViewSet.update] Args: {args}")
-        logger.debug(f"[PedidoVendaViewSet.update] Kwargs: {kwargs}")
+        """
+        Atualiza pedido. Controla movimentação de estoque apenas nas diferenças de itens.
+        """
+        logger.info(f"[UPDATE] Iniciando atualização de pedido com controle de estoque diferencial")
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        banco = get_licenca_db_config(request)
+
+        # Snapshot antes da atualização
+        itens_antes = {
+            (i.ite_prod_id): i.ite_quan
+            for i in instance.itens.all().using(banco)
+        }
+
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        pedido = serializer.save()
+
+        # Snapshot depois da atualização
+        itens_depois = {
+            (i.ite_prod_id): i.ite_quan
+            for i in pedido.itens.all().using(banco)
+        }
+
+        # Calcula diferenças
+        novos = set(itens_depois.keys()) - set(itens_antes.keys())
+        removidos = set(itens_antes.keys()) - set(itens_depois.keys())
+        alterados = {
+            k for k in itens_depois.keys() & itens_antes.keys()
+            if itens_depois[k] != itens_antes[k]
+        }
+
+        # ↓ Processa só diferenças
         try:
-            return super().update(request, *args, **kwargs)
-        except ValidationError as e:
-            logger.warning(f"[PedidoVendaViewSet.update] Erro de validação: {e.detail}")
-            return Response({'errors': e.detail}, status=status.HTTP_400_BAD_REQUEST)
+            for prod_id in novos:
+                item = pedido.itens.using(banco).filter(ite_prod_id=prod_id).first()
+                PedidosService._baixar_item(pedido, item, banco)
+
+            for prod_id in removidos:
+                quantidade = itens_antes[prod_id]
+                fake_item = type('obj', (), {'ite_prod_id': prod_id, 'ite_quan': quantidade})
+                PedidosService._estornar_item(pedido, fake_item, banco)
+
+            for prod_id in alterados:
+                diferenca = itens_depois[prod_id] - itens_antes[prod_id]
+                item = pedido.itens.using(banco).filter(ite_prod_id=prod_id).first()
+                if diferenca > 0:
+                    # aumentou a quantidade → baixa diferença
+                    item.ite_quan = diferenca
+                    PedidosService._baixar_item(pedido, item, banco)
+                elif diferenca < 0:
+                    # reduziu quantidade → devolve diferença
+                    item.ite_quan = abs(diferenca)
+                    PedidosService._estornar_item(pedido, item, banco)
+
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
         except Exception as e:
-            logger.error(f"[PedidoVendaViewSet.update] Erro inesperado: {e}")   
-            return Response({'error': 'Erro interno do servidor'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.error(f"[UPDATE] Erro ao ajustar estoque: {e}")
+            return Response({'error': 'Erro ao ajustar estoque'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
     
     def destroy(self, request, *args, **kwargs):
@@ -303,48 +356,38 @@ class PedidoVendaViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
     @action(detail=True, methods=['post'])
     def cancelar_pedido(self, request, pedi_nume=None):
         """
-        Cancela um pedido e reverte o estoque se configurado
+        Cancela um pedido e reverte o estoque se configurado.
         """
         try:
             pedido = self.get_object()
             banco = get_licenca_db_config(request)
-            
+
             if not banco:
-                return Response(
-                    {'erro': 'Banco de dados não encontrado'},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-            
-            # Verificar se pedido já está cancelado
-            if pedido.pedi_stat == '4':  # Cancelado
-                return Response(
-                    {'erro': 'Pedido já está cancelado'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
+                return Response({'erro': 'Banco de dados não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+            if pedido.pedi_stat == '4':  # já cancelado
+                return Response({'erro': 'Pedido já cancelado'}, status=status.HTTP_400_BAD_REQUEST)
+
             with transaction.atomic(using=banco):
-                # Reverter estoque
-                resultado_estoque = reverter_estoque_pedido(pedido, request)
-                
-                # Atualizar status do pedido
+                # ↓ REVERSÃO DE ESTOQUE
+                resultado_estoque = PedidosService.estornar_estoque_pedido(pedido, request)
+                logger.info(f"♻️ Estoque revertido para pedido {pedido.pedi_nume}: {resultado_estoque}")
+
+                # Atualiza status do pedido
                 pedido.pedi_stat = '4'  # Cancelado
                 pedido.pedi_canc = True
                 pedido.save(using=banco)
-                
-                logger.info(f"Pedido {pedido.pedi_nume} cancelado")
-                
+
                 return Response({
                     'sucesso': True,
-                    'mensagem': f'Pedido {pedido.pedi_nume} cancelado com sucesso',
-                    'estoque_revertido': resultado_estoque
+                    'mensagem': f'Pedido {pedido.pedi_nume} cancelado e estoque revertido',
+                    'estoque': resultado_estoque
                 }, status=status.HTTP_200_OK)
-                
+
         except Exception as e:
             logger.error(f"Erro ao cancelar pedido: {e}")
-            return Response(
-                {'erro': 'Erro interno ao cancelar pedido'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({'erro': 'Erro interno ao cancelar pedido'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     
     @action(detail=True, methods=['get'])
     def status_estoque(self, request, pedi_nume=None):

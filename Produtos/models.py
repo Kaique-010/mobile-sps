@@ -350,3 +350,31 @@ class ProdutosDetalhados(models.Model):
         db_table = 'produtos_detalhados'
 
 
+
+
+class Movimentoestoque(models.Model):
+    moes_empr = models.IntegerField(primary_key=True)
+    moes_fili = models.IntegerField()
+    moes_tipo = models.CharField(max_length=1)
+    moes_docu = models.IntegerField()
+    moes_seri = models.CharField(max_length=6)
+    moes_mode = models.CharField(max_length=2)
+    moes_enti = models.IntegerField()
+    moes_data = models.DateField(blank=True, null=True)
+    moes_prod = models.CharField(max_length=20, blank=True, null=True)
+    moes_quan = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
+    moes_unit = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
+    moes_tota = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    moes_item = models.IntegerField()
+    moes_fina = models.CharField(max_length=2, blank=True, null=True)
+    field_log_data = models.DateField(db_column='_log_data', blank=True, null=True)  # Field renamed because it started with '_'.
+    field_log_time = models.TimeField(db_column='_log_time', blank=True, null=True)  # Field renamed because it started with '_'.
+    moes_data_hora = models.CharField(max_length=40, blank=True, null=True)
+    moes_lote = models.CharField(max_length=10, blank=True, null=True)
+    moes_ctrl_ctb = models.IntegerField(blank=True, null=True)
+    moes_seto = models.IntegerField(default=0)
+
+    class Meta:
+        managed = False
+        db_table = 'movimentoestoque'
+        unique_together = (('moes_empr', 'moes_fili', 'moes_tipo', 'moes_docu', 'moes_seri', 'moes_mode', 'moes_enti', 'moes_item', 'moes_seto'),)

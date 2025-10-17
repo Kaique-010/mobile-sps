@@ -11,9 +11,9 @@ STATUS_ORCAMENTO = [
 ]
 
 class Orcamentopisos(models.Model):
-    orca_empr = models.IntegerField(primary_key=True)
+    orca_empr = models.IntegerField()
     orca_fili = models.IntegerField()
-    orca_nume = models.IntegerField()
+    orca_nume = models.IntegerField(primary_key=True)
     orca_clie = models.IntegerField(blank=True, null=True)
     orca_data = models.DateField(blank=True, null=True)
     orca_tota = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
@@ -75,6 +75,31 @@ class Orcamentopisos(models.Model):
         managed = False
         db_table = 'orcamentopisos'
         unique_together = (('orca_empr', 'orca_fili', 'orca_nume'),)
+
+
+class Itensorcapisos(models.Model):
+    item_empr = models.IntegerField()
+    item_fili = models.IntegerField()
+    item_orca = models.IntegerField(primary_key=True)
+    item_ambi = models.IntegerField()
+    item_prod = models.CharField(max_length=20)
+    item_m2 = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
+    item_quan = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
+    item_unit = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
+    item_suto = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
+    item_obse = models.TextField(blank=True, null=True)
+    field_log_data = models.DateField(db_column='_log_data', blank=True, null=True)  
+    field_log_time = models.TimeField(db_column='_log_time', blank=True, null=True)  
+    item_nome_ambi = models.CharField(max_length=100, blank=True, null=True)
+    item_nume = models.IntegerField(blank=True, null=True)
+    item_caix = models.IntegerField(blank=True, null=True)
+    item_desc = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
+    item_queb = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
+    item_inst_incl = models.BooleanField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'itensorcapisos'
 
 
 
@@ -140,35 +165,6 @@ class Pedidospisos(models.Model):
         managed = False
         db_table = 'pedidospisos'
         unique_together = (('pedi_empr', 'pedi_fili', 'pedi_nume'),)
-
-
-
-
-
-class Itensorcapisos(models.Model):
-    item_empr = models.IntegerField()
-    item_fili = models.IntegerField()
-    item_orca = models.IntegerField(primary_key=True)
-    item_ambi = models.IntegerField()
-    item_prod = models.CharField(max_length=20)
-    item_m2 = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
-    item_quan = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
-    item_unit = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
-    item_suto = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
-    item_obse = models.TextField(blank=True, null=True)
-    field_log_data = models.DateField(db_column='_log_data', blank=True, null=True)  
-    field_log_time = models.TimeField(db_column='_log_time', blank=True, null=True)  
-    item_nome_ambi = models.CharField(max_length=100, blank=True, null=True)
-    item_nume = models.IntegerField(blank=True, null=True)
-    item_caix = models.IntegerField(blank=True, null=True)
-    item_desc = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
-    item_queb = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
-    item_inst_incl = models.BooleanField(blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'itensorcapisos'
-
 
 
 
