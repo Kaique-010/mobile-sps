@@ -113,7 +113,8 @@ class PedidosService:
             
         saldo = SaldoProduto.objects.using(banco).filter(
             produto_codigo=produto_codigo,
-            empresa=pedido.pedi_empr
+            empresa=pedido.pedi_empr,
+            filial=pedido.pedi_fili
         ).first()
         
         if saldo and saldo.saldo_estoque < abs(quantidade):
@@ -150,16 +151,17 @@ class PedidosService:
         )
 
         # Atualizar saldo (DIMINUIR para saída)
-        if saldo:
-            saldo.saldo_estoque -= abs(quantidade)  # Subtrai do estoque
-            saldo.save(using=banco)
-        else:
-            # Se não existe saldo, cria com valor negativo
-            SaldoProduto.objects.using(banco).create(
-                produto_codigo=produto_codigo,
-                empresa=pedido.pedi_empr,
-                saldo_estoque=-abs(quantidade)  # Negativo porque é saída
-            )
+        # Usar get_or_create para evitar duplicatas
+        saldo, created = SaldoProduto.objects.using(banco).get_or_create(
+            produto_codigo=produto_codigo,
+            empresa=pedido.pedi_empr,
+            filial=pedido.pedi_fili,
+            defaults={'saldo_estoque': 0}
+        )
+        
+        # Diminuir do estoque
+        saldo.saldo_estoque -= abs(quantidade)
+        saldo.save(using=banco)
         
         return {'sucesso': True}
 
@@ -218,10 +220,14 @@ class PedidosService:
         )
 
         # Atualizar saldo (AUMENTAR para estorno)
-        saldo = SaldoProduto.objects.using(banco).filter(
+        # Usar get_or_create para evitar duplicatas
+        saldo, created = SaldoProduto.objects.using(banco).get_or_create(
             produto_codigo=item.iped_prod,
-            empresa=pedido.pedi_empr  # Corrigido: usar empresa do pedido
-        ).first()
-        if saldo:
-            saldo.saldo_estoque += abs(Decimal(item.iped_quan))  # Soma de volta ao estoque
-            saldo.save(using=banco, update_fields=["saldo_estoque"])
+            empresa=pedido.pedi_empr,
+            filial=pedido.pedi_fili,
+            defaults={'saldo_estoque': 0}
+        )
+        
+        # Somar de volta ao estoque
+        saldo.saldo_estoque += abs(Decimal(item.iped_quan))
+        saldo.save(using=banco, update_fields=["saldo_estoque"])

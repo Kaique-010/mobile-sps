@@ -149,7 +149,15 @@ def calcular_subtotal_item_bruto(quantidade, valor_unitario):
     
     subtotal_bruto = quantidade * valor_unitario
     
-    return subtotal_bruto.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    # Garantir que o resultado não exceda os limites do campo (max_digits=15, decimal_places=5 para iped_suto)
+    # Máximo: 9999999999.99999 (10 dígitos inteiros + 5 decimais = 15 total)
+    resultado = Decimal(str(round(subtotal_bruto, 5)))
+    
+    # Validar se não excede o limite do campo iped_suto
+    if resultado >= Decimal('10000000000.00000'):  # 10^10
+        raise ValueError(f"Subtotal calculado ({resultado}) excede o limite máximo do campo (9999999999.99999)")
+    
+    return resultado
 
 def calcular_total_item_com_desconto(quantidade, valor_unitario, desconto_item=None):
     """
@@ -167,10 +175,24 @@ def calcular_total_item_com_desconto(quantidade, valor_unitario, desconto_item=N
     valor_unitario = Decimal(str(valor_unitario or 0))
     desconto_item = Decimal(str(desconto_item or 0))
     
+    print(f"🔍 [DEBUG] Calculando total: quantidade={quantidade}, valor_unitario={valor_unitario}, desconto={desconto_item}")
+    
     subtotal_bruto = quantidade * valor_unitario
     total_item = subtotal_bruto - desconto_item
     
-    return max(total_item, Decimal('0.00')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    print(f"🔍 [DEBUG] Subtotal bruto: {subtotal_bruto}, Total antes round: {total_item}")
+    
+    # Garantir que o resultado não exceda os limites do campo (max_digits=15, decimal_places=2)
+    # Máximo: 9999999999999.99 (13 dígitos inteiros + 2 decimais = 15 total)
+    resultado = Decimal(str(round(max(total_item, Decimal('0.00')), 2)))
+    
+    print(f"🔍 [DEBUG] Total após round: {resultado}, Dígitos: {len(str(resultado).replace('.', ''))}")
+    
+    # Validar se não excede o limite do campo
+    if resultado >= Decimal('10000000000000.00'):  # 10^13
+        raise ValueError(f"Total do item calculado ({resultado}) excede o limite máximo do campo (9999999999999.99)")
+    
+    return resultado
 
 
 import logging

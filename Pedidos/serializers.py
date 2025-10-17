@@ -22,9 +22,9 @@ class ItemPedidoVendaSerializer(BancoContextMixin,serializers.ModelSerializer):
     class Meta:
         model = Itenspedidovenda
         fields = [
-            'iped_prod', 'iped_quan', 'iped_unit', 'iped_suto', 'iped_tota', 
-            'iped_fret', 'iped_desc', 'iped_unli', 'iped_cust', 'iped_tipo',
-            'iped_desc_item', 'iped_perc_desc', 'iped_unme', 'produto_nome'
+            'iped_prod', 'iped_quan', 'iped_unit', 'iped_fret', 'iped_desc', 
+            'iped_unli', 'iped_cust', 'iped_tipo', 'iped_desc_item', 
+            'iped_perc_desc', 'iped_unme', 'produto_nome'
         ]
     
     def get_produto_nome(self, obj):
@@ -154,18 +154,21 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
         # Criar itens do pedido
         itens_criados = []
         for idx, item_data in enumerate(itens_data, start=1):
-            # Calcular subtotal bruto (quantidade × valor unitário)
-            subtotal_bruto = calcular_subtotal_item_bruto(
-                item_data.get('iped_quan', 0),
-                item_data.get('iped_unit', 0)
-            )
-            
-            # Calcular total do item com desconto
-            total_item = calcular_total_item_com_desconto(
-                item_data.get('iped_quan', 0),
-                item_data.get('iped_unit', 0),
-                item_data.get('iped_desc', 0)
-            )
+            try:
+                # Calcular subtotal bruto (quantidade × valor unitário)
+                subtotal_bruto = calcular_subtotal_item_bruto(
+                    item_data.get('iped_quan', 0),
+                    item_data.get('iped_unit', 0)
+                )
+                
+                # Calcular total do item com desconto
+                total_item = calcular_total_item_com_desconto(
+                    item_data.get('iped_quan', 0),
+                    item_data.get('iped_unit', 0),
+                    item_data.get('iped_desc', 0)
+                )
+            except ValueError as e:
+                raise ValidationError(f"Erro no item {idx}: {str(e)}")
 
             # Remover campos que serão definidos explicitamente para evitar conflitos
             item_data_clean = item_data.copy()
