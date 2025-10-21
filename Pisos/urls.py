@@ -6,6 +6,7 @@ from .views import (
     ItenspedidospisosViewSet,
     ProdutosPisosViewSet
 )
+from django.urls import path
 
 router = DefaultRouter()
 router.register(r'orcamentos-pisos', OrcamentopisosViewSet, basename='orcamentos-pisos')
@@ -14,4 +15,18 @@ router.register(r'itens-orcamentos-pisos', ItensorcapisosViewSet, basename='iten
 router.register(r'itens-pedidos-pisos', ItenspedidospisosViewSet, basename='itens-pedidos-pisos')
 router.register(r'produtos-pisos', ProdutosPisosViewSet, basename='produtos-pisos')
 
-urlpatterns = router.urls
+# URLs customizadas para chave composta
+custom_patterns = [
+    path('orcamentos-pisos/<int:empresa>/<int:filial>/<int:numero>/', 
+         OrcamentopisosViewSet.as_view({
+             'get': 'retrieve',
+             'put': 'update', 
+             'patch': 'partial_update',
+             'delete': 'destroy'
+         }), name='orcamento-detail-composto'),
+
+path('orcamentos-pisos/<int:empresa>/<int:filial>/<int:numero>/exportar-pedido/',
+         OrcamentopisosViewSet.as_view({'post': 'exportar_pedido'}),
+         name='exportar-pedido')
+]
+urlpatterns = custom_patterns + router.urls

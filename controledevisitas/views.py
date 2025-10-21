@@ -11,8 +11,12 @@ from .services import (
     exportar_visita_para_orcamento_pisos, 
     verificar_modulo_pisos_liberado
 )
+from Pisos.services.utils_service import parse_decimal, arredondar
+from Pisos.services.preco_service import get_preco_produto
 from core.serializers import BancoContextMixin
 from Pisos.views import BaseMultiDBModelViewSet
+from Pisos.services.calculo_services import calcular_ambientes, calcular_item, calcular_total_geral
+from Produtos.models import Produtos
 from rest_framework import viewsets, status
 from core.utils import get_licenca_db_config
 from core.decorator import ModuloRequeridoMixin
@@ -22,6 +26,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from types import SimpleNamespace
 from datetime import datetime, date, timedelta
 from core.mixins.vendedor_mixin import VendedorEntidadeMixin
 import logging
@@ -376,67 +381,74 @@ class ItensVisitaViewSet(BaseMultiDBModelViewSet):
     
     @action(detail=False, methods=['post'], url_path='calcular-metragem-pisos')
     def calcular_metragem_pisos(self, request, slug=None):
-        """Calcula metragem para produtos de pisos"""
+        banco = self.get_banco()
+        produto_id = request.data.get('produto_id')
+        tamanho_m2 = request.data.get('tamanho_m2')
+        percentual_quebra = request.data.get('percentual_quebra', 0)
+        condicao = request.data.get('condicao', '0')
+
+        # Log dos dados recebidos
+        print(f"[calcular_metragem] Dados recebidos: {request.data}")
+        print(f"[calcular_metragem] produto_id: {produto_id}, tamanho_m2: {tamanho_m2}, percentual_quebra: {percentual_quebra}")
+
         try:
-            banco = self.get_banco()
-            
-            produto_id = request.data.get('produto_id')
-            tamanho_m2 = request.data.get('tamanho_m2')
-            percentual_quebra = request.data.get('percentual_quebra', 10)
-            condicao = request.data.get('condicao', '0')
-            
-            if not produto_id or not tamanho_m2:
-                return Response({
-                    'error': 'produto_id e tamanho_m2 são obrigatórios'
-                }, status=status.HTTP_400_BAD_REQUEST)
-            
-            # Importar modelo de produtos
-            from Produtos.models import Produtos
-            
-            # Verificar se produto existe no banco correto
-            try:
-                produto = Produtos.objects.using(banco).get(prod_codi=produto_id)
-            except Produtos.DoesNotExist:
-                return Response({
-                    'error': f'Produto {produto_id} não encontrado'
-                }, status=status.HTTP_404_NOT_FOUND)
-            
-            # Usar a função de cálculo do módulo Pisos
-            from Pisos.views import ProdutosPisosViewSet
-            
-            pisos_viewset = ProdutosPisosViewSet()
-            pisos_viewset.request = request
-            
-            # Preparar dados para o cálculo
-            dados_calculo = {
-                'produto_id': int(produto_id),
-                'tamanho_m2': float(tamanho_m2),
-                'percentual_quebra': float(percentual_quebra),
-                'condicao': str(condicao)
-            }
-            
-            # Simular request
-            class MockRequest:
-                def __init__(self, data, headers):
-                    self.data = data
-                    self.headers = headers
-            
-            mock_request = MockRequest(dados_calculo, request.headers)
-            
-            # Chamar função de cálculo
-            response = pisos_viewset.calcular_metragem(mock_request)
-            
-            return response
-            
-        except ValueError as ve:
-            return Response({
-                'error': f'Dados inválidos: {str(ve)}'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            produto = Produtos.objects.using(banco).get(prod_codi=produto_id)
+            print(f"[calcular_metragem] Produto encontrado: {produto.prod_nome}, m2_por_caixa: {getattr(produto, 'prod_cera_m2cx', None)}, pc_por_caixa: {getattr(produto, 'prod_cera_pccx', None)}")
+        except Produtos.DoesNotExist:
+            return Response({'error': 'Produto não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+        calculo = calcular_item(SimpleNamespace(
+            item_m2=tamanho_m2,
+            item_queb=percentual_quebra,
+            item_unit=0,
+        ), produto)
+
+        print(f"[calcular_metragem] Resultado do cálculo: {calculo}")
+
+        preco_origem = "tabela"
+        try:
+            preco_unitario = get_preco_produto(banco, produto_id, condicao)
         except Exception as e:
-            logger.error(f"Erro no cálculo de metragem: {e}")
-            return Response({
-                'error': f'Erro interno: {str(e)}'
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.warning(f"[calcular_metragem] Preço não encontrado na tabela: {e}. Usando fallback do produto.")
+            preco_origem = "fallback_produto"
+            # Tentar usar um preço do próprio produto (se existir), senão 0
+            preco_unitario = parse_decimal(getattr(produto, "prod_prec", 0))
+
+        valor_total = arredondar(parse_decimal(calculo["metragem_real"]) * parse_decimal(preco_unitario))
+
+        prod_m2cx_attr = getattr(produto, "prod_cera_m2cx", None)
+        prod_pccx_attr = getattr(produto, "prod_cera_pccx", None)
+        
+        m2_por_caixa = parse_decimal(prod_m2cx_attr) if prod_m2cx_attr is not None else None
+        pc_por_caixa = parse_decimal(prod_pccx_attr) if prod_pccx_attr is not None else None   
+        
+        unidade = str(produto.prod_unme).strip().upper() if produto.prod_unme else None
+        if unidade in ["METRO QUADRADO", "M²", "M2", "M"]:
+            unidade = "M2"
+        elif unidade in ["PEÇA", "PÇ", "BARRA"]:
+            unidade = "PC"
+        
+        resultado = {
+            "produto_id": produto_id,
+            "produto_nome": produto.prod_nome,
+            "condicao_pagamento": "À Vista" if condicao == "0" else "A Prazo",
+            "preco_unitario": preco_unitario,
+            "valor_total": valor_total,
+            "total": valor_total,
+            "m2_por_caixa": m2_por_caixa,
+            "pc_por_caixa": pc_por_caixa,
+            "metragem_total": calculo.get("metragem_real"),
+            "metragem_real": calculo.get("metragem_real"),
+            "metragem_com_perda": calculo.get("metragem_com_perda"),
+            "caixas_necessarias": calculo.get("caixas_necessarias"),
+            "preco_origem": preco_origem,
+            "unidade_medida": unidade,
+        }
+        
+        print(f"[calcular_metragem] Resultado final: {resultado}")
+
+        return Response(resultado)
+
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context['banco'] = get_licenca_db_config(self.request)

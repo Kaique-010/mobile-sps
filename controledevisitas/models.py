@@ -83,7 +83,7 @@ class ItensVisita(models.Model):
     item_id = models.AutoField(primary_key=True)
     item_empr = models.ForeignKey(Empresas, on_delete=models.CASCADE, db_column='item_empr')
     item_fili = models.IntegerField(db_column='item_fili')
-    item_visita = models.ForeignKey(Controlevisita, on_delete=models.CASCADE, related_name="itens_visita")
+    item_visita = models.ForeignKey(Controlevisita, on_delete=models.CASCADE, related_name="itens_visita_id")
     item_prod = models.CharField(max_length=60, verbose_name='Código do Produto')
     item_desc_prod = models.TextField(blank=True, null=True, verbose_name='Descrição do Produto')
     item_quan = models.DecimalField(max_digits=15, decimal_places=5, blank=True, null=True, verbose_name='Quantidade')

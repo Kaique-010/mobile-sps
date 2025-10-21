@@ -119,7 +119,59 @@ CREATE TABLE IF NOT EXISTS parametrosmobile (
     para_ativ BOOLEAN NOT NULL DEFAULT TRUE,
     para_data_alte TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     para_usua_alte INT
-);                    
+);         
+
+--Cria a tabela de itens de visitas
+ CREATE TABLE IF NOT EXISTS itensvisita (
+    item_id SERIAL PRIMARY KEY,
+    item_empr INTEGER NOT NULL,
+    item_fili INTEGER NOT NULL,
+    item_visita_id INTEGER NOT NULL REFERENCES controlevisita (ctrl_id) ON DELETE CASCADE,
+    item_prod VARCHAR(60) NOT NULL,
+    item_desc_prod TEXT,
+    item_quan NUMERIC(15,5),
+    item_unit NUMERIC(15,5),
+    item_tota NUMERIC(15,2),
+    item_desc NUMERIC(15,2),
+    item_unli VARCHAR(10),
+    item_data DATE DEFAULT CURRENT_DATE,
+    item_obse TEXT,
+    item_m2 NUMERIC(15,4),
+    item_nome_ambi VARCHAR(100),
+    item_queb NUMERIC(5,2) DEFAULT 10,
+    item_caix INTEGER,
+    item_tipo_calculo VARCHAR(10) DEFAULT 'normal' CHECK (item_tipo_calculo IN ('normal', 'pisos')),
+    CONSTRAINT itensvisita_unique UNIQUE (item_empr, item_fili, item_visita, item_prod)
+);
+
+--Criar a tabela de Auditoria 
+
+
+--Criação da Tabela para auditoria
+
+CREATE TABLE IF NOT EXISTS auditoria_logacao (
+id SERIAL PRIMARY KEY,
+usuario_id INTEGER REFERENCES usuarios(usua_codi) ON DELETE SET NULL,
+data_hora TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+tipo_acao VARCHAR(10) NOT NULL,
+url TEXT NOT NULL,
+ip INET,
+navegador VARCHAR(255) NOT NULL,
+dados JSONB,
+dados_antes JSONB,
+dados_depois JSONB,
+campos_alterados JSONB,
+objeto_id VARCHAR(100),
+modelo VARCHAR(100),
+empresa VARCHAR(100),
+licenca VARCHAR(100)
+);
+
+CREATE INDEX idx_auditoria_empresa_licenca_datahora ON auditoria_logacao (empresa, licenca, data_hora);
+CREATE INDEX idx_auditoria_usuario_datahora ON auditoria_logacao (usuario_id, data_hora);
+CREATE INDEX idx_auditoria_modelo_objeto ON auditoria_logacao (modelo, objeto_id);
+CREATE INDEX idx_auditoria_tipoacao_datahora ON auditoria_logacao (tipo_acao, data_hora);
+
 """
 
 # SQL de tabelas e inserções

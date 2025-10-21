@@ -96,14 +96,20 @@ class OrcamentopisosViewSet(BaseMultiDBModelViewSet, VendedorEntidadeMixin):
         response_serializer = self.get_serializer(orcamento)
         headers = self.get_success_headers(response_serializer.data)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
         
-    @action(detail=True, methods=['post'])
-    def exportar_pedido(self, request, orca_nume=None):
+        
+    def exportar_pedido(self, request, empresa=None, filial=None, numero=None, slug=None):
         """Converte orçamento em pedido"""
         banco = self.get_banco()
         
         try:
-            orcamento = self.get_object()
+            # Buscar o orçamento pelos parâmetros da URL
+            orcamento = Orcamentopisos.objects.using(banco).get(
+                orca_empr=empresa,
+                orca_fili=filial,
+                orca_nume=numero
+            )
             
             if orcamento.orca_stat == 2:  
                 return Response(
@@ -194,6 +200,11 @@ class OrcamentopisosViewSet(BaseMultiDBModelViewSet, VendedorEntidadeMixin):
                 'pedido_numero': pedido.pedi_nume
             }, status=status.HTTP_201_CREATED)
             
+        except Orcamentopisos.DoesNotExist:
+            return Response(
+                {'error': 'Orçamento não encontrado'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
         except Exception as e:
             logger.error(f"Erro ao exportar orçamento para pedido: {e}")
             return Response(
@@ -333,6 +344,16 @@ class ProdutosPisosViewSet(BaseMultiDBModelViewSet):
         except Exception as e:
             logger.error(f"Erro ao buscar nome do produto: {e}")
             return None
+    def item_prod_unme(self, item_prod):
+        try:
+            banco = self.get_banco()
+            produto = Produtos.objects.using(banco).filter(prod_codi=item_prod).first()
+            if produto:
+                return produto.prod_unme
+            return None
+        except Exception as e:
+            logger.error(f"Erro ao buscar unidade de medida do produto: {e}")
+            return None
     
     @action(detail=False, methods=['post'])
     def calcular_metragem(self, request, slug=None):
@@ -348,7 +369,7 @@ class ProdutosPisosViewSet(BaseMultiDBModelViewSet):
 
         try:
             produto = Produtos.objects.using(banco).get(prod_codi=produto_id)
-            print(f"[calcular_metragem] Produto encontrado: {produto.prod_nome}, m2_por_caixa: {getattr(produto, 'prod_cera_m2cx', None)}")
+            print(f"[calcular_metragem] Produto encontrado: {produto.prod_nome}, m2_por_caixa: {getattr(produto, 'prod_cera_m2cx', None)}, pc_por_caixa: {getattr(produto, 'prod_cera_pccx', None)}")
         except Produtos.DoesNotExist:
             return Response({'error': 'Produto não encontrado'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -372,7 +393,16 @@ class ProdutosPisosViewSet(BaseMultiDBModelViewSet):
         valor_total = arredondar(parse_decimal(calculo["metragem_real"]) * parse_decimal(preco_unitario))
 
         prod_m2cx_attr = getattr(produto, "prod_cera_m2cx", None)
+        prod_pccx_attr = getattr(produto, "prod_cera_pccx", None)
+        
         m2_por_caixa = parse_decimal(prod_m2cx_attr) if prod_m2cx_attr is not None else None
+        pc_por_caixa = parse_decimal(prod_pccx_attr) if prod_pccx_attr is not None else None   
+        
+        unidade = str(produto.prod_unme).strip().upper() if produto.prod_unme else None
+        if unidade in ["METRO QUADRADO", "M²", "M2", "M"]:
+            unidade = "M2"
+        elif unidade in ["PEÇA", "PÇ", "BARRA"]:
+            unidade = "PC"
         
         resultado = {
             "produto_id": produto_id,
@@ -382,11 +412,13 @@ class ProdutosPisosViewSet(BaseMultiDBModelViewSet):
             "valor_total": valor_total,
             "total": valor_total,
             "m2_por_caixa": m2_por_caixa,
+            "pc_por_caixa": pc_por_caixa,
             "metragem_total": calculo.get("metragem_real"),
             "metragem_real": calculo.get("metragem_real"),
             "metragem_com_perda": calculo.get("metragem_com_perda"),
             "caixas_necessarias": calculo.get("caixas_necessarias"),
             "preco_origem": preco_origem,
+            "unidade_medida": unidade,
         }
         
         print(f"[calcular_metragem] Resultado final: {resultado}")

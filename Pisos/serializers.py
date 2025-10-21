@@ -181,6 +181,8 @@ class OrcamentopisosSerializer(BancoContextMixin, serializers.ModelSerializer):
                 item_data_clean["item_m2"] = item_data_clean.pop("area_m2")
             if "observacoes" in item_data_clean:
                 item_data_clean["item_obse"] = item_data_clean.pop("observacoes")
+            if "quebra" in item_data_clean:
+                item_data_clean["item_queb"] = item_data_clean.pop("quebra")
             # Mapear nome do produto corretamente (não confundir com nome do ambiente)
             if "produto_nome" in item_data_clean:
                 # Para orçamentos, não há campo item_prod_nome, então removemos para evitar erro
@@ -194,11 +196,19 @@ class OrcamentopisosSerializer(BancoContextMixin, serializers.ModelSerializer):
             if dados_calc:
                 if "caixas_necessarias" in dados_calc and "item_caix" not in item_data_clean:
                     item_data_clean["item_caix"] = dados_calc.get("caixas_necessarias")
-                if "m2_por_caixa" in dados_calc and "item_quan" not in item_data_clean:
+                
+                # USAR A MESMA LÓGICA DO SERVICE: priorizar peças antes de m2
+                if "item_quan" not in item_data_clean:
                     try:
-                        m2cx = float(dados_calc.get("m2_por_caixa") or 0)
                         caixas = float(item_data_clean.get("item_caix") or 0)
-                        item_data_clean["item_quan"] = m2cx * caixas
+                        # Priorizar peças (pc_por_caixa) antes de metros quadrados (m2_por_caixa)
+                        pc_por_caixa = float(dados_calc.get("pc_por_caixa") or 0)
+                        m2_por_caixa = float(dados_calc.get("m2_por_caixa") or 0)
+                        
+                        if pc_por_caixa > 0:
+                            item_data_clean["item_quan"] = pc_por_caixa * caixas
+                        elif m2_por_caixa > 0:
+                            item_data_clean["item_quan"] = m2_por_caixa * caixas
                     except Exception:
                         pass
 
@@ -206,7 +216,7 @@ class OrcamentopisosSerializer(BancoContextMixin, serializers.ModelSerializer):
             item_data_clean = {k: v for k, v in item_data_clean.items() if k in allowed_fields}
 
             # Quantizar campos decimais
-            for num_key in ["item_quan", "item_unit", "item_m2", "item_desc"]:
+            for num_key in ["item_quan", "item_unit", "item_m2", "item_desc", "item_queb"]:
                 if num_key in item_data_clean and item_data_clean[num_key] is not None:
                     qv = q2(item_data_clean[num_key])
                     if qv is not None:
@@ -217,6 +227,7 @@ class OrcamentopisosSerializer(BancoContextMixin, serializers.ModelSerializer):
                 item_quan = Decimal(str(item_data_clean.get("item_quan") or 0))
                 item_unit = Decimal(str(item_data_clean.get("item_unit") or 0))
                 item_subtotal = q2(item_quan * item_unit) or Decimal("0.00")
+                print(f"DEBUG SERIALIZER: item_quan={item_quan}, item_unit={item_unit}, item_subtotal={item_subtotal}")
             except Exception:
                 item_subtotal = Decimal("0.00")
 
@@ -238,7 +249,9 @@ class OrcamentopisosSerializer(BancoContextMixin, serializers.ModelSerializer):
             except Exception:
                 return None
         total_geral = sum((Decimal(str(getattr(item, 'item_suto', 0))) for item in itens_objs), Decimal('0.00'))
+        print(f"DEBUG SERIALIZER: total_geral={total_geral}")
         orcamento.orca_tota = q2(total_geral) or Decimal('0.00')
+        print(f"DEBUG SERIALIZER: orcamento.orca_tota={orcamento.orca_tota}")
         orcamento.save(using=banco)
 
         return orcamento
@@ -261,9 +274,9 @@ class OrcamentopisosSerializer(BancoContextMixin, serializers.ModelSerializer):
             itens_data = request.data.get('itens_input') or request.data.get('itens', [])
         
         if not itens_data:
-            raise ValidationError("Itens do pedido são obrigatórios.")
+            raise ValidationError("Itens do orçamento são obrigatórios.")
 
-        print(f"DEBUG: Processando pedido {instance.pedi_nume}")
+        print(f"DEBUG: Processando orçamento {instance.orca_nume}")
         print(f"DEBUG: Número de itens recebidos: {len(itens_data)}")
 
         # Calcular valores totais (robusto a None) usando Decimal e quantização
@@ -318,22 +331,43 @@ class OrcamentopisosSerializer(BancoContextMixin, serializers.ModelSerializer):
                 # Criar cópia dos dados do item para processamento
                 item_data_clean = item_data.copy()
                 
-                # Mapear campos específicos se necessário
-                if "produto_nome" in item_data_clean and "item_prod_nome" not in item_data_clean:
-                    item_data_clean["item_prod_nome"] = item_data_clean.pop("produto_nome")
-                if "item_nome" in item_data_clean and "item_nome_ambi" not in item_data_clean:
+                # Remover campos que serão definidos explicitamente
+                for k in ["item_suto", "item_empr", "item_fili", "item_orca", "item_nume"]:
+                    item_data_clean.pop(k, None)
+
+                # Mapear campos do frontend
+                if "area_m2" in item_data_clean:
+                    item_data_clean["item_m2"] = item_data_clean.pop("area_m2")
+                if "observacoes" in item_data_clean:
+                    item_data_clean["item_obse"] = item_data_clean.pop("observacoes")
+                if "quebra" in item_data_clean:
+                    item_data_clean["item_queb"] = item_data_clean.pop("quebra")
+                # Mapear nome do produto corretamente (não confundir com nome do ambiente)
+                if "produto_nome" in item_data_clean:
+                    # Para orçamentos, não há campo item_prod_nome, então removemos para evitar erro
+                    item_data_clean.pop("produto_nome", None)
+                if "item_nome" in item_data_clean:
+                    # Se vier item_nome, mapear para item_nome_ambi (nome do ambiente)
                     item_data_clean["item_nome_ambi"] = item_data_clean.pop("item_nome")
 
-                # Processar dados de cálculo do frontend (mesma lógica do create)
+                # Processar dados de cálculo do frontend
                 dados_calc = item_data_clean.pop("dados_calculo", None)
                 if dados_calc:
                     if "caixas_necessarias" in dados_calc and "item_caix" not in item_data_clean:
                         item_data_clean["item_caix"] = dados_calc.get("caixas_necessarias")
-                    if "m2_por_caixa" in dados_calc and "item_quan" not in item_data_clean:
+                    
+                    # USAR A MESMA LÓGICA DO SERVICE: priorizar peças antes de m2
+                    if "item_quan" not in item_data_clean:
                         try:
-                            m2cx = float(dados_calc.get("m2_por_caixa") or 0)
                             caixas = float(item_data_clean.get("item_caix") or 0)
-                            item_data_clean["item_quan"] = m2cx * caixas
+                            # Priorizar peças (pc_por_caixa) antes de metros quadrados (m2_por_caixa)
+                            pc_por_caixa = float(dados_calc.get("pc_por_caixa") or 0)
+                            m2_por_caixa = float(dados_calc.get("m2_por_caixa") or 0)
+                            
+                            if pc_por_caixa > 0:
+                                item_data_clean["item_quan"] = pc_por_caixa * caixas
+                            elif m2_por_caixa > 0:
+                                item_data_clean["item_quan"] = m2_por_caixa * caixas
                         except Exception:
                             pass
 
@@ -341,7 +375,7 @@ class OrcamentopisosSerializer(BancoContextMixin, serializers.ModelSerializer):
                 item_data_clean = {k: v for k, v in item_data_clean.items() if k in allowed_fields}
 
                 # Quantizar campos decimais
-                for num_key in ["item_quan", "item_unit", "item_m2", "item_desc"]:
+                for num_key in ["item_quan", "item_unit", "item_m2", "item_desc", "item_queb"]:
                     if num_key in item_data_clean and item_data_clean[num_key] is not None:
                         qv = q2(item_data_clean[num_key])
                         if qv is not None:
@@ -560,17 +594,28 @@ class PedidospisosSerializer(BancoContextMixin, serializers.ModelSerializer):
             if "item_nome" in item_data_clean:
                 # Se vier item_nome, mapear para item_nome_ambi (nome do ambiente)
                 item_data_clean["item_nome_ambi"] = item_data_clean.pop("item_nome")
+            if "quebra" in item_data_clean:
+                item_data_clean["item_queb"] = item_data_clean.pop("quebra")
+            
 
             # Se vier dados de cálculo do frontend, garantir coerência mínima
             dados_calc = item_data_clean.pop("dados_calculo", None)
             if dados_calc:
                 if "caixas_necessarias" in dados_calc and "item_caix" not in item_data_clean:
                     item_data_clean["item_caix"] = dados_calc.get("caixas_necessarias")
-                if "m2_por_caixa" in dados_calc and "item_quan" not in item_data_clean:
+                
+                # USAR A MESMA LÓGICA DO SERVICE: priorizar peças antes de m2
+                if "item_quan" not in item_data_clean:
                     try:
-                        m2cx = float(dados_calc.get("m2_por_caixa") or 0)
                         caixas = float(item_data_clean.get("item_caix") or 0)
-                        item_data_clean["item_quan"] = m2cx * caixas
+                        # Priorizar peças (pc_por_caixa) antes de metros quadrados (m2_por_caixa)
+                        pc_por_caixa = float(dados_calc.get("pc_por_caixa") or 0)
+                        m2_por_caixa = float(dados_calc.get("m2_por_caixa") or 0)
+                        
+                        if pc_por_caixa > 0:
+                            item_data_clean["item_quan"] = pc_por_caixa * caixas
+                        elif m2_por_caixa > 0:
+                            item_data_clean["item_quan"] = m2_por_caixa * caixas
                     except Exception:
                         pass
 
@@ -578,7 +623,7 @@ class PedidospisosSerializer(BancoContextMixin, serializers.ModelSerializer):
             item_data_clean = {k: v for k, v in item_data_clean.items() if k in allowed_fields}
 
             # Quantizar campos decimais para evitar erros de max_digits
-            for num_key in ["item_quan", "item_unit", "item_m2", "item_desc"]:
+            for num_key in ["item_quan", "item_unit", "item_m2", "item_desc", "item_queb"]:
                 if num_key in item_data_clean and item_data_clean[num_key] is not None:
                     qv = q2(item_data_clean[num_key])
                     if qv is not None:
@@ -646,6 +691,7 @@ class PedidospisosSerializer(BancoContextMixin, serializers.ModelSerializer):
         # Extrair desconto e frete do validated_data ou request.data
         desconto = Decimal('0.00')
         frete = Decimal('0.00')
+
         
         # Primeiro tentar do validated_data
         if 'pedi_desc' in validated_data:
@@ -660,6 +706,7 @@ class PedidospisosSerializer(BancoContextMixin, serializers.ModelSerializer):
             # Se não estiver no validated_data, tentar do request.data
             frete = q2(request.data.get('pedi_fret', 0)) or Decimal('0.00')
         
+        
         total = subtotal - desconto + frete
         print(f"DEBUG: Subtotal: {subtotal}, Desconto: {desconto}, Frete: {frete}, Total: {total}")
         
@@ -667,6 +714,7 @@ class PedidospisosSerializer(BancoContextMixin, serializers.ModelSerializer):
         validated_data['pedi_tota'] = q2(total)
         validated_data['pedi_desc'] = desconto
         validated_data['pedi_fret'] = frete
+        
 
 
 
@@ -721,6 +769,7 @@ class PedidospisosSerializer(BancoContextMixin, serializers.ModelSerializer):
                     item_unit=item_data.get('item_unit', 0),
                     item_desc=item_data.get('item_desc', 0),
                     item_obse=item_data.get('item_obse', ''),
+                    item_queb=item_data.get('quebra', item_data.get('item_queb', 0)),  # Campo quebra/perda
                     #item_comp=item_data.get('item_comp', 0),
                     #item_espe=item_data.get('item_espe', 0),
                     #item_metr=item_data.get('item_metr', 0)
