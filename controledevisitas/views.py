@@ -481,7 +481,7 @@ class ItensVisitaViewSet(BaseMultiDBModelViewSet):
             # Só gera orçamento de pisos se tiver itens de pisos E módulo liberado
             if tem_itens_pisos and tem_modulo_pisos:
                 # Gerar orçamento de pisos
-                orcamento = exportar_visita_para_orcamento_pisos(visita, banco)
+                orcamento = exportar_visita_para_orcamento_pisos(visita, banco, request)
                 tipo_orcamento = "pisos"
                 numero_orcamento = orcamento.orca_nume
                 valor_total = orcamento.orca_tota

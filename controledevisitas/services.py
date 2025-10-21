@@ -3,6 +3,7 @@ from Orcamentos.models import Orcamentos, ItensOrcamento
 from Pisos.models import Orcamentopisos, Itensorcapisos
 from django.db.models import Max
 from core.decorator import get_modulos_usuario_db
+from Pisos.services.utils_service import DadosEntidadesService
 
 def exportar_visita_para_orcamento(visita: Controlevisita, banco: str):
     """
@@ -69,7 +70,7 @@ def exportar_visita_para_orcamento(visita: Controlevisita, banco: str):
 
     return orc
 
-def exportar_visita_para_orcamento_pisos(visita: Controlevisita, banco: str):
+def exportar_visita_para_orcamento_pisos(visita: Controlevisita, banco: str, request=None):
     """
     Cria um orçamento de pisos a partir de uma visita e seus itens.
     """
@@ -101,6 +102,10 @@ def exportar_visita_para_orcamento_pisos(visita: Controlevisita, banco: str):
         orca_tota=0,
         orca_stat=0,  # Status inicial
     )
+
+    # Preencher dados da entidade se request foi fornecido
+    if request and visita.ctrl_cliente:
+        orc_pisos = DadosEntidadesService.preencher_dados_cliente(orc_pisos, request)
 
     # Criar itens do orçamento de pisos
     total = 0

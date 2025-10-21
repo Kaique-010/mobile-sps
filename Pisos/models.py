@@ -55,7 +55,7 @@ class Orcamentopisos(models.Model):
     orca_loja = models.IntegerField(blank=True, null=True)
     orca_obse_roma = models.CharField(max_length=500, blank=True, null=True)
     orca_fina = models.IntegerField(blank=True, null=True)
-    usua_desc_codi = models.IntegerField(blank=True, null=True)
+    #usua_desc_codi = models.IntegerField(blank=True, null=True)
     orca_loca = models.CharField(max_length=1, blank=True, null=True)
     orca_tipo_cont_piso = models.CharField(max_length=1, blank=True, null=True)
     orca_umid = models.BooleanField(blank=True, null=True)
