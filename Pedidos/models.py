@@ -6,6 +6,7 @@ TIPO_FINANCEIRO = [
     ('0', 'À VISTA'),
     ('1', 'A PRAZO'),
     ('2', 'SEM FINANCEIRO'),
+    ('3', 'NA EMISSÃO'),
 ]
 
 class PedidoVenda(models.Model):
@@ -28,6 +29,7 @@ class PedidoVenda(models.Model):
     ], default=0)
     pedi_obse = models.TextField(blank=True, null=True)
     pedi_desc = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    pedi_liqu = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
 
 
     class Meta:

@@ -60,7 +60,7 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
         model = PedidoVenda
         fields = [
             'pedi_empr', 'pedi_fili', 'pedi_data', 'pedi_tota', 'pedi_topr', 'pedi_forn',
-            'itens', 'itens_input', 'parametros','pedi_desc','pedi_obse',
+            'itens', 'itens_input', 'parametros','pedi_desc','pedi_obse','pedi_fina','pedi_liqu',
             'valor_total', 'valor_subtotal', 'valor_desconto', 'cliente_nome', 'empresa_nome', 'pedi_nume', 'pedi_stat', 'pedi_vend',
             'gerar_titulos', 'financeiro_titulos'
         ]
@@ -116,11 +116,16 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
             desconto_total=validated_data.get('pedi_desc'),
             desconto_percentual=parametros.get('desconto_percentual')
         )
-        
+        liquido = valores['total'] - valores['desconto']
         # Atualizar valores calculados
         validated_data['pedi_topr'] = valores['subtotal']  # Subtotal
         validated_data['pedi_desc'] = valores['desconto']  # Desconto
         validated_data['pedi_tota'] = valores['total']     # Total
+        validated_data['pedi_liqu'] = liquido    # Liquido
+        validated_data['pedi_fina'] = validated_data.get('pedi_fina', '0')  # Financeiro padrão
+        print(f"🆕 [PEDIDO] Valor total: {validated_data['pedi_tota']}")
+        print(f"🆕 [PEDIDO] Valor liquido: {validated_data['pedi_liqu']}")
+        print(f"🆕 [PEDIDO] Financeiro: {validated_data['pedi_fina']}")
 
         pedidos_existente = None
         if 'pedi_nume' in validated_data:
@@ -307,11 +312,16 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
             desconto_total=validated_data.get('pedi_desc'),
             desconto_percentual=parametros.get('desconto_percentual')
         )
-        
+        liquido = valores['total'] - valores['desconto']
         # Atualizar valores calculados
         validated_data['pedi_topr'] = valores['subtotal']  # Subtotal
         validated_data['pedi_desc'] = valores['desconto']  # Desconto
         validated_data['pedi_tota'] = valores['total']     # Total
+        validated_data['pedi_liqu'] = liquido    # Liquido
+        validated_data['pedi_fina'] = validated_data.get('pedi_fina', '0')  # Financeiro padrão
+        print(f"🆕 [PEDIDO] Valor total: {validated_data['pedi_tota']}")
+        print(f"🆕 [PEDIDO] Valor liquido: {validated_data['pedi_liqu']}")
+        print(f"🆕 [PEDIDO] Financeiro: {validated_data['pedi_fina']}")
 
         # Atualiza campos do pedido
         for attr, value in validated_data.items():

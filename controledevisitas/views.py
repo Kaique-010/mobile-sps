@@ -56,7 +56,7 @@ class ControleVisitaViewSet(BancoContextMixin, ModuloRequeridoMixin, VendedorEnt
         'ctrl_obse'
     ]
     ordering_fields = ['ctrl_data', 'ctrl_numero', 'ctrl_cliente']
-    ordering = ['-ctrl_data', 'ctrl_numero']
+    ordering = ['-ctrl_data', '-ctrl_numero']
     lookup_field = 'ctrl_id'
 
 
@@ -135,7 +135,7 @@ class ControleVisitaViewSet(BancoContextMixin, ModuloRequeridoMixin, VendedorEnt
         queryset = queryset.distinct()
         print(f"📊 DEBUG: Total após distinct(): {queryset.count()}")
         
-        return queryset.order_by('-ctrl_numero', 'ctrl_data')
+        return queryset.order_by('ctrl_numero')
 
 
 
@@ -318,8 +318,6 @@ class ControleVisitaViewSet(BancoContextMixin, ModuloRequeridoMixin, VendedorEnt
             
             # Ordenar por data da próxima visita
             queryset = queryset.order_by('ctrl_prox_visi')
-            
-            # Limitar a 50 próximas visitas para performance
             limit = int(request.query_params.get('limit', 1000))
             queryset = queryset[:limit]
             
