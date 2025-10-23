@@ -176,6 +176,18 @@
       "database": "savexml1024",
       "username": "savexml1024",
       "password": "kllllnnnnnnn"
+    },
+    {
+      "ssh": "Disabled",
+      "previewLimit": 50,
+      "server": "base.rtalmeida.com.br",
+      "port": 5432,
+      "askForPassword": true,
+      "driver": "PostgreSQL",
+      "name": "floresta",
+      "database": "savexml1023",
+      "username": "savexml1023"
     }
-  ]
+  ],
+  "liveServer.settings.port": 5501
 }

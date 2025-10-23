@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from .models import Propriedades
+from .models import Propriedades, DashboardCentroCustoAnual
 from core.serializers import BancoContextMixin
 from Licencas.models import Empresas
 from .utils import get_next_prop_number
@@ -52,3 +52,20 @@ class PropriedadesSerializer(BancoContextMixin, serializers.ModelSerializer):
             )
         
         return Propriedades.objects.using(banco).create(**validated_data)
+
+
+
+class DashboardCentroCustoAnualSerializer(serializers.ModelSerializer):
+    filhos = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DashboardCentroCustoAnual
+        fields = [
+            "codigo", "expandido", "nivel", "nome", "tipo",
+            "orcado", "realizado", "diferenca", "perc_execucao",
+            "tem_filhos", "codigo_pai", "filhos"
+        ]
+
+    def get_filhos(self, obj):
+        # Populado no service (não recursivo aqui)
+        return obj.__dict__.get("filhos", [])

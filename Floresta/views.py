@@ -55,3 +55,30 @@ class PropriedadesViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         logger.info(f"🗑️ Exclusão da propriedade concluída")
         
         return response
+
+
+
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from .services.dashboard_service import DashboardService
+
+@api_view(["GET"])
+def fluxo_gerencial(request, slug=None):
+    """
+    Retorna o dashboard de centro de custo anual com estrutura hierárquica.
+    """
+    arvore = DashboardService.montar_arvore()
+    flat = list(DashboardService._flatten(arvore))
+
+    orcado_total = sum(float(i["orcado"] or 0) for i in flat)
+    realizado_total = sum(float(i["realizado"] or 0) for i in flat)
+    diferenca_total = realizado_total - orcado_total
+    perc_execucao_total = round((realizado_total / orcado_total * 100), 1) if orcado_total else 0
+
+    return Response({
+        "orcado_total": orcado_total,
+        "realizado_total": realizado_total,
+        "diferenca_total": diferenca_total,
+        "perc_execucao_total": perc_execucao_total,
+        "centros_custo": arvore
+    })

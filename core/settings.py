@@ -230,8 +230,8 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
-    'PAGE_SIZE': 25,  # Otimizado para performance
-    'MAX_PAGE_SIZE': 100,
+    'PAGE_SIZE': 100,  # Otimizado para performance
+    'MAX_PAGE_SIZE': 250,
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 

@@ -20,3 +20,23 @@ class Propriedades(models.Model):
 
     def __str__(self):
         return f"{self.prop_nome or f'Propriedade {self.prop_codi}'}"
+
+
+class DashboardCentroCustoAnual(models.Model):
+    codigo = models.CharField(max_length=20, primary_key=True)
+    expandido = models.CharField(max_length=50)
+    nivel = models.IntegerField()
+    nome = models.CharField(max_length=150)
+    tipo = models.CharField(max_length=1)
+    orcado = models.DecimalField(max_digits=15, decimal_places=2)
+    realizado = models.DecimalField(max_digits=15, decimal_places=2)
+    diferenca = models.DecimalField(max_digits=15, decimal_places=2)
+    perc_execucao = models.DecimalField(max_digits=6, decimal_places=2)
+    tem_filhos = models.BooleanField()
+    codigo_pai = models.CharField(max_length=50, null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = 'dashboardcentrocustoanual'
+        verbose_name = "Dashboard Centro de Custo (Anual)"
+        verbose_name_plural = "Dashboard Centros de Custo (Anual)"
