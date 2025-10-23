@@ -150,7 +150,7 @@ class Pedidospisos(models.Model):
     pedi_comi_arqu = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
     pedi_obse_roma = models.CharField(max_length=500, blank=True, null=True)
     pedi_fina = models.IntegerField(blank=True, null=True)
-    usua_desc_codi = models.IntegerField(blank=True, null=True)
+    #usua_desc_codi = models.IntegerField(blank=True, null=True)
     pedi_forn = models.IntegerField(blank=True, null=True)
     pedi_loca = models.CharField(max_length=1, blank=True, null=True)
     pedi_tipo_cont_piso = models.CharField(max_length=1, blank=True, null=True)

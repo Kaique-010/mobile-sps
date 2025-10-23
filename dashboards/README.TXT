@@ -188,3 +188,8 @@ GET
    FROM recebimentos r
      FULL JOIN pagamentos p ON r.cecu_redu = p.cecu_redu AND r.mes_num = p.mes_num AND r.empr = p.empr AND r.fili = p.fili
   ORDER BY (COALESCE(r.mes_ordem, p.mes_ordem)))
+
+
+
+  
+  
