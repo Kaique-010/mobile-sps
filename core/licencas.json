@@ -114,5 +114,12 @@
     "db_name": "savexml1024",
     "db_host": "base.rtalmeida.com.br",
     "db_port": "5432"
+  },
+   {
+    "slug": "florestabrasil",
+    "cnpj": "11472996000154",
+    "db_name": "savexml1023",
+    "db_host": "base.rtalmeida.com.br",
+    "db_port": "5432"
   }
 ]

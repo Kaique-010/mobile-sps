@@ -68,6 +68,8 @@ class ItensListaCasamentoViewSet(ModuloRequeridoMixin, ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['item_empr', 'item_fili']
+    ordering_fields = ['-item_item']
+    ordering = ['-item_item']
 
     def get_queryset(self):
         banco = get_licenca_db_config(self.request)
@@ -91,7 +93,7 @@ class ItensListaCasamentoViewSet(ModuloRequeridoMixin, ModelViewSet):
 
         logger.info(f"Parâmetros recebidos: item_empr={item_empr}, item_fili={item_fili}, item_list={item_list}")
         logger.info(f"Queryset filtrado: {queryset.query}")
-        return queryset.order_by('item_item')
+        return queryset.order_by('-item_item')
 
     def get_object(self):
         banco = get_licenca_db_config(self.request)

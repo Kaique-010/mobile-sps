@@ -67,13 +67,24 @@ def fluxo_gerencial(request, slug=None):
     """
     Retorna o dashboard de centro de custo anual com estrutura hierárquica.
     """
-    arvore = DashboardService.montar_arvore()
+    # Obter configuração do banco baseada no slug
+    banco = get_licenca_db_config(request)
+    print("banco:", banco)
+    if not banco:
+        logger.error("Banco de dados não encontrado.")
+        raise NotFound("Banco de dados não encontrado.")
+    
+    arvore = DashboardService.montar_arvore(banco)
     flat = list(DashboardService._flatten(arvore))
 
     orcado_total = sum(float(i["orcado"] or 0) for i in flat)
+    print("orcado_total:", orcado_total)
     realizado_total = sum(float(i["realizado"] or 0) for i in flat)
+    print("realizado_total:", realizado_total)
     diferenca_total = realizado_total - orcado_total
+    print("diferenca_total:", diferenca_total)
     perc_execucao_total = round((realizado_total / orcado_total * 100), 1) if orcado_total else 0
+    print("perc_execucao_total:", perc_execucao_total)
 
     return Response({
         "orcado_total": orcado_total,

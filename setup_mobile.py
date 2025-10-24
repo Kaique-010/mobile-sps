@@ -141,7 +141,7 @@ CREATE TABLE IF NOT EXISTS parametrosmobile (
     item_queb NUMERIC(5,2) DEFAULT 10,
     item_caix INTEGER,
     item_tipo_calculo VARCHAR(10) DEFAULT 'normal' CHECK (item_tipo_calculo IN ('normal', 'pisos')),
-    CONSTRAINT itensvisita_unique UNIQUE (item_empr, item_fili, item_visita, item_prod)
+    CONSTRAINT itensvisita_unique UNIQUE (item_empr, item_fili, item_visita_id, item_prod)
 );
 
 --Criar a tabela de Auditoria 
