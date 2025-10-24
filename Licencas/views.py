@@ -1,6 +1,7 @@
 from Licencas.utils import atualizar_senha
 from pprint import pprint
 from rest_framework.views import APIView
+from rest_framework import viewsets, status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -8,13 +9,14 @@ from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 from Licencas.models import Empresas, Filiais, Licencas, Usuarios
-from Licencas.serializers import EmpresaSerializer, FilialSerializer
+from Licencas.serializers import EmpresaSerializer, FilialSerializer, UsuarioSerializer
 from parametros_admin.models import PermissaoModulo, Modulo
 from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from django.contrib.auth.hashers import check_password
 from core.middleware import get_licenca_slug
 from core.registry import LICENCAS_MAP, get_licenca_db_config, get_modulos_por_docu
 from parametros_admin.utils import  get_modulos_globais, get_codigos_modulos_liberados
+from Licencas.permissions import UsuariosPermission
 import time
 import logging
 
@@ -223,3 +225,22 @@ def licencas_mapa(request, slug=None):
     # Retorna as licenças públicas sem depender de slug
     from core.licenca_context import LICENCAS_MAP
     return Response(LICENCAS_MAP)
+
+
+class UsuariosViewSet(viewsets.ModelViewSet):
+    queryset = Usuarios.objects.all()
+    serializer_class = UsuarioSerializer
+    permission_classes = [IsAuthenticated, UsuariosPermission]
+    ordering_fields = ['usua_codi']
+
+    def get_queryset(self):
+        banco = get_licenca_db_config(self.request)
+        return Usuarios.objects.using(banco).all().order_by('usua_codi')
+    
+    def create(self, request, slug=None):
+        banco = get_licenca_db_config(request)
+        serializer = UsuarioSerializer(data=request.data, context={'banco': banco})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

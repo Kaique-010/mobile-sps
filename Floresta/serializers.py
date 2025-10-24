@@ -61,11 +61,10 @@ class DashboardCentroCustoAnualSerializer(serializers.ModelSerializer):
     class Meta:
         model = DashboardCentroCustoAnual
         fields = [
-            "codigo", "expandido", "nivel", "nome", "tipo",
-            "orcado", "realizado", "diferenca", "perc_execucao",
-            "tem_filhos", "codigo_pai", "filhos"
+            "codigo", "expandido", "grupo", "nivel", "nome", "tipo",
+            "mes", "mes_num", "orcado", "realizado", "diferenca",
+            "perc_execucao", "tem_filhos", "codigo_pai", "filhos"
         ]
 
     def get_filhos(self, obj):
-        # Populado no service (não recursivo aqui)
         return obj.__dict__.get("filhos", [])

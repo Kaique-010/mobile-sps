@@ -3,6 +3,8 @@ from django.contrib.auth.hashers import make_password
 from core.middleware import get_licenca_slug
 from core.registry import get_licenca_db_config
 from django.http import HttpRequest
+from .models import Usuarios
+from django.db.models import Max
 
 def atualizar_senha(username, nova_senha, request=None):
 
@@ -36,3 +38,10 @@ def atualizar_senha(username, nova_senha, request=None):
     except Exception as e:
         print(f"Erro ao atualizar a senha do usuário {username}: {e}")
         raise e
+
+
+def get_proximo_usuario(banco):
+    """Gera próximo número de usuário"""
+    maior = Usuarios.objects.using(banco).aggregate(Max('usua_codi'))['usua_codi__max'] or 0
+    print(f"Maior usuário encontrado: {maior}")
+    return maior + 1

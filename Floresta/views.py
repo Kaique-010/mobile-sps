@@ -57,39 +57,47 @@ class PropriedadesViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         return response
 
 
-
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework.exceptions import NotFound
+from core.utils import get_licenca_db_config
 from .services.dashboard_service import DashboardService
+from .serializers import DashboardCentroCustoAnualSerializer
+
+
 
 @api_view(["GET"])
 def fluxo_gerencial(request, slug=None):
-    """
-    Retorna o dashboard de centro de custo anual com estrutura hierárquica.
-    """
-    # Obter configuração do banco baseada no slug
     banco = get_licenca_db_config(request)
-    print("banco:", banco)
     if not banco:
-        logger.error("Banco de dados não encontrado.")
-        raise NotFound("Banco de dados não encontrado.")
-    
-    arvore = DashboardService.montar_arvore(banco)
+        raise NotFound("Banco não encontrado")
+
+    mes_ini = request.GET.get("mes_ini")
+    mes_fim = request.GET.get("mes_fim")
+    nivel = request.GET.get("nivel")
+    tipo = request.GET.get("tipo")
+    busca = request.GET.get("busca")
+
+    arvore = DashboardService.montar_arvore(
+        banco, 
+        mes_ini=mes_ini, 
+        mes_fim=mes_fim,
+        nivel=nivel,
+        tipo=tipo,
+        busca=busca
+    )
     flat = list(DashboardService._flatten(arvore))
 
     orcado_total = sum(float(i["orcado"] or 0) for i in flat)
-    print("orcado_total:", orcado_total)
     realizado_total = sum(float(i["realizado"] or 0) for i in flat)
-    print("realizado_total:", realizado_total)
     diferenca_total = realizado_total - orcado_total
-    print("diferenca_total:", diferenca_total)
     perc_execucao_total = round((realizado_total / orcado_total * 100), 1) if orcado_total else 0
-    print("perc_execucao_total:", perc_execucao_total)
 
+    serializer = DashboardCentroCustoAnualSerializer(arvore, many=True)
     return Response({
         "orcado_total": orcado_total,
         "realizado_total": realizado_total,
         "diferenca_total": diferenca_total,
         "perc_execucao_total": perc_execucao_total,
-        "centros_custo": arvore
+        "centros_custo": serializer.data
     })

@@ -25,9 +25,12 @@ class Propriedades(models.Model):
 class DashboardCentroCustoAnual(models.Model):
     codigo = models.CharField(max_length=20, primary_key=True)
     expandido = models.CharField(max_length=50)
+    grupo = models.CharField(max_length=50)
     nivel = models.IntegerField()
     nome = models.CharField(max_length=150)
     tipo = models.CharField(max_length=1)
+    mes = models.CharField(max_length=50)
+    mes_num = models.IntegerField()
     orcado = models.DecimalField(max_digits=15, decimal_places=2)
     realizado = models.DecimalField(max_digits=15, decimal_places=2)
     diferenca = models.DecimalField(max_digits=15, decimal_places=2)
