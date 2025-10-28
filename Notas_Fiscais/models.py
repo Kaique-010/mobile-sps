@@ -131,10 +131,10 @@ class NotaFiscal(models.Model):
     # --- Campos de Controle do Sistema ---
     empresa = models.IntegerField(blank=True, null=True)
     filial = models.IntegerField(blank=True, null=True)
-    cliente = models.IntegerField(blank=True, null=True) # ForeignKey para Cliente seria ideal
-    vendedor = models.IntegerField(blank=True, null=True) # ForeignKey para Vendedor seria ideal
-    transportadora = models.IntegerField(blank=True, null=True) # ForeignKey para Transportadora seria ideal
-    usuario = models.IntegerField(blank=True, null=True) # ForeignKey para User seria ideal
+    cliente = models.IntegerField(blank=True, null=True) 
+    vendedor = models.IntegerField(blank=True, null=True)
+    transportadora = models.IntegerField(blank=True, null=True) 
+    usuario = models.IntegerField(blank=True, null=True)
     
     # --- Status e XMLs ---
     xml_nfe = models.TextField(blank=True, null=True)

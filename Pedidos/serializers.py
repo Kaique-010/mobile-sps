@@ -59,7 +59,7 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
     class Meta:
         model = PedidoVenda
         fields = [
-            'pedi_empr', 'pedi_fili', 'pedi_data', 'pedi_tota', 'pedi_topr', 'pedi_forn',
+            'pedi_empr', 'pedi_fili', 'pedi_data', 'pedi_tota', 'pedi_topr', 'pedi_forn','pedi_form_rece',
             'itens', 'itens_input', 'parametros','pedi_desc','pedi_obse','pedi_fina','pedi_liqu',
             'valor_total', 'valor_subtotal', 'valor_desconto', 'cliente_nome', 'empresa_nome', 'pedi_nume', 'pedi_stat', 'pedi_vend',
             'gerar_titulos', 'financeiro_titulos'
@@ -123,9 +123,23 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
         validated_data['pedi_tota'] = valores['total']     # Total
         validated_data['pedi_liqu'] = liquido    # Liquido
         validated_data['pedi_fina'] = validated_data.get('pedi_fina', '0')  # Financeiro padrão
+        
+        # DEBUG: Log do valor recebido do frontend
+        print(f"🔍 [DEBUG] pedi_form_rece no validated_data: {validated_data.get('pedi_form_rece')}")
+        print(f"🔍 [DEBUG] 'pedi_form_rece' in validated_data: {'pedi_form_rece' in validated_data}")
+        print(f"🔍 [DEBUG] validated_data['pedi_form_rece'] is None: {validated_data.get('pedi_form_rece') is None}")
+        
+        # Só define o valor padrão se não foi enviado pelo frontend
+        if 'pedi_form_rece' not in validated_data or validated_data['pedi_form_rece'] is None:
+            print(f"🔍 [DEBUG] Definindo pedi_form_rece como '54' (valor padrão)")
+            validated_data['pedi_form_rece'] = '54'
+        else:
+            print(f"🔍 [DEBUG] Mantendo pedi_form_rece como: {validated_data['pedi_form_rece']}")
+            
         print(f"🆕 [PEDIDO] Valor total: {validated_data['pedi_tota']}")
         print(f"🆕 [PEDIDO] Valor liquido: {validated_data['pedi_liqu']}")
         print(f"🆕 [PEDIDO] Financeiro: {validated_data['pedi_fina']}")
+        print(f"🆕 [PEDIDO] Forma recebimento FINAL: {validated_data['pedi_form_rece']}")
 
         pedidos_existente = None
         if 'pedi_nume' in validated_data:
@@ -319,9 +333,23 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
         validated_data['pedi_tota'] = valores['total']     # Total
         validated_data['pedi_liqu'] = liquido    # Liquido
         validated_data['pedi_fina'] = validated_data.get('pedi_fina', '0')  # Financeiro padrão
+        
+        # DEBUG: Log do valor recebido do frontend
+        print(f"🔍 [DEBUG UPDATE] pedi_form_rece no validated_data: {validated_data.get('pedi_form_rece')}")
+        print(f"🔍 [DEBUG UPDATE] 'pedi_form_rece' in validated_data: {'pedi_form_rece' in validated_data}")
+        print(f"🔍 [DEBUG UPDATE] validated_data['pedi_form_rece'] is None: {validated_data.get('pedi_form_rece') is None}")
+        
+        # Só define o valor padrão se não foi enviado pelo frontend
+        if 'pedi_form_rece' not in validated_data or validated_data['pedi_form_rece'] is None:
+            print(f"🔍 [DEBUG UPDATE] Definindo pedi_form_rece como '54' (valor padrão)")
+            validated_data['pedi_form_rece'] = '54'
+        else:
+            print(f"🔍 [DEBUG UPDATE] Mantendo pedi_form_rece como: {validated_data['pedi_form_rece']}")
+            
         print(f"🆕 [PEDIDO] Valor total: {validated_data['pedi_tota']}")
         print(f"🆕 [PEDIDO] Valor liquido: {validated_data['pedi_liqu']}")
         print(f"🆕 [PEDIDO] Financeiro: {validated_data['pedi_fina']}")
+        print(f"🆕 [PEDIDO UPDATE] Forma recebimento FINAL: {validated_data['pedi_form_rece']}")
 
         # Atualiza campos do pedido
         for attr, value in validated_data.items():

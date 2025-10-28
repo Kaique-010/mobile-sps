@@ -11,6 +11,8 @@ from pynfe.entidades.emitente import Emitente
 from pynfe.entidades.notafiscal import NotaFiscal as NFePyNFe
 from pynfe.entidades.fonte_dados import _fonte_dados
 from pynfe.utils.flags import CODIGO_BRASIL
+from Licencas.models import Filiais
+from Entidades.models import Entidades
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +49,31 @@ class EmissaoNFeService:
             logger.error(f"Erro ao verificar status do serviço: {e}")
             raise
     
+    def criar_emitente_from_filial(self, filial):
+        """Cria objeto emitente para PyNFe a partir do modelo Filiais"""
+        emitente = Emitente(
+            razao_social=filial.empr_nome,
+            nome_fantasia=filial.empr_nome,  # Usando o mesmo nome como fantasia
+            cnpj=filial.empr_docu,
+            codigo_de_regime_tributario=filial.empr_regi_trib or '1',
+            inscricao_estadual=filial.empr_insc_esta or '',
+            inscricao_municipal=filial.empr_insc_muni or '',
+            cnae_fiscal=filial.empr_cnae or '',
+            endereco_logradouro=filial.empr_ende or '',
+            endereco_numero=filial.empr_nume or '',
+            endereco_complemento=filial.empr_comp or '',
+            endereco_bairro=filial.empr_bair or '',
+            endereco_municipio=filial.empr_cida or '',
+            endereco_uf=filial.empr_esta or '',
+            endereco_cep=filial.empr_cep or '',
+            endereco_pais=CODIGO_BRASIL,
+            telefone=filial.empr_fone or '',
+            email=filial.empr_emai or ''
+        )
+        return emitente
+    
     def criar_emitente(self, dados_emitente):
-        """Cria objeto emitente para PyNFe"""
+        """Cria objeto emitente para PyNFe (método legado)"""
         emitente = Emitente(
             razao_social=dados_emitente['razao_social'],
             nome_fantasia=dados_emitente.get('nome_fantasia', ''),
@@ -70,8 +95,32 @@ class EmissaoNFeService:
         )
         return emitente
     
+    def criar_cliente_from_entidade(self, entidade):
+        """Cria objeto cliente/destinatário para PyNFe a partir do modelo Entidades"""
+        # Determinar tipo de documento
+        tipo_documento = 'CNPJ' if entidade.enti_cnpj else 'CPF'
+        numero_documento = entidade.enti_cnpj or entidade.enti_cpf
+        
+        cliente = Cliente(
+            razao_social=entidade.enti_nome,
+            tipo_documento=tipo_documento,
+            email=entidade.enti_emai or '',
+            numero_documento=numero_documento,
+            inscricao_estadual=entidade.enti_insc_esta or '',
+            endereco_logradouro=entidade.enti_ende,
+            endereco_numero=entidade.enti_nume,
+            endereco_complemento=entidade.enti_comp or '',
+            endereco_bairro='',  # Campo não existe no modelo Entidades
+            endereco_municipio=entidade.enti_cida,
+            endereco_uf=entidade.enti_esta,
+            endereco_cep=entidade.enti_cep,
+            endereco_pais=CODIGO_BRASIL,
+            telefone=entidade.enti_fone or ''
+        )
+        return cliente
+    
     def criar_cliente(self, dados_cliente):
-        """Cria objeto cliente/destinatário para PyNFe"""
+        """Cria objeto cliente/destinatário para PyNFe (método legado)"""
         cliente = Cliente(
             razao_social=dados_cliente['razao_social'],
             tipo_documento='CNPJ' if dados_cliente.get('cnpj') else 'CPF',
@@ -146,8 +195,70 @@ class EmissaoNFeService:
             logger.error(f"Erro ao criar NFe: {e}")
             raise
     
+    def emitir_nfe_com_modelos(self, dados_nfe, filial_id, entidade_id, itens):
+        """Emite uma NFe usando os modelos Django Filiais e Entidades"""
+        try:
+            logger.info(f"Iniciando emissão da NFe número: {dados_nfe['numero']} usando modelos Django")
+            
+            # Buscar filial (emitente)
+            try:
+                filial = Filiais.objects.get(empr_empr=filial_id)
+            except Filiais.DoesNotExist:
+                raise ValueError(f"Filial com ID {filial_id} não encontrada")
+            
+            # Buscar entidade (destinatário)
+            try:
+                entidade = Entidades.objects.get(enti_clie=entidade_id)
+            except Entidades.DoesNotExist:
+                raise ValueError(f"Entidade com ID {entidade_id} não encontrada")
+            
+            # Verificar status do serviço
+            self.verificar_status_servico()
+            
+            # Criar objetos usando os modelos Django
+            emitente = self.criar_emitente_from_filial(filial)
+            cliente = self.criar_cliente_from_entidade(entidade)
+            nfe = self.criar_nfe(dados_nfe, emitente, cliente, itens)
+            
+            # Processar NFe
+            com = self._inicializar_comunicacao()
+            
+            # Assinar e enviar
+            processo_nfe = com.autorizar('nfe', nfe)
+            
+            if processo_nfe.resposta.cStat == '100':  # Autorizada
+                logger.info(f"NFe {dados_nfe['numero']} autorizada com sucesso")
+                return {
+                    'sucesso': True,
+                    'chave_acesso': processo_nfe.resposta.chNFe,
+                    'protocolo': processo_nfe.resposta.nProt,
+                    'xml_autorizado': processo_nfe.resposta.xml,
+                    'data_autorizacao': processo_nfe.resposta.dhRecbto,
+                    'status': processo_nfe.resposta.cStat,
+                    'motivo': processo_nfe.resposta.xMotivo,
+                    'filial': filial.empr_nome,
+                    'destinatario': entidade.enti_nome
+                }
+            else:
+                logger.error(f"Erro na autorização da NFe: {processo_nfe.resposta.xMotivo}")
+                return {
+                    'sucesso': False,
+                    'status': processo_nfe.resposta.cStat,
+                    'motivo': processo_nfe.resposta.xMotivo,
+                    'xml_envio': processo_nfe.xml,
+                    'filial': filial.empr_nome,
+                    'destinatario': entidade.enti_nome
+                }
+                
+        except Exception as e:
+            logger.error(f"Erro ao emitir NFe com modelos Django: {e}")
+            return {
+                'sucesso': False,
+                'erro': str(e)
+            }
+    
     def emitir_nfe(self, dados_nfe, dados_emitente, dados_cliente, itens):
-        """Emite uma NFe completa"""
+        """Emite uma NFe completa (método legado)"""
         try:
             logger.info(f"Iniciando emissão da NFe número: {dados_nfe['numero']}")
             

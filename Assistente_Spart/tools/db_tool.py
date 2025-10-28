@@ -1,4 +1,5 @@
 from langchain_core.tools import tool
+import Entidades
 from Produtos.models import Produtos, SaldoProduto, UnidadeMedida
 from core.utils import get_db_from_slug
 from core.middleware import get_licenca_slug
@@ -225,3 +226,5 @@ def consultar_saldo(produto_codigo: str, banco: str = "default",
         return f"Nenhum saldo encontrado no banco {real_banco} para {produto.prod_nome} (emp {empresa_id}, fil {filial_id})."
 
     return f"Saldo de {produto.prod_nome} (cód {produto_codigo}) no banco {real_banco}: {saldo.saldo_estoque}"
+
+

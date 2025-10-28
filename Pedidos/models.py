@@ -1,6 +1,20 @@
 # models.py
 from django.db import models
 
+FORMAS_RECEBIMENTO = [
+   ('00', 'DUPLICATA'),
+   ('01', 'CHEQUE'),
+   ('02', 'PROMISSÓRIA'),
+   ('03', 'RECIBO'),
+   ('50', 'CHEQUE PRÉ'),
+   ('51', 'CARTÃO DE CRÉDITO'),
+   ('52', 'CARTÃO DE DÉBITO'),
+   ('53', 'BOLETO BANCÁRIO'),
+   ('54', 'DINHEIRO'),
+   ('55', 'DEPÓSITO EM CONTA'),
+   ('56', 'VENDA À VISTA'),
+   ('60', 'PIX'),
+]
 
 TIPO_FINANCEIRO = [
     ('0', 'À VISTA'),
@@ -9,24 +23,27 @@ TIPO_FINANCEIRO = [
     ('3', 'NA EMISSÃO'),
 ]
 
+STATUS_PEDIDO = [
+    (0, 'Pendente'),
+    (1, 'Processando'),
+    (2, 'Enviado'),
+    (3, 'Concluído'),
+    (4, 'Cancelado'),
+]
+
 class PedidoVenda(models.Model):
     pedi_empr = models.IntegerField()
     pedi_fili = models.IntegerField()
     pedi_nume = models.IntegerField(primary_key=True)
     pedi_forn = models.CharField(db_column='pedi_forn',max_length=60)
     pedi_data = models.DateField()
-    pedi_topr = models.DecimalField(db_column='pedi_topr', max_digits=15, decimal_places=2, blank=True, null=True)  # Subtotal
+    pedi_topr = models.DecimalField(db_column='pedi_topr', max_digits=15, decimal_places=2, blank=True, null=True)
     pedi_tota = models.DecimalField(decimal_places=2, max_digits=15)
     pedi_canc = models.BooleanField(default=False)
     pedi_fina = models.CharField(max_length=100, choices=TIPO_FINANCEIRO, default='0')
     pedi_vend = models.CharField( db_column='pedi_vend', max_length=15, default=0)  
-    pedi_stat = models.CharField(max_length=50, choices=[
-        (0, 'Pendente'),
-        (1, 'Processando'),
-        (2, 'Enviado'),
-        (3, 'Concluído'),
-        (4, 'Cancelado'),
-    ], default=0)
+    pedi_stat = models.CharField(max_length=50, choices=STATUS_PEDIDO, default=0)
+    pedi_form_rece = models.CharField(max_length=100, choices=FORMAS_RECEBIMENTO, default='54')
     pedi_obse = models.TextField(blank=True, null=True)
     pedi_desc = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
     pedi_liqu = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)

@@ -134,6 +134,8 @@ class NotaFiscalSerializer(BancoContextMixin, serializers.ModelSerializer):
             return "Pendente"
 
 
+
+
 class NotaFiscalListSerializer(BancoContextMixin, serializers.ModelSerializer):
     """Serializer simplificado para listagem de notas fiscais"""
     numero_completo = serializers.SerializerMethodField()

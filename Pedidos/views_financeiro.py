@@ -20,7 +20,7 @@ class GerarTitulosPedidoView(APIView):
         pedi_nume = data.get("pedi_nume")
         pedi_forn = data.get("pedi_forn")  # Cliente do pedido
         pedi_tota = Decimal(data.get("pedi_tota", 0))
-        forma_pagamento = data.get("forma_pagamento")
+        forma_pagamento = data.get("pedi_form_rece")
         parcelas = int(data.get("parcelas", 1))
         data_base = data.get("data_base", datetime.now().date().isoformat())
         
@@ -66,7 +66,7 @@ class GerarTitulosPedidoView(APIView):
                 titu_port="0",
                 titu_even="0",
                 titu_prov = True,
-                titu_tipo= "RECEBER"
+                titu_tipo= "Receber"
 
             ))
 
