@@ -92,13 +92,14 @@ class WorkflowPermission(BasePermission):
         return request.user and request.user.is_authenticated
 
 
+#Permissão para criar com e editar ordens de serviço com esses usuários apenas 
 class OrdemServicoPermission(BasePermission):
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
 
         usuario = getattr(request.user, "usua_nome", None)
-        if usuario in ["admin", "mobile"]:
+        if usuario in ["admin", "mobile", "lucas1", "recebimento2"]:
             return True
         return request.method in SAFE_METHODS
     

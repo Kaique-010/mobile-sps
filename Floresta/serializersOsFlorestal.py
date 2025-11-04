@@ -1,0 +1,449 @@
+import base64
+import logging
+from django.db.models import Max
+from django.db import transaction,IntegrityError
+from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+from Entidades.models import Entidades
+from contas_a_receber.models import Titulosreceber
+from core.serializers import BancoContextMixin
+from .models import (
+    Osflorestal, Osflorestalpecas, Osflorestalservicos
+)
+from datetime import datetime
+import re
+
+logger = logging.getLogger(__name__)
+
+
+def validar_formato_data(data_str):
+    """
+    Valida se uma string de data está em formato válido
+    Retorna True se válida, False caso contrário
+    """
+    if not data_str:
+        return True  # Campos de data podem ser nulos
+    
+    if isinstance(data_str, datetime):
+        return True
+    
+    data_str = str(data_str).strip()
+    
+    if not data_str or data_str.lower() in ['null', 'none', '']:
+        return True
+    
+    try:
+        # Formato ISO (YYYY-MM-DD)
+        if re.match(r'^\d{4}-\d{2}-\d{2}$', data_str):
+            datetime.strptime(data_str, '%Y-%m-%d')
+            return True
+        
+        # Formato brasileiro DD/MM/YYYY
+        elif re.match(r'^\d{1,2}/\d{1,2}/\d{4}$', data_str):
+            datetime.strptime(data_str, '%d/%m/%Y')
+            return True
+        
+        # Formato DD-MM-YYYY
+        elif re.match(r'^\d{1,2}-\d{1,2}-\d{4}$', data_str):
+            datetime.strptime(data_str, '%d-%m-%Y')
+            return True
+        
+        return False
+        
+    except ValueError:
+        return False
+
+
+class BancoModelSerializer(BancoContextMixin, serializers.ModelSerializer):
+    def create(self, validated_data):
+        banco = self.context.get('banco')
+        if not banco:
+            raise ValidationError('Banco não encontrado no contexto')
+        instance = self.Meta.model.objects.using(banco).create(**validated_data)
+        return instance
+
+    def update(self, instance, validated_data):
+        banco = self.context.get('banco')
+        if not banco:
+            raise ValidationError('Banco não encontrado no contexto')
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save(using=banco)
+        return instance
+
+
+class OsflorestalpecasSerializer(BancoModelSerializer): 
+    peca_item = serializers.IntegerField(required=False)
+    peca_empr = serializers.IntegerField(required=True)
+    peca_fili = serializers.IntegerField(required=True)
+    peca_orde = serializers.IntegerField(required=True)
+    peca_prod = serializers.CharField(required=True)  
+    peca_hect = serializers.CharField(required=False, allow_blank=True)
+    peca_quan = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
+    peca_unit = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
+    peca_tota = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
+    produto_nome = serializers.SerializerMethodField()
+   
+    class Meta:
+        model = Osflorestalpecas
+        fields = '__all__'
+        
+    def validate(self, data):
+        # Validar campos obrigatórios
+        campos_obrigatorios = ['peca_empr', 'peca_fili', 'peca_orde', 'peca_prod'] 
+        for campo in campos_obrigatorios:
+            if campo not in data:
+                raise serializers.ValidationError(f"O campo {campo} é obrigatório.")
+            
+            if data[campo] is None:
+                raise serializers.ValidationError(f"O campo {campo} não pode ser nulo.")
+
+        # Validar valores numéricos
+        if data.get('peca_quan', 0) < 0:
+            raise serializers.ValidationError("A quantidade não pode ser negativa.")
+        
+        if data.get('peca_unit', 0) < 0:
+            raise serializers.ValidationError("O valor unitário não pode ser negativo.")
+
+        # Calcular o total se não fornecido
+        if 'peca_tota' not in data and 'peca_quan' in data and 'peca_unit' in data:
+            data['peca_tota'] = data['peca_quan'] * data['peca_unit']
+
+        return data
+
+    def validate_peca_quan(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Quantidade deve ser maior que zero")
+        if value > 9999:
+            raise serializers.ValidationError("Quantidade muito alta")
+        return value
+    
+    def validate_peca_unit(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Valor unitário deve ser maior que zero")
+        return value
+    
+    def validate_peca_prod(self, value):  # Changed from validate_peca_codi to validate_peca_prod
+        # Validar se produto existe
+        banco = self.context.get('banco')
+        if banco:
+            from Produtos.models import Produtos
+            if not Produtos.objects.using(banco).filter(prod_codi=value).exists():
+                raise serializers.ValidationError("Produto não encontrado")
+        return value
+    
+    def create(self, validated_data):
+        banco = self.context.get('banco')
+        if not banco:
+            raise ValidationError("Banco de dados não fornecido.")
+      
+        return Osflorestalpecas.objects.using(banco).create(**validated_data)
+    
+    
+    def get_produto_nome(self, obj):
+        try:
+            banco = self.context.get('banco')
+            from Produtos.models import Produtos
+
+            produto = Produtos.objects.using(banco).get(prod_codi=obj.peca_prod)  # Changed from peca_codi to peca_prod
+            return produto.prod_nome
+        except:
+            return ''
+
+
+class OsflorestalservicosSerializer(BancoModelSerializer):
+    serv_item = serializers.IntegerField(required=False)
+    serv_empr = serializers.IntegerField(required=True)
+    serv_fili = serializers.IntegerField(required=True)
+    serv_orde = serializers.IntegerField(required=True)
+    serv_prod = serializers.CharField(required=True)
+    serv_hect = serializers.CharField(required=False, allow_blank=True)
+    serv_quan = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
+    serv_unit = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
+    serv_tota = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
+    servico_nome = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Osflorestalservicos
+        fields = '__all__'
+        
+    def validate(self, data):
+        # Validar campos obrigatórios
+        campos_obrigatorios = ['serv_empr', 'serv_fili', 'serv_orde', 'serv_prod']
+        for campo in campos_obrigatorios:
+            if campo not in data:
+                raise serializers.ValidationError(f"O campo {campo} é obrigatório.")
+            
+            if data[campo] is None:
+                raise serializers.ValidationError(f"O campo {campo} não pode ser nulo.")
+
+        # Validar valores numéricos
+        if data.get('serv_quan', 0) < 0:
+            raise serializers.ValidationError("A quantidade não pode ser negativa.")
+        
+        if data.get('serv_unit', 0) < 0:
+            raise serializers.ValidationError("O valor unitário não pode ser negativo.")
+
+        # Calcular o total se não fornecido
+        if 'serv_tota' not in data and 'serv_quan' in data and 'serv_unit' in data:
+            data['serv_tota'] = data['serv_quan'] * data['serv_unit']
+
+        return data
+    
+    
+
+    def validate_serv_data(self, value):
+        """Valida o formato da data do serviço"""
+        if not validar_formato_data(value):
+            raise ValidationError('Formato de data inválido. Use DD/MM/YYYY, DD-MM-YYYY ou YYYY-MM-DD.')
+        return value
+
+    def create(self, validated_data):
+        banco = self.context.get('banco')
+        if not banco:
+            raise ValidationError("Banco de dados não fornecido.")
+        
+        return Osflorestalservicos.objects.using(banco).create(**validated_data)
+        
+    
+    def get_servico_nome(self, obj):
+        try:
+            banco = self.context.get('banco')
+            from Produtos.models import Produtos
+
+            servico = Produtos.objects.using(banco).get(prod_codi=obj.serv_prod)  
+            return servico.prod_nome
+        except:
+            return ''
+
+
+
+class TituloReceberSerializer(BancoModelSerializer):
+    class Meta:
+        model = Titulosreceber
+        fields = [
+            'titu_empr',
+            'titu_fili',
+            'titu_titu',
+            'titu_seri',
+            'titu_parc',
+            'titu_clie',
+            'titu_valo',
+            'titu_venc',
+            'titu_form_reci',
+            
+        ]
+
+
+class OsflorestalSerializer(BancoModelSerializer):
+    pecas = OsflorestalpecasSerializer(many=True, required=False)
+    servicos = serializers.SerializerMethodField()
+    cliente_nome = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Osflorestal
+        fields = [
+            'osfl_empr',
+            'osfl_fili',
+            'osfl_forn',
+            'osfl_prop',
+            'osfl_orde',
+            'osfl_data_aber',
+            'pecas',
+            'servicos',
+            'cliente_nome',
+            'osfl_stat',
+        ]
+
+    def to_representation(self, instance):
+        """
+        Sobrescreve o método para tratar datas inválidas durante a serialização
+        """
+        try:
+            # Verificar se as datas são válidas antes de serializar
+            if hasattr(instance, 'osfl_data_aber') and instance.osfl_data_aber:
+                try:
+                    # Tentar acessar o ano da data para verificar se é válida
+                    year = instance.osfl_data_aber.year
+                    if year < 1900 or year > 2100:
+                        # Se a data for inválida, definir como None
+                        instance.osfl_data_aber = None
+                except (ValueError, OverflowError, AttributeError):
+                    instance.osfl_data_aber = None
+            
+            if hasattr(instance, 'osfl_data_entr') and instance.osfl_data_entr:
+                try:
+                    year = instance.osfl_data_entr.year
+                    if year < 1900 or year > 2100:
+                        instance.osfl_data_entr = None
+                except (ValueError, OverflowError, AttributeError):
+                    instance.osfl_data_entr = None
+            
+            if hasattr(instance, 'osfl_data_fech') and instance.osfl_data_fech:
+                try:
+                    year = instance.osfl_data_fech.year
+                    if year < 1900 or year > 2100:
+                        instance.osfl_data_fech = None
+                except (ValueError, OverflowError, AttributeError):
+                    instance.osfl_data_fech = None
+            
+            return super().to_representation(instance)
+        except Exception as e:
+            logger.error(f"Erro ao serializar OS {getattr(instance, 'osfl_orde', 'N/A')}: {e}")
+            # Em caso de erro, retornar representação básica
+            return {
+                'osfl_empr': getattr(instance, 'osfl_empr', None),
+                'osfl_fili': getattr(instance, 'osfl_fili', None),
+                'osfl_orde': getattr(instance, 'osfl_orde', None),
+                'osfl_data_aber': None,
+                'error': 'Dados inválidos'
+            }
+
+    def get_servicos(self, obj):
+        # Tentar usar dados prefetched primeiro para evitar N+1 queries
+        if hasattr(obj, '_prefetched_objects_cache') and 'osflorestalservicos_set' in obj._prefetched_objects_cache:
+            servicos = obj._prefetched_objects_cache['osflorestalservicos_set']
+            servicos = sorted(servicos, key=lambda x: x.serv_item)
+        else:
+            # Fallback para query direta se não houver prefetch
+            banco = self.context.get('banco')
+            if not banco:
+                return []
+            
+            servicos = Osflorestalservicos.objects.using(banco).filter(
+                serv_empr=obj.osfl_empr,
+                serv_fili=obj.osfl_fili,    
+                serv_orde=obj.osfl_orde
+            ).order_by('serv_item')
+        
+        return OsflorestalservicosSerializer(servicos, many=True, context=self.context).data
+    
+    def get_cliente_nome(self, obj):
+        banco = self.context.get('banco')
+        if not banco or not obj.osfl_forn or not obj.osfl_empr:
+            return None
+            
+        try:
+            entidade = Entidades.objects.using(banco).filter(
+                enti_clie=obj.osfl_forn,
+                enti_empr=obj.osfl_empr 
+            ).first()
+            return entidade.enti_nome if entidade else None
+        except Exception as e:
+            logger.error(f"Erro ao buscar fornecedor: {e}")
+            return None
+            
+    def validate_osfl_stat(self, value):
+        VALID_STATUSES = [0, 1, 2, 3, 4, 5, 20]
+        if value not in VALID_STATUSES:
+            raise ValidationError('Status inválido.')
+        return value
+
+    def validate_osfl_data_aber(self, value):
+        """Valida data de abertura para evitar anos inválidos"""
+        if value and hasattr(value, 'year'):
+            if value.year < 1900 or value.year > 2100:
+                raise ValidationError('Ano da data de abertura deve estar entre 1900 e 2100.')
+        elif value and not validar_formato_data(value):
+            raise ValidationError('Formato de data inválido. Use DD/MM/YYYY, DD-MM-YYYY ou YYYY-MM-DD.')
+        return value
+
+    def validate_osfl_data_entr(self, value):
+        """Valida data de entrega para evitar anos inválidos"""
+        if value and hasattr(value, 'year'):
+            if value.year < 1900 or value.year > 2100:
+                raise ValidationError('Ano da data de entrega deve estar entre 1900 e 2100.')
+        elif value and not validar_formato_data(value):
+            raise ValidationError('Formato de data inválido. Use DD/MM/YYYY, DD-MM-YYYY ou YYYY-MM-DD.')
+        return value
+
+    def validate_osfl_data_fech(self, value):
+        """Valida data de fechamento para evitar anos inválidos"""
+        if value and hasattr(value, 'year'):
+            if value.year < 1900 or value.year > 2100:
+                raise ValidationError('Ano da data de fechamento deve estar entre 1900 e 2100.')
+        elif value and not validar_formato_data(value):
+            raise ValidationError('Formato de data inválido. Use DD/MM/YYYY, DD-MM-YYYY ou YYYY-MM-DD.')
+        return value
+
+    def create(self, validated_data):
+        print(f"DEBUG: validated_data keys: {validated_data.keys()}")
+        print(f"DEBUG: osfl_orde in validated_data: {'osfl_orde' in validated_data}")
+        if 'osfl_orde' in validated_data:
+            print(f"DEBUG: osfl_orde value: {validated_data['osfl_orde']}")
+        
+        pecas_data = validated_data.pop('pecas', [])
+        servicos_data = validated_data.pop('servicos', [])
+        banco = self.context.get('banco')
+        print(f"DEBUG: banco context: {banco}")
+        
+        ordem = super().create(validated_data)
+
+        self._sync_pecas(ordem, pecas_data, banco)
+        self._sync_servicos(ordem, servicos_data, banco)
+
+        return ordem
+
+    def update(self, instance, validated_data):
+        pecas_data = validated_data.pop('pecas', [])
+        servicos_data = validated_data.pop('servicos', [])
+        banco = self.context.get('banco')
+
+        instance = super().update(instance, validated_data)
+
+        self._sync_pecas(instance, pecas_data, banco)
+        self._sync_servicos(instance, servicos_data, banco)
+
+        return instance
+
+    def _sync_pecas(self, ordem, pecas_data, banco):
+        ids_enviados = []
+        for item in pecas_data:
+            item['peca_empr'] = ordem.osfl_empr
+            item['peca_fili'] = ordem.osfl_fili
+            item['peca_orde'] = ordem.osfl_orde
+
+            peca_item = item.get('peca_item')
+            if peca_item:
+                obj, _ = Osflorestalpecas.objects.using(banco).update_or_create(
+                    peca_item=peca_item,
+                    peca_empr=ordem.osfl_empr,
+                    peca_fili=ordem.osfl_fili,
+                    peca_orde=ordem.osfl_orde,
+                    defaults=item
+                )
+                ids_enviados.append(obj.peca_item)
+            else:
+                obj = Osflorestalpecas.objects.using(banco).create(**item)
+                ids_enviados.append(obj.peca_item)
+
+        # Remove peças que não vieram mais
+        Osflorestalpecas.objects.using(banco).filter(
+            peca_orde=ordem.osfl_orde
+        ).exclude(peca_item__in=ids_enviados).delete()
+
+    def _sync_servicos(self, ordem, servicos_data, banco):
+        ids_enviados = []
+        for item in servicos_data:
+            item['serv_empr'] = ordem.osfl_empr
+            item['serv_fili'] = ordem.osfl_fili
+            item['serv_orde'] = ordem.osfl_orde
+
+            serv_item = item.get('serv_item')
+            if serv_item:
+                obj, _ = Osflorestalservicos.objects.using(banco).update_or_create(
+                    serv_item=serv_item,
+                    serv_empr=ordem.osfl_empr,
+                    serv_fili=ordem.osfl_fili,
+                    serv_orde=ordem.osfl_orde,
+                    defaults=item
+                )
+                ids_enviados.append(obj.serv_item)
+            else:
+                obj = Osflorestalservicos.objects.using(banco).create(**item)
+                ids_enviados.append(obj.serv_item)
+
+        # Remove serviços que não vieram mais
+        Osflorestalservicos.objects.using(banco).filter(
+            serv_orde=ordem.osfl_orde 
+        ).exclude(serv_item__in=ids_enviados).delete()

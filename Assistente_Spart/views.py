@@ -120,13 +120,15 @@ Ela já faz o roteamento inteligente para a tool correta.""")
         logger.debug(f"[PROMPT] Tamanho: {len(prompt)} chars")
 
         # ======== AGENTE ========
+        # ======== AGENTE ========
         resposta_texto = ""
         tools_usadas = []
         inicio_agente = time.time()
-        
+
         try:
             logger.info(f"🤖 Executando agente (tipo: {rota['tipo']})...")
             
+            # Configuração robusta
             resultado = agenteReact.invoke(
                 {"messages": [HumanMessage(content=prompt)]},
                 config
@@ -136,35 +138,84 @@ Ela já faz o roteamento inteligente para a tool correta.""")
             logger.info(f"✅ Agente concluído em {tempo_agente}s")
             metricas.registrar("agente", tempo_agente)
             
-            # Extrai resposta e tools usadas
+            # Extração robusta de mensagens
             mensagens = resultado.get("messages", [])
             
-            for msg in mensagens:
-                # Detecta tools chamadas
-                if hasattr(msg, '__class__') and msg.__class__.__name__ == 'ToolMessage':
-                    if hasattr(msg, 'name'):
-                        tools_usadas.append(msg.name)
+            if not mensagens:
+                resposta_texto = "⚠️ O agente não retornou mensagens."
+                logger.warning("[AGENTE] Resultado vazio")
+            else:
+                for msg in mensagens:
+                    msg_type = msg.__class__.__name__
+                    
+                    # Detecta tools executadas
+                    if msg_type == 'ToolMessage':
+                        tool_name = getattr(msg, 'name', 'desconhecida')
+                        tools_usadas.append(tool_name)
+                        
+                        # Verifica se a tool retornou erro
+                        content = getattr(msg, 'content', '')
+                        if content and isinstance(content, str):
+                            if content.startswith('❌'):
+                                logger.warning(f"[TOOL_ERROR] {tool_name}: {content[:100]}")
+                    
+                    # Extrai resposta do AIMessage
+                    elif msg_type == 'AIMessage':
+                        conteudo = getattr(msg, 'content', '')
+                        
+                        # Processa conteúdo complexo (lista de dicts)
+                        if isinstance(conteudo, list):
+                            texto_parts = []
+                            for item in conteudo:
+                                if isinstance(item, dict) and item.get("type") == "text":
+                                    texto_parts.append(str(item.get("text", "")))
+                            conteudo = " ".join(texto_parts).strip()
+                        
+                        # Processa string simples
+                        elif isinstance(conteudo, str):
+                            conteudo = conteudo.strip()
+                        
+                        if conteudo:
+                            resposta_texto = str(conteudo)
                 
-                # Pega resposta final
-                if hasattr(msg, '__class__') and msg.__class__.__name__ == 'AIMessage':
-                    conteudo = msg.content
-                    if isinstance(conteudo, list):
-                        conteudo = " ".join(
-                            str(b.get("text", "")) for b in conteudo
-                            if isinstance(b, dict) and b.get("type") == "text"
-                        )
-                    if conteudo:
-                        resposta_texto = str(conteudo).strip()
-            
-            logger.info(f"🔧 Tools usadas: {tools_usadas or ['nenhuma']}")
-            
+                logger.info(f"🔧 Tools executadas: {tools_usadas or ['nenhuma']}")
+                
+                # Validação final
+                if not resposta_texto or resposta_texto.strip() == "":
+                    resposta_texto = "⚠️ O agente não gerou uma resposta textual."
+                    logger.warning("[AGENTE] Resposta vazia após processamento")
+
         except Exception as e:
-            logger.exception("[AGENTE] Erro")
-            resposta_texto = f"❌ Erro ao processar: {str(e)}"
+            logger.exception("[AGENTE] Erro detalhado")
+            
+            error_str = str(e)
+            
+            # Tratamento específico para INVALID_CHAT_HISTORY
+            if "INVALID_CHAT_HISTORY" in error_str or "ToolMessage" in error_str:
+                resposta_texto = (
+                    "⚠️ Ocorreu um problema no histórico de conversa. "
+                    "Por favor, reformule sua pergunta de forma mais específica."
+                )
+                logger.error(f"[AGENTE] Erro de histórico: {error_str}")
+                
+                # Limpa o histórico se possível
+                try:
+                    # Força limpeza do checkpointer
+                    config_thread = config.get("configurable", {}).get("thread_id")
+                    if config_thread:
+                        logger.info(f"🧹 Limpando histórico do thread {config_thread}")
+                except:
+                    pass
+            
+            # Outros erros
+            else:
+                resposta_texto = f"❌ Erro ao processar: {str(e)}"
+            
             metricas.registrar("erro", time.time() - inicio_agente)
 
-        if not resposta_texto:
-            resposta_texto = "⚠️ O agente não retornou resposta."
+        # Fallback final
+        if not resposta_texto or not isinstance(resposta_texto, str):
+            resposta_texto = "⚠️ Não foi possível gerar uma resposta válida."
 
         # ======== TTS PARALELO (Não bloqueia) ========
         # TTS roda em thread separada para não bloquear resposta

@@ -7,6 +7,8 @@ from core.utils import get_db_from_slug
 from .db_tool import (
     cadastrar_produtos,
     consultar_saldo,
+    consultar_titulos_a_pagar,
+    consultar_titulos_a_receber,
     consulta_inteligente_prime,
 )
 from .rag_tool import rag_url_resposta_vetorial
@@ -89,6 +91,37 @@ def executar_intencao(
                 filial_id=str(filial_id),
             )
 
+        # Substitua as seções de títulos no executar_intencao:
+
+        # ========== CONSULTA DE TITULOS A PAGAR ==========
+        if re.search(r"(?i)(t[ií]tulo|titulo).*?(pagar|a\s+pagar|contas\s+a\s+pagar)", msg_lower):
+            logger.info(f"[EXECUTAR_INTENCAO] Consulta títulos a pagar")
+            try:
+                resultado = consultar_titulos_a_pagar.func(
+                    banco=real_banco,
+                    empresa_id=str(empresa_id),
+                    filial_id=str(filial_id),
+                )
+                # Garante que retorna string
+                return str(resultado) if resultado else "Sem dados de títulos a pagar."
+            except Exception as e:
+                logger.error(f"[TITULOS_PAGAR] Erro: {e}")
+                return f"❌ Erro ao consultar títulos a pagar: {str(e)}"
+
+        # ========== CONSULTA DE TITULOS A RECEBER ==========
+        if re.search(r"(?i)(t[ií]tulo|titulo).*?(receber|a\s+receber|contas\s+a\s+receber)", msg_lower):
+            logger.info(f"[EXECUTAR_INTENCAO] Consulta títulos a receber")
+            try:
+                resultado = consultar_titulos_a_receber.func(
+                    banco=real_banco,
+                    empresa_id=str(empresa_id),
+                    filial_id=str(filial_id),
+                )
+                # Garante que retorna string
+                return str(resultado) if resultado else "Sem dados de títulos a receber."
+            except Exception as e:
+                logger.error(f"[TITULOS_RECEBER] Erro: {e}")
+                return f"❌ Erro ao consultar títulos a receber: {str(e)}"
         # ========== VISUALIZAÇÃO — MAPA SEMÂNTICO ==========
         if re.search(r"(?i)(mapa\s+sem[aâ]ntico|c[ée]rebro|pca|tsne)", msg_lower):
             metodo = "tsne" if "tsne" in msg_lower else "pca"

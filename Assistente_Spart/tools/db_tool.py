@@ -1,6 +1,8 @@
 from langchain_core.tools import tool
 import Entidades
 from Produtos.models import Produtos, SaldoProduto, UnidadeMedida
+from contas_a_pagar.models import Titulospagar
+from contas_a_receber.models import Titulosreceber
 from core.utils import get_db_from_slug
 from core.middleware import get_licenca_slug
 
@@ -153,24 +155,66 @@ def consulta_inteligente_prime(pergunta: str, slug: str = "default") -> str:
     Analisa o schema (com cache), infere relacionamentos e retorna somente os insights finais.
     """
     try:
+        # Validação de entrada
+        if not pergunta or not pergunta.strip():
+            return "❌ Pergunta não pode estar vazia."
+        
+        if not slug:
+            slug = "default"
+            
+        # Verificar se a conexão existe
+        if slug not in connections:
+            return f"❌ Banco de dados '{slug}' não encontrado."
+        
         schema = ler_schema_db(slug)
+        if not schema:
+            return "❌ Não foi possível obter o schema do banco de dados."
+            
         rels = relacionamentos_heuristicos(schema)
         sql = gerar_sql(pergunta, schema, rels)
 
-        if not isinstance(sql, str) or not sql.strip().lower().startswith("select"):
-            return "A consulta gerada não é um SELECT válido. Reformule a pergunta."
+        if not isinstance(sql, str) or not sql.strip():
+            return "❌ Não foi possível gerar uma consulta SQL válida."
+            
+        if not sql.strip().lower().startswith("select"):
+            return "❌ A consulta gerada não é um SELECT válido. Reformule a pergunta."
 
         conn = connections[slug]
         with conn.cursor() as cur:
-            cur.execute(sql)
-            colunas = [desc[0] for desc in cur.description]
-            linhas = cur.fetchall()
+            try:
+                cur.execute(sql)
+                colunas = [desc[0] for desc in cur.description] if cur.description else []
+                linhas = cur.fetchall()
+            except Exception as db_error:
+                return f"❌ Erro ao executar consulta SQL: {str(db_error)}"
+
+        # Verifica se há resultados
+        if not linhas:
+            return "ℹ️ Consulta executada com sucesso, mas não retornou resultados."
 
         insights = gerar_insights(colunas, linhas)
+        if not insights or insights.strip() == "":
+            # Fallback: retorna dados brutos formatados
+            resultado_formatado = f"Resultados para: {pergunta}\n\n"
+            for i, linha in enumerate(linhas[:10]):  # Limita a 10 linhas
+                resultado_formatado += f"Linha {i+1}: {dict(zip(colunas, linha))}\n"
+            if len(linhas) > 10:
+                resultado_formatado += f"... e mais {len(linhas) - 10} registros"
+            return resultado_formatado
+        
         resposta = f"📊 Resultado da análise baseada na pergunta:\n\n{insights}"
         return str(resposta)
+        
     except Exception as e:
-        return f"Erro ao executar consulta: {e}"
+        import traceback
+        error_msg = f"❌ Erro interno ao executar consulta: {str(e)}"
+        try:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"[CONSULTA_INTELIGENTE] {error_msg}\n{traceback.format_exc()}")
+        except:
+            pass
+        return error_msg
 
 @tool
 def cadastrar_produtos(prod_nome: str, prod_ncm: str, banco: str = "default",
@@ -228,3 +272,109 @@ def consultar_saldo(produto_codigo: str, banco: str = "default",
     return f"Saldo de {produto.prod_nome} (cód {produto_codigo}) no banco {real_banco}: {saldo.saldo_estoque}"
 
 
+@tool
+def consultar_titulos_a_pagar(banco: str = "default",
+                    empresa_id: str = "1", filial_id: str = "1") -> str:
+    """Consulta títulos a pagar respeitando o banco recebido."""
+    
+    try:
+        real_banco = banco or "default"
+        
+        # Validação de entrada
+        if not empresa_id or not filial_id:
+            return "❌ Empresa e filial são obrigatórios."
+        
+        titulos = Titulospagar.objects.using(real_banco).filter(
+            titu_empr=empresa_id,
+            titu_fili=filial_id,
+            titu_aber='A'
+        )
+        
+        if not titulos.exists():
+            return f"ℹ️ Nenhum título a pagar encontrado na empresa {empresa_id}, filial {filial_id}."
+        
+        resultado = f"📋 Títulos a pagar - Empresa {empresa_id}, Filial {filial_id}:\n\n"
+        total_valor = 0
+        
+        for titulo in titulos[:100]:  # Limita a 100 registros
+            try:
+                valor = float(getattr(titulo, 'titu_valo', 0) or 0)
+                vencimento = getattr(titulo, 'titu_venc', 'N/A')
+                from Entidades.models import Entidades
+                fornecedor_nome = Entidades.objects.using(real_banco).get(enti_clie=titulo.titu_forn).enti_nome or getattr(titulo, 'titu_forn', 'N/A')
+                
+                resultado += f"• Fornecedor: {fornecedor_nome} | Valor: R$ {valor:,.2f} | Vencimento: {vencimento}\n"
+                total_valor += valor
+            except Exception as item_error:
+                continue  # Ignora itens com erro
+        
+        if titulos.count() > 100:
+            resultado += f"\n... e mais {titulos.count() - 100} títulos\n"
+        
+        resultado += f"\n💰 Total geral: R$ {total_valor:,.2f}"
+        return resultado
+        
+    except Exception as e:
+        import traceback
+        error_msg = f"❌ Erro ao consultar títulos a pagar: {str(e)}"
+        try:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"[TITULOS_PAGAR] {error_msg}\n{traceback.format_exc()}")
+        except:
+            pass
+        return error_msg
+
+
+@tool
+def consultar_titulos_a_receber(banco: str = "default",
+                    empresa_id: str = "1", filial_id: str = "1") -> str:
+    """Consulta títulos a receber respeitando o banco recebido."""
+    
+    try:
+        real_banco = banco or "default"
+        
+        # Validação de entrada
+        if not empresa_id or not filial_id:
+            return "❌ Empresa e filial são obrigatórios."
+        
+        titulos = Titulosreceber.objects.using(real_banco).filter(
+            titu_empr=empresa_id,
+            titu_fili=filial_id,
+            titu_aber='A'
+        )
+        
+        if not titulos.exists():
+            return f"ℹ️ Nenhum título a receber encontrado na empresa {empresa_id}, filial {filial_id}."
+        
+        resultado = f"📋 Títulos a receber - Empresa {empresa_id}, Filial {filial_id}:\n\n"
+        total_valor = 0
+        
+        for titulo in titulos[:100]:  # Limita a 100 registros
+            try:
+                valor = float(getattr(titulo, 'titu_valo', 0) or 0)
+                vencimento = getattr(titulo, 'titu_venc', 'N/A')
+                from Entidades.models import Entidades
+                cliente_nome = Entidades.objects.using(real_banco).get(enti_clie=titulo.titu_clie).enti_nome or getattr(titulo, 'titu_clie', 'N/A')
+                
+                resultado += f"• Cliente: {cliente_nome} | Valor: R$ {valor:,.2f} | Vencimento: {vencimento}\n"
+                total_valor += valor
+            except Exception as item_error:
+                continue  # Ignora itens com erro
+        
+        if titulos.count() > 100:
+            resultado += f"\n... e mais {titulos.count() - 100} títulos\n"
+        
+        resultado += f"\n💰 Total geral: R$ {total_valor:,.2f}"
+        return resultado
+        
+    except Exception as e:
+        import traceback
+        error_msg = f"❌ Erro ao consultar títulos a receber: {str(e)}"
+        try:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"[TITULOS_RECEBER] {error_msg}\n{traceback.format_exc()}")
+        except:
+            pass
+        return error_msg
