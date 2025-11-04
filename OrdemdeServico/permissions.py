@@ -99,7 +99,7 @@ class OrdemServicoPermission(BasePermission):
             return False
 
         usuario = getattr(request.user, "usua_nome", None)
-        if usuario in ["admin", "mobile", "lucas1", "recebimento2"]:
+        if usuario in ["admin", "mobile", "lucas1", "recebimento"]:
             return True
         return request.method in SAFE_METHODS
     
