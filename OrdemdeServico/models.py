@@ -146,6 +146,16 @@ class Ordemservico(models.Model):
     orde_ulti_usua = models.CharField(max_length=100, blank=True, null=True)
     orde_ulti_alte = models.DateTimeField(blank=True, null=True)  
     orde_tota = models.DecimalField(max_digits=15, decimal_places=4, default=0)
+    orde_nf_entr = models.TextField(blank=True, null=True, verbose_name="Nota Fiscal de Entrada")
+
+    orde_gara = models.BooleanField(default=False, verbose_name="Garantia", blank=True, null=True)
+    orde_sem_cons = models.BooleanField(default=False, verbose_name="Sem Conserto", blank=True, null=True)
+    orde_data_repr = models.DateField(blank=True, null=True, verbose_name="Data de Reprovação",)
+    orde_seto_repr = models.IntegerField(blank=True, null=True, verbose_name="Setor de Reprovação",)
+    orde_fina_ofic = models.CharField(max_length=100, blank=True, null=True, verbose_name="Finalizada Oficina")
+
+    
+
 
     def calcular_total(self):
         total_pecas = sum(
@@ -219,6 +229,55 @@ class Ordemservico(models.Model):
             hist_usua=user_id,
         )
         
+        return True
+
+    def pode_retornar_setor(self, setor_origem, banco='default'):
+        """Verifica se a O.S. pode retornar para o setor de origem informado"""
+        # Sem setor atual, não há como retornar
+        if not self.orde_seto:
+            return False
+
+        return WorkflowSetor.objects.using(banco).filter(
+            wkfl_seto_orig=setor_origem,
+            wkfl_seto_dest=self.orde_seto,
+            wkfl_ativo=True
+        ).exists()
+
+    def obter_setores_anteriores(self, banco='default'):
+        """Retorna lista de setores dos quais a O.S. pode retornar (origens válidas)"""
+        if not self.orde_seto:
+            # Sem setor atual, não há anteriores
+            return WorkflowSetor.objects.none()
+
+        return WorkflowSetor.objects.using(banco).filter(
+            wkfl_seto_dest=self.orde_seto,
+            wkfl_ativo=True
+        ).order_by('wkfl_orde')
+
+    def retornar_setor(self, setor_origem, usuario_id, banco='default'):
+        """Retorna a O.S. para um setor anterior válido"""
+        if not self.pode_retornar_setor(setor_origem, banco):
+            raise ValueError(f"Não é possível retornar do setor {self.orde_seto} para {setor_origem}")
+
+        # Extrai o ID do usuário se for um objeto User
+        user_id = usuario_id.pk if hasattr(usuario_id, 'pk') else usuario_id
+
+        setor_atual = self.orde_seto
+        self.orde_seto = setor_origem
+        self.orde_ulti_usua = str(user_id)
+        self.orde_ulti_alte = timezone.now()
+        self.save(using=banco)
+
+        # Registra no histórico (movimentação de retorno)
+        HistoricoWorkflow.objects.using(banco).create(
+            hist_empr=self.orde_empr,
+            hist_fili=self.orde_fili,
+            hist_orde=self.orde_nume,
+            hist_seto_orig=setor_atual,
+            hist_seto_dest=setor_origem,
+            hist_usua=user_id,
+        )
+
         return True
 
     def obter_historico_workflow(self, banco='default'):

@@ -250,7 +250,7 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
         banco = self.get_banco()
         data = request.data.copy()
 
-        data['orde_stat_orde'] = 0
+        data['orde_stat_orde'] = 0 if data.get('orde_stat_orde') is None else data.get('orde_stat_orde')
         if request.user and request.user.pk:
             data['orde_usua_aber'] = request.user.pk
 
@@ -260,12 +260,22 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
             return Response({"detail": "Empresa e Filial são obrigatórios."}, status=400)
 
         # Mapear campos do frontend para o backend
+        # Inclui mapeamento para Nota Fiscal de Entrada
         campo_mapping = {
             'os_clie': 'orde_enti',
             'os_data_aber': 'orde_data_aber',
             'os_empr': 'orde_empr',
             'os_fili': 'orde_fili',
-            'usua': 'orde_usua_aber'
+            'usua': 'orde_usua_aber',
+            # possíveis nomes enviados pelo frontend
+            'nf_entrada': 'orde_nf_entr',
+            'os_nf_entr': 'orde_nf_entr',
+            'os_gara': 'orde_gara',
+            'os_sem_cons': 'orde_sem_cons',
+            'os_data_repr': 'orde_data_repr',
+            'os_seto_repr': 'orde_seto_repr',
+            'os_fina_ofic': 'orde_fina_ofic',
+            'os_stat_orde': 'orde_stat_orde',
         }
         
         # Aplicar mapeamento
@@ -352,6 +362,47 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
             logger.error(f"Erro ao avançar setor da ordem {self.kwargs.get(self.lookup_url_kwarg or self.lookup_field)}: {str(e)}")
             return Response(
                 {"error": "Erro ao avançar setor da ordem"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(
+        detail=True,
+        methods=['post'],
+        permission_classes=[IsAuthenticated, PodeVerOrdemDoSetor, WorkflowPermission],
+        url_path='retornar-setor'
+    )
+    def retornar_setor(self, request, *args, **kwargs):
+        """
+        Endpoint para retornar ordem para setor anterior válido no workflow.
+        """
+        try:
+            banco = self.get_banco()
+            ordem = self.get_object()
+            # Aceita tanto 'setor_origem' quanto 'setor_destino' por compatibilidade
+            setor_origem = request.data.get('setor_origem') or request.data.get('setor_destino')
+            
+            if not setor_origem:
+                return Response(
+                    {"error": "setor_origem é obrigatório"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            with transaction.atomic(using=banco):
+                sucesso = ordem.retornar_setor(setor_origem, request.user, banco)
+                
+                if not sucesso:
+                    return Response(
+                        {"error": "Não é possível retornar para este setor"}, 
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            
+            serializer = self.get_serializer(ordem)
+            return Response(serializer.data)
+            
+        except Exception as e:
+            logger.error(f"Erro ao retornar setor da ordem {self.kwargs.get(self.lookup_url_kwarg or self.lookup_field)}: {str(e)}")
+            return Response(
+                {"error": "Erro ao retornar setor da ordem"}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
 

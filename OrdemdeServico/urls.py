@@ -40,6 +40,7 @@ urlpatterns += [
     path('financeiro/relatorio/', RelatorioFinanceiroOSView.as_view(), name='relatorio_financeiro'),
     # Novos end points
     path('ordens/<int:id>/avancar-setor/', OrdemServicoViewSet.as_view({'post': 'avancar_setor'}), name='avancar_setor'),
+    path('ordens/<int:id>/retornar-setor/', OrdemServicoViewSet.as_view({'post': 'retornar_setor'}), name='retornar_setor'),
     path('ordens/<int:id>/proximos-setores/', OrdemServicoViewSet.as_view({'get': 'proximos_setores'}), name='proximos_setores'),
     path('ordens/<int:id>/historico-workflow/', OrdemServicoViewSet.as_view({'get': 'historico_workflow'}), name='historico_workflow'),
 ]
