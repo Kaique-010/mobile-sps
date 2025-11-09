@@ -1,0 +1,310 @@
+{% load static %}
+<style>
+    /* Rodapé fixo do offcanvas */
+    .offcanvas {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    .offcanvas-body {
+        padding: 0;
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .offcanvas-content {
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+</style>
+<header class="bg-body">
+    <nav class="navbar fixed-top bg-body" id="main-navbar">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/home/">SPS WEB</a>
+            <img src="{% static 'logo.png' %}" style="height:32px" />
+            <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas"
+                data-bs-target="#offcanvasDarkNavbar" aria-controls="offcanvasDarkNavbar" aria-label="Abrir menu">
+                <i class="bi bi-list fs-2"></i>
+            </button>
+            <div class="offcanvas offcanvas-end bg-body" tabindex="-1" id="offcanvasDarkNavbar"
+                aria-labelledby="offcanvasDarkNavbarLabel">
+                <div class="offcanvas-header">
+                    <h5 class="offcanvas-title" id="offcanvasDarkNavbarLabel">SPS WEB</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Fechar"></button>
+                </div>
+                <div class="offcanvas-body">
+                    <div class="px-3 pt-2">
+                        <div id="login-warning" class="alert alert-warning d-none">Necessário Estar Logado</div>
+                        <ul class="navbar-nav justify-content-end flex-grow-1 pe-3">
+                            <li class="nav-item">
+                                <a class="nav-link active" aria-current="page" href="{% url 'home' %}">
+                                    <i class="bi bi-house fs-3"></i> Home
+                                </a>
+                            </li>
+
+                            <!-- Parametrizações - Colapsável -->
+                            <li class="nav-item" data-modulo="parametros_admin">
+                                <a class="nav-link collapsed" data-bs-toggle="collapse"
+                                    data-bs-target="#collapseParametrizacoes" href="#" role="button"
+                                    aria-expanded="false" aria-controls="collapseParametrizacoes">
+                                    <i class="bi bi-gear-wide-connected fs-4"></i> Parametrizações
+                                </a>
+                                <div class="collapse" id="collapseParametrizacoes">
+                                    <ul class="list-unstyled ps-4">
+                                        <li><a class="nav-link" href="#">Empresas</a></li>
+                                        <li><a class="nav-link" href="#">Filiais</a></li>
+                                    </ul>
+                                </div>
+                            </li>
+
+                            <!-- Agrícola - Colapsável -->
+                            <li class="nav-item" data-modulo="Floresta">
+                                <a class="nav-link collapsed" data-bs-toggle="collapse"
+                                    data-bs-target="#collapseAgricola" role="button" href="#" aria-expanded="false"
+                                    aria-controls="collapseAgricola">
+                                    <i class="bi bi-box-seam fs-4"></i> Agrícola
+                                </a>
+                                <div class="collapse" id="collapseAgricola">
+                                    <ul class="list-unstyled ps-4">
+                                        <li><a class="nav-link" href="#">Animais</a></li>
+                                        <li><a class="nav-link" href="#">Aplicação
+                                                de insumos</a></li>
+                                        <li><a class="nav-link" href="#">Categorias
+                                                de Produtos Agrícolas</a></li>
+                                        <li><a class="nav-link" href="#">Ciclos
+                                                Florestais</a></li>
+                                        <li><a class="nav-link" href="#">Estoque
+                                                Fazenda</a></li>
+                                        <li><a class="nav-link" href="#">Fazendas</a></li>
+                                        <li><a class="nav-link" href="#">Movimentações de
+                                                estoque</a></li>
+                                        <li><a class="nav-link" href="#">Produtos
+                                                Agrícolas</a></li>
+                                        <li><a class="nav-link" href="#">Talhões</a></li>
+                                        <li><a class="nav-link" href="#">Movimentações
+                                                em lista</a></li>
+                                    </ul>
+                                </div>
+                            </li>
+
+                            <li class="nav-item" data-modulo="Entidades">
+                                <a class="nav-link active" href="/entidades/">
+                                    <i class="bi bi-person-gear fs-3"></i> Entidades
+                                </a>
+                            </li>
+
+                            <li class="nav-item" data-modulo="Pedidos">
+                                <a class="nav-link active" href="/pedidos-necessitam-contato/">
+                                    <i class="bi bi-phone-flip fs-3"></i> Entrar em Contato
+                                </a>
+                            </li>
+
+                            <li class="nav-item" data-modulo="dashboard">
+                                <a class="nav-link active" href="/dashboard/">
+                                    <i class="bi bi-graph-up fs-3"></i> Métricas
+                                </a>
+                            </li>
+
+                            <li class="nav-item" data-modulo="Orcamentos">
+                                <a class="nav-link active" aria-current="page" href="#">
+                                    <i class="bi bi-file-break-fill fs-3"></i> Orçamentos
+                                </a>
+                            </li>
+
+                            <li class="nav-item" data-modulo="O_S">
+                                <a class="nav-link active" href="/os/">
+                                    <i class="bi bi-wrench-adjustable fs-4"></i> Ordens de Serviço
+                                </a>
+                            </li>
+
+                            <li class="nav-item" data-modulo="Pedidos" data-modulo-alias="listacasamento">
+                                <a class="nav-link collapsed" data-bs-toggle="collapse"
+                                    data-bs-target="#collapsePedidos" href="#" role="button" aria-expanded="false"
+                                    aria-controls="collapsePedidos">
+                                    <i class="bi bi-patch-check fs-3"></i> Pedidos de Vendas
+                                </a>
+                                <div class="collapse" id="collapsePedidos">
+                                    <ul class="list-unstyled ps-4">
+                                        <li><a class="nav-link" href="#">Pedidos</a></li>
+                                        <li><a class="nav-link" href="#">Listas de Casamento</a></li>
+                                    </ul>
+                                </div>
+                            </li>
+
+                            <!-- Produtos - Colapsável -->
+                            <li class="nav-item" data-modulo="Produtos">
+                                <a class="nav-link collapsed" data-bs-toggle="collapse"
+                                    data-bs-target="#collapseProdutos" role="button" href="#" aria-expanded="false"
+                                    aria-controls="collapseProdutos">
+                                    <i class="bi bi-box-seam fs-4"></i> Produtos
+                                </a>
+                                <div class="collapse" id="collapseProdutos">
+                                    <ul class="list-unstyled ps-4">
+                                        <li><a class="nav-link" href="#">Cadastro de
+                                                Produtos</a></li>
+                                        <li><a class="nav-link" href="#">Entrada de
+                                                Estoque</a></li>
+                                        <li><a class="nav-link" href="#">Famílias</a></li>
+                                        <li><a class="nav-link" href="#">Grupos</a></li>
+                                        <li><a class="nav-link" href="#">Marcas</a></li>
+                                        <li><a class="nav-link" href="#">Saída de estoque</a>
+                                        </li>
+                                        <li><a class="nav-link" href="#">Saldos Estoque</a></li>
+                                    </ul>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="offcanvas-footer bg-body px-3 py-3 d-flex gap-2">
+                    <button id="logout-jwt" class="btn btn-outline-danger" type="button">
+                        <i class="bi bi-box-arrow-right"></i> Sair
+                    </button>
+                    <button id="theme-toggle" type="button" class="btn btn-outline-dark" title="Alternar tema">
+                        <i class="bi bi-moon"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+</header>
+
+<script>
+    // Controla visibilidade do menu conforme módulos liberados para empresa/filial
+    (() => {
+        const access = localStorage.getItem('access');
+        const slug = localStorage.getItem('slug');
+        const empresaId = localStorage.getItem('empresa_id');
+        const filialId = localStorage.getItem('filial_id');
+
+        const $warning = document.getElementById('login-warning');
+        const showWarning = (msg) => {
+            if ($warning) {
+                $warning.textContent = msg || 'Necessário Estar Logado';
+                $warning.classList.remove('d-none');
+            }
+        };
+
+        if (!access || !slug) {
+            showWarning('Necessário Estar Logado');
+            return;
+        }
+
+        // Helper de autenticação com auto-refresh (SimpleJWT)
+        const authFetch = async (url, options = {}) => {
+            const empresa = localStorage.getItem('empresa_id') || '1';
+            const filial = localStorage.getItem('filial_id') || '1';
+            const makeHeaders = (token) => ({
+                'Authorization': token ? `Bearer ${token}` : '',
+                'Content-Type': 'application/json',
+                'X-Empresa': empresa,
+                'X-Filial': filial,
+            });
+            const token = localStorage.getItem('access');
+            let resp = await fetch(url, { ...options, headers: { ...makeHeaders(token), ...(options.headers || {}) } });
+            if (resp.status !== 401) return resp;
+
+            // Tentar refresh
+            const refresh = localStorage.getItem('refresh');
+            if (!refresh) return resp; // sem refresh, devolve 401
+            try {
+                const refreshResp = await fetch(`/api/${slug}/auth/token/refresh/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ refresh })
+                });
+                if (!refreshResp.ok) return resp;
+                const data = await refreshResp.json();
+                const newAccess = data?.access;
+                if (!newAccess) return resp;
+                localStorage.setItem('access', newAccess);
+                // Refaz a requisição original com novo token
+                resp = await fetch(url, { ...options, headers: { ...makeHeaders(newAccess), ...(options.headers || {}) } });
+                return resp;
+            } catch (e) {
+                console.error('Falha no refresh token:', e);
+                return resp;
+            }
+        };
+
+        // Carrega módulos liberados (por nome) e esconde itens não permitidos
+        const aplicarModulos = (modulosLiberados) => {
+            // Normalizar para comparação case-insensitive
+            const allowSet = new Set(modulosLiberados.map(m => String(m).toLowerCase()));
+            document.querySelectorAll('[data-modulo]')?.forEach(el => {
+                const nome = (el.getAttribute('data-modulo') || '').toLowerCase();
+                // Alguns aliases comuns
+                const aliases = {
+                    'dashboard': ['dashboard', 'dashboards', 'métricas', 'dash'],
+                    'o_s': ['o_s', 'ordens de serviço', 'os'],
+                    'parametros_admin': ['parametros_admin', 'parametrizações', 'parametros'],
+                    // Aliases comuns para módulo de pedidos/vendas
+                    'pedidos': ['pedidos', 'pedido', 'pedido venda', 'pedido_venda', 'pv', 'vendas', 'Pedidos', 'listacasamento'],
+                    // Aliases para orçamentos
+                    'orcamentos': ['orcamentos', 'orçamentos', 'orcamento', 'orçamento', 'budget']
+                };
+                const nomeMatch = allowSet.has(nome) || Object.entries(aliases).some(([key, vals]) => {
+                    const isAliasName = vals.includes(nome);
+                    const setHasKey = allowSet.has(key);
+                    const setHasAnyAlias = vals.some(v => allowSet.has(v));
+                    return isAliasName && (setHasKey || setHasAnyAlias);
+                });
+                if (!nomeMatch) {
+                    el.style.display = 'none';
+                }
+            });
+        };
+
+        const loadModulos = async () => {
+            try {
+                // Preferimos endpoint que retorna nomes: detail=False action em viewset
+                const params = new URLSearchParams({ empresa_id: empresaId || '1', filial_id: filialId || '1' });
+                const resp = await authFetch(`/api/${slug}/parametros-admin/permissoes-modulos/modulos_empresa_filial/?${params.toString()}`);
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const data = await resp.json();
+                const nomes = data?.modulos_liberados || [];
+                // Se não houver permissões configuradas, usar módulos globais ativos
+                if (!Array.isArray(nomes) || nomes.length === 0) {
+                    const respGlobais = await authFetch(`/api/${slug}/parametros-admin/permissoes-modulos/modulos_disponiveis/`);
+                    if (!respGlobais.ok) throw new Error(`Globais HTTP ${respGlobais.status}`);
+                    const globais = await respGlobais.json();
+                    const nomesAtivos = (globais?.modulos || []).filter(m => m.modu_ativ).map(m => m.modu_nome);
+                    aplicarModulos(nomesAtivos);
+                } else {
+                    aplicarModulos(nomes);
+                }
+            } catch (err) {
+                console.error('Falha ao carregar módulos liberados:', err);
+                // Fallback: tentar endpoint por códigos e buscar nomes globais para mapear
+                try {
+                    const params = new URLSearchParams({ empr: empresaId || '1', fili: filialId || '1' });
+                    const [respCodes, respGlobais] = await Promise.all([
+                        authFetch(`/api/${slug}/parametros-admin/modulos_liberados/?${params.toString()}`),
+                        authFetch(`/api/${slug}/parametros-admin/permissoes-modulos/modulos_disponiveis/`)
+                    ]);
+                    if (!respCodes.ok || !respGlobais.ok) throw new Error('Fallback endpoints indisponíveis');
+                    const codData = await respCodes.json();
+                    const globais = await respGlobais.json();
+                    const liberadosCodigos = new Set((codData?.modulos_liberados || []).map(c => Number(c)));
+                    const nomesLiberados = (globais?.modulos || []).
+                        filter(m => liberadosCodigos.has(Number(m.modu_codi))).
+                        map(m => m.modu_nome);
+                    // Se ainda vazio, cair para todos módulos ativos
+                    const finalNames = (Array.isArray(nomesLiberados) && nomesLiberados.length > 0)
+                        ? nomesLiberados
+                        : (globais?.modulos || []).filter(m => m.modu_ativ).map(m => m.modu_nome);
+                    aplicarModulos(finalNames);
+                } catch (err2) {
+                    console.error('Fallback falhou:', err2);
+                    showWarning('Erro ao validar módulos');
+                }
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', loadModulos);
+    })();
+</script>

@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container min-vh-100 d-flex align-items-center justify-content-center py-5">
+  <div class="position-fixed top-0 end-0 p-3">
+    <button id="theme-toggle" type="button" class="btn btn-outline-dark btn-sm rounded-circle"
+      aria-label="Alternar tema">
+      <i class="bi bi-moon"></i>
+    </button>
+  </div>
+  <div class="w-100" style="max-width: 420px;">
+    <div class="mb-4 text-center">
+      <img src="{% static 'logo.png' %}" alt="Logo Spartacus Sistemas" class="mb-2 shadow-sm" style="height:64px;" />
+      <h1 class="h4 mb-1">SPS WEB</h1>
+
+    </div>
+
+    <div id="alert" class="alert alert-danger d-none" role="alert"></div>
+
+    <form id="loginForm" class="bg-body-tertiary border-0 rounded-4 p-4 shadow">
+      <div class="mb-3">
+        <label for="docu" class="form-label d-flex align-items-center gap-2">
+          <i class="bi bi-building"></i><span>CNPJ</span>
+        </label>
+        <input type="text" class="form-control" id="docu" name="docu" placeholder="00.000.000/0000-00" required>
+      </div>
+      <div class="mb-3">
+        <label for="username" class="form-label d-flex align-items-center gap-2">
+          <i class="bi bi-person-circle"></i><span>Usuário</span>
+        </label>
+        <input type="text" class="form-control" id="username" name="username" placeholder="seu usuário" required>
+      </div>
+      <div class="mb-3">
+        <label for="password" class="form-label d-flex align-items-center gap-2">
+          <i class="bi bi-shield-lock"></i><span>Senha</span>
+        </label>
+        <input type="password" class="form-control" id="password" name="password" placeholder="••••" required>
+      </div>
+      <button type="submit" class="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2 py-2">
+        <span>Entrar</span>
+        <i class="bi bi-arrow-right"></i>
+      </button>
+    </form>
+
+    <div class="mt-3 text-center">
+      <small class="text-body-secondary">
+        <a href="https://mobile-sps.site/" target="_blank" rel="noopener"
+          class="link-secondary text-decoration-none">https://mobile-sps.site/</a>
+      </small>
+    </div>
+  </div>
+</div>
+
+<script>
+  const showError = (msg) => {
+    const el = document.getElementById('alert');
+    el.textContent = msg;
+    el.classList.remove('d-none');
+  };
+
+  const findSlugByCNPJ = async (cnpj) => {
+    try {
+      const resp = await fetch('/api/licencas/mapa/');
+      const data = await resp.json();
+      const cleaned = (cnpj || '').replace(/\D/g, '');
+      const match = data.find(x => x.cnpj === cleaned);
+      return match ? match.slug : null;
+    } catch (e) {
+      console.error('Erro ao buscar mapa de licenças', e);
+      return null;
+    }
+  };
+
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    document.getElementById('alert').classList.add('d-none');
+
+    const docu = document.getElementById('docu').value.trim();
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+
+    if (!docu) return showError('Informe o CNPJ.');
+
+    const slug = await findSlugByCNPJ(docu);
+    if (!slug) return showError('CNPJ inválido ou não mapeado.');
+
+    try {
+      const resp = await fetch(`/api/${slug}/licencas/login/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ docu, username, password })
+      });
+
+      const data = await resp.json();
+      if (!resp.ok) {
+        const msg = data?.error || 'Falha no login.';
+        return showError(msg);
+      }
+
+      // Armazena tokens e contexto básico
+      localStorage.setItem('access', data.access);
+      localStorage.setItem('refresh', data.refresh);
+      localStorage.setItem('usuario', JSON.stringify(data.usuario));
+      localStorage.setItem('licenca', JSON.stringify(data.licenca));
+      localStorage.setItem('slug', slug);
+      localStorage.setItem('docu', docu);
+
+      // Avança para seleção de empresa/filial
+      window.location.href = '/web/selecionar-empresa/';
+    } catch (e) {
+      console.error(e);
+      showError('Erro inesperado ao tentar fazer login.');
+    }
+  });
+</script>
+{% endblock %}
+{% block header %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block body_class %}login-minimal{% endblock %}

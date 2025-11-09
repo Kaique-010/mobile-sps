@@ -42,7 +42,7 @@ class PermissaoModuloViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
     
     # Adicionar estes métodos na PermissaoModuloViewSet
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def modulos_liberados(self, request, slug=None):
         """Retorna módulos liberados para a empresa do usuário"""
         try:
@@ -85,7 +85,7 @@ class PermissaoModuloViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
     
     
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def modulos_disponiveis(self, request, slug=None):
         
         slug = get_licenca_slug()
@@ -182,7 +182,7 @@ class PermissaoModuloViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def modulos_empresa_filial(self, request, slug=None):
         """Retorna módulos liberados para uma empresa/filial específica"""
         try:

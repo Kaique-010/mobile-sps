@@ -14,6 +14,10 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('', views.index, name='index'),
+    path('home/', views.home, name='home'),
+    # Páginas Web
+    path('web/login/', views.web_login, name='web_login'),
+    path('web/selecionar-empresa/', views.selecionar_empresa, name='selecionar_empresa'),
     # Endpoint de health para Docker
     path('health/', views.health_check, name='health'),
     path('api/warm-cache/', views.warm_cache_endpoint, name='warm_cache'),

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPS WEB</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        /* Cor primária da marca */
+        :root {
+            --bs-primary: #2a62ff;
+        }
+
+        [data-bs-theme="dark"] {
+            --bs-primary: #2a62ff;
+        }
+
+        /* Compensa a navbar fixa no topo */
+        body {
+            padding-top: 4.5rem;
+        }
+
+        @media (min-width: 992px) {
+            body {
+                padding-top: 5rem;
+            }
+        }
+
+        /* Layout minimal sem navbar/footer */
+        body.login-minimal {
+            padding-top: 0 !important;
+        }
+    </style>
+    <script>
+        // Tema claro/escuro usando data-bs-theme
+        (function () {
+            const root = document.documentElement;
+            const saved = localStorage.getItem('sps_theme') || 'light';
+            const applyThemeAttr = (theme) => { root.setAttribute('data-bs-theme', theme); };
+            applyThemeAttr(saved);
+            window.addEventListener('DOMContentLoaded', () => {
+                const navbar = document.getElementById('main-navbar');
+                const offcanvas = document.getElementById('offcanvasDarkNavbar');
+                const applyChildren = (theme) => {
+                    if (navbar) navbar.setAttribute('data-bs-theme', theme);
+                    if (offcanvas) offcanvas.setAttribute('data-bs-theme', theme);
+                };
+                applyChildren(saved);
+                const btn = document.getElementById('theme-toggle');
+                if (!btn) return;
+                const setIcon = () => {
+                    const dark = (root.getAttribute('data-bs-theme') === 'dark');
+                    btn.classList.toggle('btn-outline-light', dark);
+                    btn.classList.toggle('btn-outline-dark', !dark);
+                    btn.innerHTML = dark ? '<i class="bi bi-sun"></i>' : '<i class="bi bi-moon"></i>';
+                };
+                setIcon();
+                btn.addEventListener('click', () => {
+                    const next = root.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
+                    localStorage.setItem('sps_theme', next);
+                    applyThemeAttr(next);
+                    applyChildren(next);
+                    setIcon();
+                });
+            });
+        })();
+    </script>
+</head>
+
+<body class="{% block body_class %}{% endblock %}">
+    {% block header %}{% include 'headerNav.html' %}{% endblock %}
+    {% block content %}{% endblock %}
+    {% block footer %}{% include 'footer.html' %}{% endblock %}
+
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+    <!-- Scripts adicionais abaixo -->
+    <script>
+        const btnInsights = document.getElementById("btn-insights");
+        if (btnInsights) {
+            btnInsights.addEventListener("click", function () {
+                fetch("/insights/")
+                    .then((response) => response.json())
+                    .then((data) => {
+                        document.getElementById("produto-mais-vendido").textContent = data.produto_mais_vendido;
+                        document.getElementById("quantidade-produto").textContent = data.quantidade_produto;
+                        document.getElementById("vendedor-top").textContent = data.vendedor_top;
+                        document.getElementById("cliente-top").textContent = data.cliente_top;
+                        document.getElementById("dia-mais-vendas").textContent = data.dia_mais_vendas;
+                        document.getElementById("modal-insights").style.display = "block";
+                        const produtoMenorEstoque = data.produto_menor_estoque;
+                        document.getElementById("produto-menor-estoque").textContent = produtoMenorEstoque.nome;
+                        document.getElementById("estoque-total").textContent = data.estoque_total;
+                        const clientesInativos = data.clientes_inativos;
+                        const clientesList = document.getElementById("clientes-inativos");
+                        clientesList.innerHTML = "";
+                        clientesInativos.forEach((cliente) => {
+                            const clienteItem = document.createElement("li");
+                            clienteItem.textContent = `${cliente.cliente} - Última Compra: ${cliente.data_ultima_compra} - Vendedor: ${cliente.vendedor}`;
+                            clientesList.appendChild(clienteItem);
+                        });
+                        document.getElementById("clientes-aniversario").textContent = data.clientes_aniversario;
+                    });
+            });
+        }
+
+        const closeBtn = document.querySelector(".close");
+        if (closeBtn) {
+            closeBtn.addEventListener("click", function () {
+                document.getElementById("modal-insights").style.display = "none";
+            });
+        }
+    </script>
+    <script>
+        // Controle de sessão via JWT no cliente
+        document.addEventListener('DOMContentLoaded', () => {
+            const warning = document.getElementById('login-warning');
+            const logoutBtn = document.getElementById('logout-jwt');
+            const hasToken = !!localStorage.getItem('access');
+            if (warning) warning.classList.toggle('d-none', hasToken);
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', () => {
+                    localStorage.removeItem('access');
+                    localStorage.removeItem('refresh');
+                    localStorage.removeItem('slug');
+                    localStorage.removeItem('usuario');
+                    localStorage.removeItem('licenca');
+                    localStorage.removeItem('docu');
+                    if (warning) warning.classList.remove('d-none');
+                    window.location.href = '/web/login/';
+                });
+            }
+        });
+    </script>
+</body>
+
+</html>

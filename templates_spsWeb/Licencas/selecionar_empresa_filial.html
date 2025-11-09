@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container min-vh-100 d-flex align-items-center justify-content-center">
+  <div class="w-100" style="max-width: 640px;">
+    <div class="mb-4 text-center">
+      <h1 class="h4 mb-1">Seleção de Empresa e Filial</h1>
+      <p class="text-body-secondary mb-0">Escolha a empresa e filial para continuar.</p>
+    </div>
+
+    <div id="alert" class="alert alert-danger d-none" role="alert"></div>
+
+    <form id="selForm" class="bg-body border rounded-3 p-4">
+      <div class="form-floating mb-3">
+        <select class="form-select" id="empresa" required>
+          <option value="" selected disabled>Carregando...</option>
+        </select>
+        <label for="empresa">Empresa</label>
+      </div>
+      <div class="form-floating mb-3">
+        <select class="form-select" id="filial" required>
+          <option value="" selected disabled>Selecione a empresa primeiro</option>
+        </select>
+        <label for="filial">Filial</label>
+      </div>
+      <button type="submit" class="btn btn-success w-100">Continuar</button>
+    </form>
+
+    <div class="mt-3 text-center">
+      <small class="text-body-secondary">Após selecionar, você será direcionado à home.</small>
+    </div>
+  </div>
+</div>
+
+<script>
+  const showError = (msg) => {
+    const el = document.getElementById('alert');
+    el.textContent = msg;
+    el.classList.remove('d-none');
+  };
+
+  const slug = localStorage.getItem('slug');
+  const access = localStorage.getItem('access');
+
+  const authFetch = (url) => fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${access}`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  const carregarEmpresas = async () => {
+    try {
+      const resp = await authFetch(`/api/${slug}/licencas/empresas/`);
+      const data = await resp.json();
+      if (!resp.ok) return showError(data?.error || 'Erro ao carregar empresas');
+      const sel = document.getElementById('empresa');
+      sel.innerHTML = '<option value="" disabled selected>Selecione...</option>';
+      data.forEach(e => {
+        const opt = document.createElement('option');
+        opt.value = e.empr_codi;
+        opt.textContent = `${e.empr_nome} (${e.empr_docu})`;
+        sel.appendChild(opt);
+      });
+    } catch (e) {
+      console.error(e);
+      showError('Erro inesperado ao carregar empresas');
+    }
+  };
+
+  const carregarFiliais = async (empresaId) => {
+    try {
+      const resp = await authFetch(`/api/${slug}/licencas/filiais/?empresa_id=${encodeURIComponent(empresaId)}`);
+      const data = await resp.json();
+      if (!resp.ok) return showError(data?.error || 'Erro ao carregar filiais');
+      const sel = document.getElementById('filial');
+      sel.innerHTML = '<option value="" disabled selected>Selecione...</option>';
+      data.forEach(f => {
+        const opt = document.createElement('option');
+        // Adapte conforme campos do serializer de Filiais
+        opt.value = f.empr_codi; // Placeholder se houver campo específico da filial
+        opt.textContent = f.empr_nome;
+        sel.appendChild(opt);
+      });
+    } catch (e) {
+      console.error(e);
+      showError('Erro inesperado ao carregar filiais');
+    }
+  };
+
+  document.getElementById('empresa').addEventListener('change', (e) => {
+    const empresaId = e.target.value;
+    if (empresaId) carregarFiliais(empresaId);
+  });
+
+  document.getElementById('selForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const empresaId = document.getElementById('empresa').value;
+    const filialId = document.getElementById('filial').value;
+    if (!empresaId || !filialId) return showError('Selecione empresa e filial.');
+
+    localStorage.setItem('empresa_id', empresaId);
+    localStorage.setItem('filial_id', filialId);
+    // Redireciona para a Home do sistema
+    window.location.href = '/home/';
+  });
+
+  // Inicializa
+  if (!slug || !access) {
+    showError('Sessão inválida. Faça login novamente.');
+  } else {
+    carregarEmpresas();
+  }
+</script>
+{% endblock %}
