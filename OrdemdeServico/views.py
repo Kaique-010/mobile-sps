@@ -450,6 +450,39 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
     @action(
         detail=True,
         methods=['get'],
+        permission_classes=[IsAuthenticated, PodeVerOrdemDoSetor, WorkflowPermission],
+        url_path='anteriores-setores'
+    )        
+    def anteriores_setores(self, request, *args, **kwargs):
+        """
+        Endpoint para obter setores anteriores válidos no workflow.
+        """
+        try:
+            banco = self.get_banco()
+            ordem = self.get_object()
+            
+            setores = ordem.obter_setores_anteriores(banco)
+            
+            return Response({
+                "anteriores_setores": [
+                    {
+                        "codigo": setor.wkfl_seto_orig, 
+                        "nome": f"Setor {setor.wkfl_seto_orig}"
+                    }
+                    for setor in setores
+                ]
+            })
+            
+        except Exception as e:
+            logger.error(f"Erro ao obter setores anteriores da ordem {self.kwargs.get(self.lookup_url_kwarg or self.lookup_field)}: {str(e)}")
+            return Response(
+                {"error": "Erro ao obter setores anteriores"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(
+        detail=True,
+        methods=['get'],
         permission_classes=[IsAuthenticated],
         url_path='historico-workflow'
     )
