@@ -80,7 +80,8 @@ class Lote(models.Model):
 
 
 class GrupoProduto(models.Model):
-    codigo = models.AutoField(
+    codigo = models.CharField(
+        max_length=20,
         db_column='grup_codi', 
         primary_key=True,
         verbose_name='Código'
@@ -95,14 +96,15 @@ class GrupoProduto(models.Model):
         db_table = 'gruposprodutos'
         verbose_name = 'Grupo de Produto'
         verbose_name_plural = 'Grupos de Produtos'
-        managed = 'false'
+        managed = False
 
 
     def __str__(self):
         return f'{self.codigo} - {self.descricao}'
 
 class SubgrupoProduto(models.Model):
-    codigo = models.AutoField(
+    codigo = models.CharField(
+        max_length=20,
         db_column='sugr_codi', 
         primary_key=True,
         verbose_name='Código'
@@ -115,7 +117,7 @@ class SubgrupoProduto(models.Model):
 
     class Meta:
         db_table = 'subgruposprodutos'
-        managed = 'false'
+        managed = False
 
 
 
@@ -123,7 +125,8 @@ class SubgrupoProduto(models.Model):
         return self.descricao
 
 class FamiliaProduto(models.Model):
-    codigo = models.AutoField(
+    codigo = models.CharField(
+        max_length=20,
         db_column='fami_codi', 
         primary_key=True,
         verbose_name='Código'
@@ -136,7 +139,7 @@ class FamiliaProduto(models.Model):
 
     class Meta:
         db_table = 'familiaprodutos'
-        managed = 'false'
+        managed = False
 
 
 
@@ -157,7 +160,7 @@ class Marca(models.Model):
 
     class Meta:
         db_table = 'marca'
-        managed = 'false'
+        managed = False
 
 
 

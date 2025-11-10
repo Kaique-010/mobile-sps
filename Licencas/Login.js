@@ -21,10 +21,19 @@ import Toast from 'react-native-toast-message'
 const EMPRESAS_CACHE_KEY = 'empresas_login_cache'
 const EMPRESAS_CACHE_DURATION = 12 * 60 * 60 * 1000 // 12 horas
 
-// Função para buscar empresas com cache
+// Função para buscar empresas com cache (rota nova com slug)
 const buscarEmpresasComCache = async () => {
   try {
-    const response = await fetch(`${BASE_URL}/auth/empresas/`)
+    // Resolve slug a partir do CNPJ salvo
+    const docu = await AsyncStorage.getItem('docu')
+    const slugMap = await fetchSlugMap()
+    const slug = slugMap?.[docu]
+
+    if (!slug) {
+      throw new Error('Slug não encontrado para o CNPJ informado')
+    }
+
+    const response = await fetch(`${BASE_URL}/api/${slug}/licencas/empresas/`)
     const empresas = await response.json()
 
     // Salvar no cache

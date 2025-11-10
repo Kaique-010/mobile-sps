@@ -2,52 +2,248 @@
 {% load static %}
 
 {% block content %}
-<div class="container min-vh-100 d-flex align-items-center justify-content-center py-5">
+<style>
+  /*
+    ====== LOGIN (THEMES) ======
+    Organização: primeiro TEMA CLARO (default), depois TEMA ESCURO (data-bs-theme="dark").
+    Cada bloco agrupa regras por componente, com comentários explicando o impacto visual.
+  */
+
+  /* ===================== TEMA CLARO ===================== */
+
+  /* Página: fundo leve e neutro para destacar o cartão */
+  .login-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Plano de fundo claro com leve gradiente, melhora contraste com o card */
+    background: linear-gradient(135deg, #eef2f7 0%, #f8f9fa 100%);
+  }
+
+  /* Cartão de login: branco, cantos arredondados e sombra moderada */
+  .login-card {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    overflow: hidden;
+    max-width: 440px;
+    width: 100%;
+  }
+
+  /* Cabeçalho: gradiente na identidade para destaque do logotipo */
+  .login-header {
+    background: linear-gradient(135deg, #2f4858 0%, #356b54 100%);
+    padding: 40px 30px;
+    text-align: center;
+    color: #ffffff; /* garante contraste alto com o fundo do cabeçalho */
+  }
+
+  /* Marca e título: dimensionamento e inversão para boa legibilidade */
+  .login-logo {
+    height: 64px;
+    margin-bottom: 16px;
+    filter: brightness(0) invert(1);
+  }
+  .login-title {
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  /* Corpo do card: espaçamento confortável para os campos */
+  .login-body { padding: 40px 30px; }
+
+  /* Rótulos: cor escura padrão para boa leitura */
+  .form-label {
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: #333;
+  }
+
+  /* Campos: borda suave, foco com realce azul e sombra leve */
+  .form-control {
+    border-radius: 8px;
+    padding: 12px 16px;
+    border: 2px solid #e0e0e0;
+    transition: all 0.3s ease;
+    background: #ffffff;
+    color: #212529;
+  }
+  .form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12);
+  }
+
+  /* Botão Entrar: gradiente violeta/azul com leve elevação no hover */
+  .btn-login {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 8px;
+    padding: 14px;
+    font-weight: 600;
+    color: #ffffff;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .btn-login:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.35);
+  }
+
+  /* Rodapé do card: borda sutil e links com transição */
+  .login-footer {
+    text-align: center;
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid #e0e0e0;
+  }
+  .login-footer a {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+  }
+  .login-footer a:hover { color: #764ba2; }
+
+  /* Botão de alternância de tema: visível e sem deslocamento extra */
+  .theme-toggle-login {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(255,255,255,0.18);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 0, 0, 0.35);
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: #000000;
+    font-size: 20px;
+  }
+  .theme-toggle-login:hover {
+    background: rgba(255,255,255,0.28);
+    transform: rotate(180deg);
+  }
+
+  /* Ajustes gerais:
+     - Alertas sem borda para estética mais limpa
+     - Oculta footer global nesta página para foco no formulário */
+  .alert { border-radius: 8px; border: none; }
+  .footer { display: none !important; }
+
+   
+
+  /* ===================== TEMA ESCURO ===================== */
+
+  /* Página: tons frios e profundos para reduzir brilho */
+  [data-bs-theme="dark"] .login-wrapper {
+    /* Gradiente escuro suave que evita banding e deixa o card em evidência */
+    background: linear-gradient(135deg, #101522 0%, #1b2432 100%);
+  }
+
+  /* Cartão de login: superfície escura com sombra mais presente para legibilidade */
+  [data-bs-theme="dark"] .login-card {
+    background: #1f2633;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+  }
+
+  /* Cabeçalho: variação mais escura preservando contraste do texto */
+  [data-bs-theme="dark"] .login-header {
+    background: linear-gradient(135deg, #243447 0%, #1f3a33 100%);
+  }
+
+  /* Rótulos: clareamento para manter contraste com o fundo escuro */
+  [data-bs-theme="dark"] .form-label { color: #e0e0e0; }
+
+  /* Campos: fundo escuro, borda definida e foco coerente */
+  [data-bs-theme="dark"] .form-control {
+    background: #141a24;
+    border-color: #3a4a62;
+    color: #e0e0e0;
+  }
+  [data-bs-theme="dark"] .form-control:focus {
+    background: #141a24;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.22);
+  }
+
+  /* Botão Entrar: tons escuros coesos e sombra mais marcada no hover */
+  [data-bs-theme="dark"] .btn-login {
+    background: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
+  }
+  [data-bs-theme="dark"] .btn-login:hover {
+    box-shadow: 0 8px 20px rgba(15, 52, 96, 0.5);
+  }
+
+  /* Rodapé do card: borda ajustada e links com cor adequada ao dark */
+  [data-bs-theme="dark"] .login-footer { border-top-color: #3a4a62; }
+  [data-bs-theme="dark"] .login-footer a { color: #88a4e6; }
+
+  /* Botão de alternância de tema: fundo e borda adaptados ao escuro */
+  [data-bs-theme="dark"] .theme-toggle-login {
+    background: rgba(32,32,48,0.35);
+    border-color: rgba(255,255,255,0.25);
+    color: #ffffff;
+  }
+  [data-bs-theme="dark"] .theme-toggle-login:hover {
+    transform: rotate(180deg);
+    background: rgba(32,32,48,0.45);
+  }
+  .login-title {
+   
+       font-size: 1.5rem;
+        font-family: 'Fauna', serif;
+  }
+</style>
+<div class="login-wrapper">
   <div class="position-fixed top-0 end-0 p-3">
-    <button id="theme-toggle" type="button" class="btn btn-outline-dark btn-sm rounded-circle"
+    <button id="theme-toggle" type="button" class="btn btn-outline-dark btn-sm rounded-circle theme-toggle-login"
       aria-label="Alternar tema">
       <i class="bi bi-moon"></i>
     </button>
   </div>
-  <div class="w-100" style="max-width: 420px;">
-    <div class="mb-4 text-center">
-      <img src="{% static 'logo.png' %}" alt="Logo Spartacus Sistemas" class="mb-2 shadow-sm" style="height:64px;" />
-      <h1 class="h4 mb-1">SPS WEB</h1>
 
+  <div class="login-card">
+    <div class="login-header">
+      <img src="{% static 'logo.png' %}" alt="Logo Spartacus Sistemas" class="login-logo" />
+      <h1 class="login-title">SPS WEB</h1>
     </div>
 
-    <div id="alert" class="alert alert-danger d-none" role="alert"></div>
+    <div class="login-body">
+      <div id="alert" class="alert alert-danger d-none" role="alert"></div>
 
-    <form id="loginForm" class="bg-body-tertiary border-0 rounded-4 p-4 shadow">
-      <div class="mb-3">
-        <label for="docu" class="form-label d-flex align-items-center gap-2">
-          <i class="bi bi-building"></i><span>CNPJ</span>
-        </label>
-        <input type="text" class="form-control" id="docu" name="docu" placeholder="00.000.000/0000-00" required>
-      </div>
-      <div class="mb-3">
-        <label for="username" class="form-label d-flex align-items-center gap-2">
-          <i class="bi bi-person-circle"></i><span>Usuário</span>
-        </label>
-        <input type="text" class="form-control" id="username" name="username" placeholder="seu usuário" required>
-      </div>
-      <div class="mb-3">
-        <label for="password" class="form-label d-flex align-items-center gap-2">
-          <i class="bi bi-shield-lock"></i><span>Senha</span>
-        </label>
-        <input type="password" class="form-control" id="password" name="password" placeholder="••••" required>
-      </div>
-      <button type="submit" class="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2 py-2">
-        <span>Entrar</span>
-        <i class="bi bi-arrow-right"></i>
-      </button>
-    </form>
+      <form id="loginForm">
+        <div class="mb-3">
+          <label for="docu" class="form-label d-flex align-items-center gap-2">
+            <i class="bi bi-building"></i><span>CNPJ</span>
+          </label>
+          <input type="text" class="form-control" id="docu" name="docu" placeholder="00.000.000/0000-00" required>
+        </div>
+        <div class="mb-3">
+          <label for="username" class="form-label d-flex align-items-center gap-2">
+            <i class="bi bi-person-circle"></i><span>Usuário</span>
+          </label>
+          <input type="text" class="form-control" id="username" name="username" placeholder="seu usuário" required>
+        </div>
+        <div class="mb-3">
+          <label for="password" class="form-label d-flex align-items-center gap-2">
+            <i class="bi bi-shield-lock"></i><span>Senha</span>
+          </label>
+          <input type="password" class="form-control" id="password" name="password" placeholder="••••" required>
+        </div>
+        <button type="submit" class="btn-login w-100 d-flex align-items-center justify-content-center gap-2">
+          <span>Entrar</span>
+          <i class="bi bi-arrow-right"></i>
+        </button>
+      </form>
+    </div>
 
-    <div class="mt-3 text-center">
-      <small class="text-body-secondary">
-        <a href="https://mobile-sps.site/" target="_blank" rel="noopener"
-          class="link-secondary text-decoration-none">https://mobile-sps.site/</a>
-      </small>
+    <div class="login-footer">
+      <a href="https://mobile-sps.site/" target="_blank" rel="noopener">https://mobile-sps.site/</a>
     </div>
   </div>
 </div>

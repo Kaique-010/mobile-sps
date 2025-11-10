@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Cadastrar Grupo{% endblock %}
+
+{% block content %}
+<br><br><br><br><br>
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+<link rel="stylesheet" href="{% static 'produtos/styles.css' %}">
+
+<div class="container">
+  <div class="card">
+    <div class="card-body">
+      <h3 class="card-title">Cadastrar Grupo <i class="bi bi-box fs-4"></i></h3>
+      <br>
+
+      <!-- Mensagens de Sucesso e Erro -->
+      {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+          {{ message }}
+        </div>
+        {% endfor %}
+      {% endif %}
+
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <!-- Dados Cadastrais -->
+        <h5>Dados do Grupo</h5>
+        <br>
+
+        <div class="row">
+          <div class="col-md-6">
+            <div class="form-group">
+              <label for="{{ form.codigo.id_for_label }}">Código do Grupo</label>
+              {{ form.codigo }}
+              {% if form.codigo.errors %}
+              <div class="alert alert-danger mt-1">
+                {{ form.codigo.errors|striptags }}
+              </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="form-group">
+              <label for="{{ form.descricao.id_for_label }}">Descrição</label>
+              {{ form.descricao }}
+              {% if form.descricao.errors %}
+              <div class="alert alert-danger mt-1">
+                {{ form.descricao.errors|striptags }}
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Botões de Salvar e Voltar -->
+        <div class="d-flex justify-content-between mt-3">
+          <button type="submit" class="btn btn-primary">Salvar</button>
+          <a href="{% url 'grupos_list' %}" class="btn btn-secondary mt-2">Voltar para a Lista de Grupos</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

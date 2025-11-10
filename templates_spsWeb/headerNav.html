@@ -20,6 +20,10 @@
         flex: 1 1 auto;
         min-height: 0;
     }
+    .navbar-brand, .offcanvas-title {
+        font-size: 1.2rem;
+        font-family: 'Fauna', serif;
+    }
 </style>
 <header class="bg-body">
     <nav class="navbar fixed-top bg-body" id="main-navbar">
@@ -92,7 +96,7 @@
                             </li>
 
                             <li class="nav-item" data-modulo="Entidades">
-                                <a class="nav-link active" href="/entidades/">
+                                <a class="nav-link active" href="/web/login/" data-slug-route="/web/{slug}/entidades/">
                                     <i class="bi bi-person-gear fs-3"></i> Entidades
                                 </a>
                             </li>
@@ -144,7 +148,7 @@
                                 </a>
                                 <div class="collapse" id="collapseProdutos">
                                     <ul class="list-unstyled ps-4">
-                                        <li><a class="nav-link" href="#">Cadastro de
+                                        <li><a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/produtos/">Cadastro de
                                                 Produtos</a></li>
                                         <li><a class="nav-link" href="#">Entrada de
                                                 Estoque</a></li>
@@ -161,6 +165,9 @@
                     </div>
                 </div>
                 <div class="offcanvas-footer bg-body px-3 py-3 d-flex gap-2">
+                    <a href="/web/selecionar-empresa/" class="btn btn-outline-primary">
+                        <i class="bi bi-building"></i> Trocar Empresa/Filial
+                    </a>
                     <button id="logout-jwt" class="btn btn-outline-danger" type="button">
                         <i class="bi bi-box-arrow-right"></i> Sair
                     </button>
@@ -306,5 +313,21 @@
         };
 
         document.addEventListener('DOMContentLoaded', loadModulos);
+
+        // Ajusta links com base no slug armazenado
+        document.addEventListener('DOMContentLoaded', () => {
+            const slug = localStorage.getItem('slug');
+            const links = document.querySelectorAll('[data-slug-route]');
+            links.forEach(el => {
+                const pattern = el.getAttribute('data-slug-route');
+                if (!pattern) return;
+                if (slug) {
+                    el.setAttribute('href', pattern.replace('{slug}', slug));
+                } else {
+                    // Sem slug, mantém fallback para login web
+                    el.setAttribute('href', '/web/login/');
+                }
+            });
+        });
     })();
 </script>

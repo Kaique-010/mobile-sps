@@ -1,0 +1,474 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Cadastrar Orçamento{% endblock %}
+
+{% block content %}
+
+<br><br>
+<link rel="stylesheet" href="{% static 'orcamentos/dstyle.css' %}?v={{ STATIC_VERSION }}" />
+
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+
+
+<div class="container mt-5">
+    <div class="card">
+        <div class="card-body">
+            <h3 class="card-title text-center">Orçamento de Venda <i class="bi bi-file-earmark-text fs-4"></i></h3>
+            <hr />
+
+            <!-- Exibe erros do formulário principal e do formset -->
+            {% if form.errors or pecas_formset.errors %}
+            <div class="alert alert-danger">
+                <strong>Erros no formulário:</strong>
+                <ul>
+                    <!-- Erros do formulário principal -->
+                    {% for field in form %}
+                    {% for error in field.errors %}
+                    <li>{{ field.label }}: {{ error }}</li>
+                    {% endfor %}
+                    {% endfor %}
+                    {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                    {% endfor %}
+
+                    <!-- Erros do formset -->
+                    {% for form in pecas_formset %}
+                    {% for field in form %}
+                    {% for error in field.errors %}
+                    <li>{{ field.label }}: {{ error }}</li>
+                    {% endfor %}
+                    {% endfor %}
+                    {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                    {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <!-- Exibe mensagens de sucesso/erro -->
+            {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Fechar">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            {% endfor %}
+            {% endif %}
+
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <!-- Navegação das abas -->
+                <ul class="nav nav-tabs" id="orcamentoTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link active" id="dadosOrcamentoTab" data-toggle="tab" href="#dadosOrcamento"
+                            role="tab" aria-controls="dadosOrcamento" aria-selected="true">Dados do Orçamento</a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link" id="dadosComplementaresTab" data-toggle="tab" href="#dadosComplementares"
+                            role="tab" aria-controls="dadosComplementares" aria-selected="false">Dados
+                            Complementares</a>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="orcamentoTabsContent">
+                    <!-- Aba Dados do Orçamento -->
+                    <div class="tab-pane fade show active" id="dadosOrcamento" role="tabpanel"
+                        aria-labelledby="dadosOrcamentoTab">
+                        <!-- Campos principais do orçamento -->
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="{{ form.pedi_empr.id_for_label }}">Empresa</label>
+                                    {{ form.pedi_empr }}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="{{ form.pedi_fili.id_for_label }}">Filial</label>
+                                    {{ form.pedi_fili }}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="{{ form.pedi_nume.id_for_label }}">Nº Orçamento</label>
+                                    {{ form.pedi_nume }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.pedi_data.id_for_label }}">Data de Abertura</label>
+                                    {{ form.pedi_data }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.pedi_vali.id_for_label }}">Validade</label>
+                                    {{ form.pedi_vali }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <!-- Campo de busca para Cliente -->
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Cliente</label>
+                                    <input type="text" id="cliente" placeholder="Digite o nome do cliente"
+                                        class="form-control" autocomplete="off">
+                                    {{ form.pedi_forn }}
+                                    <ul id="lista-clientes" class="list-group"></ul>
+                                </div>
+                            </div>
+                            <!-- Campo de busca para Vendedor -->
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Vendedor</label>
+                                    <input type="text" id="vendedor" placeholder="Digite o nome do vendedor"
+                                        class="form-control" autocomplete="off">
+                                    {{ form.pedi_vend }}
+                                    <ul id="lista-vendedores" class="list-group"></ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h5 style="text-align: center; margin-top: 35px; margin-bottom: 25px; color: rgb(20, 35, 46);">
+                            Itens do Orçamento</h5>
+                        <table class="table-responsive">
+                            <thead>
+                                <tr>
+                                    <th>Código da Peça</th>
+                                    <th>Quantidade</th>
+                                    <th>Preço Unitário</th>
+                                    <th>Total</th>
+                                    <th>Observação</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="itens-orcamento">
+                                {{ pecas_formset.management_form }}
+                                {% for form in pecas_formset %}
+                                <tr class="item-row">
+                                    <td>
+                                        <input type="text" class="form-control busca-produto"
+                                            placeholder="Buscar produto..." autocomplete="on">
+                                        <input type="hidden" name="{{ form.prefix }}-peca_codi" class="produto-id">
+                                        <ul class="list-group resultado-busca"></ul>
+                                    </td>
+                                    <td>
+                                        <input type="number" name="{{ form.prefix }}-peca_quan"
+                                            class="form-control quantidade" min="1" value="1" required>
+                                    </td>
+                                    <td>
+                                        <input type="text" name="{{ form.prefix }}-peca_unit"
+                                            class="form-control preco-unitario" step="0.01" value="0.00" required>
+                                    </td>
+                                    <td>
+                                        <input type="text" name="{{ form.prefix }}-peca_tota" class="form-control total"
+                                            value="0.00" readonly>
+                                    </td>
+                                    <td>
+                                        {{ form.peca_comp }}
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-danger remove-item">Remover</button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+
+                        <button type="button" class="btn btn-primary" id="add-item">Adicionar Item</button>
+                        <br><br>
+                        <div class="form-row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label for="id_orca_valo_tota">Total do Orçamento</label>
+                                    <input type="text" name="{{ form.orca_valo_tota.name }}" id="id_orca_valo_tota"
+                                        class="form-control" value="{{ form.orca_valo_tota.value }}" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Aba Dados Complementares -->
+                    <div class="tab-pane fade" id="dadosComplementares" role="tabpanel"
+                        aria-labelledby="dadosComplementaresTab">
+                        <div class="form-row">
+                            <div class="form-group col-md-4">
+                                <label for="{{ form.orca_cond.id_for_label }}">Condição</label>
+                                {{ form.orca_cond }}
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label for="{{ form.orca_resp.id_for_label }}">Responsável</label>
+                                {{ form.orca_resp }}
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label for="{{ form.orca_tipo_fret.id_for_label }}">Tipo de Frete</label>
+                                {{ form.orca_tipo_fret }}
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-4">
+                                <label for="{{ form.orca_tipo_impo.id_for_label }}">Tipo de Imposto</label>
+                                {{ form.orca_tipo_impo }}
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label for="{{ form.orca_praz_entr.id_for_label }}">Prazo de Entrega</label>
+                                {{ form.orca_praz_entr }}
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-12">
+                                <label for="{{ form.orca_obse.id_for_label }}">Observações</label>
+                                {{ form.orca_obse }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <br><br>
+                <div class="container-buttons">
+                    <button type="submit" class="btn btn-success">Criar Orçamento</button>
+                    <a href="{% url 'orcamento_list' %}" class="btn btn-danger">Voltar para a lista de orçamentos</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<!-- JavaScript -->
+<script>
+    // Função para atualizar o total do orçamento
+    function atualizarTotalOrcamento() {
+        let total = 0;
+        $('#itens-orcamento .item-row').each(function () {
+            let quantidade = parseFloat($(this).find('.quantidade').val()) || 0;
+            let precoUnitario = parseFloat($(this).find('.preco-unitario').val()) || 0;
+            let totalLinha = quantidade * precoUnitario;
+            $(this).find('.total').val(totalLinha.toFixed(2));
+            total += totalLinha;
+        });
+        $('#id_orca_valo_tota').val(total.toFixed(2));
+    }
+
+    $(document).ready(function () {
+        var totalForms = $('#id_pecas-TOTAL_FORMS');
+
+        // Evento para campos de busca (autocomplete)
+        $(document).on("keyup", ".busca-produto", function () {
+            let input = $(this);
+            let query = input.val();
+            let resultados = input.siblings(".resultado-busca");
+
+            if (query.length < 3) {
+                resultados.empty();
+                return;
+            }
+
+            $.ajax({
+                url: "{% url 'buscar_produtos' %}",
+                data: { term: query },
+                dataType: "json",
+                success: function (data) {
+                    resultados.empty();
+                    data.forEach(function (produto) {
+                        resultados.append(`
+              <li class="list-group-item list-group-item-action" data-id="${produto.id}" data-nome="${produto.nome}">
+                ${produto.nome} (${produto.codigo})
+              </li>
+            `);
+                    });
+                    resultados.show();
+                }
+            });
+        });
+
+        // Evento para selecionar um produto da lista
+        $(document).on("click", ".resultado-busca li", function () {
+            let produtoId = $(this).data("id");
+            let produtoNome = $(this).data("nome");
+            let inputBusca = $(this).closest("td").find(".busca-produto");
+            let inputId = $(this).closest("td").find(".produto-id");
+
+            inputBusca.val(produtoNome);
+            inputId.val(produtoId);
+            $(this).closest(".resultado-busca").empty().hide();
+        });
+
+        // Esconder a lista de busca ao clicar fora
+        $(document).on("click", function (e) {
+            if (!$(e.target).closest(".busca-produto, .resultado-busca").length) {
+                $(".resultado-busca").empty().hide();
+            }
+        });
+
+        // Adicionar um novo item
+        $('#add-item').click(function () {
+            var currentFormCount = parseInt(totalForms.val());
+            var newRow = `
+        <tr class="item-row">
+          <td>
+            <input type="text" class="form-control busca-produto" placeholder="Buscar produto..." autocomplete="on">
+            <input type="hidden" name="pecas-${currentFormCount}-peca_codi" class="produto-id">
+            <ul class="list-group resultado-busca"></ul>
+          </td>
+          <td>
+            <input type="number" name="pecas-${currentFormCount}-peca_quan" class="form-control quantidade" min="1" value="1" required>
+          </td>
+          <td>
+            <input type="text" name="pecas-${currentFormCount}-peca_unit" class="form-control preco-unitario" step="0.01" value="0.00" required>
+          </td>
+          <td>
+            <input type="text" name="pecas-${currentFormCount}-peca_tota" class="form-control total" value="0.00" readonly>
+          </td>
+          <td>
+            <input type="text" name="pecas-${currentFormCount}-peca_comp" class="form-control">
+          </td>
+          <td>
+            <button type="button" class="btn btn-danger remove-item">Remover</button>
+          </td>
+        </tr>
+      `;
+            $('#itens-orcamento').append(newRow);
+            totalForms.val(currentFormCount + 1);
+            atualizarTotalOrcamento();
+        });
+
+        // Remover um item
+        $(document).on("click", ".remove-item", function () {
+            $(this).closest('tr').remove();
+            atualizarTotalOrcamento();
+        });
+
+        // Atualizar total ao alterar quantidade ou preço
+        $(document).on("input", ".quantidade, .preco-unitario", function () {
+            atualizarTotalOrcamento();
+        });
+    });
+
+    $(document).ready(function () {
+
+        // Quando o usuário digitar no campo de busca...
+        $(document).on("keyup", ".busca-produto", function () {
+            var $input = $(this);
+            var query = $input.val();
+            var $resultados = $input.siblings(".resultado-busca");
+
+            // Se não digitar nada, limpa a lista
+            if (query.length === 0) {
+                $resultados.empty().hide();
+                return;
+            }
+
+            $.ajax({
+                url: "{% url 'buscar_produtos' %}",
+                data: { term: query },
+                dataType: "json",
+                success: function (data) {
+                    $resultados.empty();
+                    if (data.length > 0) {
+                        $.each(data, function (index, produto) {
+                            // Cria um item para cada produto retornado
+                            $resultados.append(
+                                "<li class='list-group-item list-group-item-action' data-id='" + produto.id + "' data-nome='" + produto.nome + "'>" +
+                                produto.nome + " (" + produto.codigo + ")" +
+                                "</li>"
+                            );
+                        });
+                        $resultados.show();
+                    } else {
+                        $resultados.hide();
+                    }
+                },
+                error: function () {
+                    $resultados.empty().hide();
+                }
+            });
+        });
+
+        // Quando o usuário clicar em um item da lista...
+        $(document).on("click", ".resultado-busca li", function () {
+            var $li = $(this);
+            var produtoNome = $li.data("nome");
+            var produtoId = $li.data("id");
+            var $td = $li.closest("td");
+            $td.find(".busca-produto").val(produtoNome);
+            $td.find(".produto-id").val(produtoId);
+            $li.parent().empty().hide();
+        });
+
+        // Esconder a lista se clicar fora
+        $(document).on("click", function (e) {
+            if (!$(e.target).closest(".busca-produto, .resultado-busca").length) {
+                $(".resultado-busca").empty().hide();
+            }
+        });
+
+    });
+
+    $("#cliente").on("input", function () {
+        let query = $(this).val();
+        if (query.length > 1) {
+            $.ajax({
+                url: "{% url 'buscar_clientes' %}",
+                data: { 'term': query },  // Use 'term' aqui
+                success: function (data) {
+                    $("#lista-clientes").empty();
+                    $.each(data, function (index, cliente) {
+                        $("#lista-clientes").append(`<li class="list-group-item" data-id="${cliente.id}">${cliente.nome}</li>`);
+                    });
+                }
+            });
+        } else {
+            $("#lista-clientes").empty();
+        }
+    });
+
+    // Ao clicar em um item da lista de clientes
+    $(document).on('click', '#lista-clientes li', function () {
+        let id = $(this).data('id');
+        let nome = $(this).text();
+        $("#cliente").val(nome); // Atualiza o campo de busca com o nome
+        // Atualiza o campo oculto do formulário (pedi_forn)
+        $("[name='pedi_forn']").val(id);
+        $("#lista-clientes").empty();
+    });
+
+    // Autocomplete para Vendedores
+    $("#vendedor").on("input", function () {
+        let query = $(this).val();
+        if (query.length > 1) {
+            $.ajax({
+                url: "{% url 'buscar_vendedores' %}",
+                data: { 'term': query },  // Use 'term' aqui também
+                success: function (data) {
+                    $("#lista-vendedores").empty();
+                    $.each(data, function (index, vendedor) {
+                        $("#lista-vendedores").append(`<li class="list-group-item" data-id="${vendedor.id}">${vendedor.nome}</li>`);
+                    });
+                }
+            });
+        } else {
+            $("#lista-vendedores").empty();
+        }
+    });
+
+    // Ao clicar em um item da lista de vendedores
+    $(document).on('click', '#lista-vendedores li', function () {
+        let id = $(this).data('id');
+        let nome = $(this).text();
+        $("#vendedor").val(nome); // Atualiza o campo de busca com o nome
+        // Atualiza o campo oculto do formulário (pedi_vend)
+        $("[name='pedi_vend']").val(id);
+        $("#lista-vendedores").empty();
+    });
+</script>
+{% endblock %}

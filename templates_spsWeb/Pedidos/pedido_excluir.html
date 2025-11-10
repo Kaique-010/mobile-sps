@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    h1,
+    p {
+        color: aliceblue;
+        text-align: center;
+    }
+
+    form {
+        text-align: center;
+    }
+</style>
+<br><br><br><br><br><br>
+<h1>Excluir Pedido #{{ object.pedi_nume }}</h1>
+
+<p>Tem certeza que deseja excluir este pedido?</p>
+
+<form method="POST">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Excluir</button>
+    <a href="{% url 'pedidos_por_cliente' %}" class="btn btn-secondary">Cancelar</a>
+</form>
+<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+{% endblock %}

@@ -7,6 +7,7 @@
     <title>SPS WEB</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fauna+One&display=swap" rel="stylesheet">
     <style>
         /* Cor primária da marca */
         :root {
@@ -79,6 +80,24 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
     <!-- Scripts adicionais abaixo -->
+    <!-- Reescreve links com slug em toda a página (fallback genérico) -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const slug = localStorage.getItem('slug');
+                const links = document.querySelectorAll('[data-slug-route]');
+                links.forEach(el => {
+                    const pattern = el.getAttribute('data-slug-route');
+                    if (!pattern) return;
+                    if (slug) {
+                        el.setAttribute('href', pattern.replace('{slug}', slug));
+                    }
+                });
+            } catch (e) {
+                console.warn('Falha ao aplicar slug nas rotas:', e);
+            }
+        });
+    </script>
     <script>
         const btnInsights = document.getElementById("btn-insights");
         if (btnInsights) {

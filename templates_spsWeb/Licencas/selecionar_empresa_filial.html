@@ -2,32 +2,52 @@
 {% load static %}
 
 {% block content %}
-<div class="container min-vh-100 d-flex align-items-center justify-content-center">
-  <div class="w-100" style="max-width: 640px;">
-    <div class="mb-4 text-center">
+<style>
+  .login-wrapper {
+    padding: 1rem;
+  }
+  .login-card {
+    max-width: 640px;
+    box-shadow: 0 0 20px rgba(127, 198, 255, 0.938);
+  }
+  .login-header .subtitle {
+    color: var(--bs-secondary-color);
+  }
+  [data-bs-theme="dark"] .login-header .subtitle {
+    color: var(--bs-secondary-color);
+  }
+</style>
+
+<div class="login-wrapper container min-vh-80 d-flex align-items-center justify-content-center">
+  <div class="login-card w-100 bg-body border rounded-3">
+    <div class="login-header p-4 pb-0 text-center">
       <h1 class="h4 mb-1">Seleção de Empresa e Filial</h1>
-      <p class="text-body-secondary mb-0">Escolha a empresa e filial para continuar.</p>
+      <p class="subtitle mb-0">Escolha a empresa e filial para continuar.</p>
     </div>
 
-    <div id="alert" class="alert alert-danger d-none" role="alert"></div>
+    <div class="px-4 pt-3">
+      <div id="alert" class="alert alert-danger d-none" role="alert"></div>
+    </div>
 
-    <form id="selForm" class="bg-body border rounded-3 p-4">
-      <div class="form-floating mb-3">
-        <select class="form-select" id="empresa" required>
-          <option value="" selected disabled>Carregando...</option>
-        </select>
-        <label for="empresa">Empresa</label>
-      </div>
-      <div class="form-floating mb-3">
-        <select class="form-select" id="filial" required>
-          <option value="" selected disabled>Selecione a empresa primeiro</option>
-        </select>
-        <label for="filial">Filial</label>
-      </div>
-      <button type="submit" class="btn btn-success w-100">Continuar</button>
-    </form>
+    <div class="login-body p-4 pt-0">
+      <form id="selForm">
+        <div class="form-floating mb-3">
+          <select class="form-select" id="empresa" required>
+            <option value="" selected disabled>Carregando...</option>
+          </select>
+          <label for="empresa">Empresa</label>
+        </div>
+        <div class="form-floating mb-3">
+          <select class="form-select" id="filial" required>
+            <option value="" selected disabled>Selecione a empresa primeiro</option>
+          </select>
+          <label for="filial">Filial</label>
+        </div>
+        <button type="submit" class="btn btn-success w-100">Continuar</button>
+      </form>
+    </div>
 
-    <div class="mt-3 text-center">
+    <div class="login-footer px-4 pb-4 text-center">
       <small class="text-body-secondary">Após selecionar, você será direcionado à home.</small>
     </div>
   </div>
@@ -94,16 +114,52 @@
     if (empresaId) carregarFiliais(empresaId);
   });
 
-  document.getElementById('selForm').addEventListener('submit', (e) => {
+  // Helper para obter CSRF do cookie
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+  }
+
+  document.getElementById('selForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const empresaId = document.getElementById('empresa').value;
     const filialId = document.getElementById('filial').value;
+    const empresaNome = document.querySelector('#empresa option:checked')?.textContent || '';
+    const filialNome = document.querySelector('#filial option:checked')?.textContent || '';
     if (!empresaId || !filialId) return showError('Selecione empresa e filial.');
 
-    localStorage.setItem('empresa_id', empresaId);
-    localStorage.setItem('filial_id', filialId);
-    // Redireciona para a Home do sistema
-    window.location.href = '/home/';
+    // Persistir também no localStorage para compatibilidade com rotas que usam headers
+    try {
+      localStorage.setItem('empresa_id', String(empresaId));
+      localStorage.setItem('filial_id', String(filialId));
+      if (empresaNome) localStorage.setItem('empresa_nome', empresaNome);
+      if (filialNome) localStorage.setItem('filial_nome', filialNome);
+    } catch (e) {
+      console.warn('Não foi possível persistir no localStorage:', e);
+    }
+
+    // Persistir no servidor (sessão) para padronização nos web views
+    try {
+      const resp = await fetch('/web/selecionar-empresa/', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: new URLSearchParams({ empresa_id: empresaId, filial_id: filialId, empresa_nome: empresaNome, filial_nome: filialNome })
+      });
+      if (!resp.ok) {
+        const data = await resp.text();
+        return showError('Falha ao salvar seleção.');
+      }
+      // Redireciona para a Home do sistema
+      window.location.href = '/home/';
+    } catch (err) {
+      console.error(err);
+      showError('Erro ao comunicar com o servidor.');
+    }
   });
 
   // Inicializa

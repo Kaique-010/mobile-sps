@@ -120,13 +120,23 @@ class LicencaMiddleware:
         cache_start = time.time()
         
         # Cache de módulos por licença (30 minutos - mais tempo)
-        empresa_id = request.headers.get("X-Empresa", 1)
-        filial_id = request.headers.get("X-Filial", 1)
+        # Padrão: ler da sessão se disponível, depois cabeçalho, senão fallback 1
+        empresa_id = (
+            request.session.get('empresa_id')
+            or request.headers.get("X-Empresa")
+            or 1
+        )
+        filial_id = (
+            request.session.get('filial_id')
+            or request.headers.get("X-Filial")
+            or 1
+        )
         
         # Log para debug
         import logging
         logger = logging.getLogger(__name__)
         logger.info(f"MIDDLEWARE DEBUG - Slug: {slug}, Empresa: {empresa_id}, Filial: {filial_id}")
+        logger.info(f"MIDDLEWARE DEBUG - Session empresa_id: {request.session.get('empresa_id')}, filial_id: {request.session.get('filial_id')}")
         logger.info(f"MIDDLEWARE DEBUG - Headers X-Empresa: {request.headers.get('X-Empresa')}, X-Filial: {request.headers.get('X-Filial')}")
         
         cache_key = f"modulos_licenca_{slug}_{empresa_id}_{filial_id}"

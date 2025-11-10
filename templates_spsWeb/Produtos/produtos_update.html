@@ -1,0 +1,273 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Editar Produto{% endblock %}
+
+{% block content %}
+<style>
+  .container.page-container { padding-top: 34px; padding-bottom: 34px; }
+  .page-header-custom { margin-top: 10px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #e9ecef; display:flex; justify-content:space-between; align-items:center; }
+  .page-title { font-size: 24px; font-weight: bold; color: #343a40; margin:0; }
+  .form-section-title { font-weight: 600; margin-top: 8px; margin-bottom: 16px; }
+  .form-actions { display:flex; gap:12px; }
+</style>
+
+<div class="container page-container">
+  <div class="page-header-custom">
+    <h2 class="page-title"><i class="bi bi-box"></i> Editar Produto</h2>
+    <div class="page-actions d-flex gap-2">
+      <a href="{% url 'produtos_web' slug=slug %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Voltar à Lista
+      </a>
+      {% if form.instance and form.instance.prod_codi %}
+      <a href="{% url 'produto_delete_web' slug=slug prod_codi=form.instance.prod_codi %}" class="btn btn-outline-danger btn-sm">
+        <i class="bi bi-trash"></i> Excluir
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="card">
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <ul class="nav nav-tabs" id="produtoTabs">
+          <li class="nav-item">
+            <a class="nav-link active" id="produto-tab" data-bs-toggle="tab" href="#produto">Dados do Produto</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="precos-tab" data-bs-toggle="tab" href="#precos">Tabela de Preços</a>
+          </li>
+        </ul>
+
+        <div class="tab-content mt-3">
+          <div class="tab-pane fade show active" id="produto">
+            <h5 class="form-section-title">Dados Cadastrais</h5>
+
+            {# Empresa é atribuída via headers/sessão; campo ocultado na UI #}
+
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="{{ form.prod_codi.id_for_label }}">Código Produto</label>
+                  {{ form.prod_codi }}
+                  {% if form.prod_codi.errors %}
+                  <div class="alert alert-danger mt-1">{{ form.prod_codi.errors|striptags }}</div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="{{ form.prod_nome.id_for_label }}">Nome do Produto</label>
+                  {{ form.prod_nome }}
+                  {% if form.prod_nome.errors %}
+                  <div class="alert alert-danger mt-1">{{ form.prod_nome.errors|striptags }}</div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="{{ form.prod_unme.id_for_label }}">Unidade de Medida</label>
+                  {{ form.prod_unme }}
+                  {% if form.prod_unme.errors %}
+                  <div class="alert alert-danger mt-1">{{ form.prod_unme.errors|striptags }}</div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="{{ form.prod_grup.id_for_label }}">Grupo</label>
+                  {{ form.prod_grup }}
+                  {% if form.prod_grup.errors %}
+                  <div class="alert alert-danger mt-1">{{ form.prod_grup.errors|striptags }}</div>
+                  {% endif %}
+                  <small>
+                    <a href="#" class="btn btn-plus" title="Adicionar Novo Grupo">
+                      <i class="bi bi-plus-circle"></i>
+                    </a>
+                  </small>
+                </div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="{{ form.prod_sugr.id_for_label }}">Subgrupo</label>
+                  {{ form.prod_sugr }}
+                  {% if form.prod_sugr.errors %}
+                  <div class="alert alert-danger mt-1">{{ form.prod_sugr.errors|striptags }}</div>
+                  {% endif %}
+                  <small>
+                    <a href="#" class="btn btn-plus" title="Adicionar Novo SubGrupo">
+                      <i class="bi bi-plus-circle"></i>
+                    </a>
+                  </small>
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="{{ form.prod_fami.id_for_label }}">Família</label>
+                  {{ form.prod_fami }}
+                  {% if form.prod_fami.errors %}
+                  <div class="alert alert-danger mt-1">{{ form.prod_fami.errors|striptags }}</div>
+                  {% endif %}
+                  <small>
+                    <a href="#" class="btn btn-plus" title="Adicionar Nova Família">
+                      <i class="bi bi-plus-circle"></i>
+                    </a>
+                  </small>
+                </div>
+              </div>
+            </div>
+
+            <h5 class="form-section-title">Informações Adicionais</h5>
+
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="{{ form.prod_loca.id_for_label }}">Local</label>
+                  {{ form.prod_loca }}
+                  {% if form.prod_loca.errors %}
+                  <div class="alert alert-danger mt-1">{{ form.prod_loca.errors|striptags }}</div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="{{ form.prod_ncm.id_for_label }}">NCM</label>
+                  {{ form.prod_ncm }}
+                  {% if form.prod_ncm.errors %}
+                  <div class="alert alert-danger mt-1">{{ form.prod_ncm.errors|striptags }}</div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="{{ form.prod_marc.id_for_label }}">Marca</label>
+                  {{ form.prod_marc }}
+                  {% if form.prod_marc.errors %}
+                  <div class="alert alert-danger mt-1">{{ form.prod_marc.errors|striptags }}</div>
+                  {% endif %}
+                  <small>
+                    <a href="#" class="btn btn-plus" title="Adicionar Nova Marca">
+                      <i class="bi bi-plus-circle"></i>
+                    </a>
+                  </small>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="{{ form.prod_codi_fabr_field.id_for_label }}">Código do Fabricante</label>
+                  {{ form.prod_codi_fabr_field }}
+                </div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="{{ form.prod_foto.id_for_label }}">Foto</label>
+                  {{ form.prod_foto }}
+                  {% if form.prod_foto.errors %}
+                  <div class="alert alert-danger mt-1">{{ form.prod_foto.errors|striptags }}</div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-pane fade" id="precos">
+            <h5 class="form-section-title">Tabela de Preços</h5>
+            {{ formset.management_form }}
+            <div id="precos-formset">
+              {% for form in formset %}
+              <div class="preco-item border p-3 mb-2">
+                <div class="row">
+                  <div class="col-md-4">
+                    <label for="{{ form.tabe_prco.id_for_label }}">Preço de Compra</label>
+                    {{ form.tabe_prco }}
+                  </div>
+                  <div class="col-md-4">
+                    <label for="{{ form.tabe_fret.id_for_label }}">Frete sobre o produto</label>
+                    {{ form.tabe_fret }}
+                  </div>
+                  <div class="col-md-4">
+                    <label for="{{ form.tabe_cuge.id_for_label }}">Custo Gerencial</label>
+                    {{ form.tabe_cuge }}
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-md-6">
+                    <label for="{{ form.tabe_marg.id_for_label }}">% sobre custo</label>
+                    {{ form.tabe_marg }}
+                  </div>
+                  <div class="col-md-6">
+                    <label for="{{ form.tabe_avis.id_for_label }}">Preço à Vista</label>
+                    {{ form.tabe_avis }}
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-md-6">
+                    <label for="{{ form.tabe_apra.id_for_label }}">% a Prazo</label>
+                    {{ form.tabe_apra }}
+                  </div>
+                  <div class="col-md-6">
+                    <label for="{{ form.tabe_praz.id_for_label }}">Preço a Prazo</label>
+                    {{ form.tabe_praz }}
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-md-12">
+                    <label for="{{ form.tabe_hist.id_for_label }}">Histórico</label>
+                    {{ form.tabe_hist }}
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-3 form-actions">
+          <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> Salvar</button>
+          <a href="{% url 'produtos_web' slug=slug %}" class="btn btn-secondary">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <footer class="text-center mt-4">
+    <p class="text-muted">&copy; {{ current_year }} Spartacus Sistemas</p>
+  </footer>
+</div>
+
+{% endblock %}
+{% if messages %}
+<div class="container" style="margin-top: 10px;">
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags|default:'info' }}" role="alert" style="margin-bottom: 10px;">
+      {{ message }}
+    </div>
+  {% endfor %}
+  </div>
+{% endif %}

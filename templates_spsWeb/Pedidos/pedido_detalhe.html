@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    h1,
+    p, h2 {
+        color: aliceblue;
+        text-align: center;
+    }
+    .container{
+        text-align: center;
+    }
+
+</style>
+<br><br><br><br>
+<Div class="container">
+    <h1>Detalhes do Pedido #{{ object.pedi_nume }}</h1>
+
+    <p><strong>Empresa:</strong> {{ object.pedi_empr }}</p>
+    <p><strong>Filial:</strong> {{ object.pedi_fili }}</p>
+    <p><strong>Data:</strong> {{ object.pedi_data }}</p>
+    <p><strong>Cliente:</strong> {{ object.pedi_forn }}</p>
+    <p><strong>Vendedor:</strong> {{ object.pedi_vend }}</p>
+    <p><strong>Total:</strong> R$ {{ object.pedi_tota }}</p>
+
+    <h2>Itens do Pedido</h2>
+    <ul>
+        {% for item in object.itenspedidovenda_set.all %}
+        <li>{{ item.iped_prod }} - Quantidade: {{ item.iped_quan }} - Preço Unitário: R$ {{ item.iped_unit }}</li>
+        {% endfor %}
+    </ul>
+</Div>
+<Div class="container">
+    <a href="{% url 'pedido_editar' object.pk %}" class="btn btn-warning">Editar</a>
+    <a href="{% url 'pedido_excluir' object.pk %}" class="btn btn-danger">Excluir</a>
+    <a href="{% url 'pedidos_por_cliente' %}" class="btn btn-secondary">Voltar</a>
+</Div>
+<br><br><br><br><br><br><br><br><br><br><br><br>
+{% endblock %}

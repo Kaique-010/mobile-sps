@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}Confirmar Exclusão{% endblock %}
+
+{% block content %}
+<style>
+  h2 {
+    text-align: center;
+    font-size: 2rem;
+    color: aliceblue;
+  }
+
+  h6 {
+    text-align: center;
+    font-weight: bold;
+    color: aliceblue;
+  }
+
+  form {
+    text-align: center;
+    font-weight: bold;
+  }
+</style>
+
+<br><br><br><br><br><br><br><br><br>
+
+<h2 class="mb-4">
+  <i class="bi bi-person-gear fs-3"></i> Exclusão de Grupo
+</h2>
+
+<h6>Você tem certeza que deseja excluir o Subgrupo "{{ subgrupo.codigo }}" - "{{ subgrupo.descricao }}"?</h6>
+
+<form method="post">
+  {% csrf_token %}
+  <button type="submit" class="btn btn-danger">Excluir</button>
+  <a href="{% url 'subgrupos_list' %}" class="btn btn-secondary">Cancelar</a>
+</form>
+
+<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+
+{% endblock %}

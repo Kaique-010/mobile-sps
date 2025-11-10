@@ -1,0 +1,279 @@
+{% extends 'base.html' %} {% load static %} {% block title %} Editar Entidades
+{%endblock %} {% block content %}
+
+
+
+
+<div class="container">
+  <div class="card">
+    <div class="card-body">
+      <h3 class="card-title">
+        Cadastrar Pessoa <i class="bi bi-person-check fs-4"></i>
+      </h3>
+      <br />
+      <!-- Mensagens de Sucesso e Erro -->
+      {% if messages %} {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+      {% endfor %} {% endif %}
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <!-- Tabs (Bootstrap 5) -->
+        <ul class="nav nav-tabs" id="tabMenu" role="tablist">
+          <li class="nav-item" role="presentation">
+            <a class="nav-link active" id="cadastrais-tab" data-bs-toggle="tab" href="#cadastrais" role="tab"
+              aria-controls="cadastrais" aria-selected="true">Dados Cadastrais</a>
+          </li>
+          <li class="nav-item" role="presentation">
+            <a class="nav-link" id="endereco-tab" data-bs-toggle="tab" href="#endereco" role="tab" aria-controls="endereco"
+              aria-selected="false">Informações de Endereço</a>
+          </li>
+          <li class="nav-item" role="presentation">
+            <a class="nav-link" id="contato-tab" data-bs-toggle="tab" href="#contato" role="tab" aria-controls="contato"
+              aria-selected="false">Dados de Contato</a>
+          </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content" id="tabContent">
+          <!-- Dados Cadastrais -->
+          <div class="tab-pane fade show active" id="cadastrais" role="tabpanel" aria-labelledby="cadastrais-tab">
+            <br />
+            <div class="row">
+              <div class="col-md-12">
+                <div class="form-group">
+                  <label for="{{  form.enti_tipo_enti.id_for_label }}">Tipo da Entidade</label>
+                  {{ form.enti_tipo_enti }}
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="{{ form.enti_nome.id_for_label }}">Nome completo</label>
+                  {{ form.enti_nome }} {% if form.enti_nome.errors %}
+                  <div class="text-danger">
+                    {% for error in form.enti_nome.errors %}
+                    <p>{{ error }}</p>
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="{{ form.enti_fant.id_for_label }}">Nome Fantasia</label>
+                  {{ form.enti_fant }} {% if form.enti_fant.errors %}
+                  <div class="text-danger">
+                    {% for error in form.enti_fant.errors %}
+                    <p>{{ error }}</p>
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label for="{{ form.enti_cpf.id_for_label }}">CPF</label>
+                  {{ form.enti_cpf }} {% if form.enti_cpf.errors %}
+                  <div class="text-danger">
+                    {% for error in form.enti_cpf.errors %}
+                    <p>{{ error }}</p>
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label for="{{ form.enti_cnpj.id_for_label }}">CNPJ</label>
+                  {{ form.enti_cnpj }} {% if form.enti_cnpj.errors %}
+                  <div class="text-danger">
+                    {% for error in form.enti_cnpj.errors %}
+                    <p>{{ error }}</p>
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label for="{{ form.enti_insc_esta.id_for_label }}">Inscrição Estadual</label>
+                  {{ form.enti_insc_esta }} {% if form.enti_insc_esta.errors %}
+                  <div class="text-danger">
+                    {% for error in form.enti_insc_esta.errors %}
+                    <p>{{ error }}</p>
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Informações de Endereço -->
+          <div class="tab-pane fade" id="endereco" role="tabpanel" aria-labelledby="endereco-tab">
+            <br />
+            <div class="row">
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label for="{{ form.enti_cep.id_for_label }}">CEP</label>
+                  {{ form.enti_cep }} {% if form.enti_cep.errors %}
+                  <div class="text-danger">
+                    {% for error in form.enti_cep.errors %}
+                    <p>{{ error }}</p>
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label for="{{ form.enti_ende.id_for_label }}">Endereço</label>
+                  {{ form.enti_ende }} {% if form.enti_ende.errors %}
+                  <div class="text-danger">
+                    {% for error in form.enti_ende.errors %}
+                    <p>{{ error }}</p>
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label for="{{ form.enti_nume.id_for_label }}">Número</label>
+                  {{ form.enti_nume }} {% if form.enti_nume.errors %}
+                  <div class="text-danger">
+                    {% for error in form.enti_nume.errors %}
+                    <p>{{ error }}</p>
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="{{ form.enti_cida.id_for_label }}">Cidade</label>
+                  {{ form.enti_cida }} {% if form.enti_cida.errors %}
+                  <div class="text-danger">
+                    {% for error in form.enti_cida.errors %}
+                    <p>{{ error }}</p>
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="{{ form.enti_esta.id_for_label }}">Estado</label>
+                  {{ form.enti_esta }} {% if form.enti_esta.errors %}
+                  <div class="text-danger">
+                    {% for error in form.enti_esta.errors %}
+                    <p>{{ error }}</p>
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dados de Contato -->
+          <div class="tab-pane fade" id="contato" role="tabpanel" aria-labelledby="contato-tab">
+            <br />
+            <div class="row">
+              <div class="col-md-3">
+                <div class="form-group">
+                  <label for="{{ form.enti_fone.id_for_label }}">Telefone</label>
+                  {{ form.enti_fone }} {% if form.enti_fone.errors %}
+                  <div class="text-danger">
+                    {% for error in form.enti_fone.errors %}
+                    <p>{{ error }}</p>
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="col-md-3">
+                <div class="form-group">
+                  <label for="{{ form.enti_celu.id_for_label }}">Celular</label>
+                  {{ form.enti_celu }} {% if form.enti_celu.errors %}
+                  <div class="text-danger">
+                    {% for error in form.enti_celu.errors %}
+                    <p>{{ error }}</p>
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="{{ form.enti_emai.id_for_label }}">Email Pessoal</label>
+                  {{ form.enti_emai }} {% if form.enti_emai.errors %}
+                  <div class="text-danger">
+                    {% for error in form.enti_emai.errors %}
+                    <p>{{ error }}</p>
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+    </div>
+
+
+    <div class="container-buttons">
+      <button type="submit" class="btn btn-primary">Salvar</button>
+    <a href="{% url 'entidades_web' slug=slug %}" class="btn btn-secondary">Voltar Para a Lista de Pessoas</a>
+    </div>
+
+    </form>
+  </div>
+</div>
+</div>
+</div>
+
+<script>
+  document.getElementById("id_enti_cep").addEventListener("blur", buscarCEP);
+  function buscarCEP() {
+    var cep = document.getElementById("id_enti_cep").value;
+
+    if (cep.length === 8) {
+      var url = "https://viacep.com.br/ws/" + cep + "/json/";
+
+      fetch(url)
+        .then((response) => response.json())
+        .then((data) => {
+          if (!data.erro) {
+            document.getElementById("id_enti_ende").value = data.logradouro;
+            document.getElementById("id_enti_cida").value = data.localidade;
+            document.getElementById("id_enti_esta").value = data.uf;
+          } else {
+            alert("CEP não encontrado!");
+          }
+        })
+        .catch((error) => {
+          alert("Erro ao buscar o CEP. Tente novamente.");
+          console.error(error);
+        });
+    } else {
+      alert("CEP inválido. O CEP deve conter 8 dígitos.");
+    }
+  }
+</script>
+{% endblock %}

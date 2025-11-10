@@ -64,5 +64,31 @@ def web_login(request):
 
 
 def selecionar_empresa(request):
-    """Página para seleção de empresa e filial após login."""
+    """Página para seleção de empresa e filial após login.
+    GET: Renderiza formulário.
+    POST: Salva empresa/filial na sessão e redireciona para a Home.
+    """
+    if request.method == 'POST':
+        empresa_id = request.POST.get('empresa_id') or request.POST.get('empresa')
+        filial_id = request.POST.get('filial_id') or request.POST.get('filial')
+        empresa_nome = request.POST.get('empresa_nome')
+        filial_nome = request.POST.get('filial_nome')
+
+        if not empresa_id or not filial_id:
+            return render(request, 'Licencas/selecionar_empresa_filial.html', {
+                'error': 'Empresa e filial são obrigatórias.'
+            })
+
+        # Persistir na sessão
+        request.session['empresa_id'] = int(empresa_id)
+        request.session['filial_id'] = int(filial_id)
+        if empresa_nome:
+            request.session['empresa_nome'] = empresa_nome
+        if filial_nome:
+            request.session['filial_nome'] = filial_nome
+
+        # Feedback opcional via messages pode ser adicionado aqui
+        from django.shortcuts import redirect
+        return redirect('home')
+
     return render(request, 'Licencas/selecionar_empresa_filial.html')

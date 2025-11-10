@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Lista de Marcas{% endblock %}
+
+{% block content %}
+
+<div class="container page-container">
+    <div class="page-header">
+        <h2 class="page-title"><i class="bi bi-boxes"></i> Marcas</h2>
+        <div class="page-actions">
+            <a href="#" class="btn btn-success">
+                <i class="bi bi-plus"></i> Nova Marca
+            </a>
+        </div>
+    </div>
+
+<div class="container mt-3">
+    <div class="card">
+        <div class="card-body">
+            
+
+            {% if messages %}
+            <div class="alert-container">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if page_obj %}
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>Ações</th>
+                            <th>Código da Marca</th>
+                            <th>Nome</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for marca in page_obj %}
+                        <tr>
+                            <td>
+                                <a href="#" class="btn btn-warning btn-sm">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="#" class="btn btn-danger btn-sm">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </td>
+                            <td>{{ marca.codigo }}</td>
+                            <td>{{ marca.nome }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <a href="#" class="btn btn-plus custom-btn" title="Adicionar Novo Produto">
+                <i class="bi bi-plus-circle"></i> Incluir Produto
+            </a>
+            <div class="container-fluid">
+                {% if page_obj.has_other_pages %}
+                <nav>
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1">Primeira</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Anterior</a>
+                        </li>
+                        {% endif %}
+                        {% for page_number in page_obj.paginator.page_range %}
+                        {% if page_number <= page_obj.number|add:3 and page_number >= page_obj.number|add:-3 %}
+                            <li class="page-item {% if page_obj.number == page_number %}active{% endif %}">
+                                <a class="page-link" href="?page={{ page_number }}">{{ page_number }}</a>
+                            </li>
+                            {% endif %}
+                            {% endfor %}
+                            {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}">Próxima</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Última</a>
+                            </li>
+                            {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+            {% else %}
+            <p>Não há marcas cadastradas.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<footer class="text-center mt-4">
+    <p>&copy; {{ current_year }} Spartacus Sistemas</p>
+</footer>
+
+{% endblock %}

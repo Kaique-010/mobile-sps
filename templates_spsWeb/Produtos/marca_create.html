@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{% if form.instance.pk %}Criar Marca{% else %}Cadastrar Marca{% endif %}{% endblock %}
+
+{% block content %}
+<br><br><br>
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+<link rel="stylesheet" href="{% static 'produtos/styles.css' %}">
+
+<div class="container">
+    <div class="card">
+        <div class="card-body">
+            <h3 class="card-title">
+                {% if form.instance.pk %}Criar Marca{% else %}Cadastrar Marca{% endif %} 
+                <i class="bi bi-box fs-4"></i>
+            </h3>
+            <br>
+
+            <!-- Mensagens de Sucesso e Erro -->
+            {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <!-- Dados da Marca -->
+                <h5>Dados da Marca</h5>
+                <br>
+                <div class="row">
+
+                    {% if form.instance.pk %}
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="codigo">Código da Marca</label>
+                            <input type="text" class="form-control" id="codigo" value="{{ form.instance.codigo }}" readonly>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.nome.id_for_label }}">Nome</label>
+                            {{ form.nome }}
+                            {% if form.nome.errors %}
+                            <div class="alert alert-danger mt-1">
+                                {{ form.nome.errors|striptags }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Botões de Salvar e Voltar -->
+                <div class="d-flex justify-content-between mt-3">
+                    <button type="submit" class="btn btn-primary">
+                        {% if form.instance.pk %}Atualizar{% else %}Salvar{% endif %}
+                    </button>
+                    <a href="{% url 'marcas_list' %}" class="btn btn-secondary mt-2">Voltar para a Lista de Marcas</a>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

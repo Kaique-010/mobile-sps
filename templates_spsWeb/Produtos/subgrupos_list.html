@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Lista de SubGrupos{% endblock %}
+
+{% block content %}
+
+<br><br><br>
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+<link rel="stylesheet" href="{% static 'produtos/style.css' %}">
+
+<div class="container mt-5">
+    <div class="card">
+        <div class="card-body">
+            <h2 class="mb-4">
+                <i class="bi bi-boxes fs-3"></i> Lista de SubGrupos
+            </h2>
+            
+            {% if messages %}
+            <div class="alert-container">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <form method="get" class="search-form mb-4">
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="nome">Nome do SubGrupo</label>
+                        <input type="text" id="nome" name="nome" class="form-control" value="{{ nome }}"
+                            placeholder="Filtrar por nome">
+                    </div>
+                    <div class="form-group col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary">Filtrar</button>
+                    </div>
+                </div>
+            </form>
+
+            <a href="#" class="btn btn-success float-end mb-3">
+                <i class="bi bi-plus"></i> Novo SubGrupo
+            </a>
+
+            {% if page_obj %}
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>Ações</th>
+                            <th>Código SubGrupo</th>
+                            <th>Nome</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for subgrupo in page_obj %}
+                        <tr>
+                            <td>
+                                <a href="#" class="btn btn-sm btn-info">
+                                    <i class="bi bi-pencil"></i> Editar
+                                </a>
+                                <a href="#" class="btn btn-sm btn-danger">
+                                    <i class="bi bi-trash"></i> Excluir
+                                </a>
+                            </td>
+                            <td>{{ subgrupo.codigo }}</td>
+                            <td>{{ subgrupo.descricao }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <a href="#" class="btn btn-plus custom-btn" title="Adicionar Novo Produto">
+                <i class="bi bi-plus-circle"></i> Incluir Produto
+              </a>
+            <div class="container-fluid">
+                {% if page_obj.has_other_pages %}
+                <nav>
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1">Primeira</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Anterior</a>
+                        </li>
+                        {% endif %}
+
+                        {% for page_number in page_obj.paginator.page_range %}
+                        {% if page_number <= page_obj.number|add:3 and page_number >= page_obj.number|add:-3 %}
+                            <li class="page-item {% if page_obj.number == page_number %}active{% endif %}">
+                                <a class="page-link" href="?page={{ page_number }}">{{ page_number }}</a>
+                            </li>
+                        {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Próxima</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Última</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+            {% else %}
+            <p>Não há Subgrupos cadastrados.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <footer class="text-center mt-4">
+        <p>&copy; {{ current_year }} Spartacus Sistemas</p>
+    </footer>
+</div>
+
+
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+{% endblock %}
