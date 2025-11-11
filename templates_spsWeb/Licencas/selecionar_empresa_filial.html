@@ -31,6 +31,7 @@
 
     <div class="login-body p-4 pt-0">
       <form id="selForm">
+        {% csrf_token %}
         <div class="form-floating mb-3">
           <select class="form-select" id="empresa" required>
             <option value="" selected disabled>Carregando...</option>
@@ -141,12 +142,13 @@
 
     // Persistir no servidor (sessão) para padronização nos web views
     try {
+      const csrfToken = getCookie('csrftoken') || document.querySelector('input[name="csrfmiddlewaretoken"]')?.value;
       const resp = await fetch('/web/selecionar-empresa/', {
         method: 'POST',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'X-CSRFToken': getCookie('csrftoken')
+          'X-CSRFToken': csrfToken
         },
         body: new URLSearchParams({ empresa_id: empresaId, filial_id: filialId, empresa_nome: empresaNome, filial_nome: filialNome })
       });

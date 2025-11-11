@@ -3,7 +3,7 @@ from django.shortcuts import render
 import json
 from Entidades.models import Entidades
 from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 import logging
 
 logger = logging.getLogger(__name__)
@@ -63,6 +63,7 @@ def web_login(request):
     return render(request, 'Licencas/login.html')
 
 
+@ensure_csrf_cookie
 def selecionar_empresa(request):
     """Página para seleção de empresa e filial após login.
     GET: Renderiza formulário.
