@@ -154,8 +154,8 @@
         const data = await resp.text();
         return showError('Falha ao salvar seleção.');
       }
-      // Redireciona para a Home do sistema
-      window.location.href = '/home/';
+      // Redireciona para a Home do sistema (corrigido)
+      window.location.href = '/web/home/';
     } catch (err) {
       console.error(err);
       showError('Erro ao comunicar com o servidor.');

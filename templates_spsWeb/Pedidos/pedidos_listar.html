@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Pedidos de Venda{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Pedidos</h2>
+    <a class="btn btn-primary" href="{% url 'PedidosWeb:pedido_criar' slug=slug %}">Novo Pedido</a>
+  </div>
+
+  <form class="row g-3 mb-3" method="get">
+    <div class="col-md-4">
+      <input type="text" name="cliente" value="{{ request.GET.cliente }}" class="form-control" placeholder="Filtrar por cliente">
+    </div>
+    <div class="col-md-3">
+      <input type="text" name="vendedor" value="{{ request.GET.vendedor }}" class="form-control" placeholder="Filtrar por vendedor">
+    </div>
+    <div class="col-md-3">
+      <select name="status" class="form-select">
+        <option value="todos" {% if request.GET.status == 'todos' or not request.GET.status %}selected{% endif %}>Todos</option>
+        <option value="A" {% if request.GET.status == 'A' %}selected{% endif %}>Aberto</option>
+        <option value="F" {% if request.GET.status == 'F' %}selected{% endif %}>Faturado</option>
+        <option value="C" {% if request.GET.status == 'C' %}selected{% endif %}>Cancelado</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <button class="btn btn-outline-secondary w-100" type="submit">Buscar</button>
+    </div>
+  </form>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>#</th>
+          <th>Data</th>
+          <th>Cliente</th>
+          <th>Vendedor</th>
+          <th class="text-end">Total</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in pedidos %}
+        <tr>
+          <td>{{ p.pedi_nume }}</td>
+          <td>{{ p.pedi_data|date:'d/m/Y' }}</td>
+          <td>{{ p.cliente_nome|default:p.pedi_forn }}</td>
+          <td>{{ p.vendedor_nome|default:p.pedi_vend }}</td>
+          <td class="text-end">R$ {{ p.pedi_tota }}</td>
+          <td>
+            {% if p.pedi_stat == 'A' %}
+              <span class="badge bg-warning text-dark">Aberto</span>
+            {% elif p.pedi_stat == 'F' %}
+              <span class="badge bg-success">Faturado</span>
+            {% elif p.pedi_stat == 'C' %}
+              <span class="badge bg-secondary">Cancelado</span>
+            {% else %}
+              <span class="badge bg-light text-dark">{{ p.pedi_stat }}</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-outline-primary" href="{% url 'PedidosWeb:pedido_detalhe' slug=slug pk=p.pk %}">Detalhes</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center text-muted">Nenhum pedido encontrado.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

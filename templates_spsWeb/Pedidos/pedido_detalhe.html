@@ -1,39 +1,102 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<style>
-    h1,
-    p, h2 {
-        color: aliceblue;
-        text-align: center;
-    }
-    .container{
-        text-align: center;
-    }
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
 
-</style>
-<br><br><br><br>
-<Div class="container">
-    <h1>Detalhes do Pedido #{{ object.pedi_nume }}</h1>
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Pedido #{{ object.pedi_nume }}</h2>
+    <div class="btn-group">
+      <a class="btn btn-outline-secondary" href="{% url 'PedidosWeb:pedidos_listar' slug=slug %}">Voltar</a>
+      <a class="btn btn-outline-primary" href="{% url 'PedidosWeb:pedido_impressao' slug=slug pk=object.pk %}">Imprimir</a>
+    </div>
+  </div>
 
-    <p><strong>Empresa:</strong> {{ object.pedi_empr }}</p>
-    <p><strong>Filial:</strong> {{ object.pedi_fili }}</p>
-    <p><strong>Data:</strong> {{ object.pedi_data }}</p>
-    <p><strong>Cliente:</strong> {{ object.pedi_forn }}</p>
-    <p><strong>Vendedor:</strong> {{ object.pedi_vend }}</p>
-    <p><strong>Total:</strong> R$ {{ object.pedi_tota }}</p>
+  <div class="row g-3">
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-3">
+              <div class="text-muted">Empresa</div>
+              <div class="fw-semibold">{{ object.pedi_empr }}</div>
+            </div>
+            <div class="col-md-3">
+              <div class="text-muted">Filial</div>
+              <div class="fw-semibold">{{ object.pedi_fili }}</div>
+            </div>
+            <div class="col-md-3">
+              <div class="text-muted">Data</div>
+              <div class="fw-semibold">{{ object.pedi_data|date:'d/m/Y' }}</div>
+            </div>
+            <div class="col-md-3">
+              <div class="text-muted">Status</div>
+              <div>
+                {% if object.pedi_stat == 'A' %}
+                  <span class="badge bg-warning text-dark">Aberto</span>
+                {% elif object.pedi_stat == 'F' %}
+                  <span class="badge bg-success">Faturado</span>
+                {% elif object.pedi_stat == 'C' %}
+                  <span class="badge bg-secondary">Cancelado</span>
+                {% else %}
+                  <span class="badge bg-light text-dark">{{ object.pedi_stat }}</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
 
-    <h2>Itens do Pedido</h2>
-    <ul>
-        {% for item in object.itenspedidovenda_set.all %}
-        <li>{{ item.iped_prod }} - Quantidade: {{ item.iped_quan }} - Preço Unitário: R$ {{ item.iped_unit }}</li>
-        {% endfor %}
-    </ul>
-</Div>
-<Div class="container">
-    <a href="{% url 'pedido_editar' object.pk %}" class="btn btn-warning">Editar</a>
-    <a href="{% url 'pedido_excluir' object.pk %}" class="btn btn-danger">Excluir</a>
-    <a href="{% url 'pedidos_por_cliente' %}" class="btn btn-secondary">Voltar</a>
-</Div>
-<br><br><br><br><br><br><br><br><br><br><br><br>
+          <hr>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="text-muted">Cliente</div>
+              <div class="fw-semibold">{{ cliente_nome|default:object.pedi_forn }}</div>
+            </div>
+            <div class="col-md-4">
+              <div class="text-muted">Vendedor</div>
+              <div class="fw-semibold">{{ vendedor_nome|default:object.pedi_vend }}</div>
+            </div>
+            <div class="col-md-2 text-md-end">
+              <div class="text-muted">Total</div>
+              <div class="fw-bold fs-5">R$ {{ object.pedi_tota }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title mb-3">Itens do Pedido</h5>
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>Produto</th>
+                  <th class="text-end">Quantidade</th>
+                  <th class="text-end">Preço Unitário</th>
+                  <th class="text-end">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in object.itens %}
+                <tr>
+                  <td>{{ item.iped_prod }}</td>
+                  <td class="text-end">{{ item.iped_quan }}</td>
+                  <td class="text-end">R$ {{ item.iped_unit }}</td>
+                  <td class="text-end">R$ {{ item.iped_tota|default:0 }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="4" class="text-center text-muted">Nenhum item cadastrado para este pedido.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

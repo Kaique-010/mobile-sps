@@ -1,0 +1,16 @@
+from django.urls import include, path
+from . import views
+
+urlpatterns = [
+    path("", views.index, name="index"),
+    path("home/", views.home, name="home"),
+
+    # Páginas web
+    path("login/", views.web_login, name="web_login"),
+    path("selecionar-empresa/", views.selecionar_empresa, name="selecionar_empresa"),
+
+    # Templates com slug
+    path("<slug:slug>/entidades/", include("Entidades.web_urls")),
+    path("<slug:slug>/produtos/", include("Produtos.web_urls")),
+    path("<slug:slug>/pedidos/", include("Pedidos.web_urls")),
+]

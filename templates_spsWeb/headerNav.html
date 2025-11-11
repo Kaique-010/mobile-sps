@@ -5,6 +5,8 @@
         display: flex;
         flex-direction: column;
         height: 100%;
+        background: var(--bs-body-bg);
+        color: var(--bs-body-color);
     }
 
     .offcanvas-body {
@@ -20,15 +22,18 @@
         flex: 1 1 auto;
         min-height: 0;
     }
-    .navbar-brand, .offcanvas-title {
+
+    .navbar-brand,
+    .offcanvas-title {
         font-size: 1.2rem;
         font-family: 'Fauna', serif;
+        color: var(--bs-body-color);
     }
 </style>
 <header class="bg-body">
     <nav class="navbar fixed-top bg-body" id="main-navbar">
         <div class="container-fluid">
-            <a class="navbar-brand" href="/home/">SPS WEB</a>
+            <a class="navbar-brand" href="/web/home/">SPS WEB</a>
             <img src="{% static 'logo.png' %}" style="height:32px" />
             <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas"
                 data-bs-target="#offcanvasDarkNavbar" aria-controls="offcanvasDarkNavbar" aria-label="Abrir menu">
@@ -133,7 +138,11 @@
                                 </a>
                                 <div class="collapse" id="collapsePedidos">
                                     <ul class="list-unstyled ps-4">
-                                        <li><a class="nav-link" href="#">Pedidos</a></li>
+                                        <li>
+                                            <a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/pedidos/">
+                                                Pedidos
+                                            </a>
+                                        </li>
                                         <li><a class="nav-link" href="#">Listas de Casamento</a></li>
                                     </ul>
                                 </div>
@@ -148,7 +157,8 @@
                                 </a>
                                 <div class="collapse" id="collapseProdutos">
                                     <ul class="list-unstyled ps-4">
-                                        <li><a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/produtos/">Cadastro de
+                                        <li><a class="nav-link" href="/web/login/"
+                                                data-slug-route="/web/{slug}/produtos/">Cadastro de
                                                 Produtos</a></li>
                                         <li><a class="nav-link" href="#">Entrada de
                                                 Estoque</a></li>

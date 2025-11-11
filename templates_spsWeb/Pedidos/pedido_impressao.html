@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+  /* Layout de impressão simplificado (A4) */
+  @media print {
+    .no-print { display: none !important; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+  .sheet {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 24px;
+    color: #000;
+    background: #fff;
+    border: 1px solid #ddd;
+  }
+  .header { display:flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .title { font-size: 20px; font-weight: 700; }
+  .meta { font-size: 14px; color: #333; }
+  .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
+  .label { font-size: 12px; color: #666; }
+  .value { font-size: 14px; font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid #ddd; padding: 6px; }
+  th { background: #f5f5f5; text-align: left; }
+  td.num { text-align: right; }
+</style>
+
+<div class="sheet">
+  <div class="header">
+    <div class="title">Impressão do Pedido #{{ object.pedi_nume }}</div>
+    <div class="no-print">
+      <a class="btn btn-sm btn-secondary" href="{% url 'PedidosWeb:pedidos_listar' slug=slug %}">Voltar</a>
+      <button class="btn btn-sm btn-primary" onclick="window.print()">Imprimir</button>
+    </div>
+  </div>
+
+  <div class="meta">Data: {{ object.pedi_data|date:'d/m/Y' }} | Empresa: {{ object.pedi_empr }} | Filial: {{ object.pedi_fili }}</div>
+
+  <div class="grid">
+    <div>
+      <div class="label">Cliente</div>
+      <div class="value">{{ cliente_nome|default:object.pedi_forn }}</div>
+    </div>
+    <div>
+      <div class="label">Vendedor</div>
+      <div class="value">{{ vendedor_nome|default:object.pedi_vend }}</div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Produto</th>
+        <th style="width: 100px;">Qtd</th>
+        <th style="width: 140px;">Preço Unit.</th>
+        <th style="width: 140px;">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in object.itens %}
+      <tr>
+        <td>{{ item.iped_prod }}</td>
+        <td class="num">{{ item.iped_quan }}</td>
+        <td class="num">R$ {{ item.iped_unit }}</td>
+        <td class="num">R$ {{ item.iped_tota|default:0 }}</td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="4" style="text-align:center; color:#666;">Nenhum item cadastrado para este pedido.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div style="display:flex; justify-content:flex-end; margin-top: 12px;">
+    <div>
+      <div class="label">Total do Pedido</div>
+      <div class="value" style="font-size:16px;">R$ {{ object.pedi_tota }}</div>
+    </div>
+  </div>
+</div>
+{% endblock %}
