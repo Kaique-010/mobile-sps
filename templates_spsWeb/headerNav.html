@@ -106,6 +106,12 @@
                                 </a>
                             </li>
 
+                            <li class="nav-item">
+                                <a class="nav-link active" href="/web/login/" data-slug-route="/web/{slug}/centrosdecustos/">
+                                    <i class="bi bi-diagram-3 fs-3"></i> Centros de Custos
+                                </a>
+                            </li>
+
                             <li class="nav-item" data-modulo="Pedidos">
                                 <a class="nav-link active" href="/pedidos-necessitam-contato/">
                                     <i class="bi bi-phone-flip fs-3"></i> Entrar em Contato
@@ -262,7 +268,9 @@
                     // Aliases comuns para módulo de pedidos/vendas
                     'pedidos': ['pedidos', 'pedido', 'pedido venda', 'pedido_venda', 'pv', 'vendas', 'Pedidos', 'listacasamento'],
                     // Aliases para orçamentos
-                    'orcamentos': ['orcamentos', 'orçamentos', 'orcamento', 'orçamento', 'budget']
+                    'orcamentos': ['orcamentos', 'orçamentos', 'orcamento', 'orçamento', 'budget'],
+                    // Aliases para Centros de Custos
+                    'centrosdecustos': ['centrosdecustos', 'centrodecustos', 'centros de custos', 'centro de custos', 'cc']
                 };
                 const nomeMatch = allowSet.has(nome) || Object.entries(aliases).some(([key, vals]) => {
                     const isAliasName = vals.includes(nome);

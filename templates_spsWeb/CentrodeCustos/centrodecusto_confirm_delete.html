@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block title %}Excluir Centro de Custo{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h3>Excluir Centro de Custo</h3>
+  <p>Tem certeza que deseja excluir o centro de custo <strong>{{ object.cecu_nome }}</strong> (código {{ object.cecu_redu }})?</p>
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Excluir</button>
+    <a href="{% url 'centrosdecustos:lista' slug=slug %}" class="btn btn-secondary">Cancelar</a>
+  </form>
+  <p class="text-muted small mt-3">&copy; {{ current_year }}</p>
+</div>
+{% endblock %}

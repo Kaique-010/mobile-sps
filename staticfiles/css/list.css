@@ -13,7 +13,7 @@
   margin-bottom: 20px;
 }
 
-/* Corrige seletor: alvo é <a class="btn btn-success"> */
+
 a.btn.btn-success {
   background-color: #28a745;
   border-color: #28a745;
@@ -37,8 +37,6 @@ a.btn.btn-success:hover {
 .page-header-custom .page-actions {
   margin-left: auto; /* empurra o bloco de ações para o fim (direita) */
 }
-
-
 
 .page-header-custom {
   margin-top: 45px;

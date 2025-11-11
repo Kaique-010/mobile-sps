@@ -144,7 +144,7 @@ class Ordemservico(models.Model):
     orde_data_aber = models.DateField(auto_now_add=True) 
     orde_hora_aber = models.TimeField(auto_now_add=True)
     orde_stat_orde = models.IntegerField(choices=ORDEM_STATUS_CHOICES, default=0)
-    orde_seto = models.IntegerField(blank=True, null=True) 
+    orde_seto = models.IntegerField(blank=True, null=True ) 
     orde_prio = models.CharField(max_length=10, choices=Ordem_Prioridade_Choices, default="0")
     orde_prob = models.TextField(blank=True, null=True)  
     orde_defe_desc = models.TextField(blank=True, null=True)  

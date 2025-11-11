@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Centros de Custos{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>Centros de Custos</h3>
+    <div>
+      <a href="{% url 'centrosdecustos:exportar' slug=slug %}?cecu_nome={{ cecu_nome }}&cecu_redu={{ cecu_redu }}" class="btn btn-outline-secondary btn-sm">Exportar CSV</a>
+      <a href="{% url 'centrosdecustos:criar' slug=slug %}" class="btn btn-primary btn-sm">Novo</a>
+    </div>
+  </div>
+
+  <form method="get" class="mb-3">
+    <div class="row g-2">
+      <div class="col-md-6">
+        <input type="text" name="cecu_nome" class="form-control" placeholder="Nome" value="{{ cecu_nome }}" />
+      </div>
+      <div class="col-md-3">
+        <input type="text" name="cecu_redu" class="form-control" placeholder="Código" value="{{ cecu_redu }}" />
+      </div>
+      <div class="col-md-3">
+        <button type="submit" class="btn btn-outline-primary w-100">Filtrar</button>
+      </div>
+    </div>
+  </form>
+
+  <div class="table-responsive">
+    <table class="table table-striped table-sm">
+      <thead>
+        <tr>
+          <th>Empresa</th>
+          <th>Código</th>
+          <th>Nome</th>
+          <th>Nível</th>
+          <th>Pai</th>
+          <th>Tipo</th>
+          <th class="text-end">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in centros %}
+        <tr>
+          <td>{{ c.cecu_empr }}</td>
+          <td>{{ c.cecu_redu }}</td>
+          <td>{{ c.cecu_nome }}</td>
+          <td>{{ c.cecu_nive }}</td>
+          <td>{{ c.cecu_niv1 }}</td>
+          <td>{{ c.cecu_anal }}</td>
+          <td class="text-end">
+            <a href="{% url 'centrosdecustos:editar' slug=slug cecu_redu=c.cecu_redu %}" class="btn btn-sm btn-outline-secondary">Editar</a>
+            <a href="{% url 'centrosdecustos:excluir' slug=slug cecu_redu=c.cecu_redu %}" class="btn btn-sm btn-outline-danger">Excluir</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-center text-muted">Nenhum centro de custo encontrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if is_paginated %}
+  <nav>
+    <ul class="pagination pagination-sm">
+      {% if page_obj.has_previous %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&cecu_nome={{ cecu_nome }}&cecu_redu={{ cecu_redu }}">Anterior</a></li>
+      {% endif %}
+      <li class="page-item disabled"><span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span></li>
+      {% if page_obj.has_next %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&cecu_nome={{ cecu_nome }}&cecu_redu={{ cecu_redu }}">Próxima</a></li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+
+  <p class="text-muted small">&copy; {{ current_year }}</p>
+</div>
+{% endblock %}

@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Centro de Custo{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h3 class="mb-3">{{ form.instance.pk|yesno:"Editar,Novo" }} Centro de Custo</h3>
+  <form method="post">
+    {% csrf_token %}
+
+    <ul class="nav nav-tabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="tab-principais" data-bs-toggle="tab" data-bs-target="#pane-principais" type="button" role="tab">Dados Principais</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-complementares" data-bs-toggle="tab" data-bs-target="#pane-complementares" type="button" role="tab">Complementares</button>
+      </li>
+    </ul>
+
+    <div class="tab-content border border-top-0 p-3">
+      <div class="tab-pane fade show active" id="pane-principais" role="tabpanel">
+        {{ form.cecu_empr }}
+        <div class="row g-3 align-items-end">
+          <div class="col-md-7">
+            <label class="form-label">{{ form.cecu_nome.label }}</label>
+            {{ form.cecu_nome }}
+            <div class="form-text">Nome do centro de custo.</div>
+          </div>
+          <div class="col-md-5">
+            <div class="mb-2">Tipo de criação</div>
+            <div class="btn-group" role="group" aria-label="Tipo">
+              <input type="radio" class="btn-check" name="tipoCriacao" id="tipoRaiz" autocomplete="off">
+              <label class="btn btn-outline-primary" for="tipoRaiz">Raiz</label>
+              <input type="radio" class="btn-check" name="tipoCriacao" id="tipoFilho" autocomplete="off">
+              <label class="btn btn-outline-primary" for="tipoFilho">Filho de…</label>
+            </div>
+            <div class="mt-2" id="bloco-pai">
+              <label class="form-label">{{ form.cecu_niv1.label }}</label>
+              {{ form.cecu_niv1 }}
+              <div class="form-text">Selecione o centro pai para criar um filho.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-3 mt-2">
+          <div class="col-md-4">
+            <div class="card">
+              <div class="card-body">
+                <div class="text-muted">Próximo código</div>
+                <div class="h5" id="prevCodigo">—</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card">
+              <div class="card-body">
+                <div class="text-muted">Nível</div>
+                <div class="h5" id="prevNivel">—</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card">
+              <div class="card-body">
+                <div class="text-muted">Tipo do código</div>
+                <div class="h5" id="prevTipo">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="pane-complementares" role="tabpanel">
+        <div class="row g-3">
+          <div class="col-md-4">{{ form.cecu_expa.label_tag }} {{ form.cecu_expa }}</div>
+          <div class="col-md-4">{{ form.cecu_grup.label_tag }} {{ form.cecu_grup }}</div>
+          <div class="col-md-4">{{ form.cecu_natu.label_tag }} {{ form.cecu_natu }}</div>
+
+          <div class="col-md-6">{{ form.cecu_refe.label_tag }} {{ form.cecu_refe }}</div>
+          <div class="col-md-3">{{ form.cecu_dati.label_tag }} {{ form.cecu_dati }}</div>
+          <div class="col-md-3">{{ form.cecu_data.label_tag }} {{ form.cecu_data }}</div>
+
+          <div class="col-md-3">{{ form.cecu_inat.label_tag }} {{ form.cecu_inat }}</div>
+          <div class="col-md-3">{{ form.cecu_data_inat.label_tag }} {{ form.cecu_data_inat }}</div>
+          <div class="col-md-6">{{ form.cecu_obse.label_tag }} {{ form.cecu_obse }}</div>
+
+          <div class="col-md-3">{{ form.cecu_dre.label_tag }} {{ form.cecu_dre }}</div>
+          <div class="col-md-3">{{ form.cecu_prod.label_tag }} {{ form.cecu_prod }}</div>
+          <div class="col-md-3">{{ form.cecu_situ.label_tag }} {{ form.cecu_situ }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-3 d-flex gap-2">
+      <button type="submit" class="btn btn-primary">Salvar</button>
+      <a href="{% url 'centrosdecustos:lista' slug=slug %}" class="btn btn-secondary">Voltar</a>
+    </div>
+  </form>
+
+  <p class="text-muted small mt-3">&copy; {{ current_year }}</p>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const slug = '{{ slug }}';
+    const urlPreview = '{% url "centrosdecustos:proximo_codigo" slug=slug %}';
+    const inputPai = document.getElementById('id_cecu_niv1');
+    const inputEmpresa = document.getElementById('id_cecu_empr');
+    const prevCodigo = document.getElementById('prevCodigo');
+    const prevNivel = document.getElementById('prevNivel');
+    const prevTipo = document.getElementById('prevTipo');
+    const blocoPai = document.getElementById('bloco-pai');
+    const tipoRaiz = document.getElementById('tipoRaiz');
+    const tipoFilho = document.getElementById('tipoFilho');
+
+    function atualizarPreview() {
+      const params = new URLSearchParams();
+      const empresaLS = (typeof localStorage !== 'undefined') ? localStorage.getItem('empresa_id') : null;
+      const empresaVal = (inputEmpresa && inputEmpresa.value) ? inputEmpresa.value : (empresaLS || '');
+      if (empresaVal) params.set('empresa', empresaVal);
+      if (!tipoRaiz.checked && inputPai && inputPai.value) {
+        params.set('parent', inputPai.value);
+      }
+      fetch(urlPreview + (params.toString() ? ('?' + params.toString()) : ''))
+        .then(r => r.json())
+        .then(d => {
+          if (d.error) throw new Error(d.error);
+          prevCodigo.textContent = d.code ?? '—';
+          prevNivel.textContent = d.level ?? '—';
+          prevTipo.textContent = (d.tipo === 'A' ? 'Analítico' : 'Sintético');
+        })
+        .catch(e => {
+          prevCodigo.textContent = '—';
+          prevNivel.textContent = '—';
+          prevTipo.textContent = '—';
+        });
+    }
+
+    function aplicarModo() {
+      if (tipoRaiz.checked) {
+        blocoPai.style.display = 'none';
+        if (inputPai) inputPai.value = '';
+      } else {
+        blocoPai.style.display = '';
+      }
+      atualizarPreview();
+    }
+
+    // Estado inicial
+    if (inputPai && inputPai.value) {
+      tipoFilho.checked = true;
+    } else {
+      tipoRaiz.checked = true;
+    }
+    aplicarModo();
+
+    // Eventos
+    if (inputPai) inputPai.addEventListener('change', atualizarPreview);
+    tipoRaiz.addEventListener('change', aplicarModo);
+    tipoFilho.addEventListener('change', aplicarModo);
+  });
+</script>
+{% endblock %}
