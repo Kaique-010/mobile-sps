@@ -13,4 +13,5 @@ urlpatterns = [
     path("<slug:slug>/entidades/", include("Entidades.web_urls")),
     path("<slug:slug>/produtos/", include("Produtos.web_urls")),
     path("<slug:slug>/pedidos/", include("Pedidos.web_urls")),
+    path("<slug:slug>/orcamentos/", include("Orcamentos.web_urls")),
 ]

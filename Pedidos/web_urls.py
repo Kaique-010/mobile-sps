@@ -10,4 +10,9 @@ urlpatterns = [
     path("<int:pk>/imprimir/", web_views.PedidoPrintView.as_view(), name="pedido_impressao"),
     # Alias compatível com templates existentes
     path("por-cliente/", web_views.PedidosListView.as_view(), name="pedidos_por_cliente"),
+    # Endpoints de autocomplete
+    path("autocomplete/clientes/", web_views.autocomplete_clientes, name="autocomplete_clientes"),
+    path("autocomplete/vendedores/", web_views.autocomplete_vendedores, name="autocomplete_vendedores"),
+    path("autocomplete/produtos/", web_views.autocomplete_produtos, name="autocomplete_produtos"),
+    path("preco/", web_views.preco_produto, name="preco_produto"),
 ]

@@ -119,7 +119,7 @@
                             </li>
 
                             <li class="nav-item" data-modulo="Orcamentos">
-                                <a class="nav-link active" aria-current="page" href="#">
+                                <a class="nav-link active" aria-current="page" href="/web/login/" data-slug-route="/web/{slug}/orcamentos/">
                                     <i class="bi bi-file-break-fill fs-3"></i> Orçamentos
                                 </a>
                             </li>
@@ -339,5 +339,36 @@
                 }
             });
         });
+
+        // Ordena alfabeticamente os itens de lista dentro dos menus colapsáveis
+        const normalizeText = (el) => (el.textContent || '').replace(/\s+/g, ' ').trim();
+        const sortCollapsedLists = () => {
+            document.querySelectorAll('.collapse ul')?.forEach(ul => {
+                const items = Array.from(ul.querySelectorAll(':scope > li'));
+                items.sort((a, b) => normalizeText(a).localeCompare(normalizeText(b), 'pt-BR', { sensitivity: 'base' }));
+                items.forEach(li => ul.appendChild(li));
+            });
+        };
+
+        
+
+        // Aplica a ordenação após o carregamento inicial
+        document.addEventListener('DOMContentLoaded', sortCollapsedLists);
+
+        // Ordena alfabeticamente o menu principal (itens de primeiro nível)
+        const getItemLabel = (li) => {
+            const a = li.querySelector(':scope > a.nav-link');
+            return normalizeText(a || li);
+        };
+        const sortMainMenu = () => {
+            const ul = document.querySelector('ul.navbar-nav');
+            if (!ul) return;
+            const items = Array.from(ul.querySelectorAll(':scope > li.nav-item'));
+            const homeItems = items.filter(li => /^(home)$/i.test(getItemLabel(li)));
+            const otherItems = items.filter(li => !/^(home)$/i.test(getItemLabel(li)));
+            otherItems.sort((a, b) => getItemLabel(a).localeCompare(getItemLabel(b), 'pt-BR', { sensitivity: 'base' }));
+            [...homeItems, ...otherItems].forEach(li => ul.appendChild(li));
+        };
+        document.addEventListener('DOMContentLoaded', sortMainMenu);
     })();
 </script>

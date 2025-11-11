@@ -79,9 +79,19 @@
                 </tr>
               </thead>
               <tbody>
-                {% for item in object.itens %}
+                {% for item in itens_detalhados %}
                 <tr>
-                  <td>{{ item.iped_prod }}</td>
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      {% if item.has_foto %}
+                        <img src="{% url 'produto_foto_web' slug=slug prod_codi=item.prod_codigo %}" alt="foto" width="40" height="40" class="rounded" onerror="this.style.display='none';" />
+                      {% endif %}
+                      <div>
+                        <div class="fw-semibold">{{ item.prod_nome }}</div>
+                        <div class="text-muted small">{{ item.prod_codigo }}</div>
+                      </div>
+                    </div>
+                  </td>
                   <td class="text-end">{{ item.iped_quan }}</td>
                   <td class="text-end">R$ {{ item.iped_unit }}</td>
                   <td class="text-end">R$ {{ item.iped_tota|default:0 }}</td>

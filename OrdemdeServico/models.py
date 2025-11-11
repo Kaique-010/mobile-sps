@@ -55,6 +55,17 @@ class OrdemServicoFaseSetor(models.Model):
     def __str__(self):
         return self.osfs_nome
 
+class OrdemServicoVoltagem(models.Model):
+    osvo_codi = models.IntegerField(primary_key=True)
+    osvo_nome = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = 'ordemservicovoltagem'
+        managed = False
+
+    def __str__(self):
+        return self.osvo_nome
+
 
 class WorkflowSetor(models.Model):
     """Modelo para definir a sequência de setores no workflow das O.S."""

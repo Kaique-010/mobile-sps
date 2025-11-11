@@ -2,41 +2,159 @@ from django.views.generic import CreateView, ListView, DetailView
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.urls import reverse
+from django.http import JsonResponse
+from django.db.models import Q
 from core.utils import get_licenca_db_config
 from .models import PedidoVenda
-from .forms import PedidoVendaForm, ItensPedidoVendaForm
+from .forms import PedidoVendaForm
 from .formssets import ItensPedidoFormSet
-from .services.pedido_service import PedidoVendaService
+from .services.pedido_service import PedidoVendaService, proximo_pedido_numero
 from django.db.models import Subquery, OuterRef, BigIntegerField
 from django.db.models.functions import Cast
+
+# Endpoints de autocomplete simples (retornam {id, text})
+def autocomplete_clientes(request, slug=None):
+    banco = get_licenca_db_config(request) or 'default'
+    empresa_id = request.session.get('empresa_id', 1)
+    term = (request.GET.get('term') or request.GET.get('q') or '').strip()
+
+    from Entidades.models import Entidades
+    qs = Entidades.objects.using(banco).filter(
+        enti_empr=str(empresa_id),
+        enti_tipo_enti__icontains='CL'
+    )
+    if term:
+        if term.isdigit():
+            qs = qs.filter(enti_clie__icontains=term)
+        else:
+            qs = qs.filter(enti_nome__icontains=term)
+    qs = qs.order_by('enti_nome')[:20]
+    data = [{'id': str(obj.enti_clie), 'text': f"{obj.enti_clie} - {obj.enti_nome}"} for obj in qs]
+    return JsonResponse({'results': data})
+
+
+def autocomplete_vendedores(request, slug=None):
+    banco = get_licenca_db_config(request) or 'default'
+    empresa_id = request.session.get('empresa_id', 1)
+    term = (request.GET.get('term') or request.GET.get('q') or '').strip()
+
+    from Entidades.models import Entidades
+    qs = Entidades.objects.using(banco).filter(
+        enti_empr=str(empresa_id),
+        enti_tipo_enti__icontains='VE'
+    )
+    if term:
+        if term.isdigit():
+            qs = qs.filter(enti_clie__icontains=term)
+        else:
+            qs = qs.filter(enti_nome__icontains=term)
+    qs = qs.order_by('enti_nome')[:20]
+    data = [{'id': str(obj.enti_clie), 'text': f"{obj.enti_clie} - {obj.enti_nome}"} for obj in qs]
+    return JsonResponse({'results': data})
+
+
+
+def autocomplete_produtos(request, slug=None):
+    banco = get_licenca_db_config(request) or 'default'
+    empresa_id = request.session.get('empresa_id', 1)
+    term = (request.GET.get('term') or request.GET.get('q') or '').strip()
+
+    from Produtos.models import Produtos
+    qs = Produtos.objects.using(banco).filter(
+        prod_empr=str(empresa_id),
+    )
+    if term:
+        if term.isdigit():
+            qs = qs.filter(prod_codi__icontains=term)
+        else:
+            qs = qs.filter(prod_nome__icontains=term)
+    qs = qs.order_by('prod_nome')[:20]
+    data = [{'id': str(obj.prod_codi), 'text': f"{obj.prod_codi} - {obj.prod_nome}"} for obj in qs]
+    return JsonResponse({'results': data})
+
+# Endpoint para obter preço do produto conforme financeiro (à vista/prazo)
+def preco_produto(request, slug=None):
+    banco = get_licenca_db_config(request) or 'default'
+    empresa_id = request.session.get('empresa_id', 1)
+    filial_id = request.session.get('filial_id', 1)
+
+    prod_codi = (request.GET.get('prod_codi') or '').strip()
+    tipo_financeiro = (request.GET.get('pedi_fina') or '').strip()
+
+    if not prod_codi:
+        return JsonResponse({'error': 'prod_codi obrigatório'}, status=400)
+
+    try:
+        from Produtos.models import Tabelaprecos
+        qs = Tabelaprecos.objects.using(banco).filter(
+            tabe_empr=str(empresa_id),
+            tabe_fili=str(filial_id),
+            tabe_prod=str(prod_codi)
+        )
+        tp = qs.first()
+        if not tp:
+            return JsonResponse({'unit_price': None, 'found': False})
+
+        # Mapear o tipo financeiro: '1' = à vista, demais = prazo
+        if tipo_financeiro == '1':
+            price = tp.tabe_avis or tp.tabe_prco or tp.tabe_praz
+        else:
+            price = tp.tabe_praz or tp.tabe_prco or tp.tabe_avis
+
+        # Converter para float seguro
+        try:
+            unit_price = float(price or 0)
+        except Exception:
+            unit_price = 0.0
+
+        return JsonResponse({'unit_price': unit_price, 'found': True})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 class PedidoCreateView(CreateView):
     model = PedidoVenda
     form_class = PedidoVendaForm
     template_name = 'Pedidos/pedidocriar.html'
-    # success_url resolvida dinamicamente com slug
+
 
     def get_success_url(self):
         slug = self.kwargs.get('slug')
         return f"/web/{slug}/pedidos/" if slug else "/web/home/"
 
+    def get_form_kwargs(self):
+        """Passa parâmetros extras para o form"""
+        kwargs = super().get_form_kwargs()
+        kwargs['database'] = get_licenca_db_config(self.request) or 'default'
+        kwargs['empresa_id'] = self.request.session.get('empresa_id', 1)
+        return kwargs
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        banco = get_licenca_db_config(self.request) or 'default'
+        empresa_id = self.request.session.get('empresa_id', 1)
+        
         if self.request.POST:
-            context['formset'] = ItensPedidoFormSet(self.request.POST)
+            context['formset'] = ItensPedidoFormSet(
+                self.request.POST,
+                form_kwargs={'database': banco, 'empresa_id': empresa_id}
+            )
         else:
-            context['formset'] = ItensPedidoFormSet()
-        # Carregar produtos para o select dos itens
+            context['formset'] = ItensPedidoFormSet(
+                form_kwargs={'database': banco, 'empresa_id': empresa_id}
+            )
+        
+        # Produtos para o template (usado no JavaScript para adicionar linhas)
         try:
             from Produtos.models import Produtos
-            banco = get_licenca_db_config(self.request) or 'default'
             qs = Produtos.objects.using(banco).all()
-            empresa_id = self.request.session.get('empresa_id')
             if empresa_id:
                 qs = qs.filter(prod_empr=str(empresa_id))
-            context['produtos'] = qs.order_by('prod_nome')[:100]
-        except Exception:
+            context['produtos'] = qs.order_by('prod_nome')[:500]
+        except Exception as e:
+            print(f"Erro ao carregar produtos: {e}")
             context['produtos'] = []
+        
+        context['slug'] = self.kwargs.get('slug')
         return context
 
     def form_valid(self, form):
@@ -44,76 +162,89 @@ class PedidoCreateView(CreateView):
         formset_itens = context['formset']
 
         # Injetar empresa/filial da sessão
-        empresa_id = self.request.session.get('empresa_id') or 1
-        filial_id = self.request.session.get('filial_id') or 1
-        form.cleaned_data['pedi_empr'] = empresa_id
-        form.cleaned_data['pedi_fili'] = filial_id
-
+        empresa_id = self.request.session.get('empresa_id', 1)
+        filial_id = self.request.session.get('filial_id', 1)
+        banco = get_licenca_db_config(self.request) or 'default'
+        
         if form.is_valid() and formset_itens.is_valid():
             try:
-                # Extrai dados dos itens do formset para lista de dicts
+                # Prepara dados do pedido
+                pedido_data = form.cleaned_data.copy()
+                pedido_data['pedi_empr'] = empresa_id
+                pedido_data['pedi_fili'] = filial_id
+                
+                # Converte objetos Entidades para IDs
+                if hasattr(pedido_data.get('pedi_forn'), 'enti_clie'):
+                    pedido_data['pedi_forn'] = pedido_data['pedi_forn'].enti_clie
+                if hasattr(pedido_data.get('pedi_vend'), 'enti_clie'):
+                    pedido_data['pedi_vend'] = pedido_data['pedi_vend'].enti_clie
+                
+                # Extrai dados dos itens
                 itens_data = []
-                for f in getattr(formset_itens, 'forms', []):
-                    cd = getattr(f, 'cleaned_data', None)
-                    if not cd:
+                for item_form in formset_itens.forms:
+                    if not item_form.cleaned_data:
                         continue
-                    if cd.get('DELETE'):
+                    if item_form.cleaned_data.get('DELETE'):
                         continue
+                    
+                    item_data = item_form.cleaned_data.copy()
+                    # Converte objeto Produto para ID
+                    if hasattr(item_data.get('iped_prod'), 'prod_codi'):
+                        item_data['iped_prod'] = item_data['iped_prod'].prod_codi
+                    
                     itens_data.append({
-                        'iped_prod': cd.get('iped_prod'),
-                        'iped_quan': cd.get('iped_quan'),
-                        'iped_unit': cd.get('iped_unit'),
-                        'iped_desc': cd.get('iped_desc', 0) or 0,
+                        'iped_prod': item_data.get('iped_prod'),
+                        'iped_quan': item_data.get('iped_quan', 1),
+                        'iped_unit': item_data.get('iped_unit', 0),
+                        'iped_desc': item_data.get('iped_desc', 0),
                     })
-
+                
+                if not itens_data:
+                    messages.error(self.request, "O pedido precisa ter pelo menos um item.")
+                    return self.form_invalid(form)
+                
+                # Cria o pedido usando o service (banco-aware e com cálculo de itens)
                 pedido = PedidoVendaService.create_pedido_venda(
-                    form.cleaned_data,
+                    banco,
+                    pedido_data,
                     itens_data
                 )
                 messages.success(self.request, f"Pedido {pedido.pedi_nume} criado com sucesso.")
                 return redirect(self.get_success_url())
 
             except Exception as e:
-                messages.error(self.request, f"Erro ao salvar pedido: {e}")
+                messages.error(self.request, f"Erro ao salvar pedido: {str(e)}")
+                print(f"Erro detalhado: {e}")
+                import traceback
+                traceback.print_exc()
                 return self.form_invalid(form)
         else:
-            messages.error(self.request, "Verifique os campos antes de enviar.")
-        return self.form_invalid(form)
+            # Mostra erros de validação
+            if not form.is_valid():
+                messages.error(self.request, f"Erros no formulário: {form.errors}")
+            if not formset_itens.is_valid():
+                messages.error(self.request, f"Erros nos itens: {formset_itens.errors}")
+            return self.form_invalid(form)
 
 
 class PedidosListView(ListView):
     model = PedidoVenda
     template_name = 'Pedidos/pedidos_listar.html'
     context_object_name = 'pedidos'
+    paginate_by = 50
     
-    def vendedor_nome(self, pedi_vend):
-        try:
-            from Entidades.models import Entidades
-            banco = get_licenca_db_config(self.request) or 'default'
-            vendedor = Entidades.objects.using(banco).get(enti_clie=pedi_vend)
-            return vendedor.enti_nome
-        except Entidades.DoesNotExist:
-            return "Vendedor Desconhecido"
-    def cliente_nome(self, pedi_forn):
-        try:
-            from Entidades.models import Entidades
-            banco = get_licenca_db_config(self.request) or 'default'
-            cliente = Entidades.objects.using(banco).get(enti_clie=pedi_forn)
-            return cliente.enti_nome
-        except Entidades.DoesNotExist:
-            return "Cliente Desconhecido"
-
     def get_queryset(self):
         banco = get_licenca_db_config(self.request) or 'default'
         from Entidades.models import Entidades
+        
         qs = PedidoVenda.objects.using(banco).all()
-        # Filtros simples via GET (alinhados com o template)
+        
+        # Filtros
         cliente_param = (self.request.GET.get('cliente') or '').strip()
         vendedor_param = (self.request.GET.get('vendedor') or '').strip()
         status = self.request.GET.get('status')
 
         if cliente_param:
-            # Se for número/código, filtra direto; senão, busca por nome em Entidades
             if cliente_param.isdigit():
                 qs = qs.filter(pedi_forn__icontains=cliente_param)
             else:
@@ -140,10 +271,11 @@ class PedidosListView(ListView):
                     qs = qs.filter(pedi_vend__in=vendedores_ids)
                 else:
                     qs = qs.none()
+                    
         if status not in (None, '', 'todos'):
             qs = qs.filter(pedi_stat=status)
 
-        # Anotar nomes do cliente e vendedor usando subqueries
+        # Anotar nomes
         cliente_nome_subq = (
             Entidades.objects.using(banco)
             .filter(enti_clie=Cast(OuterRef('pedi_forn'), BigIntegerField()))
@@ -178,19 +310,62 @@ class PedidoDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['slug'] = self.kwargs.get('slug')
-        # Enriquecer com nomes de cliente e vendedor
+        
         try:
             from Entidades.models import Entidades
+            from Produtos.models import Produtos
             banco = get_licenca_db_config(self.request) or 'default'
             pedido = context.get('object')
+            
             if pedido:
-                cliente = Entidades.objects.using(banco).filter(enti_clie=pedido.pedi_forn).values('enti_nome').first()
-                vendedor = Entidades.objects.using(banco).filter(enti_clie=pedido.pedi_vend).values('enti_nome').first()
-                context['cliente_nome'] = cliente.get('enti_nome') if cliente else None
-                context['vendedor_nome'] = vendedor.get('enti_nome') if vendedor else None
-        except Exception:
-            context['cliente_nome'] = None
-            context['vendedor_nome'] = None
+                cliente = Entidades.objects.using(banco).filter(
+                    enti_clie=pedido.pedi_forn
+                ).values('enti_nome').first()
+                vendedor = Entidades.objects.using(banco).filter(
+                    enti_clie=pedido.pedi_vend
+                ).values('enti_nome').first()
+                
+                context['cliente_nome'] = cliente.get('enti_nome') if cliente else 'N/A'
+                context['vendedor_nome'] = vendedor.get('enti_nome') if vendedor else 'N/A'
+
+                # Itens detalhados com nome e foto do produto
+                itens_qs = (
+                    pedido.itens if hasattr(pedido, 'itens') else []
+                )
+                # Preferir consulta explícita usando o banco correto
+                try:
+                    itens_qs = Produtos.objects.none()  # placeholder para tipo
+                    from .models import Itenspedidovenda
+                    itens_qs = Itenspedidovenda.objects.using(banco).filter(
+                        iped_empr=pedido.pedi_empr,
+                        iped_fili=pedido.pedi_fili,
+                        iped_pedi=str(pedido.pedi_nume)
+                    ).order_by('iped_item')
+                except Exception:
+                    pass
+
+                codigos = [i.iped_prod for i in itens_qs]
+                produtos = Produtos.objects.using(banco).filter(prod_codi__in=codigos)
+                prod_map = {p.prod_codi: {'nome': p.prod_nome, 'has_foto': bool(p.prod_foto)} for p in produtos}
+
+                itens_detalhados = []
+                for i in itens_qs:
+                    meta = prod_map.get(i.iped_prod, {})
+                    itens_detalhados.append({
+                        'prod_codigo': i.iped_prod,
+                        'prod_nome': meta.get('nome') or i.iped_prod,
+                        'has_foto': bool(meta.get('has_foto')), 
+                        'iped_quan': i.iped_quan,
+                        'iped_unit': i.iped_unit,
+                        'iped_tota': i.iped_tota,
+                        'iped_item': getattr(i, 'iped_item', None),
+                    })
+                context['itens_detalhados'] = itens_detalhados
+        except Exception as e:
+            print(f"Erro ao carregar nomes: {e}")
+            context['cliente_nome'] = 'N/A'
+            context['vendedor_nome'] = 'N/A'
+            
         return context
 
 
@@ -205,20 +380,55 @@ class PedidoPrintView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['slug'] = self.kwargs.get('slug')
-        # Reutiliza a lógica de nomes para impressão
+        
         try:
             from Entidades.models import Entidades
+            from Produtos.models import Produtos
             banco = get_licenca_db_config(self.request) or 'default'
             pedido = context.get('object')
+            
             if pedido:
-                cliente = Entidades.objects.using(banco).filter(enti_clie=pedido.pedi_forn).values('enti_nome').first()
-                vendedor = Entidades.objects.using(banco).filter(enti_clie=pedido.pedi_vend).values('enti_nome').first()
-                context['cliente_nome'] = cliente.get('enti_nome') if cliente else None
-                context['vendedor_nome'] = vendedor.get('enti_nome') if vendedor else None
-        except Exception:
-            context['cliente_nome'] = None
-            context['vendedor_nome'] = None
+                cliente = Entidades.objects.using(banco).filter(
+                    enti_clie=pedido.pedi_forn
+                ).values('enti_nome').first()
+                vendedor = Entidades.objects.using(banco).filter(
+                    enti_clie=pedido.pedi_vend
+                ).values('enti_nome').first()
+                
+                context['cliente_nome'] = cliente.get('enti_nome') if cliente else 'N/A'
+                context['vendedor_nome'] = vendedor.get('enti_nome') if vendedor else 'N/A'
+
+                # Itens detalhados com nome e foto para impressão
+                try:
+                    from .models import Itenspedidovenda
+                    itens_qs = Itenspedidovenda.objects.using(banco).filter(
+                        iped_empr=pedido.pedi_empr,
+                        iped_fili=pedido.pedi_fili,
+                        iped_pedi=str(pedido.pedi_nume)
+                    ).order_by('iped_item')
+                except Exception:
+                    itens_qs = []
+
+                codigos = [i.iped_prod for i in itens_qs]
+                produtos = Produtos.objects.using(banco).filter(prod_codi__in=codigos)
+                prod_map = {p.prod_codi: {'nome': p.prod_nome, 'has_foto': bool(p.prod_foto)} for p in produtos}
+
+                itens_detalhados = []
+                for i in itens_qs:
+                    meta = prod_map.get(i.iped_prod, {})
+                    itens_detalhados.append({
+                        'prod_codigo': i.iped_prod,
+                        'prod_nome': meta.get('nome') or i.iped_prod,
+                        'has_foto': bool(meta.get('has_foto')),
+                        'iped_quan': i.iped_quan,
+                        'iped_unit': i.iped_unit,
+                        'iped_tota': i.iped_tota,
+                        'iped_item': getattr(i, 'iped_item', None),
+                    })
+                context['itens_detalhados'] = itens_detalhados
+        except Exception as e:
+            print(f"Erro ao carregar nomes: {e}")
+            context['cliente_nome'] = 'N/A'
+            context['vendedor_nome'] = 'N/A'
+            
         return context
-
-
-# Views de edição/exclusão serão adicionadas futuramente

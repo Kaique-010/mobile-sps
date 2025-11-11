@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block title %}Orçamentos{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Orçamentos</h2>
+    <a class="btn btn-primary" href="{% url 'OrcamentosWeb:orcamento_criar' slug=slug %}">Novo Orçamento</a>
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <form class="row g-3 mb-3" method="get">
+    <div class="col-md-4">
+      <input type="text" name="cliente" value="{{ request.GET.cliente }}" class="form-control" placeholder="Filtrar por cliente">
+    </div>
+    <div class="col-md-4">
+      <input type="text" name="vendedor" value="{{ request.GET.vendedor }}" class="form-control" placeholder="Filtrar por vendedor">
+    </div>
+    <div class="col-md-4">
+      <button class="btn btn-outline-secondary w-100" type="submit">Buscar</button>
+    </div>
+  </form>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>#</th>
+          <th>Data</th>
+          <th>Cliente</th>
+          <th>Vendedor</th>
+          <th class="text-end">Total</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in orcamentos %}
+        <tr>
+          <td>{{ o.pedi_nume }}</td>
+          <td>{{ o.pedi_data|date:'d/m/Y' }}</td>
+          <td>{{ o.pedi_forn }}</td>
+          <td>{{ o.pedi_vend }}</td>
+          <td class="text-end">R$ {{ o.pedi_tota }}</td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-outline-primary" href="{% url 'OrcamentosWeb:orcamento_detalhe' slug=slug pk=o.pk %}">Detalhes</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center text-muted">Nenhum orçamento encontrado.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

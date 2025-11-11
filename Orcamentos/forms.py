@@ -69,10 +69,52 @@ class OrcamentoPecasForm(forms.ModelForm):
         return preco_unitario
 
 
-OrcamentoPecasInlineFormSet = inlineformset_factory(
-    Orcamentos,
-    ItensOrcamento,
-    form=OrcamentoPecasForm,
-    extra=1,
-    can_delete=True
-)
+def get_orcamento_pecas_inline_formset():
+    """Cria o inline formset sob demanda para ambientes onde há FK configurada.
+    Evita erro de import quando não existe FK explícita entre os modelos.
+    """
+    return inlineformset_factory(
+        Orcamentos,
+        ItensOrcamento,
+        form=OrcamentoPecasForm,
+        extra=1,
+        can_delete=True
+    )
+
+
+# ====== Formulários Web (espelhando Pedidos) ======
+
+class OrcamentoVendaForm(forms.ModelForm):
+    class Meta:
+        model = Orcamentos
+        fields = [
+            'pedi_data', 'pedi_forn', 'pedi_vend', 'pedi_desc', 'pedi_tota'
+        ]
+        widgets = {
+            'pedi_data': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
+            'pedi_forn': forms.HiddenInput(),
+            'pedi_vend': forms.HiddenInput(),
+            'pedi_desc': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'pedi_tota': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'readonly': 'readonly'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.database = kwargs.pop('database', None)
+        self.empresa_id = kwargs.pop('empresa_id', None)
+        super().__init__(*args, **kwargs)
+
+
+class ItensOrcamentoVendaForm(forms.ModelForm):
+    class Meta:
+        model = ItensOrcamento
+        fields = ['iped_prod', 'iped_quan', 'iped_unit']
+        widgets = {
+            'iped_prod': forms.HiddenInput(),
+            'iped_quan': forms.NumberInput(attrs={'class': 'form-control text-end', 'min': '1', 'value': '1'}),
+            'iped_unit': forms.NumberInput(attrs={'class': 'form-control text-end', 'step': '0.01', 'value': '0.00'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.database = kwargs.pop('database', None)
+        self.empresa_id = kwargs.pop('empresa_id', None)
+        super().__init__(*args, **kwargs)

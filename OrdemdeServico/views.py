@@ -19,12 +19,12 @@ from .pagination import OrdemServicoPagination
 from .models import (
     Ordemservico, Ordemservicopecas, Ordemservicoservicos,
     Ordemservicoimgantes, Ordemservicoimgdurante, Ordemservicoimgdepois, 
-    WorkflowSetor, HistoricoWorkflow, OrdemServicoFaseSetor
+    WorkflowSetor, HistoricoWorkflow, OrdemServicoFaseSetor, OrdemServicoVoltagem
 )
 from .serializers import (
     OrdemServicoSerializer, OrdemServicoPecasSerializer, OrdemServicoServicosSerializer,
     ImagemAntesSerializer, ImagemDuranteSerializer, ImagemDepoisSerializer, 
-    WorkflowSetorSerializer, OrdemServicoFaseSetorSerializer
+    WorkflowSetorSerializer, OrdemServicoFaseSetorSerializer, OrdemServicoVoltagemSerializer
 )
 from .serializers_historico import HistoricoWorkflowSerializer
 from core.middleware import get_licenca_slug
@@ -105,6 +105,16 @@ class OrdemServicoFaseSetorViewSet(BaseMultiDBModelViewSet):
         context['banco'] = get_licenca_db_config(self.request)
         return context
 
+class OrdemServicoVoltagemViewSet(BaseMultiDBModelViewSet):
+    """ViewSet para gerenciar voltagens de O.S."""
+    modulo_necessario = 'OrdemdeServico'
+    queryset = OrdemServicoVoltagem.objects.all()
+    serializer_class = OrdemServicoVoltagemSerializer
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
+    filterset_fields = ['osvo_codi', 'osvo_nome']
+    ordering_fields = ['osvo_codi', 'osvo_nome']
+    search_fields = ['osvo_nome']
+    http_method_names = ['get']
 
 
 

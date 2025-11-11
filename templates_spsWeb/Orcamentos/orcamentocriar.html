@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Cadastrar Orçamento{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="card-title mb-0 fs-4">Orçamento <i class="bi bi-file-break"></i></h3>
+      </div>
+
+      <form method="post" enctype="multipart/form-data" id="orcamento-form">
+        {% csrf_token %}
+
+        <div class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label" for="{{ form.pedi_data.id_for_label }}">Data</label>
+            {{ form.pedi_data }}
+          </div>
+          <div class="col-md-5 position-relative">
+            <label class="form-label" for="{{ form.pedi_forn.id_for_label }}">Cliente</label>
+            <input type="text" class="form-control" id="autocomplete-cliente" placeholder="Buscar cliente por nome ou código">
+            {{ form.pedi_forn }}
+            <small id="cliente-selecionado" class="text-muted"></small>
+          </div>
+          <div class="col-md-4 position-relative">
+            <label class="form-label" for="{{ form.pedi_vend.id_for_label }}">Vendedor</label>
+            <input type="text" class="form-control" id="autocomplete-vendedor" placeholder="Buscar vendedor por nome ou código">
+            {{ form.pedi_vend }}
+            <small id="vendedor-selecionado" class="text-muted"></small>
+          </div>
+
+          <div class="col-md-4 ms-auto">
+            <label class="form-label" for="id_pedi_tota">Subtotal</label>
+            <div class="input-group">
+              <span class="input-group-text">R$</span>
+              {{ form.pedi_tota }}
+            </div>
+          </div>
+        </div>
+
+        <hr class="my-4">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h5 class="mb-0">Itens do Orçamento</h5>
+          <button type="button" class="btn btn-primary" id="add-item">
+            <i class="bi bi-plus-lg"></i> Adicionar Item
+          </button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-sm table-hover align-middle">
+            <thead class="table-light">
+              <tr>
+                <th style="min-width: 220px;">Produto</th>
+                <th class="text-end" style="width: 120px;">Quantidade</th>
+                <th class="text-end" style="width: 160px;">Preço Unitário</th>
+                <th class="text-end" style="width: 160px;">Total</th>
+                <th style="width: 120px;">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="itens-orcamento">
+              {{ formset.management_form }}
+              {% for form_item in formset %}
+              <tr class="item-row">
+                <td class="position-relative">
+                  {{ form_item.iped_prod }}
+                  <input type="text" class="form-control autocomplete-prod" data-index="{{ forloop.counter0 }}" placeholder="Buscar produto por nome ou código">
+                </td>
+                <td>
+                  {{ form_item.iped_quan }}
+                </td>
+                <td>
+                  {{ form_item.iped_unit }}
+                </td>
+                <td class="text-end item-total">R$ 0,00</td>
+                <td>
+                  <button type="button" class="btn btn-outline-danger btn-sm remove-item">
+                    <i class="bi bi-trash"></i> Remover
+                  </button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mt-3">
+          <button type="submit" class="btn btn-success">
+            <i class="bi bi-check2-circle"></i> Criar Orçamento
+          </button>
+          <a href="/web/login/" data-slug-route="/web/{slug}/orcamentos/" class="btn btn-outline-secondary">
+            Voltar
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof jQuery === 'undefined') {
+    console.error('jQuery não está carregado!');
+    return;
+  }
+
+  const $table = $('#itens-orcamento');
+  const $totalForms = $('#id_form-TOTAL_FORMS');
+  const $addBtn = $('#add-item');
+
+  function formatBRL(value) {
+    const num = Number(value || 0);
+    return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+
+  function updateTotals() {
+    let grandTotal = 0.0;
+    $table.find('.item-row').each(function() {
+      const $row = $(this);
+      const qty = parseFloat($row.find('input[name$="-iped_quan"]').val()) || 0;
+      const price = parseFloat($row.find('input[name$="-iped_unit"]').val()) || 0;
+      const lineTotal = qty * price;
+      grandTotal += lineTotal;
+      $row.find('.item-total').text(formatBRL(lineTotal));
+    });
+    $('#id_pedi_tota').val(grandTotal.toFixed(2));
+  }
+
+  $addBtn.on('click', function() {
+    const currentIndex = parseInt($totalForms.val(), 10) || 0;
+    const newRow = `
+      <tr class="item-row">
+        <td class="position-relative">
+          <input type="hidden" name="form-${currentIndex}-iped_prod" id="id_form-${currentIndex}-iped_prod">
+          <input type="text" class="form-control autocomplete-prod" data-index="${currentIndex}" placeholder="Buscar produto por nome ou código">
+        </td>
+        <td>
+          <input type="number" name="form-${currentIndex}-iped_quan" id="id_form-${currentIndex}-iped_quan" 
+                 class="form-control text-end" min="1" value="1" required>
+        </td>
+        <td>
+          <input type="number" name="form-${currentIndex}-iped_unit" id="id_form-${currentIndex}-iped_unit" 
+                 class="form-control text-end" step="0.01" value="0.00" required>
+        </td>
+        <td class="text-end item-total">R$ 0,00</td>
+        <td>
+          <button type="button" class="btn btn-outline-danger btn-sm remove-item">
+            <i class="bi bi-trash"></i> Remover
+          </button>
+        </td>
+      </tr>
+    `;
+    $table.append(newRow);
+    $totalForms.val(currentIndex + 1);
+    const $addedRow = $table.find('tr.item-row').last();
+    bindProdutoAutocomplete($addedRow);
+    updateTotals();
+  });
+
+  $table.on('click', '.remove-item', function() {
+    const $row = $(this).closest('tr');
+    if ($table.find('.item-row').length <= 1) {
+      alert('O orçamento precisa ter pelo menos um item.');
+      return;
+    }
+    $row.remove();
+    updateTotals();
+  });
+
+  $table.on('input', 'input[name$="-iped_quan"], input[name$="-iped_unit"]', function() {
+    updateTotals();
+  });
+
+  updateTotals();
+
+  function createDropdown(container) {
+    let dd = container.querySelector('.autocomplete-dropdown');
+    if (!dd) {
+      dd = document.createElement('div');
+      dd.className = 'autocomplete-dropdown list-group position-absolute w-100';
+      dd.style.zIndex = '1000';
+      container.appendChild(dd);
+    }
+    return dd;
+  }
+
+  function setupInputAutocomplete({ inputEl, hiddenEl, url, onSelect }) {
+    if (!inputEl || !hiddenEl) return;
+    const container = inputEl.parentElement;
+    const dropdown = createDropdown(container);
+
+    let controller = null;
+    let debounce = null;
+
+    async function fetchResults(term) {
+      try {
+        if (controller) controller.abort();
+        controller = new AbortController();
+        const resp = await fetch(`${url}?term=${encodeURIComponent(term)}`, { signal: controller.signal });
+        const json = await resp.json();
+        const results = json.results || [];
+        dropdown.innerHTML = '';
+        results.forEach(item => {
+          const a = document.createElement('a');
+          a.href = '#';
+          a.className = 'list-group-item list-group-item-action';
+          a.textContent = item.text;
+          a.dataset.id = item.id;
+          a.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            hiddenEl.value = item.id;
+            inputEl.value = item.text;
+            dropdown.innerHTML = '';
+            if (typeof onSelect === 'function') onSelect(item);
+          });
+          dropdown.appendChild(a);
+        });
+      } catch (e) {
+        console.error('Erro no autocomplete:', e);
+      }
+    }
+
+    inputEl.addEventListener('input', (e) => {
+      const term = e.target.value.trim();
+      clearTimeout(debounce);
+      dropdown.innerHTML = '';
+      if (!term) return;
+      debounce = setTimeout(() => fetchResults(term), 250);
+    });
+
+    inputEl.addEventListener('blur', () => {
+      setTimeout(() => { dropdown.innerHTML = ''; }, 150);
+    });
+  }
+
+  function bindProdutoAutocomplete($row) {
+    const $input = $row.find('.autocomplete-prod');
+    const $hidden = $row.find('input[type="hidden"][name$="-iped_prod"]');
+    const slug = localStorage.getItem('slug') || '';
+    const url = `/web/${slug}/orcamentos/autocomplete/produtos/`;
+
+    setupInputAutocomplete({
+      inputEl: $input.get(0),
+      hiddenEl: $hidden.get(0),
+      url,
+      onSelect: async (item) => {
+        try {
+          const resp = await fetch(`/web/${slug}/orcamentos/preco/?prod_codi=${encodeURIComponent(item.id)}`);
+          const js = await resp.json();
+          if (js && typeof js.unit_price === 'number') {
+            const $unit = $row.find('input[name$="-iped_unit"]');
+            $unit.val(js.unit_price.toFixed(2));
+            updateTotals();
+          }
+        } catch (e) {
+          console.error('Erro ao obter preço:', e);
+        }
+      }
+    });
+  }
+
+  $('#itens-orcamento tr.item-row').each(function() { bindProdutoAutocomplete($(this)); });
+
+  // Autocomplete cliente
+  (function() {
+    const $input = $('#autocomplete-cliente');
+    const $hidden = $('#id_pedi_forn');
+    const slug = localStorage.getItem('slug') || '';
+    const url = `/web/${slug}/orcamentos/autocomplete/clientes/`;
+    setupInputAutocomplete({ inputEl: $input.get(0), hiddenEl: $hidden.get(0), url, onSelect: (item) => {
+      $('#cliente-selecionado').text(item.text);
+    }});
+  })();
+
+  // Autocomplete vendedor
+  (function() {
+    const $input = $('#autocomplete-vendedor');
+    const $hidden = $('#id_pedi_vend');
+    const slug = localStorage.getItem('slug') || '';
+    const url = `/web/${slug}/orcamentos/autocomplete/vendedores/`;
+    setupInputAutocomplete({ inputEl: $input.get(0), hiddenEl: $hidden.get(0), url, onSelect: (item) => {
+      $('#vendedor-selecionado').text(item.text);
+    }});
+  })();
+});
+</script>
+{% endblock %}

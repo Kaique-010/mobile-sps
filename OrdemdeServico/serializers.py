@@ -10,7 +10,7 @@ from contas_a_receber.models import Titulosreceber
 from core.serializers import BancoContextMixin
 from .models import (
     Ordemservico, Ordemservicopecas, Ordemservicoservicos,
-    Ordemservicoimgantes, Ordemservicoimgdurante, Ordemservicoimgdepois, WorkflowSetor, OrdemServicoFaseSetor, OrdensEletro
+    Ordemservicoimgantes, Ordemservicoimgdurante, Ordemservicoimgdepois, WorkflowSetor, OrdemServicoFaseSetor, OrdensEletro, OrdemServicoVoltagem
 )
 
 logger = logging.getLogger(__name__)
@@ -49,11 +49,17 @@ class OrdemServicoFaseSetorSerializer(BancoModelSerializer):
         return instance
 
 
-class OrdemServicoFaseSetorSerializer(BancoModelSerializer):
-    """Serializer para fases de setores (tabela não gerenciada)"""
+class OrdemServicoVoltagemSerializer(BancoModelSerializer):
     class Meta:
-        model = OrdemServicoFaseSetor
+        model = OrdemServicoVoltagem
         fields = '__all__'
+    
+    def create(self, validated_data):
+        banco = self.context.get('banco')
+        if not banco:
+            raise ValidationError('Banco não encontrado no contexto')
+        instance = self.Meta.model.objects.using(banco).create(**validated_data)
+        return instance
 
 
 class WorkflowSetorSerializer(BancoModelSerializer):
@@ -395,6 +401,20 @@ class OrdemServicoSerializer(BancoModelSerializer):
                 raise ValidationError('Data de fechamento não pode ser anterior à data de abertura.')
         
         return data
+
+
+    def validate_orde_nume(self, value):
+        """Valida se o número da ordem já existe"""
+        banco = self.context.get('banco')
+        if not banco:
+            raise ValidationError('Banco não informado.')
+        
+        if Ordemservico.objects.using(banco).filter(
+            orde_nume=value,
+            
+        ).exists():
+            raise ValidationError('Número de ordem já existe.')
+        return value
 
     def create(self, validated_data):
         pecas_data = validated_data.pop('pecas', [])

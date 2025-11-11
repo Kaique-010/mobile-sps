@@ -3,7 +3,7 @@ from django.urls import path
 from .views import (
     OrdemServicoViewSet, OrdemServicoPecasViewSet, OrdemServicoServicosViewSet,
     ImagemAntesViewSet, ImagemDuranteViewSet, ImagemDepoisViewSet, 
-    WorkflowSetorViewSet, OrdemServicoFaseSetorViewSet
+    WorkflowSetorViewSet, OrdemServicoFaseSetorViewSet, OrdemServicoVoltagemViewSet
 )
 from .views_financeiro import (
     GerarTitulosOSView, 
@@ -27,6 +27,7 @@ router.register(r'fase-setor', OrdemServicoFaseSetorViewSet, basename='fase-seto
 router.register(r'workflow-setor', WorkflowSetorViewSet, basename='workflow-setor')
 router.register(r'historico-workflow', HistoricoWorkflowViewSet, basename='historico-workflow')
 router.register(r'ordens-eletro', OrdensEletroViewSet, basename='ordens-eletro')
+router.register(r'voltagens', OrdemServicoVoltagemViewSet, basename='voltagens')
 
 
 

@@ -1,0 +1,56 @@
+{% block content %}
+<div class="container py-4">
+  <div class="text-center mb-4">
+    <h2>Orçamento #{{ object.pedi_nume }}</h2>
+    <div>Data: {{ object.pedi_data|date:'d/m/Y' }}</div>
+    <div>Cliente: {{ object.pedi_forn }}</div>
+    <div>Vendedor: {{ object.pedi_vend }}</div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-sm table-bordered">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Produto</th>
+          <th class="text-end">Quantidade</th>
+          <th class="text-end">Preço Unitário</th>
+          <th class="text-end">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in itens_detalhados %}
+        <tr>
+          <td>{{ item.iped_item }}</td>
+          <td>
+            <div style="display:flex; align-items:center; gap:8px;">
+              {% if item.has_foto %}
+                <img src="{% url 'produto_foto_web' slug=slug prod_codi=item.prod_codigo %}" alt="foto" width="40" height="40" style="object-fit:cover;" onerror="this.style.display='none';" />
+              {% endif %}
+              <div>
+                <div style="font-weight:600;">{{ item.prod_nome }}</div>
+                <div style="color:#666; font-size:12px;">{{ item.prod_codigo }}</div>
+              </div>
+            </div>
+          </td>
+          <td class="text-end">{{ item.iped_quan }}</td>
+          <td class="text-end">R$ {{ item.iped_unit }}</td>
+          <td class="text-end">R$ {{ item.iped_tota|default:0 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <th colspan="4" class="text-end">Total do Orçamento</th>
+          <th class="text-end">R$ {{ object.pedi_tota }}</th>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <div class="mt-3">
+    <a class="btn btn-outline-secondary" href="{% url 'OrcamentosWeb:orcamentos_listar' slug=slug %}">Voltar</a>
+    <button class="btn btn-primary" onclick="window.print()">Imprimir</button>
+  </div>
+</div>
+{% endblock %}
