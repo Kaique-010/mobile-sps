@@ -9,7 +9,6 @@ urlpatterns = [
     path("login/", views.web_login, name="web_login"),
     path("selecionar-empresa/", views.selecionar_empresa, name="selecionar_empresa"),
 
-    # Templates com slug
     path("<slug:slug>/entidades/", include("Entidades.web_urls")),
     path("<slug:slug>/produtos/", include("Produtos.web_urls")),
     path("<slug:slug>/pedidos/", include("Pedidos.web_urls")),
@@ -18,4 +17,8 @@ urlpatterns = [
         "<slug:slug>/centrosdecustos/",
         include(("CentrodeCustos.web_urls", "centrosdecustos"), namespace="centrosdecustos"),
     ),
+    # Financeiro
+    path("<slug:slug>/contas-a-pagar/", include("contas_a_pagar.web_urls")),
+    path("<slug:slug>/contas-a-receber/", include("contas_a_receber.web_urls")),
+    path("<slug:slug>/fluxo-de-caixa/", include("Financeiro.web_urls")),
 ]

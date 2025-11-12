@@ -88,12 +88,13 @@ class OrcamentoVendaForm(forms.ModelForm):
     class Meta:
         model = Orcamentos
         fields = [
-            'pedi_data', 'pedi_forn', 'pedi_vend', 'pedi_desc', 'pedi_tota'
+            'pedi_data', 'pedi_forn', 'pedi_vend', 'pedi_topr', 'pedi_desc', 'pedi_tota'
         ]
         widgets = {
             'pedi_data': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
             'pedi_forn': forms.HiddenInput(),
             'pedi_vend': forms.HiddenInput(),
+            'pedi_topr': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'readonly': 'readonly'}),
             'pedi_desc': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'pedi_tota': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'readonly': 'readonly'}),
         }

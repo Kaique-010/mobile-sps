@@ -33,3 +33,12 @@
   display: flex;
   gap: 12px;
 }
+
+.form-group {
+  margin-bottom: 30px;
+}
+
+.form-control {
+  padding: 16px 20px;
+  border-radius: 8px;
+}

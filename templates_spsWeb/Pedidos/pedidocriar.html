@@ -1,14 +1,16 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Cadastrar Pedido de Venda{% endblock %}
-
+{% block title %}{% if form.instance.pk %}Editar Pedido de Venda{% else %}Cadastrar Pedido de Venda{% endif %}{% endblock %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
 {% block content %}
 <div class="container py-4">
+  <h3 class="card-title mb-4 fs-4  text-center">{% if form.instance.pk %}Editar Pedido de Venda{% else %}Pedido de Venda{% endif %} <i class="bi bi-cart"></i></h3>
   <div class="card shadow-sm">
     <div class="card-body">
       <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3 class="card-title mb-0 fs-4">Pedido de Venda <i class="bi bi-cart"></i></h3>
+
       </div>
 
 
@@ -18,18 +20,20 @@
 
         <div class="row g-3">
           <div class="col-md-3">
-            <label class="form-label" for="{{ form.pedi_data.id_for_label }}">Data</label>
+            <label class="form-label" for="{{ form.pedi_data.id_for_label }}">Data do Pedido</label>
             {{ form.pedi_data }}
           </div>
           <div class="col-md-5 position-relative">
             <label class="form-label" for="{{ form.pedi_forn.id_for_label }}">Cliente</label>
-            <input type="text" class="form-control" id="autocomplete-cliente" placeholder="Buscar cliente por nome ou código">
+            <input type="text" class="form-control" id="autocomplete-cliente"
+              placeholder="Buscar cliente por nome ou código" {% if is_edit and cliente_display %}value="{{ cliente_display }}"{% endif %}>
             {{ form.pedi_forn }}
             <small id="cliente-selecionado" class="text-muted"></small>
           </div>
           <div class="col-md-4 position-relative">
             <label class="form-label" for="{{ form.pedi_vend.id_for_label }}">Vendedor</label>
-            <input type="text" class="form-control" id="autocomplete-vendedor" placeholder="Buscar vendedor por nome ou código">
+            <input type="text" class="form-control" id="autocomplete-vendedor"
+              placeholder="Buscar vendedor por nome ou código" {% if is_edit and vendedor_display %}value="{{ vendedor_display }}"{% endif %}>
             {{ form.pedi_vend }}
             <small id="vendedor-selecionado" class="text-muted"></small>
           </div>
@@ -38,18 +42,37 @@
             <label class="form-label" for="{{ form.pedi_fina.id_for_label }}">Tipo Financeiro</label>
             {{ form.pedi_fina }}
           </div>
-          <div class="col-md-4 ms-auto">
-            <label class="form-label" for="id_pedi_tota">Subtotal</label>
-            <div class="input-group">
-              <span class="input-group-text">R$</span>
-              {{ form.pedi_tota }}
+          <div class="col-md-8">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label" for="id_pedi_topr">Subtotal</label>
+                <div class="input-group">
+                  <span class="input-group-text">R$</span>
+                  {{ form.pedi_topr }}
+                </div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="id_pedi_desc">Desconto</label>
+                <div class="input-group">
+                  <span class="input-group-text">R$</span>
+                  {{ form.pedi_desc }}
+                </div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="id_pedi_tota">Total</label>
+                <div class="input-group">
+                  <span class="input-group-text">R$</span>
+                  {{ form.pedi_tota }}
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         <hr class="my-4">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h5 class="mb-0">Itens do Pedido</h5>
+        <h5 class="mb-4 fs-5 text-center">Itens do Pedido</h5>
+        <div class="d-flex justify-content-between align-items-center mb-4 mt-3">
+
           <button type="button" class="btn btn-primary" id="add-item">
             <i class="bi bi-plus-lg"></i> Adicionar Item
           </button>
@@ -72,7 +95,9 @@
               <tr class="item-row">
                 <td class="position-relative">
                   {{ form_item.iped_prod }}
-                  <input type="text" class="form-control autocomplete-prod" data-index="{{ forloop.counter0 }}" placeholder="Buscar produto por nome ou código">
+                  <div class="d-none">{{ form_item.DELETE }}</div>
+                  <input type="text" class="form-control autocomplete-prod" data-index="{{ forloop.counter0 }}"
+                    placeholder="Buscar produto por nome ou código" {% if is_edit and form_item.initial.display_prod_text %}value="{{ form_item.initial.display_prod_text }}"{% endif %}>
                 </td>
                 <td>
                   {{ form_item.iped_quan }}
@@ -94,7 +119,7 @@
 
         <div class="d-flex justify-content-end gap-2 mt-3">
           <button type="submit" class="btn btn-success">
-            <i class="bi bi-check2-circle"></i> Criar Pedido
+            <i class="bi bi-check2-circle"></i> {% if form.instance.pk %}Salvar Alterações{% else %}Criar Pedido{% endif %}
           </button>
           <a href="/web/login/" data-slug-route="/web/{slug}/pedidos/" class="btn btn-outline-secondary">
             Voltar
@@ -106,47 +131,59 @@
 </div>
 
 <script>
-// Aguarda jQuery estar disponível
-document.addEventListener('DOMContentLoaded', function() {
-  // Verifica se jQuery está carregado
-  if (typeof jQuery === 'undefined') {
-    console.error('jQuery não está carregado!');
-    return;
-  }
+  // Aguarda jQuery estar disponível
+  document.addEventListener('DOMContentLoaded', function () {
+    // Verifica se jQuery está carregado
+    if (typeof jQuery === 'undefined') {
+      console.error('jQuery não está carregado!');
+      return;
+    }
 
-  const $table = $('#itens-pedido');
-  const $totalForms = $('#id_form-TOTAL_FORMS');
-  const $addBtn = $('#add-item');
+    const $table = $('#itens-pedido');
+    const $totalForms = $('#id_form-TOTAL_FORMS');
+    const $addBtn = $('#add-item');
 
-  function formatBRL(value) {
-    const num = Number(value || 0);
-    return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  }
+    function formatBRL(value) {
+      const num = Number(value || 0);
+      return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
 
-  function updateTotals() {
-    let grandTotal = 0.0;
-    
-    $table.find('.item-row').each(function() {
-      const $row = $(this);
-      const qty = parseFloat($row.find('input[name$="-iped_quan"]').val()) || 0;
-      const price = parseFloat($row.find('input[name$="-iped_unit"]').val()) || 0;
-      const lineTotal = qty * price;
-      
-      grandTotal += lineTotal;
-      $row.find('.item-total').text(formatBRL(lineTotal));
-    });
-    
-    $('#id_pedi_tota').val(grandTotal.toFixed(2));
-  }
+    function updateTotals() {
+      let subtotal = 0.0;
 
-  // Adicionar nova linha
-  $addBtn.on('click', function() {
-    const currentIndex = parseInt($totalForms.val(), 10) || 0;
-    
-    const newRow = `
+      $table.find('.item-row').each(function () {
+        const $row = $(this);
+        const isDeleted = $row.find('input[name$="-DELETE"]').is(':checked');
+        if (isDeleted) return;
+        const qty = parseFloat($row.find('input[name$="-iped_quan"]').val()) || 0;
+        const price = parseFloat($row.find('input[name$="-iped_unit"]').val()) || 0;
+        const lineTotal = qty * price;
+        console.debug('[Pedidos.updateTotals] linha', {
+          deleted: isDeleted,
+          quantidade: qty,
+          unitario: price,
+          totalLinha: lineTotal
+        });
+        subtotal += lineTotal;
+        $row.find('.item-total').text(formatBRL(lineTotal));
+      });
+
+      const desconto = parseFloat($('#id_pedi_desc').val()) || 0;
+      const total = Math.max(subtotal - desconto, 0);
+      $('#id_pedi_topr').val(subtotal.toFixed(2));
+      $('#id_pedi_tota').val(total.toFixed(2));
+      console.debug('[Pedidos.updateTotals] subtotal/desconto/total', { subtotal, desconto, total });
+    }
+
+    // Adicionar nova linha
+    $addBtn.on('click', function () {
+      const currentIndex = parseInt($totalForms.val(), 10) || 0;
+
+      const newRow = `
       <tr class="item-row">
         <td class="position-relative">
           <input type="hidden" name="form-${currentIndex}-iped_prod" id="id_form-${currentIndex}-iped_prod">
+          <input type="checkbox" name="form-${currentIndex}-DELETE" id="id_form-${currentIndex}-DELETE" class="visually-hidden">
           <input type="text" class="form-control autocomplete-prod" data-index="${currentIndex}" placeholder="Buscar produto por nome ou código">
         </td>
         <td>
@@ -165,180 +202,256 @@ document.addEventListener('DOMContentLoaded', function() {
         </td>
       </tr>
     `;
-    
-    $table.append(newRow);
-    $totalForms.val(currentIndex + 1);
-    // Vincula imediatamente o autocomplete ao novo item
-    const $addedRow = $table.find('tr.item-row').last();
-    bindProdutoAutocomplete($addedRow);
-    updateTotals();
-  });
 
-  // Remover linha
-  $table.on('click', '.remove-item', function() {
-    const $row = $(this).closest('tr');
-    
-    // Se for a última linha, não remove
-    if ($table.find('.item-row').length <= 1) {
-      alert('O pedido precisa ter pelo menos um item.');
-      return;
-    }
-    
-    $row.remove();
-    updateTotals();
-  });
+      $table.append(newRow);
+      $totalForms.val(currentIndex + 1);
+      // Vincula imediatamente o autocomplete ao novo item
+      const $addedRow = $table.find('tr.item-row').last();
+      bindProdutoAutocomplete($addedRow);
+      updateTotals();
+    });
 
-  // Atualizar totais ao digitar
-  $table.on('input', 'input[name$="-iped_quan"], input[name$="-iped_unit"]', function() {
-    updateTotals();
-  });
+    // Remover linha
+    $table.on('click', '.remove-item', function () {
+      const $row = $(this).closest('tr');
 
-  // Calcula total inicial
-  updateTotals();
-
-  // ===== Autocomplete com dropdown e campos escondidos =====
-  function createDropdown(container) {
-    let dd = container.querySelector('.autocomplete-dropdown');
-    if (!dd) {
-      dd = document.createElement('div');
-      dd.className = 'autocomplete-dropdown list-group position-absolute w-100';
-      dd.style.zIndex = '1000';
-      container.appendChild(dd);
-    }
-    return dd;
-  }
-
-  function setupInputAutocomplete({ inputEl, hiddenEl, url, onSelect }) {
-    if (!inputEl || !hiddenEl) return;
-    const container = inputEl.parentElement;
-    const dropdown = createDropdown(container);
-
-    let controller = null;
-    let debounce = null;
-
-    async function fetchResults(term) {
-      try {
-        if (controller) controller.abort();
-        controller = new AbortController();
-        const resp = await fetch(`${url}?term=${encodeURIComponent(term)}`, { signal: controller.signal });
-        const json = await resp.json();
-        const results = json.results || [];
-        dropdown.innerHTML = '';
-        results.forEach(item => {
-          const a = document.createElement('a');
-          a.href = '#';
-          a.className = 'list-group-item list-group-item-action';
-          a.textContent = item.text;
-          a.dataset.id = item.id;
-          a.addEventListener('click', (ev) => {
-            ev.preventDefault();
-            hiddenEl.value = item.id;
-            inputEl.value = item.text;
-            dropdown.innerHTML = '';
-            if (typeof onSelect === 'function') onSelect(item);
-          });
-          dropdown.appendChild(a);
-        });
-      } catch (e) {
-        console.error('Erro no autocomplete:', e);
+      // Se for a última linha, não remove
+      if ($table.find('.item-row').length <= 1) {
+        alert('O pedido precisa ter pelo menos um item.');
+        return;
       }
-    }
 
-    inputEl.addEventListener('input', (e) => {
-      const term = e.target.value.trim();
-      clearTimeout(debounce);
-      dropdown.innerHTML = '';
-      if (term.length < 2) return;
-      debounce = setTimeout(() => fetchResults(term), 250);
+      // Marca como deletado e oculta
+      const $del = $row.find('input[name$="-DELETE"]');
+      if ($del.length) {
+        $del.prop('checked', true);
+        $row.addClass('deleted').hide();
+        console.debug('[Pedidos.removeItem] marcado DELETE e ocultado linha');
+      } else {
+        $row.remove();
+        const currentIndex = parseInt($totalForms.val(), 10) || 0;
+        $totalForms.val(Math.max(currentIndex - 1, 0));
+        console.debug('[Pedidos.removeItem] linha removida (sem DELETE oculto)');
+      }
+      updateTotals();
     });
 
-    document.addEventListener('click', (e) => {
-      if (!container.contains(e.target)) dropdown.innerHTML = '';
+    // Atualizar totais ao digitar
+    $table.on('input', 'input[name$="-iped_quan"], input[name$="-iped_unit"]', function () {
+      updateTotals();
     });
-  }
+    $('#id_pedi_desc').on('input', function () { updateTotals(); });
 
-  const clientesUrl = "{% url 'PedidosWeb:autocomplete_clientes' slug=slug %}";
-  const vendedoresUrl = "{% url 'PedidosWeb:autocomplete_vendedores' slug=slug %}";
-  const produtosUrl  = "{% url 'PedidosWeb:autocomplete_produtos' slug=slug %}";
-  const precoUrl     = "{% url 'PedidosWeb:preco_produto' slug=slug %}";
+    // Calcula total inicial
+    updateTotals();
 
-  // Cliente
-  setupInputAutocomplete({
-    inputEl: document.getElementById('autocomplete-cliente'),
-    hiddenEl: document.getElementById('id_pedi_forn'),
-    url: clientesUrl,
-    onSelect: (item) => {
-      $('#cliente-selecionado').text(`Selecionado: ${item.text}`);
+    // ===== Autocomplete com dropdown e campos escondidos =====
+    function createDropdown(container) {
+      let dd = container.querySelector('.autocomplete-dropdown');
+      if (!dd) {
+        dd = document.createElement('div');
+        dd.className = 'autocomplete-dropdown list-group position-absolute w-100';
+        dd.style.zIndex = '1000';
+        container.appendChild(dd);
+      }
+      return dd;
     }
-  });
 
-  // Vendedor
-  setupInputAutocomplete({
-    inputEl: document.getElementById('autocomplete-vendedor'),
-    hiddenEl: document.getElementById('id_pedi_vend'),
-    url: vendedoresUrl,
-    onSelect: (item) => {
-      $('#vendedor-selecionado').text(`Selecionado: ${item.text}`);
+    function setupInputAutocomplete({ inputEl, hiddenEl, url, onSelect }) {
+      if (!inputEl || !hiddenEl) return;
+      const container = inputEl.parentElement;
+      const dropdown = createDropdown(container);
+
+      let controller = null;
+      let debounce = null;
+
+      async function fetchResults(term) {
+        try {
+          if (controller) controller.abort();
+          controller = new AbortController();
+          const resp = await fetch(`${url}?term=${encodeURIComponent(term)}`, { signal: controller.signal });
+          const json = await resp.json();
+          const results = json.results || [];
+          dropdown.innerHTML = '';
+          results.forEach(item => {
+            const a = document.createElement('a');
+            a.href = '#';
+            a.className = 'list-group-item list-group-item-action';
+            a.textContent = item.text;
+            a.dataset.id = item.id;
+            a.addEventListener('click', (ev) => {
+              ev.preventDefault();
+              hiddenEl.value = item.id;
+              inputEl.value = item.text;
+              dropdown.innerHTML = '';
+              if (typeof onSelect === 'function') onSelect(item);
+            });
+            dropdown.appendChild(a);
+          });
+        } catch (e) {
+          console.error('Erro no autocomplete:', e);
+        }
+      }
+
+      inputEl.addEventListener('input', (e) => {
+        const term = e.target.value.trim();
+        clearTimeout(debounce);
+        dropdown.innerHTML = '';
+        if (term.length < 2) return;
+        debounce = setTimeout(() => fetchResults(term), 250);
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!container.contains(e.target)) dropdown.innerHTML = '';
+      });
     }
-  });
 
-  // Produtos (por linha)
-  function bindProdutoAutocomplete($context) {
-    $context.find('.autocomplete-prod').each(function() {
-      const inputEl = this;
-      // Evita rebinding múltiplo no mesmo input
-      if (inputEl.dataset.bound === '1') return;
-      inputEl.dataset.bound = '1';
-      const idx = inputEl.getAttribute('data-index');
-      const hiddenEl = document.getElementById(`id_form-${idx}-iped_prod`);
-      const unitEl = document.getElementById(`id_form-${idx}-iped_unit`);
+    const clientesUrl = "{% url 'PedidosWeb:autocomplete_clientes' slug=slug %}";
+    const vendedoresUrl = "{% url 'PedidosWeb:autocomplete_vendedores' slug=slug %}";
+    const produtosUrl = "{% url 'PedidosWeb:autocomplete_produtos' slug=slug %}";
+    const precoUrl = "{% url 'PedidosWeb:preco_produto' slug=slug %}";
 
-      setupInputAutocomplete({
-        inputEl,
-        hiddenEl,
-        url: produtosUrl,
-        onSelect: async (item) => {
-          // Buscar preço pelo financeiro atual
-          const tipo = $('#id_pedi_fina').val();
-          try {
-            const resp = await fetch(`${precoUrl}?prod_codi=${encodeURIComponent(item.id)}&pedi_fina=${encodeURIComponent(tipo)}`);
-            const json = await resp.json();
-            if (json && typeof json.unit_price !== 'undefined') {
-              unitEl.value = Number(json.unit_price || 0).toFixed(2);
-              updateTotals();
+    // Cliente
+    setupInputAutocomplete({
+      inputEl: document.getElementById('autocomplete-cliente'),
+      hiddenEl: document.getElementById('id_pedi_forn'),
+      url: clientesUrl,
+      onSelect: (item) => {
+        $('#cliente-selecionado').text(`Selecionado: ${item.text}`);
+      }
+    });
+
+    // Vendedor
+    setupInputAutocomplete({
+      inputEl: document.getElementById('autocomplete-vendedor'),
+      hiddenEl: document.getElementById('id_pedi_vend'),
+      url: vendedoresUrl,
+      onSelect: (item) => {
+        $('#vendedor-selecionado').text(`Selecionado: ${item.text}`);
+      }
+    });
+
+    // Produtos (por linha)
+    function bindProdutoAutocomplete($context) {
+      $context.find('.autocomplete-prod').each(function () {
+        const inputEl = this;
+        // Evita rebinding múltiplo no mesmo input
+        if (inputEl.dataset.bound === '1') return;
+        inputEl.dataset.bound = '1';
+        const idx = inputEl.getAttribute('data-index');
+        const hiddenEl = document.getElementById(`id_form-${idx}-iped_prod`);
+        const unitEl = document.getElementById(`id_form-${idx}-iped_unit`);
+
+        setupInputAutocomplete({
+          inputEl,
+          hiddenEl,
+          url: produtosUrl,
+          onSelect: async (item) => {
+            // Buscar preço pelo financeiro atual
+            const tipo = $('#id_pedi_fina').val();
+            try {
+              const resp = await fetch(`${precoUrl}?prod_codi=${encodeURIComponent(item.id)}&pedi_fina=${encodeURIComponent(tipo)}`);
+              const json = await resp.json();
+              if (json && typeof json.unit_price !== 'undefined') {
+                unitEl.value = Number(json.unit_price || 0).toFixed(2);
+                console.debug('[Pedidos.autocomplete.produto] preço definido', { prod_codi: item.id, tipo_fina: tipo, unit_price: json.unit_price });
+                updateTotals();
+              }
+            } catch (e) {
+              console.error('Erro ao obter preço:', e);
             }
-          } catch (e) {
-            console.error('Erro ao obter preço:', e);
+          }
+        });
+      });
+    }
+
+    bindProdutoAutocomplete($(document));
+
+    // Prefill cliente, vendedor e produtos em modo edição
+    async function prefillEntidade(hiddenSelector, inputSelector, url, labelSelector) {
+      const hiddenEl = document.querySelector(hiddenSelector);
+      const inputEl = document.querySelector(inputSelector);
+      if (!hiddenEl || !hiddenEl.value || !inputEl) return;
+      try {
+        const resp = await fetch(`${url}?term=${encodeURIComponent(hiddenEl.value)}`);
+        const json = await resp.json();
+        const match = (json.results || []).find(r => String(r.id) === String(hiddenEl.value));
+        if (match) {
+          inputEl.value = match.text;
+          if (labelSelector) {
+            const lbl = document.querySelector(labelSelector);
+            if (lbl) lbl.textContent = `Selecionado: ${match.text}`;
           }
         }
-      });
-    });
-  }
+      } catch (e) { console.error('Erro ao prefill entidade:', e); }
+    }
 
-  bindProdutoAutocomplete($(document));
-
-  // Rebinding é feito diretamente após inserir a nova linha (ver handler do botão)
-
-  // Atualiza preços dos itens quando o tipo financeiro muda
-  $('#id_pedi_fina').on('change', async function() {
-    const tipo = $(this).val();
-    $table.find('.item-row').each(async function() {
-      const $row = $(this);
-      const hiddenEl = $row.find('input[type="hidden"][name$="-iped_prod"]')[0];
-      const unitEl = $row.find('input[name$="-iped_unit"]')[0];
-      if (!hiddenEl || !hiddenEl.value) return;
-      try {
-        const resp = await fetch(`${precoUrl}?prod_codi=${encodeURIComponent(hiddenEl.value)}&pedi_fina=${encodeURIComponent(tipo)}`);
-        const json = await resp.json();
-        if (json && typeof json.unit_price !== 'undefined') {
-          unitEl.value = Number(json.unit_price || 0).toFixed(2);
-        }
-      } catch (e) {
-        console.error('Erro ao obter preço:', e);
+    async function prefillProdutos() {
+      const rows = document.querySelectorAll('#itens-pedido tr.item-row');
+      for (const row of rows) {
+        const hiddenEl = row.querySelector('input[type="hidden"][name$="-iped_prod"]');
+        const inputEl = row.querySelector('.autocomplete-prod');
+        if (!hiddenEl || !hiddenEl.value || !inputEl) continue;
+        try {
+          const resp = await fetch(`${produtosUrl}?term=${encodeURIComponent(hiddenEl.value)}`);
+          const json = await resp.json();
+          const match = (json.results || []).find(r => String(r.id) === String(hiddenEl.value));
+          if (match) {
+            inputEl.value = match.text;
+          }
+        } catch (e) { console.error('Erro ao prefill produto:', e); }
       }
+    }
+
+    // Executa prefill em modo edição
+    prefillEntidade('#id_pedi_forn', '#autocomplete-cliente', clientesUrl, '#cliente-selecionado');
+    prefillEntidade('#id_pedi_vend', '#autocomplete-vendedor', vendedoresUrl, '#vendedor-selecionado');
+    prefillProdutos();
+
+    // Rebinding é feito diretamente após inserir a nova linha (ver handler do botão)
+
+    // Atualiza preços dos itens quando o tipo financeiro muda
+    $('#id_pedi_fina').on('change', async function () {
+      const tipo = $(this).val();
+      $table.find('.item-row').each(async function () {
+        const $row = $(this);
+        const hiddenEl = $row.find('input[type="hidden"][name$="-iped_prod"]')[0];
+        const unitEl = $row.find('input[name$="-iped_unit"]')[0];
+        if (!hiddenEl || !hiddenEl.value) return;
+        try {
+          const resp = await fetch(`${precoUrl}?prod_codi=${encodeURIComponent(hiddenEl.value)}&pedi_fina=${encodeURIComponent(tipo)}`);
+          const json = await resp.json();
+          if (json && typeof json.unit_price !== 'undefined') {
+            unitEl.value = Number(json.unit_price || 0).toFixed(2);
+            console.debug('[Pedidos.tipoFinanceiro.change] preço atualizado', { prod_codi: hiddenEl.value, tipo_fina: tipo, unit_price: json.unit_price });
+          }
+        } catch (e) {
+          console.error('Erro ao obter preço:', e);
+        }
+      });
+      updateTotals();
     });
-    updateTotals();
+
+    // Logar dados no submit para diagnosticar falhas
+    const $form = $('#pedido-form');
+    $form.on('submit', function () {
+      const payload = {
+        pedi_desc: parseFloat($('#id_pedi_desc').val()) || 0,
+        pedi_topr: parseFloat($('#id_pedi_topr').val()) || 0,
+        pedi_tota: parseFloat($('#id_pedi_tota').val()) || 0,
+        itens: []
+      };
+      $table.find('.item-row').each(function () {
+        const $row = $(this);
+        payload.itens.push({
+          deleted: $row.find('input[name$="-DELETE"]').is(':checked'),
+          prod: $row.find('input[type="hidden"][name$="-iped_prod"]').val(),
+          quan: parseFloat($row.find('input[name$="-iped_quan"]').val()) || 0,
+          unit: parseFloat($row.find('input[name$="-iped_unit"]').val()) || 0
+        });
+      });
+      console.debug('[Pedidos.submit] payload', payload);
+    });
   });
-});
 </script>
 {% endblock %}

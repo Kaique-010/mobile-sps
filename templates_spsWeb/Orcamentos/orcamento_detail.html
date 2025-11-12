@@ -4,49 +4,79 @@
 {% block content %}
 <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
 <link rel="stylesheet" href="{% static 'orcamentos/dstyles.css' %}" />
+<link rel="stylesheet" href="{% static 'css/ui.css' %}" />
 
-<div class="container mt-5" id="orcamento-container">
-  <h1 class="text-center mb-4">Detalhes do Orçamento #{{ orcamento.pk }}</h1>
+<div class="container page-container" id="orcamento-container">
+  <div class="page-header-custom">
+    <h2 class="page-title">Orçamento #{{ orcamento.pk }}</h2>
+    <div class="page-actions">
+      <div class="btn-group" role="group" aria-label="Navegação">
+        <a href="{% url 'orcamento_list' %}" class="btn btn-outline-secondary" aria-label="Voltar para a lista de orçamentos">Voltar</a>
+      </div>
+    </div>
+  </div>
 
   <!-- Card: Informações do Orçamento -->
   <div class="card mb-4" id="orcamento-info-card">
-    <div class="card-header">
-      <h4>Informações do Orçamento</h4>
-    </div>
     <div class="card-body">
-      <p><strong>Empresa:</strong> {{ orcamento.orca_empr }}</p>
-      <p><strong>Filial:</strong> {{ orcamento.orca_fili }}</p>
-      <p><strong>Data de Criação:</strong> {{ orcamento.orca_aber }}</p>
-      <p><strong>Total do Orçamento:</strong> R$ {{ orcamento.orca_valo_tota | floatformat:2 }}</p>
+      <div class="row" role="group" aria-label="Metadados do orçamento">
+        <div class="col-md-3">
+          <div class="text-muted">Empresa</div>
+          <div class="fw-semibold">{{ orcamento.orca_empr }}</div>
+        </div>
+        <div class="col-md-3">
+          <div class="text-muted">Filial</div>
+          <div class="fw-semibold">{{ orcamento.orca_fili }}</div>
+        </div>
+        <div class="col-md-3">
+          <div class="text-muted">Data de Criação</div>
+          <div class="fw-semibold">{{ orcamento.orca_aber }}</div>
+        </div>
+        <div class="col-md-3 text-md-end">
+          <div class="text-muted">Total</div>
+          <div class="fw-bold fs-5">R$ {{ orcamento.orca_valo_tota | floatformat:2 }}</div>
+        </div>
+      </div>
     </div>
   </div>
 
   <!-- Card: Peças do Orçamento -->
   <div class="card" id="orcamento-pecas-card">
-    <div class="card-header">
-      <h4>Peças do Orçamento</h4>
-    </div>
     <div class="card-body">
+      <h5 class="card-title mb-3">Peças do Orçamento</h5>
       {% if orcamento.pecas.all %}
-      <ul class="list-group" id="pecas-list">
-        {% for peca in orcamento.pecas.all %}
-        <li class="list-group-item">
-          <strong>Código da Peça:</strong> {{ peca.peca_codi }}<br>
-          <strong>Quantidade:</strong> {{ peca.peca_quan }}<br>
-          <strong>Preço Unitário:</strong> R$ {{ peca.peca_unit | floatformat:2 }}<br>
-          <strong>Total da Peça:</strong> R$ {{ peca.peca_tota | floatformat:2 }}
-        </li>
-        {% endfor %}
-      </ul>
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle" aria-describedby="caption-pecas">
+          <caption id="caption-pecas">Lista de peças com código, quantidade, preço e total.</caption>
+          <thead class="table-light">
+            <tr>
+              <th scope="col">Código</th>
+              <th scope="col" class="text-end">Quantidade</th>
+              <th scope="col" class="text-end">Preço Unitário</th>
+              <th scope="col" class="text-end">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for peca in orcamento.pecas.all %}
+            <tr>
+              <td>{{ peca.peca_codi }}</td>
+              <td class="text-end">{{ peca.peca_quan }}</td>
+              <td class="text-end">R$ {{ peca.peca_unit | floatformat:2 }}</td>
+              <td class="text-end">R$ {{ peca.peca_tota | floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
       {% else %}
-      <p>Este orçamento não contém peças.</p>
+      <p class="text-muted">Este orçamento não contém peças.</p>
       {% endif %}
     </div>
   </div>
 
-  <!-- Botão de Voltar -->
-  <div class="text-center mt-4" id="back-button-container">
-    <a href="{% url 'orcamento_list' %}" class="btn btn">Voltar para a lista de orçamentos</a>
+  <!-- Botão de Voltar (redundante) -->
+  <div class="text-center mt-4 no-print" id="back-button-container">
+    <a href="{% url 'orcamento_list' %}" class="btn btn-outline-secondary">Voltar para a lista de orçamentos</a>
   </div>
 </div>
 

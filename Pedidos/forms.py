@@ -1,4 +1,5 @@
 from django import forms
+import logging
 from django.forms import inlineformset_factory
 from .models import PedidoVenda, Itenspedidovenda
 from Produtos.models import Produtos
@@ -10,23 +11,29 @@ class PedidoVendaForm(forms.ModelForm):
         fields = [
             'pedi_forn',
             'pedi_data',
+            'pedi_topr',
             'pedi_tota',
             'pedi_fina',
             'pedi_vend',
+            'pedi_desc',
         ]
         widgets = {
             'pedi_forn': forms.HiddenInput(),
             'pedi_data': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'pedi_tota': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0.00', 'readonly': True}),
+            'pedi_topr': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0.00', 'readonly': True}),
             'pedi_fina': forms.Select(attrs={'class': 'form-select'}),
             'pedi_vend': forms.HiddenInput(),
+            'pedi_desc': forms.NumberInput(attrs={'class': 'form-control','placeholder': '0.00', 'step': '0.01'}),
         }
         labels = {
             'pedi_forn': 'Cliente',
             'pedi_data': 'Data',
+            'pedi_topr': 'Subtotal',
             'pedi_tota': 'Total',
             'pedi_fina': 'Tipo Financeiro',
             'pedi_vend': 'Vendedor',
+            'pedi_desc': 'Desconto',
         }
 
     def __init__(self, *args, **kwargs):
@@ -69,11 +76,19 @@ class PedidoVendaForm(forms.ModelForm):
         # Opções de tipo financeiro (ajuste conforme seu modelo)
         self.fields['pedi_fina'].choices = [
             ('', 'Selecione o tipo'),
-            ('1', 'À Vista'),
-            ('2', 'Parcelado'),
-            ('3', 'Boleto'),
-            ('4', 'Cartão de Crédito'),
+            ('0', 'À Vista'),
+            ('1', 'A Prazo'),
+            ('2', 'Sem Financeiro'),
+            ('3', 'Na Emissão'),
         ]
+
+    def clean(self):
+        cleaned = super().clean()
+        logging.getLogger(__name__).debug(
+            "[PedidoVendaForm.clean] pedi_desc=%s pedi_topr=%s pedi_tota=%s pedi_fina=%s",
+            cleaned.get('pedi_desc'), cleaned.get('pedi_topr'), cleaned.get('pedi_tota'), cleaned.get('pedi_fina')
+        )
+        return cleaned
 
 
 class ItensPedidoVendaForm(forms.ModelForm):
@@ -114,5 +129,13 @@ class ItensPedidoVendaForm(forms.ModelForm):
         
         # Campos opcionais
         self.fields['iped_desc'].required = False
+
+    def clean(self):
+        cleaned = super().clean()
+        logging.getLogger(__name__).debug(
+            "[ItensPedidoVendaForm.clean] iped_prod=%s iped_quan=%s iped_unit=%s iped_desc=%s",
+            cleaned.get('iped_prod'), cleaned.get('iped_quan'), cleaned.get('iped_unit'), cleaned.get('iped_desc')
+        )
+        return cleaned
 
 

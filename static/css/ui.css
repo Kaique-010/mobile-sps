@@ -1,0 +1,87 @@
+/* UI compartilhado para páginas de detalhes e listas
+   Foco em legibilidade, acessibilidade e consistência visual */
+
+:root {
+  --brand-primary: #0d6efd; /* Bootstrap primary */
+  --brand-success: #198754;
+  --brand-warning: #ffc107;
+  --brand-muted: #6c757d;
+}
+
+.page-container {
+  padding-top: 16px;
+  padding-bottom: 24px;
+}
+
+.page-header-custom {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.page-header-custom .page-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.2;
+  color: #212529;
+}
+
+.page-header-custom .page-actions {
+  align-self: flex-end;
+}
+
+/* Tabela acessível e legível */
+.table caption {
+  caption-side: top;
+  color: #495057;
+  font-weight: 600;
+}
+.table thead th {
+  vertical-align: middle;
+}
+.table-hover tbody tr:hover {
+  background-color: rgba(13, 110, 253, 0.05);
+}
+
+/* Badges com contraste adequado */
+.badge.bg-warning.text-dark { color: #212529 !important; }
+.badge.bg-success { color: #fff; }
+.badge.bg-secondary { color: #fff; }
+
+/* Microinterações sutis em botões */
+.btn {
+  transition: transform .08s ease, box-shadow .12s ease;
+}
+.btn:hover {
+  transform: translateY(-1px);
+}
+.btn:focus-visible {
+  outline: 2px solid rgba(13, 110, 253, 0.35);
+  outline-offset: 2px;
+}
+
+/* Conteúdo de cartões */
+.card-title {
+  font-weight: 600;
+}
+
+/* Utilitário de acessibilidade */
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* Preferência de usuário para reduzir movimentos */
+@media (prefers-reduced-motion: reduce) {
+  .btn { transition: none; }
+}

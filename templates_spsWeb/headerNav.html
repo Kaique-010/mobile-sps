@@ -55,125 +55,188 @@
                                 </a>
                             </li>
 
-                            <!-- Parametrizações - Colapsável -->
-                            <li class="nav-item" data-modulo="parametros_admin">
-                                <a class="nav-link collapsed" data-bs-toggle="collapse"
-                                    data-bs-target="#collapseParametrizacoes" href="#" role="button"
-                                    aria-expanded="false" aria-controls="collapseParametrizacoes">
-                                    <i class="bi bi-gear-wide-connected fs-4"></i> Parametrizações
-                                </a>
-                                <div class="collapse" id="collapseParametrizacoes">
-                                    <ul class="list-unstyled ps-4">
-                                        <li><a class="nav-link" href="#">Empresas</a></li>
-                                        <li><a class="nav-link" href="#">Filiais</a></li>
-                                    </ul>
-                                </div>
-                            </li>
-
-                            <!-- Agrícola - Colapsável -->
-                            <li class="nav-item" data-modulo="Floresta">
-                                <a class="nav-link collapsed" data-bs-toggle="collapse"
-                                    data-bs-target="#collapseAgricola" role="button" href="#" aria-expanded="false"
-                                    aria-controls="collapseAgricola">
-                                    <i class="bi bi-box-seam fs-4"></i> Agrícola
-                                </a>
-                                <div class="collapse" id="collapseAgricola">
-                                    <ul class="list-unstyled ps-4">
-                                        <li><a class="nav-link" href="#">Animais</a></li>
-                                        <li><a class="nav-link" href="#">Aplicação
-                                                de insumos</a></li>
-                                        <li><a class="nav-link" href="#">Categorias
-                                                de Produtos Agrícolas</a></li>
-                                        <li><a class="nav-link" href="#">Ciclos
-                                                Florestais</a></li>
-                                        <li><a class="nav-link" href="#">Estoque
-                                                Fazenda</a></li>
-                                        <li><a class="nav-link" href="#">Fazendas</a></li>
-                                        <li><a class="nav-link" href="#">Movimentações de
-                                                estoque</a></li>
-                                        <li><a class="nav-link" href="#">Produtos
-                                                Agrícolas</a></li>
-                                        <li><a class="nav-link" href="#">Talhões</a></li>
-                                        <li><a class="nav-link" href="#">Movimentações
-                                                em lista</a></li>
-                                    </ul>
-                                </div>
-                            </li>
-
-                            <li class="nav-item" data-modulo="Entidades">
-                                <a class="nav-link active" href="/web/login/" data-slug-route="/web/{slug}/entidades/">
-                                    <i class="bi bi-person-gear fs-3"></i> Entidades
-                                </a>
-                            </li>
-
+                            <!-- Seção: Cadastros -->
                             <li class="nav-item">
-                                <a class="nav-link active" href="/web/login/" data-slug-route="/web/{slug}/centrosdecustos/">
-                                    <i class="bi bi-diagram-3 fs-3"></i> Centros de Custos
+                                <a class="nav-link collapsed" data-bs-toggle="collapse" href="#" role="button"
+                                   data-bs-target="#collapseCadastros" aria-expanded="false" aria-controls="collapseCadastros">
+                                    <i class="bi bi-clipboard-data fs-4"></i> Cadastros
                                 </a>
+                                <div class="collapse" id="collapseCadastros">
+                                    <ul class="list-unstyled ps-4">
+                                        <!-- Entidades -->
+                                        <li class="nav-item" data-modulo="Entidades">
+                                            <a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/entidades/">
+                                                <i class="bi bi-person-gear"></i> Entidades
+                                            </a>
+                                        </li>
+                                        <!-- Centros de Custos -->
+                                        <li class="nav-item" data-modulo="centrosdecustos">
+                                            <a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/centrosdecustos/">
+                                                <i class="bi bi-diagram-3"></i> Centros de Custo
+                                            </a>
+                                        </li>
+                                        <!-- Parametrizações (mantém subitens) -->
+                                        <li class="nav-item" data-modulo="parametros_admin">
+                                            <a class="nav-link collapsed" data-bs-toggle="collapse" href="#" role="button"
+                                               data-bs-target="#collapseParametrizacoes" aria-expanded="false" aria-controls="collapseParametrizacoes">
+                                                <i class="bi bi-gear-wide-connected"></i> Parametrizações do sistema
+                                            </a>
+                                            <div class="collapse" id="collapseParametrizacoes">
+                                                <ul class="list-unstyled ps-4">
+                                                    <li><a class="nav-link" href="#">Empresas</a></li>
+                                                    <li><a class="nav-link" href="#">Filiais</a></li>
+                                                </ul>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
                             </li>
 
-                            <li class="nav-item" data-modulo="Pedidos">
-                                <a class="nav-link active" href="/pedidos-necessitam-contato/">
-                                    <i class="bi bi-phone-flip fs-3"></i> Entrar em Contato
+                            <!-- Seção: Compras/Entradas (nova) -->
+                            <li class="nav-item">
+                                <a class="nav-link collapsed" data-bs-toggle="collapse" href="#" role="button"
+                                   data-bs-target="#collapseCompras" aria-expanded="false" aria-controls="collapseCompras">
+                                    <i class="bi bi-box-arrow-in-down fs-4"></i> Compras/Entradas
                                 </a>
+                                <div class="collapse" id="collapseCompras">
+                                    <ul class="list-unstyled ps-4">
+                                        <li>
+                                            <span class="nav-link disabled"><i class="bi bi-hourglass-split"></i> A ser desenvolvida posteriormente</span>
+                                        </li>
+                                    </ul>
+                                </div>
                             </li>
 
+                            <!-- Seção: Estoque -->
+                            <li class="nav-item">
+                                <a class="nav-link collapsed" data-bs-toggle="collapse" href="#" role="button"
+                                   data-bs-target="#collapseEstoque" aria-expanded="false" aria-controls="collapseEstoque">
+                                    <i class="bi bi-boxes fs-4"></i> Estoque
+                                </a>
+                                <div class="collapse" id="collapseEstoque">
+                                    <ul class="list-unstyled ps-4">
+                                        <!-- Mantém módulo Produtos e seus subitens -->
+                                        <li class="nav-item" data-modulo="Produtos">
+                                            <a class="nav-link collapsed" data-bs-toggle="collapse" href="#" role="button"
+                                               data-bs-target="#collapseProdutos" aria-expanded="false" aria-controls="collapseProdutos">
+                                                <i class="bi bi-box-seam"></i> Produtos
+                                            </a>
+                                            <div class="collapse" id="collapseProdutos">
+                                                <ul class="list-unstyled ps-4">
+                                                    <li><a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/produtos/">Cadastro de Produtos</a></li>
+                                                    <li><a class="nav-link" href="#">Entrada de Estoque</a></li>
+                                                    <li><a class="nav-link" href="#">Famílias</a></li>
+                                                    <li><a class="nav-link" href="#">Grupos</a></li>
+                                                    <li><a class="nav-link" href="#">Marcas</a></li>
+                                                    <li><a class="nav-link" href="#">Saída de estoque</a></li>
+                                                    <li><a class="nav-link" href="#">Saldos Estoque</a></li>
+                                                </ul>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </li>
+
+                            <!-- Seção: Financeira -->
+                            <li class="nav-item">
+                                <a class="nav-link collapsed" data-bs-toggle="collapse" href="#" role="button"
+                                   data-bs-target="#collapseFinanceira" aria-expanded="false" aria-controls="collapseFinanceira">
+                                    <i class="bi bi-cash-stack fs-4"></i> Financeira
+                                </a>
+                                <div class="collapse" id="collapseFinanceira">
+                                    <ul class="list-unstyled ps-4">
+                                        <!-- Mantém módulo Financeiro e seus subitens -->
+                                        <li class="nav-item" data-modulo="Financeiro">
+                                            <a class="nav-link collapsed" data-bs-toggle="collapse" href="#" role="button"
+                                               data-bs-target="#collapseFinanceiro" aria-expanded="false" aria-controls="collapseFinanceiro">
+                                                <i class="bi bi-cash"></i> Módulos Financeiros
+                                            </a>
+                                            <div class="collapse" id="collapseFinanceiro">
+                                                <ul class="list-unstyled ps-4">
+                                                    <li>
+                                                        <a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/contas-a-pagar/">Contas a Pagar</a>
+                                                    </li>
+                                                    <li>
+                                                        <a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/contas-a-receber/">Contas a Receber</a>
+                                                    </li>
+                                                    <li>
+                                                        <a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/fluxo-de-caixa/">Fluxo de Caixa</a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </li>
+
+                            <!-- Seção: Vendas/Saídas -->
+                            <li class="nav-item">
+                                <a class="nav-link collapsed" data-bs-toggle="collapse" href="#" role="button"
+                                   data-bs-target="#collapseVendas" aria-expanded="false" aria-controls="collapseVendas">
+                                    <i class="bi bi-bag-check fs-4"></i> Vendas/Saídas
+                                </a>
+                                <div class="collapse" id="collapseVendas">
+                                    <ul class="list-unstyled ps-4">
+                                        <!-- Pedidos de Vendas -->
+                                        <li class="nav-item" data-modulo="Pedidos" data-modulo-alias="listacasamento">
+                                            <a class="nav-link collapsed" data-bs-toggle="collapse" href="#" role="button"
+                                               data-bs-target="#collapsePedidos" aria-expanded="false" aria-controls="collapsePedidos">
+                                                <i class="bi bi-patch-check"></i> Pedidos de Vendas
+                                            </a>
+                                            <div class="collapse" id="collapsePedidos">
+                                                <ul class="list-unstyled ps-4">
+                                                    <li>
+                                                        <a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/pedidos/">Pedidos</a>
+                                                    </li>
+                                                    <li><a class="nav-link" href="#">Listas de Casamento</a></li>
+                                                </ul>
+                                            </div>
+                                        </li>
+                                        <!-- Orçamentos -->
+                                        <li class="nav-item" data-modulo="Orcamentos">
+                                            <a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/orcamentos/">
+                                                <i class="bi bi-file-break-fill"></i> Orçamentos
+                                            </a>
+                                        </li>
+                                        <!-- Integra contato existente -->
+                                        <li class="nav-item" data-modulo="Pedidos">
+                                            <a class="nav-link" href="/pedidos-necessitam-contato/">
+                                                <i class="bi bi-phone-flip"></i> Entrar em Contato
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </li>
+
+                            <!-- Mantém itens existentes fora das novas seções -->
                             <li class="nav-item" data-modulo="dashboard">
                                 <a class="nav-link active" href="/dashboard/">
                                     <i class="bi bi-graph-up fs-3"></i> Métricas
                                 </a>
                             </li>
-
-                            <li class="nav-item" data-modulo="Orcamentos">
-                                <a class="nav-link active" aria-current="page" href="/web/login/" data-slug-route="/web/{slug}/orcamentos/">
-                                    <i class="bi bi-file-break-fill fs-3"></i> Orçamentos
-                                </a>
-                            </li>
-
                             <li class="nav-item" data-modulo="O_S">
                                 <a class="nav-link active" href="/os/">
                                     <i class="bi bi-wrench-adjustable fs-4"></i> Ordens de Serviço
                                 </a>
                             </li>
-
-                            <li class="nav-item" data-modulo="Pedidos" data-modulo-alias="listacasamento">
-                                <a class="nav-link collapsed" data-bs-toggle="collapse"
-                                    data-bs-target="#collapsePedidos" href="#" role="button" aria-expanded="false"
-                                    aria-controls="collapsePedidos">
-                                    <i class="bi bi-patch-check fs-3"></i> Pedidos de Vendas
+                            <!-- Agrícola - mantém como seção própria -->
+                            <li class="nav-item" data-modulo="Floresta">
+                                <a class="nav-link collapsed" data-bs-toggle="collapse" href="#" role="button"
+                                   data-bs-target="#collapseAgricola" aria-expanded="false" aria-controls="collapseAgricola">
+                                    <i class="bi bi-tree fs-4"></i> Agrícola
                                 </a>
-                                <div class="collapse" id="collapsePedidos">
+                                <div class="collapse" id="collapseAgricola">
                                     <ul class="list-unstyled ps-4">
-                                        <li>
-                                            <a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/pedidos/">
-                                                Pedidos
-                                            </a>
-                                        </li>
-                                        <li><a class="nav-link" href="#">Listas de Casamento</a></li>
-                                    </ul>
-                                </div>
-                            </li>
-
-                            <!-- Produtos - Colapsável -->
-                            <li class="nav-item" data-modulo="Produtos">
-                                <a class="nav-link collapsed" data-bs-toggle="collapse"
-                                    data-bs-target="#collapseProdutos" role="button" href="#" aria-expanded="false"
-                                    aria-controls="collapseProdutos">
-                                    <i class="bi bi-box-seam fs-4"></i> Produtos
-                                </a>
-                                <div class="collapse" id="collapseProdutos">
-                                    <ul class="list-unstyled ps-4">
-                                        <li><a class="nav-link" href="/web/login/"
-                                                data-slug-route="/web/{slug}/produtos/">Cadastro de
-                                                Produtos</a></li>
-                                        <li><a class="nav-link" href="#">Entrada de
-                                                Estoque</a></li>
-                                        <li><a class="nav-link" href="#">Famílias</a></li>
-                                        <li><a class="nav-link" href="#">Grupos</a></li>
-                                        <li><a class="nav-link" href="#">Marcas</a></li>
-                                        <li><a class="nav-link" href="#">Saída de estoque</a>
-                                        </li>
-                                        <li><a class="nav-link" href="#">Saldos Estoque</a></li>
+                                        <li><a class="nav-link" href="#">Animais</a></li>
+                                        <li><a class="nav-link" href="#">Aplicação de insumos</a></li>
+                                        <li><a class="nav-link" href="#">Categorias de Produtos Agrícolas</a></li>
+                                        <li><a class="nav-link" href="#">Ciclos Florestais</a></li>
+                                        <li><a class="nav-link" href="#">Estoque Fazenda</a></li>
+                                        <li><a class="nav-link" href="#">Fazendas</a></li>
+                                        <li><a class="nav-link" href="#">Movimentações de estoque</a></li>
+                                        <li><a class="nav-link" href="#">Produtos Agrícolas</a></li>
+                                        <li><a class="nav-link" href="#">Talhões</a></li>
+                                        <li><a class="nav-link" href="#">Movimentações em lista</a></li>
                                     </ul>
                                 </div>
                             </li>
@@ -270,7 +333,9 @@
                     // Aliases para orçamentos
                     'orcamentos': ['orcamentos', 'orçamentos', 'orcamento', 'orçamento', 'budget'],
                     // Aliases para Centros de Custos
-                    'centrosdecustos': ['centrosdecustos', 'centrodecustos', 'centros de custos', 'centro de custos', 'cc']
+                    'centrosdecustos': ['centrosdecustos', 'centrodecustos', 'centros de custos', 'centro de custos', 'cc'],
+                    // Aliases para Entidades
+                    'entidades': ['entidades', 'entidade', 'cadastro entidades']
                 };
                 const nomeMatch = allowSet.has(nome) || Object.entries(aliases).some(([key, vals]) => {
                     const isAliasName = vals.includes(nome);

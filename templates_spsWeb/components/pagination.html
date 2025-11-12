@@ -1,0 +1,32 @@
+{% comment %} Componente de paginação reutilizável {% endcomment %}
+{% with extra=extra_query|default:'' %}
+<nav aria-label="Navegação de páginas" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page=1{{ extra }}">Primeira</a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{{ extra }}">Anterior</a>
+        </li>
+        {% endif %}
+
+        {% for n in page_obj.paginator.page_range %}
+        {% if n <= page_obj.number|add:3 and n >= page_obj.number|add:-3 %}
+        <li class="page-item {% if page_obj.number == n %}active{% endif %}">
+            <a class="page-link" href="?page={{ n }}{{ extra }}">{{ n }}</a>
+        </li>
+        {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{{ extra }}">Próxima</a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{{ extra }}">Última</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endwith %}

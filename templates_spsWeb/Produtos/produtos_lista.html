@@ -11,16 +11,20 @@
         cursor: pointer;
         transition: transform 0.2s;
     }
+
     .product-image:hover {
         transform: scale(1.05);
     }
+
     .product-card {
         transition: box-shadow 0.3s;
         height: 100%;
     }
+
     .product-card:hover {
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
+
     .no-image {
         height: 200px;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -30,19 +34,22 @@
         color: white;
         font-size: 3rem;
     }
+
     .price-badge {
-        background:transparent;
+        background: transparent;
         padding: 8px 12px;
         border-radius: 6px;
         margin-bottom: 8px;
         font-size: 0.9rem;
     }
+
     .stock-info {
         padding: 6px 12px;
         border-radius: 4px;
         font-weight: 500;
         display: inline-block;
     }
+
     /* Lightbox */
     .lightbox {
         display: none;
@@ -52,8 +59,9 @@
         top: 0;
         width: 100%;
         height: 100%;
-        background-color: rgba(0,0,0,0.9);
+        background-color: rgba(0, 0, 0, 0.9);
     }
+
     .lightbox-content {
         margin: auto;
         display: block;
@@ -64,6 +72,7 @@
         left: 50%;
         transform: translate(-50%, -50%);
     }
+
     .lightbox-close {
         position: absolute;
         top: 20px;
@@ -75,24 +84,28 @@
     }
 </style>
 <div class="container page-container">
-<div class="page-header-custom">
-        <h2 class="page-title">
-            <i class="bi bi-boxes"></i> Produtos
-        </h2>
-        <div class="page-actions">
-            <a href="{% url 'produto_create_web' slug=slug %}" class="btn btn-success">
-                <i class="bi bi-plus-lg"></i> Novo Produto
-            </a>
+    <div class="page-header-custom">
+        <div class="container align-items-center">
+            <h2 class="page-title">
+                <i class="bi bi-boxes"></i> Produtos
+            </h2>
+        </div>
+        <div class="container d-flex justify-content-end">
+            <div class="page-actions">
+                <a href="{% url 'produto_create_web' slug=slug %}" class="btn btn-success">
+                    <i class="bi bi-plus-lg"></i> Novo Produto
+                </a>
+            </div>
         </div>
     </div>
-   <!-- Mensagens -->
+    <!-- Mensagens -->
     {% if messages %}
-        {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        {% endfor %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
     {% endif %}
 
     <!-- Card Principal -->
@@ -106,12 +119,12 @@
                     </h5>
                     {% if page_obj %}
                     <div class="text-muted small">
-                        <span>{{ page_obj.paginator.count }} itens</span> · 
+                        <span>{{ page_obj.paginator.count }} itens</span> ·
                         <span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
                     </div>
                     {% endif %}
-                    <a href="{% url 'exportar_produtos_web' slug=slug %}?prod_nome={{ prod_nome }}&prod_codi={{ prod_codi }}" 
-                       class="btn btn-outline-success btn-sm">
+                    <a href="{% url 'exportar_produtos_web' slug=slug %}?prod_nome={{ prod_nome }}&prod_codi={{ prod_codi }}"
+                        class="btn btn-outline-success btn-sm">
                         <i class="bi bi-download"></i> CSV
                     </a>
                 </div>
@@ -119,21 +132,13 @@
                 <div class="row g-3 mb-3">
                     <div class="col-md-5">
                         <label for="prod_nome" class="form-label">Nome do Produto</label>
-                        <input type="text" 
-                               id="prod_nome" 
-                               name="prod_nome" 
-                               class="form-control" 
-                               value="{{ prod_nome }}"
-                               placeholder="Buscar por nome...">
+                        <input type="text" id="prod_nome" name="prod_nome" class="form-control" value="{{ prod_nome }}"
+                            placeholder="Buscar por nome...">
                     </div>
                     <div class="col-md-3">
                         <label for="prod_codi" class="form-label">Código</label>
-                        <input type="number" 
-                               id="prod_codi" 
-                               name="prod_codi" 
-                               class="form-control"
-                               value="{{ prod_codi }}" 
-                               placeholder="Código">
+                        <input type="number" id="prod_codi" name="prod_codi" class="form-control"
+                            value="{{ prod_codi }}" placeholder="Código">
                     </div>
                     <div class="col-md-4 d-flex align-items-end">
                         <button type="submit" class="btn btn-primary w-100">
@@ -153,10 +158,9 @@
                     <div class="card product-card">
                         <!-- Imagem -->
                         {% if produto.prod_foto and produto.prod_codi %}
-                        <img src="{% url 'produto_foto_web' slug=slug prod_codi=produto.prod_codi %}" 
-                             alt="{{ produto.prod_nome }}" 
-                             class="card-img-top product-image"
-                             onclick="openLightbox(this.src)">
+                        <img src="{% url 'produto_foto_web' slug=slug prod_codi=produto.prod_codi %}"
+                            alt="{{ produto.prod_nome }}" class="card-img-top product-image"
+                            onclick="openLightbox(this.src)">
                         {% else %}
                         <div class="no-image">
                             <i class="bi bi-image"></i>
@@ -182,26 +186,26 @@
 
                             <!-- Preços -->
                             {% if produto.tabelaprecos_set.all %}
-                                {% for preco in produto.tabelaprecos_set.all %}
-                                <div class="price-badge">
-                                    <div class="d-flex justify-content-between">
-                                        <span class="text-muted small">Custo:</span>
-                                        <strong>R$ {{ preco.tabe_cust|floatformat:2 }}</strong>
-                                    </div>
-                                    <div class="d-flex justify-content-between">
-                                        <span class="text-muted small">À vista:</span>
-                                        <strong class="text-success">R$ {{ preco.tabe_avis|floatformat:2 }}</strong>
-                                    </div>
-                                    <div class="d-flex justify-content-between">
-                                        <span class="text-muted small">A prazo:</span>
-                                        <strong class="text-primary">R$ {{ preco.tabe_praz|floatformat:2 }}</strong>
-                                    </div>
+                            {% for preco in produto.tabelaprecos_set.all %}
+                            <div class="price-badge">
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted small">Custo:</span>
+                                    <strong>R$ {{ preco.tabe_cust|floatformat:2 }}</strong>
                                 </div>
-                                {% endfor %}
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted small">À vista:</span>
+                                    <strong class="text-success">R$ {{ preco.tabe_avis|floatformat:2 }}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted small">A prazo:</span>
+                                    <strong class="text-primary">R$ {{ preco.tabe_praz|floatformat:2 }}</strong>
+                                </div>
+                            </div>
+                            {% endfor %}
                             {% else %}
-                                <div class="alert alert-warning py-2 small mb-3">
-                                    Sem preço definido
-                                </div>
+                            <div class="alert alert-warning py-2 small mb-3">
+                                Sem preço definido
+                            </div>
                             {% endif %}
 
                             <!-- Estoque -->
@@ -220,13 +224,13 @@
                         <div class="card-footer bg-transparent border-top">
                             <div class="d-flex gap-2">
                                 {% if produto.prod_codi %}
-                                <a href="{% url 'produto_edit_web' slug=slug prod_codi=produto.prod_codi %}" 
-                                   class="btn btn-warning btn-sm flex-fill">
+                                <a href="{% url 'produto_edit_web' slug=slug prod_codi=produto.prod_codi %}"
+                                    class="btn btn-warning btn-sm flex-fill">
                                     <i class="bi bi-pencil"></i> Editar
                                 </a>
-                                <a href="{% url 'produto_delete_web' slug=slug prod_codi=produto.prod_codi %}" 
-                                   class="btn btn-danger btn-sm"
-                                   onclick="return confirm('Deseja realmente excluir este produto?')">
+                                <a href="{% url 'produto_delete_web' slug=slug prod_codi=produto.prod_codi %}"
+                                    class="btn btn-danger btn-sm"
+                                    onclick="return confirm('Deseja realmente excluir este produto?')">
                                     <i class="bi bi-trash"></i>
                                 </a>
                                 {% endif %}
@@ -239,49 +243,7 @@
 
             <!-- Paginação -->
             {% if page_obj.has_other_pages %}
-            <nav aria-label="Navegação de páginas" class="mt-4">
-                <ul class="pagination justify-content-center">
-                    {% if page_obj.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page=1{% if prod_nome %}&prod_nome={{ prod_nome }}{% endif %}{% if prod_codi %}&prod_codi={{ prod_codi }}{% endif %}">
-                            Primeira
-                        </a>
-                    </li>
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if prod_nome %}&prod_nome={{ prod_nome }}{% endif %}{% if prod_codi %}&prod_codi={{ prod_codi }}{% endif %}">
-                            Anterior
-                        </a>
-                    </li>
-                    {% endif %}
-
-                    {% for num in page_obj.paginator.page_range %}
-                        {% if num == page_obj.number %}
-                        <li class="page-item active">
-                            <span class="page-link">{{ num }}</span>
-                        </li>
-                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ num }}{% if prod_nome %}&prod_nome={{ prod_nome }}{% endif %}{% if prod_codi %}&prod_codi={{ prod_codi }}{% endif %}">
-                                {{ num }}
-                            </a>
-                        </li>
-                        {% endif %}
-                    {% endfor %}
-
-                    {% if page_obj.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if prod_nome %}&prod_nome={{ prod_nome }}{% endif %}{% if prod_codi %}&prod_codi={{ prod_codi }}{% endif %}">
-                            Próxima
-                        </a>
-                    </li>
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if prod_nome %}&prod_nome={{ prod_nome }}{% endif %}{% if prod_codi %}&prod_codi={{ prod_codi }}{% endif %}">
-                            Última
-                        </a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </nav>
+            {% include 'components/pagination.html' with page_obj=page_obj extra_query=extra_query %}
             {% endif %}
         </div>
 
@@ -299,37 +261,37 @@
     </div>
 
 
-<!-- Lightbox -->
-<div id="lightbox" class="lightbox" onclick="closeLightbox()">
-    <span class="lightbox-close">&times;</span>
-    <img class="lightbox-content" id="lightbox-img">
-</div>
-
-<script>
-function openLightbox(src) {
-    document.getElementById('lightbox').style.display = 'block';
-    document.getElementById('lightbox-img').src = src;
-}
-
-function closeLightbox() {
-    document.getElementById('lightbox').style.display = 'none';
-}
-
-// Fechar com ESC
-document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape') {
-        closeLightbox();
-    }
-});
-</script>
-
-{% endblock %}
-{% if messages %}
-<div class="container" style="margin-top: 10px;">
-  {% for message in messages %}
-    <div class="alert alert-{{ message.tags|default:'info' }}" role="alert" style="margin-bottom: 10px;">
-      {{ message }}
+    <!-- Lightbox -->
+    <div id="lightbox" class="lightbox" onclick="closeLightbox()">
+        <span class="lightbox-close">&times;</span>
+        <img class="lightbox-content" id="lightbox-img">
     </div>
-  {% endfor %}
-  </div>
-{% endif %}
+
+    <script>
+        function openLightbox(src) {
+            document.getElementById('lightbox').style.display = 'block';
+            document.getElementById('lightbox-img').src = src;
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightbox').style.display = 'none';
+        }
+
+        // Fechar com ESC
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                closeLightbox();
+            }
+        });
+    </script>
+
+    {% endblock %}
+    {% if messages %}
+    <div class="container" style="margin-top: 10px;">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }}" role="alert" style="margin-bottom: 10px;">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}

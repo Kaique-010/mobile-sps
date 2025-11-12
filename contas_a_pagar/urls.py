@@ -38,14 +38,30 @@ urlpatterns = [
         baixar_titulo,
         name='titulospagar-baixar'
     ),
+    # Aliases para histórico de baixas
     path(
         'titulos-pagar/<int:titu_empr>/<int:titu_fili>/<int:titu_forn>/<str:titu_titu>/<str:titu_seri>/<str:titu_parc>/<str:titu_emis>/<str:titu_venc>/historico_baixas/',
         historico_baixas,
         name='titulospagar-historico-baixas'
     ),
     path(
+        'titulos-pagar/<int:titu_empr>/<int:titu_fili>/<int:titu_forn>/<str:titu_titu>/<str:titu_seri>/<str:titu_parc>/<str:titu_emis>/<str:titu_venc>/historico-baixas/',
+        historico_baixas,
+        name='titulospagar-historico-baixas-alias'
+    ),
+    path(
+        'titulos-pagar/<int:titu_empr>/<int:titu_fili>/<int:titu_forn>/<str:titu_titu>/<str:titu_seri>/<str:titu_parc>/<str:titu_emis>/<str:titu_venc>/baixas/',
+        historico_baixas,
+        name='titulospagar-baixas-list'
+    ),
+    path(
         'titulos-pagar/<int:titu_empr>/<int:titu_fili>/<int:titu_forn>/<str:titu_titu>/<str:titu_seri>/<str:titu_parc>/<str:titu_emis>/<str:titu_venc>/excluir_baixa/',
         excluir_baixa,
         name='titulospagar-excluir-baixa'
+    ),
+    path(
+        'titulos-pagar/<int:titu_empr>/<int:titu_fili>/<int:titu_forn>/<str:titu_titu>/<str:titu_seri>/<str:titu_parc>/<str:titu_emis>/<str:titu_venc>/baixas/<int:baixa_id>/',
+        excluir_baixa,
+        name='titulospagar-baixa-delete'
     ),
 ]

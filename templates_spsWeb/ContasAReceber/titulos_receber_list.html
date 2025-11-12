@@ -1,0 +1,435 @@
+{% extends 'base.html' %}
+{% load finance_tags %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+<div class="container page-container">
+  <div class="page-header-custom">
+    <div class="container align-items-center">
+      <h2 class="page-title"><i class="bi bi-wallet2"></i> Contas a Receber</h2>
+    </div>
+    <div class="container">
+      <div class="row g-3">
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title"><i class="bi bi-cash-coin me-1"></i> Total Recebido</h5>
+          <p class="card-text">{{ total_recebido|brl }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title"><i class="bi bi-wallet me-1"></i> Total em Aberto</h5>
+          <p class="card-text">{{ total_em_aberto|brl }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title"><i class="bi bi-graph-up-arrow me-1"></i> % Recebido sobre o Total</h5>
+          <p class="card-text">{{ percent_recebido|floatformat:1 }}%</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title"><i class="bi bi-graph-down-arrow me-1"></i> % a Receber sobre o Total</h5>
+          <p class="card-text">{{ percent_a_receber|floatformat:1 }}%</p>
+        </div>
+      </div>
+    </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container d-flex justify-content-end">
+    <a class="btn btn-success" href="">Novo Título</a>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <form method="get" class="row g-3 mb-3">
+    <div class="col-md-3">
+      <label class="form-label">Cliente (ID)</label>
+      <input type="text" name="titu_clie" value="{{ filters.titu_clie }}" class="form-control"
+        placeholder="ID do cliente">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Cliente (Nome)</label>
+      <input type="text" name="cliente_nome" value="{{ filters.cliente_nome }}" class="form-control"
+        placeholder="Nome do cliente">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Status</label>
+      <select name="titu_aber" class="form-select">
+        <option value="">Todos</option>
+        <option value="A" {% if filters.titu_aber == 'A' %}selected{% endif %}>Aberto</option>
+        <option value="P" {% if filters.titu_aber == 'P' %}selected{% endif %}>Parcial</option>
+        <option value="T" {% if filters.titu_aber == 'T' %}selected{% endif %}>Total</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Venc. Inicial</label>
+      <input type="date" name="venc_ini" value="{{ filters.venc_ini }}" class="form-control">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Venc. Final</label>
+      <input type="date" name="venc_fim" value="{{ filters.venc_fim }}" class="form-control">
+    </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary">Filtrar</button>
+          <a href="?" class="btn btn-secondary">Limpar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="row">
+    {% for t in titulos %}
+    <div class="col-md-4 mb-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <h5 class="card-title">Título {{ t.titu_titu }}</h5>
+            {% if t.titu_aber == 'A' %}
+            <span class="badge bg-danger">Aberto</span>
+            {% elif t.titu_aber == 'P' %}
+            <span class="badge bg-warning text-dark">Parcial</span>
+            {% else %}
+            <span class="badge bg-success">Quitado</span>
+            {% endif %}
+          </div>
+          <p class="card-text mb-1"><strong>Cliente:</strong> {{ t.cliente_nome }} (ID {{ t.titu_clie }})</p>
+          <p class="card-text"><strong>Vencimento:</strong> {{ t.titu_venc|date:'d/m/Y' }}<br>
+            <strong>Valor:</strong> {{ t.titu_valo|brl }}
+          </p>
+          <div class="mt-3 d-flex flex-wrap gap-2">
+            {% if t.titu_aber == 'A' %}
+            <button type="button" class="btn btn-success btn-sm btn-baixar"
+              title="Receber título"
+              data-tipo="receber"
+              data-empr="{{ t.titu_empr }}" data-fili="{{ t.titu_fili }}" data-clie="{{ t.titu_clie }}"
+              data-titu="{{ t.titu_titu }}" data-seri="{{ t.titu_seri }}" data-parc="{{ t.titu_parc }}"
+              data-emis="{{ t.titu_emis|date:'Y-m-d' }}" data-venc="{{ t.titu_venc|date:'Y-m-d' }}">💵 Receber</button>
+            {% endif %}
+            {% if t.titu_aber == 'T' or t.titu_aber == 'P' %}
+            <button type="button" class="btn btn-warning btn-sm btn-reabrir" title="Reabrir/Liquidar"
+              data-empr="{{ t.titu_empr }}" data-fili="{{ t.titu_fili }}" data-clie="{{ t.titu_clie }}"
+              data-titu="{{ t.titu_titu }}" data-seri="{{ t.titu_seri }}" data-parc="{{ t.titu_parc }}"
+              data-emis="{{ t.titu_emis|date:'Y-m-d' }}" data-venc="{{ t.titu_venc|date:'Y-m-d' }}">🔄 Reabrir/Liquidar</button>
+            {% endif %}
+            <button type="button" class="btn btn-primary btn-sm" title="Editar" disabled>✏️ Editar</button>
+            <button type="button" class="btn btn-danger btn-sm btn-excluir" title="Excluir"
+              data-empr="{{ t.titu_empr }}" data-fili="{{ t.titu_fili }}" data-clie="{{ t.titu_clie }}"
+              data-titu="{{ t.titu_titu }}" data-seri="{{ t.titu_seri }}" data-parc="{{ t.titu_parc }}"
+              data-emis="{{ t.titu_emis|date:'Y-m-d' }}" data-venc="{{ t.titu_venc|date:'Y-m-d' }}">🗑️ Excluir</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+      <div class="alert alert-info">Nenhum título encontrado com os filtros atuais.</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% include 'components/pagination.html' with page_obj=page_obj extra_query=preserved_query %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function getCSRFToken() {
+    const name = 'csrftoken=';
+    const cookies = document.cookie.split(';');
+    for (let c of cookies) {
+      c = c.trim();
+      if (c.startsWith(name)) return c.substring(name.length, c.length);
+    }
+    return '';
+  }
+
+  // Obtém empresa/filial do localStorage com fallback para sessão
+  function getEmpresaFilial() {
+    try {
+      const empresaLS = localStorage.getItem('empresa_id');
+      const filialLS = localStorage.getItem('filial_id');
+      const empresaSess = '{{ request.session.empresa_id|default_if_none:"" }}';
+      const filialSess = '{{ request.session.filial_id|default_if_none:"" }}';
+      const empresa = empresaLS || empresaSess || '';
+      const filial = filialLS || filialSess || '';
+      return { empresa, filial };
+    } catch (e) {
+      return { empresa: '{{ request.session.empresa_id|default_if_none:"" }}', filial: '{{ request.session.filial_id|default_if_none:"" }}' };
+    }
+  }
+
+  function formatDateISO(value) {
+    const s = (value || '').toString();
+    // Se já está em YYYY-MM-DD, retorna como está para evitar alterações por timezone
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    // Converte de DD/MM/AAAA para YYYY-MM-DD
+    const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+    // Fallback: retorna até 10 caracteres sem tentar Date.toISOString
+    return s.slice(0, 10);
+  }
+
+  async function excluirContaReceber(btn) {
+    const empr = btn.dataset.empr;
+    const fili = btn.dataset.fili;
+    const clie = btn.dataset.clie;
+    const titu = btn.dataset.titu;
+    const seri = btn.dataset.seri;
+    const parc = btn.dataset.parc;
+    const emis = formatDateISO(btn.dataset.emis);
+    const venc = formatDateISO(btn.dataset.venc);
+
+    if (!confirm(`Confirma excluir o título ${titu}?`)) return;
+
+    const url = `/api/{{ slug }}/contas_a_receber/titulos-receber/${empr}/${fili}/${clie}/${titu}/${seri}/${parc}/${emis}/${venc}/`;
+    try {
+      const resp = await fetch(url, {
+        method: 'DELETE',
+        credentials: 'same-origin',
+        headers: {
+          'X-CSRFToken': getCSRFToken(),
+          'X-Empresa': getEmpresaFilial().empresa,
+          'X-Filial': getEmpresaFilial().filial,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({})
+      });
+      if (!resp.ok) {
+        const text = await resp.text();
+        alert('Erro ao excluir: ' + text);
+        return;
+      }
+      window.location.reload();
+    } catch (err) {
+      alert('Falha na requisição: ' + err.message);
+    }
+  }
+
+  async function reabrirTituloReceber(btn) {
+    const empr = btn.dataset.empr;
+    const fili = btn.dataset.fili;
+    const clie = btn.dataset.clie;
+    const titu = btn.dataset.titu;
+    const seri = btn.dataset.seri;
+    const parc = btn.dataset.parc;
+    const emis = formatDateISO(btn.dataset.emis);
+    const venc = formatDateISO(btn.dataset.venc);
+
+    const histUrl = `/api/{{ slug }}/contas_a_receber/titulos-receber/${empr}/${fili}/${clie}/${titu}/${seri}/${parc}/${emis}/${venc}/historico_baixas/`;
+    try {
+      const hr = await fetch(histUrl, {
+        credentials: 'same-origin',
+        headers: {
+          'Accept': 'application/json',
+          'X-Empresa': getEmpresaFilial().empresa,
+          'X-Filial': getEmpresaFilial().filial,
+        }
+      });
+      const historico = await hr.json();
+      if (!Array.isArray(historico) || historico.length === 0) {
+        alert('Nenhuma baixa encontrada para reabrir.');
+        return;
+      }
+      contextoReabrirRec = { empr, fili, clie, titu, seri, parc, emis, venc, historico };
+      preencherModalReabrirRec(historico);
+      document.getElementById('modal-reabrir-rec').style.display = 'block';
+    } catch (err) {
+      alert('Falha na requisição: ' + err.message);
+    }
+  }
+
+  // Reabrir: escolher qual baixa excluir (receber)
+  let contextoReabrirRec = null;
+  function preencherModalReabrirRec(historico) {
+    const lista = document.getElementById('lista-baixas-rec');
+    lista.innerHTML = '';
+    historico.forEach(b => {
+      const id = b.bare_sequ ?? b.id ?? b.sequencia ?? '';
+      const li = document.createElement('li');
+      li.innerHTML = `<label><input type="radio" name="baixa_rec" value="${id}"> Baixa #${id}</label>`;
+      lista.appendChild(li);
+    });
+  }
+
+  // Inicialização segura após o DOM estar pronto
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.btn-excluir').forEach(btn => {
+      btn.addEventListener('click', () => excluirContaReceber(btn));
+    });
+    document.querySelectorAll('.btn-reabrir').forEach(btn => {
+      btn.addEventListener('click', () => reabrirTituloReceber(btn));
+    });
+
+    // Modal de Baixa (receber)
+    const modal = document.getElementById('modal-baixa-rec');
+    const form = document.getElementById('form-baixa-rec');
+    let contextoBaixa = null;
+
+    function abrirModalBaixa(btn) {
+      contextoBaixa = {
+        tipo: btn.dataset.tipo, // 'receber'
+        empr: btn.dataset.empr,
+        fili: btn.dataset.fili,
+        clie: btn.dataset.clie,
+        titu: btn.dataset.titu,
+        seri: btn.dataset.seri,
+        parc: btn.dataset.parc,
+        emis: formatDateISO(btn.dataset.emis),
+        venc: formatDateISO(btn.dataset.venc),
+      };
+      if (form) form.reset();
+      document.getElementById('historico-rec').value = `Baixa do título ${contextoBaixa.titu}`;
+      modal.style.display = 'block';
+    }
+
+    function fecharModalBaixa() {
+      modal.style.display = 'none';
+      contextoBaixa = null;
+    }
+
+    document.querySelectorAll('.btn-baixar').forEach(btn => {
+      btn.addEventListener('click', () => abrirModalBaixa(btn));
+    });
+    document.querySelectorAll('.btn-reabrir').forEach(btn => {
+      btn.addEventListener('click', () => reabrirTituloReceber(btn));
+    });
+
+    document.getElementById('btn-cancelar-baixa-rec')?.addEventListener('click', fecharModalBaixa);
+
+    document.getElementById('btn-confirmar-baixa-rec')?.addEventListener('click', async () => {
+      if (!contextoBaixa) return;
+      const dataRecebimento = document.getElementById('data_recebimento').value;
+      const valorRecebido = parseFloat(document.getElementById('valor_recebido').value || '0');
+      const valorJuros = parseFloat(document.getElementById('valor_juros_rec').value || '0');
+      const valorMulta = parseFloat(document.getElementById('valor_multa_rec').value || '0');
+      const valorDesconto = parseFloat(document.getElementById('valor_desconto_rec').value || '0');
+      const historico = document.getElementById('historico-rec').value || '';
+      const banco = document.getElementById('banco-rec').value || '';
+      const cheque = document.getElementById('cheque-rec').value || '';
+      const formaPagamento = document.getElementById('forma_pagamento_rec').value || 'B';
+      const tipoBaixa = 'N';
+
+      if (!dataRecebimento || isNaN(valorRecebido) || valorRecebido <= 0) {
+        alert('Informe data e valor recebido válido.');
+        return;
+      }
+
+      const url = `/api/{{ slug }}/contas_a_receber/titulos-receber/${contextoBaixa.empr}/${contextoBaixa.fili}/${contextoBaixa.clie}/${contextoBaixa.titu}/${contextoBaixa.seri}/${contextoBaixa.parc}/${contextoBaixa.emis}/${contextoBaixa.venc}/baixar/`;
+      const payload = {
+        data_recebimento: dataRecebimento,
+        valor_recebido: valorRecebido,
+        valor_juros: valorJuros,
+        valor_multa: valorMulta,
+        valor_desconto: valorDesconto,
+        historico: historico,
+        banco: banco ? parseInt(banco) : null,
+        cheque: cheque ? parseInt(cheque) : null,
+        tipo_baixa: tipoBaixa,
+        forma_pagamento: formaPagamento,
+      };
+
+      try {
+        const resp = await fetch(url, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'X-CSRFToken': getCSRFToken(),
+            'X-Empresa': getEmpresaFilial().empresa,
+            'X-Filial': getEmpresaFilial().filial,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+        if (!resp.ok) {
+          const text = await resp.text();
+          alert('Erro ao baixar: ' + text);
+          return;
+        }
+        fecharModalBaixa();
+        window.location.reload();
+      } catch (err) {
+        alert('Falha na requisição: ' + err.message);
+      }
+    });
+
+    window.addEventListener('click', (event) => {
+      if (event.target === modal) fecharModalBaixa();
+    });
+    // Modal Reabrir (receber)
+    const modalReabrirRec = document.getElementById('modal-reabrir-rec');
+    function fecharModalReabrirRec() {
+      modalReabrirRec.style.display = 'none';
+      contextoReabrirRec = null;
+      document.getElementById('lista-baixas-rec').innerHTML = '';
+      document.getElementById('motivo-reabrir-rec').value = '';
+    }
+    document.getElementById('btn-cancelar-reabrir-rec')?.addEventListener('click', fecharModalReabrirRec);
+    document.getElementById('btn-confirmar-reabrir-rec')?.addEventListener('click', async () => {
+      if (!contextoReabrirRec) return;
+      const selecionado = document.querySelector('input[name="baixa_rec"]:checked');
+      if (!selecionado) {
+        alert('Selecione uma baixa para excluir.');
+        return;
+      }
+      const baixaId = selecionado.value;
+      const motivo = document.getElementById('motivo-reabrir-rec').value || `Reaberto via Web - título ${contextoReabrirRec.titu}`;
+      const delUrl = `/api/{{ slug }}/contas_a_receber/titulos-receber/${contextoReabrirRec.empr}/${contextoReabrirRec.fili}/${contextoReabrirRec.clie}/${contextoReabrirRec.titu}/${contextoReabrirRec.seri}/${contextoReabrirRec.parc}/${contextoReabrirRec.emis}/${contextoReabrirRec.venc}/excluir_baixa/?baixa_id=${encodeURIComponent(baixaId)}`;
+      try {
+      const resp = await fetch(delUrl, {
+        method: 'DELETE',
+        credentials: 'same-origin',
+        headers: {
+          'X-CSRFToken': getCSRFToken(),
+          'X-Empresa': getEmpresaFilial().empresa,
+          'X-Filial': getEmpresaFilial().filial,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ confirmar_exclusao: true, motivo_exclusao: motivo })
+      });
+        if (!resp.ok) {
+          const text = await resp.text();
+          alert('Erro ao reabrir: ' + text);
+          return;
+        }
+        fecharModalReabrirRec();
+        window.location.reload();
+      } catch (err) {
+        alert('Falha na requisição: ' + err.message);
+      }
+    });
+    window.addEventListener('click', (event) => {
+      if (event.target === modalReabrirRec) fecharModalReabrirRec();
+    });
+  });
+  // Fim da inicialização
+</script>
+<style>
+  .modal-overlay { display:none; position:fixed; z-index:1050; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.5); }
+  .modal-content { background:#fff; margin:10% auto; padding:20px; border-radius:8px; max-width:520px; }
+  .modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
+  .modal-grid { display:grid; grid-template-columns: 1fr 1fr; gap:8px; }
+  .modal-grid .full { grid-column: 1 / -1; }
+  .modal-grid input, .modal-grid select { width:100%; padding:6px; }
+</style>
+
+{% include 'ContasAReceber/partials/modal_baixa_receber.html' %}
+{% include 'ContasAReceber/partials/modal_reabrir_receber.html' %}
+{% endblock %}

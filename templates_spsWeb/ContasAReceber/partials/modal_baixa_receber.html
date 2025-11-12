@@ -1,0 +1,67 @@
+<style>
+  .modal-content {
+    padding: 24px;
+    background-color: #000000;
+  }
+
+  .modal-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+</style>
+<div id="modal-baixa-rec" class="modal-overlay">
+  <div class="modal-content">
+    <h5>Baixa de Título (Recebimento)</h5>
+    <form id="form-baixa-rec">
+      <div class="modal-grid">
+        <div>
+          <label>Data do Recebimento *</label>
+          <input id="data_recebimento" type="date" />
+        </div>
+        <div>
+          <label>Valor Recebido *</label>
+          <input id="valor_recebido" type="number" step="0.01" />
+        </div>
+        <div>
+          <label>Juros</label>
+          <input id="valor_juros_rec" type="number" step="0.01" />
+        </div>
+        <div>
+          <label>Multa</label>
+          <input id="valor_multa_rec" type="number" step="0.01" />
+        </div>
+        <div>
+          <label>Desconto</label>
+          <input id="valor_desconto_rec" type="number" step="0.01" />
+        </div>
+        <div class="full">
+          <label>Histórico</label>
+          <input id="historico-rec" type="text" />
+        </div>
+        <div>
+          <label>Banco (código)</label>
+          <input id="banco-rec" type="number" />
+        </div>
+        <div>
+          <label>Cheque (nº)</label>
+          <input id="cheque-rec" type="number" />
+        </div>
+        <div class="full">
+          <label>Forma de Recebimento</label>
+          <select id="forma_pagamento_rec">
+            <option value="B">Banco</option>
+            <option value="O">Outros</option>
+            <option value="C">Cheque</option>
+            <option value="D">Devolução</option>
+            <option value="A">Adiantamento</option>
+          </select>
+        </div>
+      </div>
+    </form>
+    <div class="modal-actions">
+      <button id="btn-cancelar-baixa-rec" type="button" class="btn btn-secondary btn-sm">Cancelar</button>
+      <button id="btn-confirmar-baixa-rec" type="button" class="btn btn-success btn-sm">Confirmar</button>
+    </div>
+  </div>
+</div>

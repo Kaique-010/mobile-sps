@@ -5,6 +5,7 @@ from django.http import Http404, HttpResponse
 from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from urllib.parse import quote_plus
 
 from .models import Entidades
 from .forms import EntidadesForm
@@ -65,8 +66,17 @@ class EntidadeListView(DBAndSlugMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         request = self.request
-        context['nome'] = request.GET.get('enti_nome', '')
-        context['id_cliente'] = request.GET.get('enti_clie', '')
+        nome = request.GET.get('enti_nome', '')
+        id_cliente = request.GET.get('enti_clie', '')
+        context['nome'] = nome
+        context['id_cliente'] = id_cliente
+        # Preservar filtros na paginação
+        extra_parts = []
+        if nome:
+            extra_parts.append('&enti_nome=' + quote_plus(nome))
+        if id_cliente:
+            extra_parts.append('&enti_clie=' + quote_plus(id_cliente))
+        context['extra_query'] = ''.join(extra_parts)
         return context
 
 

@@ -1,10 +1,14 @@
-from django.views.generic import CreateView, ListView, DetailView
+from django.views.generic import CreateView, ListView, DetailView, UpdateView
+import logging
 from django.shortcuts import render, redirect
+from urllib.parse import quote_plus
 from django.contrib import messages
 from django.urls import reverse
 from django.http import JsonResponse
 from django.db.models import Q
 from core.utils import get_licenca_db_config
+
+logger = logging.getLogger(__name__)
 from .models import PedidoVenda
 from .forms import PedidoVendaForm
 from .formssets import ItensPedidoFormSet
@@ -107,8 +111,16 @@ def preco_produto(request, slug=None):
         except Exception:
             unit_price = 0.0
 
+        logger.debug(
+            "[Pedidos.preco_produto] prod_codi=%s pedi_fina=%s price_source=%s unit_price=%.2f",
+            prod_codi,
+            tipo_financeiro,
+            ('avis' if tipo_financeiro == '1' else 'praz/prco fallback'),
+            unit_price,
+        )
         return JsonResponse({'unit_price': unit_price, 'found': True})
     except Exception as e:
+        logger.exception("[Pedidos.preco_produto] Erro ao calcular preço: %s", e)
         return JsonResponse({'error': str(e)}, status=500)
 
 class PedidoCreateView(CreateView):
@@ -166,12 +178,15 @@ class PedidoCreateView(CreateView):
         filial_id = self.request.session.get('filial_id', 1)
         banco = get_licenca_db_config(self.request) or 'default'
         
+        logger.debug("[PedidoCreateView] Form valid=%s Formset valid=%s", form.is_valid(), formset_itens.is_valid())
         if form.is_valid() and formset_itens.is_valid():
             try:
                 # Prepara dados do pedido
                 pedido_data = form.cleaned_data.copy()
                 pedido_data['pedi_empr'] = empresa_id
                 pedido_data['pedi_fili'] = filial_id
+                pedido_data['pedi_desc'] = pedido_data.get('pedi_desc', 0)
+                pedido_data['pedi_topr'] = pedido_data.get('pedi_topr', 0)
                 
                 # Converte objetos Entidades para IDs
                 if hasattr(pedido_data.get('pedi_forn'), 'enti_clie'):
@@ -179,6 +194,14 @@ class PedidoCreateView(CreateView):
                 if hasattr(pedido_data.get('pedi_vend'), 'enti_clie'):
                     pedido_data['pedi_vend'] = pedido_data['pedi_vend'].enti_clie
                 
+                logger.debug(
+                    "[PedidoCreateView] Dados do pedido iniciais: pedi_forn=%s pedi_vend=%s pedi_desc=%s pedi_topr=%s",
+                    getattr(pedido_data.get('pedi_forn'), 'enti_clie', pedido_data.get('pedi_forn')),
+                    getattr(pedido_data.get('pedi_vend'), 'enti_clie', pedido_data.get('pedi_vend')),
+                    pedido_data.get('pedi_desc'),
+                    pedido_data.get('pedi_topr'),
+                )
+
                 # Extrai dados dos itens
                 itens_data = []
                 for item_form in formset_itens.forms:
@@ -192,6 +215,13 @@ class PedidoCreateView(CreateView):
                     if hasattr(item_data.get('iped_prod'), 'prod_codi'):
                         item_data['iped_prod'] = item_data['iped_prod'].prod_codi
                     
+                    logger.debug(
+                        "[PedidoCreateView] Item: prod=%s quan=%s unit=%s desc=%s",
+                        item_data.get('iped_prod'),
+                        item_data.get('iped_quan', 1),
+                        item_data.get('iped_unit', 0),
+                        item_data.get('iped_desc', 0),
+                    )
                     itens_data.append({
                         'iped_prod': item_data.get('iped_prod'),
                         'iped_quan': item_data.get('iped_quan', 1),
@@ -204,17 +234,22 @@ class PedidoCreateView(CreateView):
                     return self.form_invalid(form)
                 
                 # Cria o pedido usando o service (banco-aware e com cálculo de itens)
+                logger.debug("[PedidoCreateView] Chamando service.create_pedido_venda com %d itens", len(itens_data))
                 pedido = PedidoVendaService.create_pedido_venda(
                     banco,
                     pedido_data,
                     itens_data
+                )
+                logger.debug(
+                    "[PedidoCreateView] Pedido criado pedi_nume=%s pedi_topr=%s pedi_desc=%s pedi_tota=%s",
+                    getattr(pedido, 'pedi_nume', None), getattr(pedido, 'pedi_topr', None), getattr(pedido, 'pedi_desc', None), getattr(pedido, 'pedi_tota', None)
                 )
                 messages.success(self.request, f"Pedido {pedido.pedi_nume} criado com sucesso.")
                 return redirect(self.get_success_url())
 
             except Exception as e:
                 messages.error(self.request, f"Erro ao salvar pedido: {str(e)}")
-                print(f"Erro detalhado: {e}")
+                logger.exception("[PedidoCreateView] Falha ao salvar pedido: %s", e)
                 import traceback
                 traceback.print_exc()
                 return self.form_invalid(form)
@@ -296,6 +331,14 @@ class PedidosListView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['slug'] = self.kwargs.get('slug')
+
+        # Preservar filtros na paginação
+        params = []
+        for key in ['cliente', 'vendedor', 'status']:
+            val = (self.request.GET.get(key) or '').strip()
+            if val:
+                params.append(f"{quote_plus(key)}={quote_plus(val)}")
+        context['extra_query'] = "&".join(params)
         return context
 
 
@@ -432,3 +475,161 @@ class PedidoPrintView(DetailView):
             context['vendedor_nome'] = 'N/A'
             
         return context
+
+
+class PedidoUpdateView(UpdateView):
+    model = PedidoVenda
+    form_class = PedidoVendaForm
+    template_name = 'Pedidos/pedidocriar.html'
+
+    def get_success_url(self):
+        slug = self.kwargs.get('slug')
+        return f"/web/{slug}/pedidos/" if slug else "/web/home/"
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['database'] = get_licenca_db_config(self.request) or 'default'
+        kwargs['empresa_id'] = self.request.session.get('empresa_id', 1)
+        return kwargs
+
+    def get_queryset(self):
+        banco = get_licenca_db_config(self.request) or 'default'
+        return PedidoVenda.objects.using(banco).all()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        banco = get_licenca_db_config(self.request) or 'default'
+        empresa_id = self.request.session.get('empresa_id', 1)
+
+        if self.request.POST:
+            context['formset'] = ItensPedidoFormSet(
+                self.request.POST,
+                form_kwargs={'database': banco, 'empresa_id': empresa_id}
+            )
+        else:
+            # Pré-popular itens com dados existentes
+            try:
+                from .models import Itenspedidovenda
+                from Entidades.models import Entidades
+                from Produtos.models import Produtos
+                pedido = self.object
+                itens_qs = Itenspedidovenda.objects.using(banco).filter(
+                    iped_empr=pedido.pedi_empr,
+                    iped_fili=pedido.pedi_fili,
+                    iped_pedi=str(pedido.pedi_nume)
+                ).order_by('iped_item')
+                initial = []
+                codigos = []
+                for i in itens_qs:
+                    initial.append({
+                        'iped_prod': i.iped_prod,
+                        'iped_quan': i.iped_quan,
+                        'iped_unit': i.iped_unit,
+                        'iped_desc': i.iped_desc or 0,
+                    })
+                    codigos.append(i.iped_prod)
+
+                # Nomes de cliente e vendedor
+                cl = Entidades.objects.using(banco).filter(enti_clie=pedido.pedi_forn).values('enti_nome').first()
+                ve = Entidades.objects.using(banco).filter(enti_clie=pedido.pedi_vend).values('enti_nome').first()
+                context['cliente_display'] = f"{pedido.pedi_forn} - {cl.get('enti_nome')}" if cl else str(pedido.pedi_forn)
+                context['vendedor_display'] = f"{pedido.pedi_vend} - {ve.get('enti_nome')}" if ve else str(pedido.pedi_vend)
+
+                # Mapear nomes de produtos para preencher inputs de autocomplete
+                produtos = Produtos.objects.using(banco).filter(prod_codi__in=codigos)
+                prod_map = {p.prod_codi: f"{p.prod_codi} - {p.prod_nome}" for p in produtos}
+                for idx, init in enumerate(initial):
+                    init['display_prod_text'] = prod_map.get(init.get('iped_prod'), init.get('iped_prod'))
+            except Exception:
+                initial = []
+
+            context['formset'] = ItensPedidoFormSet(
+                initial=initial,
+                form_kwargs={'database': banco, 'empresa_id': empresa_id}
+            )
+
+        context['slug'] = self.kwargs.get('slug')
+        context['is_edit'] = True
+        return context
+
+    def form_valid(self, form):
+        context = self.get_context_data()
+        formset_itens = context['formset']
+
+        banco = get_licenca_db_config(self.request) or 'default'
+
+        logger.debug("[PedidoUpdateView] Form valid=%s Formset valid=%s", form.is_valid(), formset_itens.is_valid())
+        if form.is_valid() and formset_itens.is_valid():
+            try:
+                pedido = self.object
+                pedido_updates = form.cleaned_data.copy()
+
+                # Converter objetos Entidades em IDs
+                if hasattr(pedido_updates.get('pedi_forn'), 'enti_clie'):
+                    pedido_updates['pedi_forn'] = pedido_updates['pedi_forn'].enti_clie
+                if hasattr(pedido_updates.get('pedi_vend'), 'enti_clie'):
+                    pedido_updates['pedi_vend'] = pedido_updates['pedi_vend'].enti_clie
+
+                logger.debug(
+                    "[PedidoUpdateView] Atualização pedido pedi_nume=%s pedi_desc=%s pedi_topr=%s",
+                    getattr(pedido, 'pedi_nume', None),
+                    pedido_updates.get('pedi_desc'),
+                    pedido_updates.get('pedi_topr'),
+                )
+
+                # Extrair itens
+                itens_data = []
+                for item_form in formset_itens.forms:
+                    if not item_form.cleaned_data:
+                        continue
+                    if item_form.cleaned_data.get('DELETE'):
+                        continue
+                    item_data = item_form.cleaned_data.copy()
+                    # Converter Produto para código
+                    if hasattr(item_data.get('iped_prod'), 'prod_codi'):
+                        item_data['iped_prod'] = item_data['iped_prod'].prod_codi
+                    logger.debug(
+                        "[PedidoUpdateView] Item: prod=%s quan=%s unit=%s desc=%s",
+                        item_data.get('iped_prod'),
+                        item_data.get('iped_quan', 1),
+                        item_data.get('iped_unit', 0),
+                        item_data.get('iped_desc', 0),
+                    )
+                    itens_data.append({
+                        'iped_prod': item_data.get('iped_prod'),
+                        'iped_quan': item_data.get('iped_quan', 1),
+                        'iped_unit': item_data.get('iped_unit', 0),
+                        'iped_desc': item_data.get('iped_desc', 0),
+                    })
+
+                if not itens_data:
+                    messages.error(self.request, "O pedido precisa ter pelo menos um item.")
+                    return self.form_invalid(form)
+
+                logger.debug("[PedidoUpdateView] Chamando service.update_pedido_venda com %d itens", len(itens_data))
+                PedidoVendaService.update_pedido_venda(
+                    banco,
+                    pedido,
+                    pedido_updates,
+                    itens_data,
+                )
+                logger.debug(
+                    "[PedidoUpdateView] Pedido atualizado pedi_nume=%s pedi_topr=%s pedi_desc=%s pedi_tota=%s",
+                    getattr(pedido, 'pedi_nume', None), getattr(pedido, 'pedi_topr', None), getattr(pedido, 'pedi_desc', None), getattr(pedido, 'pedi_tota', None)
+                )
+                messages.success(self.request, f"Pedido {pedido.pedi_nume} atualizado com sucesso.")
+                return redirect(self.get_success_url())
+            except Exception as e:
+                messages.error(self.request, f"Erro ao atualizar pedido: {str(e)}")
+                import traceback
+                logger.exception("[PedidoUpdateView] Falha ao atualizar pedido: %s", e)
+                traceback.print_exc()
+                return self.form_invalid(form)
+        else:
+            if not form.is_valid():
+                logger.error("[PedidoUpdateView] Erros no form: %s", form.errors)
+                messages.error(self.request, f"Erros no formulário: {form.errors}")
+            if not formset_itens.is_valid():
+                logger.error("[PedidoUpdateView] Erros no formset: %s", formset_itens.errors)
+                messages.error(self.request, f"Erros nos itens: {formset_itens.errors}")
+            return self.form_invalid(form)

@@ -1,4 +1,5 @@
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, View
+from urllib.parse import quote_plus
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.http import HttpResponse, Http404
@@ -92,6 +93,13 @@ class ProdutoListView(DBAndSlugMixin, ListView):
         ctx['slug'] = self.slug
         ctx['prod_nome'] = (self.request.GET.get('prod_nome') or '').strip()
         ctx['prod_codi'] = (self.request.GET.get('prod_codi') or '').strip()
+        # Preservar filtros na paginação
+        extra_parts = []
+        if ctx['prod_nome']:
+            extra_parts.append('&prod_nome=' + quote_plus(ctx['prod_nome']))
+        if ctx['prod_codi']:
+            extra_parts.append('&prod_codi=' + quote_plus(ctx['prod_codi']))
+        ctx['extra_query'] = ''.join(extra_parts)
         # Popular pseudo-relacionamento de preços para o template existente (tabelaprecos_set.all)
         class _ManagerLike:
             def __init__(self, items):

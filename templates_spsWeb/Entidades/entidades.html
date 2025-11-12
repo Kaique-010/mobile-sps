@@ -6,14 +6,18 @@
 <link rel="stylesheet" href="{% static 'css/list.css' %}">
 
 <div class="container page-container">
-<div class="page-header-custom">
-        <h2 class="page-title">
-            <i class="bi bi-person-badge"></i> Entidades
-        </h2>
-        <div class="page-actions">
-            <a href="{% url 'entidade_form_web' slug=slug %}" class="btn btn-success">
-                <i class="bi bi-plus"></i> Nova pessoa
-            </a>
+    <div class="page-header-custom">
+        <div class="container align-items-center">
+            <h2 class="page-title">
+                <i class="bi bi-person-badge"></i> Entidades
+            </h2>
+        </div>
+        <div class="container d-flex justify-content-end">
+            <div class="page-actions">
+                <a href="{% url 'entidade_form_web' slug=slug %}" class="btn btn-success">
+                    <i class="bi bi-plus"></i> Nova Entidade
+                </a>
+            </div>
         </div>
     </div>
 
@@ -32,12 +36,12 @@
                     <div class="col-md-4">
                         <label for="enti_nome" class="form-label">Nome</label>
                         <input type="text" id="enti_nome" name="enti_nome" class="form-control"
-                               value="{{ request.GET.enti_nome }}" placeholder="Filtrar por nome">
+                            value="{{ request.GET.enti_nome }}" placeholder="Filtrar por nome">
                     </div>
                     <div class="col-md-4">
                         <label for="enti_clie" class="form-label">ID</label>
                         <input type="text" id="enti_clie" name="enti_clie" class="form-control"
-                               value="{{ request.GET.enti_clie }}" placeholder="Filtrar por ID">
+                            value="{{ request.GET.enti_clie }}" placeholder="Filtrar por ID">
                     </div>
                     <div class="col-md-4 d-flex align-items-end">
                         <button type="submit" class="btn btn-primary">Filtrar</button>
@@ -63,20 +67,28 @@
                             </div>
                             <p class="text-body-secondary mb-2">ID {{ entidade.enti_clie|default_if_none:"" }}</p>
                             <div class="small">
-                                {% if entidade.enti_cpf %}<div><i class="bi bi-person-badge"></i> CPF: {{ entidade.enti_cpf }}</div>{% endif %}
-                                {% if entidade.enti_cnpj %}<div><i class="bi bi-building"></i> CNPJ: {{ entidade.enti_cnpj }}</div>{% endif %}
-                                {% if entidade.enti_cida or entidade.enti_esta %}<div><i class="bi bi-geo-alt"></i> {{ entidade.enti_cida|default_if_none:"" }}{% if entidade.enti_esta %}/{{ entidade.enti_esta }}{% endif %}</div>{% endif %}
-                                {% if entidade.enti_fone %}<div><i class="bi bi-telephone"></i> {{ entidade.enti_fone }}</div>{% endif %}
-                                {% if entidade.enti_celu %}<div><i class="bi bi-phone"></i> {{ entidade.enti_celu }}</div>{% endif %}
-                                {% if entidade.enti_emai %}<div><i class="bi bi-envelope"></i> {{ entidade.enti_emai }}</div>{% endif %}
+                                {% if entidade.enti_cpf %}<div><i class="bi bi-person-badge"></i> CPF: 
+                                    {{ entidade.enti_cpf }}</div>{% endif %}
+                                {% if entidade.enti_cnpj %}<div><i class="bi bi-building"></i> CNPJ: 
+                                    {{ entidade.enti_cnpj }}</div>{% endif %}
+                                {% if entidade.enti_cida or entidade.enti_esta %}<div><i class="bi bi-geo-alt"></i> 
+                                    {{entidade.enti_cida|default_if_none:"" }}{% if entidade.enti_esta %}/{{entidade.enti_esta }}{% endif %}</div>{% endif %}
+                                {% if entidade.enti_fone %}<div><i class="bi bi-telephone"></i> {{ entidade.enti_fone }}
+                                </div>{% endif %}
+                                {% if entidade.enti_celu %}<div><i class="bi bi-phone"></i> {{ entidade.enti_celu }}
+                                </div>{% endif %}
+                                {% if entidade.enti_emai %}<div><i class="bi bi-envelope"></i> {{ entidade.enti_emai }}
+                                </div>{% endif %}
                             </div>
                         </div>
                         <div class="card-footer d-flex gap-2">
                             {% if entidade.enti_clie %}
-                            <a href="{% url 'entidade_update_web' slug=slug enti_clie=entidade.enti_clie %}" class="btn btn-outline-primary btn-sm">
+                            <a href="{% url 'entidade_update_web' slug=slug enti_clie=entidade.enti_clie %}"
+                                class="btn btn-outline-primary btn-sm">
                                 <i class="bi bi-pencil"></i> Editar
                             </a>
-                            <a href="{% url 'entidade_delete_web' slug=slug enti_clie=entidade.enti_clie %}" class="btn btn-outline-danger btn-sm">
+                            <a href="{% url 'entidade_delete_web' slug=slug enti_clie=entidade.enti_clie %}"
+                                class="btn btn-outline-danger btn-sm">
                                 <i class="bi bi-trash"></i> Excluir
                             </a>
                             {% else %}
@@ -88,59 +100,7 @@
                 {% endfor %}
             </div>
             {% if page_obj.has_other_pages %}
-            <nav>
-                <ul class="pagination justify-content-center">
-                    {% if page_obj.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link"
-                            href="?page=1{% if nome %}&nome={{ nome }}{% endif %}{% if id_cliente %}&id_cliente={{ id_cliente }}{% endif %}">
-                            Primeira
-                        </a>
-                    </li>
-                    <li class="page-item">
-                        <a class="page-link"
-                            href="?page={{ page_obj.previous_page_number }}{% if nome %}&nome={{ nome }}{% endif %}{% if id_cliente %}&id_cliente={{ id_cliente }}{% endif %}">
-                            Anterior
-                        </a>
-                    </li>
-                    {% endif %}
-
-                    {% for page_number in page_obj.paginator.page_range %}
-                    {% if page_number <= page_obj.number|add:3 and page_number >= page_obj.number|add:-3 %}
-                        {% if page_obj.number == page_number %}
-                        <li class="page-item active">
-                            <a class="page-link"
-                                href="?page={{ page_number }}{% if nome %}&nome={{ nome }}{% endif %}{% if id_cliente %}&id_cliente={{ id_cliente }}{% endif %}">
-                                {{ page_number }}
-                            </a>
-                        </li>
-                        {% else %}
-                        <li class="page-item">
-                            <a class="page-link"
-                                href="?page={{ page_number }}{% if nome %}&nome={{ nome }}{% endif %}{% if id_cliente %}&id_cliente={{ id_cliente }}{% endif %}">
-                                {{ page_number }}
-                            </a>
-                        </li>
-                        {% endif %}
-                        {% endif %}
-                        {% endfor %}
-
-                        {% if page_obj.has_next %}
-                        <li class="page-item">
-                            <a class="page-link"
-                                href="?page={{ page_obj.next_page_number }}{% if nome %}&nome={{ nome }}{% endif %}{% if id_cliente %}&id_cliente={{ id_cliente }}{% endif %}">
-                                Próxima
-                            </a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link"
-                                href="?page={{ page_obj.paginator.num_pages }}{% if nome %}&nome={{ nome }}{% endif %}{% if id_cliente %}&id_cliente={{ id_cliente }}{% endif %}">
-                                Última
-                            </a>
-                        </li>
-                        {% endif %}
-                </ul>
-            </nav>
+            {% include 'components/pagination.html' with page_obj=page_obj extra_query=extra_query %}
             {% endif %}
             {% else %}
             <p>Não há entidades para exibir.</p>
@@ -148,10 +108,6 @@
             <a href="{% url 'exportar_entidades_web' slug=slug %}" class="btn btn-success mb-2">Exportar para Excel</a>
         </div>
     </div>
-
-    <footer class="text-center mt-3 text-body-secondary">
-        <p>&copy; {{ current_year }} Spartacus Sistemas</p>
-    </footer>
 </div>
 
 {% endblock %}

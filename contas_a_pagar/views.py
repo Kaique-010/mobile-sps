@@ -152,8 +152,8 @@ class TitulospagarViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         titulo = self.get_titulo_for_historico()  # Usar método corrigido
         banco = get_licenca_db_config(request)
         
-        # Obter baixa_id dos query parameters
-        baixa_id = request.query_params.get('baixa_id')
+        # Obter baixa_id dos query parameters ou da URL (alias REST)
+        baixa_id = request.query_params.get('baixa_id') or kwargs.get('baixa_id')
         
         if not baixa_id:
             return Response(

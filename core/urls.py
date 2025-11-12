@@ -3,6 +3,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from . import api_router, web_router, views
+import os
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -19,3 +20,7 @@ urlpatterns = [
 
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+# Sempre servir estáticos do diretório local `static/` em ambiente de desenvolvimento
+# Isso garante que CSS/JS/imagens funcionem mesmo quando STATIC_ROOT não foi coletado
+urlpatterns += static(settings.STATIC_URL, document_root=os.path.join(settings.BASE_DIR, 'static'))

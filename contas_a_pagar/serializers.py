@@ -52,6 +52,7 @@ class BaixaTitulosPagarSerializer(serializers.Serializer):
     banco = serializers.IntegerField(required=False, allow_null=True)
     cheque = serializers.IntegerField(required=False, allow_null=True)
     tipo_baixa = serializers.CharField(max_length=1, default='T')  # T=Total, P=Parcial
+    forma_pagamento = serializers.CharField(max_length=1, required=False, allow_blank=True)
     
     def validate(self, data):
         valor_pago = data.get('valor_pago', 0)
@@ -77,11 +78,12 @@ class BapatitulosSerializer(serializers.ModelSerializer):
 
 
 class ExcluirBaixaSerializer(serializers.Serializer):
+    confirmar_exclusao = serializers.BooleanField(required=True)
     motivo_exclusao = serializers.CharField(max_length=500, required=False, allow_blank=True)
     
-    def validate_confirmar_exclusao(self, value):
-        if not value:
+    def validate(self, data):
+        if not data.get('confirmar_exclusao'):
             raise serializers.ValidationError("É necessário confirmar a exclusão da baixa")
-        return value
+        return data
     
    

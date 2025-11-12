@@ -1,0 +1,18 @@
+/* Estilos de impressão consistentes para PDF/Impressora */
+
+@page {
+  margin: 12mm;
+}
+
+@media print {
+  .no-print { display: none !important; }
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  a { color: #000; text-decoration: none; }
+  .sheet { color: #000; background: #fff; border: 1px solid #ddd; }
+  .title { font-size: 32px; font-weight: 700; }
+  .meta { font-size: 13px; color: #333; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid #ddd; padding: 6px; }
+  th { background: #f5f5f5; text-align: left; }
+  td.num { text-align: right; }
+}

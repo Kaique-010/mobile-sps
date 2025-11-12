@@ -1,12 +1,11 @@
+{% load static %}
 {% block content %}
+<link rel="stylesheet" href="{% static 'css/ui.css' %}">
+<link rel="stylesheet" href="{% static 'css/print.css' %}">
 <style>
-  /* Layout de impressão simplificado (A4) */
-  @media print {
-    .no-print { display: none !important; }
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  }
+  /* Ajuste de layout da folha para impressão/PDF */
   .sheet {
-    max-width: 800px;
+    max-width: 900px;
     margin: 0 auto;
     padding: 24px;
     color: #000;
@@ -14,7 +13,7 @@
     border: 1px solid #ddd;
   }
   .header { display:flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-  .title { font-size: 40px; font-weight: 700; }
+  .title { font-size: 36px; font-weight: 700; }
   .meta { font-size: 14px; color: #333; }
   .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
   .label { font-size: 12px; color: #666; }
@@ -24,16 +23,18 @@
   th { background: #f5f5f5; text-align: left; }
   td.num { text-align: right; }
   .container-dados { margin: 25px 15px 0; }
-  .container-itens { margin: 25px 15px 0; padding: 32px; border: 1px solid #ddd; }
+  .container-itens { margin: 25px 15px 0; padding: 24px; border: 1px solid #ddd; }
+  @media print {
+    .no-print { display: none !important; }
+  }
 </style>
 
 <div class="sheet">
-  <div class="header">
-
-    <div class="title">Pedido #{{ object.pedi_nume }}</div>
-    <div class="no-print">
-      <a class="btn btn-sm btn-secondary" href="{% url 'PedidosWeb:pedidos_listar' slug=slug %}">Voltar</a>
-      <button class="btn btn-sm btn-primary" onclick="window.print()">Imprimir</button>
+  <div class="header" role="banner" aria-label="Cabeçalho da impressão do pedido">
+    <div class="title" aria-label="Número do Pedido">Pedido #{{ object.pedi_nume }}</div>
+    <div class="no-print" role="group" aria-label="Ações">
+      <a class="btn btn-sm btn-secondary" href="{% url 'PedidosWeb:pedidos_listar' slug=slug %}" aria-label="Voltar para lista">Voltar</a>
+      <button class="btn btn-sm btn-primary" onclick="window.print()" aria-label="Imprimir pedido">Imprimir</button>
     </div>
   </div>
 
@@ -53,13 +54,14 @@
   </div>
   </div>
   <div class="container-itens">
-  <table>
+  <table aria-describedby="caption-itens">
+    <caption id="caption-itens">Itens do pedido com produto, quantidade, preço e total.</caption>
     <thead>
       <tr>
-        <th>Produto</th>
-        <th style="width: 100px;">Qtd</th>
-        <th style="width: 140px;">Preço Unit.</th>
-        <th style="width: 140px;">Total</th>
+        <th scope="col">Produto</th>
+        <th scope="col" style="width: 100px;">Qtd</th>
+        <th scope="col" style="width: 140px;">Preço Unit.</th>
+        <th scope="col" style="width: 140px;">Total</th>
       </tr>
     </thead>
     <tbody>
@@ -68,7 +70,9 @@
         <td>
           <div style="display:flex; align-items:center; gap:8px;">
             {% if item.has_foto %}
-              <img src="{% url 'produto_foto_web' slug=slug prod_codi=item.prod_codigo %}" alt="foto" width="40" height="40" style="object-fit:cover;" onerror="this.style.display='none';" />
+              <img src="{% url 'produto_foto_web' slug=slug prod_codi=item.prod_codigo %}"
+                   alt="Foto do produto {{ item.prod_nome }}" width="40" height="40"
+                   style="object-fit:cover;" onerror="this.style.display='none';" />
             {% endif %}
             <div>
               <div style="font-weight:600;">{{ item.prod_nome }}</div>
@@ -95,4 +99,13 @@
     </div>
   </div>
 </div>
+<script>
+  // Atalho acessível para imprimir (tecla P), sem interferir com outros atalhos
+  (function(){
+    document.addEventListener('keydown', function(e){
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      if (e.key.toLowerCase() === 'p') { e.preventDefault(); window.print(); }
+    });
+  })();
+</script>
 {% endblock %}
