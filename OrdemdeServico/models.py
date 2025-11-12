@@ -158,12 +158,15 @@ class Ordemservico(models.Model):
     orde_ulti_alte = models.DateTimeField(blank=True, null=True)  
     orde_tota = models.DecimalField(max_digits=15, decimal_places=4, default=0)
     orde_nf_entr = models.TextField(blank=True, null=True, verbose_name="Nota Fiscal de Entrada")
+    orde_nf_data = models.DateField(blank=True, null=True, verbose_name="Data de entrada Nota Fiscal")
+    
 
     orde_gara = models.BooleanField(default=False, verbose_name="Garantia", blank=True, null=True)
     orde_sem_cons = models.BooleanField(default=False, verbose_name="Sem Conserto", blank=True, null=True)
     orde_data_repr = models.DateField(blank=True, null=True, verbose_name="Data de Reprovação",)
     orde_seto_repr = models.IntegerField(blank=True, null=True, verbose_name="Setor de Reprovação",)
     orde_fina_ofic = models.CharField(max_length=100, blank=True, null=True, verbose_name="Finalizada Oficina")
+    orde_orde_ante = models.CharField(max_length=100, blank=True, null=True, verbose_name="Ordem Anterior")
 
     
 

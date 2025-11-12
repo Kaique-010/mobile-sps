@@ -270,7 +270,6 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
             return Response({"detail": "Empresa e Filial são obrigatórios."}, status=400)
 
         # Mapear campos do frontend para o backend
-        # Inclui mapeamento para Nota Fiscal de Entrada
         campo_mapping = {
             'os_clie': 'orde_enti',
             'os_data_aber': 'orde_data_aber',
@@ -286,18 +285,25 @@ class OrdemServicoViewSet(BaseMultiDBModelViewSet):
             'os_seto_repr': 'orde_seto_repr',
             'os_fina_ofic': 'orde_fina_ofic',
             'os_stat_orde': 'orde_stat_orde',
+            'os_orde_ante': 'orde_orde_ante',
+            'os_nf_data': 'orde_nf_data',
         }
         
         # Aplicar mapeamento
         for frontend_field, backend_field in campo_mapping.items():
             if frontend_field in data:
                 data[backend_field] = data.pop(frontend_field)
-
+        # Garantir número da OS
         data['orde_nume'] = self.get_next_ordem_numero(empre, fili)
+        
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         with transaction.atomic(using=banco):
             instance = serializer.save()
+            # Se a data da nota não foi informada, forçar igual à data de abertura da OS
+            if not instance.orde_nf_data or instance.orde_nf_data != instance.orde_data_aber:
+                instance.orde_nf_data = instance.orde_data_aber
+                instance.save(using=banco, update_fields=['orde_nf_data'])
         
         logger.info(f"O.S. {instance.orde_nume} aberta por user {request.user.pk if request.user else 'anon'}")
         
