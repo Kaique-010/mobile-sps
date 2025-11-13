@@ -102,14 +102,42 @@ def selecionar_empresa(request):
 
             request.session['empresa_id'] = empresa_id_int
             request.session['filial_id'] = filial_id_int
+
+            # Popular nomes na sessão caso não venham do POST
+            if not empresa_nome or not filial_nome:
+                try:
+                    # Importar utilitário e modelos localmente para evitar dependência global
+                    from core.utils import get_licenca_db_config
+                    from Licencas.models import Empresas, Filiais
+                    banco = get_licenca_db_config(request) or 'default'
+                    if not empresa_nome:
+                        emp_obj = (
+                            Empresas.objects.using(banco)
+                            .filter(empr_codi=empresa_id_int)
+                            .only('empr_nome')
+                            .first()
+                        )
+                        empresa_nome = getattr(emp_obj, 'empr_nome', None) if emp_obj else None
+                    if not filial_nome:
+                        fil_obj = (
+                            Filiais.objects.using(banco)
+                            .filter(empr_empr=filial_id_int)
+                            .only('empr_nome')
+                            .first()
+                        )
+                        filial_nome = getattr(fil_obj, 'empr_nome', None) if fil_obj else None
+                except Exception as e:
+                    logger.warning("[selecionar_empresa] Falha ao obter nomes pelo banco da licença: %s", e)
+
             if empresa_nome:
                 request.session['empresa_nome'] = empresa_nome
             if filial_nome:
                 request.session['filial_nome'] = filial_nome
 
             logger.info(
-                "[selecionar_empresa] Sessão atualizada: empresa_id=%s filial_id=%s",
-                request.session.get('empresa_id'), request.session.get('filial_id')
+                "[selecionar_empresa] Sessão atualizada: empresa_id=%s (%s) filial_id=%s (%s)",
+                request.session.get('empresa_id'), request.session.get('empresa_nome'),
+                request.session.get('filial_id'), request.session.get('filial_nome')
             )
 
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':

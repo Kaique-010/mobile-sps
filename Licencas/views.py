@@ -153,46 +153,22 @@ class FiliaisPorEmpresaView(APIView):
 
         banco = get_licenca_db_config(request)
 
-        # Aceitar CNPJ (empr_docu) ou empresa_id. Prioridade para empr_docu.
-        empr_docu = request.query_params.get('empr_docu')
+        # Verificar se o 'empresa_id' foi passado na query string
         empresa_id = request.query_params.get('empresa_id')
+        logger.info(f"empresa_id: {empresa_id}")
 
-        if not empr_docu and not empresa_id:
-            return Response({'error': 'Informe empr_docu (CNPJ) ou empresa_id.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not empresa_id:
+            return Response({'error': 'Empresa não fornecida.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Se CNPJ fornecido, usar para localizar empresa e suas filiais
-        if empr_docu:
-            docu_sanit = ''.join(ch for ch in str(empr_docu) if ch.isdigit())
-            empresa = Empresas.objects.using(banco).filter(empr_docu=docu_sanit).first()
-            if not empresa:
-                return Response({'error': 'Empresa com CNPJ não encontrada.'}, status=status.HTTP_404_NOT_FOUND)
-            empresa_codi = empresa.empr_codi
-            origem_id = 'cnpj'
-        else:
-            # Fallback: empresa_id (código numérico)
-            try:
-                empresa_id_int = int(empresa_id)
-            except (TypeError, ValueError):
-                return Response({'error': 'empresa_id inválido.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            empresa_id_int = int(empresa_id)
+        except (TypeError, ValueError):
+            return Response({'error': 'empresa_id inválido.'}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Primeiro, considerar que empresa_id é o código da empresa (Empresas.empr_codi)
-            empresa_existe = Empresas.objects.using(banco).filter(empr_codi=empresa_id_int).exists()
-
-            # Se não existir, tentar interpretar empresa_id como código de filial (Filiais.empr_empr)
-            if empresa_existe:
-                empresa_codi = empresa_id_int
-                origem_id = 'empresa'
-            else:
-                filial = Filiais.objects.using(banco).filter(empr_empr=empresa_id_int).first()
-                if filial:
-                    empresa_codi = filial.empr_codi_id
-                    origem_id = 'filial->empresa'
-                else:
-                    return Response({'error': 'Empresa/filial não encontrada.'}, status=status.HTTP_404_NOT_FOUND)
-
-        filiais = Filiais.objects.using(banco).filter(empr_codi_id=empresa_codi).order_by('empr_empr')
-        logger.info(f"[FILIAIS] Origem={origem_id} empresa_codi={empresa_codi} total={filiais.count()}")
-
+        # AGORA SIM: filtra por empr_codi (que é IntegerField)
+        # Exemplo: empresa_id=5 retorna todas as filiais onde empr_codi=5
+        filiais = Filiais.objects.using(banco).filter(empr_empr=empresa_id_int)
+        
         # Serializar e retornar os dados das filiais
         serializer = FilialSerializer(filiais, many=True)
         return Response(serializer.data)

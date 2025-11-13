@@ -122,7 +122,7 @@ class Empresas(models.Model):
 
 class Filiais(models.Model):
     empr_empr = models.IntegerField(primary_key=True, db_column='empr_empr')
-    empr_codi = models.ForeignKey(Empresas, db_column='empr_codi', on_delete=models.CASCADE)
+    empr_codi = models.IntegerField(db_column='empr_codi')
     empr_nome = models.CharField('Nome da Filial', max_length=100, db_column='empr_nome')
     empr_docu = models.CharField('CNPJ da Filial', max_length=14, unique=True, db_column='empr_cnpj')
     empr_insc_esta = models.CharField(max_length=30, blank=True, null=True)
@@ -246,6 +246,14 @@ class Filiais(models.Model):
 
     def __str__(self):
         return self.empr_nome
+    
+    @property
+    def empresa(self):
+        try:
+            return Empresas.objects.get(empr_codi=self.empr_codi)
+        except Empresas.DoesNotExist:
+            return None
+
 
 
 class Licencas(models.Model):

@@ -32,25 +32,32 @@
 <footer class="bg-body text-center py-3">
     <div class="container">
         <p class="text-body-secondary mb-1">&copy; 2025 SPS. Todos os direitos reservados.</p>
-        {% if request and request.session %}
         <div class="small text-body-secondary mb-2">
-            {% if request.session.empresa_nome %}
+            {# Preferir variáveis de contexto, com fallback para sessão e IDs #}
+            {% if empresa_nome %}
+                Empresa: {{ empresa_nome }}
+            {% elif request and request.session and request.session.empresa_nome %}
                 Empresa: {{ request.session.empresa_nome }}
-            {% elif request.session.empresa_id %}
+            {% elif empresa_id %}
+                Empresa: {{ empresa_id }}
+            {% elif request and request.session and request.session.empresa_id %}
                 Empresa: {{ request.session.empresa_id }}
             {% else %}
                 Empresa: não selecionada
             {% endif %}
             |
-            {% if request.session.filial_nome %}
+            {% if filial_nome %}
+                Filial: {{ filial_nome }}
+            {% elif request and request.session and request.session.filial_nome %}
                 Filial: {{ request.session.filial_nome }}
-            {% elif request.session.filial_id %}
+            {% elif filial_id %}
+                Filial: {{ filial_id }}
+            {% elif request and request.session and request.session.filial_id %}
                 Filial: {{ request.session.filial_id }}
             {% else %}
                 Filial: não selecionada
             {% endif %}
         </div>
-        {% endif %}
         <div class="small">
 
             <a href="#" class="link-secondary me-2"><i class="bi bi-facebook"></i></a>
