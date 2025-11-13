@@ -450,8 +450,9 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'America/Sao_Paulo'
 
-# Session no Redis
-SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+# Sessão: preferir banco com cache (evita indisponibilidade do Redis)
+import os as _os
+SESSION_ENGINE = _os.getenv('SESSION_ENGINE', 'django.contrib.sessions.backends.cached_db')
 SESSION_CACHE_ALIAS = 'default'
 SESSION_COOKIE_AGE = 3600  # 1 hora
 
