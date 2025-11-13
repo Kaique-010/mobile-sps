@@ -70,43 +70,58 @@ def selecionar_empresa(request):
     POST: Salva empresa/filial na sessão e redireciona para a Home.
     """
     if request.method == 'POST':
-        empresa_id = request.POST.get('empresa_id') or request.POST.get('empresa')
-        filial_id = request.POST.get('filial_id') or request.POST.get('filial')
-        empresa_nome = request.POST.get('empresa_nome')
-        filial_nome = request.POST.get('filial_nome')
-
-        if not empresa_id or not filial_id:
-            # Para chamadas AJAX, retornar JSON 400
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'error': 'Empresa e filial são obrigatórias.'}, status=400)
-            return render(request, 'Licencas/selecionar_empresa_filial.html', {
-                'error': 'Empresa e filial são obrigatórias.'
-            })
-
-        # Persistir na sessão com validação
         try:
-            empresa_id_int = int(empresa_id)
-            filial_id_int = int(filial_id)
-        except (TypeError, ValueError) as exc:
-            logger.exception("IDs inválidos na seleção de empresa/filial: empresa=%s filial=%s", empresa_id, filial_id)
+            empresa_id = request.POST.get('empresa_id') or request.POST.get('empresa')
+            filial_id = request.POST.get('filial_id') or request.POST.get('filial')
+            empresa_nome = request.POST.get('empresa_nome')
+            filial_nome = request.POST.get('filial_nome')
+
+            logger.info(
+                "[selecionar_empresa] POST recebido: empresa_id=%s filial_id=%s empresa_nome=%s filial_nome=%s",
+                empresa_id, filial_id, empresa_nome, filial_nome
+            )
+
+            if not empresa_id or not filial_id:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'error': 'Empresa e filial são obrigatórias.'}, status=400)
+                return render(request, 'Licencas/selecionar_empresa_filial.html', {
+                    'error': 'Empresa e filial são obrigatórias.'
+                })
+
+            # Persistir na sessão com validação
+            try:
+                empresa_id_int = int(empresa_id)
+                filial_id_int = int(filial_id)
+            except (TypeError, ValueError) as exc:
+                logger.exception("IDs inválidos na seleção de empresa/filial: empresa=%s filial=%s", empresa_id, filial_id)
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'error': 'IDs inválidos para empresa/filial.'}, status=400)
+                return render(request, 'Licencas/selecionar_empresa_filial.html', {
+                    'error': 'IDs inválidos para empresa/filial.'
+                })
+
+            request.session['empresa_id'] = empresa_id_int
+            request.session['filial_id'] = filial_id_int
+            if empresa_nome:
+                request.session['empresa_nome'] = empresa_nome
+            if filial_nome:
+                request.session['filial_nome'] = filial_nome
+
+            logger.info(
+                "[selecionar_empresa] Sessão atualizada: empresa_id=%s filial_id=%s",
+                request.session.get('empresa_id'), request.session.get('filial_id')
+            )
+
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'error': 'IDs inválidos para empresa/filial.'}, status=400)
+                return JsonResponse({'success': True, 'redirect': '/web/home/'})
+            from django.shortcuts import redirect
+            return redirect('home')
+        except Exception as exc:
+            logger.exception("Erro inesperado em selecionar_empresa: %s", exc)
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'error': 'Erro interno ao salvar seleção.'}, status=500)
             return render(request, 'Licencas/selecionar_empresa_filial.html', {
-                'error': 'IDs inválidos para empresa/filial.'
+                'error': 'Erro interno ao salvar seleção.'
             })
-
-        request.session['empresa_id'] = empresa_id_int
-        request.session['filial_id'] = filial_id_int
-        if empresa_nome:
-            request.session['empresa_nome'] = empresa_nome
-        if filial_nome:
-            request.session['filial_nome'] = filial_nome
-
-        # Em chamadas AJAX, retornar JSON de sucesso com URL de redirect
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'success': True, 'redirect': '/web/home/'})
-        # Feedback opcional via messages pode ser adicionado aqui
-        from django.shortcuts import redirect
-        return redirect('home')
 
     return render(request, 'Licencas/selecionar_empresa_filial.html')

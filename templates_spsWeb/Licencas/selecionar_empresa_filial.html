@@ -26,7 +26,7 @@
     </div>
 
     <div class="px-4 pt-3">
-      <div id="alert" class="alert alert-danger d-none" role="alert"></div>
+      <div id="alert" class="alert alert-danger {% if not error %}d-none{% endif %}" role="alert">{% if error %}{{ error }}{% endif %}</div>
     </div>
 
     <div class="login-body p-4 pt-0">
