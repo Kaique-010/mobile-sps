@@ -186,8 +186,33 @@ class PermissaoModuloViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
     def modulos_empresa_filial(self, request, slug=None):
         """Retorna módulos liberados para uma empresa/filial específica"""
         try:
-            empresa_id = request.query_params.get('empresa_id', 1)
-            filial_id = request.query_params.get('filial_id', 1)
+            # Tenta obter dos query params e converter para int
+            def _to_int(value):
+                try:
+                    return int(value)
+                except (TypeError, ValueError):
+                    return None
+
+            empresa_id = _to_int(request.query_params.get('empresa_id'))
+            filial_id = _to_int(request.query_params.get('filial_id'))
+
+            # Fallback para sessão quando não informado ou inválido
+            if empresa_id is None:
+                empresa_id = request.session.get('empresa_id')
+            if filial_id is None:
+                filial_id = request.session.get('filial_id')
+
+            # Fallback para cabeçalhos quando sessão não possui
+            if empresa_id is None:
+                empresa_id = _to_int(request.headers.get('X-Empresa'))
+            if filial_id is None:
+                filial_id = _to_int(request.headers.get('X-Filial'))
+
+            # Último fallback para 1/1 para manter compatibilidade legada
+            if empresa_id is None:
+                empresa_id = 1
+            if filial_id is None:
+                filial_id = 1
             
             banco = get_licenca_db_config(request)
             from .utils import get_modulos_liberados_empresa

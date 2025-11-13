@@ -119,28 +119,27 @@ class LicencaMiddleware:
         # Medição do tempo de cache/banco
         cache_start = time.time()
         
-        # Cache de módulos por licença (30 minutos - mais tempo)
-        # Padrão: ler da sessão se disponível, depois cabeçalho, senão fallback 1
-        empresa_id = (
-            request.session.get('empresa_id')
-            or request.headers.get("X-Empresa")
-            or 1
-        )
-        filial_id = (
-            request.session.get('filial_id')
-            or request.headers.get("X-Filial")
-            or 1
-        )
+        # Cache de módulos por licença (30 minutos)
+        # Priorizar cabeçalhos (pedido atual) sobre sessão (estado anterior)
+        def _to_int(value, default=None):
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return default
 
-        # Se vier pelos cabeçalhos e não estiver persistido na sessão, sincronizar
-        try:
-            if request.headers.get("X-Empresa") and not request.session.get('empresa_id'):
-                request.session['empresa_id'] = int(request.headers.get("X-Empresa"))
-            if request.headers.get("X-Filial") and not request.session.get('filial_id'):
-                request.session['filial_id'] = int(request.headers.get("X-Filial"))
-        except (ValueError, TypeError):
-            # Ignorar cabeçalhos inválidos; manter fallback padrão
-            pass
+        header_empresa = _to_int(request.headers.get("X-Empresa"))
+        header_filial = _to_int(request.headers.get("X-Filial"))
+        session_empresa = request.session.get('empresa_id')
+        session_filial = request.session.get('filial_id')
+
+        empresa_id = header_empresa or session_empresa or 1
+        filial_id = header_filial or session_filial or 1
+
+        # Se cabeçalhos válidos vierem, sincronizar sessão mesmo que já tenha valores (mantém estado atualizado)
+        if header_empresa is not None:
+            request.session['empresa_id'] = header_empresa
+        if header_filial is not None:
+            request.session['filial_id'] = header_filial
         
         # Log para debug
         import logging
