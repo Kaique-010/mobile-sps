@@ -55,26 +55,59 @@
 </div>
 
 <script>
+  // ====== Logger util para depuração no navegador ======
+  const DEBUG = true; // altere para false para silenciar
+  const L = {
+    prefix: '[SEL_EMP]'
+  };
+  L.group = (label) => DEBUG && console.groupCollapsed(`${L.prefix} ${label}`);
+  L.groupEnd = () => DEBUG && console.groupEnd();
+  L.log = (...args) => DEBUG && console.log(L.prefix, ...args);
+  L.info = (...args) => DEBUG && console.info(L.prefix, ...args);
+  L.warn = (...args) => DEBUG && console.warn(L.prefix, ...args);
+  L.error = (...args) => DEBUG && console.error(L.prefix, ...args);
+  L.time = (label) => DEBUG && console.time(`${L.prefix} ${label}`);
+  L.timeEnd = (label) => DEBUG && console.timeEnd(`${L.prefix} ${label}`);
+  L.table = (data) => DEBUG && console.table(data);
+
   const showError = (msg) => {
     const el = document.getElementById('alert');
     el.textContent = msg;
     el.classList.remove('d-none');
+    L.error('Alerta mostrado:', msg);
   };
 
   const slug = localStorage.getItem('slug');
   const access = localStorage.getItem('access');
+  L.group('Sessão');
+  L.log('slug:', slug);
+  L.log('access presente:', !!access);
+  L.groupEnd();
 
-  const authFetch = (url) => fetch(url, {
+  const authFetch = (url) => {
+    L.group('authFetch');
+    L.log('URL:', url);
+    L.groupEnd();
+    return fetch(url, {
     headers: {
       'Authorization': `Bearer ${access}`,
       'Content-Type': 'application/json'
     }
-  });
+    });
+  };
 
   const carregarEmpresas = async () => {
     try {
-      const resp = await authFetch(`/api/${slug}/licencas/empresas/`);
+      const url = `/api/${slug}/licencas/empresas/`;
+      L.time('Empresas:fetch');
+      const resp = await authFetch(url);
       const data = await resp.json();
+      L.group('Empresas:resposta');
+      L.log('status:', resp.status);
+      L.log('ok:', resp.ok);
+      L.table(Array.isArray(data) ? data : [data]);
+      L.groupEnd();
+      L.timeEnd('Empresas:fetch');
       if (!resp.ok) return showError(data?.error || 'Erro ao carregar empresas');
       const sel = document.getElementById('empresa');
       sel.innerHTML = '<option value="" disabled selected>Selecione...</option>';
@@ -84,6 +117,7 @@
         opt.textContent = `${e.empr_nome} (${e.empr_docu})`;
         sel.appendChild(opt);
       });
+      L.info('Empresas carregadas:', data.length);
     } catch (e) {
       console.error(e);
       showError('Erro inesperado ao carregar empresas');
@@ -92,18 +126,28 @@
 
   const carregarFiliais = async (empresaId) => {
     try {
-      const resp = await authFetch(`/api/${slug}/licencas/filiais/?empresa_id=${encodeURIComponent(empresaId)}`);
+      const url = `/api/${slug}/licencas/filiais/?empresa_id=${encodeURIComponent(empresaId)}`;
+      L.time('Filiais:fetch');
+      L.log('Empresa selecionada:', empresaId);
+      const resp = await authFetch(url);
       const data = await resp.json();
+      L.group('Filiais:resposta');
+      L.log('status:', resp.status);
+      L.log('ok:', resp.ok);
+      L.table(Array.isArray(data) ? data : [data]);
+      L.groupEnd();
+      L.timeEnd('Filiais:fetch');
       if (!resp.ok) return showError(data?.error || 'Erro ao carregar filiais');
       const sel = document.getElementById('filial');
       sel.innerHTML = '<option value="" disabled selected>Selecione...</option>';
       data.forEach(f => {
         const opt = document.createElement('option');
-        // Adapte conforme campos do serializer de Filiais
-        opt.value = f.empr_codi; // Placeholder se houver campo específico da filial
+        // Usa o identificador primário da filial (empr_empr)
+        opt.value = f.empr_empr;
         opt.textContent = f.empr_nome;
         sel.appendChild(opt);
       });
+      L.info('Filiais carregadas:', data.length);
     } catch (e) {
       console.error(e);
       showError('Erro inesperado ao carregar filiais');
@@ -112,6 +156,7 @@
 
   document.getElementById('empresa').addEventListener('change', (e) => {
     const empresaId = e.target.value;
+    L.log('Change empresa ->', empresaId);
     if (empresaId) carregarFiliais(empresaId);
   });
 
@@ -119,7 +164,11 @@
   function getCookie(name) {
     const value = `; ${document.cookie}`;
     const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(';').shift();
+    if (parts.length === 2) {
+      const token = parts.pop().split(';').shift();
+      L.log('CSRF do cookie encontrado:', !!token);
+      return token;
+    }
   }
 
   document.getElementById('selForm').addEventListener('submit', async (e) => {
@@ -136,30 +185,52 @@
       localStorage.setItem('filial_id', String(filialId));
       if (empresaNome) localStorage.setItem('empresa_nome', empresaNome);
       if (filialNome) localStorage.setItem('filial_nome', filialNome);
+      L.info('LocalStorage atualizado', { empresaId, filialId, empresaNome, filialNome });
     } catch (e) {
       console.warn('Não foi possível persistir no localStorage:', e);
+      L.warn('Falha ao persistir no localStorage:', e?.message);
     }
 
     // Persistir no servidor (sessão) para padronização nos web views
     try {
       const csrfToken = getCookie('csrftoken') || document.querySelector('input[name="csrfmiddlewaretoken"]')?.value;
+      const payload = new URLSearchParams({ empresa_id: empresaId, filial_id: filialId, empresa_nome: empresaNome, filial_nome: filialNome });
+      L.group('POST selecionar-empresa');
+      L.log('Headers:', { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': !!csrfToken });
+      L.log('Payload:', Object.fromEntries(payload.entries()));
       const resp = await fetch('/web/selecionar-empresa/', {
         method: 'POST',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
+          'X-Requested-With': 'XMLHttpRequest',
           'X-CSRFToken': csrfToken
         },
-        body: new URLSearchParams({ empresa_id: empresaId, filial_id: filialId, empresa_nome: empresaNome, filial_nome: filialNome })
+        body: payload
       });
+      // Trata respostas 2xx como sucesso; backend retorna JSON
+      L.log('Resposta selecionar-empresa:', resp.status, resp.ok);
       if (!resp.ok) {
-        const data = await resp.text();
+        const txt = await resp.text();
+        L.error('Erro selecionar-empresa body:', txt);
+        L.groupEnd();
         return showError('Falha ao salvar seleção.');
       }
+      // Opcionalmente, ler JSON e usar redirect informado
+      try {
+        const data = await resp.json();
+        L.log('JSON selecionar-empresa:', data);
+        if (data?.redirect) {
+          L.groupEnd();
+          return window.location.href = data.redirect;
+        }
+      } catch (_) {}
       // Redireciona para a Home do sistema (corrigido)
+      L.groupEnd();
       window.location.href = '/web/home/';
     } catch (err) {
       console.error(err);
+      L.error('Exceção ao comunicar com o servidor:', err?.message);
       showError('Erro ao comunicar com o servidor.');
     }
   });
@@ -168,6 +239,7 @@
   if (!slug || !access) {
     showError('Sessão inválida. Faça login novamente.');
   } else {
+    L.info('Inicializando carregamento de empresas...');
     carregarEmpresas();
   }
 </script>

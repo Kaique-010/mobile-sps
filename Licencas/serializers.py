@@ -15,7 +15,8 @@ class EmpresaSerializer(serializers.ModelSerializer):
 class FilialSerializer(serializers.ModelSerializer):
     class Meta:
         model = Filiais
-        fields = ['empr_codi', 'empr_nome']
+        # Inclui o identificador primário da filial (empr_empr) para uso no front
+        fields = ['empr_empr', 'empr_codi', 'empr_nome']
 
 
 class UsuarioSerializer(BancoContextMixin, serializers.ModelSerializer):
