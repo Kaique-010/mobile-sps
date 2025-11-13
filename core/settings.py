@@ -456,6 +456,18 @@ SESSION_ENGINE = _os.getenv('SESSION_ENGINE', 'django.contrib.sessions.backends.
 SESSION_CACHE_ALIAS = 'default'
 SESSION_COOKIE_AGE = 3600  # 1 hora
 
+# Cookies de sessão/CSRF: garantir envio em navegação web e APIs same-site
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+# Em produção, marcar como Secure (https). Em desenvolvimento, manter False.
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+# Opcional: compartilhar cookies entre subdomínios quando necessário
+# Defina SESSION_COOKIE_DOMAIN via env (ex.: .suaempresa.com) quando API e Web estiverem em subdomínios distintos
+SESSION_COOKIE_DOMAIN = _os.getenv('SESSION_COOKIE_DOMAIN', None)
+# Salvar sessão quando modificada; evitar perda em redireções rápidas
+SESSION_SAVE_EVERY_REQUEST = False
+
 
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Mobile SPS API',

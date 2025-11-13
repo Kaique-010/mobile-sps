@@ -131,6 +131,16 @@ class LicencaMiddleware:
             or request.headers.get("X-Filial")
             or 1
         )
+
+        # Se vier pelos cabeçalhos e não estiver persistido na sessão, sincronizar
+        try:
+            if request.headers.get("X-Empresa") and not request.session.get('empresa_id'):
+                request.session['empresa_id'] = int(request.headers.get("X-Empresa"))
+            if request.headers.get("X-Filial") and not request.session.get('filial_id'):
+                request.session['filial_id'] = int(request.headers.get("X-Filial"))
+        except (ValueError, TypeError):
+            # Ignorar cabeçalhos inválidos; manter fallback padrão
+            pass
         
         # Log para debug
         import logging
