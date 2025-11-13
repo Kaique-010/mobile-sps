@@ -30,16 +30,16 @@
     </div>
 
     <div class="login-body p-4 pt-0">
-      <form id="selForm">
+      <form id="selForm" method="post" action="/web/selecionar-empresa/">
         {% csrf_token %}
         <div class="form-floating mb-3">
-          <select class="form-select" id="empresa" required>
+          <select class="form-select" id="empresa" name="empresa_id" required>
             <option value="" selected disabled>Carregando...</option>
           </select>
           <label for="empresa">Empresa</label>
         </div>
         <div class="form-floating mb-3">
-          <select class="form-select" id="filial" required>
+          <select class="form-select" id="filial" name="filial_id" required>
             <option value="" selected disabled>Selecione a empresa primeiro</option>
           </select>
           <label for="filial">Filial</label>
@@ -171,68 +171,29 @@
     }
   }
 
-  document.getElementById('selForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
+  document.getElementById('selForm').addEventListener('submit', (e) => {
     const empresaId = document.getElementById('empresa').value;
     const filialId = document.getElementById('filial').value;
     const empresaNome = document.querySelector('#empresa option:checked')?.textContent || '';
     const filialNome = document.querySelector('#filial option:checked')?.textContent || '';
-    if (!empresaId || !filialId) return showError('Selecione empresa e filial.');
-
-    // Persistir também no localStorage para compatibilidade com rotas que usam headers
+    // Validação mínima (browser já valida via 'required')
+    if (!empresaId || !filialId) {
+      showError('Selecione empresa e filial.');
+      e.preventDefault();
+      return;
+    }
+    // Persistir no localStorage para compatibilidade
     try {
       localStorage.setItem('empresa_id', String(empresaId));
       localStorage.setItem('filial_id', String(filialId));
       if (empresaNome) localStorage.setItem('empresa_nome', empresaNome);
       if (filialNome) localStorage.setItem('filial_nome', filialNome);
-      L.info('LocalStorage atualizado', { empresaId, filialId, empresaNome, filialNome });
-    } catch (e) {
-      console.warn('Não foi possível persistir no localStorage:', e);
-      L.warn('Falha ao persistir no localStorage:', e?.message);
-    }
-
-    // Persistir no servidor (sessão) para padronização nos web views
-    try {
-      const csrfToken = getCookie('csrftoken') || document.querySelector('input[name="csrfmiddlewaretoken"]')?.value;
-      const payload = new URLSearchParams({ empresa_id: empresaId, filial_id: filialId, empresa_nome: empresaNome, filial_nome: filialNome });
-      L.group('POST selecionar-empresa');
-      L.log('Headers:', { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': !!csrfToken });
-      L.log('Payload:', Object.fromEntries(payload.entries()));
-      const resp = await fetch('/web/selecionar-empresa/', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'X-Requested-With': 'XMLHttpRequest',
-          'X-CSRFToken': csrfToken
-        },
-        body: payload
-      });
-      // Trata respostas 2xx como sucesso; backend retorna JSON
-      L.log('Resposta selecionar-empresa:', resp.status, resp.ok);
-      if (!resp.ok) {
-        const txt = await resp.text();
-        L.error('Erro selecionar-empresa body:', txt);
-        L.groupEnd();
-        return showError('Falha ao salvar seleção.');
-      }
-      // Opcionalmente, ler JSON e usar redirect informado
-      try {
-        const data = await resp.json();
-        L.log('JSON selecionar-empresa:', data);
-        if (data?.redirect) {
-          L.groupEnd();
-          return window.location.href = data.redirect;
-        }
-      } catch (_) {}
-      // Redireciona para a Home do sistema (corrigido)
-      L.groupEnd();
-      window.location.href = '/web/home/';
+      L.info('Submit nativo: LocalStorage atualizado', { empresaId, filialId });
     } catch (err) {
-      console.error(err);
-      L.error('Exceção ao comunicar com o servidor:', err?.message);
-      showError('Erro ao comunicar com o servidor.');
+      L.warn('Falha ao persistir no localStorage:', err?.message);
     }
+    // Deixar o envio nativo prosseguir (redirect será seguido pelo navegador)
+    L.info('Submit nativo: prosseguindo com envio do formulário');
   });
 
   // Inicializa
