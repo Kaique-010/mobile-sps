@@ -7,7 +7,7 @@
 
 /* Corrige seletor: alvo é <a class="btn btn-success"> */
 a.btn.btn-success {
-  background-color: #215a88;
+  background-color: #218877;
   border-color: #a4fcff;
   margin-bottom: 20px;
   padding: 8px 16px;
@@ -16,8 +16,68 @@ a.btn.btn-success {
   border-radius: 4px;
 }
 a.btn.btn-success:hover {
+  background-color: #2b9baf;
+  border-color: #77661b;
+}
+
+/*Botões para a página de notas destinadas*/
+#btn-filtrar {
+  background-color: #1f6fb2;
+  border-color: #a4fcff;
+}
+
+#btn-filtrar:hover {
   background-color: #ffd900;
   border-color: #77661b;
+}
+
+button.btn.btn-sm.btn-success.custom {
+  background-color: #439472;
+  border-color: #a4fcff;
+  margin-bottom: 20px;
+  padding: 8px 16px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 4px;
+}
+button.btn.btn-sm.btn-success.custom:hover {
+  background-color: #00ccff;
+  border-color: #77661b;
+}
+
+button.custom {
+  background-color: #215a88;
+  border-color: #a4fcff;
+  margin-bottom: 20px;
+  padding: 8px 16px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 4px;
+}
+button.custom:hover {
+  background-color: #ffd900;
+  border-color: #77661b;
+}
+
+/* Estilo específico para Itens (primary) */
+
+button.btn.btn-sm.btn-primary.custom {
+  background-color: #1f6fb2;
+  border-color: #a4fcff;
+}
+button.btn.btn-sm.btn-primary.custom:hover {
+  background-color: #ffd900;
+  border-color: #77661b;
+}
+
+/* Estilo específico para Manifestar (warning) */
+button.btn.btn-sm.btn-warning.custom {
+  background-color: #d19700;
+  border-color: #fff0b3;
+}
+button.btn.btn-sm.btn-warning.custom:hover {
+  background-color: #42ad62;
+  border-color: #8a6d00;
 }
 
 /* Cabeçalho de página: título à esquerda, ações à direita */

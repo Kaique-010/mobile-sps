@@ -1,0 +1,157 @@
+<div class="modal fade" id="import-modal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Importar Notas Destinadas (DF-e)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="import-form">
+                    <div class="mb-2"><label>UF</label><input name="uf" class="form-control" required></div>
+                    <div class="mb-2"><label>CNPJ</label><input name="cnpj" class="form-control" required></div>
+                    <div class="mb-2 d-flex align-items-center gap-2">
+                        <div class="flex-grow-1"><label>Último NSU</label><input name="ultimo_nsu" class="form-control"
+                                value="0">
+                        </div>
+                        <div><button type="button" class="btn btn-outline-secondary mt-4"
+                                onclick="carregarConfig()">Atualizar
+                                NSU</button></div>
+                    </div>
+                    <div class="mb-2"><label>Caminho .pfx</label><input name="caminho_pfx" class="form-control"></div>
+                    <div class="mb-2"><label>Senha .pfx</label><input name="senha_pfx" type="password"
+                            class="form-control"></div>
+                    <div class="mb-2"><label>Ambiente</label><select name="ambiente" class="form-select">
+                            <option value="1">Produção</option>
+                            <option value="2">Homologação</option>
+                        </select></div>
+                    <div class="row">
+                        <div class="col"><label>Empresa</label><input name="empresa" class="form-control" required>
+                        </div>
+                        <div class="col"><label>Filial</label><input name="filial" class="form-control" required></div>
+                    </div>
+                    <div class="mb-2"><label>Certificado</label>
+                        <div id="cert-info" class="form-text"></div>
+                    </div>
+                    <div class="mb-2"><label>Cliente (opcional)</label><input name="cliente" class="form-control"></div>
+                    <div class="form-check"><input type="checkbox" class="form-check-input" id="gerar_estoque"
+                            name="gerar_estoque" checked><label class="form-check-label" for="gerar_estoque">Gerar
+                            estoque</label>
+                    </div>
+                    <div class="form-check"><input type="checkbox" class="form-check-input" id="gerar_contas_pagar"
+                            name="gerar_contas_pagar" checked><label class="form-check-label"
+                            for="gerar_contas_pagar">Gerar contas a
+                            pagar</label></div>
+                    <div class="form-check"><input type="checkbox" class="form-check-input" id="manifestar_ciencia"
+                            name="manifestar_ciencia" checked><label class="form-check-label"
+                            for="manifestar_ciencia">Manifestar
+                            ciência</label></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                <button type="button" class="btn btn-primary" onclick="executarImportacao()">Importar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function abrirImportacao() {
+        const slug = localStorage.getItem('slug');
+        const token = localStorage.getItem('access');
+        const url = `/api/${slug}/notasdestinadas/config/`;
+        fetch(url, { headers: { 'Authorization': `Bearer ${token}` } })
+            .then(r => r.json())
+            .then(cfg => {
+                const form = document.getElementById('import-form');
+                if (cfg && !cfg.error) {
+                    form.uf.value = cfg.uf || '';
+                    form.cnpj.value = cfg.cnpj || '';
+                    form.ultimo_nsu.value = cfg.ultimo_nsu || '0';
+                    form.caminho_pfx.value = cfg.caminho_pfx || '';
+                    form.ambiente.value = String(cfg.ambiente || '1');
+                    form.empresa.value = cfg.empresa || '';
+                    form.filial.value = cfg.filial || '';
+                    const certInfo = document.getElementById('cert-info');
+                    if (certInfo) certInfo.textContent = cfg.caminho_pfx || '';
+                }
+            })
+            .finally(() => {
+                const modal = document.getElementById('import-modal');
+                const modalEl = new bootstrap.Modal(modal);
+                modalEl.show();
+            });
+    }
+
+    async function executarImportacao() {
+        const slug = localStorage.getItem('slug');
+        const token = localStorage.getItem('access');
+        const url = `/api/${slug}/notasdestinadas/importar-notas-destinadas/`;
+        const alertBox = document.getElementById('processar-alert');
+        alertBox.className = 'alert d-none';
+        const form = document.getElementById('import-form');
+        const body = {
+            uf: form.uf.value,
+            cnpj: form.cnpj.value,
+            ultimo_nsu: form.ultimo_nsu.value || '0',
+            caminho_pfx: form.caminho_pfx.value,
+            senha_pfx: form.senha_pfx.value,
+            ambiente: parseInt(form.ambiente.value || '1'),
+            empresa: parseInt(form.empresa.value),
+            filial: parseInt(form.filial.value),
+            cliente: form.cliente.value ? parseInt(form.cliente.value) : null,
+            gerar_estoque: form.gerar_estoque.checked,
+            gerar_contas_pagar: form.gerar_contas_pagar.checked,
+            manifestar_ciencia: form.manifestar_ciencia.checked
+        };
+        try {
+            const resp = await fetch(url, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            const data = await resp.json();
+            let text = '';
+            if (resp.ok) {
+                text = data.mensagem || 'Importação concluída.';
+                text += `\nXMLs: ${data.quantidade_xmls}`;
+                const modal = document.getElementById('import-modal');
+                const modalEl = bootstrap.Modal.getInstance(modal);
+                modalEl.hide();
+                alertBox.className = 'alert alert-success';
+                carregarDashboard();
+            } else {
+                alertBox.className = 'alert alert-danger';
+                text = data.error || data.detail || 'Erro na importação.';
+            }
+            alertBox.textContent = text;
+            alertBox.classList.remove('d-none');
+        } catch (e) {
+            alertBox.className = 'alert alert-danger';
+            alertBox.textContent = 'Erro de comunicação com o servidor.';
+            alertBox.classList.remove('d-none');
+        }
+    }
+
+    async function carregarConfig() {
+        const slug = localStorage.getItem('slug');
+        const token = localStorage.getItem('access');
+        const url = `/api/${slug}/notasdestinadas/config/`;
+        try {
+            const resp = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+            const cfg = await resp.json();
+            if (resp.ok) {
+                const form = document.getElementById('import-form');
+                form.uf.value = cfg.uf || '';
+                form.cnpj.value = cfg.cnpj || '';
+                form.ultimo_nsu.value = cfg.ultimo_nsu || '0';
+                form.caminho_pfx.value = cfg.caminho_pfx || '';
+                form.ambiente.value = String(cfg.ambiente || '1');
+                form.empresa.value = cfg.empresa || '';
+                form.filial.value = cfg.filial || '';
+                const certInfo = document.getElementById('cert-info');
+                if (certInfo) certInfo.textContent = cfg.caminho_pfx || '';
+            }
+        } catch (e) { }
+    }
+
+    window.abrirImportacao = abrirImportacao;
+    window.executarImportacao = executarImportacao;
+    window.carregarConfig = carregarConfig;
+</script>

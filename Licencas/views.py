@@ -2,14 +2,16 @@ from Licencas.utils import atualizar_senha
 from pprint import pprint
 from rest_framework.views import APIView
 from rest_framework import viewsets, status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, action
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 from Licencas.models import Empresas, Filiais, Licencas, Usuarios
-from Licencas.serializers import EmpresaSerializer, FilialSerializer, UsuarioSerializer
+from Licencas.crypto import encrypt_bytes, encrypt_str
+from cryptography.hazmat.primitives.serialization.pkcs12 import load_key_and_certificates
+from Licencas.serializers import EmpresaSerializer, FilialSerializer, UsuarioSerializer, EmpresaDetailSerializer, FilialDetailSerializer
 from parametros_admin.models import PermissaoModulo, Modulo
 from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from django.contrib.auth.hashers import check_password
@@ -173,6 +175,37 @@ class FiliaisPorEmpresaView(APIView):
         serializer = FilialSerializer(filiais, many=True)
         return Response(serializer.data)
 
+class UploadCertificadoA1View(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, slug=None):
+        banco = get_licenca_db_config(request)
+        empresa_id = request.data.get('empresa_id')
+        filial_id = request.data.get('filial_id')
+        senha = request.data.get('senha')
+        arquivo = request.FILES.get('certificado')
+        if not all([empresa_id, filial_id, senha, arquivo]):
+            return Response({'error': 'empresa_id, filial_id, senha e certificado são obrigatórios.'}, status=400)
+        try:
+            empresa_id = int(empresa_id)
+            filial_id = int(filial_id)
+        except Exception:
+            return Response({'error': 'IDs inválidos.'}, status=400)
+        filial = Filiais.objects.using(banco).filter(empr_empr=filial_id, empr_codi=empresa_id).first()
+        if not filial:
+            return Response({'error': 'Filial não encontrada.'}, status=404)
+        nome_arquivo = getattr(arquivo, 'name', 'certificado.p12')
+        conteudo = arquivo.read()
+        try:
+            load_key_and_certificates(conteudo, senha.encode('utf-8'))
+        except Exception:
+            return Response({'error': 'Certificado inválido ou senha incorreta.'}, status=400)
+        filial.empr_cert = nome_arquivo
+        filial.empr_senh_cert = encrypt_str(senha)
+        filial.empr_cert_digi = encrypt_bytes(conteudo)
+        filial.save(using=banco)
+        return Response({'message': 'Certificado salvo com sucesso.'})
+
 class ModulosLiberadosView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -252,3 +285,87 @@ class UsuariosViewSet(viewsets.ModelViewSet):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class EmpresasViewSet(viewsets.ModelViewSet):
+    serializer_class = EmpresaDetailSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        banco = get_licenca_db_config(self.request)
+        return Empresas.objects.using(banco).all()
+
+    def create(self, request, *args, **kwargs):
+        banco = get_licenca_db_config(request)
+        serializer = EmpresaDetailSerializer(data=request.data)
+        if serializer.is_valid():
+            obj = Empresas.objects.using(banco).create(**serializer.validated_data)
+            return Response(EmpresaDetailSerializer(obj).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=400)
+
+    def update(self, request, *args, **kwargs):
+        banco = get_licenca_db_config(request)
+        instance = self.get_object()
+        serializer = EmpresaDetailSerializer(instance, data=request.data, partial=False)
+        if serializer.is_valid():
+            for attr, val in serializer.validated_data.items():
+                setattr(instance, attr, val)
+            instance.save(using=banco)
+            return Response(EmpresaDetailSerializer(instance).data)
+        return Response(serializer.errors, status=400)
+
+class FiliaisViewSet(viewsets.ModelViewSet):
+    serializer_class = FilialDetailSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        banco = get_licenca_db_config(self.request)
+        qs = Filiais.objects.using(banco).all()
+        empresa_id = self.request.query_params.get('empresa_id')
+        if empresa_id:
+            qs = qs.filter(empr_codi=int(empresa_id))
+        return qs
+
+    def create(self, request, *args, **kwargs):
+        banco = get_licenca_db_config(request)
+        serializer = FilialDetailSerializer(data=request.data)
+        if serializer.is_valid():
+            obj = Filiais.objects.using(banco).create(**serializer.validated_data)
+            return Response(FilialDetailSerializer(obj).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=400)
+
+    def update(self, request, *args, **kwargs):
+        banco = get_licenca_db_config(request)
+        instance = self.get_object()
+        data = request.data.copy()
+        senha = data.get('empr_senh_cert')
+        arquivo = request.FILES.get('certificado')
+        serializer = FilialDetailSerializer(instance, data=data, partial=False)
+        if serializer.is_valid():
+            for attr, val in serializer.validated_data.items():
+                setattr(instance, attr, val)
+            if senha and senha != '********':
+                from Licencas.crypto import encrypt_str
+                instance.empr_senh_cert = encrypt_str(senha)
+            if arquivo:
+                from Licencas.crypto import encrypt_bytes
+                from cryptography.hazmat.primitives.serialization.pkcs12 import load_key_and_certificates
+                content = arquivo.read()
+                load_key_and_certificates(content, (senha or '').encode('utf-8'))
+                instance.empr_cert = getattr(arquivo, 'name', 'certificado.p12')
+                instance.empr_cert_digi = encrypt_bytes(content)
+            instance.save(using=banco)
+            return Response(FilialDetailSerializer(instance).data)
+        return Response(serializer.errors, status=400)
+
+    @action(detail=True, methods=['get'])
+    def certificado(self, request, pk=None):
+        banco = get_licenca_db_config(request)
+        filial = self.get_object()
+        if not filial.empr_cert_digi:
+            return Response({'error': 'Sem certificado'}, status=404)
+        from Licencas.crypto import decrypt_bytes
+        data = decrypt_bytes(filial.empr_cert_digi)
+        from django.http import HttpResponse
+        resp = HttpResponse(data, content_type='application/x-pkcs12')
+        resp['Content-Disposition'] = f'attachment; filename="{filial.empr_cert or "certificado.p12"}"'
+        return resp

@@ -114,6 +114,7 @@ INSTALLED_APPS = [
     'Floresta',
     'Lancamentos_Bancarios',
     'Notas_Fiscais',
+    'NotasDestinadas',
     'Assistente_Spart',
     'ParametrosSps',
     'Financeiro',

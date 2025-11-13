@@ -1,0 +1,323 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Notas Destinadas{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
+<div class="container page-container">
+  <div class="page-header-custom">
+    <div class="container align-items-center">
+      <h2 class="page-title">
+        <i class="bi bi-clipboard2-minus-fill fs-4"></i> Notas Destinadas
+      </h2>
+    </div>
+    <div class="page-actions">
+      <a href="{% url 'selecionar_empresa' %}" class="btn btn-outline-secondary btn-sm">Selecionar Empresa</a>
+      <button class="btn btn-outline-primary  btn-sm" onclick="abrirImportacao()">Importar DF-e</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-body">
+      <div id="processar-alert" class="alert d-none" role="alert"></div>
+      <div id="dashboard" class="row mb-3">
+        <div class="col-md-3">
+          <div class="border rounded p-2">
+            <div class="text-muted">Total</div>
+            <div id="dash-total" class="h5 mb-0">-</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="border rounded p-2">
+            <div class="text-muted">Autorizadas</div>
+            <div id="dash-aut" class="h5 mb-0">-</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="border rounded p-2">
+            <div class="text-muted">Canceladas</div>
+            <div id="dash-canc" class="h5 mb-0">-</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="border rounded p-2">
+            <div class="text-muted">Pendentes</div>
+            <div id="dash-pend" class="h5 mb-0">-</div>
+          </div>
+        </div>
+      </div>
+      <form class="row g-3 mb-3" method="get">
+        <div class="col-md-4">
+          <label>CNPJ</label>
+          <input type="text" name="cnpj" value="{{ request.GET.cnpj }}" class="form-control">
+        </div>
+        <div class="col-md-2 align-self-end">
+          <button class="btn btn-primary" id="btn-filtrar" type="submit">Filtrar</button>
+        </div>
+      </form>
+      <div class="table-responsive">
+        <table class="table table-striped">
+          <thead>
+            <tr>
+              <th>Número</th>
+              <th>Série</th>
+              <th>Emitente</th>
+              <th>Valor</th>
+              <th>Data</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for n in notas %}
+            <tr>
+              <td>{{ n.numero_nota_fiscal }}</td>
+              <td>{{ n.serie }}</td>
+              <td>{{ n.emitente_razao_social }}</td>
+              <td>{{ n.valor_total_nota }}</td>
+              <td>{{ n.data_emissao }}</td>
+              <td>
+                <button id="btn-processar-{{ n.empresa }}-{{ n.filial }}-{{ n.numero_nota_fiscal }}"
+                  class="btn btn-sm btn-success custom" data-action="processar" data-empresa="{{ n.empresa }}"
+                  data-filial="{{ n.filial }}" data-numero="{{ n.numero_nota_fiscal }}"
+                  onclick="processar('{{ n.empresa }}','{{ n.filial }}','{{ n.numero_nota_fiscal }}')">Processar</button>
+                <button id="btn-itens-{{ n.empresa }}-{{ n.filial }}-{{ n.numero_nota_fiscal }}"
+                  class="btn btn-sm btn-primary custom" data-action="itens" data-empresa="{{ n.empresa }}"
+                  data-filial="{{ n.filial }}" data-numero="{{ n.numero_nota_fiscal }}"
+                  onclick="abrirItens('{{ n.empresa }}','{{ n.filial }}','{{ n.numero_nota_fiscal }}')">Itens</button>
+                <button id="btn-manifestar-{{ n.empresa }}-{{ n.filial }}-{{ n.numero_nota_fiscal }}"
+                  class="btn btn-sm btn-warning custom" data-action="manifestar" data-empresa="{{ n.empresa }}"
+                  data-filial="{{ n.filial }}" data-numero="{{ n.numero_nota_fiscal }}"
+                  onclick="abrirManifestar('{{ n.empresa }}','{{ n.filial }}','{{ n.numero_nota_fiscal }}')">Manifestar</button>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6">Nenhuma nota encontrada.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% if is_paginated %}
+        <nav class="mt-3 mx-auto text-center justify-content-center">
+          <ul class="pagination">
+            {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Anterior</a>
+            </li>
+            {% endif %}
+            <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
+            {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Próxima</a></li>
+            {% endif %}
+          </ul>
+        </nav>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+<script>
+  async function processar(emp, fil, num) {
+    const slug = localStorage.getItem('slug');
+    const token = localStorage.getItem('access');
+    const url = `/api/${slug}/notasdestinadas/destinadas/${emp}/${fil}/${num}/processar/`;
+    const alertBox = document.getElementById('processar-alert');
+    alertBox.className = 'alert d-none';
+    try {
+      const resp = await fetch(url, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ entradas: window.__itensSelecionados || [] }) });
+      const data = await resp.json();
+      let text = '';
+      if (resp.ok) {
+        alertBox.className = 'alert alert-success';
+        text = data.message || 'Processamento concluído.';
+        if (Array.isArray(data.itens_pendentes) && data.itens_pendentes.length > 0) {
+          text += `\n${data.itens_pendentes.length} item(ns) pendente(s) para mapeamento.`;
+        }
+      } else if (resp.status === 409) {
+        alertBox.className = 'alert alert-warning';
+        const tit = data && data.titulospagar ? ` (título ${data.titulospagar.titu_titu})` : '';
+        text = (data.error || 'Título já existe') + tit;
+      } else {
+        alertBox.className = 'alert alert-danger';
+        text = data.error || data.detail || 'Erro ao processar nota.';
+      }
+      alertBox.textContent = text;
+      alertBox.classList.remove('d-none');
+    } catch (e) {
+      alertBox.className = 'alert alert-danger';
+      alertBox.textContent = 'Erro de comunicação com o servidor.';
+      alertBox.classList.remove('d-none');
+    }
+  }
+
+  async function abrirItens(emp, fil, num) {
+    const slug = localStorage.getItem('slug');
+    const token = localStorage.getItem('access');
+    const url = `/api/${slug}/notasdestinadas/destinadas/${emp}/${fil}/${num}/preprocessar/`;
+    const alertBox = document.getElementById('processar-alert');
+    alertBox.className = 'alert d-none';
+    try {
+      const resp = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+      let data;
+      const ct = resp.headers.get('content-type') || '';
+      if (ct.includes('application/json')) {
+        data = await resp.json();
+      } else {
+        const txt = await resp.text();
+        try { data = JSON.parse(txt); } catch { data = { error: txt }; }
+      }
+      if (!resp.ok) {
+        alertBox.className = 'alert alert-danger';
+        alertBox.textContent = data.error || data.detail || `Erro ao carregar itens (status ${resp.status})`;
+        alertBox.classList.remove('d-none');
+        return;
+      }
+      renderModalItens(emp, fil, num, Array.isArray(data.itens) ? data.itens : []);
+    } catch (e) {
+      alertBox.className = 'alert alert-danger';
+      alertBox.textContent = 'Erro de comunicação com o servidor.';
+      alertBox.classList.remove('d-none');
+    }
+  }
+
+  async function confirmarProcessamento() {
+    const modal = document.getElementById('itens-modal');
+    const emp = modal.dataset.emp;
+    const fil = modal.dataset.fil;
+    const num = modal.dataset.num;
+    const slug = localStorage.getItem('slug');
+    const token = localStorage.getItem('access');
+    const url = `/api/${slug}/notasdestinadas/destinadas/${emp}/${fil}/${num}/confirmar/`;
+    const alertBox = document.getElementById('processar-alert');
+    alertBox.className = 'alert d-none';
+    try {
+      const resp = await fetch(url, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ entradas: window.__itensSelecionados || [] }) });
+      const data = await resp.json();
+      let text = '';
+      if (resp.ok) {
+        text = data.message || 'Processamento concluído.';
+        if (Array.isArray(data.itens_pendentes) && data.itens_pendentes.length > 0) {
+          text += `\n${data.itens_pendentes.length} item(ns) pendente(s) para mapeamento.`;
+        }
+        const modalEl = bootstrap.Modal.getInstance(modal);
+        modalEl.hide();
+        alertBox.className = 'alert alert-success';
+      } else if (resp.status === 409) {
+        alertBox.className = 'alert alert-warning';
+        const tit = data && data.titulospagar ? ` (título ${data.titulospagar.titu_titu})` : '';
+        text = (data.error || 'Título já existe') + tit;
+      } else {
+        alertBox.className = 'alert alert-danger';
+        text = data.error || data.detail || 'Erro ao processar nota.';
+      }
+      alertBox.textContent = text;
+      alertBox.classList.remove('d-none');
+    } catch (e) {
+      alertBox.className = 'alert alert-danger';
+      alertBox.textContent = 'Erro de comunicação com o servidor.';
+      alertBox.classList.remove('d-none');
+    }
+  }
+
+  async function carregarDashboard() {
+    const slug = localStorage.getItem('slug');
+    const token = localStorage.getItem('access');
+    const url = `/api/${slug}/notasdestinadas/destinadas/dashboard/`;
+    try {
+      const resp = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+      const data = await resp.json();
+      if (resp.ok) {
+        document.getElementById('dash-total').textContent = data.total_notas;
+        document.getElementById('dash-aut').textContent = data.autorizadas;
+        document.getElementById('dash-canc').textContent = data.canceladas;
+        document.getElementById('dash-pend').textContent = data.pendentes;
+      }
+    } catch (e) { }
+  }
+
+  document.addEventListener('DOMContentLoaded', carregarDashboard);
+
+  function abrirManifestar(emp, fil, num) {
+    const modal = document.getElementById('manifest-modal');
+    modal.dataset.emp = emp;
+    modal.dataset.fil = fil;
+    modal.dataset.num = num;
+    const slug = localStorage.getItem('slug');
+    const token = localStorage.getItem('access');
+    const form = document.getElementById('manifest-form');
+    const info = document.getElementById('manifest-cert-info');
+    info.textContent = '';
+    form.uf.value = '';
+    form.cnpj.value = '';
+    form.ambiente.value = '1';
+    const url = `/api/${slug}/licencas/filiais-crud/${fil}/`;
+    const fields = document.getElementById('manifest-cert-fields');
+    fields.style.display = '';
+    fetch(url, { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => {
+        if (d) {
+          form.uf.value = d.empr_esta || '';
+          form.cnpj.value = d.empr_docu || '';
+          form.ambiente.value = String(d.empr_ambi_nfe || '1');
+          if (d.has_certificado) {
+            info.textContent = d.certificado_nome ? `Certificado: ${d.certificado_nome}` : 'Certificado A1 cadastrado na filial';
+            fields.style.display = 'none';
+          } else {
+            info.textContent = 'Sem certificado A1 cadastrado na filial';
+            fields.style.display = '';
+          }
+        }
+      })
+      .catch(() => { });
+    const modalEl = new bootstrap.Modal(modal);
+    modalEl.show();
+  }
+
+  async function executarManifestar() {
+    const modal = document.getElementById('manifest-modal');
+    const emp = modal.dataset.emp; const fil = modal.dataset.fil; const num = modal.dataset.num;
+    const slug = localStorage.getItem('slug');
+    const token = localStorage.getItem('access');
+    const url = `/api/${slug}/notasdestinadas/destinadas/${emp}/${fil}/${num}/manifestar/`;
+    const form = document.getElementById('manifest-form');
+    const body = {
+      uf: form.uf.value,
+      cnpj_destinatario: form.cnpj.value,
+      caminho_pfx: form.caminho_pfx.value,
+      senha_pfx: form.senha_pfx.value,
+      ambiente: parseInt(form.ambiente.value || '1')
+    };
+    const alertBox = document.getElementById('processar-alert');
+    alertBox.className = 'alert d-none';
+    try {
+      const resp = await fetch(url, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const data = await resp.json();
+      let text = '';
+      if (resp.ok) {
+        text = `Manifestação registrada. Protocolo: ${data.protocolo || '-'}`;
+        const modalEl = bootstrap.Modal.getInstance(modal);
+        modalEl.hide();
+        alertBox.className = 'alert alert-success';
+      } else {
+        alertBox.className = 'alert alert-danger';
+        text = data.error || data.detail || 'Erro ao manifestar.';
+      }
+      alertBox.textContent = text;
+      alertBox.classList.remove('d-none');
+    } catch (e) {
+      alertBox.className = 'alert alert-danger';
+      alertBox.textContent = 'Erro de comunicação com o servidor.';
+      alertBox.classList.remove('d-none');
+    }
+  }
+
+  window.processar = processar;
+  window.abrirItens = abrirItens;
+  window.confirmarProcessamento = confirmarProcessamento;
+  window.carregarDashboard = carregarDashboard;
+  window.abrirManifestar = abrirManifestar;
+  window.executarManifestar = executarManifestar;
+</script>
+{% include 'NotasDestinadas/modal_produtos.html' %}
+{% include 'NotasDestinadas/modal_importardfe.html' %}
+{% include 'NotasDestinadas/modal_manifestar.html' %}
+{%endblock%}

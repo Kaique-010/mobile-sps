@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block title %}Filiais{% endblock %}
+{% block content %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
+<div class="container page-container">
+  <div class="page-header-custom">
+    <div class="container align-items-center">
+      <h2 class="page-title">
+        <i class="bi bi-building-check fs-4"></i> Filiais
+      </h2>
+    </div>
+    <div class="page-actions">
+      <a href="{% url 'filial_create_web' slug=slug %}" class="btn btn-success btn-sm">
+        <i class="bi bi-plus-lg"></i> Nova Filial
+      </a>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-body">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Id</th>
+            <th>Empresa</th>
+            <th>Nome</th>
+            <th>CNPJ</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in filiais %}
+          <tr>
+            <td>{{ f.empr_empr }}</td>
+            <td>{{ f.empr_codi }}</td>
+            <td>{{ f.empr_nome }}</td>
+            <td>{{ f.empr_docu }}</td>
+            <td><a class="btn btn-sm btn-outline-primary"
+                href="{% url 'filial_edit_web' slug=slug empr_empr=f.empr_empr %}">Editar</a></td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5">Nenhuma filial.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

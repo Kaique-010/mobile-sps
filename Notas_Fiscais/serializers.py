@@ -193,5 +193,3 @@ class NotaFiscalListSerializer(BancoContextMixin, serializers.ModelSerializer):
             return "Pendente"
     
     
-
-

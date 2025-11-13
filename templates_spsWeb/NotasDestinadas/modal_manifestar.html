@@ -1,0 +1,31 @@
+<div class="modal fade" id="manifest-modal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Manifestar Ciência da Operação</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="manifest-form">
+          <div class="mb-2"><label>UF</label><input name="uf" class="form-control" required></div>
+          <div class="mb-2"><label>CNPJ Destinatário</label><input name="cnpj" class="form-control" required></div>
+          <div class="mb-2"><small id="manifest-cert-info" class="text-muted"></small></div>
+          <div id="manifest-cert-fields">
+            <div class="mb-2"><label>Caminho .pfx</label><input name="caminho_pfx" class="form-control" placeholder="usará certificado da filial"></div>
+            <div class="mb-2"><label>Senha .pfx</label><input name="senha_pfx" type="password" class="form-control" placeholder="usará senha salva da filial"></div>
+          </div>
+          <div class="mb-2"><label>Ambiente</label>
+            <select name="ambiente" class="form-select">
+              <option value="1">Produção</option>
+              <option value="2">Homologação</option>
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+        <button type="button" class="btn btn-primary" onclick="executarManifestar()">Manifestar</button>
+      </div>
+    </div>
+  </div>
+</div>

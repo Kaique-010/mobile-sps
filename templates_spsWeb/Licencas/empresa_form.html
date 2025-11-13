@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Cadastrar Empresa{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
+<div class="container page-container">
+  <div class="page-header-custom">
+    <h2 class="page-title"><i class="bi bi-buildings"></i> Cadastro de Empresa</h2>
+    <div class="page-actions">
+      <a href="{% url 'empresas_web' slug=slug %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Voltar à Lista
+      </a>
+    </div>
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="card">
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+        <ul class="nav nav-tabs" id="empresaTabs">
+          <li class="nav-item">
+            <a class="nav-link active" id="empresa-tab" data-bs-toggle="tab" href="#empresa">Dados da Empresa</a>
+          </li>
+        </ul>
+
+        <div class="tab-content mt-3">
+          <div class="tab-pane fade show active" id="empresa">
+            <div class="row">
+              <div class="col-md-4">
+                <label for="{{ form.empr_codi.id_for_label }}">Código</label>
+                {{ form.empr_codi }}
+              </div>
+              <div class="col-md-4">
+                <label for="{{ form.empr_nome.id_for_label }}">Nome</label>
+                {{ form.empr_nome }}
+              </div>
+              <div class="col-md-4">
+                <label for="{{ form.empr_docu.id_for_label }}">CNPJ</label>
+                {{ form.empr_docu }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-3 form-actions">
+          <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> Salvar</button>
+          <a href="{% url 'empresas_web' slug=slug %}" class="btn btn-secondary">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <footer class="text-center mt-4">
+    <p class="text-muted">&copy; {{ current_year }} Spartacus Sistemas</p>
+  </footer>
+</div>
+{% endblock %}

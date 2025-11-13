@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Cadastrar Filial{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
+<div class="container page-container">
+  <div class="page-header-custom">
+    <h2 class="page-title"><i class="bi bi-building"></i> Cadastro de Filial</h2>
+    <div class="page-actions">
+      <a href="{% url 'filiais_web' slug=slug %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Voltar à Lista
+      </a>
+    </div>
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="card">
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <ul class="nav nav-tabs" id="filialTabs">
+          <li class="nav-item">
+            <a class="nav-link active" id="principal-tab" data-bs-toggle="tab" href="#principal">Dados Principais</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="endereco-tab" data-bs-toggle="tab" href="#endereco">Endereço</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="contato-tab" data-bs-toggle="tab" href="#contato">Contato</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="certificados-tab" data-bs-toggle="tab" href="#certificados">Certificados Digitais</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="smtp-tab" data-bs-toggle="tab" href="#smtp">SMTP</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="proxy-tab" data-bs-toggle="tab" href="#proxy">Proxy</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="nfe-tab" data-bs-toggle="tab" href="#nfe">NF-e/CT-e/NFS-e</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="outras-tab" data-bs-toggle="tab" href="#outras">Outras Configurações</a>
+          </li>
+        </ul>
+
+        <div class="tab-content mt-3">
+          <div class="tab-pane fade show active" id="principal">
+            <div class="row">
+              <div class="col-md-3"><label for="{{ form.empr_empr.id_for_label }}">ID Filial</label>{{ form.empr_empr }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_codi.id_for_label }}">Código da Empresa</label>{{ form.empr_codi }}</div>
+              <div class="col-md-6"><label for="{{ form.empr_nome.id_for_label }}">Nome da Filial</label>{{ form.empr_nome }}</div>
+            </div>
+            <div class="row mt-2">
+              <div class="col-md-4"><label for="{{ form.empr_docu.id_for_label }}">CNPJ da Filial</label>{{ form.empr_docu }}</div>
+              <div class="col-md-4"><label for="{{ form.empr_insc_esta.id_for_label }}">Inscrição Estadual</label>{{ form.empr_insc_esta }}</div>
+              <div class="col-md-4"><label for="{{ form.empr_insc_muni.id_for_label }}">Inscrição Municipal</label>{{ form.empr_insc_muni }}</div>
+            </div>
+            <div class="row mt-2">
+              <div class="col-md-3"><label for="{{ form.empr_sufr.id_for_label }}">SUFRAMA</label>{{ form.empr_sufr }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_cei.id_for_label }}">CEI</label>{{ form.empr_cei }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_nire.id_for_label }}">NIRE</label>{{ form.empr_nire }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_data_nire.id_for_label }}">Data do NIRE</label>{{ form.empr_data_nire }}</div>
+            </div>
+            <div class="row mt-2">
+              <div class="col-md-3"><label for="{{ form.empr_cnae.id_for_label }}">CNAE</label>{{ form.empr_cnae }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_cae.id_for_label }}">CAE</label>{{ form.empr_cae }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_natu_juri.id_for_label }}">Natureza Jurídica</label>{{ form.empr_natu_juri }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_regi.id_for_label }}">Registro</label>{{ form.empr_regi }}</div>
+            </div>
+            <div class="row mt-2">
+              <div class="col-md-3"><label for="{{ form.empr_data_regi.id_for_label }}">Data Registro</label>{{ form.empr_data_regi }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_regi_junt.id_for_label }}">Registro Junta</label>{{ form.empr_regi_junt }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_regi_outr.id_for_label }}">Outros Registros</label>{{ form.empr_regi_outr }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_teso.id_for_label }}">Tesouraria</label>{{ form.empr_teso }}</div>
+            </div>
+          </div>
+
+          <div class="tab-pane fade" id="endereco">
+            <div class="row">
+              <div class="col-md-3"><label for="{{ form.empr_cep.id_for_label }}">CEP</label>{{ form.empr_cep }}</div>
+              <div class="col-md-5"><label for="{{ form.empr_ende.id_for_label }}">Endereço</label>{{ form.empr_ende }}</div>
+              <div class="col-md-2"><label for="{{ form.empr_nume.id_for_label }}">Número</label>{{ form.empr_nume }}</div>
+              <div class="col-md-2"><label for="{{ form.empr_comp.id_for_label }}">Complemento</label>{{ form.empr_comp }}</div>
+            </div>
+            <div class="row mt-2">
+              <div class="col-md-4"><label for="{{ form.empr_bair.id_for_label }}">Bairro</label>{{ form.empr_bair }}</div>
+              <div class="col-md-4"><label for="{{ form.empr_cida.id_for_label }}">Cidade</label>{{ form.empr_cida }}</div>
+              <div class="col-md-2"><label for="{{ form.empr_esta.id_for_label }}">UF</label>{{ form.empr_esta }}</div>
+              <div class="col-md-2"><label for="{{ form.empr_pais.id_for_label }}">País</label>{{ form.empr_pais }}</div>
+            </div>
+            <div class="row mt-2">
+              <div class="col-md-4"><label for="{{ form.empr_codi_cida.id_for_label }}">Código Cidade</label>{{ form.empr_codi_cida }}</div>
+              <div class="col-md-4"><label for="{{ form.empr_codi_esta.id_for_label }}">Código Estado</label>{{ form.empr_codi_esta }}</div>
+              <div class="col-md-4"><label for="{{ form.empr_codi_pais.id_for_label }}">Código País</label>{{ form.empr_codi_pais }}</div>
+            </div>
+          </div>
+
+          <div class="tab-pane fade" id="contato">
+            <div class="row">
+              <div class="col-md-3"><label for="{{ form.empr_fone.id_for_label }}">Telefone</label>{{ form.empr_fone }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_resp.id_for_label }}">Responsável</label>{{ form.empr_resp }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_celu.id_for_label }}">Celular</label>{{ form.empr_celu }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_emai.id_for_label }}">Email</label>{{ form.empr_emai }}</div>
+            </div>
+            <div class="row mt-2">
+              <div class="col-md-6"><label for="{{ form.empr_emai_empr.id_for_label }}">Email Empresarial</label>{{ form.empr_emai_empr }}</div>
+              <div class="col-md-6"><label for="{{ form.empr_pagi.id_for_label }}">Página Web</label>{{ form.empr_pagi }}</div>
+            </div>
+          </div>
+
+          <div class="tab-pane fade" id="certificados">
+            <div class="row">
+              <div class="col-md-6">
+                <label>Certificado A1 (p12/pfx)</label>
+                {{ form.certificado }}
+                {% if has_cert %}
+                  <div class="mt-2">
+                    <span class="text-muted">Atual: {{ cert_name }}</span>
+                    <a class="btn btn-outline-secondary btn-sm ms-2" href="{% url 'filiais-crud-certificado' pk=object.empr_empr slug=slug %}">Baixar</a>
+                  </div>
+                {% endif %}
+              </div>
+              <div class="col-md-6">
+                <label for="id_senha_certificado">Senha do Certificado</label>
+                {{ form.senha_certificado }}
+              </div>
+            </div>
+            <div class="row mt-3">
+              <div class="col-md-6"><label for="{{ form.empr_seri_cert_cte.id_for_label }}">Série Cert. CT-e</label>{{ form.empr_seri_cert_cte }}</div>
+              <div class="col-md-6"><label for="{{ form.empr_senh_cert_cte.id_for_label }}">Senha Cert. CT-e</label>{{ form.empr_senh_cert_cte }}</div>
+            </div>
+            <div class="row mt-2">
+              <div class="col-md-6"><label for="{{ form.empr_cert_nfs.id_for_label }}">Certificado NFS-e</label>{{ form.empr_cert_nfs }}</div>
+              <div class="col-md-6"><label for="{{ form.empr_senh_cert_nfs.id_for_label }}">Senha Cert. NFS-e</label>{{ form.empr_senh_cert_nfs }}</div>
+            </div>
+          </div>
+
+          <div class="tab-pane fade" id="smtp">
+            <div class="row">
+              <div class="col-md-3"><label for="{{ form.empr_smtp_host.id_for_label }}">SMTP Host</label>{{ form.empr_smtp_host }}</div>
+              <div class="col-md-2"><label for="{{ form.empr_smtp_port.id_for_label }}">SMTP Porta</label>{{ form.empr_smtp_port }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_smtp_usua.id_for_label }}">SMTP Usuário</label>{{ form.empr_smtp_usua }}</div>
+              <div class="col-md-2"><label for="{{ form.empr_smtp_senh.id_for_label }}">SMTP Senha</label>{{ form.empr_smtp_senh }}</div>
+              <div class="col-md-2"><label for="{{ form.empr_smtp_emai.id_for_label }}">SMTP Email</label>{{ form.empr_smtp_emai }}</div>
+            </div>
+            <div class="row mt-2">
+              <div class="col-md-2"><label for="{{ form.empr_cone_segu.id_for_label }}">Conexão Segura</label>{{ form.empr_cone_segu }}</div>
+              <div class="col-md-2"><label for="{{ form.empr_ssl.id_for_label }}">SSL</label>{{ form.empr_ssl }}</div>
+              <div class="col-md-2"><label for="{{ form.empr_tls.id_for_label }}">TLS</label>{{ form.empr_tls }}</div>
+            </div>
+            <hr>
+            <div class="row">
+              <div class="col-md-3"><label for="{{ form.empr_smtp_host_cte.id_for_label }}">SMTP Host CT-e</label>{{ form.empr_smtp_host_cte }}</div>
+              <div class="col-md-2"><label for="{{ form.empr_smtp_port_cte.id_for_label }}">SMTP Porta CT-e</label>{{ form.empr_smtp_port_cte }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_smtp_usua_cte.id_for_label }}">SMTP Usuário CT-e</label>{{ form.empr_smtp_usua_cte }}</div>
+              <div class="col-md-2"><label for="{{ form.empr_smtp_senh_cte.id_for_label }}">SMTP Senha CT-e</label>{{ form.empr_smtp_senh_cte }}</div>
+              <div class="col-md-2"><label for="{{ form.empr_smtp_emai_cte.id_for_label }}">SMTP Email CT-e</label>{{ form.empr_smtp_emai_cte }}</div>
+            </div>
+            <div class="row mt-2">
+              <div class="col-md-2"><label for="{{ form.empr_cone_segu_cte.id_for_label }}">Conexão Segura CT-e</label>{{ form.empr_cone_segu_cte }}</div>
+              <div class="col-md-2"><label for="{{ form.empr_ssl_cte.id_for_label }}">SSL CT-e</label>{{ form.empr_ssl_cte }}</div>
+              <div class="col-md-2"><label for="{{ form.empr_tls_cte.id_for_label }}">TLS CT-e</label>{{ form.empr_tls_cte }}</div>
+            </div>
+          </div>
+
+          <div class="tab-pane fade" id="proxy">
+            <div class="row">
+              <div class="col-md-4"><label for="{{ form.empr_prox_host.id_for_label }}">Proxy Host</label>{{ form.empr_prox_host }}</div>
+              <div class="col-md-2"><label for="{{ form.empr_prox_port.id_for_label }}">Proxy Porta</label>{{ form.empr_prox_port }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_prox_usua.id_for_label }}">Proxy Usuário</label>{{ form.empr_prox_usua }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_prox_senh.id_for_label }}">Proxy Senha</label>{{ form.empr_prox_senh }}</div>
+            </div>
+            <hr>
+            <div class="row">
+              <div class="col-md-4"><label for="{{ form.empr_prox_host_cte.id_for_label }}">Proxy Host CT-e</label>{{ form.empr_prox_host_cte }}</div>
+              <div class="col-md-2"><label for="{{ form.empr_prox_port_cte.id_for_label }}">Proxy Porta CT-e</label>{{ form.empr_prox_port_cte }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_prox_user_cte.id_for_label }}">Proxy Usuário CT-e</label>{{ form.empr_prox_user_cte }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_prox_pass_cte.id_for_label }}">Proxy Senha CT-e</label>{{ form.empr_prox_pass_cte }}</div>
+            </div>
+            <hr>
+            <div class="row">
+              <div class="col-md-4"><label for="{{ form.empr_prox_host_nfs.id_for_label }}">Proxy Host NFS-e</label>{{ form.empr_prox_host_nfs }}</div>
+              <div class="col-md-2"><label for="{{ form.empr_prox_port_nfs.id_for_label }}">Proxy Porta NFS-e</label>{{ form.empr_prox_port_nfs }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_prox_usua_nfs.id_for_label }}">Proxy Usuário NFS-e</label>{{ form.empr_prox_usua_nfs }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_prox_senh_nfs.id_for_label }}">Proxy Senha NFS-e</label>{{ form.empr_prox_senh_nfs }}</div>
+            </div>
+          </div>
+
+          <div class="tab-pane fade" id="nfe">
+            <div class="row">
+              <div class="col-md-2"><label for="{{ form.empr_ambi_nfe.id_for_label }}">Ambiente NF-e</label>{{ form.empr_ambi_nfe }}</div>
+              <div class="col-md-2"><label for="{{ form.empr_lote_nfe.id_for_label }}">Lote NF-e</label>{{ form.empr_lote_nfe }}</div>
+              <div class="col-md-2"><label for="{{ form.empr_lote_even_nfe.id_for_label }}">Eventos NF-e</label>{{ form.empr_lote_even_nfe }}</div>
+              <div class="col-md-2"><label for="{{ form.empr_mdf_nfe.id_for_label }}">MDF-e NF-e</label>{{ form.empr_mdf_nfe }}</div>
+              <div class="col-md-2"><label for="{{ form.empr_cte_esta.id_for_label }}">CT-e Ativo</label>{{ form.empr_cte_esta }}</div>
+              <div class="col-md-2"><label for="{{ form.empr_mdf_cte.id_for_label }}">MDF-e CT-e</label>{{ form.empr_mdf_cte }}</div>
+            </div>
+            <div class="row mt-2">
+              <div class="col-md-2"><label for="{{ form.empr_ambi_cte.id_for_label }}">Ambiente CT-e</label>{{ form.empr_ambi_cte }}</div>
+              <div class="col-md-2"><label for="{{ form.empr_lote_cte.id_for_label }}">Lote CT-e</label>{{ form.empr_lote_cte }}</div>
+              <div class="col-md-2"><label for="{{ form.empr_lote_even_cte.id_for_label }}">Eventos CT-e</label>{{ form.empr_lote_even_cte }}</div>
+              <div class="col-md-2"><label for="{{ form.empr_ambi_nfe_nfs.id_for_label }}">Ambiente NFS-e</label>{{ form.empr_ambi_nfe_nfs }}</div>
+              <div class="col-md-2"><label for="{{ form.empr_rps.id_for_label }}">RPS</label>{{ form.empr_rps }}</div>
+              <div class="col-md-2"><label for="{{ form.empr_lote_nfes.id_for_label }}">Lote NFS-e</label>{{ form.empr_lote_nfes }}</div>
+            </div>
+            <div class="row mt-2">
+              <div class="col-md-3"><label for="{{ form.empr_seri_nfes.id_for_label }}">Série NFS-e</label>{{ form.empr_seri_nfes }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_regi_trib_serv.id_for_label }}">Regime Trib. Serviços</label>{{ form.empr_regi_trib_serv }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_simp_naci_serv.id_for_label }}">Simples Nacional Serv.</label>{{ form.empr_simp_naci_serv }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_temp_resp_nfs.id_for_label }}">Tempo Resp. NFS-e</label>{{ form.empr_temp_resp_nfs }}</div>
+            </div>
+            <div class="row mt-2">
+              <div class="col-md-3"><label for="{{ form.empr_codi_serv.id_for_label }}">Código Serviço</label>{{ form.empr_codi_serv }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_exig_iss.id_for_label }}">Exigência ISS</label>{{ form.empr_exig_iss }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_perf_sped.id_for_label }}">Perfil SPED</label>{{ form.empr_perf_sped }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_ativ_sped.id_for_label }}">Ativar SPED</label>{{ form.empr_ativ_sped }}</div>
+            </div>
+          </div>
+
+          <div class="tab-pane fade" id="outras">
+            <div class="row">
+              <div class="col-md-3"><label for="{{ form.empr_apur_ipi.id_for_label }}">Apuração IPI</label>{{ form.empr_apur_ipi }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_lote_cart_corr.id_for_label }}">Lote CC-e</label>{{ form.empr_lote_cart_corr }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_nsu.id_for_label }}">NSU</label>{{ form.empr_nsu }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_danf_pais.id_for_label }}">DANF-e País</label>{{ form.empr_danf_pais }}</div>
+            </div>
+            <div class="row mt-2">
+              <div class="col-md-3"><label for="{{ form.empr_senh_elot.id_for_label }}">Senha E-lote</label>{{ form.empr_senh_elot }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_id_toke.id_for_label }}">ID Token</label>{{ form.empr_id_toke }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_csn_toke.id_for_label }}">CSN Token</label>{{ form.empr_csn_toke }}</div>
+              <div class="col-md-3"><label for="{{ form.empr_tipo_empr_ecd.id_for_label }}">Tipo Emp. ECD</label>{{ form.empr_tipo_empr_ecd }}</div>
+            </div>
+            <div class="row mt-2">
+              <div class="col-md-6"><label for="{{ form.empr_cabe_empr.id_for_label }}">Cabeçalho Empresa</label>{{ form.empr_cabe_empr }}</div>
+              <div class="col-md-6"><label for="{{ form.empr_desc_serv.id_for_label }}">Descrição Serviços</label>{{ form.empr_desc_serv }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-3 form-actions">
+          <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> Salvar</button>
+          <a href="{% url 'filiais_web' slug=slug %}" class="btn btn-secondary">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <footer class="text-center mt-4">
+    <p class="text-muted">&copy; {{ current_year }} Spartacus Sistemas</p>
+  </footer>
+</div>
+{% endblock %}

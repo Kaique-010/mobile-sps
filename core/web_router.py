@@ -13,6 +13,7 @@ urlpatterns = [
     path("<slug:slug>/produtos/", include("Produtos.web_urls")),
     path("<slug:slug>/pedidos/", include("Pedidos.web_urls")),
     path("<slug:slug>/orcamentos/", include("Orcamentos.web_urls")),
+    path("<slug:slug>/os/", include("O_S.web_urls")),
     path(
         "<slug:slug>/centrosdecustos/",
         include(("CentrodeCustos.web_urls", "centrosdecustos"), namespace="centrosdecustos"),
@@ -21,4 +22,6 @@ urlpatterns = [
     path("<slug:slug>/contas-a-pagar/", include("contas_a_pagar.web_urls")),
     path("<slug:slug>/contas-a-receber/", include("contas_a_receber.web_urls")),
     path("<slug:slug>/fluxo-de-caixa/", include("Financeiro.web_urls")),
+    path("<slug:slug>/licencas/", include("Licencas.web_urls")),
+    path("<slug:slug>/notas-destinadas/", include("NotasDestinadas.web_urls")),
 ]

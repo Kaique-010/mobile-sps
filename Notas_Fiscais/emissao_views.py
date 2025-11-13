@@ -14,6 +14,10 @@ from .models import NotaFiscal
 from .serializers import NotaFiscalSerializer
 from .emissao_service import EmissaoNFeService
 from core.utils import get_licenca_db_config
+from Licencas.models import Filiais
+from Licencas.crypto import decrypt_bytes, decrypt_str
+import tempfile
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -22,18 +26,88 @@ class EmissaoNFeViewSet(viewsets.ViewSet):
     """ViewSet para emissão de NFe"""
     
     def _get_emissao_service(self, request):
-        """Obtém instância do serviço de emissão configurado"""
-        # Configurações do certificado (devem vir das configurações da empresa)
-        certificado_path = getattr(settings, 'NFE_CERTIFICADO_PATH', '')
-        senha_certificado = getattr(settings, 'NFE_CERTIFICADO_SENHA', '')
+        """Obtém instância do serviço de emissão configurado, priorizando o certificado binário da Filial."""
+        banco = get_licenca_db_config(request)
+        empresa_id = (
+            request.headers.get('X-Empresa') or
+            request.session.get('empresa_id') or
+            (request.data.get('dados_nfe', {}) or {}).get('empresa')
+        )
+        filial_id = (
+            request.headers.get('X-Filial') or
+            request.session.get('filial_id') or
+            (request.data.get('dados_nfe', {}) or {}).get('filial')
+        )
+
+        certificado_path = None
+        senha_certificado = None
         uf = getattr(settings, 'NFE_UF', 'PR')
         homologacao = getattr(settings, 'NFE_HOMOLOGACAO', True)
-        
+
+        try:
+            f = None
+            if banco and empresa_id and filial_id:
+                f = Filiais.objects.using(banco).filter(empr_empr=int(filial_id), empr_codi=int(empresa_id)).first()
+            if f:
+                uf = f.empr_esta or uf
+                try:
+                    ambiente = int(f.empr_ambi_nfe or (2 if homologacao else 1))
+                except Exception:
+                    ambiente = (2 if homologacao else 1)
+                homologacao = (ambiente == 2)
+                if f.empr_senh_cert:
+                    try:
+                        senha_certificado = decrypt_str(f.empr_senh_cert)
+                    except Exception:
+                        senha_certificado = None
+                if f.empr_cert_digi:
+                    try:
+                        token = f.empr_cert_digi
+                        import cryptography.fernet
+                        if isinstance(token, memoryview):
+                            token = token.tobytes()
+                        elif isinstance(token, bytearray):
+                            token = bytes(token)
+                        elif isinstance(token, str):
+                            token = token.encode('utf-8')
+                        data = None
+                        try:
+                            data = decrypt_bytes(token)
+                        except cryptography.fernet.InvalidToken:
+                            data = None
+                        if not data:
+                            try:
+                                from cryptography.hazmat.primitives.serialization.pkcs12 import load_key_and_certificates
+                                load_key_and_certificates(token, (senha_certificado or '').encode('utf-8'))
+                                data = token
+                            except Exception:
+                                data = None
+                        if data:
+                            tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.pfx')
+                            tmp.write(data)
+                            tmp.flush()
+                            tmp.close()
+                            certificado_path = tmp.name
+                    except Exception:
+                        certificado_path = None
+                if not certificado_path:
+                    pfx = (f.empr_cert or '').strip()
+                    if pfx:
+                        if pfx.startswith('~'):
+                            pfx = os.path.expanduser(pfx)
+                        certificado_path = os.path.normpath(pfx)
+        except Exception:
+            pass
+
         if not certificado_path or not senha_certificado:
-            raise ValidationError({
-                'error': 'Certificado digital não configurado'
-            })
-        
+            certificado_path = certificado_path or getattr(settings, 'NFE_CERTIFICADO_PATH', '')
+            senha_certificado = senha_certificado or getattr(settings, 'NFE_CERTIFICADO_SENHA', '')
+
+        if not certificado_path or not os.path.isfile(certificado_path):
+            raise ValidationError({'error': 'Certificado digital A1 não encontrado.'})
+        if not senha_certificado:
+            raise ValidationError({'error': 'Senha do certificado A1 é obrigatória.'})
+
         return EmissaoNFeService(
             certificado_path=certificado_path,
             senha_certificado=senha_certificado,

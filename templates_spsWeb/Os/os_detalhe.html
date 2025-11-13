@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block title %}OS {{ object.os_os }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">OS {{ object.os_os }}</h3>
+    <div>
+      <a class="btn btn-primary" href="/web/login/" data-slug-route="/web/{slug}/os/{{ object.pk }}/editar/">Editar</a>
+      <a class="btn btn-outline-secondary" href="/web/login/" data-slug-route="/web/{slug}/os/{{ object.pk }}/imprimir/">Imprimir</a>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-4">
+      <div class="card"><div class="card-body">
+        <div><strong>Data:</strong> {{ object.os_data_aber }}</div>
+        <div><strong>Cliente:</strong> {{ cliente_nome }}</div>
+        <div><strong>Responsável:</strong> {{ vendedor_nome }}</div>
+        <div><strong>Status:</strong> {{ object.os_stat_os }}</div>
+        <div><strong>Situação:</strong> {{ object.os_situ }}</div>
+      </div></div>
+    </div>
+    <div class="col-md-8">
+      <div class="card"><div class="card-body">
+        <div class="row">
+          <div class="col-md-4">
+            <div class="mb-2"><strong>Subtotal:</strong> R$ {{ object.os_topr }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="mb-2"><strong>Desconto:</strong> R$ {{ object.os_desc }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="mb-2"><strong>Total:</strong> R$ {{ object.os_tota }}</div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+</div>
+{% endblock %}

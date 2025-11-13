@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block title %}Impressão OS {{ object.os_os }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <h3 class="mb-3">OS {{ object.os_os }}</h3>
+  <div class="mb-2"><strong>Data:</strong> {{ object.os_data_aber }}</div>
+  <div class="mb-2"><strong>Cliente:</strong> {{ cliente_nome }}</div>
+  <div class="mb-2"><strong>Responsável:</strong> {{ vendedor_nome }}</div>
+  <div class="mb-2"><strong>Total:</strong> R$ {{ object.os_tota }}</div>
+</div>
+{% endblock %}

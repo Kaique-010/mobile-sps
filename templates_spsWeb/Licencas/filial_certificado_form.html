@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Certificado A1{% endblock %}
+{% block content %}
+<div class="container page-container">
+  <div class="page-header-custom">
+    <h2 class="page-title">Upload Certificado A1</h2>
+    <div class="page-actions">
+      <a href="{% url 'selecionar_empresa' %}" class="btn btn-outline-secondary btn-sm">Selecionar Empresa</a>
+    </div>
+  </div>
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+  <div class="card">
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data" id="certForm">
+        {% csrf_token %}
+        {{ form.empresa_id }}
+        {{ form.filial_id }}
+        <div class="row">
+          <div class="col-md-6">
+            <label for="id_certificado">Arquivo (.p12/.pfx)</label>
+            {{ form.certificado }}
+          </div>
+          <div class="col-md-6">
+            <label for="id_senha">Senha do Certificado</label>
+            {{ form.senha }}
+          </div>
+        </div>
+        <div class="mt-3">
+          <button type="submit" class="btn btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <footer class="text-center mt-4">
+    <p class="text-muted">&copy; {{ current_year }} Spartacus Sistemas</p>
+  </footer>
+ </div>
+ <script>
+  (function(){
+    const empresaId = localStorage.getItem('empresa_id');
+    const filialId = localStorage.getItem('filial_id');
+    const empInput = document.getElementById('id_empresa_id');
+    const filInput = document.getElementById('id_filial_id');
+    if (empresaId && empInput) empInput.value = empresaId;
+    if (filialId && filInput) filInput.value = filialId;
+  })();
+ </script>
+{% endblock %}

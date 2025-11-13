@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Ordens de Serviço{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">Ordens de Serviço</h3>
+    <a class="btn btn-primary" href="/web/login/" data-slug-route="/web/{slug}/os/criar/">Nova OS</a>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead>
+            <tr>
+              <th>Número</th>
+              <th>Data</th>
+              <th>Cliente</th>
+              <th>Responsável</th>
+              <th>Status</th>
+              <th>Total</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for o in os %}
+            <tr>
+              <td>{{ o.os_os }}</td>
+              <td>{{ o.os_data_aber }}</td>
+              <td>{{ o.cliente_nome }}</td>
+              <td>{{ o.vendedor_nome }}</td>
+              <td>{{ o.os_stat_os }}</td>
+              <td>R$ {{ o.os_tota }}</td>
+              <td class="text-end">
+                <a class="btn btn-sm btn-outline-secondary" href="/web/login/" data-slug-route="/web/{slug}/os/{{ o.pk }}/">Detalhe</a>
+                <a class="btn btn-sm btn-outline-primary" href="/web/login/" data-slug-route="/web/{slug}/os/{{ o.pk }}/editar/">Editar</a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7" class="text-center text-muted">Nenhuma OS encontrada</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

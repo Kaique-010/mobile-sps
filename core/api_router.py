@@ -43,6 +43,7 @@ urlpatterns = [
     path("<slug>/Floresta/", include("Floresta.urls")),
     path("<slug>/lctobancario/", include("Lancamentos_Bancarios.urls")),
     path("<slug>/notasfiscais/", include("Notas_Fiscais.urls")),
+    path("<slug>/notasdestinadas/", include("NotasDestinadas.urls")),
     path("<slug>/assistente/", include("Assistente_Spart.urls")),
     path("<slug>/ParametrosSps/", include("ParametrosSps.urls")),
 

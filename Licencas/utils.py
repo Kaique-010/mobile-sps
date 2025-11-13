@@ -45,3 +45,16 @@ def get_proximo_usuario(banco):
     maior = Usuarios.objects.using(banco).aggregate(Max('usua_codi'))['usua_codi__max'] or 0
     print(f"Maior usuário encontrado: {maior}")
     return maior + 1
+
+
+def get_proxima_empresa(banco):
+    """Gera próximo número de empresa"""
+    maior = Empresas.objects.using(banco).aggregate(Max('empr_codi'))['empr_codi__max'] or 0
+    print(f"Maior empresa encontrado: {maior}")
+    return maior + 1
+
+def get_proxima_filial(banco):
+    """Gera próximo número de filial"""
+    maior = Filiais.objects.using(banco).aggregate(Max('empr_codi'))['empr_codi__max'] or 0
+    print(f"Maior filial encontrado: {maior}")
+    return maior + 1

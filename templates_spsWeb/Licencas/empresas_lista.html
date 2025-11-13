@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}Empresas{% endblock %}
+{% block content %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
+<div class="container page-container">
+  <div class="page-header-custom">
+    <div class="container align-items-center">
+      <h2 class="page-title">
+        <i class="bi bi-building-check fs-4"></i> Empresas
+      </h2>
+    </div>
+    <div class="page-actions">
+      <a href="{% url 'empresa_create_web' slug=slug %}" class="btn btn-success btn-sm">
+        <i class="bi bi-plus-lg"></i> Nova Empresa
+      </a>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-body">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Nome</th>
+            <th>CNPJ</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in empresas %}
+          <tr>
+            <td>{{ e.empr_codi }}</td>
+            <td>{{ e.empr_nome }}</td>
+            <td>{{ e.empr_docu }}</td>
+            <td><a class="btn btn-sm btn-outline-primary"
+                href="{% url 'empresa_edit_web' slug=slug empr_codi=e.empr_codi %}">Editar</a></td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4">Nenhuma empresa.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

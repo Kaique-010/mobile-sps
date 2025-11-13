@@ -1,0 +1,411 @@
+<style>
+    .text-muted.itens {
+        --bs-text-opacity: 1;
+        color: rgb(0 0 0 / 75%) !important;
+    }
+</style>
+
+<!-- Modal de Itens com Mapeamento Avançado -->
+<div class="modal fade" id="itens-modal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Mapeamento de Produtos da Nota</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Barra de progresso -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted">Progresso do Mapeamento</span>
+                        <span id="progress-text" class="badge bg-secondary">0/0 mapeados</span>
+                    </div>
+                    <div class="progress" style="height: 25px;">
+                        <div id="progress-bar" class="progress-bar progress-bar-striped" role="progressbar"
+                            style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                            0%
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ações em lote -->
+                <div class="mb-3 d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-primary" onclick="autoMapearTodos()">
+                        <i class="bi bi-magic"></i> Auto-mapear Todos
+                    </button>
+                    <button class="btn btn-sm btn-outline-success" onclick="criarProdutosFaltantes()">
+                        <i class="bi bi-plus-circle"></i> Criar Produtos Faltantes
+                    </button>
+                    <button class="btn btn-sm btn-outline-warning" onclick="limparMapeamento()">
+                        <i class="bi bi-x-circle"></i> Limpar Mapeamento
+                    </button>
+                </div>
+
+                <!-- Tabela de itens -->
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 50px;">Item</th>
+                                <th style="width: 250px;">Descrição NF-e</th>
+                                <th style="width: 100px;">EAN</th>
+                                <th style="width: 100px;">Cód. Forn.</th>
+                                <th style="width: 60px;">UN</th>
+                                <th style="width: 80px;">Qtd</th>
+                                <th style="width: 100px;">Valor</th>
+                                <th style="width: 250px;">Produto Interno</th>
+                                <th style="width: 80px;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="itens-tbody"></tbody>
+                    </table>
+                </div>
+
+                <!-- Estatísticas -->
+                <div class="mt-3 p-3 bg-light rounded">
+                    <div class="row text-center">
+                        <div class="col">
+                            <div class="h5 mb-0" id="stat-total">0</div>
+                            <small class="text-muted">Total de Itens</small>
+                        </div>
+                        <div class="col">
+                            <div class="h5 mb-0 text-success" id="stat-mapeados">0</div>
+                            <small class="text-muted">Mapeados</small>
+                        </div>
+                        <div class="col">
+                            <div class="h5 mb-0 text-warning" id="stat-pendentes">0</div>
+                            <small class="text-muted">Pendentes</small>
+                        </div>
+                        <div class="col">
+                            <div class="h5 mb-0 text-info" id="stat-sugeridos">0</div>
+                            <small class="text-muted">Sugeridos</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="confirmarProcessamento()" id="btn-confirmar">
+                    <i class="bi bi-check-circle"></i> Confirmar e Processar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Loading -->
+<div class="modal fade" id="loading-modal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-body text-center p-4">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Carregando...</span>
+                </div>
+                <p class="mb-0">Processando itens...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Criar Produto -->
+<div class="modal fade" id="criar-produto-modal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Criar Novo Produto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="criar-produto-form">
+                    <input type="hidden" id="criar-item-index">
+                    <div class="mb-2">
+                        <label class="form-label">Código *</label>
+                        <input type="text" class="form-control" id="criar-cod" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Descrição *</label>
+                        <input type="text" class="form-control" id="criar-desc" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Unidade *</label>
+                        <input type="text" class="form-control" id="criar-un" value="UN" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">NCM</label>
+                        <input type="text" class="form-control" id="criar-ncm">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">EAN</label>
+                        <input type="text" class="form-control" id="criar-ean">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="executarCriarProduto()">Criar Produto</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    function renderModalItens(emp, fil, num, itens) {
+        const modal = document.getElementById('itens-modal');
+        const tbody = document.getElementById('itens-tbody');
+        tbody.innerHTML = '';
+
+        // Inicializa dados globais
+        window.__itensSelecionados = itens.map((it, idx) => ({
+            index: idx,
+            ean: it.ean,
+            forn_cod: it.forn_cod,
+            descricao: it.descricao,
+            quantidade: it.quantidade,
+            valor_total: it.valor_total,
+            unidade: it.unidade,
+            ncm: it.ncm,
+            prod: it.produto_sugerido || null,
+            sugerido: it.produto_sugerido ? true : false
+        }));
+
+        // Renderiza cada item
+        itens.forEach((it, idx) => {
+            const tr = document.createElement('tr');
+            const listId = `prod-sug-${idx}`;
+            const hasSugestao = it.produto_sugerido ? true : false;
+            const statusClass = hasSugestao ? 'table-success' : 'table-warning';
+
+            tr.className = statusClass;
+            tr.innerHTML = `
+        <td class="text-center"><strong>${it.nItem || idx + 1}</strong></td>
+        <td>
+          <small class="text-muted itens">${it.descricao || ''}</small>
+        </td>
+        <td><small>${it.ean || '-'}</small></td>
+        <td><small>${it.forn_cod || '-'}</small></td>
+        <td><small>${it.unidade || '-'}</small></td>
+        <td class="text-end"><small>${it.quantidade || '-'}</small></td>
+        <td class="text-end"><small>R$ ${(it.valor_total || 0).toFixed(2)}</small></td>
+        <td>
+          <div class="input-group input-group-sm">
+            <input 
+              type="text" 
+              class="form-control form-control-sm ${hasSugestao ? 'is-valid' : ''}" 
+              list="${listId}" 
+              value="${it.produto_sugerido || ''}" 
+              placeholder="Digite para buscar..." 
+              oninput="atualizarProduto(${idx}, this.value); buscarSugestoes(${idx}, this.value)"
+              id="prod-input-${idx}"
+            >
+            <datalist id="${listId}"></datalist>
+            ${hasSugestao ? '<span class="input-group-text bg-success text-white"><i class="bi bi-check"></i></span>' : ''}
+          </div>
+          ${it.produto_nome ? `<small class="text-muted">${it.produto_nome}</small>` : ''}
+        </td>
+        <td>
+          <button class="btn btn-sm btn-outline-primary" onclick="abrirCriarProduto(${idx})" title="Criar produto">
+            <i class="bi bi-plus"></i>
+          </button>
+        </td>
+      `;
+            tbody.appendChild(tr);
+        });
+
+        modal.dataset.emp = emp;
+        modal.dataset.fil = fil;
+        modal.dataset.num = num;
+
+        atualizarEstatisticas();
+
+        const modalEl = new bootstrap.Modal(modal);
+        modalEl.show();
+    }
+
+    function atualizarProduto(idx, value) {
+        if (!Array.isArray(window.__itensSelecionados)) return;
+        window.__itensSelecionados[idx].prod = value || null;
+        window.__itensSelecionados[idx].sugerido = false;
+
+        // Atualiza visual
+        const input = document.getElementById(`prod-input-${idx}`);
+        if (input) {
+            input.classList.toggle('is-valid', value && value.trim().length > 0);
+        }
+
+        atualizarEstatisticas();
+    }
+
+    async function buscarSugestoes(idx, value) {
+        if (!value || value.length < 2) return;
+        const slug = localStorage.getItem('slug');
+        const token = localStorage.getItem('access');
+        const url = `/api/${slug}/notasdestinadas/produtos/buscar/?q=${encodeURIComponent(value)}`;
+
+        try {
+            const resp = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+            const data = await resp.json();
+            const list = document.getElementById(`prod-sug-${idx}`);
+            list.innerHTML = '';
+
+            (data.results || []).forEach(r => {
+                const opt = document.createElement('option');
+                opt.value = r.codigo;
+                opt.label = `${r.codigo} - ${r.nome}`;
+                list.appendChild(opt);
+            });
+        } catch (e) {
+            console.error('Erro ao buscar sugestões:', e);
+        }
+    }
+
+    function atualizarEstatisticas() {
+        if (!window.__itensSelecionados) return;
+
+        const total = window.__itensSelecionados.length;
+        const mapeados = window.__itensSelecionados.filter(it => it.prod && it.prod.trim()).length;
+        const sugeridos = window.__itensSelecionados.filter(it => it.sugerido).length;
+        const pendentes = total - mapeados;
+
+        document.getElementById('stat-total').textContent = total;
+        document.getElementById('stat-mapeados').textContent = mapeados;
+        document.getElementById('stat-pendentes').textContent = pendentes;
+        document.getElementById('stat-sugeridos').textContent = sugeridos;
+
+        const progressPercent = total > 0 ? Math.round((mapeados / total) * 100) : 0;
+        const progressBar = document.getElementById('progress-bar');
+        progressBar.style.width = progressPercent + '%';
+        progressBar.textContent = progressPercent + '%';
+        progressBar.setAttribute('aria-valuenow', progressPercent);
+
+        if (progressPercent === 100) {
+            progressBar.classList.remove('progress-bar-striped');
+            progressBar.classList.add('bg-success');
+        } else {
+            progressBar.classList.add('progress-bar-striped');
+            progressBar.classList.remove('bg-success');
+        }
+
+        document.getElementById('progress-text').textContent = `${mapeados}/${total} mapeados`;
+
+        // Habilita/desabilita botão de confirmar
+        const btnConfirmar = document.getElementById('btn-confirmar');
+        btnConfirmar.disabled = mapeados === 0;
+    }
+
+    async function autoMapearTodos() {
+        // Esta função seria chamada no backend para sugerir todos automaticamente
+        alert('Função de auto-mapeamento em desenvolvimento. Use as sugestões individuais por enquanto.');
+    }
+
+    async function criarProdutosFaltantes() {
+        const pendentes = window.__itensSelecionados.filter(it => !it.prod || !it.prod.trim());
+
+        if (pendentes.length === 0) {
+            alert('Todos os itens já estão mapeados!');
+            return;
+        }
+
+        if (!confirm(`Deseja criar automaticamente ${pendentes.length} produto(s) faltante(s)?`)) {
+            return;
+        }
+
+        alert('Função em desenvolvimento. Por favor, crie os produtos manualmente.');
+    }
+
+    function limparMapeamento() {
+        if (!confirm('Deseja limpar todo o mapeamento realizado?')) {
+            return;
+        }
+
+        window.__itensSelecionados.forEach((it, idx) => {
+            if (!it.sugerido) {
+                it.prod = null;
+                const input = document.getElementById(`prod-input-${idx}`);
+                if (input) {
+                    input.value = '';
+                    input.classList.remove('is-valid');
+                }
+            }
+        });
+
+        atualizarEstatisticas();
+    }
+
+    function abrirCriarProduto(idx) {
+        const item = window.__itensSelecionados[idx];
+
+        document.getElementById('criar-item-index').value = idx;
+        document.getElementById('criar-cod').value = item.forn_cod || '';
+        document.getElementById('criar-desc').value = item.descricao || '';
+        document.getElementById('criar-un').value = item.unidade || 'UN';
+        document.getElementById('criar-ncm').value = item.ncm || '';
+        document.getElementById('criar-ean').value = item.ean || '';
+
+        const modal = new bootstrap.Modal(document.getElementById('criar-produto-modal'));
+        modal.show();
+    }
+
+    async function executarCriarProduto() {
+        const idx = parseInt(document.getElementById('criar-item-index').value);
+        const modal = document.getElementById('itens-modal');
+        const emp = modal.dataset.emp;
+        const fil = modal.dataset.fil;
+        const num = modal.dataset.num;
+
+        const slug = localStorage.getItem('slug');
+        const token = localStorage.getItem('access');
+        const url = `/api/${slug}/notasdestinadas/destinadas/${emp}/${fil}/${num}/criar-produto/`;
+
+        const body = {
+            item: {
+                forn_cod: document.getElementById('criar-cod').value,
+                descricao: document.getElementById('criar-desc').value,
+                unidade: document.getElementById('criar-un').value,
+                ncm: document.getElementById('criar-ncm').value,
+                ean: document.getElementById('criar-ean').value
+            }
+        };
+
+        try {
+            const resp = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            });
+
+            const data = await resp.json();
+
+            if (resp.ok) {
+                alert(`Produto ${data.produto} ${data.status === 'criado' ? 'criado' : 'já existia'}!`);
+
+                // Atualiza o mapeamento
+                window.__itensSelecionados[idx].prod = data.produto;
+                document.getElementById(`prod-input-${idx}`).value = data.produto;
+                atualizarProduto(idx, data.produto);
+
+                // Fecha modal
+                const modalCriar = bootstrap.Modal.getInstance(document.getElementById('criar-produto-modal'));
+                modalCriar.hide();
+            } else {
+                alert('Erro ao criar produto: ' + (data.error || 'Erro desconhecido'));
+            }
+        } catch (e) {
+            alert('Erro de comunicação: ' + e.message);
+        }
+    }
+
+    // Exporta funções globalmente
+    window.renderModalItens = renderModalItens;
+    window.atualizarProduto = atualizarProduto;
+    window.buscarSugestoes = buscarSugestoes;
+    window.atualizarEstatisticas = atualizarEstatisticas;
+    window.autoMapearTodos = autoMapearTodos;
+    window.criarProdutosFaltantes = criarProdutosFaltantes;
+    window.limparMapeamento = limparMapeamento;
+    window.abrirCriarProduto = abrirCriarProduto;
+    window.executarCriarProduto = executarCriarProduto;
+</script>
