@@ -2,7 +2,7 @@ name: Deploy Mobile-SPS (Blue/Green)
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ['main']
 
 jobs:
   deploy:
@@ -10,130 +10,125 @@ jobs:
     environment: Mobile-Sps
 
     steps:
+      # -------------------------------------------------------
+      # CHECKOUT DO CÓDIGO
+      # -------------------------------------------------------
+      - name: Checkout do código
+        uses: actions/checkout@v3
 
-    # -------------------------------------------------------
-    # CHECKOUT DO CÓDIGO
-    # -------------------------------------------------------
-    - name: Checkout do código
-      uses: actions/checkout@v3
+      # -------------------------------------------------------
+      # CACHE DO PIP (acelera muito o deploy)
+      # -------------------------------------------------------
+      - name: Cache das dependências do pip
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
+      # -------------------------------------------------------
+      # DEPLOY BLUE/GREEN NO SERVIDOR
+      # -------------------------------------------------------
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.ORACLE_HOST }}
+          username: ${{ secrets.ORACLE_USER }}
+          key: ${{ secrets.ORACLE_SSH_KEY }}
+          script: |
 
-    # -------------------------------------------------------
-    # CACHE DO PIP (acelera muito o deploy)
-    # -------------------------------------------------------
-    - name: Cache das dependências do pip
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
+            BASE=/home/ubuntu/mobile-sps
+            REPO=$BASE/repo
 
-
-    # -------------------------------------------------------
-    # DEPLOY BLUE/GREEN NO SERVIDOR
-    # -------------------------------------------------------
-    - name: Deploy via SSH
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.ORACLE_HOST }}
-        username: ${{ secrets.ORACLE_USER }}
-        key: ${{ secrets.ORACLE_SSH_KEY }}
-        script: |
-
-          BASE=/home/ubuntu/mobile-sps
-          REPO=$BASE/repo
-
-          echo ">> Atualizando repositório local em $REPO ..."
-          if [ ! -d "$REPO/.git" ]; then
-            mkdir -p $REPO
-            git clone git@github.com:Kaique-010/mobile-sps.git $REPO
-          else
-            cd $REPO
-            git fetch --all
-            git reset --hard origin/main
-          fi
+            echo ">> Atualizando repositório local em $REPO ..."
+            if [ ! -d "$REPO/.git" ]; then
+              mkdir -p $REPO
+              git clone git@github.com:Kaique-010/mobile-sps.git $REPO
+            else
+              cd $REPO
+              git fetch --all
+              git reset --hard origin/main
+            fi
 
 
-          echo ">> Descobrindo ambiente atual..."
-          if [ -L "$BASE/current" ]; then
-            CURRENT=$(readlink -f $BASE/current)
-          else
-            CURRENT="$BASE/blue"
-          fi
+            echo ">> Descobrindo ambiente atual..."
+            if [ -L "$BASE/current" ]; then
+              CURRENT=$(readlink -f $BASE/current)
+            else
+              CURRENT="$BASE/blue"
+            fi
 
-          if [[ "$CURRENT" == *"blue"* ]]; then
-            TARGET="$BASE/green"
-          else
-            TARGET="$BASE/blue"
-          fi
+            if [[ "$CURRENT" == *"blue"* ]]; then
+              TARGET="$BASE/green"
+            else
+              TARGET="$BASE/blue"
+            fi
 
-          echo ">> Ambiente atual:  $CURRENT"
-          echo ">> Novo target:     $TARGET"
-
-
-          echo ">> Sincronizando repositório para o ambiente alvo..."
-          rsync -av --delete $REPO/ $TARGET/
+            echo ">> Ambiente atual:  $CURRENT"
+            echo ">> Novo target:     $TARGET"
 
 
-          echo ">> Ativando ambiente virtual..."
-          source $BASE/venv/bin/activate
+            echo ">> Sincronizando repositório para o ambiente alvo..."
+            rsync -av --delete $REPO/ $TARGET/
 
 
-          echo ">> Instalando dependências..."
-          pip install -r $TARGET/requirements.txt
+            echo ">> Ativando ambiente virtual..."
+            source $BASE/venv/bin/activate
 
 
-          echo ">> Rodando collectstatic..."
-          cd $TARGET
-          python manage.py collectstatic --noinput
+            echo ">> Instalando dependências..."
+            pip install -r $TARGET/requirements.txt
 
 
-          echo ">> Validando health-check do novo ambiente..."
-          STATUS=$(curl -k -s -o /dev/null -w "%{http_code}" https://localhost/health/ || true)
-
-          if [ "$STATUS" != "200" ]; then
-            echo "!! Health-check falhou ($STATUS). Abortando deploy."
-            exit 1
-          fi
-
-          echo ">> Health-check OK — Alternando symlink para o novo ambiente..."
-          ln -sfn $TARGET $BASE/current
+            echo ">> Rodando collectstatic..."
+            cd $TARGET
+            python manage.py collectstatic --noinput
 
 
-          echo ">> Reiniciando serviços..."
-          sudo systemctl restart gunicorn
-          sudo systemctl restart daphne
+            echo ">> Validando health-check do novo ambiente..."
+            STATUS=$(curl -k -s -o /dev/null -w "%{http_code}" https://localhost/health/ || true)
+
+            if [ "$STATUS" != "200" ]; then
+              echo "!! Health-check falhou ($STATUS). Abortando deploy."
+              exit 1
+            fi
+
+            echo ">> Health-check OK — Alternando symlink para o novo ambiente..."
+            ln -sfn $TARGET $BASE/current
 
 
-          echo ">> Deploy Blue/Green finalizado com sucesso!"
+            echo ">> Reiniciando serviços..."
+            sudo systemctl restart gunicorn
+            sudo systemctl restart daphne
 
 
-    # -------------------------------------------------------
-    # TELEGRAM — SUCESSO
-    # -------------------------------------------------------
-    - name: Notificar sucesso no Telegram
-      if: success()
-      uses: appleboy/telegram-action@master
-      with:
-        to: ${{ secrets.TELEGRAM_CHAT_ID }}
-        token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-        message: |
-          🚀 Deploy Mobile-SPS concluído com sucesso!
-          Ambiente Blue/Green atualizado.
-          Branch: main
-          Status: OK ✔
+            echo ">> Deploy Blue/Green finalizado com sucesso!"
 
+      # -------------------------------------------------------
+      # TELEGRAM — SUCESSO
+      # -------------------------------------------------------
+      - name: Notificar sucesso no Telegram
+        if: success()
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          message: |
+            🚀 Deploy Mobile-SPS concluído com sucesso!
+            Ambiente Blue/Green atualizado.
+            Branch: main
+            Status: OK ✔
 
-    # -------------------------------------------------------
-    # TELEGRAM — FALHA
-    # -------------------------------------------------------
-    - name: Notificar falha no Telegram
-      if: failure()
-      uses: appleboy/telegram-action@master
-      with:
-        to: ${{ secrets.TELEGRAM_CHAT_ID }}
-        token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-        message: |
-          ❌ Deploy Mobile-SPS FALHOU!
-          O ambiente anterior foi mantido.
+      # -------------------------------------------------------
+      # TELEGRAM — FALHA
+      # -------------------------------------------------------
+      - name: Notificar falha no Telegram
+        if: failure()
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          message: |
+            ❌ Deploy Mobile-SPS FALHOU!
+            O ambiente anterior foi mantido.
