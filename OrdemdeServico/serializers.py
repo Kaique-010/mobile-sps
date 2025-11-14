@@ -160,14 +160,22 @@ class OrdemServicoPecasSerializer(serializers.ModelSerializer):
     def get_produto_nome(self, obj):
         try:
             banco = self.context.get('banco')
+            from django.db.models import Q
             from Produtos.models import Produtos
+            codigo = str(obj.peca_codi)
+            empresa = str(getattr(obj, 'peca_empr', ''))
+            qs = Produtos.objects.using(banco).filter(
+                Q(prod_codi=codigo) | Q(prod_codi_nume=codigo)
+            )
+            if empresa:
+                qs = qs.filter(prod_empr=empresa)
+            produto = qs.first()
+            return produto.prod_nome if produto else ""
+        except Exception:
+            return ""
 
-            produto = Produtos.objects.using(banco).get(prod_codi=obj.peca_codi)
-            return produto.prod_nome
-        except:
-            return ''
-        
-   
+            
+    
 
   
 
@@ -182,6 +190,7 @@ class OrdemServicoServicosSerializer(BancoModelSerializer):
     serv_quan = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
     serv_unit = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
     serv_tota = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
+    servico_nome = serializers.SerializerMethodField()
     
 
     class Meta:
@@ -235,6 +244,17 @@ class OrdemServicoServicosSerializer(BancoModelSerializer):
                 pass
 
         return super().update(instance, validated_data)
+
+    def get_servico_nome(self, obj):
+        try:
+            banco = self.context.get('banco')
+            from Produtos.models import Produtos
+            produto = Produtos.objects.using(banco).filter(
+                prod_codi=obj.serv_codi
+            ).first()
+            return produto.prod_nome if produto else ''
+        except Exception:
+            return ''
 
 
 
@@ -305,6 +325,27 @@ class OrdemServicoSerializer(BancoModelSerializer):
                 raise ValidationError(f"Campo '{campo}' é obrigatório para o tipo de ordem '{tipo_nome}'")
         
         return data
+    
+    def get_produto_nome(self, obj):
+        banco = self.context.get('banco')
+        if not banco:
+            return ""
+        
+        try:
+            from django.db.models import Q
+            from Produtos.models import Produtos
+            codigo = str(obj.peca_codi)
+            empresa = str(getattr(obj, 'peca_empr', ''))
+            qs = Produtos.objects.using(banco).filter(
+                Q(prod_codi=codigo) | Q(prod_codi_nume=codigo)
+            )
+            if empresa:
+                qs = qs.filter(prod_empr=empresa)
+            produto = qs.first()
+            return produto.prod_nome if produto else ""
+        except Exception as e:
+            logger.error(f"Erro ao buscar nome do produto {obj.peca_codi}: {str(e)}")
+            return ""
 
     def get_servicos(self, obj):
         banco = self.context.get('banco')
