@@ -12,4 +12,4 @@ jobs:
         with:
           to: ${{ secrets.TELEGRAM_CHAT_ID }}
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          message: '🔥 Teste do bot funcionando!'
+          message: '🔥 Teste do bot funcionando testando!'
