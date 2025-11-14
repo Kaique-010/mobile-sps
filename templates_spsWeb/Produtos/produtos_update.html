@@ -4,11 +4,38 @@
 
 {% block content %}
 <style>
-  .container.page-container { padding-top: 34px; padding-bottom: 34px; }
-  .page-header-custom { margin-top: 10px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #e9ecef; display:flex; justify-content:space-between; align-items:center; }
-  .page-title { font-size: 24px; font-weight: bold; color: #343a40; margin:0; }
-  .form-section-title { font-weight: 600; margin-top: 8px; margin-bottom: 16px; }
-  .form-actions { display:flex; gap:12px; }
+  .container.page-container {
+    padding-top: 34px;
+    padding-bottom: 34px;
+  }
+
+  .page-header-custom {
+    margin-top: 10px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .page-title {
+    font-size: 24px;
+    font-weight: bold;
+    color: #343a40;
+    margin: 0;
+  }
+
+  .form-section-title {
+    font-weight: 600;
+    margin-top: 8px;
+    margin-bottom: 16px;
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 12px;
+  }
 </style>
 
 <div class="container page-container">
@@ -19,7 +46,8 @@
         <i class="bi bi-arrow-left"></i> Voltar à Lista
       </a>
       {% if form.instance and form.instance.prod_codi %}
-      <a href="{% url 'produto_delete_web' slug=slug prod_codi=form.instance.prod_codi %}" class="btn btn-outline-danger btn-sm">
+      <a href="{% url 'produto_delete_web' slug=slug prod_codi=form.instance.prod_codi %}"
+        class="btn btn-outline-danger btn-sm">
         <i class="bi bi-trash"></i> Excluir
       </a>
       {% endif %}
@@ -27,12 +55,12 @@
   </div>
 
   {% if messages %}
-    {% for message in messages %}
-    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-      {{ message }}
-      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-    {% endfor %}
+  {% for message in messages %}
+  <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
   {% endif %}
 
   <div class="card">
@@ -261,13 +289,57 @@
   </footer>
 </div>
 
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const container = document.querySelector("#precos-formset");
+    if (!container) return;
+
+    const toNumber = (v) => {
+      if (!v) return 0;
+      return parseFloat(v.replace(",", ".")) || 0;
+    };
+
+    const calcItem = (item) => {
+      const prco = item.querySelector("[name$='tabe_prco']");
+      const fret = item.querySelector("[name$='tabe_fret']");
+      const cuge = item.querySelector("[name$='tabe_cuge']");
+      const marg = item.querySelector("[name$='tabe_marg']");
+      const avis = item.querySelector("[name$='tabe_avis']");
+      const apra = item.querySelector("[name$='tabe_apra']");
+      const praz = item.querySelector("[name$='tabe_praz']");
+
+      if (!prco || !fret || !cuge || !marg || !avis || !apra || !praz) return;
+
+      const precoCompra = toNumber(prco.value);
+      const percFrete = toNumber(fret.value);
+      const percMargem = toNumber(marg.value);
+      const percPrazo = toNumber(apra.value);
+
+      const custo = precoCompra * (percFrete / 100);
+      const custoGerencial = precoCompra + custo;
+      const precoVista = custoGerencial * (1 + percMargem / 100);
+      const precoPrazo = precoVista * (1 + percPrazo / 100);
+
+      cuge.value = custoGerencial.toFixed(2);
+      avis.value = precoVista.toFixed(2);
+      praz.value = precoPrazo.toFixed(2);
+    };
+
+    container.addEventListener("input", (e) => {
+      const item = e.target.closest(".preco-item");
+      if (item) calcItem(item);
+    });
+
+    container.querySelectorAll(".preco-item").forEach(calcItem);
+  });
+</script>
 {% endblock %}
 {% if messages %}
 <div class="container" style="margin-top: 10px;">
   {% for message in messages %}
-    <div class="alert alert-{{ message.tags|default:'info' }}" role="alert" style="margin-bottom: 10px;">
-      {{ message }}
-    </div>
-  {% endfor %}
+  <div class="alert alert-{{ message.tags|default:'info' }}" role="alert" style="margin-bottom: 10px;">
+    {{ message }}
   </div>
+  {% endfor %}
+</div>
 {% endif %}

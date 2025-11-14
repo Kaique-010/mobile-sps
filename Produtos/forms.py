@@ -132,6 +132,11 @@ class MarcaForm(forms.ModelForm):
 
 
 class TabelaprecosForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'tabe_fili' in self.fields:
+            self.fields['tabe_fili'].required = False
+
     class Meta:
         model = Tabelaprecos
         fields = [
@@ -142,19 +147,49 @@ class TabelaprecosForm(forms.ModelForm):
         ]
 
         widgets = {
-            'tabe_prco': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Preço de Compra'}),
-            'tabe_fret': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001', 'placeholder': '% Frete'}),
-            'tabe_desp': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001', 'placeholder': 'Despesas'}),
-            'tabe_marg': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001', 'placeholder': '% a vista'}),
-            'tabe_avis': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Preço a vista'}),
-            'tabe_praz': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001', 'placeholder': 'Preço a Prazo'}),
-            'tabe_apra': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '% a prazo'}),
-            'field_log_data': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'field_log_time': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+            'tabe_prco': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.00001', 'placeholder': 'Preço de Compra'}),
+            'tabe_fret': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.000001', 'placeholder': '% Frete'}),
+            'tabe_desp': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.00001', 'placeholder': 'Despesas'}),
+            'tabe_marg': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.00001', 'placeholder': '% a vista'}),
+            'tabe_avis': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.00001',
+                'readonly': 'readonly'
+            }),
+            'tabe_praz': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.00001',
+                'readonly': 'readonly'
+            }),
+            'tabe_apra': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.00001', 'placeholder': '% a prazo'}),
             'tabe_hist': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Histórico'}),
-            'tabe_cuge': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Custo Gerencial'}),
+            'tabe_cuge': forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.00001',
+        }),
             
         }
+
+    def clean(self):
+        cleaned = super().clean()
+        from decimal import Decimal
+        D = lambda v: (v if isinstance(v, Decimal) else Decimal(str(v or 0)))
+
+        prco = D(cleaned.get('tabe_prco'))
+        perc_frete = D(cleaned.get('tabe_fret'))
+        cuge = D(cleaned.get('tabe_cuge'))
+        marg = D(cleaned.get('tabe_marg'))
+        apra = D(cleaned.get('tabe_apra'))
+
+        valor_frete = prco * (perc_frete / D(100))
+        custo = prco + valor_frete + cuge
+        preco_vista = custo * (D(1) + (marg / D(100)))
+        preco_prazo = preco_vista * (D(1) + (apra / D(100)))
+
+        cleaned['tabe_cust'] = custo
+        cleaned['tabe_avis'] = preco_vista
+        cleaned['tabe_praz'] = preco_prazo
+        return cleaned
 
 TabelaprecosFormSet = forms.modelformset_factory(
     Tabelaprecos,

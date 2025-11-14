@@ -180,16 +180,28 @@ class ProdutoCreateView(DBAndSlugMixin, CreateView):
 
         # Salvar preços (se enviados)
         formset = TabelaprecosFormSet(self.request.POST, queryset=Tabelaprecos.objects.none(), prefix='precos')
-        if formset.is_valid():
-            objetos = formset.save(commit=False)
-            for obj in objetos:
-                # Garantir vínculo pelo código do produto e empresa
-                obj.tabe_prod = instance.prod_codi
+        if not formset.is_valid():
+            for fs_form in formset.forms:
+                for field, errs in fs_form.errors.items():
+                    for err in errs:
+                        messages.error(self.request, f'Preço - erro em {field}: {err}')
+            ctx = self.get_context_data()
+            ctx['form'] = form
+            ctx['formset'] = formset
+            return self.render_to_response(ctx)
+        objetos = formset.save(commit=False)
+        for obj in objetos:
+            obj.tabe_prod = instance.prod_codi
+            try:
+                obj.tabe_empr = int(instance.prod_empr)
+            except Exception:
+                obj.tabe_empr = instance.prod_empr
+            if not getattr(obj, 'tabe_fili', None):
                 try:
-                    obj.tabe_empr = int(instance.prod_empr)
+                    obj.tabe_fili = int(self.filial_id) if self.filial_id else 1
                 except Exception:
-                    pass
-                obj.save(using=self.db_alias)
+                    obj.tabe_fili = 1
+            obj.save(using=self.db_alias)
         messages.success(self.request, f'Produto criado com sucesso. Código: {instance.prod_codi}')
         return redirect(self.get_success_url())
 
@@ -250,12 +262,15 @@ class ProdutoUpdateView(DBAndSlugMixin, UpdateView):
         ctx['slug'] = self.slug
         # Carregar preços vinculados ao produto via tabe_prod/tabe_empr
         produto = self.object
+        try:
+            emp_int = int(produto.prod_empr)
+        except Exception:
+            emp_int = produto.prod_empr
         qs = Tabelaprecos.objects.using(self.db_alias).filter(
             tabe_prod=produto.prod_codi,
-            tabe_empr=produto.prod_empr
+            tabe_empr=emp_int
         )
         formset = TabelaprecosFormSet(self.request.POST or None, queryset=qs, prefix='precos')
-        # Injetar valores iniciais manualmente, pois não há FK direta
         if not formset.is_bound:
             for i, preco in enumerate(qs):
                 try:
@@ -308,19 +323,36 @@ class ProdutoUpdateView(DBAndSlugMixin, UpdateView):
         instance.save(using=self.db_alias)
 
         # Atualizar preços
+        try:
+            emp_int = int(form.instance.prod_empr)
+        except Exception:
+            emp_int = form.instance.prod_empr
         formset = TabelaprecosFormSet(self.request.POST, queryset=Tabelaprecos.objects.using(self.db_alias).filter(
             tabe_prod=form.instance.prod_codi,
-            tabe_empr=form.instance.prod_empr
+            tabe_empr=emp_int
         ), prefix='precos')
-        if formset.is_valid():
-            objetos = formset.save(commit=False)
-            for obj in objetos:
-                obj.tabe_prod = instance.prod_codi
+        if not formset.is_valid():
+            for fs_form in formset.forms:
+                for field, errs in fs_form.errors.items():
+                    for err in errs:
+                        messages.error(self.request, f'Preço - erro em {field}: {err}')
+            ctx = self.get_context_data()
+            ctx['form'] = form
+            ctx['formset'] = formset
+            return self.render_to_response(ctx)
+        objetos = formset.save(commit=False)
+        for obj in objetos:
+            obj.tabe_prod = instance.prod_codi
+            try:
+                obj.tabe_empr = int(instance.prod_empr)
+            except Exception:
+                obj.tabe_empr = instance.prod_empr
+            if not getattr(obj, 'tabe_fili', None):
                 try:
-                    obj.tabe_empr = int(instance.prod_empr)
+                    obj.tabe_fili = int(self.filial_id) if self.filial_id else 1
                 except Exception:
-                    pass
-                obj.save(using=self.db_alias)
+                    obj.tabe_fili = 1
+            obj.save(using=self.db_alias)
         messages.success(self.request, f'Produto atualizado com sucesso. Código: {instance.prod_codi}')
         return redirect(self.get_success_url())
 
