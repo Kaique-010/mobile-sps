@@ -933,12 +933,28 @@ class OrdemServicoServicosViewSet(BaseMultiDBModelViewSet):
         editar = data.get('editar', [])
         remover = data.get('remover', [])
 
+        default_empr = (
+            data.get('serv_empr') or data.get('empr') or request.headers.get('X-Empresa')
+        )
+        default_fili = (
+            data.get('serv_fili') or data.get('fili') or request.headers.get('X-Filial')
+        )
+        default_orde = (
+            data.get('serv_orde') or data.get('ordem')
+        )
+
         resposta = {'adicionados': [], 'editados': [], 'removidos': []}
 
         try:
             with transaction.atomic(using=banco):
                 # Validar e adicionar novos itens
                 for item in adicionar:
+                    if default_empr is not None:
+                        item['serv_empr'] = default_empr
+                    if default_fili is not None:
+                        item['serv_fili'] = default_fili
+                    if default_orde is not None:
+                        item['serv_orde'] = default_orde
                     # Validar campos obrigatórios
                     campos_obrigatorios = ['serv_orde', 'serv_empr', 'serv_fili', 'serv_codi']
                     campos_faltantes = [campo for campo in campos_obrigatorios if not item.get(campo)]
@@ -960,6 +976,20 @@ class OrdemServicoServicosViewSet(BaseMultiDBModelViewSet):
                     except (ValueError, TypeError) as e:
                         raise ValidationError({
                             'error': f"Erro ao converter valores numéricos: {str(e)}",
+                            'item': item
+                        })
+
+                    # Validar existência da ordem para evitar violação de FK
+                    if not Ordemservico.objects.using(banco).filter(
+                        orde_empr=item['serv_empr'],
+                        orde_fili=item['serv_fili'],
+                        orde_nume=item['serv_orde']
+                    ).exists():
+                        raise ValidationError({
+                            'error': (
+                                f"Ordem de serviço não encontrada para empresa={item['serv_empr']}, "
+                                f"filial={item['serv_fili']}, ordem={item['serv_orde']}"
+                            ),
                             'item': item
                         })
 
@@ -1001,6 +1031,12 @@ class OrdemServicoServicosViewSet(BaseMultiDBModelViewSet):
 
                 # Remover serviços
                 for item in remover:
+                    if default_empr is not None:
+                        item['serv_empr'] = default_empr
+                    if default_fili is not None:
+                        item['serv_fili'] = default_fili
+                    if default_orde is not None:
+                        item['serv_orde'] = default_orde
                     if not all(k in item for k in ['serv_id', 'serv_orde', 'serv_empr', 'serv_fili']):
                         raise ValidationError({
                             'error': "Campos obrigatórios faltando para remoção",
