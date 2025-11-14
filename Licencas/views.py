@@ -163,16 +163,12 @@ class FiliaisPorEmpresaView(APIView):
             return Response({'error': 'Empresa não fornecida.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            empresa_id_int = int(empresa_id)
+            empresa_id_int = int((empresa_id or '').strip())
         except (TypeError, ValueError):
             return Response({'error': 'empresa_id inválido.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # AGORA SIM: filtra por empr_codi (que é IntegerField)
-        # Exemplo: empresa_id=5 retorna todas as filiais onde empr_codi=5
-        filiais = Filiais.objects.using(banco).filter(empr_empr=empresa_id_int)
-        
-        # Serializar e retornar os dados das filiais
-        serializer = FilialSerializer(filiais, many=True)
+        filiais_qs = Filiais.objects.using(banco).filter(empr_empr=empresa_id_int)
+        serializer = FilialSerializer(filiais_qs, many=True)
         return Response(serializer.data)
 
 class UploadCertificadoA1View(APIView):

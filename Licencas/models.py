@@ -250,7 +250,7 @@ class Filiais(models.Model):
     @property
     def empresa(self):
         try:
-            return Empresas.objects.get(empr_codi=self.empr_codi)
+            return Empresas.objects.get(empr_codi=self.empr_empr)
         except Empresas.DoesNotExist:
             return None
 

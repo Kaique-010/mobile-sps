@@ -141,10 +141,11 @@
       const sel = document.getElementById('filial');
       sel.innerHTML = '<option value="" disabled selected>Selecione...</option>';
       data.forEach(f => {
+        if (String(f.empr_codi) !== String(empresaId)) return;
         const opt = document.createElement('option');
-        // Usa o identificador primário da filial (empr_empr)
         opt.value = f.empr_empr;
         opt.textContent = f.empr_nome;
+        opt.dataset.emprCodi = String(f.empr_codi);
         sel.appendChild(opt);
       });
       L.info('Filiais carregadas:', data.length);
@@ -179,6 +180,13 @@
     // Validação mínima (browser já valida via 'required')
     if (!empresaId || !filialId) {
       showError('Selecione empresa e filial.');
+      e.preventDefault();
+      return;
+    }
+    const filialOpt = document.querySelector('#filial option:checked');
+    const filialEmpresaCodi = filialOpt?.dataset?.emprCodi;
+    if (String(filialEmpresaCodi) !== String(empresaId)) {
+      showError('Filial não pertence à empresa selecionada.');
       e.preventDefault();
       return;
     }
