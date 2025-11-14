@@ -97,12 +97,20 @@ class OsForm(forms.ModelForm):
             self.fields['os_resp'].queryset = Entidades.objects.none()
 
         self.fields['os_fina_os'].choices = [
-            ('', 'Selecione o tipo'),
-            ('1', 'À Vista'),
-            ('2', 'A Prazo'),
-            ('3', 'Na Emissão'),
-            ('0', 'Sem Financeiro'),
+            (99, 'SEM FINANCEIRO'),
+            (00, 'DUPLICATA'),
+            (1, 'CHEQUE'),
+            (2, 'PROMISSÓRIA'),
+            (3, 'RECIBO'),
+            (50, 'CHEQUE-PRÉ'),
+            (51, 'CARTÃO DE CRÉDITO'),
+            (52, 'CARTÃO DE DÉBITO'),
+            (53, 'BOLETO'),
+            (54, 'DINHEIRO'),
+            (55, 'DEPÓSITO EM CONTA'),
+            (60, 'PIX')
         ]
+        
         self.fields['os_stat_os'].choices = [
             ('', 'Selecione o status'),
             ('0', 'Aberto'),

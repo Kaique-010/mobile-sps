@@ -2,6 +2,7 @@ from django.db import transaction
 import logging
 from decimal import Decimal, InvalidOperation
 from ..models import Os, PecasOs, ServicosOs
+from ..utils import get_next_service_id
 from core.utils import (
     calcular_subtotal_item_bruto,
     calcular_total_item_com_desconto,
@@ -84,7 +85,7 @@ class OsService:
             )
 
         # Serviços
-        for idx, item_data in enumerate(servicos_data, start=1):
+        for item_data in servicos_data:
             serv_quan = OsService._to_decimal(item_data.get('serv_quan', 0))
             serv_unit = OsService._to_decimal(item_data.get('serv_unit', 0))
             serv_desc = OsService._to_decimal(item_data.get('serv_desc', 0))
@@ -97,11 +98,12 @@ class OsService:
             if serv_desc and serv_desc > 0:
                 any_item_discount = True
 
+            novo_id, _ = get_next_service_id(banco, ordem.os_os, ordem.os_empr, ordem.os_fili)
             item = ServicosOs.objects.using(banco).create(
                 serv_empr=ordem.os_empr,
                 serv_fili=ordem.os_fili,
                 serv_os=ordem.os_os,
-                serv_item=idx,
+                serv_item=novo_id,
                 serv_prod=str(item_data.get('serv_prod') or ''),
                 serv_quan=serv_quan,
                 serv_unit=serv_unit,
@@ -109,8 +111,8 @@ class OsService:
                 serv_desc=serv_desc,
             )
             OsService.logger.debug(
-                "[OsService.create] Serviço %d: prod=%s quan=%s unit=%s desc=%s subtotal=%s total=%s",
-                idx, item.serv_prod, serv_quan, serv_unit, serv_desc, subtotal_bruto, total_item
+                "[OsService.create] Serviço %s: prod=%s quan=%s unit=%s desc=%s subtotal=%s total=%s",
+                item.serv_item, item.serv_prod, serv_quan, serv_unit, serv_desc, subtotal_bruto, total_item
             )
 
         os_desc_val = OsService._to_decimal(os_data.get('os_desc', 0))
@@ -183,7 +185,7 @@ class OsService:
                 peca_desc=peca_desc,
             )
 
-        for idx, item_data in enumerate(servicos_data, start=1):
+        for item_data in servicos_data:
             serv_quan = OsService._to_decimal(item_data.get('serv_quan', 0))
             serv_unit = OsService._to_decimal(item_data.get('serv_unit', 0))
             serv_desc = OsService._to_decimal(item_data.get('serv_desc', 0))
@@ -196,11 +198,12 @@ class OsService:
             if serv_desc and serv_desc > 0:
                 any_item_discount = True
 
+            novo_id, _ = get_next_service_id(banco, ordem.os_os, ordem.os_empr, ordem.os_fili)
             ServicosOs.objects.using(banco).create(
                 serv_empr=ordem.os_empr,
                 serv_fili=ordem.os_fili,
                 serv_os=ordem.os_os,
-                serv_item=idx,
+                serv_item=novo_id,
                 serv_prod=str(item_data.get('serv_prod') or ''),
                 serv_quan=serv_quan,
                 serv_unit=serv_unit,

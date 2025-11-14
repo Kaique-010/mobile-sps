@@ -8,7 +8,7 @@ from rest_framework.exceptions import ValidationError
 from django.http import Http404
 from django.db.models import Sum
 from rest_framework.generics import ListAPIView
-from django.db.models import Q, Subquery, OuterRef, DecimalField, Value as V, CharField, IntegerField
+from django.db.models import Q, Subquery, OuterRef, DecimalField, Value as V, CharField, IntegerField, Case, When
 from django.db.models.functions import Coalesce, Cast
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -194,7 +194,11 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             saldo_estoque=Coalesce(saldo_subquery, V(0), output_field=DecimalField()),
             prod_preco_vista=Coalesce(preco_vista_subquery, V(0), output_field=DecimalField()),
             prod_preco_normal=Coalesce(preco_normal_subquery, V(0), output_field=DecimalField()),
-            prod_codi_int=Cast('prod_codi', output_field=IntegerField())
+            prod_codi_int=Case(
+                When(prod_codi__regex=r'^\d+$', then=Cast('prod_codi', IntegerField())),
+                default=V(None),
+                output_field=IntegerField()
+            )
         )
         
         # Aplicar filtros de forma otimizada
@@ -263,7 +267,11 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                 prod_preco_vista=Coalesce(preco_vista_subquery, V(0), output_field=DecimalField()),
                 prod_preco_normal=Coalesce(preco_normal_subquery, V(0), output_field=DecimalField()),
                 prod_coba_str=Coalesce(Cast('prod_coba', CharField()), V('')),
-                prod_codi_int=Cast('prod_codi', IntegerField())
+                prod_codi_int=Case(
+                    When(prod_codi__regex=r'^\d+$', then=Cast('prod_codi', IntegerField())),
+                    default=V(None),
+                    output_field=IntegerField()
+                )
             ).filter(
                 Q(prod_nome__icontains=q) |
                 Q(prod_coba_str__exact=q) |

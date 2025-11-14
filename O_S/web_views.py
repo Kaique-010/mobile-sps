@@ -435,6 +435,8 @@ class OsPrintView(DetailView):
         banco = get_licenca_db_config(self.request) or 'default'
         return Os.objects.using(banco).all()
 
+
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['slug'] = self.kwargs.get('slug')
@@ -470,181 +472,253 @@ class OsUpdateView(UpdateView):
     form_class = OsForm
     template_name = 'Os/oscriar.html'
 
-    def get_success_url(self):
-        slug = self.kwargs.get('slug')
-        return f"/web/{slug}/os/" if slug else "/web/home/"
+    # -----------------------------------
+    #  BANCO / EMPRESA
+    # -----------------------------------
+    def get_banco(self):
+        return get_licenca_db_config(self.request) or 'default'
 
+    def get_empresa(self):
+        return self.request.session.get('empresa_id', 1)
+
+    # -----------------------------------
+    #  QUERYSET MULTIBANCO (O CORRETO!)
+    # -----------------------------------
+    def get_queryset(self):
+        return Os.objects.using(self.get_banco()).all()
+
+    # -----------------------------------
+    #  FORM COM BANCO E EMPRESA
+    # -----------------------------------
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['database'] = get_licenca_db_config(self.request) or 'default'
-        kwargs['empresa_id'] = self.request.session.get('empresa_id', 1)
+        kwargs['database'] = self.get_banco()
+        kwargs['empresa_id'] = self.get_empresa()
         return kwargs
 
-    def get_queryset(self):
-        banco = get_licenca_db_config(self.request) or 'default'
-        return Os.objects.using(banco).all()
+    # -----------------------------------
+    # SUCESSO
+    # -----------------------------------
+    def get_success_url(self):
+        slug = self.kwargs.get('slug')
+        return f"/web/{slug}/os/"
 
+    # -----------------------------------
+    # CONTEXTO (formsets e dados)
+    # -----------------------------------
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        banco = get_licenca_db_config(self.request) or 'default'
-        empresa_id = self.request.session.get('empresa_id', 1)
 
-        from Entidades.models import Entidades
-        from Produtos.models import Produtos
+        banco = self.get_banco()
+        empresa = self.get_empresa()
         os_obj = self.object
 
-        if self.request.POST:
-            context['pecas_formset'] = PecasOsFormSet(
+        # ==========================================================
+        # SE POST → retorna formsets usando POST (não recria nada)
+        # ==========================================================
+        if self.request.method == "POST":
+            context["pecas_formset"] = PecasOsFormSet(
                 self.request.POST,
-                form_kwargs={'database': banco, 'empresa_id': empresa_id},
-                prefix='pecas'
+                prefix="pecas",
+                form_kwargs={"database": banco, "empresa_id": empresa},
             )
-            context['servicos_formset'] = ServicoOsFormSet(
+            context["servicos_formset"] = ServicoOsFormSet(
                 self.request.POST,
-                form_kwargs={'database': banco, 'empresa_id': empresa_id},
-                prefix='servicos'
+                prefix="servicos",
+                form_kwargs={"database": banco, "empresa_id": empresa},
             )
-        else:
-            from .models import PecasOs, ServicosOs
-            pecas_qs = PecasOs.objects.using(banco).filter(
-                peca_empr=os_obj.os_empr,
-                peca_fili=os_obj.os_fili,
-                peca_os=os_obj.os_os,
-            ).order_by('peca_item')
-            servicos_qs = ServicosOs.objects.using(banco).filter(
-                serv_empr=os_obj.os_empr,
-                serv_fili=os_obj.os_fili,
-                serv_os=os_obj.os_os,
-            ).order_by('serv_item')
+            return context
 
-            pecas_initial = []
-            servicos_initial = []
-            pecas_codigos = []
-            serv_codigos = []
-            for p in pecas_qs:
-                pecas_initial.append({
-                    'peca_prod': p.peca_prod,
-                    'peca_quan': p.peca_quan,
-                    'peca_unit': p.peca_unit,
-                    'peca_desc': p.peca_desc or 0,
-                    'peca_tota': p.peca_tota,
-                })
-                if p.peca_prod:
-                    pecas_codigos.append(p.peca_prod)
-            for s in servicos_qs:
-                servicos_initial.append({
-                    'serv_prod': s.serv_prod,
-                    'serv_quan': s.serv_quan,
-                    'serv_unit': s.serv_unit,
-                    'serv_desc': s.serv_desc or 0,
-                    'serv_tota': s.serv_tota,
-                })
-                if s.serv_prod:
-                    serv_codigos.append(s.serv_prod)
+        # ==========================================================
+        # GET → carregar dados existentes do banco
+        # ==========================================================
+        from .models import PecasOs, ServicosOs
+        from Produtos.models import Produtos
+        from Entidades.models import Entidades
 
-            # Mapas de exibição para inputs de autocomplete
-            prod_map = {}
-            try:
-                produtos = Produtos.objects.using(banco).filter(prod_codi__in=list(set(pecas_codigos + serv_codigos)))
-                prod_map = {p.prod_codi: f"{p.prod_codi} - {p.prod_nome}" for p in produtos}
-            except Exception:
-                prod_map = {}
-            for init in pecas_initial:
-                init['display_prod_text'] = prod_map.get(init.get('peca_prod'), init.get('peca_prod'))
-            for init in servicos_initial:
-                init['display_prod_text'] = prod_map.get(init.get('serv_prod'), init.get('serv_prod'))
+        # --------- Carregar peças ---------
+        pecas = PecasOs.objects.using(banco).filter(
+            peca_empr=os_obj.os_empr,
+            peca_fili=os_obj.os_fili,
+            peca_os=os_obj.os_os
+        ).order_by("peca_item")
 
-            context['pecas_formset'] = PecasOsFormSet(
-                initial=pecas_initial,
-                form_kwargs={'database': banco, 'empresa_id': empresa_id},
-                prefix='pecas'
-            )
-            context['servicos_formset'] = ServicoOsFormSet(
-                initial=servicos_initial,
-                form_kwargs={'database': banco, 'empresa_id': empresa_id},
-                prefix='servicos'
-            )
+        pecas_initial = [
+            {
+                "peca_prod": p.peca_prod,
+                "peca_quan": p.peca_quan,
+                "peca_unit": p.peca_unit,
+                "peca_desc": p.peca_desc,
+                "peca_tota": p.peca_tota,
+            }
+            for p in pecas
+        ]
 
-            # Exibir nomes de cliente e responsável
-            cl = Entidades.objects.using(banco).filter(enti_clie=os_obj.os_clie).values('enti_nome').first()
-            ve = Entidades.objects.using(banco).filter(enti_clie=os_obj.os_resp).values('enti_nome').first()
-            context['cliente_display'] = f"{os_obj.os_clie} - {cl.get('enti_nome')}" if cl else str(os_obj.os_clie)
-            context['vendedor_display'] = f"{os_obj.os_resp} - {ve.get('enti_nome')}" if ve else str(os_obj.os_resp)
+        # --------- Carregar serviços ---------
+        servicos = ServicosOs.objects.using(banco).filter(
+            serv_empr=os_obj.os_empr,
+            serv_fili=os_obj.os_fili,
+            serv_os=os_obj.os_os
+        ).order_by("serv_item")
 
-        context['slug'] = self.kwargs.get('slug')
-        context['is_edit'] = True
+        servicos_initial = [
+            {
+                "serv_prod": s.serv_prod,
+                "serv_quan": s.serv_quan,
+                "serv_unit": s.serv_unit,
+                "serv_desc": s.serv_desc,
+                "serv_tota": s.serv_tota,
+            }
+            for s in servicos
+        ]
+
+        # ==========================================================
+        # MAPA DE PRODUTOS (AQUI ESTAVA O BUG! AGORA RESOLVIDO)
+        # ==========================================================
+        produtos_ids = set()
+
+        for p in pecas:
+            if p.peca_prod:
+                produtos_ids.add(p.peca_prod)
+
+        for s in servicos:
+            if s.serv_prod:
+                produtos_ids.add(s.serv_prod)
+
+        prod_map = {}
+        if produtos_ids:
+            produtos = Produtos.objects.using(banco).filter(prod_codi__in=produtos_ids)
+            prod_map = {
+                prod.prod_codi: f"{prod.prod_codi} - {prod.prod_nome}"
+                for prod in produtos
+            }
+
+        # nomes para exibir nas caixas de texto
+        pecas_display = [
+            prod_map.get(item["peca_prod"], item["peca_prod"])
+            for item in pecas_initial
+        ]
+
+        servicos_display = [
+            prod_map.get(item["serv_prod"], item["serv_prod"])
+            for item in servicos_initial
+        ]
+
+        # inserir os nomes no initial do formset
+        for i, item in enumerate(pecas_initial):
+            item["display_prod_text"] = pecas_display[i]
+
+        for i, item in enumerate(servicos_initial):
+            item["display_prod_text"] = servicos_display[i]
+
+        # ==========================================================
+        # CRIAR FORMSETS JÁ COM INITIAL
+        # ==========================================================
+        context["pecas_formset"] = PecasOsFormSet(
+            initial=pecas_initial,
+            prefix="pecas",
+            form_kwargs={"database": banco, "empresa_id": empresa},
+        )
+
+        context["servicos_formset"] = ServicoOsFormSet(
+            initial=servicos_initial,
+            prefix="servicos",
+            form_kwargs={"database": banco, "empresa_id": empresa},
+        )
+
+        # ==========================================================
+        # Cliente / responsável (autocomplete preenchido)
+        # ==========================================================
+        cl = Entidades.objects.using(banco).filter(
+            enti_clie=os_obj.os_clie
+        ).values("enti_nome").first()
+
+        ve = Entidades.objects.using(banco).filter(
+            enti_clie=os_obj.os_resp
+        ).values("enti_nome").first()
+
+        context["cliente_display"] = (
+            f"{os_obj.os_clie} - {cl['enti_nome']}" if cl else os_obj.os_clie
+        )
+        context["vendedor_display"] = (
+            f"{os_obj.os_resp} - {ve['enti_nome']}" if ve else os_obj.os_resp
+        )
+
+        context["slug"] = self.kwargs.get("slug")
+        context["is_edit"] = True
+
         return context
 
+
+    # -----------------------------------
+    # SALVAR — elegante + service layer
+    # -----------------------------------
     def form_valid(self, form):
         context = self.get_context_data()
-        pecas_formset = context['pecas_formset']
-        servicos_formset = context['servicos_formset']
+        pecas_fs = context["pecas_formset"]
+        serv_fs = context["servicos_formset"]
+        banco = self.get_banco()
 
-        banco = get_licenca_db_config(self.request) or 'default'
+        if not (form.is_valid() and pecas_fs.is_valid() and serv_fs.is_valid()):
+            return self.form_invalid(form)
 
-        logger.debug("[OsUpdateView] Form valid=%s Pecas valid=%s Servicos valid=%s", form.is_valid(), pecas_formset.is_valid(), servicos_formset.is_valid())
-        if form.is_valid() and pecas_formset.is_valid() and servicos_formset.is_valid():
-            try:
-                os_obj = self.object
-                os_updates = form.cleaned_data.copy()
-                os_updates.pop('os_topr', None)
+        try:
+            os_obj = self.object
 
-                # Converter entidades em IDs
-                if hasattr(os_updates.get('os_clie'), 'enti_clie'):
-                    os_updates['os_clie'] = os_updates['os_clie'].enti_clie
-                if hasattr(os_updates.get('os_resp'), 'enti_clie'):
-                    os_updates['os_resp'] = os_updates['os_resp'].enti_clie
+            # Processar OS
+            os_updates = form.cleaned_data.copy()
+            os_updates.pop("os_topr", None)
 
-                pecas_data = []
-                for item_form in pecas_formset.forms:
-                    if not item_form.cleaned_data or item_form.cleaned_data.get('DELETE'):
-                        continue
-                    item = item_form.cleaned_data.copy()
-                    prod = item.get('peca_prod')
-                    prod_code = getattr(prod, 'prod_codi', prod)
+            # Converter entidades para IDs
+            if hasattr(os_updates.get("os_clie"), "enti_clie"):
+                os_updates["os_clie"] = os_updates["os_clie"].enti_clie
+            if hasattr(os_updates.get("os_resp"), "enti_clie"):
+                os_updates["os_resp"] = os_updates["os_resp"].enti_clie
+
+            # Processar peças
+            pecas_data = []
+            for f in pecas_fs:
+                if f.cleaned_data and not f.cleaned_data.get("DELETE"):
+                    cd = f.cleaned_data
+                    prod = cd["peca_prod"]
                     pecas_data.append({
-                        'peca_prod': prod_code,
-                        'peca_quan': item.get('peca_quan', 1),
-                        'peca_unit': item.get('peca_unit', 0),
-                        'peca_desc': item.get('peca_desc', 0),
+                        "peca_prod": getattr(prod, "prod_codi", prod),
+                        "peca_quan": cd["peca_quan"],
+                        "peca_unit": cd["peca_unit"],
+                        "peca_desc": cd["peca_desc"],
                     })
 
-                servicos_data = []
-                for item_form in servicos_formset.forms:
-                    if not item_form.cleaned_data or item_form.cleaned_data.get('DELETE'):
-                        continue
-                    item = item_form.cleaned_data.copy()
-                    prod = item.get('serv_prod')
-                    prod_code = getattr(prod, 'prod_codi', prod)
-                    servicos_data.append({
-                        'serv_prod': prod_code,
-                        'serv_quan': item.get('serv_quan', 1),
-                        'serv_unit': item.get('serv_unit', 0),
-                        'serv_desc': item.get('serv_desc', 0),
+            # Processar serviços
+            serv_data = []
+            for f in serv_fs:
+                if f.cleaned_data and not f.cleaned_data.get("DELETE"):
+                    cd = f.cleaned_data
+                    prod = cd["serv_prod"]
+                    serv_data.append({
+                        "serv_prod": getattr(prod, "prod_codi", prod),
+                        "serv_quan": cd["serv_quan"],
+                        "serv_unit": cd["serv_unit"],
+                        "serv_desc": cd["serv_desc"],
                     })
 
-                if not pecas_data and not servicos_data:
-                    messages.error(self.request, "A OS precisa ter pelo menos uma peça ou serviço.")
-                    return self.form_invalid(form)
-
-                OsService.update_os(banco, os_obj, os_updates, pecas_data, servicos_data)
-                logger.debug(
-                    "[OsUpdateView] OS atualizada os_os=%s os_desc=%s os_tota=%s",
-                    getattr(os_obj, 'os_os', None), getattr(os_obj, 'os_desc', None), getattr(os_obj, 'os_tota', None)
-                )
-                messages.success(self.request, f"OS {os_obj.os_os} atualizada com sucesso.")
-                return redirect(self.get_success_url())
-            except Exception as e:
-                messages.error(self.request, f"Erro ao atualizar OS: {str(e)}")
-                import traceback
-                logger.exception("[OsUpdateView] Falha ao atualizar OS: %s", e)
-                traceback.print_exc()
+            # Nenhum item
+            if not pecas_data and not serv_data:
+                messages.error(self.request, "A OS precisa ter pelo menos uma peça ou serviço.")
                 return self.form_invalid(form)
-        else:
-            if not form.is_valid():
-                logger.error("[OsUpdateView] Erros no form: %s", form.errors)
-                messages.error(self.request, f"Erros no formulário: {form.errors}")
-            if not pecas_formset.is_valid() or not servicos_formset.is_valid():
-                logger.error("[OsUpdateView] Erros nos formsets: %s | %s", pecas_formset.errors, servicos_formset.errors)
-                messages.error(self.request, "Erros nos itens: verifique peças e serviços.")
+
+            # Chama o service (onde rola o rollback automático)
+            OsService.update_os(
+                banco=banco,
+                ordem=os_obj,
+                os_updates=os_updates,
+                pecas_data=pecas_data,
+                servicos_data=serv_data,
+            )
+
+            messages.success(self.request, f"OS {os_obj.os_os} atualizada com sucesso.")
+            return redirect(self.get_success_url())
+
+        except Exception as e:
+            messages.error(self.request, f"Erro ao atualizar OS: {e}")
+            import traceback; traceback.print_exc()
             return self.form_invalid(form)

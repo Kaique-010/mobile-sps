@@ -40,67 +40,86 @@ def get_next_sequential_id(banco, model, ordem_id, empresa_id, filial_id, id_fie
 
 def get_next_item_number_sequence(banco, peca_orde, peca_empr, peca_fili):
     """
-    Função específica para peças, mantida para compatibilidade
-    """
-    return get_next_sequential_id(
-        banco=banco,
-        model=Ordemservicopecas,
-        ordem_id=peca_orde,
-        empresa_id=peca_empr,
-        filial_id=peca_fili,
-        id_field='peca_id',
-        ordem_field='peca_orde',
-        empresa_field='peca_empr',
-        filial_field='peca_fili'
-    )
-
-
-def get_next_service_id(banco, ordem_id, empresa_id, filial_id):
-    """
-    Função para gerar IDs sequenciais simples de serviços
+    Gera próximo `peca_id` globalmente único para ordem de serviço.
     """
     with connections[banco].cursor() as cursor:
-        # Primeiro faz lock das linhas existentes
         cursor.execute(
-            """
-            SELECT serv_id, serv_sequ
-            FROM ordemservicoservicos 
-            WHERE serv_orde = %s 
-            AND serv_empr = %s 
-            AND serv_fili = %s 
-            ORDER BY serv_id
+            f"""
+            SELECT peca_id
+            FROM {Ordemservicopecas._meta.db_table}
+            ORDER BY peca_id
             FOR UPDATE
-            """,
-            [ordem_id, empresa_id, filial_id]
+            """
         )
-        results = cursor.fetchall()
-        
-        # Encontra o próximo serv_id disponível
-        if not results:
+        ids = [row[0] for row in cursor.fetchall()]
+
+        if not ids:
             novo_id = 1
-            next_sequ = 1
         else:
-            # Pega todos os IDs e sequências existentes
-            ids = [row[0] for row in results]
-            sequs = [row[1] for row in results]
-            
-            # Encontra o próximo ID disponível
             ids_sorted = sorted(ids)
             novo_id = 1
             for id_atual in ids_sorted:
                 if novo_id < id_atual:
                     break
                 novo_id = id_atual + 1
-            
-            # Encontra a próxima sequência disponível
+
+    return novo_id
+
+
+def get_next_service_id(banco, ordem_id, empresa_id, filial_id):
+    """
+    Gera próximo `serv_id` globalmente único e `serv_sequ` sequencial por ordem.
+    - `serv_id`: não pode colidir entre ordens (PK global).
+    - `serv_sequ`: sequência local por (serv_empr, serv_fili, serv_orde).
+    """
+    with connections[banco].cursor() as cursor:
+        # Calcula próximo serv_id GLOBAL (sem filtro por ordem)
+        cursor.execute(
+            """
+            SELECT serv_id
+            FROM ordemservicoservicos
+            ORDER BY serv_id
+            FOR UPDATE
+            """
+        )
+        ids = [row[0] for row in cursor.fetchall()]
+
+        if not ids:
+            novo_id = 1
+        else:
+            ids_sorted = sorted(ids)
+            novo_id = 1
+            for id_atual in ids_sorted:
+                if novo_id < id_atual:
+                    break
+                novo_id = id_atual + 1
+
+        # Calcula próximo serv_sequ LOCAL (filtrado por ordem)
+        cursor.execute(
+            """
+            SELECT serv_sequ
+            FROM ordemservicoservicos 
+            WHERE serv_orde = %s 
+              AND serv_empr = %s 
+              AND serv_fili = %s 
+            ORDER BY serv_sequ
+            FOR UPDATE
+            """,
+            [ordem_id, empresa_id, filial_id]
+        )
+        sequs = [row[0] for row in cursor.fetchall()]
+
+        if not sequs:
+            next_sequ = 1
+        else:
             sequs_sorted = sorted(sequs)
             next_sequ = 1
             for sequ_atual in sequs_sorted:
                 if next_sequ < sequ_atual:
                     break
                 next_sequ = sequ_atual + 1
-        
-        return novo_id, next_sequ
+
+    return novo_id, next_sequ
 
 
 def get_next_image_id(banco, ordem_id, empresa_id, filial_id, tipo_imagem):

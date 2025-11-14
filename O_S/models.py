@@ -1,6 +1,19 @@
 from django.db import models
 
-
+FINANCEIRO_OS = [
+    (99, 'SEM FINANCEIRO'),
+    (00, 'DUPLICATA'),
+    (1, 'CHEQUE'),
+    (2, 'PROMISSÓRIA'),
+    (3, 'RECIBO'),
+    (50, 'CHEQUE-PRÉ'),
+    (51, 'CARTÃO DE CRÉDITO'),
+    (52, 'CARTÃO DE DÉBITO'),
+    (53, 'BOLETO'),
+    (54, 'DINHEIRO'),
+    (55, 'DEPÓSITO EM CONTA'),
+    (60, 'PIX')
+]
 class Os(models.Model):
     os_empr = models.IntegerField()
     os_fili = models.IntegerField()
@@ -10,7 +23,7 @@ class Os(models.Model):
     os_hora_aber = models.TimeField(blank=True, null=True)
     os_clie = models.IntegerField(blank=True, null=True)
     os_prof_aber = models.IntegerField(blank=True, null=True)
-    os_fina_os = models.IntegerField(blank=True, null=True)
+    os_fina_os = models.IntegerField(blank=True, null=True, choices=FINANCEIRO_OS, default=99)
     os_obje_os = models.TextField(blank=True, null=True)
     os_fabr = models.IntegerField(blank=True, null=True)
     os_marc = models.IntegerField(blank=True, null=True)
@@ -120,7 +133,7 @@ class ServicosOs(models.Model):
     field_log_time = models.TimeField(db_column='_log_time', blank=True, null=True)  # Field renamed because it started with '_'.
     serv_perc_desc = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
     serv_impr = models.BooleanField(blank=True, null=True)
-    serv_stat = models.IntegerField()
+    serv_stat = models.IntegerField(blank=True, null=True, default=0)
     serv_data_hora_impr = models.DateTimeField(blank=True, null=True)
     serv_stat_seto = models.IntegerField(blank=True, null=True)
 

@@ -194,36 +194,36 @@
               <div class="preco-item border p-3 mb-2">
                 <div class="row">
                   <div class="col-md-4">
-                    <label for="{{ form.tabe_prco.id_for_label }}">Preço de Compra</label>
+                    <label for="{{ form.tabe_prco.id_for_label }}">Preço de Compra (R$)</label>
                     {{ form.tabe_prco }}
                   </div>
                   <div class="col-md-4">
-                    <label for="{{ form.tabe_fret.id_for_label }}">Frete sobre o produto</label>
+                    <label for="{{ form.tabe_fret.id_for_label }}">% Frete</label>
                     {{ form.tabe_fret }}
                   </div>
                   <div class="col-md-4">
-                    <label for="{{ form.tabe_cuge.id_for_label }}">Custo Gerencial</label>
+                    <label for="{{ form.tabe_cuge.id_for_label }}">Custo Gerencial (R$)</label>
                     {{ form.tabe_cuge }}
                   </div>
                 </div>
                 <div class="row">
                   <div class="col-md-6">
-                    <label for="{{ form.tabe_marg.id_for_label }}">% sobre custo</label>
+                    <label for="{{ form.tabe_marg.id_for_label }}">% à Vista</label>
                     {{ form.tabe_marg }}
                   </div>
                   <div class="col-md-6">
-                    <label for="{{ form.tabe_avis.id_for_label }}">Preço à Vista</label>
+                    <label for="{{ form.tabe_avis.id_for_label }}">Preço à Vista (R$)</label>
                     {{ form.tabe_avis }}
                   </div>
                 </div>
                 <div class="row">
                   <div class="col-md-6">
-                    <label for="{{ form.tabe_apra.id_for_label }}">% a Prazo</label>
-                    {{ form.tabe_apra }}
+                    <label for="{{ form.tabe_praz.id_for_label }}">% a Prazo</label>
+                    {{ form.tabe_praz }}
                   </div>
                   <div class="col-md-6">
-                    <label for="{{ form.tabe_praz.id_for_label }}">Preço a Prazo</label>
-                    {{ form.tabe_praz }}
+                    <label for="{{ form.tabe_apra.id_for_label }}">Preço a Prazo (R$)</label>
+                    {{ form.tabe_apra }}
                   </div>
                 </div>
                 <div class="row">
@@ -264,24 +264,21 @@
       const cuge = item.querySelector("[name$='tabe_cuge']");
       const marg = item.querySelector("[name$='tabe_marg']");
       const avis = item.querySelector("[name$='tabe_avis']");
-      const apra = item.querySelector("[name$='tabe_apra']");
       const praz = item.querySelector("[name$='tabe_praz']");
+      const apra = item.querySelector("[name$='tabe_apra']");
 
       if (!prco || !fret || !cuge || !marg || !avis || !apra || !praz) return;
 
       const precoCompra = toNumber(prco.value);
       const percFrete = toNumber(fret.value);
       const percMargem = toNumber(marg.value);
-      const percPrazo = toNumber(apra.value);
+      const percPrazo = toNumber(praz.value);
 
-      const custo = precoCompra * (percFrete / 100);
-      const custoGerencial = precoCompra + custo;
-      const precoVista = custoGerencial * (1 + percMargem / 100);
+      const custoFrete = precoCompra * (percFrete / 100);
+      const precoVista = precoCompra * (1 + percMargem / 100);
       const precoPrazo = precoVista * (1 + percPrazo / 100);
-
-      cuge.value = custoGerencial.toFixed(2);
       avis.value = precoVista.toFixed(2);
-      praz.value = precoPrazo.toFixed(2);
+      apra.value = precoPrazo.toFixed(2);
     };
 
     container.addEventListener("input", (e) => {

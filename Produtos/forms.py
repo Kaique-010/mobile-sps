@@ -1,5 +1,6 @@
 from django import forms
 from django.forms.models import inlineformset_factory
+from django.forms import formset_factory
 from Produtos.models import Produtos, GrupoProduto, SubgrupoProduto, FamiliaProduto, Marca, Tabelaprecos
 
 class ProdutosForm(forms.ModelForm):
@@ -147,52 +148,65 @@ class TabelaprecosForm(forms.ModelForm):
         ]
 
         widgets = {
-            'tabe_prco': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.00001', 'placeholder': 'Preço de Compra'}),
-            'tabe_fret': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.000001', 'placeholder': '% Frete'}),
-            'tabe_desp': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.00001', 'placeholder': 'Despesas'}),
-            'tabe_marg': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.00001', 'placeholder': '% a vista'}),
+            'tabe_prco': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Preço de Compra'}),
+            'tabe_fret': forms.TextInput(attrs={'class': 'form-control', 'inputmode': 'decimal', 'placeholder': '% Frete'}),
+            'tabe_desp': forms.TextInput(attrs={'class': 'form-control', 'inputmode': 'decimal', 'placeholder': 'Despesas'}),
+            'tabe_marg': forms.TextInput(attrs={'class': 'form-control', 'inputmode': 'decimal', 'placeholder': '% a vista'}),
             'tabe_avis': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'step': '0.00001',
+                'step': '0.01',
                 'readonly': 'readonly'
             }),
-            'tabe_praz': forms.NumberInput(attrs={
+            'tabe_praz': forms.TextInput(attrs={
                 'class': 'form-control',
-                'step': '0.00001',
+                'inputmode': 'decimal',
+                'placeholder': '% a prazo'
+            }),
+            'tabe_apra': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
                 'readonly': 'readonly'
             }),
-            'tabe_apra': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.00001', 'placeholder': '% a prazo'}),
             'tabe_hist': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Histórico'}),
             'tabe_cuge': forms.NumberInput(attrs={
             'class': 'form-control',
-            'step': '0.00001',
+            'step': '0.01',
         }),
             
         }
 
     def clean(self):
         cleaned = super().clean()
-        from decimal import Decimal
+        from decimal import Decimal, ROUND_HALF_UP
         D = lambda v: (v if isinstance(v, Decimal) else Decimal(str(v or 0)))
 
         prco = D(cleaned.get('tabe_prco'))
         perc_frete = D(cleaned.get('tabe_fret'))
         cuge = D(cleaned.get('tabe_cuge'))
         marg = D(cleaned.get('tabe_marg'))
-        apra = D(cleaned.get('tabe_apra'))
+        perc_prazo = D(cleaned.get('tabe_praz'))
 
         valor_frete = prco * (perc_frete / D(100))
-        custo = prco + valor_frete + cuge
-        preco_vista = custo * (D(1) + (marg / D(100)))
-        preco_prazo = preco_vista * (D(1) + (apra / D(100)))
+        custo_gerencial = prco + valor_frete + cuge
+        custo_gerencial_q = custo_gerencial.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        preco_vista = prco * (D(1) + (marg / D(100)))
+        preco_vista_q = preco_vista.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        preco_prazo = preco_vista * (D(1) + (perc_prazo / D(100)))
+        preco_prazo_q = preco_prazo.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
-        cleaned['tabe_cust'] = custo
-        cleaned['tabe_avis'] = preco_vista
-        cleaned['tabe_praz'] = preco_prazo
+        cleaned['tabe_cuge'] = custo_gerencial_q
+        cleaned['tabe_avis'] = preco_vista_q
+        cleaned['tabe_apra'] = preco_prazo_q
         return cleaned
 
 TabelaprecosFormSet = forms.modelformset_factory(
     Tabelaprecos,
     form=TabelaprecosForm,
     extra=1,
+)
+
+# Formset simples (sem PK/id oculto), usado para POST seguro
+TabelaprecosPlainFormSet = formset_factory(
+    TabelaprecosForm,
+    extra=0,
 )

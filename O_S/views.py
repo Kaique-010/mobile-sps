@@ -85,9 +85,6 @@ class OsViewSet(BaseMultiDBModelViewSet):
 
         qs = Os.objects.using(banco).all()
 
-        if user_setor.osfs_codi != 6:
-            qs = qs.filter(os_seto=user_setor.osfs_codi)
-
         return qs.order_by('-os_data_aber')
         
     @action(detail=True, methods=['post'])
@@ -524,20 +521,50 @@ class ServicosOsViewSet(BaseMultiDBModelViewSet):
                             'item': item
                         })
 
+                    # Normaliza numéricos e calcula total quando necessário
                     try:
+                        serv_quan = float(item.get('serv_quan') or 0)
+                        serv_unit = float(item.get('serv_unit') or 0)
+                        serv_desc = float(item.get('serv_desc') or 0)
+                        serv_tota = float(item.get('serv_tota') or (serv_quan * serv_unit))
+                    except (ValueError, TypeError) as e:
+                        raise ValidationError({
+                            'error': f"Erro ao converter valores numéricos na edição: {str(e)}",
+                            'item': item
+                        })
+
+                    defaults = {
+                        'serv_prod': item.get('serv_prod'),
+                        'serv_quan': serv_quan,
+                        'serv_unit': serv_unit,
+                        'serv_tota': serv_tota,
+                        'serv_desc': serv_desc,
+                        'serv_obse': item.get('serv_obse'),
+                        'serv_prof': item.get('serv_prof'),
+                        'serv_data': item.get('serv_data'),
+                        'serv_impr': item.get('serv_impr'),
+                        'serv_stat': item.get('serv_stat'),
+                        'serv_data_hora_impr': item.get('serv_data_hora_impr'),
+                        'serv_stat_seto': item.get('serv_stat_seto'),
+                    }
+
+                    updated = ServicosOs.objects.using(banco).filter(
+                        serv_item=item['serv_item'],
+                        serv_os=item['serv_os'],
+                        serv_empr=item['serv_empr'],
+                        serv_fili=item['serv_fili']
+                    ).update(**defaults)
+
+                    if updated:
                         obj = ServicosOs.objects.using(banco).get(
                             serv_item=item['serv_item'],
                             serv_os=item['serv_os'],
                             serv_empr=item['serv_empr'],
                             serv_fili=item['serv_fili']
                         )
-                        serializer = self.get_serializer(obj, data=item, partial=True, context={'banco': banco})
-                        serializer.is_valid(raise_exception=True)
-                        serializer.save()
-                        resposta['editados'].append(serializer.data)
-                    except ServicosOs.DoesNotExist:
+                        resposta['editados'].append(ServicosOsSerializer(obj, context={'banco': banco}).data)
+                    else:
                         logger.warning(f"Serviço não encontrado para edição: {item}")
-                        continue
 
                 # REMOVER
                 for item in remover:
@@ -556,6 +583,8 @@ class ServicosOsViewSet(BaseMultiDBModelViewSet):
 
                     if deleted:
                         resposta['removidos'].append(item['serv_item'])
+
+                # Sequência é garantida pelo gerador (formato ordem+NNN); não compactar
 
             return Response(resposta)
 

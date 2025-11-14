@@ -156,6 +156,21 @@ class ServicosOsSerializer(BancoModelSerializer):
         
         return ServicosOs.objects.using(banco).create(**validated_data)
 
+    def update(self, instance, validated_data):
+        # Não permitir alterações nos campos de chave/identificação
+        for key in ['serv_item', 'serv_empr', 'serv_fili', 'serv_os']:
+            if key in validated_data:
+                validated_data.pop(key)
+        # Recalcular total se fornecido quantidade/unidade
+        quan = validated_data.get('serv_quan')
+        unit = validated_data.get('serv_unit')
+        if quan is not None and unit is not None and 'serv_tota' not in validated_data:
+            try:
+                validated_data['serv_tota'] = quan * unit
+            except Exception:
+                pass
+        return super().update(instance, validated_data)
+
 
 class TituloReceberSerializer(BancoModelSerializer):
     class Meta:

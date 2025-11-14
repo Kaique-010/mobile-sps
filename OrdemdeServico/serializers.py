@@ -142,6 +142,21 @@ class OrdemServicoPecasSerializer(serializers.ModelSerializer):
       
         return Ordemservicopecas.objects.using(banco).create(**validated_data)
 
+    def update(self, instance, validated_data):
+        for key in ['peca_id', 'peca_empr', 'peca_fili', 'peca_orde']:
+            if key in validated_data:
+                validated_data.pop(key)
+
+        quan = validated_data.get('peca_quan')
+        unit = validated_data.get('peca_unit')
+        if quan is not None and unit is not None and 'peca_tota' not in validated_data:
+            try:
+                validated_data['peca_tota'] = quan * unit
+            except Exception:
+                pass
+
+        return super().update(instance, validated_data)
+
     def get_produto_nome(self, obj):
         try:
             banco = self.context.get('banco')
@@ -203,6 +218,23 @@ class OrdemServicoServicosSerializer(BancoModelSerializer):
             raise ValidationError("Banco de dados não fornecido.")
         
         return Ordemservicoservicos.objects.using(banco).create(**validated_data)
+
+    def update(self, instance, validated_data):
+        # Protege campos de chave para evitar alteração acidental do PK/identificação
+        for key in ['serv_id', 'serv_empr', 'serv_fili', 'serv_orde', 'serv_sequ']:
+            if key in validated_data:
+                validated_data.pop(key)
+
+        # Recalcula total quando quantidade/unidade fornecidos e total ausente
+        quan = validated_data.get('serv_quan')
+        unit = validated_data.get('serv_unit')
+        if quan is not None and unit is not None and 'serv_tota' not in validated_data:
+            try:
+                validated_data['serv_tota'] = quan * unit
+            except Exception:
+                pass
+
+        return super().update(instance, validated_data)
 
 
 
