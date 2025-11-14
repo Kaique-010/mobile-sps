@@ -33,7 +33,7 @@
     <div class="container">
         <p class="text-body-secondary mb-1">&copy; 2025 SPS. Todos os direitos reservados.</p>
         <div class="small text-body-secondary mb-2">
-            {# Preferir variáveis de contexto, com fallback para sessão e IDs #}
+            <span id="empresaDisplay">
             {% if empresa_nome %}
                 Empresa: {{ empresa_nome }}
             {% elif request and request.session and request.session.empresa_nome %}
@@ -45,7 +45,9 @@
             {% else %}
                 Empresa: não selecionada
             {% endif %}
+            </span>
             |
+            <span id="filialDisplay">
             {% if filial_nome %}
                 Filial: {{ filial_nome }}
             {% elif request and request.session and request.session.filial_nome %}
@@ -57,6 +59,7 @@
             {% else %}
                 Filial: não selecionada
             {% endif %}
+            </span>
         </div>
         <div class="small">
 
@@ -67,3 +70,23 @@
     </div>
 
 </footer>
+<script>
+(function(){
+  try{
+    var eNome=localStorage.getItem('empresa_nome');
+    var eId=localStorage.getItem('empresa_id');
+    var fNome=localStorage.getItem('filial_nome');
+    var fId=localStorage.getItem('filial_id');
+    var eEl=document.getElementById('empresaDisplay');
+    var fEl=document.getElementById('filialDisplay');
+    if(eEl){
+      if(eNome){ eEl.textContent='Empresa: '+eNome; }
+      else if(eId){ eEl.textContent='Empresa: '+eId; }
+    }
+    if(fEl){
+      if(fNome){ fEl.textContent='Filial: '+fNome; }
+      else if(fId){ fEl.textContent='Filial: '+fId; }
+    }
+  }catch(_){}
+})();
+</script>

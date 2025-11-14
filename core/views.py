@@ -121,7 +121,7 @@ def selecionar_empresa(request):
                     if not filial_nome:
                         fil_obj = (
                             Filiais.objects.using(banco)
-                            .filter(empr_empr=filial_id_int)
+                            .filter(empr_empr=empresa_id_int, empr_codi=filial_id_int)
                             .only('empr_nome')
                             .first()
                         )
