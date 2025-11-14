@@ -1,6 +1,15 @@
-- name: Teste do Bot
-  uses: appleboy/telegram-action@master
-  with:
-    to: ${{ secrets.TELEGRAM_CHAT_ID }}
-    token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-    message: '🔥 Teste do bot Leosousabot — funcionando!'
+name: Teste Telegram
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enviar mensagem de teste
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ 8458431982:AAGe5d8MZ0nzJY0yXpEi4DK_LI1oeV6Ej6I }}
+          token: ${{ 8189846288 }}
+          message: '🔥 Teste do bot Leosousabot — funcionando!'
