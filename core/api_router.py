@@ -1,7 +1,6 @@
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
-from rest_framework_simplejwt.views import TokenRefreshView
-from Licencas.views import licencas_mapa
+from Licencas.views import licencas_mapa, TokenRefreshCustomView
 
 urlpatterns = [
     # Rotas públicas
@@ -9,7 +8,7 @@ urlpatterns = [
     path("<slug>/entidades-login/", include("Entidades.urls")),
 
     # Auth
-    path("<slug>/auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("<slug>/auth/token/refresh/", TokenRefreshCustomView.as_view(), name="token_refresh"),
 
     # Rotas principais (privadas)
     path("<slug>/licencas/", include("Licencas.urls")),

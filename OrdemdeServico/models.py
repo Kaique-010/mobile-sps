@@ -317,7 +317,7 @@ class Ordemservico(models.Model):
 
 
 class Ordemservicopecas(models.Model):
-    peca_id = models.BigIntegerField(primary_key=True)
+    peca_id = models.IntegerField(primary_key=True)
     peca_empr = models.IntegerField() 
     peca_fili = models.IntegerField()
     peca_orde = models.IntegerField()
@@ -326,6 +326,8 @@ class Ordemservicopecas(models.Model):
     peca_quan = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
     peca_unit = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
     peca_tota = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
+    peca_tecn = models.IntegerField(blank=True, null=True, default=0)
+    peca_sem_esto = models.BooleanField(blank=True, null=True, default=True)
 
     class Meta:
         managed = False

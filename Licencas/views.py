@@ -7,6 +7,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.views import APIView
+from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from Licencas.models import Empresas, Filiais, Licencas, Usuarios
 from Licencas.crypto import encrypt_bytes, encrypt_str
@@ -93,11 +95,20 @@ class LoginView(APIView):
         refresh = RefreshToken.for_user(usuario)
         refresh['username'] = usuario.usua_nome
         refresh['usuario_id'] = usuario.usua_codi
-        refresh['setor'] = usuario.usua_seto  # Adicionar setor do usuário
+        refresh['setor'] = usuario.usua_seto
         refresh['lice_id'] = licenca.lice_id
         refresh['lice_nome'] = licenca.lice_nome
         refresh['empresa_id'] = empresa_id
         refresh['filial_id'] = filial_id
+        access = refresh.access_token
+        access['username'] = usuario.usua_nome
+        access['usuario_id'] = usuario.usua_codi
+        access['setor'] = usuario.usua_seto
+        access['lice_id'] = licenca.lice_id
+        access['lice_nome'] = licenca.lice_nome
+        access['empresa_id'] = empresa_id
+        access['filial_id'] = filial_id
+        logger.info(f"[LOGIN] Token claims: setor refresh={refresh.get('setor')} access={access.get('setor')}")
         jwt_time = (time.time() - jwt_start) * 1000
         logger.info(f"[LOGIN] Gerar JWT: {jwt_time:.2f}ms")
 
@@ -105,12 +116,12 @@ class LoginView(APIView):
         logger.info(f"[LOGIN] TOTAL: {total_time:.2f}ms para usuário {username}")
 
         return Response({
-            'access': str(refresh.access_token),
+            'access': str(access),
             'refresh': str(refresh),
             'usuario': {
                 'username': usuario.usua_nome,
                 'usuario_id': usuario.usua_codi,
-                'setor': usuario.usua_seto,  # Adicionar setor na resposta
+                'setor': usuario.usua_seto,
                 'empresa_id': empresa_id,
                 'filial_id': filial_id,
             },
@@ -120,6 +131,39 @@ class LoginView(APIView):
             },
             'modulos': modulos_login,
         })
+        
+
+class TokenRefreshCustomView(APIView):
+    def post(self, request, *args, **kwargs):
+        try:
+            raw_refresh = request.data.get('refresh')
+            if not raw_refresh:
+                return Response({'error': 'refresh ausente'}, status=400)
+            rt = RefreshToken(raw_refresh)
+            acc = rt.access_token
+            for k in ['username','usuario_id','setor','lice_id','lice_nome','empresa_id','filial_id']:
+                try:
+                    acc[k] = rt.get(k)
+                except Exception:
+                    pass
+            return Response({
+                'access': str(acc),
+                'usuario': {
+                    'username': rt.get('username', None),
+                    'usuario_id': rt.get('usuario_id', None),
+                    'setor': rt.get('setor', None),
+                },
+                'licenca': {
+                    'lice_id': rt.get('lice_id', None),
+                    'lice_nome': rt.get('lice_nome', None),
+                },
+                'contexto': {
+                    'empresa_id': rt.get('empresa_id', None),
+                    'filial_id': rt.get('filial_id', None),
+                }
+            })
+        except Exception as e:
+            return Response({'error': str(e)}, status=400)
 
 
 class EmpresaUsuarioView(APIView):

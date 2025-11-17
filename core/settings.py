@@ -155,6 +155,7 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
     'x-cnpj',
     'x-username', 
+    'setor',
     'x-email',
     'x-cpf',
     'x-Docu',
