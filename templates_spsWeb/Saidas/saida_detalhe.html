@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}Saída de Estoque{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">Saída #{{ object.said_sequ }}</h3>
+    <div class="btn-group">
+      <a class="btn btn-outline-secondary" href="{% url 'SaidasWeb:saidas_listar' slug=slug %}">Voltar</a>
+      <a class="btn btn-outline-primary" href="{% url 'SaidasWeb:saidas_editar' slug=slug pk=object.pk %}">Editar</a>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-3"><div class="text-muted">Data</div><div class="fw-semibold">{{ object.said_data }}</div></div>
+        <div class="col-md-3"><div class="text-muted">Produto</div><div class="fw-semibold">{{ object.said_prod }}</div></div>
+        <div class="col-md-3"><div class="text-muted">Entidade</div><div class="fw-semibold">{{ object.said_enti }}</div></div>
+        <div class="col-md-3"><div class="text-muted">Empresa/Filial</div><div class="fw-semibold">{{ object.said_empr }} / {{ object.said_fili }}</div></div>
+        <div class="col-md-3"><div class="text-muted">Quantidade</div><div class="fw-semibold">{{ object.said_quan }}</div></div>
+        <div class="col-md-3"><div class="text-muted">Total</div><div class="fw-semibold">{{ object.said_tota }}</div></div>
+        <div class="col-md-6"><div class="text-muted">Observação</div><div class="fw-semibold">{{ object.said_obse|default:'-' }}</div></div>
+        <div class="col-md-3"><div class="text-muted">Usuário</div><div class="fw-semibold">{{ object.said_usua }}</div></div>
+        <div class="col-md-3"><div class="text-muted">Lote</div><div class="fw-semibold">{{ object.said_lote_vend|default:'-' }}</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

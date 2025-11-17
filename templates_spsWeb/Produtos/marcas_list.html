@@ -8,7 +8,7 @@
     <div class="page-header">
         <h2 class="page-title"><i class="bi bi-boxes"></i> Marcas</h2>
         <div class="page-actions">
-            <a href="#" class="btn btn-success">
+            <a href="/web/login/" data-slug-route="/web/{slug}/produtos/marcas/new/" class="btn btn-success">
                 <i class="bi bi-plus"></i> Nova Marca
             </a>
         </div>
@@ -43,10 +43,10 @@
                         {% for marca in page_obj %}
                         <tr>
                             <td>
-                                <a href="#" class="btn btn-warning btn-sm">
+                                <a href="/web/login/" data-slug-route="/web/{slug}/produtos/marcas/{{ marca.codigo }}/edit/" class="btn btn-warning btn-sm">
                                     <i class="bi bi-pencil"></i>
                                 </a>
-                                <a href="#" class="btn btn-danger btn-sm">
+                                <a href="/web/login/" data-slug-route="/web/{slug}/produtos/marcas/{{ marca.codigo }}/delete/" class="btn btn-danger btn-sm">
                                     <i class="bi bi-trash"></i>
                                 </a>
                             </td>

@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Entrada de Estoque{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="{% static 'css/detail.css' %}">
+
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">Entrada #{{ object.entr_sequ }}</h3>
+    <div class="btn-group">
+      <a class="btn btn-outline-secondary" href="{% url 'EntradasWeb:entradas_listar' slug=slug %}">Voltar</a>
+      <a class="btn btn-outline-primary" href="{% url 'EntradasWeb:entradas_editar' slug=slug pk=object.pk %}">Editar</a>
+    </div>
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="card">
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <div class="text-muted">Data</div>
+          <div class="fw-semibold">{{ object.entr_data }}</div>
+        </div>
+        <div class="col-md-3">
+          <div class="text-muted">Produto</div>
+          <div class="fw-semibold">{{ object.entr_prod }}</div>
+        </div>
+        <div class="col-md-3">
+          <div class="text-muted">Entidade</div>
+          <div class="fw-semibold">{{ object.entr_enti }}</div>
+        </div>
+        <div class="col-md-3">
+          <div class="text-muted">Empresa / Filial</div>
+          <div class="fw-semibold">{{ object.entr_empr }} / {{ object.entr_fili }}</div>
+        </div>
+        <div class="col-md-3">
+          <div class="text-muted">Quantidade</div>
+          <div class="fw-semibold">{{ object.entr_quan }}</div>
+        </div>
+        <div class="col-md-3">
+          <div class="text-muted">Unitário</div>
+          <div class="fw-semibold">{{ object.entr_unit }}</div>
+        </div>
+        <div class="col-md-3">
+          <div class="text-muted">Total</div>
+          <div class="fw-semibold">{{ object.entr_tota }}</div>
+        </div>
+        <div class="col-md-6">
+          <div class="text-muted">Observação</div>
+          <div class="fw-semibold">{{ object.entr_obse|default:'-' }}</div>
+        </div>
+        <div class="col-md-3">
+          <div class="text-muted">Usuário</div>
+          <div class="fw-semibold">{{ object.entr_usua }}</div>
+        </div>
+        <div class="col-md-3">
+          <div class="text-muted">Lote</div>
+          <div class="fw-semibold">{{ object.entr_lote_vend|default:'-' }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

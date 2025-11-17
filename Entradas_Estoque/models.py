@@ -13,6 +13,7 @@ class EntradaEstoque(models.Model):
     entr_prod = models.CharField(db_column='entr_prod', max_length=10)
     entr_enti = models.CharField(db_column='entr_enti', max_length=10, blank=True, null=True)
     entr_data = models.DateField(db_column='entr_data', validators=[validate_data_entrada])
+    entr_unit = models.CharField(db_column='entr_unit', max_length=10, blank=True, null=True)
     entr_quan = models.DecimalField(max_digits=10, decimal_places=2)
     entr_tota = models.DecimalField(max_digits=10, decimal_places=2)
     entr_obse = models.CharField(max_length=100, blank=True, null=True)

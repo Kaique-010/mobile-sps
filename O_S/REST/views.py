@@ -9,10 +9,10 @@ from django.db.models import Max
 from django.utils import timezone
 from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser
-from .utils import get_next_item_number_sequence, get_next_service_id
+from ..utils import get_next_item_number_sequence, get_next_service_id
 from listacasamento.utils import get_next_item_number
-from .permissions import PodeVerOrdemDoSetor
-from .models import Os, PecasOs, ServicosOs
+from ..permissions import PodeVerOrdemDoSetor
+from ..models import Os, PecasOs, ServicosOs
 from .serializers import (
     OsSerializer, PecasOsSerializer, ServicosOsSerializer)
 from django.db.models import Prefetch

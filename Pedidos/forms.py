@@ -16,6 +16,7 @@ class PedidoVendaForm(forms.ModelForm):
             'pedi_fina',
             'pedi_vend',
             'pedi_desc',
+            'pedi_stat',
         ]
         widgets = {
             'pedi_forn': forms.HiddenInput(),
@@ -25,6 +26,7 @@ class PedidoVendaForm(forms.ModelForm):
             'pedi_fina': forms.Select(attrs={'class': 'form-select'}),
             'pedi_vend': forms.HiddenInput(),
             'pedi_desc': forms.NumberInput(attrs={'class': 'form-control','placeholder': '0.00', 'step': '0.01'}),
+            'pedi_stat': forms.Select(attrs={'class': 'form-select'}),
         }
         labels = {
             'pedi_forn': 'Cliente',
@@ -34,6 +36,7 @@ class PedidoVendaForm(forms.ModelForm):
             'pedi_fina': 'Tipo Financeiro',
             'pedi_vend': 'Vendedor',
             'pedi_desc': 'Desconto',
+            'pedi_stat': 'Status',
         }
 
     def __init__(self, *args, **kwargs):
@@ -81,6 +84,9 @@ class PedidoVendaForm(forms.ModelForm):
             ('2', 'Sem Financeiro'),
             ('3', 'Na Emissão'),
         ]
+        self.fields['pedi_stat'].choices = STATUS_ORCAMENTO
+
+
 
     def clean(self):
         cleaned = super().clean()

@@ -78,14 +78,14 @@ class SaidasEstoqueSerializer(BancoContextMixin, serializers.ModelSerializer):
         if not banco:
             raise ValidationError("Banco de dados não informado no contexto.")
 
-        if not validated_data.get('entr_sequ'):
+        if not validated_data.get('said_sequ'):
             max_seq = SaidasEstoque.objects.using(banco).aggregate(Max('said_sequ'))['said_sequ__max'] or 0
             validated_data['said_sequ'] = max_seq + 1
         try:
             instance = SaidasEstoque.objects.using(banco).create(**validated_data)
             return instance
         except Exception as e:
-            logger.error(f"Erro ao criar entrada: {str(e)}")
+            logger.error(f"Erro ao criar saída: {str(e)}")
             raise
     
     

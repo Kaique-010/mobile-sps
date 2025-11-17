@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}Entradas de Estoque{% endblock %}
+
+{% block content %}
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }}">{{ message }}</div>
+{% endfor %}
+{% endif %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">Entradas de Estoque</h3>
+    <a class="btn btn-primary" href="/web/login/" data-slug-route="/web/{slug}/entradas/criar/">Nova Entrada</a>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead>
+            <tr>
+              <th>Nº</th>
+              <th>Data</th>
+              <th>Produto</th>
+              <th>Entidade</th>
+              <th class="text-end">Quantidade</th>
+              <th class="text-end">Total</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for e in entradas %}
+            <tr>
+              <td>{{ e.entr_sequ }}</td>
+              <td>{{ e.entr_data }}</td>
+              <td>{{ e.entr_prod }}</td>
+              <td>{{ e.entr_enti }}</td>
+              <td class="text-end">{{ e.entr_quan }}</td>
+              <td class="text-end">R$ {{ e.entr_tota }}</td>
+              <td class="text-end">
+                <a class="btn btn-sm btn-outline-secondary" href="/web/login/"
+                  data-slug-route="/web/{slug}/entradas/{{ e.pk }}/">Detalhe</a>
+                <a class="btn btn-sm btn-outline-primary" href="/web/login/"
+                  data-slug-route="/web/{slug}/entradas/{{ e.pk }}/editar/">Editar</a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="7" class="text-center text-muted">Nenhuma entrada encontrada</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% include 'components/pagination.html' %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -61,7 +61,7 @@
           <button type="submit" class="btn btn-primary">
             {% if form.instance.pk %}Atualizar{% else %}Salvar{% endif %}
           </button>
-          <a href="{% url 'grupos_list' %}" class="btn btn-secondary mt-2">Voltar para a Lista de Grupos</a>
+          <a href="{% url 'grupos_web' slug=slug %}" class="btn btn-secondary mt-2">Voltar para a Lista de Grupos</a>
         </div>
 
       </form>

@@ -1,5 +1,13 @@
 # models.py
 from django.db import models
+
+STATUS_ORCAMENTO = [
+    (0, 'Aberto'),
+    (1, 'Processando'),
+    (2, 'Exportado'),
+    (3, 'Concluído'),
+    (4, 'Cancelado'),
+]
 class Orcamentos(models.Model):
     pedi_empr = models.IntegerField()
     pedi_fili = models.IntegerField()
@@ -12,6 +20,7 @@ class Orcamentos(models.Model):
     pedi_obse = models.TextField(blank=True, null=True)
     pedi_nume_pedi = models.IntegerField(db_column='pedi_nume_pedi',blank=True, null=True)
     pedi_desc = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    pedi_stat = models.IntegerField(db_column='pedi_stat',choices=STATUS_ORCAMENTO, default=0)
  
 
 

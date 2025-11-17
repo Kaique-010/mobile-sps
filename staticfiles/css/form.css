@@ -33,3 +33,82 @@
   display: flex;
   gap: 12px;
 }
+
+  .card {
+    border-radius: 15px;
+    overflow: hidden;
+  }
+  
+  .card-header {
+    border-bottom: 3px solid rgba(255,255,255,0.2);
+  }
+  
+  .nav-pills .nav-link {
+    border-radius: 10px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+  }
+  
+  .nav-pills .nav-link:hover {
+    transform: translateY(-2px);
+  }
+  
+  .table {
+    margin-bottom: 0;
+  }
+  
+  .table thead th {
+    border: none;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  
+  .table tbody tr {
+    transition: all 0.2s ease;
+  }
+  
+  .table tbody tr:hover {
+    background-color: rgba(0,123,255,0.05);
+  }
+  
+  .form-control, .form-select {
+    border-radius: 8px;
+    border: 0.5px solid #aaaaaa;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+  }
+  
+  .form-control:focus, .form-select:focus {
+    border-color: #6c87b1;
+    box-shadow: 0 0 0 0.2rem rgba(13,110,253,0.15);
+  }
+  
+  .autocomplete-dropdown {
+    max-height: 300px;
+    overflow-y: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    margin-top: 4px;
+  }
+  
+  .btn {
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+  }
+  
+  .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  }
+  
+  .input-group-text {
+    border-radius: 8px 0 0 8px;
+    border: 0.5px solid #e0e0e0;
+    border-right: none;
+  }
+  
+  .input-group .form-control {
+    border-left: none;
+    border-radius: 0 8px 8px 0;
+  }

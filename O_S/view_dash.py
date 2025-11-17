@@ -5,7 +5,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter
 
 from .models import OrdemServicoGeral
-from .serializers import OrdemServicoGeralSerializer
+from .REST.serializers import OrdemServicoGeralSerializer
 from .filters.os import OrdemServicoGeralFilter
 from core.registry import get_licenca_db_config
 from core.decorator import ModuloRequeridoMixin

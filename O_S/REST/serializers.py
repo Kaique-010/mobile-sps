@@ -7,7 +7,7 @@ from rest_framework.exceptions import ValidationError
 from Entidades.models import Entidades
 from contas_a_receber.models import Titulosreceber
 from core.serializers import BancoContextMixin
-from .models import (
+from ..models import (
     Os, PecasOs, ServicosOs, OrdemServicoGeral
 )
 

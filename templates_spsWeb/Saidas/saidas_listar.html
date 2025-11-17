@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}Saídas de Estoque{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">Saídas</h3>
+    <a class="btn btn-primary" href="{% url 'SaidasWeb:saidas_criar' slug=slug %}">Nova Saída</a>
+  </div>
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Data</th>
+            <th>Produto</th>
+            <th>Entidade</th>
+            <th>Quantidade</th>
+            <th>Total</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in saidas %}
+          <tr>
+            <td>{{ s.said_sequ }}</td>
+            <td>{{ s.said_data }}</td>
+            <td>{{ s.said_prod }}</td>
+            <td>{{ s.said_enti }}</td>
+            <td>{{ s.said_quan }}</td>
+            <td>{{ s.said_tota }}</td>
+            <td>
+              <a class="btn btn-sm btn-outline-secondary" href="{% url 'SaidasWeb:saidas_detalhe' slug=slug pk=s.pk %}">Detalhe</a>
+              <a class="btn btn-sm btn-outline-primary" href="{% url 'SaidasWeb:saidas_editar' slug=slug pk=s.pk %}">Editar</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="text-center text-muted">Sem registros</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% include 'components/pagination.html' %}
+    </div>
+  </div>
+</div>
+{% endblock %}

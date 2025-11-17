@@ -14,7 +14,7 @@ from Entidades.models import Entidades
 from Licencas.models import Filiais
 from core.utils import get_licenca_db_config
 from contas_a_pagar.serializers import TitulospagarSerializer
-from Entradas_Estoque.serializers import EntradasEstoqueSerializer
+from Entradas_Estoque.REST.serializers import EntradasEstoqueSerializer
 from notificacoes.models import Notificacao
 from contas_a_pagar.models import Titulospagar
 from Produtos.models import Produtos, UnidadeMedida

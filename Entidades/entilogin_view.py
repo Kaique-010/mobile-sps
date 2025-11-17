@@ -170,7 +170,7 @@ from O_S.models import OrdemServicoGeral, Os
 from OrdemdeServico.models import Ordemservico
 from Pedidos.serializers import PedidoVendaSerializer, PedidosGeralSerializer,ItemPedidoVendaSerializer
 from Orcamentos.serializers import OrcamentosSerializer,ItemOrcamentoSerializer
-from O_S.serializers import OrdemServicoGeralSerializer, OsSerializer
+from O_S.REST.serializers import OrdemServicoGeralSerializer, OsSerializer
 from OrdemdeServico.serializers import OrdemServicoSerializer
 
 

@@ -21,7 +21,7 @@ class SaidasEstoqueViewSet(ModuloRequeridoMixin, ModelViewSet):
     modulo_necessario = 'Saidas_Estoque'
     permission_classes = [IsAuthenticated]
     serializer_class = SaidasEstoqueSerializer
-    filter_backends = [SearchFilter]
+    filter_backends = [DjangoFilterBackend, SearchFilter]
     search_fields = ['said_enti', 'said_prod']
     filterset_fields = ['said_empr', 'said_fili']
 
@@ -59,18 +59,17 @@ class SaidasEstoqueViewSet(ModuloRequeridoMixin, ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         logger.info(f"🗑️ [VIEW DELETE] Solicitada exclusão do ID {instance.said_sequ}")
-        
         banco = get_licenca_db_config(self.request)
-        if banco:
-            db_alias = banco
-        else:
+        if not banco:
             logger.error("Banco de dados não encontrado.")
             raise NotFound("Banco de dados não encontrado.")
         try:
-            self.perform_destroy(instance.using(getattr(request, 'db_alias', 'default')))
+            from django.db import transaction
+            with transaction.atomic(using=banco):
+                instance.delete()
             logger.info(f"🗑️ [VIEW DELETE] Exclusão do ID {instance.said_sequ} concluída")
             logger.info(f"✅ Exclusão concluída: ID {instance.said_sequ}")
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Exception as e:
-            logger.error(f"❌ Falha ao excluir entrada: {e}")
+            logger.error(f"❌ Falha ao excluir saída: {e}")
             return Response({'erro': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

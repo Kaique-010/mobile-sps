@@ -1,7 +1,7 @@
 from django import forms
 import logging
 from django.forms import inlineformset_factory
-from .models import Os, PecasOs, ServicosOs
+from ..models import Os, PecasOs, ServicosOs
 from OrdemdeServico.models import OrdemServicoFaseSetor
 from Produtos.models import Produtos
 from Entidades.models import Entidades
@@ -112,10 +112,16 @@ class OsForm(forms.ModelForm):
         ]
         
         self.fields['os_stat_os'].choices = [
-            ('', 'Selecione o status'),
-            ('0', 'Aberto'),
-            ('1', 'Fechado'),
+            (0, "Aberta"),
+            (1, "Orçamento gerado"),
+            (2, "Aguardando Liberação"),
+            (3, "Liberada"),
+            (4, "Finalizada"),
+            (5, "Reprovada"),
+            (20, "Faturada_parcial"),
+            (21, "Em atraso"),
         ]
+        
         self.fields['os_situ'].choices = [
             ('', 'Selecione a situação'),
             ('0', 'Ativo'),

@@ -1,9 +1,4 @@
-# urls.py
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from .views import SaidasEstoqueViewSet
+from .REST.urls import urlpatterns as rest_urlpatterns
+from .Web.web_urls import urlpatterns as web_urlpatterns
 
-router = DefaultRouter()
-router.register(r'saidas-estoque', SaidasEstoqueViewSet, basename='saidas-estoque')
-
-urlpatterns = router.urls
+urlpatterns = rest_urlpatterns + web_urlpatterns

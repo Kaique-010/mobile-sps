@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load finance_tags %}
 
 {% block title %}Orçamentos{% endblock %}
 
@@ -16,6 +17,35 @@
     <div class="container d-flex justify-content-end">
       <a class="btn btn-success" href="{% url 'OrcamentosWeb:orcamento_criar' slug=slug %}">Novo Orçamento</a>
     </div>
+  </div>
+
+  <div class="row g-3 mb-3">
+    {% for c in cards_resumo %}
+    <div class="col-sm-6 col-md-3">
+      <div class="card" style="border:1px solid {{ c.color }}; box-shadow:0 2px 8px rgba(0,0,0,.08);">
+        <div class="card-body py-2">
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="fw-semibold" style="color: {{ c.color }};">{{ c.label }}</span>
+            <span class="badge" style="background-color: {{ c.color }};">{{ c.qtd }}</span>
+          </div>
+          {% if c.valor is not None %}<div class="small text-muted mt-1">Total: {{ c.valor|brl }}</div>{% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+    {% for c in cards_por_status %}
+    <div class="col-sm-6 col-md-3">
+      <div class="card" style="border:1px solid {{ c.color }}; box-shadow:0 2px 8px rgba(0,0,0,.08);">
+        <div class="card-body py-2">
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="fw-semibold" style="color: {{ c.color }};">{{ c.label }}</span>
+            <span class="badge" style="background-color: {{ c.color }};">{{ c.qtd }}</span>
+          </div>
+          <div class="small text-muted mt-1">Total: {{ c.valor|brl }}</div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
   </div>
 
   {% if messages %}
@@ -66,7 +96,7 @@
           <td>{{ o.cliente_nome|default:"—" }}</td>
           <td>{{ o.pedi_vend }}</td>
           <td>{{ o.vendedor_nome|default:"—" }}</td>
-          <td class="text-end">R$ {{ o.pedi_tota }}</td>
+          <td class="text-end">{{ o.pedi_tota|brl }}</td>
           <td class="text-end">
             <a class="btn btn-sm btn-outline-primary"
               href="{% url 'OrcamentosWeb:orcamento_detalhe' slug=slug pk=o.pk %}">Detalhes</a>
@@ -80,6 +110,13 @@
         </tr>
         {% endfor %}
       </tbody>
+      <tfoot>
+        <tr class="table-dark">
+          <td colspan="6" class="text-end fw-bold">Total ({{ total_registros }} registros):</td>
+          <td class="text-end">{{ total_valor|brl }}</td>
+          <td></td>
+        </tr>
+      </tfoot>
     </table>
   </div>
 </div>

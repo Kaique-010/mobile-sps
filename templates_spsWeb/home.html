@@ -3,219 +3,281 @@
 {% block title %}Métricas{% endblock %}
 
 {% block content %}
+<style>
+    .card-corporate {
+        box-shadow: 0 6px 18px rgba(142, 196, 212, 0.733);
+        border-radius: 12px;
+        border: 1px solid var(--bs-border-color);
+        background: var(--bs-card-bg)
+    }
+
+    .filter-panel {
+        background: var(--bs-card-bg);
+        box-shadow: 0 4px 14px rgba(142, 196, 212, 0.733);
+        border-radius: 12px;
+        border: 1px solid var(--bs-border-color);
+        padding: 16px
+    }
+
+    .chart-card {
+        background: var(--bs-card-bg);
+        box-shadow: 0 4px 14px rgba(142, 196, 212, 0.733);
+        border-radius: 12px;
+        border: 1px solid var(--bs-border-color)
+    }
+
+    .chart-card .card-body {
+        padding: 20px
+    }
+
+    .chart-canvas {
+        display: block;
+        width: 90% !important;
+        height: clamp(220px, 38vh, 380px) !important;
+        color: var(--bs-body-color);
+    }
+</style>
 <div class="container page-container">
     <div class="card card-corporate">
         <div class="card-body">
             <div class="page-header">
-                <h2 class="page-title text-center"><i class="bi bi-graph-up fs-3 justify-content-center text-center"></i> Overview</h2>
-                 <p class="text-body-secondary text-center">Filtre o período e visualize métricas por vendedor.</p>
+                <h2 class="page-title text-center"><i
+                        class="bi bi-graph-up fs-3 justify-content-center text-center"></i> Overview</h2>
+              
             </div>
-        </div>        
-</div>               
-
-            <form id="filtroDashboard" class="mb-5 mt-5" method="get" action="">
-                <div class="row g-3">
-                    <div class="col-md-4 mb-3 my-3">
-                        <label for="vendedor" class="form-label">Vendedor</label>
-                        <select id="vendedor" name="vendedor" class="form-select">
-                            <option value="">Todos os Vendedores</option>
-                            {% for vendedor in vendedores %}
-                            <option value="{{ vendedor.enti_nome }}" {% if vendedor.enti_nome == vendedor_selecionado %}selected{% endif %}>
-                                {{ vendedor.enti_nome }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label for="data_inicio" class="form-label">Data Início</label>
-                        <input type="date" id="data_inicio" name="data_inicio" class="form-control" value="{{ data_inicio }}">
-                    </div>
-                    <div class="col-md-4">
-                        <label for="data_fim" class="form-label">Data Fim</label>
-                        <input type="date" id="data_fim" name="data_fim" class="form-control" value="{{ data_fim }}">
-                    </div>
-                </div>
-                <div class="mt-3 d-flex justify-content-center">
-                    <button type="submit" class="btn btn-primary">Filtrar</button>
-                </div>
-            </form>
-
-            <div class="row g-4">
-                <div class="col-lg-6">
-                    <h3 class="h6 text-body">Pedidos por Vendedor</h3>
-                    <canvas id="totalPedidosChart"></canvas>
-                </div>
-                <div class="col-lg-6">
-                    <h3 class="h6 text-body">Valor Pedidos por Vendedor</h3>
-                    <canvas id="totalValorPedidoChart"></canvas>
-                </div>
-            </div>
-            </div>
-            </div>
-
-
-            <script>
-                // Helper: datas padrão (últimos 30 dias)
-                function getDefaultDates() {
-                    const hoje = new Date();
-                    const fim = hoje.toISOString().slice(0, 10);
-                    const iniDate = new Date(hoje);
-                    iniDate.setDate(hoje.getDate() - 30);
-                    const ini = iniDate.toISOString().slice(0, 10);
-                    return { ini, fim };
-                }
-
-                // Helper: fetch autenticado com auto-refresh
-                function getAuthHeaders(token) {
-                    return token ? { 'Authorization': `Bearer ${token}` } : {};
-                }
-
-                async function authFetch(url, options = {}) {
-                    const slug = localStorage.getItem('slug');
-                    const token = localStorage.getItem('access');
-                    const empresa = localStorage.getItem('empresa_id') || '1';
-                    const filial = localStorage.getItem('filial_id') || '1';
-                    let resp = await fetch(url, { ...options, headers: { 'Content-Type': 'application/json', 'X-Empresa': empresa, 'X-Filial': filial, ...getAuthHeaders(token), ...(options.headers || {}) } });
-                    if (resp.status !== 401) return resp;
-                    const refresh = localStorage.getItem('refresh');
-                    if (!refresh) return resp;
-                    try {
-                        const refreshResp = await fetch(`/api/${slug}/auth/token/refresh/`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ refresh })
-                        });
-                        if (!refreshResp.ok) return resp;
-                        const data = await refreshResp.json();
-                        const newAccess = data?.access;
-                        if (!newAccess) return resp;
-                        localStorage.setItem('access', newAccess);
-                        resp = await fetch(url, { ...options, headers: { 'Content-Type': 'application/json', 'X-Empresa': empresa, 'X-Filial': filial, ...getAuthHeaders(newAccess), ...(options.headers || {}) } });
-                        return resp;
-                    } catch (e) {
-                        console.error('Falha no refresh token:', e);
-                        return resp;
-                    }
-                }
-
-                // Estado dos gráficos
-                const totalPedidosCtx = document.getElementById('totalPedidosChart');
-                const totalValorPedidoCtx = document.getElementById('totalValorPedidoChart');
-                let totalPedidosChart = null;
-                let totalValorChart = null;
-
-                function upsertCharts(labels, valoresCount, valoresSum) {
-                    // Total de Pedidos por Vendedor
-                    const baseOptions = {
-                        type: 'bar',
-                        options: { scales: { y: { beginAtZero: true } } }
-                    };
-
-                    const countData = {
-                        labels,
-                        datasets: [{
-                            label: 'Total de Pedidos',
-                            data: valoresCount,
-                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            borderWidth: 1
-                        }]
-                    };
-
-                    const sumData = {
-                        labels,
-                        datasets: [{
-                            label: 'Valor Total dos Pedidos',
-                            data: valoresSum,
-                            backgroundColor: 'rgba(153, 102, 255, 0.2)',
-                            borderColor: 'rgba(153, 102, 255, 1)',
-                            borderWidth: 1
-                        }]
-                    };
-
-                    if (totalPedidosChart) {
-                        totalPedidosChart.data = countData;
-                        totalPedidosChart.update();
-                    } else if (totalPedidosCtx) {
-                        totalPedidosChart = new Chart(totalPedidosCtx.getContext('2d'), { ...baseOptions, data: countData });
-                    }
-
-                    if (totalValorChart) {
-                        totalValorChart.data = sumData;
-                        totalValorChart.update();
-                    } else if (totalValorPedidoCtx) {
-                        totalValorChart = new Chart(totalValorPedidoCtx.getContext('2d'), { ...baseOptions, data: sumData });
-                    }
-                }
-
-                async function loadData(paramsOverride = {}) {
-                    const slug = localStorage.getItem('slug');
-                    const token = localStorage.getItem('access');
-                    if (!slug || !token) {
-                        alert('Necessário estar logado.');
-                        window.location.href = '/web/login/';
-                        return;
-                    }
-
-                    // Datas padrão
-                    const { ini, fim } = getDefaultDates();
-                    const dataInicioEl = document.getElementById('data_inicio');
-                    const dataFimEl = document.getElementById('data_fim');
-                    if (dataInicioEl && !dataInicioEl.value) dataInicioEl.value = ini;
-                    if (dataFimEl && !dataFimEl.value) dataFimEl.value = fim;
-
-                    const nomeVendedor = (document.getElementById('vendedor')?.value || '').trim();
-                    const data_inicial = dataInicioEl?.value || ini;
-                    const data_final = dataFimEl?.value || fim;
-
-                    const params = new URLSearchParams({
-                        data_inicial,
-                        data_final,
-                        limit: '250'
-                    });
-                    if (nomeVendedor) params.set('nome_vendedor', nomeVendedor);
-                    // Endpoint: Pedidos gerais (usaremos para agregar por vendedor)
-                    const url = `/api/${slug}/pedidos/pedidos-geral/?${params.toString()}`;
-
-                    try {
-                        const resp = await authFetch(url);
-                        if (!resp.ok) throw new Error(`Erro ${resp.status}`);
-                        const data = await resp.json();
-                        const items = Array.isArray(data) ? data : (data.results || []);
-
-                        const porVendedorCount = {};
-                        const porVendedorValor = {};
-                        for (const item of items) {
-                            const vend = item.nome_vendedor || 'N/D';
-                            const valor = parseFloat(item.valor_total) || 0;
-                            porVendedorCount[vend] = (porVendedorCount[vend] || 0) + 1;
-                            porVendedorValor[vend] = (porVendedorValor[vend] || 0) + valor;
-                        }
-
-                        const labels = Object.keys(porVendedorCount);
-                        const valoresCount = labels.map(v => porVendedorCount[v]);
-                        const valoresSum = labels.map(v => porVendedorValor[v]);
-                        upsertCharts(labels, valoresCount, valoresSum);
-                    } catch (err) {
-                        console.error('Falha ao carregar dados do dashboard:', err);
-                        upsertCharts([], [], []);
-                    }
-                }
-
-                // Submit: apenas recarrega os dados sem navegar
-                (function () {
-                    const form = document.getElementById('filtroDashboard');
-                    if (!form) return;
-                    form.addEventListener('submit', function (e) {
-                        e.preventDefault();
-                        loadData();
-                    });
-                })();
-
-                // Inicializa ao carregar a página
-                document.addEventListener('DOMContentLoaded', () => {
-                    loadData();
-                });
-            </script>
         </div>
-        {% endblock %}
+    </div>
+
+    <form id="filtroDashboard" class="filter-panel mb-4 mt-4" method="get" action="">
+        <div class="row g-3">
+            <div class="col-md-4 mb-3 my-3">
+                <label for="vendedor" class="form-label">Vendedor</label>
+                <select id="vendedor" name="vendedor" class="form-select">
+                    <option value="">Todos os Vendedores</option>
+                    {% for vendedor in vendedores %}
+                    <option value="{{ vendedor.enti_nome }}" {% if vendedor.enti_nome == vendedor_selecionado%}
+                        selected{% endif %}>
+                        {{ vendedor.enti_nome }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="data_inicio" class="form-label">Data Início</label>
+                <input type="date" id="data_inicio" name="data_inicio" class="form-control" value="{{ data_inicio }}">
+            </div>
+            <div class="col-md-4">
+                <label for="data_fim" class="form-label">Data Fim</label>
+                <input type="date" id="data_fim" name="data_fim" class="form-control" value="{{ data_fim }}">
+            </div>
+        </div>
+        <div class="mt-3 d-flex justify-content-center">
+            <button type="submit" class="btn btn-primary">Filtrar</button>
+        </div>
+    </form>
+
+    <div class="row g-3 align-items-stretch">
+        <div class="col-lg-6 d-flex">
+            <div class="card chart-card w-100">
+                <div class="card-body">
+                    <h3 class="h6 text-body">Pedidos por Vendedor</h3>
+                    <canvas id="totalPedidosChart" class="chart-canvas"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 d-flex">
+            <div class="card chart-card w-100">
+                <div class="card-body">
+                    <h3 class="h6 text-body">Valor Pedidos por Vendedor</h3>
+                    <canvas id="totalValorPedidoChart" class="chart-canvas"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+
+<script>
+    // Helper: datas padrão (últimos 30 dias)
+    function getDefaultDates() {
+        const hoje = new Date();
+        const fim = hoje.toISOString().slice(0, 10);
+        const iniDate = new Date(hoje);
+        iniDate.setDate(hoje.getDate() - 30);
+        const ini = iniDate.toISOString().slice(0, 10);
+        return { ini, fim };
+    }
+
+    // Helper: fetch autenticado com auto-refresh
+    function getAuthHeaders(token) {
+        return token ? { 'Authorization': `Bearer ${token}` } : {};
+    }
+
+    async function authFetch(url, options = {}) {
+        const slug = localStorage.getItem('slug');
+        const token = localStorage.getItem('access');
+        const empresa = localStorage.getItem('empresa_id') || '1';
+        const filial = localStorage.getItem('filial_id') || '1';
+        let resp = await fetch(url, { ...options, headers: { 'Content-Type': 'application/json', 'X-Empresa': empresa, 'X-Filial': filial, ...getAuthHeaders(token), ...(options.headers || {}) } });
+        if (resp.status !== 401) return resp;
+        const refresh = localStorage.getItem('refresh');
+        if (!refresh) return resp;
+        try {
+            const refreshResp = await fetch(`/api/${slug}/auth/token/refresh/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh })
+            });
+            if (!refreshResp.ok) return resp;
+            const data = await refreshResp.json();
+            const newAccess = data?.access;
+            if (!newAccess) return resp;
+            localStorage.setItem('access', newAccess);
+            resp = await fetch(url, { ...options, headers: { 'Content-Type': 'application/json', 'X-Empresa': empresa, 'X-Filial': filial, ...getAuthHeaders(newAccess), ...(options.headers || {}) } });
+            return resp;
+        } catch (e) {
+            console.error('Falha no refresh token:', e);
+            return resp;
+        }
+    }
+
+    // Estado dos gráficos
+    const totalPedidosCtx = document.getElementById('totalPedidosChart');
+    const totalValorPedidoCtx = document.getElementById('totalValorPedidoChart');
+    let totalPedidosChart = null;
+    let totalValorChart = null;
+
+    function createBarGradient(ctx) {
+        const g = ctx.createLinearGradient(0, ctx.canvas.height, 0, 0); g.addColorStop(0, '#4a6cf7'); g.addColorStop(1, '#82a0ff'); return g
+    }
+    const shadowPlugin = { id: 'barShadow', beforeDatasetsDraw(chart) { const c = chart.ctx; c.save(); c.shadowColor = 'rgba(142, 196, 212, 0.733)'; c.shadowBlur = 8; c.shadowOffsetY = 4 }, afterDatasetsDraw(chart) { chart.ctx.restore() } };
+    function isDarkTheme(){ const t=(document.documentElement.getAttribute('data-bs-theme')||document.body.getAttribute('data-bs-theme')||'').toLowerCase(); if(t) return t==='dark'; return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches }
+    function isWhiteTheme(){ return !isDarkTheme() }
+    function themeAxis(){ const dark=isDarkTheme(); return { gridColor: dark? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.12)', tickColor: dark? '#ffffff' : '#212529', legendColor: dark? '#ffffff' : '#212529' } }
+
+    function upsertCharts(labels, valoresCount, valoresSum) {
+        const barCtx = totalPedidosCtx ? totalPedidosCtx.getContext('2d') : null;
+        const pieCtx = totalValorPedidoCtx ? totalValorPedidoCtx.getContext('2d') : null;
+
+        const countData = {
+            labels,
+            datasets: [{
+                label: 'Total de Pedidos',
+                data: valoresCount,
+                backgroundColor: barCtx ? createBarGradient(barCtx) : '#82a0ff',
+                borderColor: '#4a6cf7',
+                borderWidth: 1,
+                borderRadius: 6
+            }]
+        };
+
+        const palette = ['#4a6cf7', '#6ea8fe', '#06b6d4', '#82d4a0', '#8b5cf6', '#e99e60', '#e2b783', '#d69292', '#0ea5e9', '#10b981', '#c084fc', '#84cc16'];
+        const sumData = {
+            labels,
+            datasets: [{
+                label: 'Valor Total dos Pedidos',
+                data: valoresSum,
+                backgroundColor: labels.map((_, i) => palette[i % palette.length]),
+                borderColor: '#ffffff',
+                borderWidth: 1,
+                hoverOffset: 8
+            }]
+        };
+
+        const axis = themeAxis();
+        if (totalPedidosChart) {
+            totalPedidosChart.data = countData;
+            totalPedidosChart.options.scales.y.grid.color = axis.gridColor;
+            totalPedidosChart.options.scales.y.ticks.color = axis.tickColor;
+            totalPedidosChart.options.scales.x.grid.color = axis.gridColor;
+            totalPedidosChart.options.scales.x.ticks.color = axis.tickColor;
+            totalPedidosChart.update();
+        } else if (barCtx) {
+            totalPedidosChart = new Chart(barCtx, { type: 'bar', data: countData, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } }, x: { grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } } }, plugins: { legend: { display: false } } }, plugins: [shadowPlugin] });
+        }
+
+        if (totalValorChart && totalValorChart.config.type !== 'pie') {
+            totalValorChart.destroy();
+            totalValorChart = null;
+        }
+        if (totalValorChart) {
+            totalValorChart.data = sumData;
+            totalValorChart.options.plugins.legend.labels.color = axis.legendColor;
+            totalValorChart.update();
+        } else if (pieCtx) {
+            totalValorChart = new Chart(pieCtx, { type: 'pie', data: sumData, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: axis.legendColor } } }, layout: { padding: 8 } } });
+        }
+    }
+
+    async function loadData(paramsOverride = {}) {
+        const slug = localStorage.getItem('slug');
+        const token = localStorage.getItem('access');
+        if (!slug || !token) {
+            alert('Necessário estar logado.');
+            window.location.href = '/web/login/';
+            return;
+        }
+
+        // Datas padrão
+        const { ini, fim } = getDefaultDates();
+        const dataInicioEl = document.getElementById('data_inicio');
+        const dataFimEl = document.getElementById('data_fim');
+        if (dataInicioEl && !dataInicioEl.value) dataInicioEl.value = ini;
+        if (dataFimEl && !dataFimEl.value) dataFimEl.value = fim;
+
+        const nomeVendedor = (document.getElementById('vendedor')?.value || '').trim();
+        const data_inicial = dataInicioEl?.value || ini;
+        const data_final = dataFimEl?.value || fim;
+
+        const params = new URLSearchParams({
+            data_inicial,
+            data_final,
+            limit: '250'
+        });
+        if (nomeVendedor) params.set('nome_vendedor', nomeVendedor);
+        // Endpoint: Pedidos gerais (usaremos para agregar por vendedor)
+        const url = `/api/${slug}/pedidos/pedidos-geral/?${params.toString()}`;
+
+        try {
+            const resp = await authFetch(url);
+            if (!resp.ok) throw new Error(`Erro ${resp.status}`);
+            const data = await resp.json();
+            const items = Array.isArray(data) ? data : (data.results || []);
+
+            const porVendedorCount = {};
+            const porVendedorValor = {};
+            for (const item of items) {
+                const vend = item.nome_vendedor || 'N/D';
+                const valor = parseFloat(item.valor_total) || 0;
+                porVendedorCount[vend] = (porVendedorCount[vend] || 0) + 1;
+                porVendedorValor[vend] = (porVendedorValor[vend] || 0) + valor;
+            }
+
+            const labels = Object.keys(porVendedorCount);
+            const valoresCount = labels.map(v => porVendedorCount[v]);
+            const valoresSum = labels.map(v => porVendedorValor[v]);
+            upsertCharts(labels, valoresCount, valoresSum);
+        } catch (err) {
+            console.error('Falha ao carregar dados do dashboard:', err);
+            upsertCharts([], [], []);
+        }
+    }
+
+    // Submit: apenas recarrega os dados sem navegar
+    (function () {
+        const form = document.getElementById('filtroDashboard');
+        if (!form) return;
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            loadData();
+        });
+    })();
+
+    // Inicializa ao carregar a página
+    document.addEventListener('DOMContentLoaded', () => {
+        loadData();
+    });
+</script>
+</div>
+{% endblock %}

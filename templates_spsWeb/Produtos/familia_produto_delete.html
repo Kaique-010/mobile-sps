@@ -33,7 +33,7 @@
 <form method="post">
   {% csrf_token %}
   <button type="submit" class="btn btn-danger">Excluir</button>
-  <a href="{% url 'familias_produto_list' %}" class="btn btn-secondary">Cancelar</a>
+  <a href="{% url 'familias_web' slug=slug %}" class="btn btn-secondary">Cancelar</a>
 </form>
 
 <br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>

@@ -13,9 +13,26 @@ from core.middleware import get_licenca_slug
 from django.db.models import Subquery, OuterRef, DecimalField, Value as V, IntegerField
 from django.db.models.functions import Coalesce, Cast
 
-from .models import Produtos, Tabelaprecos, SaldoProduto, Tabelaprecoshist
+from .models import (
+    Produtos,
+    Tabelaprecos,
+    SaldoProduto,
+    Tabelaprecoshist,
+    GrupoProduto,
+    SubgrupoProduto,
+    FamiliaProduto,
+    Marca,
+)
 from django.utils import timezone
-from .forms import ProdutosForm, TabelaprecosFormSet, TabelaprecosPlainFormSet
+from .forms import (
+    ProdutosForm,
+    TabelaprecosFormSet,
+    TabelaprecosPlainFormSet,
+    GrupoForm,
+    SubgrupoForm,
+    FamiliaForm,
+    MarcaForm,
+)
 
 
 class DBAndSlugMixin:
@@ -379,6 +396,306 @@ class ProdutoUpdateView(DBAndSlugMixin, UpdateView):
         if not obj:
             raise Http404('Produto não encontrado')
         return obj
+
+# Grupos
+class GrupoListView(DBAndSlugMixin, ListView):
+    model = GrupoProduto
+    template_name = 'Produtos/grupos_list.html'
+    context_object_name = 'grupos'
+    paginate_by = 20
+
+    def get_queryset(self):
+        qs = GrupoProduto.objects.using(self.db_alias).all()
+        nome = (self.request.GET.get('nome') or '').strip()
+        if nome:
+            qs = qs.filter(descricao__icontains=nome)
+        return qs.order_by('codigo')
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['slug'] = self.slug
+        ctx['nome'] = (self.request.GET.get('nome') or '').strip()
+        return ctx
+
+class GrupoCreateView(DBAndSlugMixin, CreateView):
+    model = GrupoProduto
+    form_class = GrupoForm
+    template_name = 'Produtos/grupo_create.html'
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['slug'] = self.slug
+        return ctx
+
+    def form_valid(self, form):
+        obj = form.save(commit=False)
+        obj.save(using=self.db_alias)
+        messages.success(self.request, 'Grupo criado com sucesso.')
+        return redirect(self.get_success_url())
+
+class GrupoUpdateView(DBAndSlugMixin, UpdateView):
+    model = GrupoProduto
+    form_class = GrupoForm
+    template_name = 'Produtos/grupo_update.html'
+    pk_url_kwarg = 'codigo'
+
+    def get_queryset(self):
+        return GrupoProduto.objects.using(self.db_alias).all()
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['slug'] = self.slug
+        return ctx
+
+    def form_valid(self, form):
+        obj = form.save(commit=False)
+        obj.save(using=self.db_alias)
+        messages.success(self.request, 'Grupo atualizado com sucesso.')
+        return redirect(self.get_success_url())
+
+class GrupoDeleteView(DBAndSlugMixin, DeleteView):
+    model = GrupoProduto
+    template_name = 'Produtos/grupo_delete.html'
+    pk_url_kwarg = 'codigo'
+
+    def get_queryset(self):
+        return GrupoProduto.objects.using(self.db_alias).all()
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['slug'] = self.slug
+        return ctx
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        self.object.delete(using=self.db_alias)
+        messages.success(self.request, 'Grupo excluído com sucesso.')
+        return redirect(self.get_success_url())
+
+# Subgrupos
+class SubgrupoListView(DBAndSlugMixin, ListView):
+    model = SubgrupoProduto
+    template_name = 'Produtos/subgrupos_list.html'
+    context_object_name = 'subgrupos'
+    paginate_by = 20
+
+    def get_queryset(self):
+        qs = SubgrupoProduto.objects.using(self.db_alias).all()
+        nome = (self.request.GET.get('nome') or '').strip()
+        if nome:
+            qs = qs.filter(descricao__icontains=nome)
+        return qs.order_by('codigo')
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['slug'] = self.slug
+        ctx['nome'] = (self.request.GET.get('nome') or '').strip()
+        return ctx
+
+class SubgrupoCreateView(DBAndSlugMixin, CreateView):
+    model = SubgrupoProduto
+    form_class = SubgrupoForm
+    template_name = 'Produtos/subgrupo_create.html'
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['slug'] = self.slug
+        return ctx
+
+    def form_valid(self, form):
+        obj = form.save(commit=False)
+        obj.save(using=self.db_alias)
+        messages.success(self.request, 'Subgrupo criado com sucesso.')
+        return redirect(self.get_success_url())
+
+class SubgrupoUpdateView(DBAndSlugMixin, UpdateView):
+    model = SubgrupoProduto
+    form_class = SubgrupoForm
+    template_name = 'Produtos/subgrupo_update.html'
+    pk_url_kwarg = 'codigo'
+
+    def get_queryset(self):
+        return SubgrupoProduto.objects.using(self.db_alias).all()
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['slug'] = self.slug
+        return ctx
+
+    def form_valid(self, form):
+        obj = form.save(commit=False)
+        obj.save(using=self.db_alias)
+        messages.success(self.request, 'Subgrupo atualizado com sucesso.')
+        return redirect(self.get_success_url())
+
+class SubgrupoDeleteView(DBAndSlugMixin, DeleteView):
+    model = SubgrupoProduto
+    template_name = 'Produtos/subgrupo_delete.html'
+    pk_url_kwarg = 'codigo'
+
+    def get_queryset(self):
+        return SubgrupoProduto.objects.using(self.db_alias).all()
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['slug'] = self.slug
+        return ctx
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        self.object.delete(using=self.db_alias)
+        messages.success(self.request, 'Subgrupo excluído com sucesso.')
+        return redirect(self.get_success_url())
+
+# Famílias
+class FamiliaListView(DBAndSlugMixin, ListView):
+    model = FamiliaProduto
+    template_name = 'Produtos/familias_produto_list.html'
+    context_object_name = 'familias'
+    paginate_by = 20
+
+    def get_queryset(self):
+        qs = FamiliaProduto.objects.using(self.db_alias).all()
+        nome = (self.request.GET.get('nome') or '').strip()
+        if nome:
+            qs = qs.filter(descricao__icontains=nome)
+        return qs.order_by('codigo')
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['slug'] = self.slug
+        ctx['nome'] = (self.request.GET.get('nome') or '').strip()
+        return ctx
+
+class FamiliaCreateView(DBAndSlugMixin, CreateView):
+    model = FamiliaProduto
+    form_class = FamiliaForm
+    template_name = 'Produtos/familia_produto_create.html'
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['slug'] = self.slug
+        return ctx
+
+    def form_valid(self, form):
+        obj = form.save(commit=False)
+        obj.save(using=self.db_alias)
+        messages.success(self.request, 'Família criada com sucesso.')
+        return redirect(self.get_success_url())
+
+class FamiliaUpdateView(DBAndSlugMixin, UpdateView):
+    model = FamiliaProduto
+    form_class = FamiliaForm
+    template_name = 'Produtos/familia_produto_update.html'
+    pk_url_kwarg = 'codigo'
+
+    def get_queryset(self):
+        return FamiliaProduto.objects.using(self.db_alias).all()
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['slug'] = self.slug
+        return ctx
+
+    def form_valid(self, form):
+        obj = form.save(commit=False)
+        obj.save(using=self.db_alias)
+        messages.success(self.request, 'Família atualizada com sucesso.')
+        return redirect(self.get_success_url())
+
+class FamiliaDeleteView(DBAndSlugMixin, DeleteView):
+    model = FamiliaProduto
+    template_name = 'Produtos/familia_produto_delete.html'
+    pk_url_kwarg = 'codigo'
+
+    def get_queryset(self):
+        return FamiliaProduto.objects.using(self.db_alias).all()
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['slug'] = self.slug
+        return ctx
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        self.object.delete(using=self.db_alias)
+        messages.success(self.request, 'Família excluída com sucesso.')
+        return redirect(self.get_success_url())
+
+# Marcas
+class MarcaListViewWeb(DBAndSlugMixin, ListView):
+    model = Marca
+    template_name = 'Produtos/marcas_list.html'
+    context_object_name = 'marcas'
+    paginate_by = 20
+
+    def get_queryset(self):
+        qs = Marca.objects.using(self.db_alias).all()
+        nome = (self.request.GET.get('nome') or '').strip()
+        if nome:
+            qs = qs.filter(nome__icontains=nome)
+        return qs.order_by('codigo')
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['slug'] = self.slug
+        ctx['nome'] = (self.request.GET.get('nome') or '').strip()
+        return ctx
+
+class MarcaCreateView(DBAndSlugMixin, CreateView):
+    model = Marca
+    form_class = MarcaForm
+    template_name = 'Produtos/marca_create.html'
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['slug'] = self.slug
+        return ctx
+
+    def form_valid(self, form):
+        obj = form.save(commit=False)
+        obj.save(using=self.db_alias)
+        messages.success(self.request, 'Marca criada com sucesso.')
+        return redirect(self.get_success_url())
+
+class MarcaUpdateView(DBAndSlugMixin, UpdateView):
+    model = Marca
+    form_class = MarcaForm
+    template_name = 'Produtos/marca_update.html'
+    pk_url_kwarg = 'codigo'
+
+    def get_queryset(self):
+        return Marca.objects.using(self.db_alias).all()
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['slug'] = self.slug
+        return ctx
+
+    def form_valid(self, form):
+        obj = form.save(commit=False)
+        obj.save(using=self.db_alias)
+        messages.success(self.request, 'Marca atualizada com sucesso.')
+        return redirect(self.get_success_url())
+
+class MarcaDeleteView(DBAndSlugMixin, DeleteView):
+    model = Marca
+    template_name = 'Produtos/marca_delete.html'
+    pk_url_kwarg = 'codigo'
+
+    def get_queryset(self):
+        return Marca.objects.using(self.db_alias).all()
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['slug'] = self.slug
+        return ctx
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        self.object.delete(using=self.db_alias)
+        messages.success(self.request, 'Marca excluída com sucesso.')
+        return redirect(self.get_success_url())
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)

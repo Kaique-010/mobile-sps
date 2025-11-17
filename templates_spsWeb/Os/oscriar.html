@@ -9,96 +9,115 @@
 <link rel="stylesheet" href="{% static 'css/form.css' %}">
 
 <div class="container py-4">
-  <h3 class="card-title mb-4 fs-4 text-center">{% if form.instance.pk %}Editar Ordem de Serviço{% else %}Ordem de
-    Serviço{% endif %} <i class="bi bi-wrench-adjustable"></i></h3>
-  <div class="card shadow-sm">
-    <div class="card-body">
+  <div class="card shadow-lg border-0">
+    <div class="card-header text-center py-3">
+      <h3 class="mb-0 d-flex align-items-center justify-content-center">
+        <i class="bi bi-wrench-adjustable me-2"></i>
+        {% if form.instance.pk %}Editar Ordem de Serviço{% else %}Nova Ordem de Serviço{% endif %}
+      </h3>
+    </div>
+
+    <div class="card-body p-4 ">
       <form method="post" enctype="multipart/form-data" id="os-form">
         {% csrf_token %}
 
-        <div class="row g-3">
+        <!-- Status-->
+        <div class="row g-3 mb-3">
           <div class="col-md-3">
-            <label class="form-label" for="{{ form.os_data_aber.id_for_label }}">Data de Abertura</label>
+          </div>
+          <div class="col-md-6"></div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold" for="{{ form.os_stat_os.id_for_label }}">
+              <i class="bi bi-flag"></i> Status O.S
+            </label>
+            {{ form.os_stat_os }}
+          </div>
+        </div>
+
+        <!-- Seção de Informações Básicas -->
+        <div class="row g-3 mb-5">
+          <div class="col-md-3">
+            <label class="form-label fw-semibold" for="{{ form.os_data_aber.id_for_label }}">
+              <i class="bi bi-calendar-event me-1"></i>Data de Abertura
+            </label>
             {{ form.os_data_aber }}
           </div>
-          <div class="col-md-5 position-relative">
-            <label class="form-label" for="{{ form.os_clie.id_for_label }}">Cliente</label>
-            <input type="text" class="form-control" id="autocomplete-cliente" placeholder="Buscar cliente"
-              value="{{ cliente_display }}">
-            {{ form.os_clie }}
-            <small id="cliente-selecionado" class="text-muted"></small>
-          </div>
-          <div class="col-md-4 position-relative">
-            <label class="form-label" for="{{ form.os_resp.id_for_label }}">Responsável</label>
-            <input type="text" class="form-control" id="autocomplete-vendedor" placeholder="Buscar responsável"
-              value="{{ vendedor_display }}">
-            {{ form.os_resp }}
-            <small id="vendedor-selecionado" class="text-muted"></small>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label" for="{{ form.os_fina_os.id_for_label }}">Tipo Financeiro</label>
+          <div class="col-md-6"></div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold" for="{{ form.os_fina_os.id_for_label }}">
+              <i class="bi bi-cash-coin me-1"></i>Tipo Financeiro
+            </label>
             {{ form.os_fina_os }}
           </div>
-          <div class="col-md-8">
-            <div class="row g-3">
-              <div class="col-md-4">
-                <label class="form-label" for="id_os_topr">Subtotal</label>
-                <div class="input-group">
-                  <span class="input-group-text">R$</span>
-                  {{ form.os_topr }}
-                </div>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label" for="id_os_desc">Desconto</label>
-                <div class="input-group">
-                  <span class="input-group-text">R$</span>
-                  {{ form.os_desc }}
-                </div>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label" for="id_os_tota">Total</label>
-                <div class="input-group">
-                  <span class="input-group-text">R$</span>
-                  {{ form.os_tota }}
-                </div>
-              </div>
-            </div>
+        </div>
+
+        <!-- Seção de Cliente e Responsável -->
+        <div class="row g-3 mb-5">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold" for="{{ form.os_clie.id_for_label }}">
+              <i class="bi bi-person-circle me-1"></i>Cliente
+            </label>
+            <input type="text" class="form-control form-control-lg" id="autocomplete-cliente"
+              placeholder="Digite para buscar cliente..." value="{{ cliente_display }}">
+            {{ form.os_clie }}
+            <small id="cliente-selecionado" class="text-success mt-1 d-block"></small>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label fw-semibold" for="{{ form.os_resp.id_for_label }}">
+              <i class="bi bi-person-badge me-1"></i>Responsável
+            </label>
+            <input type="text" class="form-control form-control-lg" id="autocomplete-vendedor"
+              placeholder="Digite para buscar responsável..." value="{{ vendedor_display }}">
+            {{ form.os_resp }}
+            <small id="vendedor-selecionado" class="text-success mt-1 d-block"></small>
           </div>
         </div>
 
         <hr class="my-4">
 
-        <ul class="nav nav-tabs" role="tablist">
+        <!-- Tabs de Navegação -->
+        <ul class="nav nav-tabs nav-fill mb-5" role="tablist">
           <li class="nav-item" role="presentation">
             <button class="nav-link active" id="tab-pecas" data-bs-toggle="tab" data-bs-target="#pane-pecas"
-              type="button" role="tab">Peças</button>
+              type="button" role="tab">
+              <i class="bi bi-gear-fill me-2"></i>Peças
+            </button>
           </li>
           <li class="nav-item" role="presentation">
             <button class="nav-link" id="tab-servicos" data-bs-toggle="tab" data-bs-target="#pane-servicos"
-              type="button" role="tab">Serviços</button>
+              type="button" role="tab">
+              <i class="bi bi-tools me-2"></i>Serviços
+            </button>
           </li>
           <li class="nav-item" role="presentation">
             <button class="nav-link" id="tab-financeiro" data-bs-toggle="tab" data-bs-target="#pane-financeiro"
-              type="button" role="tab">Financeiro</button>
+              type="button" role="tab">
+              <i class="bi bi-calculator me-2 text-center"></i>Resumo Financeiro
+            </button>
           </li>
         </ul>
 
-        <div class="tab-content border border-top-0 p-3">
+        <div class="tab-content">
+          <!-- Tab Peças -->
           <div class="tab-pane fade show active" id="pane-pecas" role="tabpanel">
             <div class="d-flex justify-content-between align-items-center mb-3">
-              <button type="button" class="btn btn-primary" id="add-peca"><i class="bi bi-plus-lg"></i> Adicionar
-                Peça</button>
+              <h5 class="mb-0 text-primary"><i class="bi bi-gear-fill me-2"></i>Peças</h5>
+              <button type="button" class="btn btn-success btn-sm" id="add-peca">
+                <i class="bi bi-plus-circle me-1"></i>Adicionar Peça
+              </button>
             </div>
+
             <div class="table-responsive">
-              <table class="table table-sm table-hover align-middle" id="tabela-pecas">
-                <thead class="table-light">
+              <table class="table table-hover table-bordered align-middle" id="tabela-pecas">
+                <thead class="table-dark">
                   <tr>
-                    <th style="min-width: 220px;">Produto</th>
-                    <th class="text-end" style="width: 120px;">Quantidade</th>
-                    <th class="text-end" style="width: 160px;">Preço Unitário</th>
-                    <th class="text-end" style="width: 160px;">Desconto</th>
-                    <th class="text-end" style="width: 160px;">Total</th>
-                    <th style="width: 120px;">Ações</th>
+                    <th style="min-width: 250px;">Produto</th>
+                    <th class="text-center" style="width: 120px;">Qtd.</th>
+                    <th class="text-end" style="width: 150px;">Preço Unit.</th>
+                    <th class="text-end" style="width: 150px;">Desconto</th>
+                    <th class="text-end" style="width: 150px;">Total</th>
+                    <th class="text-center" style="width: 100px;">Ações</th>
                   </tr>
                 </thead>
                 <tbody id="pecas-body">
@@ -107,7 +126,7 @@
                   <tr class="peca-row">
                     <td class="position-relative">
                       <input type="text" class="form-control autocomplete-prod" data-prefix="pecas"
-                        data-index="{{ forloop.counter0 }}" placeholder="Buscar produto"
+                        data-index="{{ forloop.counter0 }}" placeholder="Buscar produto..."
                         value="{{ f.initial.display_prod_text }}">
                       {{ f.peca_prod }}
                       <div class="d-none">{{ f.DELETE }}</div>
@@ -116,8 +135,10 @@
                     <td>{{ f.peca_unit }}</td>
                     <td>{{ f.peca_desc }}</td>
                     <td>{{ f.peca_tota }}</td>
-                    <td>
-                      <button type="button" class="btn btn-sm btn-outline-danger remove-peca">Remover</button>
+                    <td class="text-center">
+                      <button type="button" class="btn btn-sm btn-danger remove-peca">
+                        <i class="bi bi-trash"></i>
+                      </button>
                     </td>
                   </tr>
                   {% endfor %}
@@ -126,21 +147,25 @@
             </div>
           </div>
 
+          <!-- Tab Serviços -->
           <div class="tab-pane fade" id="pane-servicos" role="tabpanel">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <button type="button" class="btn btn-primary" id="add-servico"><i class="bi bi-plus-lg"></i> Adicionar
-                Serviço</button>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+              <h5 class="mb-0 text-primary"><i class="bi bi-tools me-2"></i>Serviços</h5>
+              <button type="button" class="btn btn-success btn-sm" id="add-servico">
+                <i class="bi bi-plus-circle me-1"></i>Adicionar Serviço
+              </button>
             </div>
+
             <div class="table-responsive">
-              <table class="table table-sm table-hover align-middle" id="tabela-servicos">
-                <thead class="table-light">
+              <table class="table table-hover table-bordered align-middle" id="tabela-servicos">
+                <thead class="table-dark">
                   <tr>
-                    <th style="min-width: 220px;">Serviço</th>
-                    <th class="text-end" style="width: 120px;">Quantidade</th>
-                    <th class="text-end" style="width: 160px;">Preço Unitário</th>
-                    <th class="text-end" style="width: 160px;">Desconto</th>
-                    <th class="text-end" style="width: 160px;">Total</th>
-                    <th style="width: 120px;">Ações</th>
+                    <th style="min-width: 250px;">Serviço</th>
+                    <th class="text-center" style="width: 120px;">Qtd.</th>
+                    <th class="text-end" style="width: 150px;">Preço Unit.</th>
+                    <th class="text-end" style="width: 150px;">Desconto</th>
+                    <th class="text-end" style="width: 150px;">Total</th>
+                    <th class="text-center" style="width: 100px;">Ações</th>
                   </tr>
                 </thead>
                 <tbody id="servicos-body">
@@ -149,7 +174,7 @@
                   <tr class="servico-row">
                     <td class="position-relative">
                       <input type="text" class="form-control autocomplete-prod" data-prefix="servicos"
-                        data-index="{{ forloop.counter0 }}" placeholder="Buscar serviço"
+                        data-index="{{ forloop.counter0 }}" placeholder="Buscar serviço..."
                         value="{{ f.initial.display_prod_text }}">
                       {{ f.serv_prod }}
                       <div class="d-none">{{ f.DELETE }}</div>
@@ -158,8 +183,10 @@
                     <td>{{ f.serv_unit }}</td>
                     <td>{{ f.serv_desc }}</td>
                     <td>{{ f.serv_tota }}</td>
-                    <td>
-                      <button type="button" class="btn btn-sm btn-outline-danger remove-servico">Remover</button>
+                    <td class="text-center">
+                      <button type="button" class="btn btn-sm btn-danger remove-servico">
+                        <i class="bi bi-trash"></i>
+                      </button>
                     </td>
                   </tr>
                   {% endfor %}
@@ -168,43 +195,67 @@
             </div>
           </div>
 
+          <!-- Tab Financeiro -->
           <div class="tab-pane fade" id="pane-financeiro" role="tabpanel">
-            <div class="row g-3">
-              <div class="col-md-4">
-                <label class="form-label" for="{{ form.os_fina_os.id_for_label }}">Tipo Financeiro</label>
-                {{ form.os_fina_os }}
-              </div>
-              <div class="col-md-4">
-                <label class="form-label" for="id_os_topr">Subtotal</label>
-                <div class="input-group">
-                  <span class="input-group-text">R$</span>
-                  {{ form.os_topr }}
-                </div>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label" for="id_os_tota">Total</label>
-                <div class="input-group">
-                  <span class="input-group-text">R$</span>
-                  {{ form.os_tota }}
+            <div class="row g-4 justify-content-center">
+              <div class="col-lg-8">
+                <div class="card border-primary shadow-sm">
+                  <div class="card-header text-center">
+                    <h5 class="mb-0"><i class="bi bi-calculator me-2"></i>Resumo Financeiro</h5>
+                  </div>
+                  <div class="card-body p-4">
+                    <div class="row g-3">
+                      <div class="col-md-4">
+                        <label class="form-label fw-semibold">Subtotal</label>
+                        <div class="input-group input-group-lg">
+                          <span class="input-group-text bg-light"><i class="bi bi-currency-dollar"></i></span>
+                          {{ form.os_topr }}
+                        </div>
+                      </div>
+                      <div class="col-md-4">
+                        <label class="form-label fw-semibold">Desconto</label>
+                        <div class="input-group input-group-lg">
+                          <span class="input-group-text bg-light"><i class="bi bi-tag"></i></span>
+                          {{ form.os_desc }}
+                        </div>
+                      </div>
+                      <div class="col-md-4">
+                        <label class="form-label fw-semibold">Total</label>
+                        <div class="input-group input-group-lg">
+                          <span class="input-group-text bg-success text-white"><i class="bi bi-cash"></i></span>
+                          {{ form.os_tota }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="mt-4 d-flex justify-content-end gap-2">
-          <a class="btn btn-outline-secondary" href="/web/login/" data-slug-route="/web/{slug}/os/">Cancelar</a>
-          <button type="submit" class="btn btn-success">Salvar OS</button>
+        <!-- Botões de Ação -->
+        <div class="mt-4 d-flex justify-content-end gap-3">
+          <a class="btn btn-outline-danger btn-lg" href="/web/login/" data-slug-route="/web/{slug}/os/">
+            <i class="bi bi-x-circle me-2"></i>Cancelar
+          </a>
+          <button type="submit" class="btn btn-success btn-lg">
+            <i class="bi bi-check-circle me-2"></i>Salvar OS
+          </button>
         </div>
       </form>
     </div>
   </div>
 </div>
 
+
+
 {% endblock %}
 
 {% block extra_js %}
 <script>
+  
+
   document.addEventListener('DOMContentLoaded', () => {
     if (typeof jQuery === 'undefined') {
       console.error('jQuery não está carregado!');
@@ -229,7 +280,11 @@
 
     function updateTotals() {
       let subtotal = 0;
-      const sumRows = (tbody, rowClass) => {
+      let totalPecas = 0;
+      let totalServicos = 0;
+
+      const sumRows = (tbody, rowClass, updateField) => {
+        let sectionTotal = 0;
         tbody.querySelectorAll('.' + rowClass).forEach($row => {
           const del = $row.querySelector('input[name$="-DELETE"]');
           if (del && del.checked) return;
@@ -241,10 +296,18 @@
           const $tota = $row.querySelector('input[name$="-peca_tota"], input[name$="-serv_tota"]');
           if ($tota) $tota.value = fmtMoney(t);
           subtotal += (q * u);
+          sectionTotal += t;
         });
+        if (updateField) {
+          const totalField = document.getElementById(updateField);
+          if (totalField) totalField.value = fmtMoney(sectionTotal);
+        }
+        return sectionTotal;
       };
-      sumRows($pecasBody, 'peca-row');
-      sumRows($servicosBody, 'servico-row');
+
+      totalPecas = sumRows($pecasBody, 'peca-row', 'total-pecas');
+      totalServicos = sumRows($servicosBody, 'servico-row', 'total-servicos');
+
       $subtotal.value = fmtMoney(subtotal);
       const desc = parseMoney($desconto.value);
       $total.value = fmtMoney(Math.max(subtotal - desc, 0));
@@ -258,15 +321,15 @@
       tr.className = 'peca-row';
       tr.innerHTML = `
         <td class="position-relative">
-          <input type="text" class="form-control autocomplete-prod" data-prefix="pecas" data-index="${totalForms}" placeholder="Buscar produto" />
+          <input type="text" class="form-control autocomplete-prod" data-prefix="pecas" data-index="${totalForms}" placeholder="Buscar produto..." />
           <input type="hidden" name="pecas-${totalForms}-peca_prod" id="id_pecas-${totalForms}-peca_prod" />
           <input type="checkbox" name="pecas-${totalForms}-DELETE" id="id_pecas-${totalForms}-DELETE" class="visually-hidden">
         </td>
-        <td><input type="number" name="pecas-${totalForms}-peca_quan" class="form-control text-end" min="1" value="1"></td>
+        <td><input type="number" name="pecas-${totalForms}-peca_quan" class="form-control text-center" min="1" value="1"></td>
         <td><input type="number" name="pecas-${totalForms}-peca_unit" class="form-control text-end" step="0.01" value="0.00"></td>
         <td><input type="number" name="pecas-${totalForms}-peca_desc" class="form-control text-end" step="0.01" value="0.00"></td>
         <td><input type="number" name="pecas-${totalForms}-peca_tota" class="form-control text-end" step="0.01" value="0.00" readonly></td>
-        <td><button type="button" class="btn btn-sm btn-outline-danger remove-peca">Remover</button></td>
+        <td class="text-center"><button type="button" class="btn btn-sm btn-danger remove-peca"><i class="bi bi-trash"></i></button></td>
       `;
       $pecasBody.appendChild(tr);
       bindProdutoAutocomplete(tr);
@@ -281,15 +344,15 @@
       tr.className = 'servico-row';
       tr.innerHTML = `
         <td class="position-relative">
-          <input type="text" class="form-control autocomplete-prod" data-prefix="servicos" data-index="${totalForms}" placeholder="Buscar serviço" />
+          <input type="text" class="form-control autocomplete-prod" data-prefix="servicos" data-index="${totalForms}" placeholder="Buscar serviço..." />
           <input type="hidden" name="servicos-${totalForms}-serv_prod" id="id_servicos-${totalForms}-serv_prod" />
           <input type="checkbox" name="servicos-${totalForms}-DELETE" id="id_servicos-${totalForms}-DELETE" class="visually-hidden">
         </td>
-        <td><input type="number" name="servicos-${totalForms}-serv_quan" class="form-control text-end" min="1" value="1"></td>
+        <td><input type="number" name="servicos-${totalForms}-serv_quan" class="form-control text-center" min="1" value="1"></td>
         <td><input type="number" name="servicos-${totalForms}-serv_unit" class="form-control text-end" step="0.01" value="0.00"></td>
         <td><input type="number" name="servicos-${totalForms}-serv_desc" class="form-control text-end" step="0.01" value="0.00"></td>
         <td><input type="number" name="servicos-${totalForms}-serv_tota" class="form-control text-end" step="0.01" value="0.00" readonly></td>
-        <td><button type="button" class="btn btn-sm btn-outline-danger remove-servico">Remover</button></td>
+        <td class="text-center"><button type="button" class="btn btn-sm btn-danger remove-servico"><i class="bi bi-trash"></i></button></td>
       `;
       $servicosBody.appendChild(tr);
       bindProdutoAutocomplete(tr);
@@ -312,7 +375,7 @@
         if (first) {
           const hiddenEl = document.getElementById('id_os_clie');
           hiddenEl.value = first.id;
-          document.getElementById('cliente-selecionado').textContent = first.text;
+          document.getElementById('cliente-selecionado').textContent = '✓ ' + first.text;
         }
       } catch { }
     });
@@ -327,7 +390,7 @@
         if (first) {
           const hiddenEl = document.getElementById('id_os_resp');
           hiddenEl.value = first.id;
-          document.getElementById('vendedor-selecionado').textContent = first.text;
+          document.getElementById('vendedor-selecionado').textContent = '✓ ' + first.text;
         }
       } catch { }
     });
@@ -394,13 +457,13 @@
       inputEl: document.getElementById('autocomplete-cliente'),
       hiddenEl: document.getElementById('id_os_clie'),
       url: clientesUrl,
-      onSelect: (item) => { document.getElementById('cliente-selecionado').textContent = `Selecionado: ${item.text}`; }
+      onSelect: (item) => { document.getElementById('cliente-selecionado').textContent = `✓ ${item.text}`; }
     });
     setupInputAutocomplete({
       inputEl: document.getElementById('autocomplete-vendedor'),
       hiddenEl: document.getElementById('id_os_resp'),
       url: vendedoresUrl,
-      onSelect: (item) => { document.getElementById('vendedor-selecionado').textContent = `Selecionado: ${item.text}`; }
+      onSelect: (item) => { document.getElementById('vendedor-selecionado').textContent = `✓ ${item.text}`; }
     });
 
     function bindProdutoAutocomplete(context) {
@@ -411,22 +474,27 @@
         const idx = inputEl.getAttribute('data-index');
         const prefix = inputEl.getAttribute('data-prefix');
         const hiddenEl = document.getElementById(`id_${prefix}-${idx}-${prefix === 'pecas' ? 'peca_prod' : 'serv_prod'}`);
-        const unitEl = (prefix === 'pecas')
-          ? document.querySelector(`input[name="${prefix}-${idx}-peca_unit"]`)
-          : document.querySelector(`input[name="${prefix}-${idx}-serv_unit"]`);
+        const tr = inputEl.closest('tr');
+        const unitEl = tr ? tr.querySelector('input[name$="-peca_unit"], input[name$="-serv_unit"]') : null;
         setupInputAutocomplete({
           inputEl,
           hiddenEl,
           url: produtosUrl,
           onSelect: async (item) => {
-            const tipo = document.getElementById('id_os_fina_os').value;
+            const finaEl = document.getElementById('id_os_fina_os');
+            const tipo = (finaEl && finaEl.value) ? finaEl.value : '1';
             try {
               const resp = await fetch(`${precoUrl}?prod_codi=${encodeURIComponent(item.id)}&pedi_fina=${encodeURIComponent(tipo)}`);
-              const json = await resp.json();
-              if (json && typeof json.unit_price !== 'undefined') {
-                if (unitEl) unitEl.value = Number(json.unit_price || 0).toFixed(2);
+              if (!resp.ok) {
+                console.error('Falha ao consultar preço:', resp.status);
+                if (unitEl) unitEl.value = Number(0).toFixed(2);
                 updateTotals();
+                return;
               }
+              const json = await resp.json();
+              const val = (json && typeof json.unit_price !== 'undefined') ? Number(json.unit_price || 0) : 0;
+              if (unitEl) unitEl.value = val.toFixed(2);
+              updateTotals();
             } catch (e) { console.error('Erro ao obter preço:', e); }
           }
         });

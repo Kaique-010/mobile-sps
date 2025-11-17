@@ -14,6 +14,19 @@ FINANCEIRO_OS = [
     (55, 'DEPÓSITO EM CONTA'),
     (60, 'PIX')
 ]
+
+
+ORDEM_STATUS_CHOICES = (
+    (0, "Aberta"),
+    (1, "Orçamento gerado"),
+    (2, "Aguardando Liberação"),
+    (3, "Liberada"),
+    (4, "Finalizada"),
+    (5, "Reprovada"),
+    (20, "Faturada_parcial"),
+    (21, "Em atraso"),
+)
+
 class Os(models.Model):
     os_empr = models.IntegerField()
     os_fili = models.IntegerField()
@@ -33,7 +46,7 @@ class Os(models.Model):
     os_pref = models.CharField(max_length=30, blank=True, null=True)
     os_cont = models.CharField(max_length=40, blank=True, null=True)
     os_prob_rela = models.TextField(blank=True, null=True)
-    os_stat_os = models.IntegerField(blank=True, null=True)
+    os_stat_os = models.IntegerField(blank=True, null=True, choices=ORDEM_STATUS_CHOICES, default=0)
     os_situ = models.IntegerField(blank=True, null=True)
     os_nota_peca = models.CharField(max_length=20, blank=True, null=True)
     os_nota_serv = models.CharField(max_length=100, blank=True, null=True)

@@ -8,7 +8,7 @@
     <div class="page-header">
         <h2 class="page-title"><i class="bi bi-boxes"></i> Famílias de Produtos</h2>
         <div class="page-actions">
-            <a href="#" class="btn btn-success">
+            <a href="/web/login/" data-slug-route="/web/{slug}/produtos/familias/new/" class="btn btn-success">
                 <i class="bi bi-plus"></i> Nova Família
             </a>
         </div>
@@ -43,10 +43,10 @@
                         {% for familia in page_obj %}
                         <tr>
                             <td>
-                                <a href="#" class="btn btn-warning btn-sm">
+                                <a href="/web/login/" data-slug-route="/web/{slug}/produtos/familias/{{ familia.codigo }}/edit/" class="btn btn-warning btn-sm">
                                     <i class="bi bi-pencil"></i>
                                 </a>
-                                <a href="#" class="btn btn-danger btn-sm">
+                                <a href="/web/login/" data-slug-route="/web/{slug}/produtos/familias/{{ familia.codigo }}/delete/" class="btn btn-danger btn-sm">
                                     <i class="bi bi-trash"></i>
                                 </a>
                             </td>

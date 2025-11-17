@@ -38,7 +38,7 @@
                 </div>
             </form>
 
-            <a href="#" class="btn btn-success float-end mb-3">
+            <a href="/web/login/" data-slug-route="/web/{slug}/produtos/subgrupos/new/" class="btn btn-success float-end mb-3">
                 <i class="bi bi-plus"></i> Novo SubGrupo
             </a>
 
@@ -56,10 +56,10 @@
                         {% for subgrupo in page_obj %}
                         <tr>
                             <td>
-                                <a href="#" class="btn btn-sm btn-info">
+                                <a href="/web/login/" data-slug-route="/web/{slug}/produtos/subgrupos/{{ subgrupo.codigo }}/edit/" class="btn btn-sm btn-info">
                                     <i class="bi bi-pencil"></i> Editar
                                 </a>
-                                <a href="#" class="btn btn-sm btn-danger">
+                                <a href="/web/login/" data-slug-route="/web/{slug}/produtos/subgrupos/{{ subgrupo.codigo }}/delete/" class="btn btn-sm btn-danger">
                                     <i class="bi bi-trash"></i> Excluir
                                 </a>
                             </td>

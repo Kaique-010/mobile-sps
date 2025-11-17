@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Editar Entrada de Estoque{% else %}Cadastrar Entrada de Estoque{% endif %}{% endblock %}
+
+
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+{% endif %}
+<div class="container py-4 ">
+  <h3 class="card-title mb-4 fs-4 text-center">{% if form.instance.pk %}Editar Entrada{% else %}Entrada de Estoque{% endif %}</h3>
+  <div class="card shadow-sm">
+    <div class="card-body padding-20">
+      <form method="post" id="entrada-form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors|striptags }}</div>
+        {% endif %}
+
+        <div class="row g-3">
+          <div class="col-md-12">
+            <label class="form-label" for="{{ form.entr_data.id_for_label }}">Data</label>
+            {{ form.entr_data }}
+            {% if form.entr_data.errors %}
+            <div class="alert alert-danger mt-1">{{ form.entr_data.errors|striptags }}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-12 position-relative">
+            <label class="form-label" for="{{ form.entr_enti.id_for_label }}">Entidade</label>
+            <input type="text" class="form-control" id="autocomplete-entidade" placeholder="Buscar entidade">
+            {{ form.entr_enti }}
+            <small id="entidade-selecionada" class="text-muted"></small>
+            {% if form.entr_enti.errors %}
+            <div class="alert alert-danger mt-1">{{ form.entr_enti.errors|striptags }}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-12 position-relative">
+            <label class="form-label" for="{{ form.entr_prod.id_for_label }}">Produto</label>
+            <input type="text" class="form-control" id="autocomplete-produto" placeholder="Buscar produto">
+            {{ form.entr_prod }}
+            <small id="produto-selecionado" class="text-muted"></small>
+            {% if form.entr_prod.errors %}
+            <div class="alert alert-danger mt-1">{{ form.entr_prod.errors|striptags }}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label" for="{{ form.entr_quan.id_for_label }}">Quantidade</label>
+            {{ form.entr_quan }}
+            {% if form.entr_quan.errors %}
+            <div class="alert alert-danger mt-1">{{ form.entr_quan.errors|striptags }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label" for="{{ form.entr_unit.id_for_label }}">Unitário</label>
+            {{ form.entr_unit }}
+            {% if form.entr_unit.errors %}
+            <div class="alert alert-danger mt-1">{{ form.entr_unit.errors|striptags }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label" for="{{ form.entr_tota.id_for_label }}">Total</label>
+            <div class="input-group">
+              <span class="input-group-text">R$</span>
+              {{ form.entr_tota }}
+            </div>
+            {% if form.entr_tota.errors %}
+            <div class="alert alert-danger mt-1">{{ form.entr_tota.errors|striptags }}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="mt-4 d-flex justify-content-end gap-2">
+          <a class="btn btn-outline-secondary" href="/web/login/" data-slug-route="/web/{slug}/entradas/">Cancelar</a>
+          <button type="submit" class="btn btn-success">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<script>
+  (function() {
+    function createDropdown(container) {
+      let dd = container.querySelector('.autocomplete-dropdown');
+      if (!dd) {
+        dd = document.createElement('div');
+        dd.className = 'autocomplete-dropdown list-group position-absolute w-100';
+        dd.style.zIndex = '1000';
+        container.appendChild(dd);
+      }
+      return dd;
+    }
+
+    function setupInputAutocomplete({ inputEl, hiddenEl, url, onSelect }) {
+      if (!inputEl || !hiddenEl) return;
+      const container = inputEl.parentElement;
+      const dropdown = createDropdown(container);
+      let controller = null;
+      let debounce = null;
+      async function fetchResults(term) {
+        try {
+          if (controller) controller.abort();
+          controller = new AbortController();
+          const resp = await fetch(`${url}?term=${encodeURIComponent(term)}`, { signal: controller.signal });
+          const json = await resp.json();
+          const results = json.results || [];
+          dropdown.innerHTML = '';
+          results.forEach(item => {
+            const a = document.createElement('a');
+            a.href = '#';
+            a.className = 'list-group-item list-group-item-action';
+            a.textContent = item.text;
+            a.dataset.id = item.id;
+            a.addEventListener('click', (ev) => {
+              ev.preventDefault();
+              hiddenEl.value = item.id;
+              inputEl.value = item.text;
+              dropdown.innerHTML = '';
+              if (typeof onSelect === 'function') onSelect(item);
+            });
+            dropdown.appendChild(a);
+          });
+        } catch (e) { console.error('Erro no autocomplete:', e); }
+      }
+      inputEl.addEventListener('input', (e) => {
+        const term = e.target.value.trim();
+        clearTimeout(debounce);
+        dropdown.innerHTML = '';
+        if (term.length < 2) return;
+        debounce = setTimeout(() => fetchResults(term), 250);
+      });
+      document.addEventListener('click', (e) => {
+        if (!container.contains(e.target)) dropdown.innerHTML = '';
+      });
+    }
+
+    const clientesUrl = "{% url 'EntradasWeb:autocomplete_clientes' slug=slug %}";
+    const produtosUrl = "{% url 'EntradasWeb:autocomplete_produtos' slug=slug %}";
+    setupInputAutocomplete({
+      inputEl: document.getElementById('autocomplete-entidade'),
+      hiddenEl: document.getElementById('id_entr_enti'),
+      url: clientesUrl,
+      onSelect: (item) => {
+        const el = document.getElementById('entidade-selecionada');
+        if (el) el.textContent = item.text;
+      }
+    });
+    setupInputAutocomplete({
+      inputEl: document.getElementById('autocomplete-produto'),
+      hiddenEl: document.getElementById('id_entr_prod'),
+      url: produtosUrl,
+      onSelect: (item) => {
+        const el = document.getElementById('produto-selecionado');
+        if (el) el.textContent = item.text;
+      }
+    });
+
+    async function prefill(hiddenSelector, inputSelector, url) {
+      const hiddenEl = document.querySelector(hiddenSelector);
+      const inputEl = document.querySelector(inputSelector);
+      if (!hiddenEl || !hiddenEl.value || !inputEl) return;
+      try {
+        const resp = await fetch(`${url}?term=${encodeURIComponent(hiddenEl.value)}`);
+        const json = await resp.json();
+        const match = (json.results || []).find(r => String(r.id) === String(hiddenEl.value));
+        if (match) { inputEl.value = match.text; }
+      } catch (e) { console.error('Erro ao prefill:', e); }
+    }
+    prefill('#id_entr_enti', '#autocomplete-entidade', clientesUrl);
+    prefill('#id_entr_prod', '#autocomplete-produto', produtosUrl);
+
+    function updateTotal() {
+      const qEl = document.getElementById('id_entr_quan');
+      const uEl = document.getElementById('id_entr_unit');
+      const tEl = document.getElementById('id_entr_tota');
+      if (!qEl || !uEl || !tEl) return;
+      const q = parseFloat(qEl.value.replace(',', '.')) || 0;
+      const u = parseFloat(uEl.value.replace(',', '.')) || 0;
+      const total = (q * u);
+      tEl.value = total.toFixed(2);
+    }
+    const qEl = document.getElementById('id_entr_quan');
+    const uEl = document.getElementById('id_entr_unit');
+    if (qEl) qEl.addEventListener('input', updateTotal);
+    if (uEl) uEl.addEventListener('input', updateTotal);
+    updateTotal();
+  })();
+</script>
+{% endblock %}
