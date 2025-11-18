@@ -30,6 +30,7 @@ class PedidosGeralViewSet(ModuloRequeridoMixin, viewsets.ReadOnlyModelViewSet):
     filterset_class = PedidosGeralFilter
     search_fields = ['nome_vendedor', 'nome_cliente']
     serializer_class = PedidosGeralSerializer
+    pagination_class = None
 
     def get_queryset(self):
         banco = get_licenca_db_config(self.request) or 'default'

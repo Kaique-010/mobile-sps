@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/ui.css' %}">
+<div class="container py-4">
+  <div class="container align-items-center">
+    <h2 class="page-title text-center mb-5"><i class="bi bi-credit-card"></i> Caixa — Processamento</h2>
+  </div>
+  <div class="card">
+    <div class="card-body">
+      <div class="mb-3">
+        <label class="form-label">Nº Venda</label>
+        <input class="form-control" id="numeroVenda" value="{{ numero_venda }}" readonly>
+      </div>
+      <div class="row g-2 mb-3">
+        <div class="col-md-4">
+          <div class="p-2 border rounded">
+            <div><strong>Total da venda</strong></div>
+            <div id="totalVenda">R$ 0,00</div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="p-2 border rounded">
+            <div><strong>Total pago</strong></div>
+            <div id="totalPago">R$ 0,00</div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="p-2 border rounded">
+            <div><strong>Saldo a pagar</strong></div>
+            <div id="saldoPagar" class="fw-bold">R$ 0,00</div>
+          </div>
+        </div>
+      </div>
+      <div class="row g-2">
+        <div class="col-md-4">
+          <label class="form-label">Forma de pagamento</label>
+          <select class="form-select" id="formaPagamento">
+            <option value="54">Dinheiro</option>
+            <option value="60">PIX</option>
+            <option value="51">Cartão Crédito</option>
+            <option value="52">Cartão Débito</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Valor</label>
+          <input type="number" step="0.01" class="form-control" id="valor" placeholder="0,00">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Valor pago</label>
+          <input type="number" step="0.01" class="form-control" id="valorPago" placeholder="0,00">
+        </div>
+      </div>
+      <div class="row g-2 mt-2">
+        <div class="col-md-4">
+          <label class="form-label">Troco</label>
+          <input type="number" step="0.01" class="form-control" id="troco" placeholder="0,00" readonly>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Parcelas</label>
+          <input type="number" min="1" class="form-control" id="parcelas" value="1">
+        </div>
+        <div class="col-md-4 d-grid align-items-end">
+          <button class="btn btn-primary" id="btnProcessar">Processar pagamento</button>
+        </div>
+      </div>
+
+      <div class="row g-2 mt-3">
+        <div class="col-md-6">
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="tipoEmissao" id="tipoCupom" value="cupom" checked>
+            <label class="form-check-label" for="tipoCupom">Cupom</label>
+          </div>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="tipoEmissao" id="tipoNfce" value="nfce">
+            <label class="form-check-label" for="tipoNfce">NFC-e</label>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="input-group">
+            <span class="input-group-text">CPF/CNPJ</span>
+            <input class="form-control" id="cpfcnpjNota" placeholder="Opcional">
+          </div>
+        </div>
+        <div class="col-md-2 d-grid"></div>
+      </div>
+
+      <div class="mt-3">
+        <h6>Pagamentos</h6>
+        <div id="listaPagamentos" class="list-group"></div>
+      </div>
+
+      <div class="mt-3 d-grid">
+        <button class="btn btn-success" id="btnFinalizar">Finalizar venda</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  const slug = '{{ slug|default:"" }}' || (function () { try { const p = location.pathname.split('/'); return p.length > 2 ? p[2] : '' } catch (e) { return '' } })();
+  const empresa = '{{ empresa|default:"" }}'; const filial = '{{ filial|default:"" }}'; const numeroVenda = '{{ numero_venda|default:"" }}';
+  function getCSRFToken() { try { const name = 'csrftoken='; for (let c of document.cookie.split(';')) { c = c.trim(); if (c.startsWith(name)) return c.substring(name.length) } } catch (e) { } return '' }
+  function headersForm() { const h = { 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' }; const t = localStorage.getItem('access') || sessionStorage.getItem('access'); if (t) h['Authorization'] = `Bearer ${t}`; if (empresa) h['X-Empresa'] = empresa; if (filial) h['X-Filial'] = filial; h['X-CSRFToken'] = getCSRFToken(); return h }
+  function headersGet() { const h = { 'Accept': 'application/json' }; const t = localStorage.getItem('access') || sessionStorage.getItem('access'); if (t) h['Authorization'] = `Bearer ${t}`; if (empresa) h['X-Empresa'] = empresa; if (filial) h['X-Filial'] = filial; return h }
+  function brl(v) { try { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v || 0)) } catch (e) { return `R$ ${v}` } }
+  function mapMoviTipo(c) { const m = { '51': '3', '52': '4', '54': '1', '60': '6' }; return m[c] || '1' }
+  function calcTroco() { const v = Number(document.getElementById('valor').value || 0); const p = Number(document.getElementById('valorPago').value || 0); document.getElementById('troco').value = (p - v).toFixed(2); }
+  let saldoAtual = 0; const pagamentos = []; function renderPagamentos() { const ul = document.getElementById('listaPagamentos'); if (!ul) return; ul.innerHTML = ''; pagamentos.forEach(pg => { const li = document.createElement('div'); li.className = 'list-group-item d-flex justify-content-between align-items-center'; li.innerHTML = `<div><strong>${pg.descricao}</strong> — ${pg.forma}</div><div>${brl(pg.valor)}</div>`; ul.appendChild(li); }); }
+  async function atualizarResumo() { try { const url = `/web/${slug}/caixa-diario/venda/status/?numero_venda=${encodeURIComponent(numeroVenda)}`; const r = await fetch(url, { credentials: 'same-origin', headers: headersGet() }); if (!r.ok) return; const d = await r.json(); document.getElementById('totalVenda').textContent = brl(d.total_venda || 0); document.getElementById('totalPago').textContent = brl(d.total_pagamentos || 0); document.getElementById('saldoPagar').textContent = brl(d.saldo_a_pagar || 0); saldoAtual = Number(d.saldo_a_pagar || 0); const btn = document.getElementById('btnProcessar'); if (btn) btn.disabled = (saldoAtual <= 0); const valorEl = document.getElementById('valor'); if (valorEl) { valorEl.value = saldoAtual > 0 ? Number(saldoAtual).toFixed(2) : ''; } } catch (e) { } }
+  async function processar() { const f = new URLSearchParams(); const forma = document.getElementById('formaPagamento').value || '54'; f.append('numero_venda', numeroVenda); f.append('forma_pagamento', forma); f.append('movi_tipo', mapMoviTipo(forma)); f.append('valor', document.getElementById('valor').value || ''); f.append('valor_pago', document.getElementById('valorPago').value || ''); f.append('troco', document.getElementById('troco').value || ''); f.append('parcelas', document.getElementById('parcelas').value || '1'); const r = await fetch(`/web/${slug}/caixa-diario/venda/processar-pagamento/`, { method: 'POST', credentials: 'same-origin', headers: headersForm(), body: f.toString() }); if (!r.ok) { const t = await r.text(); alert('Falha ao processar: ' + t); return; } alert('Pagamento processado'); await atualizarResumo(); try { const d = await r.json(); pagamentos.push({ descricao: `Pagamento`, forma: d.descricao_tipo || forma, valor: Number(d.movi_entr || d.valor_pago || 0) }); renderPagamentos(); } catch (e) { } document.getElementById('valorPago').value = ''; document.getElementById('troco').value = ''; calcTroco(); }
+  async function finalizar() { const f = new URLSearchParams(); f.append('numero_venda', numeroVenda); const r = await fetch(`/web/${slug}/caixa-diario/venda/finalizar/`, { method: 'POST', credentials: 'same-origin', headers: headersForm(), body: f.toString() }); if (!r.ok) { const t = await r.text(); alert('Falha ao finalizar: ' + t); return; } try { await emitir(); } catch (e) { } if (typeof showToast === 'function') { showToast('Venda finalizada com sucesso', { variant: 'success', delay: 1800 }); setTimeout(() => { window.location.href = `/web/${slug}/caixa-diario/venda/`; }, 1800); } else { window.location.href = `/web/${slug}/caixa-diario/geral/`; } }
+  async function emitir() { const tipo = document.querySelector('input[name="tipoEmissao"]:checked')?.value || 'cupom'; const f = new URLSearchParams(); f.append('numero_venda', numeroVenda); f.append('tipo', tipo); const doc = document.getElementById('cpfcnpjNota')?.value || ''; if (doc) f.append('cpfcnpj', doc); const r = await fetch(`/web/${slug}/caixa-diario/venda/emitir/`, { method: 'POST', credentials: 'same-origin', headers: headersForm(), body: f.toString() }); if (!r.ok) { const t = await r.text(); alert('Falha ao emitir: ' + t); return; } try { const d = await r.json(); const w = window.open('', '_blank'); w.document.write(d.html || '<h3>Documento emitido</h3>'); w.document.close(); w.focus(); w.print(); } catch (e) { alert('Emitido'); } }
+  document.addEventListener('DOMContentLoaded', () => { document.getElementById('numeroVenda').value = numeroVenda; document.getElementById('valorPago')?.addEventListener('input', calcTroco); document.getElementById('valor')?.addEventListener('input', calcTroco); document.getElementById('btnProcessar')?.addEventListener('click', processar); document.getElementById('btnFinalizar')?.addEventListener('click', finalizar); atualizarResumo(); });
+  
+</script>
+{% endblock %}

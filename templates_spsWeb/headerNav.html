@@ -176,7 +176,7 @@
                                 <a class="nav-link collapsed" data-bs-toggle="collapse" href="#" role="button"
                                     data-bs-target="#collapseFinanceira" aria-expanded="false"
                                     aria-controls="collapseFinanceira">
-                                    <i class="bi bi-cash-stack fs-4"></i> Financeira
+                                    <i class="bi bi-cash-stack fs-4"></i> Financeiro
                                 </a>
                                 <div class="collapse" id="collapseFinanceira">
                                     <ul class="list-unstyled ps-4">
@@ -203,6 +203,12 @@
                                                         <a class="nav-link" href="/web/login/"
                                                             data-slug-route="/web/{slug}/fluxo-de-caixa/">Fluxo de
                                                             Caixa</a>
+                                                    </li>
+                                                    <li class="nav-item" data-modulo="CaixaDiario">
+                                                        <a class="nav-link" href="/web/login/"
+                                                            data-slug-route="/web/{slug}/caixa-diario/geral">
+                                                            <i class="bi bi-cash-coin"></i> Caixa Diário
+                                                        </a>
                                                     </li>
                                                 </ul>
                                             </div>
@@ -259,9 +265,39 @@
                             </li>
 
                             <!-- Mantém itens existentes fora das novas seções -->
-                            <li class="nav-item" data-modulo="dashboard">
-                                <a class="nav-link active" href="/dashboard/">
-                                    <i class="bi bi-graph-up fs-3"></i> Métricas
+                            <li class="nav-item">
+                                <a class="nav-link collapsed" data-bs-toggle="collapse" href="#" role="button"
+                                    data-bs-target="#collapseMetricas" aria-expanded="false"
+                                    aria-controls="collapseMetricas">
+                                    <i class="bi bi-patch-check"></i> Métricas
+                                </a>
+                                <div class="collapse" id="collapseMetricas">
+                                    <ul class="list-unstyled ps-4">
+                                        <li>
+                                            <a class="nav-link" href="/web/login/"
+                                                data-slug-route="/web/{slug}/pedidos/dashboard/">Pedidos</a>
+                                        </li>
+                                        <li>
+                                            <a class="nav-link" href="/web/login/"
+                                                data-slug-route="/web/{slug}/dre/dashboard/">DRE</a>
+                                        </li>
+                                        <li>
+                                            <a class="nav-link" href="/web/login/"
+                                                data-slug-route="/web/{slug}/gerencial/estoque/movimentacao/">Extrato de
+                                                Movimentação</a>
+                                        </li>
+                                        <li>
+                                            <a class="nav-link" href="/web/login/"
+                                                data-slug-route="/web/{slug}/os/dashboard/">Ordens de Serviço</a>
+                                        </li>
+                                        <li><a class="nav-link" href="#">Estoque</a></li>
+                                        <li><a class="nav-link" href="#">Financeiro</a></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="nav-item" data-modulo="Orcamentos">
+                                <a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/orcamentos/">
+                                    <i class="bi bi-file-break-fill"></i> Orçamentos
                                 </a>
                             </li>
                             <li class="nav-item" data-modulo="O_S">

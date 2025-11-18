@@ -24,6 +24,9 @@ urlpatterns = [
     path("<slug:slug>/contas-a-pagar/", include("contas_a_pagar.web_urls")),
     path("<slug:slug>/contas-a-receber/", include("contas_a_receber.web_urls")),
     path("<slug:slug>/fluxo-de-caixa/", include("Financeiro.web_urls")),
+    path("<slug:slug>/gerencial/", include("Gerencial.web_urls")),
+    path("<slug:slug>/dre/", include("DRE.web_urls")),
+    path("<slug:slug>/caixa-diario/", include("CaixaDiario.Web.web_urls")),
     path("<slug:slug>/licencas/", include("Licencas.web_urls")),
     path("<slug:slug>/notas-destinadas/", include("NotasDestinadas.web_urls")),
 ]

@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/ui.css' %}">
+<div class="container py-4">
+  <div class="container align-items-center">
+    <h2 class="page-title text-center mb-4">
+      <i class="bi bi-wrench"></i> Dashboard de Ordens de Serviço
+    </h2>
+  </div>
+  <div id="os-dashboard-warning" class="alert alert-warning d-none">Necessário estar logado para carregar os dados.</div>
+
+  <form method="get" class="row g-3 mb-3" id="osFiltrosForm">
+    <div class="col-md-2">
+      <label class="form-label">Data inicial</label>
+      <input type="date" id="osDataInicial" value="{{ filtros.data_inicial }}" class="form-control" />
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Data final</label>
+      <input type="date" id="osDataFinal" value="{{ filtros.data_final }}" class="form-control" />
+    </div>
+    <div class="col-md-3 position-relative">
+      <label class="form-label">Vendedor</label>
+      <input type="text" id="osVendedor" value="{{ filtros.vendedor }}" class="form-control" autocomplete="off" />
+      <div id="sugVend" class="list-group position-absolute w-100" style="z-index:20"></div>
+    </div>
+    <div class="col-md-3 position-relative">
+      <label class="form-label">Cliente</label>
+      <input type="text" id="osCliente" value="{{ filtros.cliente }}" class="form-control" autocomplete="off" />
+      <div id="sugCli" class="list-group position-absolute w-100" style="z-index:20"></div>
+    </div>
+    <div class="col-md-2 position-relative">
+      <label class="form-label">Atendente</label>
+      <input type="text" id="osAtendente" value="{{ filtros.atendente }}" class="form-control" autocomplete="off" />
+      <div id="sugAten" class="list-group position-absolute w-100" style="z-index:20"></div>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Status</label>
+      <select id="osStatus" class="form-select">
+        <option value="">Todos</option>
+      </select>
+    </div>
+    <div class="col-12 d-flex justify-content-end">
+      <button class="btn btn-primary" type="submit">Filtrar</button>
+    </div>
+  </form>
+
+  <div class="kpi-grid mb-4">
+    <div class="card kpi-card"><div class="card-body"><div class="label">Total OS</div><div class="value" id="kpi-total-os">0</div></div></div>
+    <div class="card kpi-card"><div class="card-body"><div class="label">Valor total</div><div class="value" id="kpi-valor-total">R$ 0,00</div></div></div>
+    <div class="card kpi-card"><div class="card-body"><div class="label">Ticket médio</div><div class="value" id="kpi-ticket-medio">R$ 0,00</div></div></div>
+    <div class="card kpi-card"><div class="card-body"><div class="label">Concluídas</div><div class="value" id="kpi-concluidas">0</div></div></div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-6">
+      <div class="card chart-card"><div class="card-header">OS por status</div><div class="card-body"><div class="chart-wrapper"><canvas id="chartStatus"></canvas></div></div></div>
+    </div>
+    <div class="col-md-6">
+      <div class="card chart-card"><div class="card-header">Valor por dia</div><div class="card-body"><div class="chart-wrapper"><canvas id="chartValorDia"></canvas></div></div></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const slugTpl = '{{ slug|default:"" }}';
+  const slug = slugTpl || (function(){ try { const p = location.pathname.split('/'); return p.length>2 ? p[2] : ''; } catch(e){ return ''; } })();
+  const empresa = '{{ filtros.empresa|default:"" }}';
+  const filial = '{{ filtros.filial|default:"" }}';
+
+  let chartStatus, chartValorDia;
+
+  function brl(v){ try{ return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(v||0)); }catch(e){ return `R$ ${v}`; } }
+  function debounce(fn, ms){ let t; return function(){ clearTimeout(t); const a=arguments; t=setTimeout(()=>fn.apply(this,a), ms); } }
+
+  async function fetchOS(params={}){
+    const s = new URLSearchParams(params);
+    let url = `/api/${slug}/Os/os-geral/?${s.toString()}`;
+    const headers = { 'Accept':'application/json','X-Requested-With':'XMLHttpRequest' };
+    const token = (window.localStorage && localStorage.getItem('access')) || (window.sessionStorage && sessionStorage.getItem('access'));
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (empresa) headers['X-Empresa'] = empresa;
+    if (filial) headers['X-Filial'] = filial;
+    const all = [];
+    let nextUrl = url.includes('limit=') ? url : `${url}&limit=1000&offset=0`;
+    while (nextUrl){
+      const r = await fetch(nextUrl, { headers, credentials:'same-origin' });
+      if (r.status === 401){ const warn = document.getElementById('os-dashboard-warning'); if (warn) warn.classList.remove('d-none'); }
+      if (!r.ok) throw new Error('Falha ao buscar dados');
+      const json = await r.json();
+      if (Array.isArray(json)){ all.push(...json); nextUrl = null; }
+      else { const items = Array.isArray(json.results) ? json.results : []; all.push(...items); nextUrl = json.next || null; }
+    }
+    return all;
+  }
+
+  async function buscarClientes(q){
+    const headers = { 'Accept':'application/json' };
+    const r = await fetch(`/web/${slug}/os/autocomplete/clientes/?q=${encodeURIComponent(q||'')}`, { headers });
+    if (!r.ok) return [];
+    const j = await r.json();
+    return Array.isArray(j.results) ? j.results : [];
+  }
+  async function buscarVendedores(q){
+    const headers = { 'Accept':'application/json' };
+    const r = await fetch(`/web/${slug}/os/autocomplete/vendedores/?q=${encodeURIComponent(q||'')}`, { headers });
+    if (!r.ok) return [];
+    const j = await r.json();
+    return Array.isArray(j.results) ? j.results : [];
+  }
+  async function buscarAtendentes(q){
+    const headers = { 'Accept':'application/json' };
+    const r = await fetch(`/web/${slug}/os/autocomplete/atendentes/?q=${encodeURIComponent(q||'')}`, { headers });
+    if (!r.ok) return [];
+    const j = await r.json();
+    return Array.isArray(j.results) ? j.results : [];
+  }
+  async function carregarStatus(){
+    const headers = { 'Accept':'application/json' };
+    const r = await fetch(`/web/${slug}/os/autocomplete/status/`, { headers });
+    if (!r.ok) return;
+    const j = await r.json();
+    const opts = Array.isArray(j.results) ? j.results : [];
+    const sel = document.getElementById('osStatus');
+    if (sel){
+      const cur = sel.value;
+      sel.innerHTML = '<option value="">Todos</option>' + opts.map(o=> `<option value="${o.id}">${o.text}</option>`).join('');
+      if (cur) sel.value = cur;
+    }
+  }
+
+  function renderSugestoes(containerId, items, onPick){
+    const cont = document.getElementById(containerId);
+    if (!cont) return;
+    const html = items.map(it=> `<button type="button" class="list-group-item list-group-item-action">${it.text}</button>`).join('');
+    cont.innerHTML = html;
+    Array.from(cont.querySelectorAll('button')).forEach((btn, i)=>{ btn.addEventListener('click', ()=>{ const it = items[i]; onPick && onPick(it); cont.innerHTML=''; }); });
+  }
+
+  function aggregate(data){
+    const arr = Array.isArray(data) ? data : [];
+    const kpis = { total_os: arr.length, valor_total: 0, ticket_medio: 0, concluidas: 0 };
+    const porStatus = new Map();
+    const porDia = new Map();
+    for (const it of arr){
+      const valor = Number(it.total_os || 0);
+      kpis.valor_total += valor;
+      const st = it.status_os || it.situacao_os || 'N/A';
+      porStatus.set(st, (porStatus.get(st)||0)+1);
+      if ((st||'').toUpperCase().includes('CONC')) kpis.concluidas += 1;
+      const dia = it.data_abertura;
+      porDia.set(dia, { valor: (porDia.get(dia)?.valor||0) + valor, qtd: (porDia.get(dia)?.qtd||0) + 1 });
+    }
+    kpis.ticket_medio = kpis.total_os ? (kpis.valor_total / kpis.total_os) : 0;
+    const status_series = Array.from(porStatus.entries()).map(([status, qtd])=>({ status, qtd })).sort((a,b)=> b.qtd - a.qtd).slice(0,8);
+    const series_diaria = Array.from(porDia.entries()).sort((a,b)=> a[0].localeCompare(b[0])).map(([data, o])=>({ data, ...o }));
+    return { kpis, status_series, series_diaria };
+  }
+
+  function updateKPIs(k){
+    document.getElementById('kpi-total-os').textContent = k.total_os;
+    document.getElementById('kpi-valor-total').textContent = brl(k.valor_total);
+    document.getElementById('kpi-ticket-medio').textContent = brl(k.ticket_medio);
+    document.getElementById('kpi-concluidas').textContent = k.concluidas;
+  }
+
+  function renderCharts(statusSeries, series){
+    const canvSt = document.getElementById('chartStatus');
+    const ctxSt = canvSt ? canvSt.getContext('2d') : null;
+    const labelsSt = (statusSeries||[]).map(s=> s.status);
+    const dadosSt = (statusSeries||[]).map(s=> Number(s.qtd||0));
+    if (chartStatus) chartStatus.destroy();
+    if (ctxSt) chartStatus = new Chart(ctxSt, { type:'bar', data:{ labels:labelsSt, datasets:[{ data:dadosSt, backgroundColor:'rgba(13,110,253,.35)', borderColor:'rgba(13,110,253,.9)', borderWidth:1.5, borderRadius:6, maxBarThickness:42 }] }, options:{ maintainAspectRatio:false, responsive:true, plugins:{ legend:{ display:false } } } });
+
+    const canvDia = document.getElementById('chartValorDia');
+    const ctxDia = canvDia ? canvDia.getContext('2d') : null;
+    const labelsDia = (series||[]).map(s=> s.data);
+    const dadosDia = (series||[]).map(s=> Number(s.valor||0));
+    if (chartValorDia) chartValorDia.destroy();
+    if (ctxDia) chartValorDia = new Chart(ctxDia, { type:'line', data:{ labels:labelsDia, datasets:[{ label:'Valor por dia (R$)', data:dadosDia, borderColor:'rgba(25,135,84,.9)', backgroundColor:'rgba(25,135,84,.12)', tension:.35, fill:true, pointRadius:2.5 }] }, options:{ maintainAspectRatio:false, responsive:true, plugins:{ legend:{ display:false } }, scales:{ y:{ ticks:{ callback:(v)=> brl(v) } } } } });
+  }
+
+  function collectParams(){
+    const di = document.getElementById('osDataInicial')?.value || '';
+    const df = document.getElementById('osDataFinal')?.value || '';
+    const vend = document.getElementById('osVendedor')?.value || '';
+    const cli = document.getElementById('osCliente')?.value || '';
+    const aten = document.getElementById('osAtendente')?.value || '';
+    const st = document.getElementById('osStatus')?.value || '';
+    const p = {};
+    if (di) p.data_inicial = di;
+    if (df) p.data_final = df;
+    if (vend) p.nome_vendedor = vend;
+    if (cli) p.nome_cliente = cli;
+    if (aten) p.atendente = aten;
+    if (st) p.status_os = st;
+    return p;
+  }
+
+  async function loadOS(params={}){
+    const base = {};
+    if (empresa) base.empresa = empresa;
+    if (filial) base.filial = filial;
+    const p = Object.assign(base, params);
+    const data = await fetchOS(p);
+    const agg = aggregate(data);
+    updateKPIs(agg.kpis);
+    renderCharts(agg.status_series, agg.series_diaria);
+  }
+
+  document.addEventListener('DOMContentLoaded', ()=>{
+    const form = document.getElementById('osFiltrosForm');
+    if (form) form.addEventListener('submit', (e)=>{ e.preventDefault(); loadOS(collectParams()); });
+    ['osDataInicial','osDataFinal'].forEach(id=>{ const el = document.getElementById(id); if (el) el.addEventListener('change', ()=> loadOS(collectParams())); });
+    const vend = document.getElementById('osVendedor');
+    const cli = document.getElementById('osCliente');
+    const aten = document.getElementById('osAtendente');
+    if (vend) vend.addEventListener('keyup', debounce(async ()=>{ const q = vend.value.trim(); if (!q){ const c=document.getElementById('sugVend'); if (c) c.innerHTML=''; loadOS(collectParams()); return; } const items = await buscarVendedores(q); renderSugestoes('sugVend', items, (it)=>{ vend.value = it.text; const c=document.getElementById('sugVend'); if (c) c.innerHTML=''; loadOS(collectParams()); }); }, 250));
+    if (cli) cli.addEventListener('keyup', debounce(async ()=>{ const q = cli.value.trim(); if (!q){ const c=document.getElementById('sugCli'); if (c) c.innerHTML=''; loadOS(collectParams()); return; } const items = await buscarClientes(q); renderSugestoes('sugCli', items, (it)=>{ cli.value = it.text; const c=document.getElementById('sugCli'); if (c) c.innerHTML=''; loadOS(collectParams()); }); }, 250));
+    if (aten) aten.addEventListener('keyup', debounce(async ()=>{ const q = aten.value.trim(); if (!q){ const c=document.getElementById('sugAten'); if (c) c.innerHTML=''; loadOS(collectParams()); return; } const items = await buscarAtendentes(q); renderSugestoes('sugAten', items, (it)=>{ aten.value = it.text; const c=document.getElementById('sugAten'); if (c) c.innerHTML=''; loadOS(collectParams()); }); }, 250));
+    const st = document.getElementById('osStatus');
+    if (st) st.addEventListener('change', ()=> loadOS(collectParams()));
+    carregarStatus();
+    loadOS(collectParams());
+  });
+</script>
+{% endblock %}

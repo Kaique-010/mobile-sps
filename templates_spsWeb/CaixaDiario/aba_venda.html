@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/ui.css' %}">
+<div class="container py-4">
+  <div class="container align-items-center">
+    <h2 class="page-title text-center mb-5"><i class="bi bi-person-badge"></i> Caixa - Vendas</h2>
+  </div>
+  <div class="row g-3">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">Dados da venda</div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">Caixa</label>
+            <select class="form-select" id="selCaixa"></select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Cliente</label>
+            <input class="form-control" id="cliente" placeholder="Código ou nome do cliente">
+            <input type="hidden" id="clienteId">
+            <div id="sugCliente" class="list-group mt-1"></div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Vendedor</label>
+            <input class="form-control" id="vendedor" placeholder="Código ou nome do vendedor">
+            <input type="hidden" id="vendedorId">
+            <div id="sugVendedor" class="list-group mt-1"></div>
+          </div>
+          <div class="d-grid"><button class="btn btn-outline-primary" id="btnIniciar">Iniciar venda</button></div>
+          <div class="mt-3">
+            <label class="form-label">Número da venda</label>
+            <input class="form-control" id="numeroVenda" readonly>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">Avançar</div>
+        <div class="card-body">
+          <a class="btn btn-outline-secondary" id="linkProdutos" href="#">Produtos</a>
+          <a class="btn btn-outline-success ms-2" id="linkProcessamento" href="#">Processamento</a>
+        </div>
+      </div>
+      <div class="card mt-3">
+        <div class="card-header">Resumo do caixa aberto</div>
+        <div class="card-body">
+          <div class="row g-2">
+            <div class="col-6">
+              <div class="p-2 border rounded">
+                <div><strong>Saldo inicial</strong></div>
+                <div id="res-saldo-inicial">R$ 0,00</div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="p-2 border rounded">
+                <div><strong>Saldo atual</strong></div>
+                <div id="res-saldo-atual">R$ 0,00</div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="p-2 border rounded">
+                <div><strong>Entradas</strong></div>
+                <div id="res-entradas">R$ 0,00</div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="p-2 border rounded">
+                <div><strong>Saídas</strong></div>
+                <div id="res-saidas">R$ 0,00</div>
+              </div>
+            </div>
+          </div>
+          <div class="mt-3">
+            <h6 class="mb-2">Por forma de recebimento</h6>
+            <div id="res-por-forma" class="list-group"></div>
+          </div>
+        </div>
+      </div>
+      <div class="d-grid mt-2">
+        <a class="btn btn-outline-primary" href="/web/{{ slug }}/caixa-diario/">Ir para o Dashboard</a>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  const slug = '{{ slug|default:"" }}' || (function () { try { const p = location.pathname.split('/'); return p.length > 2 ? p[2] : ''; } catch (e) { return '' } })();
+  const empresa = '{{ empresa|default:"" }}'; const filial = '{{ filial|default:"" }}';
+  function getCSRFToken() { try { const name = 'csrftoken='; for (let c of document.cookie.split(';')) { c = c.trim(); if (c.startsWith(name)) return c.substring(name.length) } } catch (e) { } return '' }
+  function headersForm() { const h = { 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' }; const t = localStorage.getItem('access') || sessionStorage.getItem('access'); if (t) h['Authorization'] = `Bearer ${t}`; if (empresa) h['X-Empresa'] = empresa; if (filial) h['X-Filial'] = filial; h['X-CSRFToken'] = getCSRFToken(); return h }
+  function headersGet() { const h = { 'Accept': 'application/json' }; const t = localStorage.getItem('access') || sessionStorage.getItem('access'); if (t) h['Authorization'] = `Bearer ${t}`; if (empresa) h['X-Empresa'] = empresa; if (filial) h['X-Filial'] = filial; return h }
+  async function carregarCaixas() { const r = await fetch(`/web/${slug}/caixa-diario/caixas/abertos/?empresa=${empresa}&filial=${filial}`, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } }); const d = await r.json(); const sel = document.getElementById('selCaixa'); sel.innerHTML = ''; (d.results || []).forEach(it => { const o = document.createElement('option'); o.value = it.caixa; o.textContent = `${it.caixa} - ${it.operador || ''}`; sel.appendChild(o) }); atualizarResumoCaixa(); }
+  function brl(v) { try { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v || 0)) } catch (e) { return `R$ ${v}` } }
+  async function atualizarResumoCaixa() { try { const sel = document.getElementById('selCaixa'); const cx = sel ? sel.value : ''; const params = new URLSearchParams(); if (empresa) params.append('empresa', empresa); if (filial) params.append('filial', filial); if (cx) params.append('caixa', cx); const url = `/web/${slug}/caixa-diario/caixa/resumo/?${params.toString()}`; const r = await fetch(url, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } }); if (!r.ok) return; const d = await r.json(); document.getElementById('res-saldo-inicial').textContent = brl(d.saldo_inicial || 0); document.getElementById('res-saldo-atual').textContent = brl(d.saldo_atual || 0); document.getElementById('res-entradas').textContent = brl(d.entradas || 0); document.getElementById('res-saidas').textContent = brl(d.saidas || 0); const lista = document.getElementById('res-por-forma'); if (lista) { lista.innerHTML = ''; (d.por_forma || []).forEach(it => { const row = document.createElement('div'); row.className = 'list-group-item d-flex justify-content-between align-items-center'; row.innerHTML = `<div>${it.descricao}</div><div>${brl(it.total)}</div>`; lista.appendChild(row) }); } } catch (e) { } }
+  async function iniciar() { const form = new URLSearchParams(); form.append('caixa', document.getElementById('selCaixa').value || ''); form.append('cliente', document.getElementById('clienteId').value || document.getElementById('cliente').value || ''); form.append('vendedor', document.getElementById('vendedorId').value || document.getElementById('vendedor').value || ''); const r = await fetch(`/web/${slug}/caixa-diario/venda/iniciar/`, { method: 'POST', credentials: 'same-origin', headers: headersForm(), body: form.toString() }); if (!r.ok) { const t = await r.text(); alert('Falha ao iniciar: ' + t); return } const d = await r.json(); document.getElementById('numeroVenda').value = d.numero_venda; document.getElementById('linkProdutos').href = `/web/${slug}/caixa-diario/produtos/?numero_venda=${d.numero_venda}`; document.getElementById('linkProcessamento').href = `/web/${slug}/caixa-diario/processamento/?numero_venda=${d.numero_venda}` }
+  let tidC = null, tidV = null; function renderSug(id, targetHidden, listEl) { return function (items) { const el = document.getElementById(listEl); el.innerHTML = ''; (items || []).forEach(it => { const a = document.createElement('a'); a.href = '#'; a.className = 'list-group-item list-group-item-action'; a.textContent = `${it.id} - ${it.text}`; a.addEventListener('click', ev => { ev.preventDefault(); document.getElementById(id).value = `${it.id} - ${it.text}`; document.getElementById(targetHidden).value = it.id; el.innerHTML = ''; }); el.appendChild(a); }); } }
+  const renderSugCliente = renderSug('cliente', 'clienteId', 'sugCliente'); const renderSugVendedor = renderSug('vendedor', 'vendedorId', 'sugVendedor');
+  async function buscarClientes(q) { if (!q || q.length < 2) { renderSugCliente([]); return; } const r = await fetch(`/web/${slug}/caixa-diario/autocomplete/clientes/?q=${encodeURIComponent(q)}`, { credentials: 'same-origin', headers: headersGet() }); if (!r.ok) return; const d = await r.json(); renderSugCliente(d.results) }
+  async function buscarVendedores(q) { if (!q || q.length < 2) { renderSugVendedor([]); return; } const r = await fetch(`/web/${slug}/caixa-diario/autocomplete/vendedores/?q=${encodeURIComponent(q)}`, { credentials: 'same-origin', headers: headersGet() }); if (!r.ok) return; const d = await r.json(); renderSugVendedor(d.results) }
+  function onClienteInput() { clearTimeout(tidC); const v = document.getElementById('cliente').value || ''; document.getElementById('clienteId').value = ''; tidC = setTimeout(() => buscarClientes(v), 300) }
+  function onVendedorInput() { clearTimeout(tidV); const v = document.getElementById('vendedor').value || ''; document.getElementById('vendedorId').value = ''; tidV = setTimeout(() => buscarVendedores(v), 300) }
+  document.addEventListener('DOMContentLoaded', () => { carregarCaixas(); document.getElementById('btnIniciar')?.addEventListener('click', iniciar); document.getElementById('cliente')?.addEventListener('input', onClienteInput); document.getElementById('vendedor')?.addEventListener('input', onVendedorInput); document.getElementById('selCaixa')?.addEventListener('change', atualizarResumoCaixa) });
+</script>
+{% endblock %}

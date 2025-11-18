@@ -12,7 +12,7 @@ import logging
 from datetime import datetime
 
 from .models import Caixageral, Movicaixa
-from .serializers import CaixageralSerializer, MovicaixaSerializer  
+from .REST.serializers import CaixageralSerializer, MovicaixaSerializer  
 
 logger = logging.getLogger(__name__)
 

@@ -33,6 +33,7 @@ urlpatterns = [
     path("<slug>/comissoes/", include("SpsComissoes.urls")),
     path("<slug>/enviar-cobranca/", include("EnvioCobranca.urls")),
     path("<slug>/dre/", include("DRE.urls")),
+    path("<slug>/gerencial/", include("Gerencial.urls")),
     path("<slug>/ordemproducao/", include("OrdemProducao.urls")),
     path("<slug>/parametros-admin/", include("parametros_admin.urls")),
     path("<slug>/controledevisitas/", include("controledevisitas.urls")),

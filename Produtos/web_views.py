@@ -376,6 +376,11 @@ class ProdutoUpdateView(DBAndSlugMixin, UpdateView):
     pk_url_kwarg = 'prod_codi'
     slug_url_kwarg = 'slug'
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['slug'] = self.slug
+        return ctx
+
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         # Não permitir alterar o PK no update para evitar INSERT acidental

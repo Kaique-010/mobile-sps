@@ -1,0 +1,261 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/ui.css' %}">
+<div class="container py-3">
+  <div class="container align-items-center">
+    <h2 class="page-title text-center mb-5">
+      <i class="bi bi-box-seam"></i> Extrato de Movimentação de Produtos
+    </h2>
+  </div>
+  <div class="alert alert-warning d-none" id="mov-warning">Necessário estar logado para carregar os dados.</div>
+
+  <form class="row g-2 mb-3" id="movFiltrosForm">
+    <div class="col-md-3 col-6">
+      <label class="form-label">Data inicial</label>
+      <input type="date" id="movDataInicial" class="form-control" value="{{ filtros.data_inicial }}" />
+    </div>
+    <div class="col-md-3 col-6">
+      <label class="form-label">Data final</label>
+      <input type="date" id="movDataFinal" class="form-control" value="{{ filtros.data_final }}" />
+    </div>
+    <div class="col-md-4 col-12 position-relative">
+      <label class="form-label">Produto</label>
+      <input type="text" id="movProduto" class="form-control" value="{{ filtros.produto }}" placeholder="Código ou nome" autocomplete="off" />
+      <div id="movProdutoSugestoes" class="list-group position-absolute w-100" style="z-index:1050; display:none;"></div>
+      <div class="form-text" id="movProdutoInfo"></div>
+    </div>
+    <div class="col-12 d-flex justify-content-end">
+      <button class="btn btn-primary" type="submit">Filtrar</button>
+    </div>
+  </form>
+
+  <div class="kpi-grid mb-3">
+    <div class="card kpi-card"><div class="card-body"><div class="label">Entradas (quant.)</div><div class="value" id="kpi-entr-quant">0</div></div></div>
+    <div class="card kpi-card"><div class="card-body"><div class="label">Entradas (R$)</div><div class="value" id="kpi-entr-valor">R$ 0,00</div></div></div>
+    <div class="card kpi-card"><div class="card-body"><div class="label">Saídas (quant.)</div><div class="value" id="kpi-said-quant">0</div></div></div>
+    <div class="card kpi-card"><div class="card-body"><div class="label">Saídas (R$)</div><div class="value" id="kpi-said-valor">R$ 0,00</div></div></div>
+  </div>
+  <div class="kpi-grid mb-3">
+    <div class="card kpi-card"><div class="card-body"><div class="label">Saldo em estoque</div><div class="value" id="kpi-saldo">0</div></div></div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-6">
+      <div class="card chart-card">
+        <div class="card-header">Entradas vs Saídas (Quantidade)</div>
+        <div class="card-body"><div class="chart-wrapper" style="height:240px"><canvas id="chartQuant"></canvas></div></div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card chart-card">
+        <div class="card-header">Entradas vs Saídas (Valor)</div>
+        <div class="card-body"><div class="chart-wrapper" style="height:240px"><canvas id="chartValor"></canvas></div></div>
+      </div>
+    </div>
+    <div class="col-md-12">
+      <div class="card chart-card mt-3">
+        <div class="card-header">Saldo acumulado (quantidade)</div>
+        <div class="card-body"><div class="chart-wrapper" style="height:260px"><canvas id="chartSaldo"></canvas></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt-3" id="extratoListaCard">
+    <div class="card-header">Extrato por produto no período</div>
+    <div class="card-body" style="max-height:380px; overflow:auto;">
+      <div class="table-responsive">
+        <table class="table table-striped table-hover">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Produto</th>
+              <th class="text-end">Entradas (quant.)</th>
+              <th class="text-end">Entradas (R$)</th>
+              <th class="text-end">Saídas (quant.)</th>
+              <th class="text-end">Saídas (R$)</th>
+              <th class="text-end">Saldo período</th>
+              <th class="text-end">Saldo atual</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyExtratoProdutos"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const slugTpl = '{{ slug|default:"" }}';
+  const slug = slugTpl || (function(){ try { const p = location.pathname.split('/'); return p.length>2 ? p[2] : ''; } catch(e){ return ''; } })();
+
+  function brl(v){ try{ return new Intl.NumberFormat('pt-BR',{ style:'currency', currency:'BRL' }).format(Number(v||0)); }catch(e){ return `R$ ${v}`; } }
+
+  async function fetchMov(params){
+    const s = new URLSearchParams(params);
+    const url = `/api/${slug}/gerencial/estoque/movimentacao/?${s.toString()}`;
+    const headers = { 'Accept':'application/json' };
+    const token = localStorage.getItem('access') || sessionStorage.getItem('access');
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const empresa = (typeof localStorage !== 'undefined') ? localStorage.getItem('empresa_id') : '';
+    const filial = (typeof localStorage !== 'undefined') ? localStorage.getItem('filial_id') : '';
+    if (empresa) headers['X-Empresa'] = empresa;
+    if (filial) headers['X-Filial'] = filial;
+    const r = await fetch(url, { headers, credentials:'same-origin' });
+    if (!r.ok) throw new Error('Falha extrato movimentação');
+    return r.json();
+  }
+
+  function updateKPIs(data){
+    const k = data?.kpis || {};
+    document.getElementById('kpi-entr-quant').textContent = Number(k.entradas_quantidade||0).toFixed(2);
+    document.getElementById('kpi-entr-valor').textContent = brl(k.entradas_valor||0);
+    document.getElementById('kpi-said-quant').textContent = Number(k.saidas_quantidade||0).toFixed(2);
+    document.getElementById('kpi-said-valor').textContent = brl(k.saidas_valor||0);
+    document.getElementById('kpi-saldo').textContent = (k.saldo_estoque!=null ? Number(k.saldo_estoque).toFixed(2) : '—');
+  }
+
+  let chartQuant, chartValor;
+  let chartSaldo;
+  function renderCharts(data){
+    const e = data?.series?.entradas_diarias || [];
+    const s = data?.series?.saidas_diarias || [];
+    const allDates = Array.from(new Set([ ...e.map(i=>i.data), ...s.map(i=>i.data) ])).sort();
+    const mapE = Object.fromEntries(e.map(i=>[i.data, i]));
+    const mapS = Object.fromEntries(s.map(i=>[i.data, i]));
+    const qe = allDates.map(d => Number((mapE[d]?.quantidade)||0));
+    const qs = allDates.map(d => Number((mapS[d]?.quantidade)||0));
+    const ve = allDates.map(d => Number((mapE[d]?.valor)||0));
+    const vs = allDates.map(d => Number((mapS[d]?.valor)||0));
+    const saldoAc = (function(){ let acc=0; return allDates.map((_,i)=>{ acc += (qe[i]-qs[i]); return acc; }); })();
+
+    const ctxQ = document.getElementById('chartQuant')?.getContext('2d');
+    if (chartQuant) chartQuant.destroy();
+    if (ctxQ) chartQuant = new Chart(ctxQ, {
+      type:'line',
+      data:{ labels: allDates, datasets:[
+        { label:'Entradas', data: qe, borderColor:'rgba(13,110,253,.9)', backgroundColor:'rgba(13,110,253,.12)', tension:.35, fill:true, pointRadius:2.5 },
+        { label:'Saídas', data: qs, borderColor:'rgba(220,53,69,.9)', backgroundColor:'rgba(220,53,69,.12)', tension:.35, fill:true, pointRadius:2.5 }
+      ]},
+      options:{ maintainAspectRatio:false, responsive:true, plugins:{ legend:{ display:true } } }
+    });
+
+    const ctxV = document.getElementById('chartValor')?.getContext('2d');
+    if (chartValor) chartValor.destroy();
+    if (ctxV) chartValor = new Chart(ctxV, {
+      type:'line',
+      data:{ labels: allDates, datasets:[
+        { label:'Entradas (R$)', data: ve, borderColor:'rgba(25,135,84,.9)', backgroundColor:'rgba(25,135,84,.12)', tension:.35, fill:true, pointRadius:2.5 },
+        { label:'Saídas (R$)', data: vs, borderColor:'rgba(255,193,7,.9)', backgroundColor:'rgba(255,193,7,.12)', tension:.35, fill:true, pointRadius:2.5 }
+      ]},
+      options:{ maintainAspectRatio:false, responsive:true, plugins:{ legend:{ display:true }, tooltip:{ callbacks:{ label:(ctx)=> brl(ctx.parsed.y) } } }, scales:{ y:{ ticks:{ callback:(v)=> brl(v) } } } }
+    });
+
+    const ctxS = document.getElementById('chartSaldo')?.getContext('2d');
+    if (chartSaldo) chartSaldo.destroy();
+    if (ctxS) chartSaldo = new Chart(ctxS, {
+      type:'line',
+      data:{ labels: allDates, datasets:[ { label:'Saldo acumulado (quantidade)', data: saldoAc, borderColor:'rgba(13,110,253,.9)', backgroundColor:'rgba(13,110,253,.12)', tension:.35, fill:true, pointRadius:2.5 } ] },
+      options:{ maintainAspectRatio:false, responsive:true, plugins:{ legend:{ display:true } } }
+    });
+  }
+
+  function collectParams(){
+    const di = document.getElementById('movDataInicial')?.value || '';
+    const df = document.getElementById('movDataFinal')?.value || '';
+    const prod = document.getElementById('movProduto')?.value || '';
+    const p = {};
+    if (di) p.data_ini = di; if (df) p.data_fim = df; if (prod) p.prod = prod;
+    return p;
+  }
+
+  function debounce(fn, ms){ let t; return function(){ clearTimeout(t); const args=arguments; t=setTimeout(()=>fn.apply(this,args), ms); } }
+  async function buscarProdutos(q){
+    const empresa = document.getElementById('movEmpresa')?.value || '';
+    const headers = { 'Accept':'application/json' };
+    const token = localStorage.getItem('access') || sessionStorage.getItem('access');
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (empresa) headers['X-Empresa'] = empresa;
+    const r = await fetch(`/api/${slug}/produtos/produtos/busca/?q=${encodeURIComponent(q)}`, { headers });
+    if (!r.ok) return [];
+    return r.json();
+  }
+  const showSugestoes = (items)=>{
+    const box = document.getElementById('movProdutoSugestoes');
+    if (!box) return;
+    if (!items || items.length===0){ box.style.display='none'; box.innerHTML=''; return; }
+    box.innerHTML = items.map(p=>`<button type="button" class="list-group-item list-group-item-action" data-cod="${p.prod_codi}">${p.prod_codi} — ${p.prod_nome} (${p.prod_unme})</button>`).join('');
+    box.style.display='block';
+    Array.from(box.querySelectorAll('button')).forEach(b=>{
+      b.addEventListener('click', ()=>{
+        const cod = b.getAttribute('data-cod');
+        const input = document.getElementById('movProduto');
+        if (input) input.value = cod;
+        box.style.display='none';
+        loadExtrato(collectParams());
+      });
+    });
+  };
+  function renderExtrato(data){
+    const card = document.getElementById('extratoListaCard');
+    const tbody = document.getElementById('tbodyExtratoProdutos');
+    if (!card || !tbody) return;
+    const rows = data?.extrato || [];
+    if (!rows || rows.length===0){
+      tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted">Sem dados no período selecionado</td></tr>`;
+      return;
+    }
+    const fmtQ = (v)=> Number(v||0).toFixed(2);
+    tbody.innerHTML = rows.map(r=>{
+      const nome = r.nome || '';
+      const un = r.unidade ? ` (${r.unidade})` : '';
+      return `<tr>
+        <td>${r.codigo}</td>
+        <td>${nome}${un}</td>
+        <td class="text-end">${fmtQ(r.entradas_quantidade)}</td>
+        <td class="text-end">${brl(r.entradas_valor)}</td>
+        <td class="text-end">${fmtQ(r.saidas_quantidade)}</td>
+        <td class="text-end">${brl(r.saidas_valor)}</td>
+        <td class="text-end">${fmtQ(r.saldo_periodo)}</td>
+        <td class="text-end">${r.saldo_atual!=null ? fmtQ(r.saldo_atual) : '—'}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  async function loadExtrato(params={}){
+    const p = Object.assign({}, params);
+    const d = await fetchMov(p);
+    updateKPIs(d);
+    renderCharts(d);
+    const info = d?.produto_info || {};
+    const el = document.getElementById('movProdutoInfo');
+    if (el) el.textContent = (info.codigo ? `${info.codigo} — ${info.nome||''} ${info.unidade?`(${info.unidade})`:''}` : '');
+    renderExtrato(d);
+  }
+
+  document.addEventListener('DOMContentLoaded', ()=>{
+    const diEl = document.getElementById('movDataInicial');
+    const dfEl = document.getElementById('movDataFinal');
+    const today = new Date();
+    const last30 = new Date(today.getTime() - 30*24*3600*1000);
+    if (diEl && !diEl.value) diEl.value = last30.toISOString().slice(0,10);
+    if (dfEl && !dfEl.value) dfEl.value = today.toISOString().slice(0,10);
+
+    const form = document.getElementById('movFiltrosForm');
+    if (form) form.addEventListener('submit', (e)=>{ e.preventDefault(); loadExtrato(collectParams()); });
+    ['movDataInicial','movDataFinal','movProduto'].forEach(id=>{
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('change', ()=> loadExtrato(collectParams()));
+    });
+    const prodInput = document.getElementById('movProduto');
+    if (prodInput) prodInput.addEventListener('input', debounce(async (e)=>{
+      const q = (e.target.value||'').trim();
+      if (q.length<2){ showSugestoes([]); return; }
+      const itens = await buscarProdutos(q);
+      showSugestoes(itens);
+    }, 300));
+    loadExtrato(collectParams());
+  });
+</script>
+{% endblock %}

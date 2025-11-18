@@ -6,6 +6,9 @@
   --brand-success: #198754;
   --brand-warning: #ffc107;
   --brand-muted: #6c757d;
+  --card-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  --card-border: 1px solid rgba(0, 0, 0, 0.08);
+  --card-radius: 12px;
 }
 
 .page-container {
@@ -47,13 +50,19 @@
 }
 
 /* Badges com contraste adequado */
-.badge.bg-warning.text-dark { color: #212529 !important; }
-.badge.bg-success { color: #fff; }
-.badge.bg-secondary { color: #fff; }
+.badge.bg-warning.text-dark {
+  color: #212529 !important;
+}
+.badge.bg-success {
+  color: #fff;
+}
+.badge.bg-secondary {
+  color: #fff;
+}
 
 /* Microinterações sutis em botões */
 .btn {
-  transition: transform .08s ease, box-shadow .12s ease;
+  transition: transform 0.08s ease, box-shadow 0.12s ease;
 }
 .btn:hover {
   transform: translateY(-1px);
@@ -66,6 +75,92 @@
 /* Conteúdo de cartões */
 .card-title {
   font-weight: 600;
+}
+
+/* Dashboard KPIs */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 992px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 576px) {
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.kpi-card {
+  border: var(--card-border);
+  box-shadow: var(--card-shadow);
+  border-radius: var(--card-radius);
+}
+.kpi-card .value {
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+.kpi-card .label {
+  color: var(--brand-muted);
+  font-weight: 600;
+}
+
+/* Chart containers */
+.chart-card {
+  border: var(--card-border);
+  box-shadow: var(--card-shadow);
+  border-radius: var(--card-radius);
+}
+
+/* Escopo específico do dashboard de pedidos */
+.dashboard-pedidos .card {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+}
+.dashboard-pedidos .card-header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+.chart-card .card-header {
+  font-weight: 600;
+  text-align: center;
+}
+.chart-wrapper {
+  position: relative;
+  height: 320px;
+}
+.chart-wrapper canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Filtros e pills */
+.filters .form-label {
+  font-weight: 600;
+}
+.filter-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.filter-pills .btn {
+  border-radius: 999px;
+  padding: 6px 12px;
+  border-color: rgba(13, 110, 253, 0.25);
+}
+.filter-pills .btn.active {
+  background-color: var(--brand-primary);
+  color: #fff;
+}
+
+/* Tabelas compactas */
+.table-compact th,
+.table-compact td {
+  padding: 0.35rem 0.5rem;
 }
 
 /* Utilitário de acessibilidade */
@@ -83,5 +178,7 @@
 
 /* Preferência de usuário para reduzir movimentos */
 @media (prefers-reduced-motion: reduce) {
-  .btn { transition: none; }
+  .btn {
+    transition: none;
+  }
 }

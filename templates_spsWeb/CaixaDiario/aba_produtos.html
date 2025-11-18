@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/ui.css' %}">
+<div class="container py-4">
+  <div class="container align-items-center">
+    <h2 class="page-title text-center mb-5"><i class="bi bi-box-seam"></i> Venda — Produtos</h2>
+  </div>
+  <div class="card">
+    <div class="card-body">
+      <div class="mb-3">
+        <label class="form-label">Nº Venda</label>
+        <input class="form-control" id="numeroVenda" value="{{ numero_venda }}" readonly>
+      </div>
+      <div class="row g-2 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label">Produto</label>
+          <input class="form-control" id="produtoBusca" placeholder="Código ou nome">
+          <input type="hidden" id="produto">
+          <div id="sugProduto" class="list-group mt-1"></div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Quantidade</label>
+          <input type="number" step="0.01" class="form-control" id="quantidade" placeholder="0">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Valor unitário</label>
+          <input type="number" step="0.01" class="form-control" id="valorUnit" placeholder="0,00">
+        </div>
+        <div class="col-md-3 d-grid">
+          <button class="btn btn-outline-secondary" id="btnAddItem">Adicionar item</button>
+        </div>
+      </div>
+
+      <div class="row mt-2">
+        <div class="col-md-3">
+          <img id="produtoImg" src="" alt="Imagem do produto" class="img-thumbnail" style="display:none; max-height:140px;">
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <h6>Itens adicionados</h6>
+        <div id="listaItens" class="list-group"></div>
+      </div>
+
+      <div class="mt-3 d-flex justify-content-between">
+        <div><strong>Total da lista:</strong> <span id="totalLista">R$ 0,00</span></div>
+        <div>
+          <a class="btn btn-outline-success" id="btnAvancarProc" href="#">Ir para processamento</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  const slug='{{ slug|default:"" }}'||(function(){try{const p=location.pathname.split('/');return p.length>2?p[2]:''}catch(e){return''}})();
+  const empresa='{{ empresa|default:"" }}'; const filial='{{ filial|default:"" }}'; const numeroVenda='{{ numero_venda|default:"" }}';
+  function getCSRFToken(){try{const name='csrftoken=';for(let c of document.cookie.split(';')){c=c.trim();if(c.startsWith(name))return c.substring(name.length)}}catch(e){}return''}
+  function headersForm(){const h={'Accept':'application/json','Content-Type':'application/x-www-form-urlencoded'};const t=localStorage.getItem('access')||sessionStorage.getItem('access');if(t)h['Authorization']=`Bearer ${t}`;if(empresa)h['X-Empresa']=empresa;if(filial)h['X-Filial']=filial;h['X-CSRFToken']=getCSRFToken();return h}
+  function headersGet(){const h={'Accept':'application/json'};const t=localStorage.getItem('access')||sessionStorage.getItem('access');if(t)h['Authorization']=`Bearer ${t}`;if(empresa)h['X-Empresa']=empresa;if(filial)h['X-Filial']=filial;return h}
+  function brl(v){try{return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(v||0))}catch(e){return`R$ ${v}`}}
+  const itens=[]; function render(){const ul=document.getElementById('listaItens');ul.innerHTML='';let total=0;itens.forEach(it=>{const li=document.createElement('div');li.className='list-group-item d-flex justify-content-between align-items-center';li.innerHTML=`<div><strong>${it.produto}</strong> — Qtd: ${it.quantidade} × R$ ${Number(it.valor_unitario).toFixed(2)}</div><div>${brl(it.quantidade*it.valor_unitario)}</div>`;ul.appendChild(li); total+=it.quantidade*it.valor_unitario;});document.getElementById('totalLista').textContent=brl(total)}
+  async function addItem(){const produto=document.getElementById('produto').value||document.getElementById('produtoBusca').value||'';const quantidade=Number(document.getElementById('quantidade').value||0);const valor_unitario=Number(document.getElementById('valorUnit').value||0);if(!produto||!quantidade||!valor_unitario){alert('Preencha produto, quantidade e valor unitário');return}
+    const form=new URLSearchParams();form.append('numero_venda',numeroVenda);form.append('produto',produto);form.append('quantidade',String(quantidade));form.append('valor_unitario',String(valor_unitario));
+    const r=await fetch(`/web/${slug}/caixa-diario/venda/adicionar-item/`,{method:'POST',credentials:'same-origin',headers:headersForm(),body:form.toString()}); if(!r.ok){alert('Falha ao adicionar item');return}const d=await r.json();
+    const ex=itens.find(i=>i.produto===produto); if(ex){ex.quantidade+=quantidade; ex.valor_unitario=valor_unitario;} else {itens.push({produto,quantidade,valor_unitario});}
+    render();
+    document.getElementById('produto').value='';
+    document.getElementById('produtoBusca').value='';
+    const sug=document.getElementById('sugProduto'); if(sug) sug.innerHTML='';
+    const img=document.getElementById('produtoImg'); if(img){img.style.display='none'; img.src='';}
+    document.getElementById('valorUnit').value='';}
+  function renderSugProduto(items){const el=document.getElementById('sugProduto');el.innerHTML='';(items||[]).forEach(it=>{const a=document.createElement('a');a.href='#';a.className='list-group-item list-group-item-action';a.textContent=`${it.id} - ${it.text.split(' - ').slice(1).join(' - ')}`;a.dataset.id=it.id;a.addEventListener('click',async(ev)=>{ev.preventDefault();document.getElementById('produto').value=it.id;document.getElementById('produtoBusca').value=it.text;el.innerHTML='';await preencherPrecoEImagem(it.id)});el.appendChild(a)});}
+  async function buscarProdutos(q){if(!q||q.length<2){renderSugProduto([]);return;}const r=await fetch(`/web/${slug}/caixa-diario/autocomplete/produtos/?q=${encodeURIComponent(q)}`,{credentials:'same-origin',headers:headersGet()});if(!r.ok)return;const d=await r.json();renderSugProduto(d.results)}
+  async function preencherPrecoEImagem(codigo){try{const rp=await fetch(`/web/${slug}/pedidos/preco/?prod_codi=${encodeURIComponent(codigo)}&pedi_fina=1`,{credentials:'same-origin',headers:headersGet()});if(rp.ok){const jp=await rp.json();if(typeof jp.unit_price!=='undefined'){document.getElementById('valorUnit').value=Number(jp.unit_price||0).toFixed(2)}}}catch(e){}
+    const img=document.getElementById('produtoImg');img.style.display='none';img.src=`/web/${slug}/produtos/${encodeURIComponent(codigo)}/foto/`;img.onload=function(){img.style.display='block'};img.onerror=function(){img.style.display='none'}}
+  let tidP=null; function onProdutoInput(){clearTimeout(tidP);document.getElementById('produto').value='';const v=document.getElementById('produtoBusca').value||'';tidP=setTimeout(()=>buscarProdutos(v),300)}
+  document.addEventListener('DOMContentLoaded',()=>{document.getElementById('numeroVenda').value=numeroVenda; document.getElementById('btnAddItem')?.addEventListener('click',addItem); document.getElementById('btnAvancarProc').href=`/web/${slug}/caixa-diario/processamento/?numero_venda=${encodeURIComponent(numeroVenda)}`;});
+  document.getElementById('produtoBusca')?.addEventListener('input',onProdutoInput)
+</script>
+{% endblock %}

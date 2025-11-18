@@ -1,0 +1,310 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/ui.css' %}">
+<div class="container py-4 dashboard-pedidos">
+  <div class="container align-items-center">
+    <h2 class="page-title text-center mb-5">
+      <i class="bi bi-cart"></i> Dashboard de Pedidos
+    </h2>
+  </div>
+  <div id="dashboard-warning" class="alert alert-warning d-none">Necessário estar logado para carregar os dados.</div>
+  <form method="get" class="row g-3 mb-3 filters" id="filtrosForm">
+    <div class="col-md-2">
+      <label class="form-label">Data inicial</label>
+      <input type="date" name="data_inicial" id="inputDataInicial" value="{{ filtros.data_inicial }}" class="form-control" />
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Data final</label>
+      <input type="date" name="data_final" id="inputDataFinal" value="{{ filtros.data_final }}" class="form-control" />
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Vendedor</label>
+      <input type="text" name="vendedor" id="inputVendedor" value="{{ filtros.vendedor }}" class="form-control"
+        placeholder="Nome do vendedor" />
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Cliente</label>
+      <input type="text" name="cliente" id="inputCliente" value="{{ filtros.cliente }}" class="form-control"
+        placeholder="Nome do cliente" />
+    </div>
+    <div class="col-md-2 d-flex align-items-end">
+      <button class="btn btn-primary w-100" type="submit">Filtrar</button>
+    </div>
+    <div class="col-12">
+      <div class="filter-pills">
+        <button type="button" class="btn btn-outline-secondary" data-range="7">Últimos 7 dias</button>
+        <button type="button" class="btn btn-outline-secondary" data-range="30">Últimos 30 dias</button>
+        <button type="button" class="btn btn-outline-secondary" data-range="90">Últimos 90 dias</button>
+      </div>
+    </div>
+  </form>
+
+  <div class="kpi-grid mb-5">
+    <div class="card kpi-card">
+      <div class="card-body">
+        <div class="label">Total de pedidos</div>
+        <div class="value" id="kpi-total-pedidos">{{ kpis.total_pedidos }}</div>
+      </div>
+    </div>
+    <div class="card kpi-card">
+      <div class="card-body">
+        <div class="label">Valor total</div>
+        <div class="value" id="kpi-valor-total">R$ {{ kpis.total_valor }}</div>
+      </div>
+    </div>
+    <div class="card kpi-card">
+      <div class="card-body">
+        <div class="label">Quantidade total</div>
+        <div class="value" id="kpi-quantidade-total">{{ kpis.total_quantidade }}</div>
+      </div>
+    </div>
+    <div class="card kpi-card">
+      <div class="card-body">
+        <div class="label">Ticket médio</div>
+        <div class="value" id="kpi-ticket-medio">R$ {{ kpis.ticket_medio }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-6">
+      <div class="card chart-card">
+        <div class="card-header">Top vendedores</div>
+        <div class="card-body">
+          <div class="chart-wrapper"><canvas id="chartTopVendedores"></canvas></div>
+          <table class="table table-sm table-compact mt-3">
+            <thead>
+              <tr>
+                <th>Vendedor</th>
+                <th>Pedidos</th>
+                <th>Valor</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyTopVendedores">
+              {% for v in top_vendedores %}
+              <tr>
+                <td>{{ v.nome_vendedor }}</td>
+                <td>{{ v.qtd }}</td>
+                <td>R$ {{ v.valor }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="3">Sem dados</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card chart-card">
+        <div class="card-header">Vendas por dia</div>
+        <div class="card-body">
+          <div class="chart-wrapper"><canvas id="chartVendasDia"></canvas></div>
+          <table class="table table-sm table-compact mt-3">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Pedidos</th>
+                <th>Valor</th>
+              </tr>
+            </thead>
+            <tbody id="tbodySeriesDiaria">
+              {% for d in series_diaria %}
+              <tr>
+                <td>{{ d.data_pedido }}</td>
+                <td>{{ d.qtd }}</td>
+                <td>R$ {{ d.valor }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="3">Sem dados</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const slugTpl = '{{ slug|default:"" }}';
+  const slug = slugTpl || (function () {
+    try {
+      const parts = window.location.pathname.split('/');
+      // /web/<slug>/... => index 2
+      return parts.length > 2 ? parts[2] : '';
+    } catch (e) { return ''; }
+  })();
+  const empresa = '{{ filtros.empresa|default:"" }}';
+  const filial = '{{ filtros.filial|default:"" }}';
+
+  let chartTopVend, chartVendasDia;
+
+  function brl(v) {
+    try { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v || 0)); } catch (e) { return `R$ ${v}`; }
+  }
+
+  function dateISO(d) { const x = new Date(d); return x.toISOString().slice(0, 10); }
+
+  async function fetchPedidos(params = {}) {
+    const s = new URLSearchParams(params);
+    let url = `/api/${slug}/pedidos/pedidos-geral/?${s.toString()}`;
+    const headers = { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
+    const token = (window.localStorage && localStorage.getItem('access')) || (window.sessionStorage && sessionStorage.getItem('access'));
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (empresa) headers['X-Empresa'] = empresa;
+    if (filial) headers['X-Filial'] = filial;
+    const all = [];
+    let nextUrl = url.includes('limit=') ? url : `${url}&limit=1000&offset=0`;
+    while (nextUrl) {
+      const r = await fetch(nextUrl, { headers, credentials: 'same-origin' });
+      if (r.status === 401) {
+        const warn = document.getElementById('dashboard-warning') || document.getElementById('login-warning');
+        if (warn) warn.classList.remove('d-none');
+      }
+      if (!r.ok) throw new Error('Falha ao buscar dados');
+      const json = await r.json();
+      if (Array.isArray(json)) {
+        all.push(...json);
+        nextUrl = null;
+      } else {
+        const items = Array.isArray(json.results) ? json.results : [];
+        all.push(...items);
+        nextUrl = json.next || null;
+      }
+    }
+    return all;
+  }
+
+  function aggregate(data) {
+    const arr = Array.isArray(data) ? data : [];
+    const kpis = { total_pedidos: arr.length, total_valor: 0, total_quantidade: 0 };
+    const porDia = new Map();
+    const porVend = new Map();
+    for (const it of arr) {
+      const valor = Number(it.valor_total || 0);
+      const qtd = Number(it.quantidade_total || 0);
+      kpis.total_valor += valor;
+      kpis.total_quantidade += qtd;
+      const dia = it.data_pedido;
+      porDia.set(dia, { valor: (porDia.get(dia)?.valor || 0) + valor, qtd: (porDia.get(dia)?.qtd || 0) + 1 });
+      const vend = it.nome_vendedor || 'N/A';
+      porVend.set(vend, { valor: (porVend.get(vend)?.valor || 0) + valor, qtd: (porVend.get(vend)?.qtd || 0) + 1 });
+    }
+    kpis.ticket_medio = kpis.total_pedidos ? (kpis.total_valor / kpis.total_pedidos) : 0;
+    const series_diaria = Array.from(porDia.entries()).sort((a, b) => a[0].localeCompare(b[0])).map(([data, o]) => ({ data, ...o }));
+    const top_vendedores = Array.from(porVend.entries()).map(([nome_vendedor, o]) => ({ nome_vendedor, ...o })).sort((a, b) => b.valor - a.valor).slice(0, 5);
+    return { kpis, series_diaria, top_vendedores };
+  }
+
+  function updateKPIs(kpis) {
+    document.getElementById('kpi-total-pedidos').textContent = kpis.total_pedidos;
+    document.getElementById('kpi-valor-total').textContent = brl(kpis.total_valor);
+    document.getElementById('kpi-quantidade-total').textContent = kpis.total_quantidade;
+    document.getElementById('kpi-ticket-medio').textContent = brl(kpis.ticket_medio);
+  }
+
+  function renderCharts(series, tops) {
+    const canvVend = document.getElementById('chartTopVendedores');
+    const ctxVend = canvVend ? canvVend.getContext('2d') : null;
+    const labelsVend = (tops || []).map(t => t.nome_vendedor);
+    const dadosVend = (tops || []).map(t => Number(t.valor || 0));
+    if (chartTopVend) chartTopVend.destroy();
+    if (ctxVend) chartTopVend = new Chart(ctxVend, {
+      type: 'bar',
+      data: { labels: labelsVend, datasets: [{ label: 'Valor (R$)', data: dadosVend, backgroundColor: 'rgba(13,110,253,.35)', borderColor: 'rgba(13,110,253,.9)', borderWidth: 1.5, borderRadius: 6, maxBarThickness: 42 }] },
+      options: { maintainAspectRatio: false, responsive: true, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => brl(ctx.parsed.y) } } }, scales: { x: { grid: { color: 'rgba(108,117,125,.15)' } }, y: { grid: { color: 'rgba(108,117,125,.15)' }, ticks: { callback: (v) => brl(v) } } }, animation: { duration: 450 } }
+    });
+
+    const canvDia = document.getElementById('chartVendasDia');
+    const ctxDia = canvDia ? canvDia.getContext('2d') : null;
+    const labelsDia = (series || []).map(s => s.data);
+    const dadosDia = (series || []).map(s => Number(s.valor || 0));
+    if (chartVendasDia) chartVendasDia.destroy();
+    if (ctxDia) chartVendasDia = new Chart(ctxDia, {
+      type: 'line',
+      data: { labels: labelsDia, datasets: [{ label: 'Vendas por dia (R$)', data: dadosDia, borderColor: 'rgba(25,135,84,.9)', backgroundColor: 'rgba(25,135,84,.12)', tension: .35, fill: true, pointRadius: 2.5 }] },
+      options: { maintainAspectRatio: false, responsive: true, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => brl(ctx.parsed.y) } } }, scales: { x: { grid: { color: 'rgba(108,117,125,.15)' } }, y: { grid: { color: 'rgba(108,117,125,.15)' }, ticks: { callback: (v) => brl(v) } } }, animation: { duration: 450 } }
+    });
+  }
+
+  function renderTables(agg) {
+    const tbodyVend = document.getElementById('tbodyTopVendedores');
+    const tbodyDia = document.getElementById('tbodySeriesDiaria');
+    if (tbodyVend) {
+      const rows = (agg.top_vendedores || []).map(v => `<tr><td>${v.nome_vendedor}</td><td>${v.qtd}</td><td>${brl(v.valor)}</td></tr>`).join('');
+      tbodyVend.innerHTML = rows || '<tr><td colspan="3">Sem dados</td></tr>';
+    }
+    if (tbodyDia) {
+      const rows = (agg.series_diaria || []).map(d => `<tr><td>${d.data}</td><td>${d.qtd}</td><td>${brl(d.valor)}</td></tr>`).join('');
+      tbodyDia.innerHTML = rows || '<tr><td colspan="3">Sem dados</td></tr>';
+    }
+  }
+
+  async function loadInteractive(params = {}) {
+    try {
+      const baseParams = {};
+      if (empresa) baseParams.empresa = empresa;
+      if (filial) baseParams.filial = filial;
+      const p = Object.assign(baseParams, params);
+      const data = await fetchPedidos(p);
+      const agg = aggregate(data);
+      updateKPIs(agg.kpis);
+      renderCharts(agg.series_diaria, agg.top_vendedores);
+      renderTables(agg);
+    } catch (e) { console.error(e); }
+  }
+
+  function collectParamsFromForm() {
+    const di = document.getElementById('inputDataInicial')?.value || '';
+    const df = document.getElementById('inputDataFinal')?.value || '';
+    const vend = document.getElementById('inputVendedor')?.value || '';
+    const cli = document.getElementById('inputCliente')?.value || '';
+    const params = {};
+    if (di) params.data_inicial = di;
+    if (df) params.data_final = df;
+    if (vend) params.nome_vendedor = vend;
+    if (cli) params.nome_cliente = cli;
+    return params;
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.filter-pills [data-range]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-pills [data-range]').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        const dias = parseInt(btn.getAttribute('data-range'), 10);
+        const hoje = new Date();
+        const ini = new Date(hoje.getTime() - dias * 24 * 3600 * 1000);
+        const di = document.getElementById('inputDataInicial');
+        const df = document.getElementById('inputDataFinal');
+        if (di) di.value = dateISO(ini);
+        if (df) df.value = dateISO(hoje);
+        const params = collectParamsFromForm();
+        loadInteractive(params);
+      });
+    });
+    const form = document.getElementById('filtrosForm');
+    if (form) form.addEventListener('submit', (e)=>{
+      e.preventDefault();
+      const params = collectParamsFromForm();
+      loadInteractive(params);
+    });
+    const di = document.getElementById('inputDataInicial');
+    const df = document.getElementById('inputDataFinal');
+    if (di) di.addEventListener('change', ()=> loadInteractive(collectParamsFromForm()));
+    if (df) df.addEventListener('change', ()=> loadInteractive(collectParamsFromForm()));
+    const vend = document.getElementById('inputVendedor');
+    const cli = document.getElementById('inputCliente');
+    let tVend, tCli;
+    if (vend) vend.addEventListener('keyup', ()=>{ clearTimeout(tVend); tVend = setTimeout(()=> loadInteractive(collectParamsFromForm()), 350); });
+    if (cli) cli.addEventListener('keyup', ()=>{ clearTimeout(tCli); tCli = setTimeout(()=> loadInteractive(collectParamsFromForm()), 350); });
+    loadInteractive(collectParamsFromForm());
+  });
+</script>
+{% endblock %}

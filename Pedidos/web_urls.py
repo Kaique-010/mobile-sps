@@ -5,6 +5,7 @@ app_name = "PedidosWeb"
 
 urlpatterns = [
     path("", web_views.PedidosListView.as_view(), name="pedidos_listar"),
+    path("dashboard/", web_views.PedidosDashboardView.as_view(), name="pedidos_dashboard"),
     path("criar/", web_views.PedidoCreateView.as_view(), name="pedido_criar"),
     path("<int:pk>/", web_views.PedidoDetailView.as_view(), name="pedido_detalhe"),
     path("<int:pk>/editar/", web_views.PedidoUpdateView.as_view(), name="pedido_editar"),

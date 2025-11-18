@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/ui.css' %}">
+<div class="container py-4 dashboard-pedidos">
+  <div class="container align-items-center">
+    <h2 class="page-title text-center mb-5">
+      <i class="bi bi-graph-up"></i> DRE Gerencial
+    </h2>
+  </div>
+  <div id="dre-warning" class="alert alert-warning d-none">Necessário estar logado para carregar os dados.</div>
+
+  <form class="row g-3 mb-3 filters" id="dreFiltrosForm">
+    <div class="col-md-3">
+      <label class="form-label">Data inicial</label>
+      <input type="date" id="dreDataInicial" class="form-control" value="{{ filtros.data_inicial }}" />
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Data final</label>
+      <input type="date" id="dreDataFinal" class="form-control" value="{{ filtros.data_final }}" />
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Empresa</label>
+      <input type="text" id="dreEmpresa" class="form-control" value="{{ filtros.empresa }}" placeholder="ID empresa" />
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Filial</label>
+      <input type="text" id="dreFilial" class="form-control" value="{{ filtros.filial }}" placeholder="ID filial" />
+    </div>
+    <div class="col-12 d-flex justify-content-end">
+      <button class="btn btn-primary" type="submit">Filtrar</button>
+    </div>
+  </form>
+
+  <div class="kpi-grid mb-5">
+    <div class="card kpi-card"><div class="card-body"><div class="label">Receita bruta</div><div class="value" id="kpi-receita-bruta">R$ 0,00</div></div></div>
+    <div class="card kpi-card"><div class="card-body"><div class="label">Deduções</div><div class="value" id="kpi-deducoes">R$ 0,00</div></div></div>
+    <div class="card kpi-card"><div class="card-body"><div class="label">Receita líquida</div><div class="value" id="kpi-receita-liquida">R$ 0,00</div></div></div>
+    <div class="card kpi-card"><div class="card-body"><div class="label">CMV</div><div class="value" id="kpi-cmv">R$ 0,00</div></div></div>
+  </div>
+  <div class="kpi-grid mb-5">
+    <div class="card kpi-card"><div class="card-body"><div class="label">Lucro bruto</div><div class="value" id="kpi-lucro-bruto">R$ 0,00</div></div></div>
+    <div class="card kpi-card"><div class="card-body"><div class="label">Recebimentos</div><div class="value" id="kpi-total-recebido">R$ 0,00</div></div></div>
+    <div class="card kpi-card"><div class="card-body"><div class="label">Despesas</div><div class="value" id="kpi-total-despesas">R$ 0,00</div></div></div>
+    <div class="card kpi-card"><div class="card-body"><div class="label">Resultado operacional</div><div class="value" id="kpi-resultado-operacional">R$ 0,00</div></div></div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-6">
+      <div class="card chart-card">
+        <div class="card-header">Receita vs CMV</div>
+        <div class="card-body"><div class="chart-wrapper"><canvas id="chartReceitaCMV"></canvas></div></div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card chart-card">
+        <div class="card-header">Caixa (Recebido - Despesas)</div>
+        <div class="card-body"><div class="chart-wrapper"><canvas id="chartCaixa"></canvas></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const slugTpl = '{{ slug|default:"" }}';
+  const slug = slugTpl || (function(){ try { const p = location.pathname.split('/'); return p.length>2 ? p[2] : ''; } catch(e){ return ''; } })();
+
+  function brl(v) { try { return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(v||0)); } catch(e){ return `R$ ${v}`; } }
+
+  async function fetchDRE(params) {
+    const s = new URLSearchParams(params);
+    const url = `/api/${slug}/dre/dre_gerencial/?${s.toString()}`;
+    const headers = { 'Accept':'application/json' };
+    const token = localStorage.getItem('access') || sessionStorage.getItem('access');
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const r = await fetch(url, { headers, credentials:'same-origin' });
+    if (!r.ok) throw new Error('Falha DRE gerencial');
+    return r.json();
+  }
+  async function fetchCaixa(params) {
+    const s = new URLSearchParams(params);
+    const url = `/api/${slug}/dre/dre-caixa/?${s.toString()}`;
+    const headers = { 'Accept':'application/json' };
+    const token = localStorage.getItem('access') || sessionStorage.getItem('access');
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const r = await fetch(url, { headers, credentials:'same-origin' });
+    if (!r.ok) throw new Error('Falha DRE caixa');
+    return r.json();
+  }
+
+  function updateKPIs(dre, caixa) {
+    const get = (o,k)=> (o && o[k]!=null ? o[k] : 0);
+    document.getElementById('kpi-receita-bruta').textContent = brl(get(dre,'receita_bruta'));
+    document.getElementById('kpi-deducoes').textContent = brl(get(dre,'deducoes'));
+    document.getElementById('kpi-receita-liquida').textContent = brl(get(dre,'receita_liquida'));
+    document.getElementById('kpi-cmv').textContent = brl(get(dre,'cmv'));
+    document.getElementById('kpi-lucro-bruto').textContent = brl(get(dre,'lucro_bruto'));
+    document.getElementById('kpi-total-recebido').textContent = brl(get(dre,'total_recebido'));
+    document.getElementById('kpi-total-despesas').textContent = brl(get(dre,'total_despesas'));
+    document.getElementById('kpi-resultado-operacional').textContent = brl(get(dre,'resultado_operacional'));
+  }
+
+  let chartReceitaCMV, chartCaixa;
+  function renderCharts(dre, caixa) {
+    const receita = Number(dre?.receita_liquida||0);
+    const cmv = Number(dre?.cmv||0);
+    const lucro = Number(dre?.lucro_bruto||0);
+    const recebido = Number(caixa?.total_recebido||dre?.total_recebido||0);
+    const despesas = Number(caixa?.total_despesas||dre?.total_despesas||0);
+    const resultado = Number(caixa?.resultado_caixa||((recebido - despesas) || 0));
+
+    const c1 = document.getElementById('chartReceitaCMV')?.getContext('2d');
+    if (chartReceitaCMV) chartReceitaCMV.destroy();
+    if (c1) chartReceitaCMV = new Chart(c1, {
+      type:'bar',
+      data:{ labels:['Receita líquida','CMV','Lucro bruto'], datasets:[{ data:[receita, cmv, lucro], backgroundColor:['rgba(13,110,253,.35)','rgba(220,53,69,.35)','rgba(25,135,84,.35)'], borderColor:['rgba(13,110,253,.9)','rgba(220,53,69,.9)','rgba(25,135,84,.9)'], borderWidth:1.5, borderRadius:6, maxBarThickness:42 }]},
+      options:{ maintainAspectRatio:false, responsive:true, plugins:{ legend:{ display:false } }, scales:{ y:{ ticks:{ callback:(v)=> brl(v) } } } }
+    });
+
+    const c2 = document.getElementById('chartCaixa')?.getContext('2d');
+    if (chartCaixa) chartCaixa.destroy();
+    if (c2) chartCaixa = new Chart(c2, {
+      type:'bar',
+      data:{ labels:['Recebido','Despesas','Resultado'], datasets:[{ data:[recebido, despesas, resultado], backgroundColor:['rgba(13,110,253,.35)','rgba(220,53,69,.35)','rgba(25,135,84,.35)'], borderColor:['rgba(13,110,253,.9)','rgba(220,53,69,.9)','rgba(25,135,84,.9)'], borderWidth:1.5, borderRadius:6, maxBarThickness:42 }]},
+      options:{ maintainAspectRatio:false, responsive:true, plugins:{ legend:{ display:false } }, scales:{ y:{ ticks:{ callback:(v)=> brl(v) } } } }
+    });
+  }
+
+  function collectParams() {
+    const di = document.getElementById('dreDataInicial')?.value || '';
+    const df = document.getElementById('dreDataFinal')?.value || '';
+    const empr = document.getElementById('dreEmpresa')?.value || '';
+    const fili = document.getElementById('dreFilial')?.value || '';
+    const p = {};
+    if (di) p.data_ini = di; if (df) p.data_fim = df; if (empr) p.empr = empr; if (fili) p.fili = fili;
+    return p;
+  }
+
+  async function loadDRE(params={}) {
+    const p = Object.assign({}, params);
+    const [dre, caixa] = await Promise.all([ fetchDRE(p), fetchCaixa(p) ]);
+    updateKPIs(dre, caixa);
+    renderCharts(dre, caixa);
+  }
+
+  document.addEventListener('DOMContentLoaded', ()=>{
+    const form = document.getElementById('dreFiltrosForm');
+    if (form) form.addEventListener('submit', (e)=>{ e.preventDefault(); loadDRE(collectParams()); });
+    ['dreDataInicial','dreDataFinal','dreEmpresa','dreFilial'].forEach(id=>{ const el = document.getElementById(id); if (el) el.addEventListener('change', ()=> loadDRE(collectParams())); });
+    loadDRE(collectParams());
+  });
+</script>
+{% endblock %}

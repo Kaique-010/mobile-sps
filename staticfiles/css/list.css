@@ -68,3 +68,11 @@ h2.page-title {
   font-size: 34px;
   margin-right: 8px;
 }
+
+/* Dashboard complementos (mirror) */
+.kpi-card { border: 1px solid rgba(0,0,0,.08); box-shadow: 0 4px 16px rgba(0,0,0,.06); }
+.kpi-card .value { font-size: 1.75rem; font-weight: 700; }
+.kpi-card .label { color: #6c757d; font-weight: 600; }
+.chart-card { border: 1px solid rgba(0,0,0,.08); box-shadow: 0 4px 16px rgba(0,0,0,.06); }
+.chart-wrapper { position: relative; height: 320px; }
+.table-compact th, .table-compact td { padding: .35rem .5rem; }

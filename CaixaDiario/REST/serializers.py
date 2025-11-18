@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Caixageral, Movicaixa
+from ..models import Caixageral, Movicaixa
 from Produtos.models import Produtos  # Para o método get_produto_nome
 import logging
 

@@ -5,6 +5,15 @@ from .models import PedidoVenda, Itenspedidovenda
 from Produtos.models import Produtos
 from Entidades.models import Entidades
 
+
+STATUS_PEDIDO = [
+    (0, 'Pendente'),
+    (1, 'Processando'),
+    (2, 'Enviado'),
+    (3, 'Concluído'),
+    (4, 'Cancelado'),
+]
+
 class PedidoVendaForm(forms.ModelForm):
     class Meta:
         model = PedidoVenda
@@ -84,7 +93,7 @@ class PedidoVendaForm(forms.ModelForm):
             ('2', 'Sem Financeiro'),
             ('3', 'Na Emissão'),
         ]
-        self.fields['pedi_stat'].choices = STATUS_ORCAMENTO
+        self.fields['pedi_stat'].choices = STATUS_PEDIDO
 
 
 

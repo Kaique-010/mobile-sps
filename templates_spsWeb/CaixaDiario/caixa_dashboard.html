@@ -1,0 +1,261 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/ui.css' %}">
+<div class="container py-4">
+  <div class="container align-items-center">
+    <h2 class="page-title text-center mb-4">
+      <i class="bi bi-cash-coin"></i> Caixa Diário
+    </h2>
+  </div>
+  <div id="caixa-warning" class="alert alert-warning d-none">Necessário estar logado para carregar os dados.</div>
+
+  <div class="kpi-grid mb-4">
+    <div class="card kpi-card">
+      <div class="card-body">
+        <div class="label">Saldo inicial</div>
+        <div class="value" id="kpi-saldo-inicial">R$ 0,00</div>
+      </div>
+    </div>
+    <div class="card kpi-card">
+      <div class="card-body">
+        <div class="label">Entradas</div>
+        <div class="value" id="kpi-entradas">R$ 0,00</div>
+      </div>
+    </div>
+    <div class="card kpi-card">
+      <div class="card-body">
+        <div class="label">Saídas</div>
+        <div class="value" id="kpi-saidas">R$ 0,00</div>
+      </div>
+    </div>
+    <div class="card kpi-card">
+      <div class="card-body">
+        <div class="label">Saldo atual</div>
+        <div class="value" id="kpi-saldo-atual">R$ 0,00</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-12">
+      <div class="card">
+        <div class="card-header text-center">Lançamentos</div>
+        <div class="card-body d-grid gap-2">
+          <div class="row g-2 align-items-end">
+            <div class="col-md-3">
+              <label class="form-label">Valor da entrada</label>
+              <input type="number" step="0.01" class="form-control" id="valorEntrada" placeholder="0,00" />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Forma</label>
+              <select class="form-select" id="formaEntrada">
+                <option value="dinheiro">Dinheiro</option>
+                <option value="cheque">Cheque</option>
+                <option value="credito">Cartão de Crédito</option>
+                <option value="debito">Cartão de Débito</option>
+                <option value="crediario">Crediário</option>
+                <option value="pix">PIX</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Observação</label>
+              <input type="text" class="form-control" id="obsEntrada" placeholder="Entrada" />
+            </div>
+            <div class="col-md-2 d-grid">
+              <button class="btn btn-outline-success" id="btnEntrada">Registrar entrada</button>
+            </div>
+          </div>
+          <div class="row g-2 align-items-end mt-2">
+            <div class="col-md-3">
+              <label class="form-label">Valor da saída</label>
+              <input type="number" step="0.01" class="form-control" id="valorSaida" placeholder="0,00" />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Forma</label>
+              <select class="form-select" id="formaSaida">
+                <option value="dinheiro">Dinheiro</option>
+                <option value="cheque">Cheque</option>
+                <option value="credito">Cartão de Crédito</option>
+                <option value="debito">Cartão de Débito</option>
+                <option value="crediario">Crediário</option>
+                <option value="pix">PIX</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Observação</label>
+              <input type="text" class="form-control" id="obsSaida" placeholder="Saída" />
+            </div>
+            <div class="col-md-2 d-grid">
+              <button class="btn btn-outline-warning" id="btnSaida">Registrar saída</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-12">
+      <div class="card">
+        <div class="card-header text-center">Fechamento de caixa</div>
+        <div class="card-body d-grid gap-2">
+          <div class="input-group">
+            <span class="input-group-text">Observação</span>
+            <input type="text" class="form-control" id="obsFechar" placeholder="Encerramento" />
+            <button class="btn btn-outline-danger" id="btnFechar">Fechar</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+
+    <script>
+      const slug = '{{ slug|default:"" }}' || (function () { try { const p = location.pathname.split('/'); return p.length > 2 ? p[2] : ''; } catch (e) { return ''; } })();
+      const empresa = '{{ filtros.empresa|default:"" }}';
+      const filial = '{{ filtros.filial|default:"" }}';
+      const kpiInicial = { saldo_inicial: {{ kpi.saldo_inicial|default:"0" }}, entradas: {{ kpi.entradas|default:"0" }}, saidas: {{ kpi.saidas|default:"0" }}, saldo_atual: {{ kpi.saldo_atual|default:"0" }} };
+
+      function brl(v) { try { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v || 0)); } catch (e) { return `R$ ${v}`; } }
+
+      async function fetchSaldo() {
+        const headers = { 'Accept': 'application/json' };
+        const token = (window.localStorage && localStorage.getItem('access')) || (window.sessionStorage && sessionStorage.getItem('access'));
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        if (empresa) headers['X-Empresa'] = empresa;
+        if (filial) headers['X-Filial'] = filial;
+        const r = await fetch(`/api/${slug}/caixadiario/caixa/saldo/`, { headers, credentials: 'same-origin' });
+        if (r.status === 401) { const w = document.getElementById('caixa-warning'); if (w) w.classList.remove('d-none'); }
+        if (!r.ok) throw new Error('Falha saldo caixa');
+        return r.json();
+      }
+
+      async function postA(url, body) {
+        const headers = { 'Accept': 'application/json', 'Content-Type': 'application/json' };
+        const token = (window.localStorage && localStorage.getItem('access')) || (window.sessionStorage && sessionStorage.getItem('access'));
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        if (empresa) headers['X-Empresa'] = empresa;
+        if (filial) headers['X-Filial'] = filial;
+        const r = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body || {}), credentials: 'same-origin' });
+        if (!r.ok) throw new Error('Falha requisição');
+        return r.json();
+      }
+
+      function updateKPIs(s) {
+        document.getElementById('kpi-saldo-inicial').textContent = brl(s.saldo_inicial);
+        document.getElementById('kpi-entradas').textContent = brl(s.entradas);
+        document.getElementById('kpi-saidas').textContent = brl(s.saidas);
+        document.getElementById('kpi-saldo-atual').textContent = brl(s.saldo_atual);
+      }
+
+      async function fetchCaixasAbertos() {
+        const headers = { 'Accept': 'application/json' };
+        const token = localStorage.getItem('access') || sessionStorage.getItem('access');
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        if (empresa) headers['X-Empresa'] = empresa;
+        if (filial) headers['X-Filial'] = filial;
+        const r = await fetch(`/web/${slug}/caixa-diario/caixas/abertos/?empresa=${encodeURIComponent(empresa || '')}&filial=${encodeURIComponent(filial || '')}`, { headers, credentials: 'same-origin' });
+        if (!r.ok) throw new Error('Falha caixas abertos');
+        const d = await r.json();
+        const sel = document.getElementById('selCaixa');
+        if (sel) {
+          sel.innerHTML = '';
+          (d.results || []).forEach(it => {
+            const o = document.createElement('option');
+            o.value = it.caixa;
+            o.textContent = `${it.caixa} - ${it.operador || ''}`;
+            sel.appendChild(o);
+          });
+        }
+      }
+
+      async function postW(url, body) {
+        const headers = { 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' };
+        const token = localStorage.getItem('access') || sessionStorage.getItem('access');
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        if (empresa) headers['X-Empresa'] = empresa;
+        if (filial) headers['X-Filial'] = filial;
+        try {
+          const name = 'csrftoken=';
+          const cookies = document.cookie.split(';');
+          for (let c of cookies) {
+            c = c.trim();
+            if (c.startsWith(name)) { headers['X-CSRFToken'] = c.substring(name.length, c.length); break; }
+          }
+        } catch (e) { }
+        const form = new URLSearchParams();
+        Object.keys(body || {}).forEach(k => { if (body[k] != null) form.append(k, body[k]); });
+        const r = await fetch(url, { method: 'POST', headers, body: form.toString(), credentials: 'same-origin' });
+        if (!r.ok) throw new Error('Falha requisição web');
+        return r.json();
+      }
+
+      let numeroVendaAtual = null;
+
+      document.addEventListener('DOMContentLoaded', async () => {
+        try { updateKPIs(kpiInicial); } catch (e) { }
+        try { const s = await fetchSaldo(); updateKPIs(s); } catch (e) { console.error(e); }
+        try { await fetchCaixasAbertos(); } catch (e) { console.error(e); }
+        document.getElementById('btnFechar')?.addEventListener('click', async () => {
+          const obs = document.getElementById('obsFechar')?.value || '';
+          try {
+            const r = await postA(`/api/${slug}/caixadiario/caixa/fechar/`, { observacao: obs });
+            if (r && r.ok) { alert(r.message || 'Caixa fechado com sucesso'); }
+            const s = await fetchSaldo(); updateKPIs(s);
+          } catch (e) { console.error(e); }
+        });
+        document.getElementById('btnEntrada')?.addEventListener('click', async () => {
+          const valor = parseFloat(document.getElementById('valorEntrada')?.value || '0') || 0;
+          const forma = document.getElementById('formaEntrada')?.value || 'dinheiro';
+          const observacao = document.getElementById('obsEntrada')?.value || '';
+          if (valor > 0) {
+            try { await postW(`/web/${slug}/caixa-diario/caixa/lancamento/`, { tipo: 'entrada', valor, forma, observacao }); const s = await fetchSaldo(); updateKPIs(s); } catch (e) { console.error(e); }
+          }
+        });
+        document.getElementById('btnSaida')?.addEventListener('click', async () => {
+          const valor = parseFloat(document.getElementById('valorSaida')?.value || '0') || 0;
+          const forma = document.getElementById('formaSaida')?.value || 'dinheiro';
+          const observacao = document.getElementById('obsSaida')?.value || '';
+          if (valor > 0) {
+            try { await postW(`/web/${slug}/caixa-diario/caixa/lancamento/`, { tipo: 'saida', valor, forma, observacao }); const s = await fetchSaldo(); updateKPIs(s); } catch (e) { console.error(e); }
+          }
+        });
+        document.getElementById('btnIniciarVenda')?.addEventListener('click', async () => {
+          const caixa = document.getElementById('selCaixa')?.value || '';
+          const cliente = document.getElementById('clienteVenda')?.value || '';
+          const vendedor = document.getElementById('vendedorVenda')?.value || '';
+          try {
+            const r = await postW(`/web/${slug}/caixa-diario/venda/iniciar/`, { caixa, cliente, vendedor });
+            numeroVendaAtual = r.numero_venda;
+            const nv = document.getElementById('numeroVenda'); if (nv) nv.value = r.numero_venda;
+          } catch (e) { console.error(e); }
+        });
+        document.getElementById('btnAddItem')?.addEventListener('click', async () => {
+          const numero_venda = numeroVendaAtual || document.getElementById('numeroVenda')?.value || '';
+          const produto = document.getElementById('produtoVenda')?.value || '';
+          const quantidade = document.getElementById('quantidadeVenda')?.value || '';
+          const valor_unitario = document.getElementById('valorUnitVenda')?.value || '';
+          try {
+            await postW(`/web/${slug}/caixa-diario/venda/adicionar-item/`, { numero_venda, produto, quantidade, valor_unitario });
+          } catch (e) { console.error(e); }
+        });
+        document.getElementById('btnProcPgto')?.addEventListener('click', async () => {
+          const numero_venda = numeroVendaAtual || document.getElementById('numeroVenda')?.value || '';
+          const valor = document.getElementById('valorPagamento')?.value || '';
+          const forma_pagamento = document.getElementById('formaPagamento')?.value || '';
+          const valor_pago = document.getElementById('valorPago')?.value || '';
+          const troco = document.getElementById('trocoPagamento')?.value || '';
+          const parcelas = document.getElementById('parcelasPagamento')?.value || '';
+          try {
+            await postW(`/web/${slug}/caixa-diario/venda/processar-pagamento/`, { numero_venda, valor, forma_pagamento, valor_pago, troco, parcelas });
+            const s = await fetchSaldo(); updateKPIs(s);
+          } catch (e) { console.error(e); }
+        });
+        document.getElementById('btnFinalizarVenda')?.addEventListener('click', async () => {
+          const numero_venda = numeroVendaAtual || document.getElementById('numeroVenda')?.value || '';
+          try {
+            await postW(`/web/${slug}/caixa-diario/venda/finalizar/`, { numero_venda });
+          } catch (e) { console.error(e); }
+        });
+      });
+    </script>
+
+    {% endblock %}

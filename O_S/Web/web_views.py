@@ -1,6 +1,8 @@
 from django.http import JsonResponse
 import logging
+from django.views.generic import TemplateView
 from core.utils import get_licenca_db_config
+from core.middleware import get_licenca_slug
 logger = logging.getLogger(__name__)
 
 def autocomplete_clientes(request, slug=None):
@@ -85,3 +87,57 @@ def preco_produto(request, slug=None):
         return JsonResponse({'unit_price': unit_price, 'found': True})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+class OsDashboardView(TemplateView):
+    template_name = 'Os/os_dashboard.html'
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        try:
+            slug_val = self.kwargs.get('slug') or get_licenca_slug()
+        except Exception:
+            slug_val = self.kwargs.get('slug')
+        empresa = self.request.session.get('empresa_id') or self.request.headers.get('X-Empresa') or self.request.GET.get('empresa')
+        filial = self.request.session.get('filial_id') or self.request.headers.get('X-Filial') or self.request.GET.get('filial')
+        data_inicial = self.request.GET.get('data_inicial')
+        data_final = self.request.GET.get('data_final')
+        vendedor = (self.request.GET.get('vendedor') or self.request.GET.get('nome_vendedor') or '').strip()
+        cliente = (self.request.GET.get('cliente') or self.request.GET.get('nome_cliente') or '').strip()
+        atendente = (self.request.GET.get('atendente') or '').strip()
+        status_os = (self.request.GET.get('status_os') or '').strip()
+        ctx.update({
+            'slug': slug_val,
+            'filtros': {
+                'empresa': empresa,
+                'filial': filial,
+                'data_inicial': data_inicial,
+                'data_final': data_final,
+                'vendedor': vendedor,
+                'cliente': cliente,
+                'atendente': atendente,
+                'status_os': status_os,
+            }
+        })
+        return ctx
+
+def autocomplete_atendentes(request, slug=None):
+    banco = get_licenca_db_config(request) or 'default'
+    term = (request.GET.get('term') or request.GET.get('q') or '').strip()
+    from ..models import OrdemServicoGeral
+    qs = OrdemServicoGeral.objects.using(banco).all()
+    if term:
+        qs = qs.filter(atendente__icontains=term)
+    rows = qs.values('atendente').order_by('atendente')[:20]
+    data = [{'id': r['atendente'], 'text': r['atendente']} for r in rows if r.get('atendente')]
+    return JsonResponse({'results': data})
+
+def autocomplete_status_os(request, slug=None):
+    banco = get_licenca_db_config(request) or 'default'
+    term = (request.GET.get('term') or request.GET.get('q') or '').strip()
+    from ..models import OrdemServicoGeral
+    qs = OrdemServicoGeral.objects.using(banco).all()
+    if term:
+        qs = qs.filter(status_os__icontains=term)
+    rows = qs.values('status_os').order_by('status_os').distinct()[:50]
+    data = [{'id': r['status_os'], 'text': r['status_os']} for r in rows if r.get('status_os')]
+    return JsonResponse({'results': data})
