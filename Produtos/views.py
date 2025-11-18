@@ -8,7 +8,7 @@ from rest_framework.exceptions import ValidationError
 from django.http import Http404
 from django.db.models import Sum
 from rest_framework.generics import ListAPIView
-from django.db.models import Q, Subquery, OuterRef, DecimalField, Value as V, CharField, IntegerField, Case, When
+from django.db.models import Q, Subquery, OuterRef, DecimalField, Value as V, CharField, IntegerField, BigIntegerField, Case, When
 from django.db.models.functions import Coalesce, Cast
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -195,9 +195,9 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             prod_preco_vista=Coalesce(preco_vista_subquery, V(0), output_field=DecimalField()),
             prod_preco_normal=Coalesce(preco_normal_subquery, V(0), output_field=DecimalField()),
             prod_codi_int=Case(
-                When(prod_codi__regex=r'^\d+$', then=Cast('prod_codi', IntegerField())),
+                When(prod_codi__regex=r'^\d+$', then=Cast('prod_codi', BigIntegerField())),
                 default=V(None),
-                output_field=IntegerField()
+                output_field=BigIntegerField()
             )
         )
         
@@ -206,7 +206,7 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         if empresa_id:
             queryset = queryset.filter(prod_empr=empresa_id)
             
-        return queryset.order_by('prod_empr', 'prod_codi_int')
+        return queryset.order_by('prod_empr', 'prod_codi_int', 'prod_codi')
 
     @action(detail=False, methods=["get"])
     def busca(self, request, slug=None):
