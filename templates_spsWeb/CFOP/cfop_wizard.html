@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %} Wizard CFOP {% endblock %}
+{% block content %}
+<div class="container">
+  <h3 class="mb-3">Criar CFOP</h3>
+  <ul class="nav nav-pills mb-3">
+    <li class="nav-item"><a class="nav-link {% if step == 'basicos' %}active{% endif %}" href="?step=basicos">Básicos</a></li>
+    <li class="nav-item"><a class="nav-link {% if step == 'icms' %}active{% endif %}" href="?step=icms">ICMS</a></li>
+    <li class="nav-item"><a class="nav-link {% if step == 'ipi' %}active{% endif %}" href="?step=ipi">IPI</a></li>
+    <li class="nav-item"><a class="nav-link {% if step == 'pis_cofins' %}active{% endif %}" href="?step=pis_cofins">PIS/COFINS</a></li>
+    <li class="nav-item"><a class="nav-link {% if step == 'retencoes' %}active{% endif %}" href="?step=retencoes">Retenções</a></li>
+    <li class="nav-item"><a class="nav-link {% if step == 'ibs_cbs' %}active{% endif %}" href="?step=ibs_cbs">IBS/CBS</a></li>
+    <li class="nav-item"><a class="nav-link {% if step == 'outros' %}active{% endif %}" href="?step=outros">Outros</a></li>
+  </ul>
+  <form method="post">{% csrf_token %}
+    <div class="row">
+      {% for field in current_fields %}
+      <div class="col-md-6 mb-3">
+        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        <div class="text-danger">{{ field.errors }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="mt-3 d-flex gap-2">
+      {% if step != 'basicos' %}
+      <a class="btn btn-secondary" href="?step=basicos">Início</a>
+      {% endif %}
+      {% if step == 'outros' %}
+      <button type="submit" name="finish" value="1" class="btn btn-primary">Concluir</button>
+      {% else %}
+      <button type="submit" name="next_step" value="icms" class="btn btn-outline-primary" {% if step != 'basicos' %}style="display:none"{% endif %}>Próximo: ICMS</button>
+      <button type="submit" name="next_step" value="ipi" class="btn btn-outline-primary" {% if step != 'icms' %}style="display:none"{% endif %}>Próximo: IPI</button>
+      <button type="submit" name="next_step" value="pis_cofins" class="btn btn-outline-primary" {% if step != 'ipi' %}style="display:none"{% endif %}>Próximo: PIS/COFINS</button>
+      <button type="submit" name="next_step" value="retencoes" class="btn btn-outline-primary" {% if step != 'pis_cofins' %}style="display:none"{% endif %}>Próximo: Retenções</button>
+      <button type="submit" name="next_step" value="ibs_cbs" class="btn btn-outline-primary" {% if step != 'retencoes' %}style="display:none"{% endif %}>Próximo: IBS/CBS</button>
+      <button type="submit" name="next_step" value="outros" class="btn btn-outline-primary" {% if step != 'ibs_cbs' %}style="display:none"{% endif %}>Próximo: Outros</button>
+      {% endif %}
+      <a href="/web/{{ slug }}/cfop/" class="btn btn-light">Cancelar</a>
+    </div>
+  </form>
+  <div class="mt-4">
+    <div class="input-group w-50">
+      <input id="buscaCFOP" type="text" class="form-control" placeholder="Buscar CFOP">
+      <button class="btn btn-outline-secondary" type="button" id="btnSug">Sugerir</button>
+    </div>
+    <div id="sugRes" class="mt-2"></div>
+  </div>
+</div>
+<script>
+  const slug = localStorage.getItem('slug');
+  const empresa = localStorage.getItem('empresa_id');
+  const filial = localStorage.getItem('filial_id');
+  function headers(){ const h={ 'Accept':'application/json' }; const t=localStorage.getItem('access'); if(t) h['Authorization']='Bearer '+t; if(empresa) h['X-Empresa']=empresa; if(filial) h['X-Filial']=filial; return h; }
+  async function validateUnique(){ const el=document.getElementById('id_cfop_codi'); if(!el) return; const v=(el.value||'').trim(); if(!v) return; const r=await fetch(`/web/${slug}/cfop/validate-unique/?codi=${encodeURIComponent(v)}`,{headers:headers()}); const j=await r.json(); const m=document.getElementById('msgUnique')||document.createElement('div'); m.id='msgUnique'; m.className='mt-1 small'; m.textContent = j.valid ? 'Código disponível' : 'Código já existente'; m.style.color = j.valid ? 'green' : 'red'; el.parentElement.appendChild(m); }
+  async function sugerir(){ const cf=document.getElementById('buscaCFOP'); const v=(cf.value||'').trim(); if(!v) return; const r=await fetch(`/api/${slug}/cfop/sugerir-tributacao/?cfop=${encodeURIComponent(v)}`,{headers:headers()}); const j=await r.json(); const s=document.getElementById('sugRes'); s.innerHTML = `<div class="card"><div class="card-body"><div>ICMS CST: ${j.icms_cst}</div><div>IPI CST: ${j.ipi_cst}</div><div>PIS CST: ${j.pis_cst}</div><div>COFINS CST: ${j.cofins_cst}</div></div></div>`; const hist=JSON.parse(localStorage.getItem('cfop_hist')||'[]'); hist.unshift({q:v,ts:Date.now()}); localStorage.setItem('cfop_hist', JSON.stringify(hist.slice(0,20))); }
+  document.addEventListener('DOMContentLoaded', ()=>{ const el=document.getElementById('id_cfop_codi'); if(el) el.addEventListener('blur', validateUnique); document.getElementById('btnSug').addEventListener('click', sugerir); });
+</script>
+{% endblock %}

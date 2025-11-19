@@ -5,6 +5,13 @@
   padding-bottom: 34px;
 }
 
+.container.geral {
+  padding: 10px;
+  gap: 10px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 3px 2px 4px 2px  rgba(142, 196, 212, 0.733);
+}
 /* Corrige seletor: alvo é <a class="btn btn-success"> */
 a.btn.btn-success {
   background-color: #218877;
@@ -129,4 +136,85 @@ h2.page-title {
 .bi.bi-person-badge {
   font-size: 34px;
   margin-right: 8px;
+}
+
+.table-responsive {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  box-shadow: 3px 2px 4px 6px rgba(142, 196, 212, 0.733);
+}
+
+.table-responsive .table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table-responsive thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bs-card-bg);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.04);
+}
+
+.table-responsive tbody td,
+.table-responsive thead th {
+  white-space: nowrap;
+}
+
+.table-responsive tbody tr:hover {
+  background-color: rgba(0, 191, 255, 0.08);
+}
+
+@media (max-width: 768px) {
+  .table-responsive {
+    border-radius: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  .table-responsive .table {
+    width: max-content;
+    min-width: 100%;
+    table-layout: auto;
+  }
+  .table-responsive th,
+  .table-responsive td {
+    padding: 12px 16px;
+  }
+  /* Força largura mínima por coluna para exibir todas via scroll */
+  .table-responsive .table th,
+  .table-responsive .table td {
+    min-width: 110px;
+  }
+  .table-responsive .table th:nth-child(1),
+  .table-responsive .table td:nth-child(1) {
+    min-width: 64px;
+  }
+  .table-responsive .table th:nth-child(2),
+  .table-responsive .table td:nth-child(2) {
+    min-width: 120px;
+  }
+  .table-responsive .table th:nth-child(3),
+  .table-responsive .table td:nth-child(3) {
+    min-width: 140px;
+  }
+  .table-responsive .table th:nth-child(4),
+  .table-responsive .table td:nth-child(4) {
+    min-width: 160px;
+  }
+  .table-responsive .table th:nth-child(5),
+  .table-responsive .table td:nth-child(5) {
+    min-width: 110px;
+  }
+  .table-responsive .table th:nth-child(6),
+  .table-responsive .table td:nth-child(6) {
+    min-width: 120px;
+  }
+  .table-responsive .table th:nth-child(7),
+  .table-responsive .table td:nth-child(7) {
+    min-width: 160px;
+  }
 }

@@ -12,7 +12,9 @@ from .tools.db_tool import (
     consultar_saldo, 
     consulta_inteligente_prime, 
     consultar_titulos_a_pagar, 
-    consultar_titulos_a_receber
+    consultar_titulos_a_receber,
+    historico_de_pedidos,
+    historico_de_pedidos_cliente,
 )
 from .tools.file_tool import ler_documentos
 from .tools.tool_mapa_semantico import plotar_mapa_semantico
@@ -25,6 +27,8 @@ AGENT_TOOLS = [
     executar_intencao,
     cadastrar_produtos,
     consultar_saldo,
+    historico_de_pedidos,
+    historico_de_pedidos_cliente,
     consultar_titulos_a_pagar,
     consultar_titulos_a_receber,
     consulta_inteligente_prime,
@@ -56,6 +60,8 @@ SYSTEM_PROMPT = """Você é um assistente de ERP especializado.
 - executar_intencao: Roteador inteligente (USE PRIMEIRO)
 - cadastrar_produtos: Cadastro de produtos
 - consultar_saldo: Saldo de estoque
+- historico_de_pedidos: Histórico de pedidos 
+- historico_de_pedidos_cliente: Histórico de pedidos do cliente
 - consultar_titulos_a_pagar: Contas a pagar
 - consultar_titulos_a_receber: Contas a receber
 - consulta_inteligente_prime: Consultas SQL no banco
@@ -69,6 +75,9 @@ SYSTEM_PROMPT = """Você é um assistente de ERP especializado.
 2. Se houver erro, informe ao usuário de forma clara
 3. Respostas concisas (máximo 300 palavras)
 4. Sempre valide os parâmetros antes de chamar uma tool
+5. Se a pergunta mencionar 'histórico' ou 'relatório de pedidos', prefira:
+   - historico_de_pedidos_cliente (se houver cliente)
+   - historico_de_pedidos (caso geral)
 
 📍 Contexto da sessão:
 - Banco: {banco}
@@ -125,6 +134,11 @@ def pre_rotear(mensagem: str) -> dict:
         r"saldo\s+(do\s+)?produto\s+\d+",
         r"c[oó]digo\s+\d+",
         r"t[ií]tulo.*?(pagar|receber)",
+        r"hist[oó]rico\s+de\s+pedidos",
+        r"hist[oó]rico\s+geral\s+de\s+pedidos",
+        r"hist[oó]rico.*cliente",
+        r"relat[óo]rio\s+de\s+pedidos",
+        r"pedidos\s+por\s+cliente",
     ]
     
     for padrao in PADROES_DIRETOS:

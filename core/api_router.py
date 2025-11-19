@@ -44,6 +44,7 @@ urlpatterns = [
     path("<slug>/lctobancario/", include("Lancamentos_Bancarios.urls")),
     path("<slug>/notasfiscais/", include("Notas_Fiscais.urls")),
     path("<slug>/notasdestinadas/", include("NotasDestinadas.urls")),
+    path("<slug>/cfop/", include("CFOP.REST.urls")),
     path("<slug>/assistente/", include("Assistente_Spart.urls")),
     path("<slug>/ParametrosSps/", include("ParametrosSps.urls")),
 

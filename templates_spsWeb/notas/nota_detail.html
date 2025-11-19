@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<div class="container py-3">
+  <h2 class="mb-3">NF {{ nota.modelo }}-{{ nota.serie }} / Nº {{ nota.numero }}</h2>
+
+  <div class="row mb-3">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">Emitente</div>
+        <div class="card-body">
+          <div><strong>Nome:</strong> {{ nota.emitente.empr_nome }}</div>
+          <div><strong>CNPJ:</strong> {{ nota.emitente.empr_cnpj }}</div>
+          <div><strong>Município/UF:</strong> {{ nota.emitente.empr_cida }}/{{ nota.emitente.empr_esta }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">Destinatário</div>
+        <div class="card-body">
+          <div><strong>Nome:</strong> {{ nota.destinatario.enti_nome }}</div>
+          <div><strong>Documento:</strong> {{ nota.destinatario.enti_cnpj }} {{ nota.destinatario.enti_cpf }}</div>
+          <div><strong>Município/UF:</strong> {{ nota.destinatario.enti_cida }}/{{ nota.destinatario.enti_esta }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mb-3">
+    <div class="col-md-12">
+      <div class="card">
+        <div class="card-header">Informações</div>
+        <div class="card-body">
+          <div><strong>Emissão:</strong> {{ nota.data_emissao }} | <strong>Saída:</strong> {{ nota.data_saida }}</div>
+          <div><strong>Status:</strong> {{ nota.get_status_display }} | <strong>Ambiente:</strong> {{
+            nota.get_ambiente_display }}</div>
+          <div><strong>Chave:</strong> {{ nota.chave_acesso|default:"—" }} | <strong>Protocolo:</strong> {{
+            nota.protocolo_autorizacao|default:"—" }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header">Itens</div>
+    <div class="card-body p-0">
+      <table class="table table-sm mb-0">
+        <thead>
+          <tr>
+            <th>Produto</th>
+            <th>Quant.</th>
+            <th>Unitário</th>
+            <th>Desconto</th>
+            <th>Total</th>
+            <th>CFOP</th>
+            <th>NCM</th>
+            <th>CST ICMS/PIS/COFINS</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for it in nota.itens.all %}
+          <tr>
+            <td>{{ it.produto }}</td>
+            <td>{{ it.quantidade }}</td>
+            <td>{{ it.unitario }}</td>
+            <td>{{ it.desconto }}</td>
+            <td>{{ it.total }}</td>
+            <td>{{ it.cfop }}</td>
+            <td>{{ it.ncm }}</td>
+            <td>{{ it.cst_icms }} / {{ it.cst_pis|default:"--" }} / {{ it.cst_cofins|default:"--" }}</td>
+          </tr>
+          {% if it.impostos %}
+          <tr class="table-light">
+            <td colspan="8">
+              <strong>Impostos:</strong>
+              ICMS Base {{ it.impostos.icms_base|default:"0.00" }} Aliq {{ it.impostos.icms_aliquota|default:"0.00" }} Valor {{ it.impostos.icms_valor|default:"0.00" }} |
+              IPI {{ it.impostos.ipi_valor|default:"0.00" }} | PIS {{ it.impostos.pis_valor|default:"0.00" }} | COFINS {{ it.impostos.cofins_valor|default:"0.00" }}
+              | FCP {{ it.impostos.fcp_valor|default:"0.00" }}
+            </td>
+          </tr>
+          {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header">Transporte</div>
+    <div class="card-body">
+      {% if nota.transporte %}
+      <div><strong>Modalidade:</strong> {{ nota.transporte.get_modalidade_frete_display }}</div>
+      <div><strong>Transportadora:</strong> {{ nota.transporte.transportadora.enti_nome|default:"—" }}</div>
+      <div><strong>Veículo:</strong> {{ nota.transporte.placa_veiculo|default:"" }} / {{ nota.transporte.uf_veiculo|default:"" }}</div>
+      {% else %}
+      <em>Sem informações de transporte.</em>
+      {% endif %}
+    </div>
+  </div>
+
+  <a class="btn btn-secondary" href="/web/{{ slug }}/notas-fiscais/">Voltar</a>
+</div>
+{% endblock %}

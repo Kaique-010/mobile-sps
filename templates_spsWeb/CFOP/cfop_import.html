@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %} Importar CFOP {% endblock %}
+{% block content %}
+<div class="container">
+  <h3 class="mb-3">Importar CFOP (CSV)</h3>
+  <form method="post" enctype="multipart/form-data">{% csrf_token %}
+    <div class="mb-3">
+      <input type="file" name="file" class="form-control" accept=".csv">
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary" type="submit">Importar</button>
+      <a class="btn btn-light" href="/web/{{ slug }}/cfop/">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Métricas{% endblock %}
 
@@ -36,6 +37,23 @@
         height: clamp(220px, 38vh, 380px) !important;
         color: var(--bs-body-color);
     }
+
+
+    .btn-outline-custom2 {
+        border-color: #8ec4d4;
+        transition: all 0.3s ease-in-out;
+        padding: 8px 12px;
+        position: absolute;
+        right: 5px;
+        bottom: -5px;
+        font-size: 10px;
+    }
+    .btn-outline-custom2:hover {
+        background-color: #8ec4d4;  
+        color: var(--bs-white);
+    }
+    .pulse-run { animation: pulse 0.8s ease-in-out infinite; transform-origin: center center }
+    @keyframes pulse { 0%{transform:scale(1)} 20%{transform:scale(1.25)} 120%{transform:scale(1)} }
 </style>
 <div class="container page-container">
     <div class="card card-corporate">
@@ -43,7 +61,7 @@
             <div class="page-header">
                 <h2 class="page-title text-center"><i
                         class="bi bi-graph-up fs-3 justify-content-center text-center"></i> Overview</h2>
-              
+               
             </div>
         </div>
     </div>
@@ -90,6 +108,31 @@
                 <div class="card-body">
                     <h3 class="h6 text-body">Valor Pedidos por Vendedor</h3>
                     <canvas id="totalValorPedidoChart" class="chart-canvas"></canvas>
+                     <button id="abrirKronos" class="btn btn-outline-custom2 ms-2"><img src="{% static 'logo.png' %}" style="height:24px" />Fale com Kronos</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="kronosModal" class="modal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content" style="background-color:#121212;border:1px solid #00bfff">
+                <div class="modal-header" style="border-bottom-color:#00bfff">
+                    <div class="d-flex align-items-center">
+                        <div id="logoPulse" style="width:30px;height:30px;border-radius:15px;background:#00bfff93;margin-right:14px"><img src="{% static 'logo.png' %}" style="height:18px; margin-left:7px"></div>
+                        <h5 class="modal-title" style="color:#00bfff">Kronos — Agente I.A Spartacus</h5>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" style="height:50vh;display:flex;flex-direction:column">
+                    <div id="chatBox" style="flex:1;overflow:auto"></div>
+                    <div class="d-flex justify-content-end mb-2">
+                        <button id="limparChat" class="btn btn-secondary btn-sm">🗑</button>
+                    </div>
+                    <div class="input-group">
+                        <input id="mensagemInput" type="text" class="form-control" placeholder="Diga algo para o Kronos..." />
+                        <button id="enviarMensagem" class="btn btn-primary">Enviar</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -278,6 +321,163 @@
     document.addEventListener('DOMContentLoaded', () => {
         loadData();
     });
+
+    // Kronos: abre o modal e carrega o histórico
+    const abrirBtn = document.getElementById('abrirKronos');
+    const modalEl = document.getElementById('kronosModal');
+    const mensagemInput = document.getElementById('mensagemInput');
+    const enviarBtn = document.getElementById('enviarMensagem');
+    const limparBtn = document.getElementById('limparChat');
+    const chatBox = document.getElementById('chatBox');
+    const logoPulse = document.getElementById('logoPulse');
+    let pensando = false;
+    let historico = [];
+
+    function setPensando(active){
+        pensando = active;
+        if(!logoPulse) return;
+        if(active){
+            logoPulse.classList.add('pulse-run');
+        } else {
+            logoPulse.classList.remove('pulse-run');
+        }
+    }
+    function mdFormat(text){
+        const link = /\[([^\]]+)\]\(([^\)]+)\)/g;
+        const bold = /\*\*([^*]+)\*\*/g;
+        const h3 = /^###\s+(.+)$/gm;
+        const h2 = /^##\s+(.+)$/gm;
+        const h1 = /^#\s+(.+)$/gm;
+        let t = String(text || '');
+        t = t.replace(h1, '<h3>$1</h3>');
+        t = t.replace(h2, '<h4>$1</h4>');
+        t = t.replace(h3, '<h5>$1</h5>');
+        t = t.replace(bold, '<strong>$1</strong>');
+        t = t.replace(link, (m, p1, p2)=>{
+            const url = String(p2 || '').replace(/^sandbox:\//, '');
+            return `<a href="${url}" target="_blank" rel="noopener">${p1}</a>`;
+        });
+        const lines = t.split(/\r?\n/);
+        let out = '';
+        let inList = false;
+        for(const line of lines){
+            if(/^\s*[-•]\s+/.test(line)){
+                if(!inList){ out += '<ul style="margin:6px 0 10px 18px;">'; inList = true; }
+                out += `<li>${line.replace(/^\s*[-•]\s+/, '')}</li>`;
+            } else {
+                if(inList){ out += '</ul>'; inList = false; }
+                if(line.trim()){ out += `<div>${line}</div>`; }
+            }
+        }
+        if(inList) out += '</ul>';
+        return out || t;
+    }
+
+    function renderHistorico(){
+        chatBox.innerHTML = '';
+        historico.forEach((msg)=>{
+            const row = document.createElement('div');
+            row.style.display = 'flex';
+            row.style.flexDirection = msg.tipo === 'user' ? 'row-reverse' : 'row';
+            row.style.alignItems = 'flex-end';
+            row.style.margin = '6px 0';
+            const avatar = document.createElement('div');
+            if(msg.tipo === 'user'){
+                avatar.style.width = '34px';
+                avatar.style.height = '34px';
+                avatar.style.borderRadius = '17px';
+                avatar.style.background = '#00bfff33';
+                avatar.style.display = 'flex';
+                avatar.style.justifyContent = 'center';
+                avatar.style.alignItems = 'center';
+                avatar.style.margin = '0 6px';
+                avatar.textContent = '👤';
+            } else {
+                avatar.style.width = '34px';
+                avatar.style.height = '34px';
+                avatar.style.borderRadius = '17px';
+                avatar.style.margin = '0 6px';
+                avatar.style.background = '#00bfff33';
+                avatar.innerHTML = `<img src="{% static 'logo.png' %}" style="height:24px; margin-left:6px">`;
+            }
+            const bubble = document.createElement('div');
+            bubble.style.maxWidth = '70%';
+            bubble.style.padding = '8px';
+            bubble.style.borderRadius = '8px';
+            bubble.style.color = '#fff';
+            bubble.style.background = msg.tipo === 'user' ? '#00bfff' : '#333';
+            bubble.innerHTML = msg.tipo === 'user' ? msg.texto : mdFormat(msg.texto);
+            row.appendChild(avatar);
+            row.appendChild(bubble);
+            chatBox.appendChild(row);
+        });
+        if(pensando){
+            const dots = document.createElement('div');
+            dots.style.display = 'flex';
+            dots.style.alignItems = 'center';
+            dots.style.margin = '6px 0 6px 8px';
+            for(let i=0;i<3;i++){
+                const d = document.createElement('div');
+                d.style.width = '8px';
+                d.style.height = '8px';
+                d.style.borderRadius = '4px';
+                d.style.background = '#00bfff';
+                d.style.opacity = '0.3';
+                d.style.margin = '0 3px';
+                d.style.animation = `dot${i} 0.8s linear infinite`;
+                dots.appendChild(d);
+            }
+            const t = document.createElement('span');
+            t.style.color = '#aaa';
+            t.style.marginLeft = '10px';
+            t.textContent = 'pensando...';
+            dots.appendChild(t);
+            chatBox.appendChild(dots);
+        }
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+    async function enviarMsg(texto){
+        if(!texto) return;
+        historico.push({tipo:'user', texto});
+        setPensando(true);
+        renderHistorico();
+        try{
+            const slug = localStorage.getItem('slug');
+            const url = `/api/${slug}/assistente/chat/`;
+            const resp = await authFetch(url, {method:'POST', body: JSON.stringify({mensagem: texto})});
+            const data = await resp.json();
+            const textoSpart = (typeof data?.resposta === 'string' && data.resposta.trim()) ? data.resposta : (data?.erro || '⚠️ Sem retorno visível do agente.');
+            historico.push({tipo:'spart', texto: textoSpart});
+            if(data?.resposta_audio){
+                try{
+                    const audio = new Audio(`data:audio/mp3;base64,${data.resposta_audio}`);
+                    await audio.play();
+                }catch(e){}
+            }
+        }catch(err){
+            historico.push({tipo:'spart', texto: '❌ Erro ao falar com o agente.'});
+        } finally {
+            setPensando(false);
+            renderHistorico();
+        }
+    }
+    abrirBtn?.addEventListener('click', ()=>{
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+    });
+    enviarBtn?.addEventListener('click', ()=>{
+        const texto = mensagemInput.value.trim();
+        mensagemInput.value='';
+        enviarMsg(texto);
+    });
+    limparBtn?.addEventListener('click', ()=>{
+        historico = [];
+        renderHistorico();
+    });
+
+    const style = document.createElement('style');
+    style.innerHTML = `@keyframes dot0{0%{opacity:.3;transform:scale(1)}50%{opacity:1;transform:scale(1.6)}100%{opacity:.3;transform:scale(1)}}@keyframes dot1{0%{opacity:.3;transform:scale(1)}50%{opacity:1;transform:scale(1.6)}100%{opacity:.3;transform:scale(1)}}@keyframes dot2{0%{opacity:.3;transform:scale(1)}50%{opacity:1;transform:scale(1.6)}100%{opacity:.3;transform:scale(1)}}`;
+    document.head.appendChild(style);
 </script>
 </div>
 {% endblock %}

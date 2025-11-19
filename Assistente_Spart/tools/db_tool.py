@@ -5,6 +5,8 @@ from contas_a_pagar.models import Titulospagar
 from contas_a_receber.models import Titulosreceber
 from core.utils import get_db_from_slug
 from core.middleware import get_licenca_slug
+from django.db.models import Count, Sum
+from Pedidos.models import PedidosGeral
 
 from langchain_openai import ChatOpenAI
 from django.db import connection
@@ -375,6 +377,121 @@ def consultar_titulos_a_receber(banco: str = "default",
             import logging
             logger = logging.getLogger(__name__)
             logger.error(f"[TITULOS_RECEBER] {error_msg}\n{traceback.format_exc()}")
+        except:
+            pass
+        return error_msg
+
+@tool
+def historico_de_pedidos(banco: str = "default",
+                    empresa_id: str = "1", filial_id: str = "1",
+                    data_inicial: str = None, data_final: str = None) -> str:
+    """Relatório de pedidos por cliente com filtro de data."""
+    try:
+        real_banco = banco or "default"
+        if not empresa_id or not filial_id:
+            return "❌ Empresa e filial são obrigatórios."
+        qs = PedidosGeral.objects.using(real_banco).filter(
+            empresa=empresa_id,
+            filial=filial_id,
+        )
+        if data_inicial:
+            qs = qs.filter(data_pedido__gte=data_inicial)
+        if data_final:
+            qs = qs.filter(data_pedido__lte=data_final)
+        if not qs.exists():
+            periodo = ""
+            if data_inicial or data_final:
+                periodo = f" no período {data_inicial or 'início'} a {data_final or 'hoje'}"
+            return f"ℹ️ Nenhum pedido encontrado na empresa {empresa_id}, filial {filial_id}{periodo}."
+        agregados = qs.values("codigo_cliente", "nome_cliente").annotate(
+            total_pedidos=Count("numero_pedido"),
+            valor_total=Sum("valor_total")
+        ).order_by("nome_cliente")
+        soma_valor = qs.aggregate(soma=Sum("valor_total"))
+        total_pedidos = qs.count()
+        total_clientes = agregados.count()
+        titulo_periodo = ""
+        if data_inicial or data_final:
+            titulo_periodo = f" — Período {data_inicial or 'início'} a {data_final or 'hoje'}"
+        resultado = f"📋 Relatório de pedidos por cliente — Empresa {empresa_id}, Filial {filial_id}{titulo_periodo}:\n\n"
+        for item in agregados[:200]:
+            nome = item["nome_cliente"] or str(item["codigo_cliente"]) or "N/A"
+            valor = float(item["valor_total"] or 0)
+            qtd = int(item["total_pedidos"] or 0)
+            resultado += f"• Cliente: {nome} | Pedidos: {qtd} | Total: R$ {valor:,.2f}\n"
+        if agregados.count() > 200:
+            resultado += f"\n... e mais {agregados.count() - 200} clientes\n"
+        valor_geral = float(soma_valor.get("soma") or 0)
+        ticket_medio = valor_geral / total_pedidos if total_pedidos else 0
+        top = sorted(agregados, key=lambda x: x["valor_total"] or 0, reverse=True)
+        if top:
+            lider_nome = top[0]["nome_cliente"] or str(top[0]["codigo_cliente"]) or "N/A"
+            lider_valor = float(top[0]["valor_total"] or 0)
+            participacao = (lider_valor / valor_geral * 100) if valor_geral else 0
+            resultado += f"\n📈 Insight: Cliente líder {lider_nome} com R$ {lider_valor:,.2f} ({participacao:.1f}% do período)\n"
+        resultado += f"\n🔢 Clientes: {total_clientes} | Pedidos: {total_pedidos} | Faturamento: R$ {valor_geral:,.2f} | Ticket médio: R$ {ticket_medio:,.2f}"
+        return resultado
+    except Exception as e:
+        import traceback
+        error_msg = f"❌ Erro ao consultar histórico de pedidos: {str(e)}"
+        try:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"[HISTORICO_PEDIDOS] {error_msg}\n{traceback.format_exc()}")
+        except:
+            pass
+        return error_msg
+
+@tool
+def historico_de_pedidos_cliente(banco: str = "default",
+                    empresa_id: str = "1", filial_id: str = "1",
+                    data_inicial: str = None, data_final: str = None,
+                    codigo_cliente: str = None, nome_cliente: str = None) -> str:
+    """Relatório de pedidos por cliente específico com filtro de data."""
+    try:
+        real_banco = banco or "default"
+        if not empresa_id or not filial_id:
+            return "❌ Empresa e filial são obrigatórios."
+        qs = PedidosGeral.objects.using(real_banco).filter(
+            empresa=empresa_id,
+            filial=filial_id,
+        )
+        if data_inicial:
+            qs = qs.filter(data_pedido__gte=data_inicial)
+        if data_final:
+            qs = qs.filter(data_pedido__lte=data_final)
+        if codigo_cliente:
+            qs = qs.filter(codigo_cliente=codigo_cliente)
+        elif nome_cliente:
+            qs = qs.filter(nome_cliente__icontains=nome_cliente)
+        if not qs.exists():
+            alvo = nome_cliente or codigo_cliente or "cliente informado"
+            periodo = ""
+            if data_inicial or data_final:
+                periodo = f" no período {data_inicial or 'início'} a {data_final or 'hoje'}"
+            return f"ℹ️ Nenhum pedido encontrado para {alvo} na empresa {empresa_id}, filial {filial_id}{periodo}."
+        agg = qs.aggregate(
+            total_pedidos=Count("numero_pedido"),
+            valor_total=Sum("valor_total")
+        )
+        nome = qs.values_list("nome_cliente", flat=True).first() or str(qs.values_list("codigo_cliente", flat=True).first()) or "N/A"
+        valor_geral = float(agg.get("valor_total") or 0)
+        qtd = int(agg.get("total_pedidos") or 0)
+        ticket_medio = valor_geral / qtd if qtd else 0
+        titulo_periodo = ""
+        if data_inicial or data_final:
+            titulo_periodo = f" — Período {data_inicial or 'início'} a {data_final or 'hoje'}"
+        resultado = f"📋 Relatório de pedidos do cliente — Empresa {empresa_id}, Filial {filial_id}{titulo_periodo}:\n\n"
+        resultado += f"• Cliente: {nome} | Pedidos: {qtd} | Total: R$ {valor_geral:,.2f}\n"
+        resultado += f"\n🔢 Ticket médio: R$ {ticket_medio:,.2f}"
+        return resultado
+    except Exception as e:
+        import traceback
+        error_msg = f"❌ Erro ao consultar histórico de pedidos do cliente: {str(e)}"
+        try:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"[HISTORICO_PEDIDOS_CLIENTE] {error_msg}\n{traceback.format_exc()}")
         except:
             pass
         return error_msg

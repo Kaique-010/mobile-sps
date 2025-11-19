@@ -10,6 +10,8 @@ from .db_tool import (
     consultar_titulos_a_pagar,
     consultar_titulos_a_receber,
     consulta_inteligente_prime,
+    historico_de_pedidos_cliente,
+    historico_de_pedidos,
 )
 from .rag_tool import rag_url_resposta_vetorial
 from .web_tool import procura_web
@@ -36,6 +38,7 @@ def executar_intencao(
     - Cadastro: "produto <nome> ncm <codigo>" -> cadastrar_produtos
     - Saldo: contém "saldo|estoque|quantidade" e "codigo|produto <número>" -> consultar_saldo
     - Pergunta de negócio (vendas, pedidos, clientes, etc.) -> consulta_inteligente_prime
+    - Histórico de pedidos do cliente: "meu histórico de pedidos" -> historico_de_pedidos_cliente
     - Pergunta sobre URL específica -> rag_url_resposta_vetorial
     - Pesquisa na web (google, web, internet) -> procura_web
     - Leitura de arquivo local (caminho/arquivo) -> ler_documentos
@@ -53,6 +56,50 @@ def executar_intencao(
 
         logger.info(f"[EXECUTAR_INTENCAO] Banco: {real_banco} | Empresa: {empresa_id} | Filial: {filial_id}")
         msg_lower = mensagem.lower()
+
+        def mes_pt_para_num(m):
+            mapa = {
+                'janeiro':1,'fevereiro':2,'marco':3,'março':3,'abril':4,'maio':5,
+                'junho':6,'julho':7,'agosto':8,'setembro':9,'outubro':10,'novembro':11,'dezembro':12
+            }
+            return mapa.get(m.strip().lower())
+
+        def normalizar_data_token(dia:str, mes_nome:str, ano:str=None):
+            try:
+                d = int(dia)
+                m = mes_pt_para_num(mes_nome) if mes_nome else None
+                y = int(ano) if ano else __import__('datetime').datetime.now().year
+                if not m:
+                    m = __import__('datetime').datetime.now().month
+                return f"{y:04d}-{m:02d}-{d:02d}"
+            except Exception:
+                return None
+
+        def extrair_periodo(texto:str):
+            import re
+            r1 = re.search(r"(?i)(?:de|desde)\s*(\d{1,2})(?:\s*de\s*([a-zçãõáéíóú]+))?\s*(?:de\s*(\d{4}))?\s*(?:at[eé]|a)\s*(\d{1,2})(?:\s*de\s*([a-zçãõáéíóú]+))?\s*(?:de\s*(\d{4}))?", texto)
+            if r1:
+                di, mi, yi, df, mf, yf = r1.groups()
+                d_ini = normalizar_data_token(di, mi, yi)
+                d_fim = normalizar_data_token(df, mf, yf)
+                return d_ini, d_fim
+            r2 = re.search(r"(?i)(\d{1,2})[/-](\d{1,2})[/-](\d{2,4}).*?(?:at[eé]|a)\s*(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})", texto)
+            if r2:
+                d1,m1,y1,d2,m2,y2 = r2.groups()
+                y1 = int(y1); y1 = 2000+y1 if y1<100 else y1
+                y2 = int(y2); y2 = 2000+y2 if y2<100 else y2
+                return f"{y1:04d}-{int(m1):02d}-{int(d1):02d}", f"{y2:04d}-{int(m2):02d}-{int(d2):02d}"
+            return None, None
+
+        def extrair_cliente(texto:str):
+            import re
+            m_cod = re.search(r"(?i)cliente\s*(\d{1,9})", texto)
+            if m_cod:
+                return m_cod.group(1), None
+            m_nome = re.search(r"(?i)(?:do\s+cliente|cliente)\s+([A-Za-zÁ-Úá-úÇãõêéôíú\s']{3,})", texto)
+            if m_nome:
+                return None, m_nome.group(1).strip()
+            return None, None
 
         # ========== INSTRUÇÕES DE USO ==========
         if re.search(r"(?i)como(\s+posso|\s+fa[cç]o)?\s+cadastrar", msg_lower):
@@ -90,6 +137,29 @@ def executar_intencao(
                 empresa_id=str(empresa_id),
                 filial_id=str(filial_id),
             )
+
+        # ========== HISTÓRICO DE PEDIDOS ==========
+        if re.search(r"(?i)(hist[óo]rico\s+de\s+pedidos|hist[óo]rico\s+geral\s+de\s+pedidos|relat[óo]rio\s+de\s+pedidos|pedidos\s+por\s+cliente)", msg_lower):
+            di, df = extrair_periodo(mensagem)
+            cod, nome = extrair_cliente(mensagem)
+            if cod or nome:
+                return historico_de_pedidos_cliente.func(
+                    banco=real_banco,
+                    empresa_id=str(empresa_id),
+                    filial_id=str(filial_id),
+                    data_inicial=di,
+                    data_final=df,
+                    codigo_cliente=cod,
+                    nome_cliente=nome,
+                )
+            else:
+                return historico_de_pedidos.func(
+                    banco=real_banco,
+                    empresa_id=str(empresa_id),
+                    filial_id=str(filial_id),
+                    data_inicial=di,
+                    data_final=df,
+                )
 
         # Substitua as seções de títulos no executar_intencao:
 
@@ -164,7 +234,10 @@ def executar_intencao(
         # Evita "como..." para DB
         if not re.search(r"(?i)\bcomo\b", msg_lower):
             if any(re.search(t, msg_lower) for t in termos_negocio):
-                return consulta_inteligente_prime.func(pergunta=mensagem, slug=real_banco)
+                if re.search(r"(?i)hist[óo]rico|relat[óo]rio\s+de\s+pedidos|pedidos\s+por\s+cliente", msg_lower):
+                    pass
+                else:
+                    return consulta_inteligente_prime.func(pergunta=mensagem, slug=real_banco)
 
         # ========== PERGUNTAS GERAIS/DOCUMENTAÇÃO ==========
         # ❌ REMOVIDO: Chamadas para faiss_context_qa e faiss_condicional_qa

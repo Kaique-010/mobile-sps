@@ -1,0 +1,409 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<div class="container py-3">
+  <h2 class="mb-5 text-center"><i class="bi bi-upload"></i> Emissão de Nota Fiscal</h2>
+
+  <ul class="nav nav-tabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-principal" type="button"
+        role="tab">Principal</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-cliente" type="button"
+        role="tab">Cliente</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-itens" type="button" role="tab">Itens</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-cfop" type="button" role="tab">CFOP &
+        Tributos</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-transporte" type="button"
+        role="tab">Transporte</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-totais" type="button"
+        role="tab">Totais</button>
+    </li>
+  </ul>
+
+  <form id="emit-form" class="tab-content border border-top-0 p-3">
+    <div class="tab-pane fade show active" id="tab-principal" role="tabpanel">
+      <div class="row g-3">
+        <div class="col-md-2">
+          <label class="form-label">Modelo</label>
+          <select class="form-select" name="modelo">
+            <option value="55">NF-e</option>
+            <option value="65">NFC-e</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Série</label>
+          <input type="number" class="form-control" name="serie" value="1" />
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Número</label>
+          <input type="number" class="form-control" name="numero" />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Emissão</label>
+          <input type="date" class="form-control" name="data_emissao" />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Saída</label>
+          <input type="date" class="form-control" name="data_saida" />
+        </div>
+        <div class="col-md-12">
+          <label class="form-label">Natureza da Operação</label>
+          <input type="text" class="form-control" name="natureza_operacao" value="Venda de mercadoria" />
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="tab-cliente" role="tabpanel">
+      <div class="row g-3">
+        <div class="col-md-8">
+          <label class="form-label">Cliente</label>
+          <input type="text" class="form-control" id="cli-autocomplete"
+            placeholder="Digite nome/CNPJ/CPF e selecione" />
+          <input type="hidden" name="destinatario" id="destinatario-id" />
+          <small class="text-muted">Busca limitada a 20 resultados</small>
+        </div>
+        <div class="col-md-4">
+          <div class="form-text">Após selecionar, os dados do cliente serão inferidos automaticamente.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="tab-itens" role="tabpanel">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Produto</label>
+          <input type="text" class="form-control" id="prod-autocomplete"
+            placeholder="Digite descrição/ref/código e selecione" />
+          <input type="hidden" id="produto-codigo" />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">NCM</label>
+          <input type="text" class="form-control" name="item_ncm" id="item-ncm" value="00000000" />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Unidade</label>
+          <input type="text" class="form-control" name="item_unidade" id="item-unidade" value="UN" />
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Quantidade</label>
+          <input type="number" step="0.0001" class="form-control" name="item_quantidade" value="1" />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Unitário</label>
+          <input type="number" step="0.01" class="form-control" name="item_unitario" id="item-unitario" value="0" />
+          <small class="text-muted">Preço sugerido vem de Tabela de Preços</small>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Desconto</label>
+          <input type="number" step="0.01" class="form-control" name="item_desconto" value="0" />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">CFOP</label>
+          <input type="text" class="form-control" name="item_cfop" id="item-cfop" value="5102" />
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="tab-cfop" role="tabpanel">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Pesquisar CFOP</label>
+          <input type="text" class="form-control" id="cfop-autocomplete" placeholder="Digite CFOP ou descrição" />
+        </div>
+        <div class="col-md-6">
+          <div class="row g-2">
+            <div class="col-4">
+              <label class="form-label">CST ICMS</label>
+              <input type="text" class="form-control" id="cst-icms" name="cst_icms" />
+            </div>
+            <div class="col-4">
+              <label class="form-label">CST PIS</label>
+              <input type="text" class="form-control" id="cst-pis" name="cst_pis" />
+            </div>
+            <div class="col-4">
+              <label class="form-label">CST COFINS</label>
+              <input type="text" class="form-control" id="cst-cofins" name="cst_cofins" />
+            </div>
+          </div>
+          <div class="row g-2 mt-1">
+            <div class="col-3">
+              <label class="form-label">ICMS %</label>
+              <input type="number" step="0.01" class="form-control" id="aliq-icms" name="icms_aliquota" />
+            </div>
+            <div class="col-3">
+              <label class="form-label">IPI %</label>
+              <input type="number" step="0.01" class="form-control" id="aliq-ipi" name="ipi_aliquota" />
+            </div>
+            <div class="col-3">
+              <label class="form-label">PIS %</label>
+              <input type="number" step="0.01" class="form-control" id="aliq-pis" name="pis_aliquota" />
+            </div>
+            <div class="col-3">
+              <label class="form-label">COFINS %</label>
+              <input type="number" step="0.01" class="form-control" id="aliq-cof" name="cofins_aliquota" />
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tab-pane fade" id="tab-transporte" role="tabpanel">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Modalidade de Transporte</label>
+          <input type="text" class="form-control" name="transporte_modalidade" id="transporte-modalidade" value="01" />
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Transportadora</label>
+          <input type="text" class="form-control" name="transportadora" id="transportadora" value="" />
+          <input type="hidden" id="transportadora-id" />
+        </div>
+      </div>
+    </div>
+    <div class="tab-pane fade" id="tab-totais" role="tabpanel">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">Total Produtos</label>
+          <input type="text" class="form-control" name="total" id="total" value="" />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Desconto</label>
+          <input type="text" class="form-control" name="total_desconto" id="total-desconto" value="" />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Tributos</label>
+          <input type="text" class="form-control" id="total-tributos" value="" />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Total Nota</label>
+          <input type="text" class="form-control" id="total-nota" value="" />
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex justify-content-end gap-2 mt-3">
+      <a class="btn btn-secondary" href="/web/{{ slug }}/notas-fiscais/">Voltar</a>
+      <button class="btn btn-success" type="submit"><i class="bi bi-upload"></i> Transmitir</button>
+    </div>
+  </form>
+</div>
+
+<script>
+  (() => {
+    const slug = localStorage.getItem('slug');
+    const empresa = localStorage.getItem('empresa_id') || '1';
+    const filial = localStorage.getItem('filial_id') || '1';
+    const authFetch = async (url, options = {}) => {
+      const token = localStorage.getItem('access');
+      const headers = { 'Content-Type': 'application/json', 'X-Empresa': empresa, 'X-Filial': filial };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      return fetch(url, { ...options, headers: { ...headers, ...(options.headers || {}) } });
+    };
+
+    // --- Autocomplete Cliente ---
+    const mountAutocomplete = (input, source, onPick) => {
+      let timer = null;
+      const listId = input.id + '-list';
+      const list = document.createElement('div');
+      list.className = 'list-group position-absolute w-100';
+      list.id = listId;
+      input.parentElement.appendChild(list);
+      const render = (items) => {
+        list.innerHTML = '';
+        items.forEach(it => {
+          const a = document.createElement('a');
+          a.href = '#'; a.className = 'list-group-item list-group-item-action';
+          a.textContent = it.label;
+          a.addEventListener('click', (e) => { e.preventDefault(); onPick(it); list.innerHTML = ''; });
+          list.appendChild(a);
+        });
+      };
+      input.addEventListener('input', async () => {
+        const q = input.value.trim();
+        clearTimeout(timer);
+        timer = setTimeout(async () => {
+          if (!q) { list.innerHTML = ''; return; }
+          const resp = await authFetch(source(q));
+          const data = await resp.json();
+          render(Array.isArray(data) ? data : []);
+        }, 250);
+      });
+    };
+
+    const cliInput = document.getElementById('cli-autocomplete');
+    const destId = document.getElementById('destinatario-id');
+    mountAutocomplete(cliInput, (q) => `/web/${slug}/notas-fiscais/entidades-autocomplete/?q=${encodeURIComponent(q)}`, (item) => {
+      cliInput.value = item.label;
+      destId.value = item.value;
+    });
+
+    // --- Autocomplete Produto + preencher NCM/Unidade/Preço ---
+    const prodInput = document.getElementById('prod-autocomplete');
+    const prodCodigoHidden = document.getElementById('produto-codigo');
+    const ncmInput = document.getElementById('item-ncm');
+    const unInput = document.getElementById('item-unidade');
+    const unitInput = document.getElementById('item-unitario');
+    mountAutocomplete(prodInput, (q) => `/web/${slug}/notas-fiscais/produtos-autocomplete/?q=${encodeURIComponent(q)}`, async (item) => {
+      prodInput.value = item.label;
+      prodCodigoHidden.value = item.value;
+      try {
+        const resp = await authFetch(`/web/${slug}/notas-fiscais/produto-detalhe/${item.value}/`);
+        const data = await resp.json();
+        ncmInput.value = data?.prod_ncm || ncmInput.value;
+        unInput.value = data?.prod_unid || unInput.value;
+        const preco = data?.prod_preco_vista || data?.prod_preco_normal || 0;
+        if (Number(preco) > 0) unitInput.value = Number(preco).toFixed(2);
+      } catch { }
+    });
+
+    // --- Autocomplete CFOP + preencher tributos ---
+    const cfopInput = document.getElementById('cfop-autocomplete');
+    const cstIcms = document.getElementById('cst-icms');
+    const cstPis = document.getElementById('cst-pis');
+    const cstCof = document.getElementById('cst-cofins');
+    const aliqIcms = document.getElementById('aliq-icms');
+    const aliqIpi = document.getElementById('aliq-ipi');
+    const aliqPis = document.getElementById('aliq-pis');
+    const aliqCof = document.getElementById('aliq-cof');
+    mountAutocomplete(cfopInput, (q) => `/web/${slug}/notas-fiscais/cfop-autocomplete/?q=${encodeURIComponent(q)}`, (cf) => {
+      document.getElementById('item-cfop').value = cf.value;
+      cstIcms.value = cf.cst_icms || '';
+      cstPis.value = cf.cst_pis || '';
+      cstCof.value = cf.cst_cofins || '';
+      aliqIcms.value = cf.icms_aliquota || '';
+      aliqIpi.value = cf.ipi_aliquota || '';
+      aliqPis.value = cf.pis_aliquota || '';
+      aliqCof.value = cf.cofins_aliquota || '';
+    });
+
+    const transpInput = document.getElementById('transportadora');
+    const transpIdHidden = document.getElementById('transportadora-id');
+    mountAutocomplete(transpInput, (q) => `/web/${slug}/notas-fiscais/transportadoras-autocomplete/?q=${encodeURIComponent(q)}`, (item) => {
+      transpInput.value = item.label;
+      transpIdHidden.value = item.value;
+    });
+
+    const qtdInput = document.querySelector('input[name="item_quantidade"]');
+    const unitInputTot = document.getElementById('item-unitario');
+    const descInput = document.querySelector('input[name="item_desconto"]');
+    const totalProdutos = document.getElementById('total');
+    const totalDesconto = document.getElementById('total-desconto');
+    const totalTributos = document.getElementById('total-tributos');
+    const totalNota = document.getElementById('total-nota');
+
+    const calcTotais = () => {
+      const qtd = Number(qtdInput.value || 0);
+      const unit = Number(unitInputTot.value || 0);
+      const desc = Number(descInput.value || 0);
+      const bruto = qtd * unit;
+      const liquido = bruto - desc;
+      totalProdutos.value = bruto.toFixed(2);
+      if (totalDesconto) totalDesconto.value = desc.toFixed(2);
+      const icms = Number(document.getElementById('aliq-icms').value || 0);
+      const ipi = Number(document.getElementById('aliq-ipi').value || 0);
+      const pis = Number(document.getElementById('aliq-pis').value || 0);
+      const cof = Number(document.getElementById('aliq-cof').value || 0);
+      const base = liquido;
+      const trib = base * (icms + ipi + pis + cof) / 100;
+      if (totalTributos) totalTributos.value = trib.toFixed(2);
+      if (totalNota) totalNota.value = (liquido + trib).toFixed(2);
+    };
+
+    [qtdInput, unitInputTot, descInput, aliqIcms, aliqIpi, aliqPis, aliqCof].forEach(el => {
+      el.addEventListener('input', calcTotais);
+    });
+    calcTotais();
+
+    document.getElementById('emit-form').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const fd = new FormData(ev.target);
+      const dados_nfe = {
+        numero: Number(fd.get('numero') || 0),
+        serie: Number(fd.get('serie') || 1),
+        natureza_operacao: fd.get('natureza_operacao') || 'Venda de mercadoria',
+        modelo: Number(fd.get('modelo') || 55),
+        data_emissao: fd.get('data_emissao') || null,
+        data_saida_entrada: fd.get('data_saida') || fd.get('data_emissao') || null,
+        tipo_documento: 1,
+        forma_pagamento: 0,
+        tipo_pagamento: 1,
+        empresa: Number(empresa),
+        filial: Number(filial),
+      };
+      const destinatarioId = document.getElementById('destinatario-id').value;
+      if (!destinatarioId) { alert('Selecione o cliente na aba Cliente.'); return; }
+      const itens = [{
+        codigo: document.getElementById('produto-codigo').value || '',
+        descricao: document.getElementById('prod-autocomplete').value || '',
+        ncm: fd.get('item_ncm') || '00000000',
+        cfop: fd.get('item_cfop') || '5102',
+        unidade: fd.get('item_unidade') || 'UN',
+        quantidade: Number(fd.get('item_quantidade') || 0),
+        valor_unitario: Number(fd.get('item_unitario') || 0),
+        valor_total: Number(fd.get('item_quantidade') || 0) * Number(fd.get('item_unitario') || 0) - Number(fd.get('item_desconto') || 0),
+        origem: 0, modalidade_icms: Number(document.getElementById('cst-icms').value || 102),
+      }];
+      const impostos = [{
+        icms_aliquota: Number(document.getElementById('aliq-icms').value || 0),
+        ipi_valor: null,
+        pis_valor: null,
+        cofins_valor: null,
+      }];
+      try {
+        const resp = await authFetch(`/api/${slug}/notasfiscais/notas-fiscais/notas/`, {
+          method: 'POST', body: JSON.stringify({
+            modelo: String(dados_nfe.modelo),
+            serie: String(dados_nfe.serie),
+            numero: dados_nfe.numero,
+            data_emissao: dados_nfe.data_emissao,
+            data_saida: dados_nfe.data_saida_entrada,
+            tipo_operacao: 1,
+            finalidade: 1,
+            ambiente: 2,
+            destinatario: Number(destinatarioId),
+            itens: [{
+              produto: Number(document.getElementById('produto-codigo').value || 0),
+              quantidade: Number(fd.get('item_quantidade') || 0),
+              unitario: Number(fd.get('item_unitario') || 0),
+              desconto: Number(fd.get('item_desconto') || 0),
+              cfop: fd.get('item_cfop') || '5102',
+              ncm: fd.get('item_ncm') || '00000000',
+              cest: '',
+              cst_icms: document.getElementById('cst-icms').value || '102',
+              cst_pis: document.getElementById('cst-pis').value || '49',
+              cst_cofins: document.getElementById('cst-cofins').value || '49',
+            }],
+            impostos: impostos,
+            transporte: {
+              modalidade_frete: Number(document.getElementById('transporte-modalidade').value || 0),
+              transportadora: Number(document.getElementById('transportadora-id').value || 0) || null,
+              placa_veiculo: '',
+              uf_veiculo: '',
+            },
+          })
+        });
+        const data = await resp.json();
+        if (resp.ok && data?.sucesso) {
+          alert('Emitida com sucesso. Chave: ' + (data?.chave_acesso || ''));
+          window.location.href = `/web/${slug}/notas-fiscais/`;
+        } else {
+          alert('Falha: ' + (data?.detail || data?.motivo || data?.erro || 'Erro'));
+        }
+      } catch (e) {
+        alert('Erro: ' + e);
+      }
+    });
+  })();
+</script>
+{% endblock %}

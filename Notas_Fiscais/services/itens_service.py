@@ -1,0 +1,42 @@
+# notas_fiscais/services/itens_service.py
+
+from django.db import transaction
+from django.core.exceptions import ValidationError
+
+from ..models import NotaItem, NotaItemImposto
+from ..handlers.itens_handler import ItensHandler
+
+
+class ItensService:
+
+    @staticmethod
+    def inserir_itens(nota, itens, impostos_map=None):
+        """
+        Cria os itens e seus impostos.
+        impostos_map → dict {index_item: dados_impostos}
+        """
+
+        ItensHandler.validar_itens(itens)
+        itens_norm = ItensHandler.normalizar_itens(itens)
+
+        for index, item_data in enumerate(itens_norm):
+            item_obj = NotaItem.objects.create(nota=nota, **item_data)
+
+            # impostos
+            if impostos_map and index in impostos_map:
+                imp_raw = impostos_map[index]
+                imp_norm = ItensHandler.normalizar_impostos(imp_raw)
+
+                NotaItemImposto.objects.create(item=item_obj, **imp_norm)
+
+
+    @staticmethod
+    def atualizar_itens(nota, itens, impostos_map=None):
+        """
+        Remove tudo e recria.
+        Mais simples e consistente para notas fiscais.
+        """
+
+        NotaItem.objects.filter(nota=nota).delete()
+
+        ItensService.inserir_itens(nota, itens, impostos_map)

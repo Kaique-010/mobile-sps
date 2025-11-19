@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %} CFOPs {% endblock %}
+{% block content %}
+<div class="container">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-5 text-center">CFOPs</h3>
+    <div class="btn-group">
+      <a class="btn btn-primary" href="/web/{{ slug }}/cfop/new/">Novo CFOP</a>
+
+      <a class="btn btn-outline-secondary" href="/web/{{ slug }}/cfop/import/">Importar</a>
+      <a class="btn btn-outline-secondary" href="/web/{{ slug }}/cfop/export/">Exportar</a>
+    </div>
+  </div>
+  <form method="get" class="row g-2 mb-3">
+    <div class="col-md-3"><input name="q" id="busca" type="text" class="form-control" placeholder="Descrição"
+        value="{{ busca }}"></div>
+    <div class="col-md-2"><input name="cfop" type="text" class="form-control" placeholder="CFOP" value="{{ cfop }}">
+    </div>
+    <div class="col-md-2"><input name="tipo" id="tipo" type="text" class="form-control" placeholder="Tipo"
+        value="{{ tipo }}"></div>
+    <div class="col-md-2"><input name="ini" type="date" class="form-control" value="{{ ini }}"></div>
+    <div class="col-md-2"><input name="fim" type="date" class="form-control" value="{{ fim }}"></div>
+    <div class="col-12"></div>
+    <div class="col-md-2"><input name="cst_icms" type="text" class="form-control" placeholder="CST ICMS"
+        value="{{ cst_icms }}"></div>
+    <div class="col-md-2"><input name="cst_ipi" type="text" class="form-control" placeholder="CST IPI"
+        value="{{ cst_ipi }}"></div>
+    <div class="col-md-2"><input name="cst_pis" type="text" class="form-control" placeholder="CST PIS"
+        value="{{ cst_pis }}"></div>
+    <div class="col-md-2"><input name="cst_cofins" type="text" class="form-control" placeholder="CST COFINS"
+        value="{{ cst_cofins }}"></div>
+    <div class="col-md-2"><button class="btn btn-outline-secondary w-100" type="submit">Filtrar</button></div>
+
+    <div class="col-12">
+      <div id="sug" class="mt-2"></div>
+    </div>
+  </form>
+  <div class="card">
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-striped table-hover">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>CFOP</th>
+              <th>Descrição</th>
+              <th class="text-end">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for o in object_list %}
+            <tr>
+              <td>{{ o.cfop_codi }}</td>
+              <td>{{ o.cfop_cfop }}</td>
+              <td>{{ o.cfop_desc }}</td>
+              <td class="text-end">
+                <a class="btn btn-sm btn-outline-primary"
+                  href="/web/{{ slug }}/cfop/{{ o.cfop_empr }}/{{ o.cfop_codi }}/edit/">Editar</a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="4" class="text-center text-muted">Nenhum CFOP encontrado</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% include 'components/pagination.html' with page_obj=page_obj %}
+</div>
+<script>
+  const slug = localStorage.getItem('slug');
+  const empresa = localStorage.getItem('empresa_id');
+  const filial = localStorage.getItem('filial_id');
+  function headers() { const h = { 'Accept': 'application/json' }; const t = localStorage.getItem('access'); if (t) h['Authorization'] = 'Bearer ' + t; if (empresa) h['X-Empresa'] = empresa; if (filial) h['X-Filial'] = filial; return h; }
+  async function autocomplete(q) { const r = await fetch(`/api/${slug}/cfop/autocomplete/?q=${encodeURIComponent(q)}`, { headers: headers() }); const j = await r.json(); return j.results || []; }
+  async function sugerir() { const cf = document.getElementById('busca'); const uf = document.getElementById('uf'); const te = document.getElementById('tipo'); const v = (cf.value || '').trim(); const u = (uf.value || '').trim(); const t = (te.value || '').trim(); if (!v) return; const r = await fetch(`/api/${slug}/cfop/sugerir-tributacao/?cfop=${encodeURIComponent(v)}&uf=${encodeURIComponent(u)}&tipo=${encodeURIComponent(t)}`, { headers: headers() }); const j = await r.json(); const s = document.getElementById('sug'); s.innerHTML = `<div class="alert alert-info">ICMS:${j.icms_cst} IPI:${j.ipi_cst} PIS:${j.pis_cst} COFINS:${j.cofins_cst}</div>`; const hist = JSON.parse(localStorage.getItem('cfop_hist') || '[]'); hist.unshift({ cfop: v, uf: u, tipo: t, ts: Date.now() }); localStorage.setItem('cfop_hist', JSON.stringify(hist.slice(0, 20))); }
+  document.addEventListener('DOMContentLoaded', () => { const b = document.getElementById('btnSug'); const i = document.getElementById('busca'); if (b) b.addEventListener('click', sugerir); if (i) i.addEventListener('keyup', async (e) => { const v = (i.value || '').trim(); if (v.length < 2) return; const items = await autocomplete(v); }); });
+</script>
+{% endblock %}

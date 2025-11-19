@@ -91,6 +91,7 @@ INSTALLED_APPS = [
     'Saidas_Estoque',
     'listacasamento',
     'implantacao',
+    'CFOP',
     'contas_a_pagar',
     'contas_a_receber',
     'contratos', 
@@ -397,6 +398,7 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
 
 # Patch para SMTP
+CFOP_SUGGESTION_API_URL = config('CFOP_SUGGESTION_API_URL', default='')
 import smtplib
 
 orig_starttls = smtplib.SMTP.starttls

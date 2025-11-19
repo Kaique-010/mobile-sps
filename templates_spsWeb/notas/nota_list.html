@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<div class="container py-3">
+  <h2 class="mb-3 text-center"><i class="bi bi-file-earmark-text-fill"></i> Notas Fiscais</h2>
+
+  <form class="row g-2 mb-3" method="get">
+    <div class="col-md-2">
+      <label class="form-label">Status</label>
+      <select name="status" class="form-select">
+        <option value="">Todos</option>
+        {% for code, label in status_choices %}
+          <option value="{{ code }}" {% if preservado.status == code|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Cliente</label>
+      <input type="text" name="cliente" class="form-control" value="{{ preservado.cliente }}" placeholder="Nome, CNPJ ou CPF" />
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">De</label>
+      <input type="date" name="data_ini" class="form-control" value="{{ preservado.data_ini }}" />
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Até</label>
+      <input type="date" name="data_fim" class="form-control" value="{{ preservado.data_fim }}" />
+    </div>
+    <div class="col-md-3 d-grid align-items-end">
+      <div class="btn-group">
+        <button class="btn btn-primary" type="submit"><i class="bi bi-funnel"></i> Filtrar</button>
+        <a class="btn btn-outline-secondary" href="?"><i class="bi bi-x-circle"></i> Limpar</a>
+        <a class="btn btn-success" href="/web/{{ slug }}/notas-fiscais/emissao/"><i class="bi bi-upload"></i> Emitir Nota</a>
+      </div>
+    </div>
+  </form>
+
+  <table class="table table-sm table-striped">
+    <thead>
+      <tr>
+        <th>Modelo</th>
+        <th>Série</th>
+        <th>Número</th>
+        <th>Emissão</th>
+        <th>Emitente</th>
+        <th>Destinatário</th>
+        <th>Status</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for n in notas %}
+      <tr>
+        <td>{{ n.modelo }}</td>
+        <td>{{ n.serie }}</td>
+        <td>{{ n.numero }}</td>
+        <td>{{ n.data_emissao }}</td>
+
+        <td>{{ n.emitente.empr_nome }}</td>
+        <td>{{ n.destinatario.enti_nome }}</td>
+        <td>{{ n.get_status_display }}</td>
+        <td>
+          <div class="btn-group btn-group-sm">
+            <a class="btn btn-primary" href="/web/{{ slug }}/notas-fiscais/{{ n.id }}/">Detalhes</a>
+            {% if n.status == 0 %}
+              <button class="btn btn-outline-success" data-transmitir data-id="{{ n.id }}">Transmitir</button>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="8" class="text-center">Nenhuma nota encontrada.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if is_paginated %}
+  <nav>
+    <ul class="pagination pagination-sm">
+      {% if page_obj.has_previous %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Anterior</a></li>
+      {% endif %}
+      <li class="page-item active"><span class="page-link">{{ page_obj.number }} / {{ paginator.num_pages }}</span></li>
+      {% if page_obj.has_next %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Próxima</a></li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+</div>
+
+<script>
+  (() => {
+    const slug = localStorage.getItem('slug');
+    const empresa = localStorage.getItem('empresa_id') || '1';
+    const filial = localStorage.getItem('filial_id') || '1';
+    const authFetch = async (url, options={}) => {
+      const token = localStorage.getItem('access');
+      const headers = { 'Content-Type': 'application/json', 'X-Empresa': empresa, 'X-Filial': filial };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      return fetch(url, { ...options, headers: { ...headers, ...(options.headers || {}) } });
+    };
+
+    const onTransmitir = async (id) => {
+      const btn = document.querySelector(`[data-transmitir][data-id="${id}"]`);
+      if (btn) btn.disabled = true;
+      try {
+        const resp = await authFetch(`/api/${slug}/notas-fiscais/notas/${id}/transmitir/`, { method: 'POST', body: JSON.stringify({}) });
+        const data = await resp.json();
+        if (resp.ok) {
+          alert('Transmitida com sucesso. Chave: ' + (data?.resultado?.chave_acesso || ''));
+          location.reload();
+        } else {
+          alert('Falha na transmissão: ' + (data?.motivo || data?.error || 'Erro'));
+        }
+      } catch (e) {
+        alert('Erro: ' + e);
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    };
+
+    document.querySelectorAll('[data-transmitir]')?.forEach(el => {
+      el.addEventListener('click', (ev) => { ev.preventDefault(); const id = el.getAttribute('data-id'); onTransmitir(id); });
+    });
+  })();
+</script>
+{% endblock %}
