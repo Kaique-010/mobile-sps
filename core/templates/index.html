@@ -8,7 +8,7 @@
     <title>Servidor no Ar - Spartacus Mobile</title>
     <!-- Font Awesome para ícones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Fauna&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
@@ -352,8 +352,38 @@
                 font-size: 1.1rem;
             }
         }
+        .btn-custom {
+            background-color: #64ffda;
+            color: #0a0a0d;
+            border: none;
+            padding: 10px 18px;
+            font-size: 0.95rem;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            position: fixed;
+            top: 14px;
+            right: 14px;
+            z-index: 1000;
+            box-shadow: 0 8px 25px rgba(100, 255, 218, 0.15);
+        }
+        .btn-custom:hover {
+            background-color: #00e6e6;
+            color: #0a0a0d;
+            transform: translateY(-1px);
+            box-shadow: 0 8px 25px rgba(100, 255, 218, 0.3);
+        }
+        @media (max-width: 768px) {
+            .btn-custom {
+                top: 10px;
+                right: 10px;
+                padding: 8px 14px;
+                font-size: 0.9rem;
+                border-radius: 6px;
+            }
+        }
     </style>
 </head>
+<a href="/web/login/" class="btn btn-custom btn-sm">Acessar o Sistema</a>
 
 <body>
     <div class="container">
@@ -568,7 +598,8 @@
                     <div class="icon" style="margin-right: 12px;"><i class="fas fa-mobile-alt"></i></div>
                     <h2>CRM Mobile Vinculado a Orçamentos de Pisos</h2>
                 </div>
-                <p>Sistema de relacionamento com cliente otimizado para dispositivos móveis, com integração ao CRM e Orçamentos de Pisos.</p>
+                <p>Sistema de relacionamento com cliente otimizado para dispositivos móveis, com integração ao CRM e
+                    Orçamentos de Pisos.</p>
                 <a href="https://youtube.com/shorts/aCFLHkF5cjo?feature=share" target="_blank" class="video-btn">
                     Ver demonstração
                 </a>
@@ -636,19 +667,19 @@
 <footer>
     <p>&copy; 2025 Spartacus Sistemas. Todos os direitos reservados.</p>
     <div class="elementor-widget-container">
-					    <div class="ct-icon1 style2">
-                                    <a href="https://www.facebook.com/Spartacus.sistemas/?rf=220514235038325" target="_blank">
-                    <i aria-hidden="true" class="fab fa-facebook-f"></i>                                    </a>
-                                                <a href="https://twitter.com/spartacusgestao" target="_blank">
-                    <i aria-hidden="true" class="fab fa-twitter"></i>                                    </a>
-                                                <a href="https://www.instagram.com/spartacus.sistemas/" target="_blank">
-                    <i aria-hidden="true" class="fab fa-instagram"></i>                                    </a>
-                                                <a href="https://www.youtube.com/channel/UCLYrLJ6tgej7ScLQj2ONKOA" target="_blank">
-                    <i aria-hidden="true" class="fab fa-youtube"></i>                                    </a>
-                                                <a href="https://api.whatsapp.com/send?phone=5542988018764">
-                    <i aria-hidden="true" class="fab fa-whatsapp"></i>                                    </a>
-                        </div>
-				</div>
+        <div class="ct-icon1 style2">
+            <a href="https://www.facebook.com/Spartacus.sistemas/?rf=220514235038325" target="_blank">
+                <i aria-hidden="true" class="fab fa-facebook-f"></i> </a>
+            <a href="https://twitter.com/spartacusgestao" target="_blank">
+                <i aria-hidden="true" class="fab fa-twitter"></i> </a>
+            <a href="https://www.instagram.com/spartacus.sistemas/" target="_blank">
+                <i aria-hidden="true" class="fab fa-instagram"></i> </a>
+            <a href="https://www.youtube.com/channel/UCLYrLJ6tgej7ScLQj2ONKOA" target="_blank">
+                <i aria-hidden="true" class="fab fa-youtube"></i> </a>
+            <a href="https://api.whatsapp.com/send?phone=5542988018764">
+                <i aria-hidden="true" class="fab fa-whatsapp"></i> </a>
+        </div>
+    </div>
 </footer>
 
 </html>
