@@ -4,7 +4,7 @@ from django.db.models import Q
 from core.utils import get_licenca_db_config
 from Entidades.models import Entidades
 from Produtos.models import Produtos, Tabelaprecos
-from CFOP.models import Cfop
+from CFOP.models import CFOP    
 
 
 def entidades_autocomplete(request, slug=None):

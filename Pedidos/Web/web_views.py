@@ -9,10 +9,10 @@ from django.db.models import Q
 from core.utils import get_licenca_db_config
 
 logger = logging.getLogger(__name__)
-from .models import PedidoVenda
+from ..models import PedidoVenda
 from .forms import PedidoVendaForm
 from .formssets import ItensPedidoFormSet
-from .services.pedido_service import PedidoVendaService, proximo_pedido_numero
+from ..services.pedido_service import PedidoVendaService, proximo_pedido_numero
 from django.db.models import Subquery, OuterRef, BigIntegerField, Sum, Count
 from django.db.models.functions import Cast
 
@@ -25,7 +25,9 @@ def autocomplete_clientes(request, slug=None):
     from Entidades.models import Entidades
     qs = Entidades.objects.using(banco).filter(
         enti_empr=str(empresa_id),
-        enti_tipo_enti__icontains='CL'
+        enti_clie__isnull=False,
+    ).filter(
+        Q(enti_tipo_enti__icontains='CL') | Q(enti_tipo_enti__icontains='AM')
     )
     if term:
         if term.isdigit():
@@ -148,11 +150,13 @@ class PedidoCreateView(CreateView):
         if self.request.POST:
             context['formset'] = ItensPedidoFormSet(
                 self.request.POST,
-                form_kwargs={'database': banco, 'empresa_id': empresa_id}
+                form_kwargs={'database': banco, 'empresa_id': empresa_id},
+                prefix='form'
             )
         else:
             context['formset'] = ItensPedidoFormSet(
-                form_kwargs={'database': banco, 'empresa_id': empresa_id}
+                form_kwargs={'database': banco, 'empresa_id': empresa_id},
+                prefix='form'
             )
         
         # Produtos para o template (usado no JavaScript para adicionar linhas)
@@ -235,10 +239,13 @@ class PedidoCreateView(CreateView):
                 
                 # Cria o pedido usando o service (banco-aware e com cálculo de itens)
                 logger.debug("[PedidoCreateView] Chamando service.create_pedido_venda com %d itens", len(itens_data))
+                pedi_tipo_oper = pedido_data.get('pedi_tipo_oper', 'VENDA')
+                logger.debug("[PedidoCreateView] tipo_oper=%s", pedi_tipo_oper)
                 pedido = PedidoVendaService.create_pedido_venda(
                     banco,
                     pedido_data,
-                    itens_data
+                    itens_data,
+                    pedi_tipo_oper=pedi_tipo_oper
                 )
                 logger.debug(
                     "[PedidoCreateView] Pedido criado pedi_nume=%s pedi_topr=%s pedi_desc=%s pedi_tota=%s",
@@ -602,10 +609,11 @@ class PedidoUpdateView(UpdateView):
         else:
             # Pré-popular itens com dados existentes
             try:
-                from .models import Itenspedidovenda
+                from ..models import Itenspedidovenda
                 from Entidades.models import Entidades
                 from Produtos.models import Produtos
                 pedido = self.object
+                logger.debug("[PedidoUpdateView.get_context_data] carregando itens do pedido=%s", getattr(pedido, 'pedi_nume', None))
                 itens_qs = Itenspedidovenda.objects.using(banco).filter(
                     iped_empr=pedido.pedi_empr,
                     iped_fili=pedido.pedi_fili,
@@ -621,6 +629,7 @@ class PedidoUpdateView(UpdateView):
                         'iped_desc': i.iped_desc or 0,
                     })
                     codigos.append(i.iped_prod)
+                logger.debug("[PedidoUpdateView.get_context_data] itens_qs=%d initial_forms=%d", len(list(itens_qs)), len(initial))
 
                 # Nomes de cliente e vendedor
                 cl = Entidades.objects.using(banco).filter(enti_clie=pedido.pedi_forn).values('enti_nome').first()
@@ -633,13 +642,21 @@ class PedidoUpdateView(UpdateView):
                 prod_map = {p.prod_codi: f"{p.prod_codi} - {p.prod_nome}" for p in produtos}
                 for idx, init in enumerate(initial):
                     init['display_prod_text'] = prod_map.get(init.get('iped_prod'), init.get('iped_prod'))
+                logger.debug("[PedidoUpdateView.get_context_data] prod_map_size=%d", len(prod_map))
             except Exception:
                 initial = []
+                logger.exception("[PedidoUpdateView.get_context_data] erro ao pré-popular itens")
 
             context['formset'] = ItensPedidoFormSet(
                 initial=initial,
-                form_kwargs={'database': banco, 'empresa_id': empresa_id}
+                form_kwargs={'database': banco, 'empresa_id': empresa_id},
+                prefix='form'
             )
+            try:
+                mf = context['formset'].management_form
+                logger.debug("[PedidoUpdateView.get_context_data] TOTAL_FORMS=%s INITIAL_FORMS=%s", getattr(mf, 'initial', {}).get('TOTAL_FORMS'), getattr(mf, 'initial', {}).get('INITIAL_FORMS'))
+            except Exception:
+                logger.debug("[PedidoUpdateView.get_context_data] management_form indisponível")
 
         context['slug'] = self.kwargs.get('slug')
         context['is_edit'] = True
@@ -700,11 +717,13 @@ class PedidoUpdateView(UpdateView):
                     return self.form_invalid(form)
 
                 logger.debug("[PedidoUpdateView] Chamando service.update_pedido_venda com %d itens", len(itens_data))
+                logger.debug("[PedidoUpdateView] tipo_oper=%s", pedido_updates.get('pedi_tipo_oper'))
                 PedidoVendaService.update_pedido_venda(
                     banco,
                     pedido,
                     pedido_updates,
                     itens_data,
+                    pedi_tipo_oper=pedido_updates.get('pedi_tipo_oper', 'VENDA')
                 )
                 logger.debug(
                     "[PedidoUpdateView] Pedido atualizado pedi_nume=%s pedi_topr=%s pedi_desc=%s pedi_tota=%s",

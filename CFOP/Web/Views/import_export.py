@@ -5,16 +5,16 @@ from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from core.utils import get_licenca_db_config
-from ...models import Cfop
+from ...models import CFOP
 
-class CfopExportView(View):
+class CFOPExportView(View):
     def dispatch(self, request, *args, **kwargs):
         self.slug = kwargs.get('slug')
         self.db_alias = get_licenca_db_config(request)
         self.empresa_id = request.session.get('empresa_id') or request.headers.get('X-Empresa') or request.GET.get('empresa')
         return super().dispatch(request, *args, **kwargs)
     def get(self, request, *args, **kwargs):
-        qs = Cfop.objects.using(self.db_alias).all()
+        qs = CFOP.objects.using(self.db_alias).all()
         if self.empresa_id:
             qs = qs.filter(cfop_empr=int(self.empresa_id))
         buf = StringIO()

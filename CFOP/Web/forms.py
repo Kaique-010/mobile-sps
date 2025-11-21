@@ -1,9 +1,14 @@
 from django import forms
-from ..models import Cfop, CST_ICMS_CHOICES, CST_PIS_CHOICES, CST_COFINS_CHOICES, CST_IPI_CHOICES
+from django.conf import settings
+from django.core.cache import cache
+from ..models import CFOP, CFOPFiscal
+import json
+import urllib.request
 
-class CfopForm(forms.ModelForm):
+
+class CFOPForm(forms.ModelForm):
     class Meta:
-        model = Cfop
+        model = CFOP
         fields = '__all__'
 
     def __init__(self, *args, **kwargs):
@@ -24,24 +29,26 @@ class CfopForm(forms.ModelForm):
                 w.attrs.setdefault('step', '0.01')
             elif isinstance(field, forms.CharField):
                 w.attrs.setdefault('class', 'form-control')
+                if name == 'cfop_codi':
+                    w.attrs['list'] = 'cfop-codes'
             elif isinstance(field, forms.BooleanField):
                 w.attrs.setdefault('class', 'form-check-input')
 
-        if 'cfop_trib_cst_icms' in self.fields:
-            self.fields['cfop_trib_cst_icms'].widget = forms.Select(choices=CST_ICMS_CHOICES, attrs={'class': 'form-select'})
-        if 'cfop_trib_cst_pis' in self.fields:
-            self.fields['cfop_trib_cst_pis'].widget = forms.Select(choices=CST_PIS_CHOICES, attrs={'class': 'form-select'})
-        if 'cfop_trib_cst_cofins' in self.fields:
-            self.fields['cfop_trib_cst_cofins'].widget = forms.Select(choices=CST_COFINS_CHOICES, attrs={'class': 'form-select'})
-        if 'cfop_trib_ipi_trib' in self.fields:
-            self.fields['cfop_trib_ipi_trib'].widget = forms.Select(choices=CST_IPI_CHOICES, attrs={'class': 'form-select'})
-        if 'cfop_trib_ipi_nao_trib' in self.fields:
-            self.fields['cfop_trib_ipi_nao_trib'].widget = forms.Select(choices=CST_IPI_CHOICES, attrs={'class': 'form-select'})
-
+    
     def clean(self):
         cleaned = super().clean()
         empr = cleaned.get('cfop_empr')
         codi = cleaned.get('cfop_codi')
+        try:
+            if codi:
+                catalog = fetch_cfop_catalog()
+                if catalog:
+                    valid_set = {it['value'] for it in catalog}
+                    if str(codi) not in valid_set:
+                        from django.core.exceptions import ValidationError
+                        raise ValidationError({'cfop_codi': 'CFOP inválido (não encontrado em fonte oficial)'})
+        except Exception:
+            pass
         if empr and codi:
             from django.core.exceptions import ValidationError
             from core.utils import get_licenca_db_config
@@ -49,7 +56,7 @@ class CfopForm(forms.ModelForm):
                 db = get_licenca_db_config(getattr(self, 'request', None))
             except Exception:
                 db = None
-            qs = Cfop.objects.all()
+            qs = CFOP.objects.all()
             if db:
                 qs = qs.using(db)
             exists = qs.filter(cfop_empr=empr, cfop_codi=codi)
@@ -58,3 +65,11 @@ class CfopForm(forms.ModelForm):
             if exists.exists():
                 raise ValidationError({'cfop_codi': 'Código já existe para a empresa'})
         return cleaned
+    
+    def clean_cfop_codi(self):
+        codi = self.cleaned_data["cfop_codi"]
+
+        if not CFOPFiscal.objects.filter(cfop_codi=codi).exists():
+            raise forms.ValidationError("CFOP não existe na tabela fiscal oficial.")
+
+        return codi

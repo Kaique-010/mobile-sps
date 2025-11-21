@@ -1,7 +1,7 @@
 from django import forms
 from Entidades.models import Entidades
 from Produtos.models import Produtos
-from .models import Orcamentos, ItensOrcamento
+from .models import Orcamentos, ItensOrcamento, STATUS_ORCAMENTO
 from django.forms import inlineformset_factory
 from django.db.models import Max
 
@@ -88,12 +88,13 @@ class OrcamentoVendaForm(forms.ModelForm):
     class Meta:
         model = Orcamentos
         fields = [
-            'pedi_data', 'pedi_forn', 'pedi_vend', 'pedi_topr', 'pedi_desc', 'pedi_tota'
+            'pedi_data', 'pedi_forn', 'pedi_vend', 'pedi_stat', 'pedi_topr', 'pedi_desc', 'pedi_tota'
         ]
         widgets = {
             'pedi_data': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
             'pedi_forn': forms.HiddenInput(),
             'pedi_vend': forms.HiddenInput(),
+            'pedi_stat': forms.Select(attrs={'class': 'form-select'}),
             'pedi_topr': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'readonly': 'readonly'}),
             'pedi_desc': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'pedi_tota': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'readonly': 'readonly'}),
@@ -103,6 +104,14 @@ class OrcamentoVendaForm(forms.ModelForm):
         self.database = kwargs.pop('database', None)
         self.empresa_id = kwargs.pop('empresa_id', None)
         super().__init__(*args, **kwargs)
+        self.fields['pedi_stat'].choices = STATUS_ORCAMENTO
+        self.fields['pedi_stat'].initial = '0'
+
+    def clean(self):
+        cleaned = super().clean()
+        if not cleaned.get('pedi_forn'):
+            self.add_error('pedi_forn', 'Cliente é obrigatório')
+        return cleaned
 
 
 class ItensOrcamentoVendaForm(forms.ModelForm):

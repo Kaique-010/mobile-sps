@@ -1,99 +1,65 @@
 {% load static %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
 <form method="post" enctype="multipart/form-data">
   {% csrf_token %}
+  {{ form.cfop_empr }}
+
   {% if messages %}
     {% for message in messages %}
       <div class="alert alert-{{ message.tags }}">{{ message }}</div>
     {% endfor %}
   {% endif %}
 
-  <ul class="nav nav-tabs" role="tablist">
-    <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-basicos" role="tab">Dados Básicos</a></li>
-    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-icms" role="tab">ICMS</a></li>
-    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-ipi" role="tab">IPI</a></li>
-    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-pis-cofins" role="tab">PIS/COFINS</a></li>
-    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-retencoes" role="tab">Retenções</a></li>
-    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-ibs-cbs" role="tab">IBS/CBS</a></li>
-    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-outros" role="tab">Outros</a></li>
-  </ul>
+  <div class="row">
+    <div class="col-md-4 mb-3">
+      <label class="form-label" for="{{ form.cfop_codi.auto_id }}">Código CFOP</label>
+      {{ form.cfop_codi }}
+      <div id="cfop-suggest" class="list-group mt-1" style="max-height:200px; overflow:auto;"></div>
 
-  <div class="tab-content mt-3">
-    <div id="tab-basicos" class="tab-pane fade show active" role="tabpanel">
-      <div class="row">
-        {% for field in grouped_fields.basicos %}
-          <div class="col-md-6 mb-3">
-            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {% if field.errors %}<div class="text-danger">{{ field.errors }}</div>{% endif %}
-          </div>
-        {% endfor %}
-      </div>
+      <!-- Datalist vazio – será preenchido via JS -->
+      <datalist id="cfop-codes"></datalist>
+
+      {% if form.cfop_codi.errors %}
+        <div class="text-danger">{{ form.cfop_codi.errors }}</div>
+      {% endif %}
     </div>
-    <div id="tab-icms" class="tab-pane fade" role="tabpanel">
-      <div class="row">
-        {% for field in grouped_fields.icms %}
-          <div class="col-md-6 mb-3">
-            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {% if field.errors %}<div class="text-danger">{{ field.errors }}</div>{% endif %}
-          </div>
-        {% endfor %}
-      </div>
+
+    <div class="col-md-8 mb-3">
+      <label class="form-label" for="{{ form.cfop_desc.auto_id }}">Descrição</label>
+      {{ form.cfop_desc }}
+      {% if form.cfop_desc.errors %}
+        <div class="text-danger">{{ form.cfop_desc.errors }}</div>
+      {% endif %}
     </div>
-    <div id="tab-ipi" class="tab-pane fade" role="tabpanel">
-      <div class="row">
-        {% for field in grouped_fields.ipi %}
-          <div class="col-md-6 mb-3">
-            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {% if field.errors %}<div class="text-danger">{{ field.errors }}</div>{% endif %}
-          </div>
-        {% endfor %}
+  </div>
+
+  <div class="row">
+    <div class="col-md-12 mb-2"><span class="form-label">Exigências</span></div>
+
+    <div class="col-md-12 d-flex flex-wrap gap-4">
+
+      <div class="form-check">
+        {{ form.cfop_exig_ipi }}
+        <label class="form-check-label" for="{{ form.cfop_exig_ipi.auto_id }}">Exige IPI</label>
       </div>
-    </div>
-    <div id="tab-pis-cofins" class="tab-pane fade" role="tabpanel">
-      <div class="row">
-        {% for field in grouped_fields.pis_cofins %}
-          <div class="col-md-6 mb-3">
-            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {% if field.errors %}<div class="text-danger">{{ field.errors }}</div>{% endif %}
-          </div>
-        {% endfor %}
+
+      <div class="form-check">
+        {{ form.cfop_exig_icms }}
+        <label class="form-check-label" for="{{ form.cfop_exig_icms.auto_id }}">Exige ICMS</label>
       </div>
-    </div>
-    <div id="tab-retencoes" class="tab-pane fade" role="tabpanel">
-      <div class="row">
-        {% for field in grouped_fields.retencoes %}
-          <div class="col-md-6 mb-3">
-            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {% if field.errors %}<div class="text-danger">{{ field.errors }}</div>{% endif %}
-          </div>
-        {% endfor %}
+
+      <div class="form-check">
+        {{ form.cfop_exig_pis_cofins }}
+        <label class="form-check-label" for="{{ form.cfop_exig_pis_cofins.auto_id }}">Exige PIS/COFINS</label>
       </div>
-    </div>
-    <div id="tab-ibs-cbs" class="tab-pane fade" role="tabpanel">
-      <div class="row">
-        {% for field in grouped_fields.ibs_cbs %}
-          <div class="col-md-6 mb-3">
-            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {% if field.errors %}<div class="text-danger">{{ field.errors }}</div>{% endif %}
-          </div>
-        {% endfor %}
+
+      <div class="form-check">
+        {{ form.cfop_exig_cbs }}
+        <label class="form-check-label" for="{{ form.cfop_exig_cbs.auto_id }}">Exige CBS</label>
       </div>
-    </div>
-    <div id="tab-outros" class="tab-pane fade" role="tabpanel">
-      <div class="row">
-        {% for field in grouped_fields.outros %}
-          <div class="col-md-6 mb-3">
-            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {% if field.errors %}<div class="text-danger">{{ field.errors }}</div>{% endif %}
-          </div>
-        {% endfor %}
+
+      <div class="form-check">
+        {{ form.cfop_exig_ibs }}
+        <label class="form-check-label" for="{{ form.cfop_exig_ibs.auto_id }}">Exige IBS</label>
       </div>
     </div>
   </div>
@@ -103,3 +69,66 @@
     <a href="/web/{{ slug }}/cfop/" class="btn btn-secondary">Voltar</a>
   </div>
 </form>
+
+<script>
+(function () {
+  var input = document.getElementById('{{ form.cfop_codi.auto_id }}');
+  var desc  = document.getElementById('{{ form.cfop_desc.auto_id }}');
+  var list = document.getElementById('cfop-codes');
+  var suggest = document.getElementById('cfop-suggest');
+  var slug = '{{ slug }}';
+
+  function renderDatalist(items) {
+    list.innerHTML = '';
+    items.forEach(function (it) {
+      var opt = document.createElement('option');
+      opt.value = it.value;
+      opt.textContent = it.label;
+      list.appendChild(opt);
+    });
+  }
+
+  function renderSuggest(items) {
+    suggest.innerHTML = '';
+    items.slice(0, 10).forEach(function (it) {
+      var a = document.createElement('a');
+      a.href = '#';
+      a.className = 'list-group-item list-group-item-action';
+      a.textContent = it.label;
+      a.onclick = function (e) {
+        e.preventDefault();
+        input.value = it.value;
+
+        var parts = it.label.split(' - ');
+        if (parts.length > 1) {
+          desc.value = parts.slice(1).join(' - ');
+        }
+
+        suggest.innerHTML = '';
+      };
+      suggest.appendChild(a);
+    });
+  }
+
+  function fetchSuggest(q) {
+    var url = '/web/' + slug + '/cfop/autocomplete/?q=' + encodeURIComponent(q);
+
+    fetch(url)
+      .then(r => r.json())
+      .then(data => {
+        var items = data.results || [];
+        renderDatalist(items);
+        renderSuggest(items);
+      });
+  }
+
+  input.addEventListener('input', function () {
+    var q = input.value.trim();
+    if (q.length >= 2) {
+      fetchSuggest(q);
+    } else {
+      suggest.innerHTML = '';
+    }
+  });
+})();
+</script>

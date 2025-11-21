@@ -1,10 +1,10 @@
 from django.views.generic import ListView
 from django.core.paginator import Paginator
 from core.utils import get_licenca_db_config
-from ...models import Cfop
+from ...models import CFOP
 
-class CfopListView(ListView):
-    model = Cfop
+class CFOPListView(ListView):
+    model = CFOP    
     template_name = 'CFOP/cfops_list.html'
     paginate_by = 20
 
@@ -15,7 +15,7 @@ class CfopListView(ListView):
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
-        qs = Cfop.objects.using(self.db_alias).all()
+        qs = CFOP.objects.using(self.db_alias).all()
         if self.empresa_id:
             qs = qs.filter(cfop_empr=int(self.empresa_id))
         busca = (self.request.GET.get('q') or '').strip()

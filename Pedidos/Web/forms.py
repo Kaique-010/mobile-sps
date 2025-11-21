@@ -1,18 +1,12 @@
 from django import forms
 import logging
 from django.forms import inlineformset_factory
-from .models import PedidoVenda, Itenspedidovenda
+from ..models import PedidoVenda, Itenspedidovenda, STATUS_PEDIDO
 from Produtos.models import Produtos
 from Entidades.models import Entidades
+from CFOP.services.services import MotorFiscal
 
 
-STATUS_PEDIDO = [
-    (0, 'Pendente'),
-    (1, 'Processando'),
-    (2, 'Enviado'),
-    (3, 'Concluído'),
-    (4, 'Cancelado'),
-]
 
 class PedidoVendaForm(forms.ModelForm):
     class Meta:
@@ -26,6 +20,7 @@ class PedidoVendaForm(forms.ModelForm):
             'pedi_vend',
             'pedi_desc',
             'pedi_stat',
+            'pedi_tipo_oper',
         ]
         widgets = {
             'pedi_forn': forms.HiddenInput(),
@@ -36,6 +31,7 @@ class PedidoVendaForm(forms.ModelForm):
             'pedi_vend': forms.HiddenInput(),
             'pedi_desc': forms.NumberInput(attrs={'class': 'form-control','placeholder': '0.00', 'step': '0.01'}),
             'pedi_stat': forms.Select(attrs={'class': 'form-select'}),
+            'pedi_tipo_oper': forms.Select(attrs={'class': 'form-select'}),
         }
         labels = {
             'pedi_forn': 'Cliente',
@@ -46,6 +42,7 @@ class PedidoVendaForm(forms.ModelForm):
             'pedi_vend': 'Vendedor',
             'pedi_desc': 'Desconto',
             'pedi_stat': 'Status',
+            'pedi_tipo_oper': 'Tipo de Operação',
         }
 
     def __init__(self, *args, **kwargs):
@@ -57,8 +54,9 @@ class PedidoVendaForm(forms.ModelForm):
         
         # Popula clientes (pedi_forn)
         try:
+            from django.db.models import Q
             clientes_qs = Entidades.objects.using(database).filter(
-                enti_tipo_enti__icontains='CL'  # Filtra apenas clientes
+                Q(enti_tipo_enti__icontains='CL') | Q(enti_tipo_enti__icontains='AM')
             )
             if empresa_id:
                 clientes_qs = clientes_qs.filter(enti_empr=str(empresa_id))
@@ -94,15 +92,17 @@ class PedidoVendaForm(forms.ModelForm):
             ('3', 'Na Emissão'),
         ]
         self.fields['pedi_stat'].choices = STATUS_PEDIDO
+        self.fields['pedi_stat'].initial = 0
 
 
 
     def clean(self):
         cleaned = super().clean()
-        logging.getLogger(__name__).debug(
-            "[PedidoVendaForm.clean] pedi_desc=%s pedi_topr=%s pedi_tota=%s pedi_fina=%s",
-            cleaned.get('pedi_desc'), cleaned.get('pedi_topr'), cleaned.get('pedi_tota'), cleaned.get('pedi_fina')
-        )
+        logging.getLogger(__name__).debug("[PedidoVendaForm.clean] cleaned=%s", cleaned)
+        if not cleaned.get('pedi_forn'):
+            logging.getLogger(__name__).warning("[PedidoVendaForm.clean] pedi_forn ausente")
+            self.add_error('pedi_forn', 'Cliente é obrigatório')
+        logging.getLogger(__name__).debug("[PedidoVendaForm.clean] errors=%s", self.errors)
         return cleaned
 
 
@@ -154,3 +154,20 @@ class ItensPedidoVendaForm(forms.ModelForm):
         return cleaned
 
 
+    def save(self, commit=True):
+        item = super().save(commit=False)
+
+        motor = MotorFiscal(uf_origem=item.pedido.get_uf_origem())
+        pacote = motor.calcular_item(
+            pedido=item.pedido,
+            item=item,
+            produto=item.produto,
+            uf_destino=item.pedido.cliente.enti_uf
+        )
+
+        motor.aplicar_no_item(item, pacote)
+
+        if commit:
+            item.save()
+
+        return item

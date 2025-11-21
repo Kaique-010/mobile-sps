@@ -23,7 +23,9 @@ def autocomplete_clientes(request, slug=None):
     from Entidades.models import Entidades
     qs = Entidades.objects.using(banco).filter(
         enti_empr=str(empresa_id),
-        enti_tipo_enti__icontains='CL'
+        enti_clie__isnull=False,
+    ).filter(
+        Q(enti_tipo_enti__icontains='CL') | Q(enti_tipo_enti__icontains='AM')
     )
     if term:
         if term.isdigit():
@@ -133,11 +135,13 @@ class OrcamentoCreateView(CreateView):
         if self.request.POST:
             context['formset'] = ItensOrcamentoFormSet(
                 self.request.POST,
-                form_kwargs={'database': banco, 'empresa_id': empresa_id}
+                form_kwargs={'database': banco, 'empresa_id': empresa_id},
+                prefix='form'
             )
         else:
             context['formset'] = ItensOrcamentoFormSet(
-                form_kwargs={'database': banco, 'empresa_id': empresa_id}
+                form_kwargs={'database': banco, 'empresa_id': empresa_id},
+                prefix='form'
             )
         context['slug'] = self.kwargs.get('slug')
         return context
@@ -147,7 +151,11 @@ class OrcamentoCreateView(CreateView):
         empresa_id = self.request.session.get('empresa_id', 1)
         filial_id = self.request.session.get('filial_id', 1)
 
-        formset = ItensOrcamentoFormSet(self.request.POST, form_kwargs={'database': banco, 'empresa_id': empresa_id})
+        formset = ItensOrcamentoFormSet(
+            self.request.POST,
+            form_kwargs={'database': banco, 'empresa_id': empresa_id},
+            prefix='form'
+        )
         logger.debug("[OrcamentoCreateView] Form valid=%s Formset valid=%s", form.is_valid(), formset.is_valid())
         if not formset.is_valid():
             messages.error(self.request, 'Verifique os itens do orçamento.')
@@ -222,18 +230,27 @@ class OrcamentoCreateView(CreateView):
         )
 
         # Persistir itens
-        for item in itens_data:
-            ItensOrcamento.objects.using(banco).create(
-                iped_empr=empresa_id,
-                iped_fili=filial_id,
-                iped_pedi=str(orcamento.pedi_nume),
-                iped_item=item['iped_item'],
-                iped_prod=item['iped_prod'],
-                iped_quan=item['iped_quan'],
-                iped_unit=item['iped_unit'],
-                iped_suto=item['iped_suto'],
-                iped_tota=item['iped_tota'],
-            )
+        if not itens_data:
+            messages.error(self.request, 'Inclua ao menos um item válido no orçamento.')
+            return self.form_invalid(form)
+        try:
+            for item in itens_data:
+                ItensOrcamento.objects.using(banco).create(
+                    iped_empr=empresa_id,
+                    iped_fili=filial_id,
+                    iped_pedi=str(orcamento.pedi_nume),
+                    iped_item=item['iped_item'],
+                    iped_prod=item['iped_prod'],
+                    iped_quan=item['iped_quan'],
+                    iped_unit=item['iped_unit'],
+                    iped_suto=item['iped_suto'],
+                    iped_tota=item['iped_tota'],
+                    iped_data=orcamento.pedi_data,
+                )
+        except Exception as e:
+            logger.exception("[OrcamentoCreateView] Erro ao salvar itens: %s", e)
+            messages.error(self.request, f'Erro ao salvar itens: {e}')
+            return self.form_invalid(form)
 
         messages.success(self.request, f'Orçamento #{orcamento.pedi_nume} criado com sucesso.')
         return redirect(self.get_success_url())

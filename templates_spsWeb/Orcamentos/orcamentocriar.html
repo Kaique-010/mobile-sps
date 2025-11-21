@@ -5,118 +5,140 @@
 
 {% block content %}
 <div class="container py-4">
-  <h3 class="card-title mb-4 fs-4 text-center">{% if form.instance.pk %}Editar Orçamento{% else %}Orçamento{% endif %} <i class="bi bi-file-break"></i></h3>
-  <div class="card shadow-sm">
-    <div class="card-body">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-
-      </div>
-
+  <div class="card shadow-lg border-0">
+    <div class="card-header text-center py-3">
+      <h3 class="mb-0 d-flex align-items-center justify-content-center">
+        <i class="bi bi-file-break me-2"></i>{% if form.instance.pk %}Editar Orçamento{% else %}Novo Orçamento{% endif %}
+      </h3>
+    </div>
+    <div class="card-body p-4">
       <form method="post" enctype="multipart/form-data" id="orcamento-form">
         {% csrf_token %}
 
-        <div class="row g-3">
+        <div class="row g-3 mb-4">
           <div class="col-md-3">
-            <label class="form-label" for="{{ form.pedi_data.id_for_label }}">Data</label>
+            <label class="form-label fw-semibold" for="{{ form.pedi_data.id_for_label }}"><i class="bi bi-calendar-event me-1"></i>Data</label>
             {{ form.pedi_data }}
           </div>
           <div class="col-md-5 position-relative">
-            <label class="form-label" for="{{ form.pedi_forn.id_for_label }}">Cliente</label>
-            <input type="text" class="form-control" id="autocomplete-cliente"
+            <label class="form-label fw-semibold" for="{{ form.pedi_forn.id_for_label }}"><i class="bi bi-person-circle me-1"></i>Cliente</label>
+            <input type="text" class="form-control form-control-lg" id="autocomplete-cliente"
               placeholder="Buscar cliente por nome ou código" {% if is_edit and cliente_display %}value="{{ cliente_display }}"{% endif %}>
             {{ form.pedi_forn }}
-            <small id="cliente-selecionado" class="text-muted"></small>
+            <small id="cliente-selecionado" class="text-success mt-1 d-block"></small>
           </div>
           <div class="col-md-4 position-relative">
-            <label class="form-label" for="{{ form.pedi_vend.id_for_label }}">Vendedor</label>
-            <input type="text" class="form-control" id="autocomplete-vendedor"
+            <label class="form-label fw-semibold" for="{{ form.pedi_vend.id_for_label }}"><i class="bi bi-person-badge me-1"></i>Vendedor</label>
+            <input type="text" class="form-control form-control-lg" id="autocomplete-vendedor"
               placeholder="Buscar vendedor por nome ou código" {% if is_edit and vendedor_display %}value="{{ vendedor_display }}"{% endif %}>
             {{ form.pedi_vend }}
-            <small id="vendedor-selecionado" class="text-muted"></small>
+            <small id="vendedor-selecionado" class="text-success mt-1 d-block"></small>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold" for="{{ form.pedi_stat.id_for_label }}"><i class="bi bi-flag me-1"></i>Status</label>
+            {{ form.pedi_stat }}
+          </div>
+        </div>
+
+        <hr class="my-4">
+
+        <ul class="nav nav-tabs nav-fill mb-5" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tab-itens" data-bs-toggle="tab" data-bs-target="#pane-itens" type="button" role="tab">
+              <i class="bi bi-cart me-2"></i>Itens do Orçamento
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-financeiro" data-bs-toggle="tab" data-bs-target="#pane-financeiro" type="button" role="tab">
+              <i class="bi bi-calculator me-2"></i>Resumo Financeiro
+            </button>
+          </li>
+        </ul>
+
+        <div class="tab-content">
+          <div class="tab-pane fade show active" id="pane-itens" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="mb-0 text-primary"><i class="bi bi-cart me-2"></i>Itens</h5>
+              <button type="button" class="btn btn-success btn-sm" id="add-item">
+                <i class="bi bi-plus-circle me-1"></i>Adicionar Item
+              </button>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-hover table-bordered align-middle">
+                <thead class="table-dark">
+                  <tr>
+                    <th style="min-width: 220px;">Produto</th>
+                    <th class="text-center" style="width: 120px;">Quantidade</th>
+                    <th class="text-end" style="width: 160px;">Preço Unitário</th>
+                    <th class="text-end" style="width: 160px;">Total</th>
+                    <th class="text-center" style="width: 120px;">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="itens-orcamento">
+                  {{ formset.management_form }}
+                  {% for form_item in formset %}
+                  <tr class="item-row">
+                    <td class="position-relative">
+                      {{ form_item.iped_prod }}
+                      <div class="d-none">{{ form_item.DELETE }}</div>
+                      <input type="text" class="form-control autocomplete-prod" data-index="{{ forloop.counter0 }}" placeholder="Buscar produto por nome ou código" {% if is_edit and form_item.initial.display_prod_text %}value="{{ form_item.initial.display_prod_text }}"{% endif %}>
+                    </td>
+                    <td>{{ form_item.iped_quan }}</td>
+                    <td>{{ form_item.iped_unit }}</td>
+                    <td class="text-end item-total">R$ 0,00</td>
+                    <td class="text-center"><button type="button" class="btn btn-sm btn-danger remove-item"><i class="bi bi-trash"></i></button></td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          <div class="col-md-8 ms-auto">
-            <div class="row g-3">
-              <div class="col-md-4">
-                <label class="form-label" for="id_pedi_topr">Subtotal</label>
-                <div class="input-group">
-                  <span class="input-group-text">R$</span>
-                  {{ form.pedi_topr }}
-                </div>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label" for="id_pedi_desc">Desconto</label>
-                <div class="input-group">
-                  <span class="input-group-text">R$</span>
-                  {{ form.pedi_desc }}
-                </div>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label" for="id_pedi_tota">Total</label>
-                <div class="input-group">
-                  <span class="input-group-text">R$</span>
-                  {{ form.pedi_tota }}
+          <div class="tab-pane fade" id="pane-financeiro" role="tabpanel">
+            <div class="row g-4 justify-content-center">
+              <div class="col-lg-8">
+                <div class="card border-primary shadow-sm">
+                  <div class="card-header text-center">
+                    <h5 class="mb-0"><i class="bi bi-calculator me-2"></i>Resumo Financeiro</h5>
+                  </div>
+                  <div class="card-body p-4">
+                    <div class="row g-3">
+                      <div class="col-md-4">
+                        <label class="form-label fw-semibold">Subtotal</label>
+                        <div class="input-group input-group-lg">
+                          <span class="input-group-text bg-light"><i class="bi bi-currency-dollar"></i></span>
+                          {{ form.pedi_topr }}
+                        </div>
+                      </div>
+                      <div class="col-md-4">
+                        <label class="form-label fw-semibold">Desconto</label>
+                        <div class="input-group input-group-lg">
+                          <span class="input-group-text bg-light"><i class="bi bi-tag"></i></span>
+                          {{ form.pedi_desc }}
+                        </div>
+                      </div>
+                      <div class="col-md-4">
+                        <label class="form-label fw-semibold">Total</label>
+                        <div class="input-group input-group-lg">
+                          <span class="input-group-text bg-success text-white"><i class="bi bi-cash"></i></span>
+                          {{ form.pedi_tota }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <hr class="my-4">
-        <h5 class="mb-4 fs-5 text-center">Itens do Orçamento</h5>
-        <div class="d-flex justify-content-between align-items-center mb-2">
-
-          <button type="button" class="btn btn-primary" id="add-item">
-            <i class="bi bi-plus-lg"></i> Adicionar Item
-          </button>
-        </div>
-
-        <div class="table-responsive">
-          <table class="table table-sm table-hover align-middle">
-            <thead class="table-light">
-              <tr>
-                <th style="min-width: 220px;">Produto</th>
-                <th class="text-end" style="width: 120px;">Quantidade</th>
-                <th class="text-end" style="width: 160px;">Preço Unitário</th>
-                <th class="text-end" style="width: 160px;">Total</th>
-                <th style="width: 120px;">Ações</th>
-              </tr>
-            </thead>
-            <tbody id="itens-orcamento">
-              {{ formset.management_form }}
-              {% for form_item in formset %}
-              <tr class="item-row">
-                <td class="position-relative">
-                  {{ form_item.iped_prod }}
-                  <div class="d-none">{{ form_item.DELETE }}</div>
-                  <input type="text" class="form-control autocomplete-prod" data-index="{{ forloop.counter0 }}"
-                    placeholder="Buscar produto por nome ou código" {% if is_edit and form_item.initial.display_prod_text %}value="{{ form_item.initial.display_prod_text }}"{% endif %}>
-                </td>
-                <td>
-                  {{ form_item.iped_quan }}
-                </td>
-                <td>
-                  {{ form_item.iped_unit }}
-                </td>
-                <td class="text-end item-total">R$ 0,00</td>
-                <td>
-                  <button type="button" class="btn btn-outline-danger btn-sm remove-item">
-                    <i class="bi bi-trash"></i> Remover
-                  </button>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-
-        <div class="d-flex justify-content-end gap-2 mt-3">
-          <button type="submit" class="btn btn-success">
-            <i class="bi bi-check2-circle"></i> {% if form.instance.pk %}Salvar Alterações{% else %}Criar Orçamento{% endif %}
-          </button>
-          <a href="/web/login/" data-slug-route="/web/{slug}/orcamentos/" class="btn btn-outline-secondary">
-            Voltar
+        <div class="mt-4 d-flex justify-content-end gap-3">
+          <a class="btn btn-outline-danger btn-lg" href="/web/login/" data-slug-route="/web/{slug}/orcamentos/">
+            <i class="bi bi-x-circle me-2"></i>Cancelar
           </a>
+          <button type="submit" class="btn btn-success btn-lg">
+            <i class="bi bi-check-circle me-2"></i>{% if form.instance.pk %}Salvar Orçamento{% else %}Criar Orçamento{% endif %}
+          </button>
         </div>
       </form>
     </div>

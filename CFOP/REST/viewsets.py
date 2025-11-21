@@ -2,16 +2,16 @@ from rest_framework import viewsets
 from rest_framework.response import Response
 from django.db.models import Q
 from core.utils import get_licenca_db_config
-from ..models import Cfop
+from ..models import CFOP
 
 
-class CfopBuscaViewSet(viewsets.ViewSet):
+class CFOPBuscaViewSet(viewsets.ViewSet):
     def list(self, request, *args, **kwargs):
         banco = get_licenca_db_config(request) or "default"
         empresa = request.session.get("empresa_id")
         q = request.query_params.get("q", "").strip()
 
-        qs = Cfop.objects.using(banco).filter(cfop_empr=empresa)
+        qs = CFOP.objects.using(banco).filter(cfop_empr=empresa)
         if q:
             qs = qs.filter(
                 Q(cfop_cfop__icontains=q) | Q(cfop_desc__iregex=q)

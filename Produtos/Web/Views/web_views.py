@@ -1,4 +1,6 @@
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView, View
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView, View, TemplateView
+from django.http import JsonResponse
+from django.db.models import Q
 from urllib.parse import quote_plus
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
@@ -13,7 +15,7 @@ from core.middleware import get_licenca_slug
 from django.db.models import Subquery, OuterRef, DecimalField, Value as V, IntegerField
 from django.db.models.functions import Coalesce, Cast
 
-from .models import (
+from ...models import (
     Produtos,
     Tabelaprecos,
     SaldoProduto,
@@ -22,9 +24,11 @@ from .models import (
     SubgrupoProduto,
     FamiliaProduto,
     Marca,
+    Ncm,
 )
+from CFOP.models import CFOP as CFOPModel, NCM_CFOP_DIF
 from django.utils import timezone
-from .forms import (
+from ..prod_forms import (
     ProdutosForm,
     TabelaprecosFormSet,
     TabelaprecosPlainFormSet,
@@ -401,6 +405,60 @@ class ProdutoUpdateView(DBAndSlugMixin, UpdateView):
         if not obj:
             raise Http404('Produto não encontrado')
         return obj
+
+
+def autocomplete_ncms(request, slug=None):
+    banco = get_licenca_db_config(request) or 'default'
+    term = (request.GET.get('term') or request.GET.get('q') or '').strip()
+    qs = Ncm.objects.using(banco).all()
+    if term:
+        qs = qs.filter(Q(ncm_codi__icontains=term) | Q(ncm_desc__icontains=term))
+    qs = qs.order_by('ncm_codi')[:30]
+    data = [{'value': obj.ncm_codi, 'label': f"{obj.ncm_codi} - {obj.ncm_desc}"} for obj in qs]
+    return JsonResponse({'results': data})
+
+
+def ncm_aliquotas(request, slug=None):
+    banco = get_licenca_db_config(request) or 'default'
+    empresa_id = request.session.get('empresa_id') or request.headers.get('X-Empresa') or request.GET.get('empresa')
+    ncm_code = (request.GET.get('ncm') or '').strip()
+    cfop_code = (request.GET.get('cfop') or '').strip()
+    resp = {'ncm': ncm_code, 'empresa': empresa_id, 'aliquotas': {}, 'override': {}}
+    if not ncm_code:
+        return JsonResponse(resp)
+    ncm = Ncm.objects.using(banco).filter(ncm_codi=ncm_code).first()
+    if ncm:
+        from Produtos.models import NcmAliquota as NcmAliqModel
+        qs = NcmAliqModel.objects.using(banco).filter(nali_ncm=ncm)
+        if empresa_id:
+            try:
+                qs = qs.filter(nali_empr=int(empresa_id))
+            except Exception:
+                qs = qs.filter(nali_empr=empresa_id)
+        aliq = qs.first()
+        if aliq:
+            resp['aliquotas'] = {
+                'ipi': aliq.nali_aliq_ipi,
+                'pis': aliq.nali_aliq_pis,
+                'cofins': aliq.nali_aliq_cofins,
+                'cbs': aliq.nali_aliq_cbs,
+                'ibs': aliq.nali_aliq_ibs,
+            }
+    if ncm and cfop_code:
+        cfop = CFOPModel.objects.using(banco).filter(cfop_codi=cfop_code).first()
+        if cfop and empresa_id:
+            override = NCM_CFOP_DIF.objects.using(banco).filter(ncm=ncm, cfop=cfop, ncm_empr=int(empresa_id)).first()
+            if override:
+                resp['override'] = {
+                    'ipi': override.ncm_ipi_dif,
+                    'pis': override.ncm_pis_dif,
+                    'cofins': override.ncm_cofins_dif,
+                    'cbs': override.ncm_cbs_dif,
+                    'ibs': override.ncm_ibs_dif,
+                    'icms': override.ncm_icms_aliq_dif,
+                    'st': override.ncm_st_aliq_dif,
+                }
+    return JsonResponse(resp)
 
 # Grupos
 class GrupoListView(DBAndSlugMixin, ListView):
@@ -981,3 +1039,181 @@ class ProdutoFotoView(DBAndSlugMixin, View):
             # Sem foto, retornar 404 para que o template use placeholder
             raise Http404('Foto não disponível')
         return HttpResponse(bytes(foto), content_type='image/jpeg')
+
+
+
+class SaldosDashboardView(DBAndSlugMixin, TemplateView):
+    template_name = 'Produtos/saldos.html'
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['slug'] = self.slug
+        banco = self.db_alias
+        empresa = self.empresa_id or self.request.session.get('empresa_id') or self.request.headers.get('X-Empresa') or 1
+        filial = self.filial_id or self.request.session.get('filial_id') or self.request.headers.get('X-Filial') or 1
+
+        # Filtros
+        raw_list = self.request.GET.getlist('produto')
+        raw_str = (self.request.GET.get('produto') or '').strip()
+        if raw_str and not raw_list:
+            raw_list = [x.strip() for x in raw_str.split(',') if x.strip()]
+        produtos_sel = [str(x) for x in raw_list if x]
+        data_inicio = (self.request.GET.get('data_inicio') or '').strip()
+        data_fim = (self.request.GET.get('data_fim') or '').strip()
+
+        # Defaults de período: últimos 30 dias
+        from datetime import date, timedelta
+        if not data_inicio or not data_fim:
+            hoje = date.today()
+            inicio = hoje - timedelta(days=30)
+            data_inicio = data_inicio or inicio.strftime('%Y-%m-%d')
+            data_fim = data_fim or hoje.strftime('%Y-%m-%d')
+
+        # Produtos para o select
+        try:
+            produtos_qs = Produtos.objects.using(banco).all()
+            if empresa:
+                produtos_qs = produtos_qs.filter(prod_empr=str(empresa))
+            ctx['produtos'] = produtos_qs.order_by('prod_nome')[:300]
+        except Exception:
+            ctx['produtos'] = []
+
+        # Entradas e Saídas agregadas por produto
+        entradas_data = []
+        saidas_data = []
+        try:
+            from Entradas_Estoque.models import EntradaEstoque
+            from Saidas_Estoque.models import SaidasEstoque
+            from datetime import datetime
+            di = datetime.strptime(data_inicio, '%Y-%m-%d').date()
+            df = datetime.strptime(data_fim, '%Y-%m-%d').date()
+
+            ent_qs = EntradaEstoque.objects.using(banco).filter(entr_empr=int(empresa), entr_fili=int(filial), entr_data__range=(di, df))
+            sai_qs = SaidasEstoque.objects.using(banco).filter(said_empr=int(empresa), said_fili=int(filial), said_data__range=(di, df))
+            if produtos_sel:
+                ent_qs = ent_qs.filter(entr_prod__in=produtos_sel)
+                sai_qs = sai_qs.filter(said_prod__in=produtos_sel)
+
+            from django.db.models import Sum
+            ent_group = ent_qs.values('entr_prod').annotate(total_entradas=Sum('entr_quan')).order_by('entr_prod')[:200]
+            sai_group = sai_qs.values('said_prod').annotate(total_saidas=Sum('said_quan')).order_by('said_prod')[:200]
+            entradas_data = list(ent_group)
+            saidas_data = list(sai_group)
+        except Exception:
+            entradas_data = []
+            saidas_data = []
+
+        chart_labels = []
+        chart_entradas = []
+        chart_saidas = []
+        try:
+            cods_ent = [e.get('entr_prod') for e in entradas_data]
+            cods_sai = [s.get('said_prod') for s in saidas_data]
+            cods = sorted(set([c for c in cods_ent + cods_sai if c]))
+            ent_map = {e.get('entr_prod'): float(e.get('total_entradas') or 0) for e in entradas_data}
+            sai_map = {s.get('said_prod'): float(s.get('total_saidas') or 0) for s in saidas_data}
+            nomes = {}
+            if cods:
+                prods_nomes = Produtos.objects.using(banco).filter(prod_codi__in=cods)
+                nomes = {p.prod_codi: p.prod_nome for p in prods_nomes}
+            for c in cods:
+                chart_labels.append(nomes.get(c, c))
+                chart_entradas.append(ent_map.get(c, 0))
+                chart_saidas.append(sai_map.get(c, 0))
+        except Exception:
+            chart_labels = []
+            chart_entradas = []
+            chart_saidas = []
+
+        try:
+            combined = []
+            for i, lbl in enumerate(chart_labels):
+                ve = float(chart_entradas[i] if i < len(chart_entradas) else 0)
+                vs = float(chart_saidas[i] if i < len(chart_saidas) else 0)
+                combined.append((lbl, ve, vs, ve + vs))
+            combined.sort(key=lambda x: x[3], reverse=True)
+            combined = combined[:30]
+            chart_labels = [c[0] for c in combined]
+            chart_entradas = [c[1] for c in combined]
+            chart_saidas = [c[2] for c in combined]
+        except Exception:
+            pass
+
+        try:
+            kpi_total_entradas = float(sum(chart_entradas))
+            kpi_total_saidas = float(sum(chart_saidas))
+            kpi_produtos_mov = int(len(chart_labels))
+        except Exception:
+            kpi_total_entradas = 0.0
+            kpi_total_saidas = 0.0
+            kpi_produtos_mov = 0
+
+        # Saldos atuais por produto
+        saldos_list = []
+        try:
+            saldos_qs = SaldoProduto.objects.using(banco).filter(empresa=str(empresa), filial=str(filial))
+            if produtos_sel:
+                saldos_qs = saldos_qs.filter(produto_codigo__in=produtos_sel)
+            saldos_qs = saldos_qs.order_by('produto_codigo')[:300]
+            codigos = [s.produto_codigo for s in saldos_qs]
+            nomes_map = {}
+            if codigos:
+                prods = Produtos.objects.using(banco).filter(prod_codi__in=codigos)
+                nomes_map = {p.prod_codi: p.prod_nome for p in prods}
+            for s in saldos_qs:
+                saldos_list.append({
+                    'prod_nome': nomes_map.get(s.produto_codigo, s.produto_codigo),
+                    'saldo_atual': getattr(s, 'saldo_estoque', 0),
+                })
+        except Exception:
+            saldos_list = []
+
+        # Detalhe de saldo do produto selecionado
+        saldo_prod_sel = None
+        if produtos_sel:
+            try:
+                sp = SaldoProduto.objects.using(banco).filter(produto_codigo__in=produtos_sel, empresa=str(empresa), filial=str(filial)).first()
+                if sp:
+                    saldo_prod_sel = getattr(sp, 'saldo_estoque', None)
+            except Exception:
+                saldo_prod_sel = None
+
+        filtros_ctx = {
+            'empresa': empresa,
+            'filial': filial,
+            'data_inicial': data_inicio,
+            'data_final': data_fim,
+            'produto': ','.join(produtos_sel) if produtos_sel else '',
+        }
+
+        ctx.update({
+            'entradas_data': entradas_data,
+            'saidas_data': saidas_data,
+            'saldos_produtos': saldos_list,
+            'produtos_selecionados': produtos_sel,
+            'saldo_produto_selecionado': saldo_prod_sel,
+            'data_inicio': data_inicio,
+            'data_fim': data_fim,
+            'chart_labels': chart_labels,
+            'chart_entradas': chart_entradas,
+            'chart_saidas': chart_saidas,
+            'filtros': filtros_ctx,
+            'kpi_total_entradas': kpi_total_entradas,
+            'kpi_total_saidas': kpi_total_saidas,
+            'kpi_produtos_mov': kpi_produtos_mov,
+        })
+        return ctx
+
+def autocomplete_produtos(request, slug=None):
+    banco = get_licenca_db_config(request) or 'default'
+    empresa_id = request.session.get('empresa_id', 1)
+    term = (request.GET.get('term') or request.GET.get('q') or '').strip()
+    qs = Produtos.objects.using(banco).filter(prod_empr=str(empresa_id))
+    if term:
+        if term.isdigit():
+            qs = qs.filter(prod_codi__icontains=term)
+        else:
+            qs = qs.filter(prod_nome__icontains=term)
+    qs = qs.order_by('prod_nome')[:20]
+    data = [{'id': str(obj.prod_codi), 'text': f"{obj.prod_codi} - {obj.prod_nome}"} for obj in qs]
+    return JsonResponse({'results': data})

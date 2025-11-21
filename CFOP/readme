@@ -1,0 +1,97 @@
+                               ┌─────────────────────────┐
+                               │   INÍCIO DO PROCESSO    │
+                               │ (Emissão Nota/Pedido)   │
+                               └──────────────┬──────────┘
+                                              │
+                                              ▼
+                      ┌────────────────────────────────────────┐
+                      │ 1. Usuário seleciona o CLIENTE         │
+                      └──────────────┬─────────────────────────┘
+                                     │
+                                     ▼
+                 ┌──────────────────────────────────────────────────┐
+                 │ 2. Sistema captura automaticamente:              │
+                 │     - UF_DESTINO (do cliente)                   │
+                 │     - TIPO_CLIENTE (contribuinte? final?)       │
+                 │     - UF_ORIGEM (da empresa)                    │
+                 └────────────────────┬────────────────────────────┘
+                                      │
+                                      ▼
+                ┌───────────────────────────────────────────────────┐
+                │ 3. Usuário escolhe TIPO DE OPERAÇÃO:             │
+                │      - Venda                                      │
+                │      - Devolução                                  │
+                │      - Remessa                                    │
+                │      - Transferência                              │
+                │      - Bonificação                                │
+                │      (etc.)                                       │
+                └───────────────────────┬──────────────────────────┘
+                                        │
+                                        ▼
+   ┌──────────────────────────────────────────────────────────────────────┐
+   │ 4. SISTEMA DEFINE O CFOP AUTOMATICAMENTE                             │
+   │    com base no MapaCFOP:                                            │
+   │       - operação (venda, remessa...)                                 │
+   │       - relação UF_origem x UF_destino (intra/inter/exterior)       │
+   │                                                                      │
+   │    Exemplo:                                                          │
+   │       Venda + mesmo estado  → 5102                                   │
+   │       Venda + outro estado  → 6102                                   │
+   │       Venda + exterior      → 7102                                   │
+   └─────────────────────────────┬────────────────────────────────────────┘
+                                 │
+                                 ▼
+                  ┌────────────────────────────────────────────┐
+                  │ 5. Usuário adiciona PRODUTOS               │
+                  └──────────────────────┬──────────────────────┘
+                                         │
+                                         ▼
+         ┌──────────────────────────────────────────────────────────┐
+         │ 6. Sistema captura o NCM do produto  com os indices IBPT                    │
+         │    + alíquotas IBPT (IPI, PIS, COFINS, CBS, IBS)         │
+         └───────────────────────────────┬──────────────────────────┘
+                                         │
+                                         ▼
+      ┌─────────────────────────────────────────────────────────────────┐
+      │ 7. SISTEMA APLICA AS REGRAS FISCAIS COMBINADAS:                 │
+      │      - CFOP (define quais tributos entram)                      │
+      │      - NCM (define alíquotas padrão oficial IBPT)               │
+      │      - MapaUF (define ICMS, ICMS-ST, interestadual etc.)       │
+      └──────────────────────────────┬──────────────────────────────────┘
+                                     │
+                                     ▼
+       ┌──────────────────────────────────────────────────────────────┐
+       │ 8. SISTEMA VERIFICA EXCEÇÕES (Overrides por NCM+CFOP):       │
+       │        existe override?                                      │
+       │        - se SIM → aplica valores especiais                   │
+       │        - se NÃO → usa padrão IBPT + CFOP                     │
+       └─────────────────────────────┬────────────────────────────────┘
+                                     │
+                                     ▼
+       ┌─────────────────────────────────────────────────────────────┐
+       │ 9. MOTOR FISCAL CALCULA:                                    │
+       │      - IPI                                                  │
+       │      - ICMS (interno/inter/DIFAL/ST)                        │
+       │      - PIS                                                  │
+       │      - COFINS                                               │
+       │      - CBS/IBS                                              │
+       │      - Total de tributos                                    │
+       │      (tudo conforme CFOP automático + NCM IBPT)             │
+       └──────────────────────────────┬──────────────────────────────┘
+                                      │
+                                      ▼
+                      ┌────────────────────────────────────┐
+                      │ 10. Sistema preenche ITEM da nota  │
+                      │     com os cálculos prontos        │
+                      └──────────────────────┬─────────────┘
+                                             │
+                                             ▼
+                     ┌────────────────────────────────────────┐
+                     │ 11. Mostra totais da nota e tributos   │
+                     │     ao usuário                         │
+                     └─────────────────────────┬──────────────┘
+                                               │
+                                               ▼
+                        ┌───────────────────────────────────────┐
+                        │     FIM – NOTA COMPLETA E CORRETA     │
+                        └───────────────────────────────────────┘

@@ -2,12 +2,12 @@ from django.views.generic import CreateView
 from django.contrib import messages
 from django.shortcuts import redirect
 from core.utils import get_licenca_db_config
-from ...models import Cfop
-from ..forms import CfopForm
+from ...models import CFOP
+from ..forms import CFOPForm
 
-class CfopCreateView(CreateView):
-    model = Cfop
-    form_class = CfopForm
+class CFOPCreateView(CreateView):
+    model = CFOP
+    form_class = CFOPForm
     template_name = 'CFOP/cfop_create.html'
 
     def dispatch(self, request, *args, **kwargs):
@@ -28,6 +28,13 @@ class CfopCreateView(CreateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['slug'] = self.slug
+        try:
+            qs = CFOP.objects.using(self.db_alias).all()
+            if self.empresa_id:
+                qs = qs.filter(cfop_empr=int(self.empresa_id))
+            ctx['cfops_all'] = qs.order_by('cfop_codi')
+        except Exception:
+            ctx['cfops_all'] = []
         form = ctx.get('form')
         icms_extra = {'cfop_trib_cst_icms','cfop_trib_icms','cfop_trib_redu','cfop_trib_moda_base','cfop_trib_moda_bast','cfop_trib_mva','cfop_trib_redu_st','cfop_redu_icms_para','cfop_conf_vend_st','cfop_perc_dife_aliq','cfop_nao_soma_mva','cfop_nao_trib_icms'}
         ipi_extra = {'cfop_trib_ipi_trib','cfop_trib_ipi_nao_trib','cfop_trib_aliq_ipi','cfop_nao_trib_ipi'}

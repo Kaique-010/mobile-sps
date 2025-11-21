@@ -24,12 +24,23 @@ TIPO_FINANCEIRO = [
 ]
 
 STATUS_PEDIDO = [
-    (0, 'Pendente'),
-    (1, 'Processando'),
-    (2, 'Enviado'),
-    (3, 'Concluído'),
-    (4, 'Cancelado'),
+    ('0', 'Pendente'),
+    ('1', 'Processando'),
+    ('2', 'Enviado'),
+    ('3', 'Concluído'),
+    ('4', 'Cancelado'),
 ]
+
+TIPO_OPER_CHOICES = [
+        ("VENDA", "Venda"),
+        ("DEVOLUCAO_VENDA", "Devolução de Venda"),
+        ("REMESSA", "Remessa"),
+        ("TRANSFERENCIA", "Transferência"),
+        ("BONIFICACAO", "Bonificação"),
+        ("EXPORTACAO", "Exportação"),
+    ]
+
+    
 
 class PedidoVenda(models.Model):
     pedi_empr = models.IntegerField()
@@ -42,11 +53,12 @@ class PedidoVenda(models.Model):
     pedi_canc = models.BooleanField(default=False)
     pedi_fina = models.CharField(max_length=100, choices=TIPO_FINANCEIRO, default='0')
     pedi_vend = models.CharField( db_column='pedi_vend', max_length=15, default=0)  
-    pedi_stat = models.CharField(max_length=50, choices=STATUS_PEDIDO, default=0)
+    pedi_stat = models.CharField(max_length=50, choices=STATUS_PEDIDO, default='0')
     pedi_form_rece = models.CharField(max_length=100, choices=FORMAS_RECEBIMENTO, default='54')
     pedi_obse = models.TextField(blank=True, null=True)
     pedi_desc = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
     pedi_liqu = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    pedi_tipo_oper = models.CharField(max_length=30, choices=TIPO_OPER_CHOICES, default='VENDA') 
 
 
     class Meta:
@@ -56,6 +68,25 @@ class PedidoVenda(models.Model):
 
     def __str__(self):
         return f"Pedido {self.pedi_nume} - {self.pedi_forn}"
+    
+    def get_uf_origem(self, banco=None):
+        try:
+            from Licencas.models import Filiais
+            qs = Filiais.objects
+            if banco:
+                qs = qs.using(banco)
+            f = qs.filter(empr_empr=int(self.pedi_empr), empr_codi=int(self.pedi_fili)).first()
+            return (getattr(f, 'empr_esta', '') or '') if f else ''
+        except Exception:
+            return ''
+    
+    @property
+    def cliente(self):
+        try:
+            from Entidades.models import Entidades
+            return Entidades.objects.filter(enti_clie=self.pedi_forn, enti_empr=self.pedi_empr).first()
+        except Exception:
+            return None
     
     @property
     def itens(self):
@@ -98,6 +129,21 @@ class Itenspedidovenda(models.Model):
         db_table = 'itenspedidovenda'
         unique_together = (('iped_empr', 'iped_fili', 'iped_pedi', 'iped_item'),)
         managed = 'false'
+
+    @property
+    def pedido(self):
+        try:
+            return PedidoVenda.objects.filter(pedi_empr=self.iped_empr, pedi_fili=self.iped_fili, pedi_nume=int(self.iped_pedi)).first()
+        except Exception:
+            return None
+
+    @property
+    def produto(self):
+        try:
+            from Produtos.models import Produtos
+            return Produtos.objects.filter(prod_codi=self.iped_prod, prod_empr=str(self.iped_empr)).first()
+        except Exception:
+            return None
 
 
 

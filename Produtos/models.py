@@ -2,6 +2,52 @@ from django.db import models
 from django.utils.html import mark_safe
 
 
+class Ncm(models.Model):
+    ncm_codi = models.CharField(max_length=10, primary_key=True)
+    ncm_desc = models.TextField(blank=True, null=True)
+    field_log_data = models.DateField(db_column='_log_data', blank=True, null=True)  # Field renamed because it started with '_'.
+    field_log_time = models.TimeField(db_column='_log_time', blank=True, null=True)  # Field renamed because it started with '_'.
+
+    class Meta:
+        managed = False
+        db_table = 'ncm'
+
+class NcmAliquota(models.Model):
+    nali_id = models.AutoField(primary_key=True)
+    nali_empr = models.IntegerField(default=1)
+    nali_ncm = models.OneToOneField(Ncm, on_delete=models.CASCADE, db_column='nali_ncm', to_field='ncm_codi')
+
+    nali_aliq_ipi = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    nali_aliq_pis = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    nali_aliq_cofins = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    nali_aliq_cbs = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    nali_aliq_ibs = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+
+    class Meta:
+        db_table = "ncm_aliquotas_ibpt"
+
+    def __str__(self):
+        return f"Aliquotas IBPT - {self.nali_ncm.ncm_codi}"
+
+    @property
+    def aliq_ipi(self):
+        return self.nali_aliq_ipi
+
+    @property
+    def aliq_pis(self):
+        return self.nali_aliq_pis
+
+    @property
+    def aliq_cofins(self):
+        return self.nali_aliq_cofins
+
+    @property
+    def aliq_cbs(self):
+        return self.nali_aliq_cbs
+
+    @property
+    def aliq_ibs(self):
+        return self.nali_aliq_ibs
 
 
 class Lote(models.Model):

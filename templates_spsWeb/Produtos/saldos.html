@@ -1,180 +1,186 @@
 {% extends 'base.html' %}
-
-{% block title %}Extrato de Produtos{% endblock %}
-
+{% load static %}
 {% block content %}
-<style>
-    h2 {
-        text-align: center;
-        color: rgb(255, 255, 255);
-    }
+<link rel="stylesheet" href="{% static 'css/ui.css' %}">
+<div class="container py-4 dashboard-pedidos">
+  <div class="container align-items-center">
+    <h2 class="page-title text-center mb-5">
+      <i class="bi bi-graph-up"></i> Saldos de Estoque
+    </h2>
+  </div>
 
-    h1 {
-        text-align: center;
-        color: rgb(255, 255, 255);
-        margin-bottom: 20px;
-    }
-
-    .btn-primary {
-        text-align: center;
-        background-color: rgb(84, 126, 104);
-    }
-
-    .btn-primary:hover {
-        background-color: #000000;
-    }
-
-    .card {
-        background: linear-gradient(#0a2b2e, #000000);
-        border-radius: 25px;
-        box-shadow: 0 10px 16px rgba(0, 0, 0, 0.1);
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .card:hover {
-        transform: scale(1.02);
-        box-shadow: 0 15px 25px rgba(0, 0, 0, 0.2);
-    }
-
-    .card-body {
-        backdrop-filter: blur(20px);
-        padding: 80px;
-        color: aliceblue;
-    }
-
-    .form-select,
-    .form-control {
-        border-radius: 10px;
-    }
-
-    .container {
-        max-width: 70%;
-        margin-top: 150px;
-    }
-
-    canvas {
-        max-height: 300px;
-        width: 100%;
-    }
-
-    .list-group-item {
-        background-color: transparent;
-        color: rgb(255, 255, 255);
-        text-shadow: 1px 1px 5px rgba(0, 0, 0, 0.5);
-    }
-</style>
-
-<div class="container mt-12">
-    <div class="card">
-        <div class="card-body">
-            <h1>Extrato de Entradas e Saídas</h1>
-            <div class="container-filtros">
-                <form method="GET" class="row g-3 mb-4">
-                    <div class="col-md-4">
-                        <label for="produto" class="form-label">Produto</label>
-                        <select name="produto" id="produto" class="form-select">
-                            <option value="">Todos os Produtos</option>
-                            {% for produto in produtos %}
-                            <option value="{{ produto.prod_codi }}" 
-                            {% if produto_selecionado == produto.prod_codi%}selected{% endif %}>{{ produto.prod_nome }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label for="data_inicio" class="form-label">Data Início</label>
-                        <input type="date" name="data_inicio" id="data_inicio" class="form-control"
-                            value="{{ data_inicio }}">
-                    </div>
-                    <div class="col-md-3">
-                        <label for="data_fim" class="form-label">Data Fim</label>
-                        <input type="date" name="data_fim" id="data_fim" class="form-control" value="{{ data_fim }}">
-                    </div>
-                    <div class="col-md-2 d-grid">
-                        <button type="submit" class="btn btn-primary mt-4">Filtrar</button>
-                    </div>
-                </form>
-            </div>
-
-            <!-- Gráfico de Entradas e Saídas -->
-            <canvas id="graficoSaldo"></canvas>
-            <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-            <script>
-                var ctx = document.getElementById('graficoSaldo').getContext('2d');
-                var chart = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: [{% for entrada in entradas_data %}"{{ entrada.entr_prod }}",{% endfor %}],
-                datasets: [
-                    {
-                        label: 'Entradas',
-                        backgroundColor: 'rgba(54, 162, 235, 0.7)', // Azul mais moderno
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 1,
-                        data: [{% for entrada in entradas_data %}{{ entrada.total_entradas }}, {% endfor %}]
-                            },
-                {
-                    label: 'Saídas',
-                        backgroundColor: 'rgba(255, 99, 132, 0.7)', // Rosa mais suave
-                            borderColor: 'rgba(255, 99, 132, 1)',
-                                borderWidth: 1,
-                                    data: [{% for saida in saidas_data %} { { saida.total_saidas } }, {% endfor %}]
-                            }
-                        ]
-                    },
-                options: {
-                    responsive: true,
-                        maintainAspectRatio: false,
-                            scales: {
-                        y: {
-                            beginAtZero: true,
-                                ticks: {
-                                stepSize: 10
-                            },
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.2)'
-                            }
-                        },
-                        x: {
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.2)'
-                            }
-                        }
-                    },
-                    plugins: {
-                        tooltip: {
-                            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                                bodyColor: '#fff',
-                                    borderColor: '#fff',
-                                        borderWidth: 1
-                        }
-                    },
-                    hover: {
-                        mode: 'nearest',
-                            intersect: true
-                    }
-                }
-                });
-            </script>
-
-            {% if produto_selecionado %}
-            <ul class="list-group">
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    {{ produto_selecionado }}
-                    <h2>Saldo Atual: <span class="badge bg-primary">{{ saldo_produto_selecionado }}</span></h2>
-                </li>
-            </ul>
-            {% else %}
-            <ul class="list-group">
-                {% for produto in saldos_produtos %}
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    {{ produto.prod_nome }}
-                    <span class="badge bg-primary">{{ produto.saldo_atual }}</span>
-                </li>
-                {% endfor %}
-            </ul>
-            {% endif %}
-        </div>
+  <form class="row g-3 mb-3 filters">
+    <div class="col-md-4">
+      <label class="form-label">Produto</label>
+      <div id="produtosSelecionados" class="d-flex flex-wrap gap-2 mb-2"></div>
+      <div id="hiddenProdutosContainer"></div>
+      <div id="autoProdContainer" class="position-relative">
+        <input type="text" id="saldoProdutoBusca" class="form-control" placeholder="Digite código ou nome" value="" autocomplete="off" />
+        <div id="saldoProdutoSugestoes" class="list-group position-absolute w-100" style="z-index:10; max-height:280px; overflow:auto;"></div>
+      </div>
     </div>
+    <div class="col-md-3">
+      <label class="form-label">Data inicial</label>
+      <input type="date" name="data_inicio" id="saldoDataInicial" class="form-control" value="{{ filtros.data_inicial }}" />
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Data final</label>
+      <input type="date" name="data_fim" id="saldoDataFinal" class="form-control" value="{{ filtros.data_final }}" />
+    </div>
+    <div class="col-12 d-flex justify-content-end gap-2">
+      <button class="btn btn-outline-secondary" type="button" id="btnLimpar">Limpar</button>
+      <button class="btn btn-primary" type="submit">Filtrar</button>
+    </div>
+  </form>
+
+  <div class="row g-3">
+    <div class="col-md-4">
+      <div class="card kpi-card"><div class="card-body"><div class="label">Total Entradas</div><div class="value">{{ kpi_total_entradas }}</div></div></div>
+    </div>
+    <div class="col-md-4">
+      <div class="card kpi-card"><div class="card-body"><div class="label">Total Saídas</div><div class="value">{{ kpi_total_saidas }}</div></div></div>
+    </div>
+    <div class="col-md-4">
+      <div class="card kpi-card"><div class="card-body"><div class="label">Produtos com movimento</div><div class="value">{{ kpi_produtos_mov }}</div></div></div>
+    </div>
+    <div class="col-12">
+      <div class="card chart-card">
+        <div class="card-header">Entradas vs Saídas</div>
+        <div class="card-body"><div class="chart-wrapper" style="height:420px"><canvas id="chartEntradasSaidas"></canvas></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mt-3">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">Saldos atuais</div>
+        <div class="card-body">
+          {% if produto_selecionado %}
+            <ul class="list-group">
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                {{ produto_selecionado }}
+                <span class="badge bg-primary">{{ saldo_produto_selecionado }}</span>
+              </li>
+            </ul>
+          {% else %}
+            <ul class="list-group">
+              {% for produto in saldos_produtos %}
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                {{ produto.prod_nome }}
+                <span class="badge bg-primary">{{ produto.saldo_atual }}</span>
+              </li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const labels = [
+    {% for l in chart_labels %}'{{ l }}'{% if not forloop.last %},{% endif %}{% endfor %}
+  ];
+  const entradas = [
+    {% for v in chart_entradas %}{{ v|default:0 }}{% if not forloop.last %},{% endif %}{% endfor %}
+  ];
+  const saidas = [
+    {% for v in chart_saidas %}{{ v|default:0 }}{% if not forloop.last %},{% endif %}{% endfor %}
+  ];
+
+  let chartES;
+  function renderChart() {
+    const ctx = document.getElementById('chartEntradasSaidas')?.getContext('2d');
+    if (chartES) chartES.destroy();
+    if (ctx) chartES = new Chart(ctx, {
+      type:'bar',
+      data:{ labels: labels, datasets:[
+        { label:'Entradas', data: entradas, backgroundColor:'rgba(13,110,253,.35)', borderColor:'rgba(13,110,253,.9)', borderWidth:1.5, borderRadius:6, maxBarThickness:42 },
+        { label:'Saídas', data: saidas, backgroundColor:'rgba(220,53,69,.35)', borderColor:'rgba(220,53,69,.9)', borderWidth:1.5, borderRadius:6, maxBarThickness:42 }
+      ]},
+      options:{ maintainAspectRatio:false, responsive:true, plugins:{ legend:{ display:true } }, indexAxis:'y' }
+    });
+  }
+  document.addEventListener('DOMContentLoaded', renderChart);
+
+  (function setupAutocomplete(){
+    const input = document.getElementById('saldoProdutoBusca');
+    const hiddenContainer = document.getElementById('hiddenProdutosContainer');
+    const chips = document.getElementById('produtosSelecionados');
+    const list = document.getElementById('saldoProdutoSugestoes');
+    const url = "{% url 'autocomplete_produtos' slug=slug %}";
+    let debounce;
+    const selecionados = new Map();
+    function addHidden(name, value){
+      const h = document.createElement('input');
+      h.type = 'hidden';
+      h.name = name;
+      h.value = value;
+      hiddenContainer.appendChild(h);
+      return h;
+    }
+    function addChip(id, text){
+      if (selecionados.has(id)) return;
+      const h = addHidden('produto', id);
+      const span = document.createElement('span');
+      span.className = 'badge bg-primary d-inline-flex align-items-center gap-2';
+      span.textContent = text;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn btn-sm btn-light';
+      btn.textContent = 'x';
+      btn.addEventListener('click', ()=>{ span.remove(); h.remove(); selecionados.delete(id); });
+      span.appendChild(btn);
+      chips.appendChild(span);
+      selecionados.set(id, { h, span });
+    }
+    (function preload(){
+      {% for pid in produtos_selecionados %}
+        addChip('{{ pid }}', '{{ pid }}');
+      {% endfor %}
+    })();
+    async function fetchResults(term){
+      try{
+        const r = await fetch(url + `?q=${encodeURIComponent(term)}`, { credentials:'same-origin' });
+        const j = await r.json();
+        const results = j.results || [];
+        list.innerHTML = '';
+        results.forEach(item=>{
+          const a = document.createElement('a');
+          a.href = '#';
+          a.className = 'list-group-item list-group-item-action';
+          a.textContent = item.text;
+          a.dataset.id = item.id;
+          a.addEventListener('click', (ev)=>{
+            ev.preventDefault();
+            addChip(item.id, item.text);
+            input.value = '';
+            list.innerHTML = '';
+          });
+          list.appendChild(a);
+        });
+      }catch(e){ list.innerHTML=''; }
+    }
+    input.addEventListener('input', (e)=>{
+      const term = e.target.value.trim();
+      clearTimeout(debounce);
+      list.innerHTML='';
+      if(term.length < 2) return;
+      debounce = setTimeout(()=> fetchResults(term), 250);
+    });
+    document.addEventListener('click', (e)=>{ if(!document.getElementById('autoProdContainer').contains(e.target)) list.innerHTML=''; });
+    document.getElementById('btnLimpar').addEventListener('click', ()=>{
+      list.innerHTML='';
+      input.value='';
+      hiddenContainer.innerHTML='';
+      chips.innerHTML='';
+      selecionados.clear();
+      const di=document.getElementById('saldoDataInicial'); if(di) di.value='';
+      const df=document.getElementById('saldoDataFinal'); if(df) df.value='';
+    });
+  })();
+</script>
 {% endblock %}

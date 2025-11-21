@@ -97,6 +97,75 @@ CREATE TABLE IF NOT EXISTS django_migrations (
     applied TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
+--cria a tabela cfopweb se não existir
+CREATE TABLE IF NOT EXISTS cfopweb (
+    cfop_id SERIAL PRIMARY KEY,
+    cfop_empr INTEGER NOT NULL,
+    cfop_codi VARCHAR(10) NOT NULL UNIQUE,
+    cfop_desc VARCHAR(255) NOT NULL,
+    cfop_exig_ipi BOOLEAN NOT NULL DEFAULT FALSE,
+    cfop_exig_icms BOOLEAN NOT NULL DEFAULT FALSE,
+    cfop_exig_pis_cofins BOOLEAN NOT NULL DEFAULT FALSE,
+    cfop_exig_cbs BOOLEAN NOT NULL DEFAULT FALSE,
+    cfop_exig_ibs BOOLEAN NOT NULL DEFAULT FALSE,
+    cfop_gera_st BOOLEAN NOT NULL DEFAULT FALSE,
+    cfop_gera_difal BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+ALTER TABLE cfopweb ADD COLUMN IF NOT EXISTS cfop_exig_pis_cofins BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE cfopweb ADD COLUMN IF NOT EXISTS cfop_exig_cbs BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE cfopweb ADD COLUMN IF NOT EXISTS cfop_exig_ibs BOOLEAN NOT NULL DEFAULT FALSE;
+
+--criar a tabela tabela_icms se não existir
+CREATE TABLE IF NOT EXISTS tabela_icms (
+    tabe_id SERIAL PRIMARY KEY,
+    tabe_empr INTEGER NOT NULL,
+    tabe_uf_orig VARCHAR(2) NOT NULL,
+    tabe_uf_dest VARCHAR(2) NOT NULL,
+    tabe_aliq_interna NUMERIC(5,2) NOT NULL,
+    tabe_aliq_inter NUMERIC(5,2) NOT NULL,
+    tabe_mva_st NUMERIC(6,2),
+    UNIQUE(tabe_empr, tabe_uf_orig, tabe_uf_dest)
+);
+
+--criar a tabela ncm_aliquotas_ibpt se não existir
+CREATE TABLE IF NOT EXISTS ncm_aliquotas_ibpt (
+    nali_id SERIAL PRIMARY KEY,
+    nali_empr INTEGER NOT NULL,
+    nali_ncm VARCHAR(10) NOT NULL,
+    nali_aliq_ipi NUMERIC(6,2) NOT NULL,
+    nali_aliq_pis NUMERIC(6,2) NOT NULL,
+    nali_aliq_cofins NUMERIC(6,2) NOT NULL,
+    nali_aliq_cbs NUMERIC(6,2) NOT NULL,
+    nali_aliq_ibs NUMERIC(6,2) NOT NULL,
+    UNIQUE(nali_empr, nali_ncm)
+);
+
+-- criar a tabela mapa_cfop se não existir
+CREATE TABLE IF NOT EXISTS mapa_cfop (
+    id SERIAL PRIMARY KEY,
+    tipo_oper VARCHAR(30) NOT NULL,
+    uf_origem VARCHAR(2) NOT NULL,
+    uf_destino VARCHAR(2) NOT NULL,
+    cfop_id INTEGER NOT NULL REFERENCES cfopweb(cfop_id),
+    UNIQUE(tipo_oper, uf_origem, uf_destino)
+);
+
+-- criar a tabela ncm_cfop_dif se não existir
+CREATE TABLE IF NOT EXISTS ncm_cfop_dif (
+    ncmdif_id SERIAL PRIMARY KEY,
+    ncm_id INTEGER NOT NULL REFERENCES ncm(id),
+    cfop_id INTEGER NOT NULL REFERENCES cfopweb(cfop_id),
+    ncm_ipi_dif NUMERIC(6,2),
+    ncm_pis_dif NUMERIC(6,2),
+    ncm_cofins_dif NUMERIC(6,2),
+    ncm_cbs_dif NUMERIC(6,2),
+    ncm_ibs_dif NUMERIC(6,2),
+    ncm_icms_aliq_dif NUMERIC(6,2),
+    ncm_st_aliq_dif NUMERIC(6,2),
+    UNIQUE(ncm_id, cfop_id)
+);
+
 -- Criar tabela modulosmobile se não existir
 CREATE TABLE IF NOT EXISTS modulosmobile (
     modu_codi SERIAL PRIMARY KEY,
@@ -167,10 +236,10 @@ empresa VARCHAR(100),
 licenca VARCHAR(100)
 );
 
-CREATE INDEX idx_auditoria_empresa_licenca_datahora ON auditoria_logacao (empresa, licenca, data_hora);
-CREATE INDEX idx_auditoria_usuario_datahora ON auditoria_logacao (usuario_id, data_hora);
-CREATE INDEX idx_auditoria_modelo_objeto ON auditoria_logacao (modelo, objeto_id);
-CREATE INDEX idx_auditoria_tipoacao_datahora ON auditoria_logacao (tipo_acao, data_hora);
+CREATE INDEX IF NOT EXISTS idx_auditoria_empresa_licenca_datahora ON auditoria_logacao (empresa, licenca, data_hora);
+CREATE INDEX IF NOT EXISTS idx_auditoria_usuario_datahora ON auditoria_logacao (usuario_id, data_hora);
+CREATE INDEX IF NOT EXISTS idx_auditoria_modelo_objeto ON auditoria_logacao (modelo, objeto_id);
+CREATE INDEX IF NOT EXISTS idx_auditoria_tipoacao_datahora ON auditoria_logacao (tipo_acao, data_hora);
 
 """
 
@@ -388,8 +457,6 @@ CREATE OR REPLACE VIEW public.os_geral
     os.os_data_aber AS data_abertura,
     os.os_data_fech AS data_fim,
     os.os_situ AS situacao_os,
-    os.os_vend AS vendedor,
-    vend.enti_nome AS nome_vendedor,
     COALESCE(p.pecas, 'Sem peças'::text) AS pecas,
     COALESCE(s.servicos, 'Sem serviços'::text) AS servicos,
     COALESCE(p.total_pecas, 0::numeric) + COALESCE(s.total_servicos, 0::numeric) AS total_os,
@@ -410,7 +477,6 @@ CREATE OR REPLACE VIEW public.os_geral
      LEFT JOIN servicos_agrupados s ON s.serv_os = os.os_os AND s.serv_empr = os.os_empr AND s.serv_fili = os.os_fili
      LEFT JOIN entidades cli ON os.os_clie = cli.enti_clie AND os.os_empr = cli.enti_empr
      LEFT JOIN entidades aten ON os.os_prof_aber = aten.enti_clie AND os.os_empr = aten.enti_empr
-     LEFT JOIN entidades vend ON os.os_vend = vend.enti_clie AND os.os_empr = vend.enti_empr
   ORDER BY os.os_data_aber DESC, os.os_os DESC;
 
 -- view para envio de cobrança 

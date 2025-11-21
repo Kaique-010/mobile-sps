@@ -1,5 +1,9 @@
 from django.urls import path
-from .web_views import (
+from .Views.listar import NcmAliquotaListView, NcmListView
+from .Views.criar import NcmAliquotaCreateView, NcmCreateView
+from .Views.update import NcmAliquotaUpdateView, NcmUpdateView
+from .Views.jobViews import job_importar_ibpt
+from .Views.web_views import (
     ProdutoListView,
     ProdutoCreateView,
     ProdutoUpdateView,
@@ -22,9 +26,22 @@ from .web_views import (
     MarcaCreateView,
     MarcaUpdateView,
     MarcaDeleteView,
+    autocomplete_ncms,
+    ncm_aliquotas,
+    SaldosDashboardView,
+    autocomplete_produtos
 )
 
+
 urlpatterns = [
+    path("ncm-aliquotas/", NcmAliquotaListView.as_view(), name="ncmaliquota_list"),
+    path("ncm-aliquotas/novo/", NcmAliquotaCreateView.as_view(), name="ncmaliquota_create"),
+    path("ncm-aliquotas/<int:pk>/editar/", NcmAliquotaUpdateView.as_view(), name="ncmaliquota_update"),
+    path("ncm/", NcmListView.as_view(), name="ncm_list"),
+    path("ncm/novo/", NcmCreateView.as_view(), name="ncm_create"),
+    path("ncm/<int:pk>/editar/", NcmUpdateView.as_view(), name="ncm_update"),
+    path("autocomplete/ncms/", autocomplete_ncms, name="autocomplete_ncms"),
+    path("ncm/aliquotas/", ncm_aliquotas, name="ncm_aliquotas"),
     path('', ProdutoListView.as_view(), name='produtos_web'),
     path('new/', ProdutoCreateView.as_view(), name='produto_create_web'),
     path('<str:prod_codi>/edit/', ProdutoUpdateView.as_view(), name='produto_edit_web'),
@@ -51,4 +68,11 @@ urlpatterns = [
     path('marcas/new/', MarcaCreateView.as_view(), name='marca_create_web'),
     path('marcas/<int:codigo>/edit/', MarcaUpdateView.as_view(), name='marca_edit_web'),
     path('marcas/<int:codigo>/delete/', MarcaDeleteView.as_view(), name='marca_delete_web'),
+    
+    # Jobs
+    path('jobs/importar-ibpt/', job_importar_ibpt, name='job_importar_ibpt'),
+    
+    # Saldos
+    path('saldos/', SaldosDashboardView.as_view(), name='saldos_web'),
+    path('autocomplete/produtos/', autocomplete_produtos, name='autocomplete_produtos'),
 ]

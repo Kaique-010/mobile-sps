@@ -10,8 +10,8 @@ urlpatterns = [
     path("selecionar-empresa/", views.selecionar_empresa, name="selecionar_empresa"),
 
     path("<slug:slug>/entidades/", include("Entidades.web_urls")),
-    path("<slug:slug>/produtos/", include("Produtos.web_urls")),
-    path("<slug:slug>/pedidos/", include("Pedidos.web_urls")),
+    path("<slug:slug>/produtos/", include("Produtos.Web.web_urls")),
+    path("<slug:slug>/pedidos/", include("Pedidos.Web.web_urls")),
     path("<slug:slug>/orcamentos/", include("Orcamentos.web_urls")),
     path("<slug:slug>/os/", include("O_S.Web.web_urls")),
     path("<slug:slug>/entradas/", include("Entradas_Estoque.Web.web_urls")),

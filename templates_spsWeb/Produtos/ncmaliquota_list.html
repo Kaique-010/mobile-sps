@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Alíquotas IBPT{% endblock %}
+
+{% block content %}
+<div class="container page-container">
+  <div class="page-header-custom">
+    <h2 class="page-title"><i class="bi bi-percent"></i> Alíquotas IBPT</h2>
+    <div class="page-actions">
+      <a href="{% url 'ncmaliquota_create' slug=slug %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus"></i> Novo
+      </a>
+    </div>
+  </div>
+
+  {% if messages %}
+  {% for message in messages %}
+  <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <div class="card">
+    <div class="card-body table-responsive">
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>NCM</th>
+            <th>IPI</th>
+            <th>PIS</th>
+            <th>COFINS</th>
+            <th>CBS</th>
+            <th>IBS</th>
+            <th class="text-end">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for item in itens %}
+          <tr>
+            <td>{{ item.nali_ncm.ncm_codi }}</td>
+            <td>{{ item.nali_aliq_ipi }}</td>
+            <td>{{ item.nali_aliq_pis }}</td>
+            <td>{{ item.nali_aliq_cofins }}</td>
+            <td>{{ item.nali_aliq_cbs }}</td>
+            <td>{{ item.nali_aliq_ibs }}</td>
+            <td class="text-end">
+              <a href="{% url 'ncmaliquota_update' slug=slug pk=item.pk %}" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-pencil"></i> Editar
+              </a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7" class="text-center">Nenhum registro encontrado.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
