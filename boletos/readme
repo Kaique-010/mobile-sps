@@ -1,0 +1,69 @@
+Padrão de organização: Boletos REST e Web (DRY)
+
+boletos/
+  __init__.py
+  apps.py
+
+  models.py
+  migrations/
+
+  adaptadores/
+    itau/
+      itau_boleto_adapter.py   -> Geração de PDF (Itaú)
+      itau240.py               -> CNAB240 (remessa/retorno)
+      itau400.py               -> CNAB400 (remessa/retorno)
+    bradesco/
+      bradesco240.py           -> CNAB240 (remessa/retorno)
+      bradesco400.py           -> CNAB400 (remessa/retorno)
+    caixa/
+      caixa240.py              -> CNAB240 (remessa/retorno)
+      caixa400.py              -> CNAB400 (remessa/retorno)
+    sicoob/
+      sicoob240.py             -> CNAB240 (remessa/retorno)
+      sicoob400.py             -> CNAB400 (remessa/retorno)
+    sicredi/
+      sicredi240.py            -> CNAB240 (remessa/retorno)
+      sicredi400.py            -> CNAB400 (remessa/retorno)
+
+  services/
+    boleto_service.py          -> Orquestra PDF via adapter de banco
+    cnab_service.py            -> Orquestra remessa (240/400) via adapter
+    retorno_service.py         -> Processa arquivo de retorno via adapter
+
+  REST/
+    urls.py
+    serializers/
+      boleto_serializer.py
+      titulo_serializer.py
+      remessa_serializer.py
+    views/
+      titulo_api.py            -> POST /titulo/<pk>/gerar/
+      cnab_api.py              -> POST /bordero/<pk>/remessa/ | POST /retorno/
+
+  Web/
+    urls.py
+    forms/
+      titulo_form.py
+      remessa_form.py
+
+
+Princípios de separação de responsabilidades
+- Adapters: regras por banco/layout (Itaú 240/400), sem lógica de API
+- Services: orquestram dados (cedente, banco_cfg, títulos) e chamam adapters
+- REST/Web: entrada/saída HTTP; utilizam Services; sem regras bancárias
+
+Fluxos
+- Geração Remessa: REST chama CNABService( layout, banco_cfg, cedente, titulos )
+- Retorno: REST envia caminho do arquivo; RetornoService seleciona adapter
+- Boleto PDF: REST/Web chama BoletoService com cedente/sacado/banco_cfg
+
+Replicação para outros bancos
+- Criar adaptadores em `adaptadores/<banco>/` com classes `<Banco>Cnab240Adapter` e `<Banco>Cnab400Adapter`
+- Ajustar `CNABService.resolver_adapter` para suportar novos bancos
+
+Mapeamento de bancos
+- Itaú: `codigo_banco` = `341`
+- Bradesco: `codigo_banco` = `237`
+- Caixa: `codigo_banco` = `104`
+- Sicoob: `codigo_banco` = `756`
+- Sicredi: `codigo_banco` = `748`

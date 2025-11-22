@@ -37,6 +37,12 @@ class Entidades(models.Model):
     enti_mobi_senh = models.CharField(max_length=100, blank=True, null=True)  
     enti_vend = models.IntegerField(blank=True, null=True)  
 
+    # Campos adicionais para banco/caixa
+
+    enti_banc = models.CharField(max_length=100, blank=True, null=True)
+    enti_agen = models.CharField(max_length=100, blank=True, null=True)
+    
+    
 
 
     def __str__(self):

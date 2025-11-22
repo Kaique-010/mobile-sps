@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+    <h3>Lista de Bancos ({{ variation }})</h3>
+    <div class="row">
+        {% for b in bancos %}
+            {% if b.codigo == '104' %}
+            <div class="col-3 text-center mb-3">
+                <img src="{% url 'boleto_logo' slug=slug variation=variation codigo=b.codigo %}" alt="{{ b.codigo }}" style="max-width:160px; max-height:48px" />
+                <div class="mt-2">
+                    <a class="btn btn-sm btn-outline-primary" href="{% url 'banco_config_list' slug=slug %}?tipo=caixa">Configurar Caixa</a>
+                </div>
+            </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

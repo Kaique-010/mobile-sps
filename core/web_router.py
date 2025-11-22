@@ -31,4 +31,5 @@ urlpatterns = [
     path("<slug:slug>/notas-destinadas/", include("NotasDestinadas.web_urls")),
     path("<slug:slug>/notas-fiscais/", include("Notas_Fiscais.Web.web_urls")),
     path("<slug:slug>/cfop/", include("CFOP.Web.urls")),
+    path("<slug:slug>/boletos/", include("boletos.Web.urls")),
 ]

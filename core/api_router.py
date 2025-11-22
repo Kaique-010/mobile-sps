@@ -47,6 +47,7 @@ urlpatterns = [
     path("<slug>/cfop/", include("CFOP.REST.urls")),
     path("<slug>/assistente/", include("Assistente_Spart.urls")),
     path("<slug>/ParametrosSps/", include("ParametrosSps.urls")),
+    path("<slug>/boletos/", include("boletos.REST.urls")),
 
     # Documentação da API
     path("schema/", SpectacularAPIView.as_view(), name="schema"),

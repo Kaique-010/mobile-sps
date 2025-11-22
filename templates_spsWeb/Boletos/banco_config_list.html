@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+  <h3>Configurações Bancárias por Entidade</h3>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Nome</th>
+        <th>Banco</th>
+        <th>Agência</th>
+        <th>Conta</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in entidades %}
+        <tr>
+          <td>{{ e.enti_clie }}</td>
+          <td>{{ e.enti_nome }}</td>
+          <td>{{ e.enti_banc }}</td>
+          <td>{{ e.enti_agen }}</td>
+          <td>{{ e.enti_coco }}</td>
+          <td>
+            <a class="btn btn-sm btn-primary" href="{% url 'banco_config_editar' slug=slug enti_clie=e.enti_clie %}">Editar</a>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

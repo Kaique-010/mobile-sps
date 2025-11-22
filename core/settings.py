@@ -120,6 +120,7 @@ INSTALLED_APPS = [
     'ParametrosSps',
     'Financeiro',
     'CentrodeCustos',
+    'boletos',
 ]
 # Middleware
 MIDDLEWARE = [
