@@ -4,27 +4,27 @@
     <ul class="pagination justify-content-center">
         {% if page_obj.has_previous %}
         <li class="page-item">
-            <a class="page-link" href="?page=1{{ extra }}">Primeira</a>
+            <a class="page-link" href="?page=1{% if extra %}&{{ extra }}{% endif %}">Primeira</a>
         </li>
         <li class="page-item">
-            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{{ extra }}">Anterior</a>
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if extra %}&{{ extra }}{% endif %}">Anterior</a>
         </li>
         {% endif %}
 
         {% for n in page_obj.paginator.page_range %}
         {% if n <= page_obj.number|add:3 and n >= page_obj.number|add:-3 %}
         <li class="page-item {% if page_obj.number == n %}active{% endif %}">
-            <a class="page-link" href="?page={{ n }}{{ extra }}">{{ n }}</a>
+            <a class="page-link" href="?page={{ n }}{% if extra %}&{{ extra }}{% endif %}">{{ n }}</a>
         </li>
         {% endif %}
         {% endfor %}
 
         {% if page_obj.has_next %}
         <li class="page-item">
-            <a class="page-link" href="?page={{ page_obj.next_page_number }}{{ extra }}">Próxima</a>
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if extra %}&{{ extra }}{% endif %}">Próxima</a>
         </li>
         <li class="page-item">
-            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{{ extra }}">Última</a>
+            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if extra %}&{{ extra }}{% endif %}">Última</a>
         </li>
         {% endif %}
     </ul>

@@ -1,0 +1,87 @@
+<div id="financeiro-pedido" class="card shadow-sm" data-pedi-nume="{{ object.pedi_nume }}" data-pedi-forn="{{ object.pedi_forn }}" data-pedi-tota="{{ object.pedi_tota }}" data-pedi-topr="{{ object.pedi_topr }}" data-pedi-desc="{{ object.pedi_desc }}" data-slug="{{ slug }}">
+  <div class="card-body">
+    <h5 class="card-title mb-3">Financeiro</h5>
+    <div class="row g-3 mb-3">
+      <div class="col-md-4">
+        <div class="form-label">Subtotal</div>
+        <div id="fin-resumo-subtotal" class="fw-semibold">R$ 0,00</div>
+      </div>
+      <div class="col-md-4">
+        <div class="form-label">Desconto</div>
+        <div id="fin-resumo-desconto" class="fw-semibold">R$ 0,00</div>
+      </div>
+      <div class="col-md-4">
+        <div class="form-label">Total</div>
+        <div id="fin-resumo-total" class="fw-bold">R$ 0,00</div>
+      </div>
+    </div>
+    <div class="row g-3 align-items-end mb-2">
+      <div class="col-md-3">
+        <label class="form-label">Entrada (R$)</label>
+        <input type="number" min="0" step="0.01" class="form-control" id="fin-entrada" placeholder="0,00">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Restante</label>
+        <div id="fin-resumo-restante" class="fw-bold">R$ 0,00</div>
+      </div>
+    </div>
+    <div class="row g-3 align-items-end mb-3">
+      <div class="col-md-3">
+        <label class="form-label">Parcelas</label>
+        <input type="number" min="1" value="1" class="form-control" id="fin-parcelas">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Data base</label>
+        <input type="date" class="form-control" id="fin-data-base">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Forma pagamento</label>
+        <select class="form-select" id="fin-forma">
+          <option value="" selected>Selecione...</option>
+          <option value="00">DUPLICATA</option>
+          <option value="01">CHEQUE</option>
+          <option value="02">PROMISSÓRIA</option>
+          <option value="03">RECIBO</option>
+          <option value="50">CHEQUE PRÉ</option>
+          <option value="51">CARTAO DE CRÉDITO</option>
+          <option value="52">CARTAO DE DÉBITO</option>
+          <option value="53">BOLETO BANCÁRIO</option>
+          <option value="54">DINHEIRO</option>
+          <option value="55">DEPÓSITO EM CONTA</option>
+          <option value="56">VENDA À VISTA</option>
+          <option value="60">PIX</option>
+        </select>
+      </div>
+      <div class="col-md-3 d-flex gap-2">
+        <button type="button" class="btn btn-outline-success" id="fin-btn-gerar">Gerar Títulos</button>
+        <button type="button" class="btn btn-outline-primary" id="fin-btn-consultar">Consultar</button>
+        <button type="button" class="btn btn-outline-danger" id="fin-btn-remover">Remover</button>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Parcela</th>
+            <th class="text-end">Valor</th>
+            <th>Vencimento</th>
+            <th>Forma</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="fin-titulos-body"></tbody>
+        <tfoot>
+          <tr class="table-dark">
+            <td colspan="3" class="text-end fw-bold">Total</td>
+            <td colspan="2" class="text-end" id="fin-total"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+{% include 'Pedidos/FinanceiroPedido.js' %}
+</script>

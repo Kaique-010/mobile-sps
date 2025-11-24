@@ -151,6 +151,8 @@ CREATE TABLE IF NOT EXISTS mapa_cfop (
     UNIQUE(tipo_oper, uf_origem, uf_destino)
 );
 
+ALTER TABLE pedidosvenda add column if not exists pedi_tipo_oper VARCHAR(30) NOT NULL DEFAULT 'VENDA';
+
 -- criar a tabela ncm_cfop_dif se não existir
 CREATE TABLE IF NOT EXISTS ncm_cfop_dif (
     ncmdif_id SERIAL PRIMARY KEY,

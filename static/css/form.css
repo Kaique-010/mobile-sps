@@ -42,3 +42,71 @@
   padding: 16px 20px;
   border-radius: 8px;
 }
+
+/* Adicione estilos específicos para o formulário de título a pagar aqui */
+.form-section {
+  border-radius: 8px;
+  padding: 1.2rem;
+  margin-bottom: 1.2rem;
+  border-left: 4px solid #8aa9d8;
+}
+
+.form-section-header {
+  text-align: center;
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  font-weight: 600;
+  color: #495057;
+}
+
+.form-section-header i {
+  text-align: center;
+  margin-right: 0.5rem;
+  color: #91bcfd;
+}
+
+.field-group {
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+
+.autocomplete-wrapper {
+  position: relative;
+}
+
+.autocomplete-input {
+  padding-right: 2.5rem;
+}
+
+.autocomplete-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6c757d;
+  pointer-events: none;
+}
+
+.readonly-field {
+  cursor: not-allowed;
+}
+
+.list-group {
+  max-height: 250px;
+  overflow-y: auto;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+}
+
+.required-label::after {
+  content: ' *';
+  color: #dc3545;
+}
+
+.form-actions {
+  padding: 1rem;
+  border-radius: 8px;
+  margin-top: 1.5rem;
+}

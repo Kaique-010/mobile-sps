@@ -73,14 +73,14 @@
         <option value="C" {% if request.GET.status == 'C' %}selected{% endif %}>Cancelado</option>
       </select>
     </div>
-    <div class="col-md-2">
+    <div class="col-md-2 mt-3 ">
       <button class="btn btn-outline-secondary w-100" type="submit">Buscar</button>
     </div>
   </form>
 
-  <div class="table-responsive">
+  <div class="table-responsive mb-3 mt-3 d-none d-md-block">
     <table class="table table-hover align-middle">
-      <thead class="table-light">
+      <thead class="table">
         <tr>
           <th>#</th>
           <th>Data</th>
@@ -130,6 +130,41 @@
         </tr>
       </tfoot>
     </table>
+  </div>
+  <div class="card-list d-md-none">
+    {% for p in pedidos %}
+    <div class="card mb-2">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="fw-semibold">Pedido #{{ p.pedi_nume }}</div>
+          <div class="text-muted small">{{ p.pedi_data|date:'d/m/Y' }}</div>
+        </div>
+        <div class="mt-2 small">
+          <div><strong>Cliente:</strong> {{ p.cliente_nome|default:p.pedi_forn }}</div>
+          <div><strong>Vendedor:</strong> {{ p.vendedor_nome|default:p.pedi_vend }}</div>
+          <div><strong>Total:</strong> {{ p.pedi_tota|brl }}</div>
+          <div><strong>Status:</strong>
+            {% if p.pedi_stat == 'A' %}Aberto{% elif p.pedi_stat == 'F' %}Faturado{% elif p.pedi_stat == 'C' %}Cancelado{% else %}{{ p.pedi_stat }}{% endif %}
+          </div>
+        </div>
+        <div class="mt-3 d-flex gap-2">
+          <a class="btn btn-sm btn-outline-primary" href="{% url 'PedidosWeb:pedido_detalhe' slug=slug pk=p.pk %}">Detalhes</a>
+          <a class="btn btn-sm btn-outline-secondary" href="{% url 'PedidosWeb:pedido_editar' slug=slug pk=p.pk %}">Editar</a>
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <div class="alert alert-info">Nenhum pedido encontrado.</div>
+    {% endfor %}
+    <div class="card mb-2">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div class="fw-semibold">Total</div>
+          <div>{{ total_valor|brl }}</div>
+        </div>
+        <div class="small text-muted">{{ total_registros }} registros</div>
+      </div>
+    </div>
   </div>
 
   {% include 'components/pagination.html' with page_obj=page_obj extra_query=extra_query %}

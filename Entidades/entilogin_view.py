@@ -168,8 +168,8 @@ from Pedidos.models import PedidoVenda, PedidosGeral,Itenspedidovenda
 from Orcamentos.models import Orcamentos,ItensOrcamento
 from O_S.models import OrdemServicoGeral, Os
 from OrdemdeServico.models import Ordemservico
-from Pedidos.serializers import PedidoVendaSerializer, PedidosGeralSerializer,ItemPedidoVendaSerializer
-from Orcamentos.serializers import OrcamentosSerializer,ItemOrcamentoSerializer
+from Pedidos.rest.serializers import PedidoVendaSerializer, PedidosGeralSerializer, ItemPedidoVendaSerializer
+from Orcamentos.rest.serializers import OrcamentosSerializer, ItemOrcamentoSerializer
 from O_S.REST.serializers import OrdemServicoGeralSerializer, OsSerializer
 from OrdemdeServico.serializers import OrdemServicoSerializer
 

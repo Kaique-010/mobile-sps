@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import TitulospagarViewSet
+from .rest.views import TitulospagarViewSet
 
 router = DefaultRouter()
 router.register(r'titulos-pagar', TitulospagarViewSet, basename='titulospagar')

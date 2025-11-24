@@ -1,0 +1,238 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
+
+<style>
+  
+</style>
+
+<div class="container py-4">
+  {% include 'ContasAReceber/partials/messages.html' %}
+
+  <div class="card shadow-lg border-0">
+    <div class="card-header  text-center py-3">
+      <h3 class="mb-0 d-flex align-items-center justify-content-center">
+        <i class="bi bi-file-earmark-plus me-2"></i>
+        Novo Título a Pagar
+      </h3>
+    </div>
+
+    <div class="card-body p-4">
+      <form method="post" id="titulo-pagar-form">
+        {% csrf_token %}
+
+        <!-- Seção: Fornecedor -->
+        <div class="form-section">
+          <div class="form-section-header">
+            <i class="bi bi-building"></i>
+            Fornecedor
+          </div>
+          <div class="field-group">
+            <div class="row g-3">
+              <div class="col-md-2">
+                <label class="form-label">Empresa</label>
+                <input type="text" class="form-control readonly-field" value="{{ empresa_id|default:'' }}" readonly>
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">Filial</label>
+                <input type="text" class="form-control readonly-field" value="{{ filial_id|default:'' }}" readonly>
+              </div>
+              <div class="col-md-8">
+                <label class="form-label required-label" for="{{ form.titu_forn.id_for_label }}">
+                  Fornecedor
+                </label>
+                <div class="autocomplete-wrapper">
+                  <input type="text" class="form-control autocomplete-input" id="autocomplete-fornecedor"
+                    value="{{ form.titu_forn.value|default:'' }}"
+                    placeholder="Digite o nome ou código do fornecedor...">
+                  <i class="bi bi-search autocomplete-icon"></i>
+                </div>
+                {{ form.titu_forn.as_hidden }}
+                {% if form.titu_forn.errors %}
+
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Seção: Dados do Título -->
+        <div class="form-section">
+          <div class="form-section-header">
+            <i class="bi bi-file-text"></i>
+            Dados do Título
+          </div>
+          <div class="field-group">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label required-label" for="{{ form.titu_titu.id_for_label }}">
+                  Número do Título
+                </label>
+                {{ form.titu_titu }}
+                {% if form.titu_titu.errors %}
+                <div class="invalid-feedback d-block">{{ form.titu_titu.errors|striptags }}</div>
+                {% endif %}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="{{ form.titu_seri.id_for_label }}">
+                  Série
+                </label>
+                {{ form.titu_seri }}
+                {% if form.titu_seri.errors %}
+                <div class="invalid-feedback d-block">{{ form.titu_seri.errors|striptags }}</div>
+                {% endif %}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label required-label" for="{{ form.titu_parc.id_for_label }}">
+                  Parcela
+                </label>
+                {{ form.titu_parc }}
+                {% if form.titu_parc.errors %}
+                <div class="invalid-feedback d-block">{{ form.titu_parc.errors|striptags }}</div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Seção: Valores e Datas -->
+        <div class="form-section">
+          <div class="form-section-header">
+            <i class="bi bi-cash-coin"></i>
+            Valores e Vencimento
+          </div>
+          <div class="field-group">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label required-label" for="{{ form.titu_valo.id_for_label }}">
+                  Valor (R$)
+                </label>
+                {{ form.titu_valo }}
+                {% if form.titu_valo.errors %}
+                <div class="invalid-feedback d-block">{{ form.titu_valo.errors|striptags }}</div>
+                {% endif %}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label required-label" for="{{ form.titu_emis.id_for_label }}">
+                  Data de Emissão
+                </label>
+                {{ form.titu_emis }}
+                {% if form.titu_emis.errors %}
+                <div class="invalid-feedback d-block">{{ form.titu_emis.errors|striptags }}</div>
+                {% endif %}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label required-label" for="{{ form.titu_venc.id_for_label }}">
+                  Data de Vencimento
+                </label>
+                {{ form.titu_venc }}
+                {% if form.titu_venc.errors %}
+                <div class="invalid-feedback d-block">{{ form.titu_venc.errors|striptags }}</div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ações -->
+        <div class="form-actions">
+          <div class="d-flex gap-2 justify-content-end">
+            <a href="{% url 'contas_a_pagar_web:titulos_pagar_list' slug=request.resolver_match.kwargs.slug %}"
+              class="btn btn-secondary">
+              <i class="bi bi-x-circle me-1"></i> Cancelar
+            </a>
+            <button type="submit" class="btn btn-success">
+              <i class="bi bi-check-circle me-1"></i> Salvar Título
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  const slugTpl = '{{ slug|default:"" }}';
+  const slug = slugTpl || (function () {
+    try {
+      const p = location.pathname.split('/');
+      return p.length > 2 ? p[2] : ''
+    } catch (e) {
+      return ''
+    }
+  })();
+
+  const input = document.getElementById('autocomplete-fornecedor');
+  const hidden = document.getElementById('{{ form.titu_forn.id_for_label }}');
+
+  if (input && hidden) {
+    let controller = null;
+    let dd = null;
+
+    function dropdown() {
+      if (dd) return dd;
+      dd = document.createElement('div');
+      dd.className = 'list-group position-absolute w-100';
+      dd.style.marginTop = '4px';
+      input.parentElement.appendChild(dd);
+      return dd;
+    }
+
+    input.addEventListener('input', async function () {
+      const term = this.value.trim();
+      if (term.length < 2) {
+        if (dd) dd.innerHTML = '';
+        return;
+      }
+
+      try {
+        if (controller) controller.abort();
+        controller = new AbortController();
+
+        const r = await fetch(`/web/${slug}/contas-a-pagar/autocomplete/fornecedores/?q=${encodeURIComponent(term)}`, {
+          signal: controller.signal
+        });
+        const j = await r.json();
+        const results = j.results || [];
+        const d = dropdown();
+        d.innerHTML = '';
+
+        if (results.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'list-group-item text-muted';
+          empty.textContent = 'Nenhum fornecedor encontrado';
+          d.appendChild(empty);
+          return;
+        }
+
+        results.forEach(it => {
+          const a = document.createElement('a');
+          a.href = '#';
+          a.className = 'list-group-item list-group-item-action';
+          a.innerHTML = `<i class="bi bi-building me-2"></i>${it.text || it.id || ''}`;
+          a.addEventListener('click', ev => {
+            ev.preventDefault();
+            hidden.value = it.id || '';
+            input.value = it.text || it.id || '';
+            d.innerHTML = '';
+          });
+          d.appendChild(a);
+        });
+      } catch (e) {
+        if (e.name !== 'AbortError') {
+          console.error('Erro ao buscar fornecedores:', e);
+        }
+      }
+    });
+
+    document.addEventListener('click', e => {
+      if (dd && !input.parentElement.contains(e.target)) {
+        dd.innerHTML = '';
+      }
+    });
+  }
+</script>
+{% endblock %}

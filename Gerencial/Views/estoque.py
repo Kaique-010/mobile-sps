@@ -69,7 +69,7 @@ class ExtratoMovimentacaoProdutosView(ModuloRequeridoMixin, APIView):
                 prod_info_map[p.prod_codi] = { 'nome': p.prod_nome, 'unidade': str(p.prod_unme) }
             saldo_map = {}
             for sp in SaldoProduto.objects.filter(produto_codigo__prod_codi__in=codes, empresa=str(empresa), filial=str(filial)):
-                saldo_map[sp.produto_codigo.prod_codi] = float(sp.saldo_estoque or 0)
+                saldo_map[getattr(sp, 'produto_codigo_id', None)] = float(sp.saldo_estoque or 0)
             extrato_list = []
             for c in codes:
                 e = ent_map.get(c, {'q':0.0,'v':0.0})
@@ -93,7 +93,7 @@ class ExtratoMovimentacaoProdutosView(ModuloRequeridoMixin, APIView):
         unidade_desc = None
         if produto:
             try:
-                sp = SaldoProduto.objects.filter(produto_codigo__prod_codi=produto, empresa=str(empresa), filial=str(filial)).first()
+                sp = SaldoProduto.objects.filter(produto_codigo=produto, empresa=str(empresa), filial=str(filial)).first()
                 saldo_val = float(sp.saldo_estoque) if sp and sp.saldo_estoque is not None else None
             except Exception:
                 saldo_val = None

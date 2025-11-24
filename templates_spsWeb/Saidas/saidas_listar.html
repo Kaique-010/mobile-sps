@@ -7,7 +7,7 @@
     <a class="btn btn-primary" href="{% url 'SaidasWeb:saidas_criar' slug=slug %}">Nova Saída</a>
   </div>
   <div class="card">
-    <div class="table-responsive">
+    <div class="table-responsive d-none d-md-block">
       <table class="table table-sm">
         <thead>
           <tr>
@@ -39,6 +39,31 @@
           {% endfor %}
         </tbody>
       </table>
+      {% include 'components/pagination.html' %}
+    </div>
+    <div class="card-list d-md-none">
+      {% for s in saidas %}
+      <div class="card mb-2">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="fw-semibold">Saída {{ s.said_sequ }}</div>
+            <div class="text-muted small">{{ s.said_data }}</div>
+          </div>
+          <div class="mt-2 small">
+            <div><strong>Produto:</strong> {{ s.said_prod }}</div>
+            <div><strong>Entidade:</strong> {{ s.said_enti }}</div>
+            <div><strong>Quantidade:</strong> {{ s.said_quan }}</div>
+            <div><strong>Total:</strong> {{ s.said_tota }}</div>
+          </div>
+          <div class="mt-3 d-flex gap-2">
+            <a class="btn btn-sm btn-outline-secondary" href="{% url 'SaidasWeb:saidas_detalhe' slug=slug pk=s.pk %}">Detalhe</a>
+            <a class="btn btn-sm btn-outline-primary" href="{% url 'SaidasWeb:saidas_editar' slug=slug pk=s.pk %}">Editar</a>
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <div class="alert alert-info">Sem registros</div>
+      {% endfor %}
       {% include 'components/pagination.html' %}
     </div>
   </div>

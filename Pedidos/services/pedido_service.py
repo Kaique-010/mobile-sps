@@ -336,3 +336,125 @@ class proximo_pedido_numero:
             qs = qs.filter(pedi_fili=pedi_fili)
         ultimo_pedido = qs.order_by('-pedi_nume').first()
         return (ultimo_pedido.pedi_nume + 1) if ultimo_pedido else 1
+
+class OrcamentoService:
+    logger = logging.getLogger(__name__)
+
+    @staticmethod
+    def _proximo_orcamento_numero(banco: str, pedi_empr: int, pedi_fili: int) -> int:
+        from Orcamentos.models import Orcamentos
+        ultimo = (
+            Orcamentos.objects.using(banco)
+            .filter(pedi_empr=pedi_empr, pedi_fili=pedi_fili)
+            .order_by('-pedi_nume')
+            .first()
+        )
+        proximo = (ultimo.pedi_nume + 1) if ultimo else 1
+        while Orcamentos.objects.using(banco).filter(pedi_nume=proximo).exists():
+            proximo += 1
+        return proximo
+
+    @transaction.atomic
+    @staticmethod
+    def create_orcamento(banco: str, orcamento_data: dict, itens_data: list):
+        from Orcamentos.models import Orcamentos, ItensOrcamento
+
+        pedi_empr = int(orcamento_data.get('pedi_empr'))
+        pedi_fili = int(orcamento_data.get('pedi_fili'))
+
+        if not orcamento_data.get('pedi_nume'):
+            orcamento_data['pedi_nume'] = OrcamentoService._proximo_orcamento_numero(
+                banco, pedi_empr, pedi_fili
+            )
+
+        desconto_total = PedidoVendaService._to_decimal(orcamento_data.get('pedi_desc', 0))
+        orc = Orcamentos.objects.using(banco).create(**{k: v for k, v in orcamento_data.items() if k != 'pedi_topr' and k != 'pedi_tota'})
+
+        subtotal_sum = Decimal('0.00')
+        itens_criados = []
+        for idx, item in enumerate(itens_data, start=1):
+            iped_quan = PedidoVendaService._to_decimal(item.get('iped_quan', 0))
+            iped_unit = PedidoVendaService._to_decimal(item.get('iped_unit', 0))
+            iped_desc = PedidoVendaService._to_decimal(item.get('iped_desc', 0))
+
+            subtotal_bruto = calcular_subtotal_item_bruto(iped_quan, iped_unit)
+            total_item = calcular_total_item_com_desconto(iped_quan, iped_unit, iped_desc)
+            subtotal_sum += Decimal(str(subtotal_bruto))
+
+            clean_item = item.copy()
+            clean_item.pop('iped_suto', None)
+            clean_item.pop('iped_tota', None)
+
+            created = ItensOrcamento.objects.using(banco).create(
+                iped_empr=orc.pedi_empr,
+                iped_fili=orc.pedi_fili,
+                iped_item=idx,
+                iped_pedi=str(orc.pedi_nume),
+                iped_data=orc.pedi_data,
+                iped_forn=getattr(orc, 'pedi_forn', None),
+                iped_suto=subtotal_bruto,
+                iped_tota=total_item,
+                **clean_item,
+            )
+            itens_criados.append(created)
+
+        orc.pedi_topr = subtotal_sum
+        orc.pedi_desc = desconto_total
+        orc.pedi_tota = subtotal_sum - desconto_total
+        if orc.pedi_tota < 0:
+            orc.pedi_tota = Decimal('0.00')
+        orc.save(using=banco)
+
+        return orc
+
+    @transaction.atomic
+    @staticmethod
+    def update_orcamento(banco: str, orcamento_obj, updates: dict, itens_data: list):
+        from Orcamentos.models import ItensOrcamento
+
+        updates = updates.copy()
+        desconto_total = PedidoVendaService._to_decimal(updates.pop('pedi_desc', getattr(orcamento_obj, 'pedi_desc', 0)))
+        for attr, value in updates.items():
+            setattr(orcamento_obj, attr, value)
+        orcamento_obj.save(using=banco)
+
+        ItensOrcamento.objects.using(banco).filter(
+            iped_empr=orcamento_obj.pedi_empr,
+            iped_fili=orcamento_obj.pedi_fili,
+            iped_pedi=str(orcamento_obj.pedi_nume),
+        ).delete()
+
+        subtotal_sum = Decimal('0.00')
+        for idx, item in enumerate(itens_data, start=1):
+            iped_quan = PedidoVendaService._to_decimal(item.get('iped_quan', 0))
+            iped_unit = PedidoVendaService._to_decimal(item.get('iped_unit', 0))
+            iped_desc = PedidoVendaService._to_decimal(item.get('iped_desc', 0))
+
+            subtotal_bruto = calcular_subtotal_item_bruto(iped_quan, iped_unit)
+            total_item = calcular_total_item_com_desconto(iped_quan, iped_unit, iped_desc)
+            subtotal_sum += Decimal(str(subtotal_bruto))
+
+            clean_item = item.copy()
+            clean_item.pop('iped_suto', None)
+            clean_item.pop('iped_tota', None)
+
+            ItensOrcamento.objects.using(banco).create(
+                iped_empr=orcamento_obj.pedi_empr,
+                iped_fili=orcamento_obj.pedi_fili,
+                iped_item=idx,
+                iped_pedi=str(orcamento_obj.pedi_nume),
+                iped_data=orcamento_obj.pedi_data,
+                iped_forn=getattr(orcamento_obj, 'pedi_forn', None),
+                iped_suto=subtotal_bruto,
+                iped_tota=total_item,
+                **clean_item,
+            )
+
+        orcamento_obj.pedi_topr = subtotal_sum
+        orcamento_obj.pedi_desc = desconto_total
+        orcamento_obj.pedi_tota = subtotal_sum - desconto_total
+        if orcamento_obj.pedi_tota < 0:
+            orcamento_obj.pedi_tota = Decimal('0.00')
+        orcamento_obj.save(using=banco)
+
+        return orcamento_obj

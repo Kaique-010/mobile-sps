@@ -68,7 +68,7 @@ class MotorFiscal:
             pedi_tipo_oper, self.uf_origem, uf_destino
         )
         mapa = MapaCFOP.objects.select_related("cfop").get(
-            pedi_tipo_oper=pedi_tipo_oper,
+            tipo_oper=pedi_tipo_oper,
             uf_origem=self.uf_origem,
             uf_destino=uf_destino,
         )

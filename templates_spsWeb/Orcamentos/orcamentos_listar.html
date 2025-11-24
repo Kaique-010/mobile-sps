@@ -73,15 +73,14 @@
     </div>
   </form>
 
-  <div class="table-responsive">
-    <table class="table table-hover align-middle">
-      <thead class="table-light">
+  <div class="table-responsive d-none d-md-block">
+    <table class="table table-hover align-left p-2">
+      <thead class="table">
         <tr>
-          <th>#</th>
+          <th>Nº</th>
           <th>Data</th>
-          <th>Cliente</th>
+          <th>ID Cliente</th>
           <th>Nome do Cliente</th>
-          <th>Vendedor</th>
           <th>Nome do Vendedor</th>
           <th class="text-end">Total</th>
           <th></th>
@@ -92,9 +91,8 @@
         <tr>
           <td>{{ o.pedi_nume }}</td>
           <td>{{ o.pedi_data|date:'d/m/Y' }}</td>
-          <td>{{ o.pedi_forn }}</td>
+          <td>{{ o.pedi_forn|default:"—" }}</td>
           <td>{{ o.cliente_nome|default:"—" }}</td>
-          <td>{{ o.pedi_vend }}</td>
           <td>{{ o.vendedor_nome|default:"—" }}</td>
           <td class="text-end">{{ o.pedi_tota|brl }}</td>
           <td class="text-end">
@@ -102,6 +100,13 @@
               href="{% url 'OrcamentosWeb:orcamento_detalhe' slug=slug pk=o.pk %}">Detalhes</a>
             <a class="btn btn-sm btn-outline-secondary"
               href="{% url 'OrcamentosWeb:orcamento_editar' slug=slug pk=o.pk %}">Editar</a>
+            {% if not o.pedi_nume_pedi %}
+            <form method="post" action="{% url 'OrcamentosWeb:orcamento_transformar' slug=slug pk=o.pk %}"
+              style="display:inline">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-success">Transformar em Pedido</button>
+            </form>
+            {% endif %}
           </td>
         </tr>
         {% empty %}
@@ -118,6 +123,35 @@
         </tr>
       </tfoot>
     </table>
+  </div>
+  <div class="card-list d-md-none">
+    {% for o in orcamentos %}
+    <div class="card mb-2" style="box-shadow:0 2px 8px rgba(0,0,0,.08);">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="fw-semibold">Orçamento #{{ o.pedi_nume }}</div>
+          <div class="text-muted small">{{ o.pedi_data|date:'d/m/Y' }}</div>
+        </div>
+        <div class="mt-2 small">
+          <div><strong>Cliente:</strong> {{ o.pedi_forn|default:"—" }} — {{ o.cliente_nome|default:"—" }}</div>
+          <div><strong>Vendedor:</strong> {{ o.vendedor_nome|default:"—" }}</div>
+          <div><strong>Total:</strong> {{ o.pedi_tota|brl }}</div>
+        </div>
+        <div class="mt-3 d-flex gap-2">
+          <a class="btn btn-sm btn-outline-primary" href="{% url 'OrcamentosWeb:orcamento_detalhe' slug=slug pk=o.pk %}">Detalhes</a>
+          <a class="btn btn-sm btn-outline-secondary" href="{% url 'OrcamentosWeb:orcamento_editar' slug=slug pk=o.pk %}">Editar</a>
+          {% if not o.pedi_nume_pedi %}
+          <form method="post" action="{% url 'OrcamentosWeb:orcamento_transformar' slug=slug pk=o.pk %}" style="display:inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-success">Transformar</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <div class="alert alert-info">Nenhum orçamento encontrado.</div>
+    {% endfor %}
   </div>
 </div>
 {% include 'components/pagination.html' with page_obj=page_obj extra_query=extra_query %}

@@ -209,4 +209,12 @@ TabelaprecosFormSet = forms.modelformset_factory(
 TabelaprecosPlainFormSet = formset_factory(
     TabelaprecosForm,
     extra=0,
+    can_delete=True,
+    formset=TabelaprecosFormSet,
+)
+
+TabelaprecosFormSetUpdate = forms.modelformset_factory(
+    Tabelaprecos,
+    form=TabelaprecosForm,
+    extra=0,
 )

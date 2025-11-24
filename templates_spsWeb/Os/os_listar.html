@@ -59,7 +59,7 @@
 
   <div class="card">
     <div class="card-body">
-      <div class="table-responsive">
+      <div class="table-responsive d-none d-md-block">
         <table class="table table-hover align-middle">
           <thead>
             <tr>
@@ -98,6 +98,30 @@
             </tr>
           </tfoot>
         </table>
+      </div>
+      <div class="card-list d-md-none">
+        {% for o in os %}
+        <div class="card mb-2">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="fw-semibold">OS {{ o.os_os }}</div>
+              <div class="text-muted small">{{ o.os_data_aber }}</div>
+            </div>
+            <div class="mt-2 small">
+              <div><strong>Cliente:</strong> {{ o.cliente_nome }}</div>
+              <div><strong>Responsável:</strong> {{ o.vendedor_nome }}</div>
+              <div><strong>Status:</strong> {{ o.os_stat_os }}</div>
+              <div><strong>Total:</strong> {{ o.os_tota|brl }}</div>
+            </div>
+            <div class="mt-3 d-flex gap-2">
+              <a class="btn btn-sm btn-outline-secondary" href="/web/login/" data-slug-route="/web/{slug}/os/{{ o.pk }}/">Detalhe</a>
+              <a class="btn btn-sm btn-outline-primary" href="/web/login/" data-slug-route="/web/{slug}/os/{{ o.pk }}/editar/">Editar</a>
+            </div>
+          </div>
+        </div>
+        {% empty %}
+        <div class="alert alert-info">Nenhuma OS encontrada</div>
+        {% endfor %}
       </div>
     </div>
   </div>

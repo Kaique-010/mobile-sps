@@ -59,7 +59,7 @@
   </div>
 
   <div class="container d-flex justify-content-end">
-    <a class="btn btn-success" href="">Novo Título</a>
+    <a href="{% url 'contas_a_receber_web:criar' slug=slug %}" class="btn btn-success">Novo Título</a>
   </div>
 
   <div class="card">
@@ -133,11 +133,8 @@
               data-titu="{{ t.titu_titu }}" data-seri="{{ t.titu_seri }}" data-parc="{{ t.titu_parc }}"
               data-emis="{{ t.titu_emis|date:'Y-m-d' }}" data-venc="{{ t.titu_venc|date:'Y-m-d' }}">🔄 Reabrir/Liquidar</button>
             {% endif %}
-            <button type="button" class="btn btn-outline-primary btn-sm" title="Editar" disabled>✏️ Editar</button>
-            <button type="button" class="btn btn-outline-danger btn-sm btn-excluir" title="Excluir"
-              data-empr="{{ t.titu_empr }}" data-fili="{{ t.titu_fili }}" data-clie="{{ t.titu_clie }}"
-              data-titu="{{ t.titu_titu }}" data-seri="{{ t.titu_seri }}" data-parc="{{ t.titu_parc }}"
-              data-emis="{{ t.titu_emis|date:'Y-m-d' }}" data-venc="{{ t.titu_venc|date:'Y-m-d' }}">🗑️ Excluir</button>
+            <a href="{% url 'contas_a_receber_web:editar' slug=slug titu_titu=t.titu_titu titu_parc=t.titu_parc %}" class="btn btn-outline-primary btn-sm" title="Editar">✏️ Editar</a>
+            <a href="{% url 'contas_a_receber_web:excluir' slug=slug titu_titu=t.titu_titu %}" class="btn btn-outline-danger btn-sm" title="Excluir">🗑️ Excluir</a>
           </div>
         </div>
       </div>
@@ -150,7 +147,10 @@
   </div>
 
   {% include 'components/pagination.html' with page_obj=page_obj extra_query=preserved_query %}
+  {% include 'ContasAReceber/partials/modal_baixa_receber.html' %}
+  {% include 'ContasAReceber/partials/modal_reabrir_receber.html' %}
 </div>
+{% include 'ContasAReceber/partials/form_criar_titulo.html' %}
 {% endblock %}
 
 {% block extra_js %}
@@ -440,3 +440,51 @@
 {% include 'ContasAReceber/partials/modal_baixa_receber.html' %}
 {% include 'ContasAReceber/partials/modal_reabrir_receber.html' %}
 {% endblock %}
+  const modalCriarReceber = document.getElementById('modal-criar-receber');
+  function abrirCriarReceber() { modalCriarReceber.style.display = 'block'; }
+  function fecharCriarReceber() { modalCriarReceber.style.display = 'none'; }
+  document.getElementById('btn-abrir-criar-receber')?.addEventListener('click', abrirCriarReceber);
+  document.getElementById('btn-cancelar-criar-receber')?.addEventListener('click', fecharCriarReceber);
+  document.getElementById('btn-confirmar-criar-receber')?.addEventListener('click', async () => {
+    const { empresa, filial } = getEmpresaFilial();
+    const payload = {
+      titu_empr: Number(document.getElementById('cr_empr').value || empresa || 0),
+      titu_fili: Number(document.getElementById('cr_fili').value || filial || 0),
+      titu_clie: Number(document.getElementById('cr_clie').value || 0),
+      titu_titu: document.getElementById('cr_titu').value || '',
+      titu_seri: document.getElementById('cr_seri').value || '',
+      titu_parc: document.getElementById('cr_parc').value || '',
+      titu_emis: formatDateISO(document.getElementById('cr_emis').value || ''),
+      titu_venc: formatDateISO(document.getElementById('cr_venc').value || ''),
+      titu_valo: Number(document.getElementById('cr_valo').value || 0),
+    };
+    if (!payload.titu_empr || !payload.titu_fili || !payload.titu_clie || !payload.titu_titu || !payload.titu_seri || !payload.titu_parc || !payload.titu_emis || !payload.titu_venc || !payload.titu_valo) {
+      alert('Preencha todos os campos obrigatórios.');
+      return;
+    }
+    try {
+      const url = `/api/{{ slug }}/contas_a_receber/titulos-receber/`;
+      const resp = await fetch(url, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'X-CSRFToken': getCSRFToken(),
+          'X-Empresa': getEmpresaFilial().empresa,
+          'X-Filial': getEmpresaFilial().filial,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      if (!resp.ok) {
+        const t = await resp.text();
+        alert('Erro ao criar: ' + t);
+        return;
+      }
+      fecharCriarReceber();
+      window.location.reload();
+    } catch (e) {
+      alert('Falha na requisição: ' + e.message);
+    }
+  });
+  window.addEventListener('click', (ev) => { if (ev.target === modalCriarReceber) fecharCriarReceber(); });

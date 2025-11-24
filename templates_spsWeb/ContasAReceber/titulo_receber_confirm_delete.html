@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-4">
+  <h2>Excluir Título a Receber {{ object.titu_titu }}</h2>
+  <div class="alert alert-warning">Tem certeza que deseja excluir este título?</div>
+  <form method="post" class="mt-3">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Excluir</button>
+    <a href="{% url 'contas_a_receber_web:titulos_receber_list' slug=request.resolver_match.kwargs.slug %}" class="btn btn-secondary">Cancelar</a>
+  </form>
+</div>
+{% endblock %}

@@ -168,6 +168,7 @@
                 </div>
               </div>
             </div>
+            {% include 'Pedidos/financeiroAba.html' %}
           </div>
         </div>
 
@@ -175,7 +176,7 @@
           <a class="btn btn-outline-danger btn-lg" href="/web/login/" data-slug-route="/web/{slug}/pedidos/">
             <i class="bi bi-x-circle me-2"></i>Cancelar
           </a>
-          <button type="submit" class="btn btn-success btn-lg">
+          <button type="submit" class="btn btn-outline-success btn-lg">
             <i class="bi bi-check-circle me-2"></i>{% if form.instance.pk %}Salvar Pedido{% else %}Criar Pedido{% endif %}
           </button>
         </div>

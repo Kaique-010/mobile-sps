@@ -26,7 +26,7 @@
     </div>
   <div class="card">
     <div class="card-body">
-      <div class="table-responsive">
+      <div class="table-responsive d-none d-md-block">
         <table class="table table-hover align-middle">
           <thead>
             <tr>
@@ -62,6 +62,31 @@
             {% endfor %}
           </tbody>
         </table>
+        {% include 'components/pagination.html' %}
+      </div>
+      <div class="card-list d-md-none">
+        {% for e in entradas %}
+        <div class="card mb-2">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="fw-semibold">Entrada {{ e.entr_sequ }}</div>
+              <div class="text-muted small">{{ e.entr_data }}</div>
+            </div>
+            <div class="mt-2 small">
+              <div><strong>Produto:</strong> {{ e.entr_prod }}</div>
+              <div><strong>Entidade:</strong> {{ e.entr_enti }}</div>
+              <div><strong>Quantidade:</strong> {{ e.entr_quan }}</div>
+              <div><strong>Total:</strong> R$ {{ e.entr_tota }}</div>
+            </div>
+            <div class="mt-3 d-flex gap-2">
+              <a class="btn btn-sm btn-outline-secondary" href="/web/login/" data-slug-route="/web/{slug}/entradas/{{ e.pk }}/">Detalhe</a>
+              <a class="btn btn-sm btn-outline-primary" href="/web/login/" data-slug-route="/web/{slug}/entradas/{{ e.pk }}/editar/">Editar</a>
+            </div>
+          </div>
+        </div>
+        {% empty %}
+        <div class="alert alert-info">Nenhuma entrada encontrada</div>
+        {% endfor %}
         {% include 'components/pagination.html' %}
       </div>
     </div>

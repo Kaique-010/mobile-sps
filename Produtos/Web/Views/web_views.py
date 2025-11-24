@@ -32,6 +32,7 @@ from ..prod_forms import (
     ProdutosForm,
     TabelaprecosFormSet,
     TabelaprecosPlainFormSet,
+    TabelaprecosFormSetUpdate,
     GrupoForm,
     SubgrupoForm,
     FamiliaForm,
@@ -383,6 +384,18 @@ class ProdutoUpdateView(DBAndSlugMixin, UpdateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['slug'] = self.slug
+        try:
+            produto = self.object or ctx.get('object')
+        except Exception:
+            produto = ctx.get('object')
+        from ...models import Tabelaprecos
+        qs = Tabelaprecos.objects.using(self.db_alias).filter(tabe_prod=getattr(produto, 'prod_codi', None))
+        if self.empresa_id:
+            try:
+                qs = qs.filter(tabe_empr=int(self.empresa_id))
+            except Exception:
+                qs = qs.filter(tabe_empr=self.empresa_id)
+        ctx['formset'] = TabelaprecosFormSetUpdate(queryset=qs, prefix='precos')
         return ctx
 
     def get_form(self, form_class=None):

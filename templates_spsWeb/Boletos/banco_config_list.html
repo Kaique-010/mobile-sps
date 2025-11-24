@@ -1,20 +1,35 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block content %}
-<div class="container">
-  <h3>Configurações Bancárias por Entidade</h3>
-  <table class="table table-striped">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Nome</th>
-        <th>Banco</th>
-        <th>Agência</th>
-        <th>Conta</th>
-        <th>Ações</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for e in entidades %}
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
+<div class="container page-container">
+  <div class="page-header-custom">
+    <div class="container align-items-center">
+      <h2 class="page-title">
+        <i class="bi bi-building-check fs-4"></i> Configurações Bancárias Bancos/Caixa
+      </h2>
+    </div>
+    <div class="page-actions">
+      <a href="{% url 'banco_config_criar' slug=slug %}" class="btn btn-success btn-sm">
+        <i class="bi bi-plus-lg"></i> Nova Configuração
+      </a>
+    </div>
+  </div>
+
+  <div class="table-responsive d-none d-md-block">
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nome</th>
+          <th>Banco</th>
+          <th>Agência</th>
+          <th>Conta</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in entidades %}
         <tr>
           <td>{{ e.enti_clie }}</td>
           <td>{{ e.enti_nome }}</td>
@@ -22,11 +37,40 @@
           <td>{{ e.enti_agen }}</td>
           <td>{{ e.enti_coco }}</td>
           <td>
-            <a class="btn btn-sm btn-primary" href="{% url 'banco_config_editar' slug=slug enti_clie=e.enti_clie %}">Editar</a>
+            <a class="btn btn-sm btn-primary"
+              href="{% url 'banco_config_editar' slug=slug enti_clie=e.enti_clie %}">Editar</a>
           </td>
         </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center">Nenhum registro encontrado.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card-list d-md-none">
+    {% for e in entidades %}
+    <div class="card mb-2">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="fw-semibold">{{ e.enti_nome }}</div>
+          <div class="text-muted small">ID {{ e.enti_clie }}</div>
+        </div>
+        <div class="mt-2 small">
+          <div><strong>Banco:</strong> {{ e.enti_banc }}</div>
+          <div><strong>Agência:</strong> {{ e.enti_agen }}</div>
+          <div><strong>Conta:</strong> {{ e.enti_coco }}</div>
+        </div>
+        <div class="mt-3 d-flex gap-2">
+          <a class="btn btn-sm btn-outline-primary"
+            href="{% url 'banco_config_editar' slug=slug enti_clie=e.enti_clie %}">Editar</a>
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <div class="alert alert-info">Nenhum registro encontrado.</div>
+    {% endfor %}
+  </div>
 </div>
 {% endblock %}

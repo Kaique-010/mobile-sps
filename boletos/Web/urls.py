@@ -1,7 +1,7 @@
 from django.urls import path
 from .views.titulo_cbv import GerarBoletoWebView
 from .views.cnab_cbv import GerarRemessaWebView, ProcessarRetornoWebView
-from .views.banco_cbv import ListaBancosView, BancoConfigListView, BancoConfigUpdateView
+from .views.banco_cbv import ListaBancosView, BancoConfigListView, BancoConfigUpdateView, BancoConfigCreateView
 from .views.logo_cbv import LogoView
 
 urlpatterns = [
@@ -10,6 +10,7 @@ urlpatterns = [
     path("retorno/", ProcessarRetornoWebView.as_view(), name="retorno_web_processar"),
     path("bancos/", ListaBancosView.as_view(), name="lista_bancos"),
     path("bancos/configuracao/", BancoConfigListView.as_view(), name="banco_config_list"),
+    path("bancos/configuracao/criar/", BancoConfigCreateView.as_view(), name="banco_config_criar"),
     path("bancos/configuracao/<int:enti_clie>/editar/", BancoConfigUpdateView.as_view(), name="banco_config_editar"),
     path("logos/<str:variation>/<str:codigo>.bmp", LogoView.as_view(), name="boleto_logo"),
 ]

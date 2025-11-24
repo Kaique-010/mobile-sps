@@ -2,18 +2,9 @@ import os
 from django.views.generic import TemplateView, UpdateView, ListView
 from django.urls import reverse_lazy
 from django.http import JsonResponse
-
 from core.registry import get_licenca_db_config
-
-try:
-    from Entidades.models import Entidades
-except Exception:
-    Entidades = None
-
-try:
-    from ..forms.banco_config_form import BancoConfigForm
-except Exception:
-    BancoConfigForm = None
+from Entidades.models import Entidades
+from ..forms.banco_config_form import BancoConfigForm
 from ...services.validation_service import validate_caixa_config
 
 
@@ -48,7 +39,36 @@ class ListaBancosView(TemplateView):
         ctx['tipo'] = tipo
         ctx['slug'] = self.kwargs.get('slug')
         return ctx
+    
+    def get_queryset(self):
+        bancos = Entidades.objects.filter(enti_tipo_enti__isnull=False, enti_tien = 'B')
+        
+        return bancos
+       
+    
+class BancoConfigCreateView(TemplateView):
+    template_name = 'Boletos/banco_config_form.html'
+    context_object_name = 'entidade'
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['form'] = BancoConfigForm()
+        ctx['slug'] = self.kwargs.get('slug')
+        return ctx
+
+    def post(self, request, *args, **kwargs):
+        banco = get_licenca_db_config(self.request) or 'default'
+        form = BancoConfigForm(request.POST)
+        if form.is_valid():
+            empresa = self.request.session.get('empresa_id')
+            obj = form.save(commit=False)
+            if not getattr(obj, 'enti_tien', None):
+                obj.enti_tien = 'B'
+            obj.enti_empr = empresa
+            obj.save(using=banco)
+            return JsonResponse({'ok': True, 'enti_clie': obj.enti_clie, 'enti_banc': obj.enti_banc})
+        return JsonResponse({'ok': False, 'errors': form.errors}, status=400)
+    
 
 class BancoConfigListView(ListView):
     template_name = 'Boletos/banco_config_list.html'
@@ -57,13 +77,7 @@ class BancoConfigListView(ListView):
     def get_queryset(self):
         banco = get_licenca_db_config(self.request) or 'default'
         empresa = self.request.session.get('empresa_id')
-        qs = Entidades.objects.using(banco).filter(enti_empr=str(empresa)).order_by('enti_nome')
-        tipo = (self.request.GET.get('tipo') or '').lower()
-        if tipo == 'caixa':
-            try:
-                qs = qs.filter(enti_banc='104')
-            except Exception:
-                qs = qs.filter(enti_banc__icontains='104')
+        qs = Entidades.objects.using(banco).filter(enti_empr=empresa, enti_tien__in=['B']).order_by('enti_nome')        
         return qs
 
     def get_context_data(self, **kwargs):
@@ -86,7 +100,6 @@ class BancoConfigUpdateView(UpdateView):
 
     def form_valid(self, form):
         banco = get_licenca_db_config(self.request) or 'default'
-        # Validação específica para Caixa (104) se presente nos dados do formulário
         try:
             cfg = {
                 'codigo_banco': str(self.request.POST.get('codigo_banco') or ''),

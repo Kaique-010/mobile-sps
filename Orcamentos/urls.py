@@ -2,7 +2,7 @@
 
 from rest_framework.routers import DefaultRouter
 from django.urls import path, include
-from .views import OrcamentoViewSet
+from .rest.views import OrcamentoViewSet
 
 router = DefaultRouter()
 router.register(r'orcamentos', OrcamentoViewSet, basename='orcamentos')

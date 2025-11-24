@@ -1,0 +1,4 @@
+from .titulosreceber import TitulosreceberSerializer
+from .baretitulos import BaretitulosSerializer
+from .baixa_receber import BaixaTitulosReceberSerializer
+from .excluir_baixa import ExcluirBaixaSerializer
