@@ -3,12 +3,15 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from . import api_router, web_router, views
-from .views import whatsapp_webhook
+from .views import whatsapp_webhook, webhook_verify, webhook_receive
 import os
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("webhook/", whatsapp_webhook),
+    path("webhook/verify/", webhook_verify),
+    path("webhook/receive/", webhook_receive),
+    
 
 
     # Health e cache
