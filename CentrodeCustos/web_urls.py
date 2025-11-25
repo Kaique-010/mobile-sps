@@ -10,4 +10,5 @@ urlpatterns = [
     path("excluir/<int:cecu_redu>/", web_views.CentrodeCustosDeleteView.as_view(), name="excluir"),
     path("exportar/", web_views.ExportarCentrodeCustosView.as_view(), name="exportar"),
     path("proximo-codigo/", web_views.ProximoCodigoCentrodeCustosView.as_view(), name="proximo_codigo"),
+    path("autocomplete-pai/", web_views.AutocompletePaiCentrodeCustosView.as_view(), name="autocomplete_pai"),
 ]

@@ -1,164 +1,389 @@
 {% extends 'base.html' %}
 {% load static %}
-
-{% block title %}Centro de Custo{% endblock %}
-
+{% block title %}Centro de Custos{% endblock %}
 {% block content %}
-<div class="container mt-4">
-  <h3 class="mb-3">{{ form.instance.pk|yesno:"Editar,Novo" }} Centro de Custo</h3>
-  <form method="post">
-    {% csrf_token %}
+<div class="container py-4">
+    <div class="page-header-custom mb-3 d-flex justify-content-between align-items-center">
+        <div class="container align-items-center">
+            <h2 class="page-title"><i class="bi bi-diagram-3"></i> Centro de Custos</h2>
+        </div>
+        <div class="page-actions">
+            <a href="{% url 'centrosdecustos:lista' slug=slug %}" class="btn btn-outline-secondary btn-sm"
+                id="btnCancelar"><i class="bi bi-arrow-left"></i> Cancelar</a>
+            <button type="submit" form="ccForm" class="btn btn-primary btn-sm" id="btnSalvar"><i
+                    class="bi bi-check2-circle"></i> Salvar</button>
+        </div>
+    </div>
 
-    <ul class="nav nav-tabs" role="tablist">
-      <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="tab-principais" data-bs-toggle="tab" data-bs-target="#pane-principais" type="button" role="tab">Dados Principais</button>
-      </li>
-      <li class="nav-item" role="presentation">
-        <button class="nav-link" id="tab-complementares" data-bs-toggle="tab" data-bs-target="#pane-complementares" type="button" role="tab">Complementares</button>
-      </li>
-    </ul>
+    {% if messages %}
+    <div id="messagesBox" class="d-none">
+        {% for message in messages %}
+        <div class="message-item" data-level="{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
 
-    <div class="tab-content border border-top-0 p-3">
-      <div class="tab-pane fade show active" id="pane-principais" role="tabpanel">
+    <form id="ccForm" method="post" novalidate class="needs-validation">
+        {% csrf_token %}
         {{ form.cecu_empr }}
-        <div class="row g-3 align-items-end">
-          <div class="col-md-7">
-            <label class="form-label">{{ form.cecu_nome.label }}</label>
-            {{ form.cecu_nome }}
-            <div class="form-text">Nome do centro de custo.</div>
-          </div>
-          <div class="col-md-5">
-            <div class="mb-2">Tipo de criação</div>
-            <div class="btn-group" role="group" aria-label="Tipo">
-              <input type="radio" class="btn-check" name="tipoCriacao" id="tipoRaiz" autocomplete="off">
-              <label class="btn btn-outline-primary" for="tipoRaiz">Raiz</label>
-              <input type="radio" class="btn-check" name="tipoCriacao" id="tipoFilho" autocomplete="off">
-              <label class="btn btn-outline-primary" for="tipoFilho">Filho de…</label>
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            {{ form.non_field_errors }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+
+        <div class="card mb-3">
+            <div class="card-header">Informações básicas</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label for="id_cecu_nome" class="form-label">Nome *</label>
+                        <input type="text" name="cecu_nome" maxlength="60"
+                            class="form-control {% if form.cecu_nome.errors %}is-invalid{% endif %}" id="id_cecu_nome"
+                            value="{{ form.cecu_nome.value|default_if_none:'' }}" required>
+                        {% if form.cecu_nome.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.cecu_nome.errors.0 }}
+                        </div>
+                        {% else %}
+                        <div class="invalid-feedback">Informe o nome.</div>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
-            <div class="mt-2" id="bloco-pai">
-              <label class="form-label">{{ form.cecu_niv1.label }}</label>
-              {{ form.cecu_niv1 }}
-              <div class="form-text">Selecione o centro pai para criar um filho.</div>
-            </div>
-          </div>
         </div>
 
-        <div class="row g-3 mt-2">
-          <div class="col-md-4">
-            <div class="card">
-              <div class="card-body">
-                <div class="text-muted">Próximo código</div>
-                <div class="h5" id="prevCodigo">—</div>
-              </div>
+        <div class="card mb-3">
+            <div class="card-header">Tipo e Hierarquia</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="id_cecu_anal" class="form-label">Tipo *</label>
+                        <select name="cecu_anal" class="form-select {% if form.cecu_anal.errors %}is-invalid{% endif %}"
+                            id="id_cecu_anal" required>
+                            <option value="">-- Selecione o tipo --</option>
+                            <option value="S">Sintética (agrupa outras contas)</option>
+                            <option value="A">Analítica (movimentação direta)</option>
+                        </select>
+                        <div class="form-text">
+                            <small>
+                                <strong>Sintética:</strong> agrupa outras contas (não tem movimentação direta)<br>
+                                <strong>Analítica:</strong> tem movimentação direta (precisa de conta pai)
+                            </small>
+                        </div>
+                        {% if form.cecu_anal.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.cecu_anal.errors.0 }}
+                        </div>
+                        {% else %}
+                        <div class="invalid-feedback">Selecione o tipo.</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-6" id="divPai">
+                        <label for="id_cecu_niv1" class="form-label">
+                            Conta Pai <span id="requiredPai" class="text-danger d-none">*</span>
+                        </label>
+                        <input type="text" name="cecu_niv1"
+                            class="form-control {% if form.cecu_niv1.errors %}is-invalid{% endif %}" id="id_cecu_niv1"
+                            value="{{ form.cecu_niv1.value|default_if_none:'' }}" list="listaPais"
+                            placeholder="Digite código ou nome para buscar">
+                        <datalist id="listaPais"></datalist>
+                        <div class="form-text">
+                            <small id="paiHelp">Deixe vazio para criar conta raiz (nível 1)</small>
+                        </div>
+                        {% if form.cecu_niv1.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.cecu_niv1.errors.0 }}
+                        </div>
+                        {% else %}
+                        <div class="invalid-feedback">Conta analítica precisa de conta pai sintética.</div>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
-          </div>
-          <div class="col-md-4">
-            <div class="card">
-              <div class="card-body">
-                <div class="text-muted">Nível</div>
-                <div class="h5" id="prevNivel">—</div>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-4">
-            <div class="card">
-              <div class="card-body">
-                <div class="text-muted">Tipo do código</div>
-                <div class="h5" id="prevTipo">—</div>
-              </div>
-            </div>
-          </div>
         </div>
-      </div>
 
-      <div class="tab-pane fade" id="pane-complementares" role="tabpanel">
-        <div class="row g-3">
-          <div class="col-md-4">{{ form.cecu_expa.label_tag }} {{ form.cecu_expa }}</div>
-          <div class="col-md-4">{{ form.cecu_grup.label_tag }} {{ form.cecu_grup }}</div>
-          <div class="col-md-4">{{ form.cecu_natu.label_tag }} {{ form.cecu_natu }}</div>
-
-          <div class="col-md-6">{{ form.cecu_refe.label_tag }} {{ form.cecu_refe }}</div>
-          <div class="col-md-3">{{ form.cecu_dati.label_tag }} {{ form.cecu_dati }}</div>
-          <div class="col-md-3">{{ form.cecu_data.label_tag }} {{ form.cecu_data }}</div>
-
-          <div class="col-md-3">{{ form.cecu_inat.label_tag }} {{ form.cecu_inat }}</div>
-          <div class="col-md-3">{{ form.cecu_data_inat.label_tag }} {{ form.cecu_data_inat }}</div>
-          <div class="col-md-6">{{ form.cecu_obse.label_tag }} {{ form.cecu_obse }}</div>
-
-          <div class="col-md-3">{{ form.cecu_dre.label_tag }} {{ form.cecu_dre }}</div>
-          <div class="col-md-3">{{ form.cecu_prod.label_tag }} {{ form.cecu_prod }}</div>
-          <div class="col-md-3">{{ form.cecu_situ.label_tag }} {{ form.cecu_situ }}</div>
+        <div class="card mb-3" id="divPreview">
+            <div class="card-header bg-light">
+                <i class="bi bi-eye"></i> Pré-visualização do Código
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Próximo código disponível</label>
+                        <input type="text" class="form-control fw-bold" id="previewCodigo" readonly
+                            placeholder="Configure tipo e pai">
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">Expansão hierárquica</label>
+                        <input type="text" class="form-control fw-bold" id="previewExpa" readonly
+                            placeholder="Ex: 1.001">
+                    </div>
+                </div>
+                <div class="alert alert-info mt-3 mb-0" id="codigoInfo">
+                    <i class="bi bi-info-circle"></i>
+                    <span id="codigoInfoText">Selecione o tipo para ver o próximo código disponível</span>
+                </div>
+            </div>
         </div>
-      </div>
+
+    </form>
+
+    <div class="modal fade" id="confirmLeaveModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Descartar alterações?</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    As alterações não salvas serão perdidas.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Continuar editando</button>
+                    <a href="{% url 'centrosdecustos:lista' slug=slug %}" class="btn btn-danger"
+                        id="confirmLeaveGo">Descartar</a>
+                </div>
+            </div>
+        </div>
     </div>
-
-    <div class="mt-3 d-flex gap-2">
-      <button type="submit" class="btn btn-primary">Salvar</button>
-      <a href="{% url 'centrosdecustos:lista' slug=slug %}" class="btn btn-secondary">Voltar</a>
-    </div>
-  </form>
-
-  <p class="text-muted small mt-3">&copy; {{ current_year }}</p>
 </div>
-
+{% endblock %}
+{% block extra_js %}
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    const slug = '{{ slug }}';
-    const urlPreview = '{% url "centrosdecustos:proximo_codigo" slug=slug %}';
-    const inputPai = document.getElementById('id_cecu_niv1');
-    const inputEmpresa = document.getElementById('id_cecu_empr');
-    const prevCodigo = document.getElementById('prevCodigo');
-    const prevNivel = document.getElementById('prevNivel');
-    const prevTipo = document.getElementById('prevTipo');
-    const blocoPai = document.getElementById('bloco-pai');
-    const tipoRaiz = document.getElementById('tipoRaiz');
-    const tipoFilho = document.getElementById('tipoFilho');
+    (function () {
+        var form = document.getElementById('ccForm');
+        var nome = document.getElementById('id_cecu_nome');
+        var pai = document.getElementById('id_cecu_niv1');
+        var tipo = document.getElementById('id_cecu_anal');
+        var previewCodigo = document.getElementById('previewCodigo');
+        var previewExpa = document.getElementById('previewExpa');
+        var codigoInfoText = document.getElementById('codigoInfoText');
+        var requiredPai = document.getElementById('requiredPai');
+        var paiHelp = document.getElementById('paiHelp');
+        var dirty = false;
 
-    function atualizarPreview() {
-      const params = new URLSearchParams();
-      const empresaLS = (typeof localStorage !== 'undefined') ? localStorage.getItem('empresa_id') : null;
-      const empresaVal = (inputEmpresa && inputEmpresa.value) ? inputEmpresa.value : (empresaLS || '');
-      if (empresaVal) params.set('empresa', empresaVal);
-      if (!tipoRaiz.checked && inputPai && inputPai.value) {
-        params.set('parent', inputPai.value);
-      }
-      fetch(urlPreview + (params.toString() ? ('?' + params.toString()) : ''))
-        .then(r => r.json())
-        .then(d => {
-          if (d.error) throw new Error(d.error);
-          prevCodigo.textContent = d.code ?? '—';
-          prevNivel.textContent = d.level ?? '—';
-          prevTipo.textContent = (d.tipo === 'A' ? 'Analítico' : 'Sintético');
-        })
-        .catch(e => {
-          prevCodigo.textContent = '—';
-          prevNivel.textContent = '—';
-          prevTipo.textContent = '—';
+        function setDirty() { dirty = true; }
+        ['input', 'change'].forEach(function (ev) {
+            if (nome) nome.addEventListener(ev, setDirty);
+            if (pai) pai.addEventListener(ev, setDirty);
+            if (tipo) tipo.addEventListener(ev, setDirty);
         });
-    }
 
-    function aplicarModo() {
-      if (tipoRaiz.checked) {
-        blocoPai.style.display = 'none';
-        if (inputPai) inputPai.value = '';
-      } else {
-        blocoPai.style.display = '';
-      }
-      atualizarPreview();
-    }
+        function validate() {
+            var ok = true;
 
-    // Estado inicial
-    if (inputPai && inputPai.value) {
-      tipoFilho.checked = true;
-    } else {
-      tipoRaiz.checked = true;
-    }
-    aplicarModo();
+            // Valida nome
+            if (!nome.value || !nome.value.trim()) {
+                nome.classList.add('is-invalid');
+                ok = false;
+            } else {
+                nome.classList.remove('is-invalid');
+            }
 
-    // Eventos
-    if (inputPai) inputPai.addEventListener('change', atualizarPreview);
-    tipoRaiz.addEventListener('change', aplicarModo);
-    tipoFilho.addEventListener('change', aplicarModo);
-  });
+            // Valida tipo
+            if (!tipo.value) {
+                tipo.classList.add('is-invalid');
+                ok = false;
+            } else {
+                tipo.classList.remove('is-invalid');
+            }
+
+            // Valida pai (obrigatório para Analítica)
+            if (tipo.value === 'A' && (!pai.value || String(pai.value).trim() === '')) {
+                pai.classList.add('is-invalid');
+                ok = false;
+            } else {
+                pai.classList.remove('is-invalid');
+            }
+
+            return ok;
+        }
+
+        if (form) {
+            form.addEventListener('submit', function (e) {
+                if (!validate()) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            });
+        }
+
+        function fetchPreview() {
+            var tipoVal = tipo.value;
+            var paiVal = pai.value;
+
+            // Limpa preview se tipo não selecionado
+            if (!tipoVal) {
+                previewCodigo.value = '';
+                previewExpa.value = '';
+                codigoInfoText.textContent = 'Selecione o tipo para ver o próximo código disponível';
+                return;
+            }
+
+            // Para analítica sem pai, não busca código
+            if (tipoVal === 'A' && !paiVal) {
+                previewCodigo.value = '';
+                previewExpa.value = '';
+                codigoInfoText.textContent = 'Selecione uma conta pai para ver o próximo código';
+                return;
+            }
+
+            var params = new URLSearchParams();
+            if (paiVal) {
+                params.set('cecu_niv1', String(paiVal));
+            }
+
+            var url = '{% url "centrosdecustos:proximo_codigo" slug=slug %}' +
+                (params.toString() ? '?' + params.toString() : '');
+
+            fetch(url)
+                .then(function (r) { return r.json(); })
+                .then(function (j) {
+                    if (j && j.next) {
+                        previewCodigo.value = String(j.next);
+
+                        // Calcula expansão
+                        try {
+                            var digits = parseInt('{{ mask_digits|default:3 }}');
+                            var base = Math.pow(10, digits);
+                            var code = parseInt(j.next);
+                            var parts = [];
+
+                            while (code >= base) {
+                                parts.push(code % base);
+                                code = Math.floor(code / base);
+                            }
+                            parts.push(code);
+                            parts.reverse();
+
+                            var s = String(parts[0]);
+                            for (var i = 1; i < parts.length; i++) {
+                                s += '.' + String(parts[i]).padStart(digits, '0');
+                            }
+                            previewExpa.value = s;
+
+                            // Atualiza mensagem informativa
+                            if (paiVal) {
+                                codigoInfoText.textContent = 'Será criado como filho da conta ' + paiVal + ' no código ' + s;
+                            } else {
+                                codigoInfoText.textContent = 'Será criado como conta raiz (nível 1) no código ' + s;
+                            }
+                        } catch (e) {
+                            previewExpa.value = '';
+                        }
+                    }
+                })
+                .catch(function () {
+                    previewCodigo.value = '';
+                    previewExpa.value = '';
+                });
+        }
+
+        // Autocomplete de Pai
+        var debounceTimer = null;
+        function buscaPais(term) {
+            var url = '{% url "centrosdecustos:autocomplete_pai" slug=slug %}?q=' +
+                encodeURIComponent(term || '');
+            fetch(url)
+                .then(function (r) { return r.json(); })
+                .then(function (j) {
+                    var dl = document.getElementById('listaPais');
+                    if (!dl) return;
+                    dl.innerHTML = '';
+                    (j.results || []).forEach(function (item) {
+                        var opt = document.createElement('option');
+                        opt.value = String(item.id);
+                        opt.label = item.text;
+                        dl.appendChild(opt);
+                    });
+                })
+                .catch(function () { });
+        }
+
+        function onPaiInput() {
+            var val = String(pai.value || '').trim();
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(function () { buscaPais(val); }, 200);
+            fetchPreview();
+        }
+
+        function onTipoChange() {
+            var tipoVal = tipo.value;
+
+            if (tipoVal === 'A') {
+                // Analítica: pai obrigatório
+                pai.setAttribute('required', 'required');
+                requiredPai.classList.remove('d-none');
+                paiHelp.innerHTML = '<small class="text-danger">Conta analítica <strong>precisa</strong> de uma conta pai sintética</small>';
+            } else if (tipoVal === 'S') {
+                // Sintética: pai opcional
+                pai.removeAttribute('required');
+                requiredPai.classList.add('d-none');
+                paiHelp.innerHTML = '<small>Deixe vazio para criar conta raiz, ou escolha um pai para criar subconta</small>';
+            } else {
+                pai.removeAttribute('required');
+                requiredPai.classList.add('d-none');
+                paiHelp.innerHTML = '<small>Deixe vazio para criar conta raiz</small>';
+            }
+
+            fetchPreview();
+        }
+
+        if (pai) {
+            pai.addEventListener('input', onPaiInput);
+        }
+
+        if (tipo) {
+            tipo.addEventListener('change', onTipoChange);
+        }
+
+        // Inicialização
+        buscaPais('');
+        onTipoChange();
+        fetchPreview();
+
+        // Modal de confirmação ao cancelar
+        var cancel = document.getElementById('btnCancelar');
+        var modalEl = document.getElementById('confirmLeaveModal');
+        var modal = null;
+
+        if (cancel && modalEl) {
+            modal = new bootstrap.Modal(modalEl);
+            cancel.addEventListener('click', function (e) {
+                if (dirty) {
+                    e.preventDefault();
+                    modal.show();
+                }
+            });
+        }
+
+        // Exibe mensagens
+        document.addEventListener('DOMContentLoaded', function () {
+            var box = document.getElementById('messagesBox');
+            if (!box) return;
+            var items = box.querySelectorAll('.message-item');
+            items.forEach(function (it) {
+                var level = (it.getAttribute('data-level') || 'success').split(' ').pop();
+                if (window.showToast) {
+                    window.showToast(it.textContent, {
+                        variant: level === 'error' ? 'danger' : level
+                    });
+                }
+            });
+        });
+
+        // Aviso antes de sair
+        window.addEventListener('beforeunload', function (e) {
+            if (dirty) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+    })();
 </script>
 {% endblock %}
