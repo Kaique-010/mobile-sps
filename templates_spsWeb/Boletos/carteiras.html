@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Carteiras{% endblock %}
+{% block content %}
+<div class="container page-container">
+  <div class="page-header-custom d-flex justify-content-between align-items-center">
+    <h2 class="page-title">Carteiras</h2>
+    <div class="page-actions">
+      <a href="{% url 'banco_config_list' slug=slug %}" class="btn btn-outline-secondary btn-sm">Voltar</a>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <form id="carteiraForm" method="post" novalidate>
+        {% csrf_token %}
+        <div class="row g-3">
+          <div class="col-md-2">
+            <label class="form-label">Banco</label>
+            <input type="text" class="form-control" id="bancoCodigo" value="{{ banco_codigo }}" placeholder="Código do banco">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Código</label>
+            {{ form.cart_codi }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Nome</label>
+            {{ form.cart_nome }}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">CNAB</label>
+            {{ form.cart_cnab }}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Convênio</label>
+            {{ form.cart_conv }}
+          </div>
+        </div>
+        <div class="row g-3 mt-2">
+          <div class="col-md-3">
+            <label class="form-label">Carteira</label>
+            {{ form.cart_cart }}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Nosso Número</label>
+            {{ form.cart_noss_nume }}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Multa %</label>
+            {{ form.cart_mult }}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Juro %</label>
+            {{ form.cart_juro }}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Desconto %</label>
+            {{ form.cart_desc }}
+          </div>
+        </div>
+        <div class="mt-3 d-flex gap-2">
+          <button type="submit" class="btn btn-primary">Salvar</button>
+          <button type="button" id="btnProximo" class="btn btn-outline-secondary">Próximo Código</button>
+          <button type="button" id="btnLookup" class="btn btn-outline-info">Buscar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <h5 class="card-title">Carteiras Cadastradas</h5>
+      <div class="table-responsive">
+        <table class="table table-striped">
+          <thead><tr><th>Código</th><th>Nome</th><th>Convênio</th><th>Carteira</th><th>CNAB</th></tr></thead>
+          <tbody>
+            {% for c in carteiras %}
+            <tr>
+              <td>{{ c.cart_codi }}</td>
+              <td>{{ c.cart_nome }}</td>
+              <td>{{ c.cart_conv }}</td>
+              <td>{{ c.cart_cart }}</td>
+              <td>{{ c.cart_cnab }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center">Nenhuma carteira encontrada.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const formEl = document.getElementById('carteiraForm');
+  const bancoInput = document.getElementById('bancoCodigo');
+  document.getElementById('btnProximo').addEventListener('click', async function(){
+    const banco = bancoInput.value || '';
+    const url = new URL('{% url "carteira_proximo" slug=slug %}', window.location.origin);
+    if (banco) url.searchParams.set('banco', banco);
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data && data.ok) {
+      const codInput = formEl.querySelector('[name="cart_codi"]');
+      if (codInput) codInput.value = data.proximo;
+    }
+  });
+  document.getElementById('btnLookup').addEventListener('click', async function(){
+    const banco = bancoInput.value || '';
+    const cod = formEl.querySelector('[name="cart_codi"]').value;
+    const url = new URL('{% url "carteira_lookup" slug=slug %}', window.location.origin);
+    if (banco) url.searchParams.set('banco', banco);
+    if (cod) url.searchParams.set('cart_codi', cod);
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data && data.ok && data.carteira) {
+      const map = data.carteira;
+      Object.entries(map).forEach(([k,v]) => {
+        const el = formEl.querySelector('[name="'+k+'"]');
+        if (el) el.value = v == null ? '' : v;
+      });
+    }
+  });
+  formEl.addEventListener('submit', async function(e){
+    e.preventDefault();
+    const fd = new FormData(formEl);
+    fd.append('banco', bancoInput.value || '');
+    Array.from(formEl.querySelectorAll('[data-field-error="1"]')).forEach(function(el){ el.remove(); });
+    const csrftoken = (document.querySelector('input[name="csrfmiddlewaretoken"]')||{}).value || '';
+    const res = await fetch('{% url "carteira_criar" slug=slug %}', { method:'POST', headers:{'X-Requested-With':'XMLHttpRequest','X-CSRFToken': csrftoken}, body: fd, credentials: 'same-origin' });
+    const data = await res.json();
+    if (data.ok) {
+      if (window.showToast) window.showToast('Carteira salva', {variant:'success', delay:1500});
+      window.location.reload();
+    } else if (data.errors) {
+      Object.entries(data.errors).forEach(function([name,msgs]){
+        const field = formEl.querySelector('[name="'+name+'"]');
+        if (field) {
+          const div = document.createElement('div');
+          div.className = 'text-danger';
+          div.setAttribute('data-field-error','1');
+          div.textContent = Array.isArray(msgs) ? msgs.join(' ') : String(msgs);
+          field.insertAdjacentElement('afterend', div);
+        }
+      });
+      if (window.showToast) window.showToast('Erro ao salvar', {variant:'danger', delay:3000});
+    }
+  });
+</script>
+{% endblock %}

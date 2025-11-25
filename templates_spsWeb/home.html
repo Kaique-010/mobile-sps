@@ -48,12 +48,30 @@
         bottom: -5px;
         font-size: 10px;
     }
+
     .btn-outline-custom2:hover {
-        background-color: #8ec4d4;  
+        background-color: #8ec4d4;
         color: var(--bs-white);
     }
-    .pulse-run { animation: pulse 0.8s ease-in-out infinite; transform-origin: center center }
-    @keyframes pulse { 0%{transform:scale(1)} 20%{transform:scale(1.25)} 120%{transform:scale(1)} }
+
+    .pulse-run {
+        animation: pulse 0.8s ease-in-out infinite;
+        transform-origin: center center
+    }
+
+    @keyframes pulse {
+        0% {
+            transform: scale(1)
+        }
+
+        20% {
+            transform: scale(1.25)
+        }
+
+        120% {
+            transform: scale(1)
+        }
+    }
 </style>
 <div class="container page-container">
     <div class="card card-corporate">
@@ -61,7 +79,7 @@
             <div class="page-header">
                 <h2 class="page-title text-center"><i
                         class="bi bi-graph-up fs-3 justify-content-center text-center"></i> Overview</h2>
-               
+
             </div>
         </div>
     </div>
@@ -72,12 +90,6 @@
                 <label for="vendedor" class="form-label">Vendedor</label>
                 <select id="vendedor" name="vendedor" class="form-select">
                     <option value="">Todos os Vendedores</option>
-                    {% for vendedor in vendedores %}
-                    <option value="{{ vendedor.enti_nome }}" {% if vendedor.enti_nome == vendedor_selecionado%}
-                        selected{% endif %}>
-                        {{ vendedor.enti_nome }}
-                    </option>
-                    {% endfor %}
                 </select>
             </div>
             <div class="col-md-4">
@@ -108,18 +120,22 @@
                 <div class="card-body">
                     <h3 class="h6 text-body">Valor Pedidos por Vendedor</h3>
                     <canvas id="totalValorPedidoChart" class="chart-canvas"></canvas>
-                     <button id="abrirKronos" class="btn btn-outline-custom2 ms-2"><img src="{% static 'logo.png' %}" style="height:24px" />Fale com Kronos</button>
+                    <button id="abrirKronos" class="btn btn-outline-custom2 ms-2"><img src="{% static 'logo.png' %}"
+                            style="height:24px" />Fale com Kronos</button>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <div id="kronosModal" class="modal" tabindex="-1">
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content" style="background-color:#121212;border:1px solid #00bfff">
                 <div class="modal-header" style="border-bottom-color:#00bfff">
                     <div class="d-flex align-items-center">
-                        <div id="logoPulse" style="width:30px;height:30px;border-radius:15px;background:#00bfff93;margin-right:14px"><img src="{% static 'logo.png' %}" style="height:18px; margin-left:7px"></div>
+                        <div id="logoPulse"
+                            style="width:30px;height:30px;border-radius:15px;background:#00bfff93;margin-right:14px">
+                            <img src="{% static 'logo.png' %}" style="height:18px; margin-left:7px">
+                        </div>
                         <h5 class="modal-title" style="color:#00bfff">Kronos — Agente I.A Spartacus</h5>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -130,7 +146,8 @@
                         <button id="limparChat" class="btn btn-secondary btn-sm">🗑</button>
                     </div>
                     <div class="input-group">
-                        <input id="mensagemInput" type="text" class="form-control" placeholder="Diga algo para o Kronos..." />
+                        <input id="mensagemInput" type="text" class="form-control"
+                            placeholder="Diga algo para o Kronos..." />
                         <button id="enviarMensagem" class="btn btn-primary">Enviar</button>
                     </div>
                 </div>
@@ -195,9 +212,9 @@
         const g = ctx.createLinearGradient(0, ctx.canvas.height, 0, 0); g.addColorStop(0, '#4a6cf7'); g.addColorStop(1, '#82a0ff'); return g
     }
     const shadowPlugin = { id: 'barShadow', beforeDatasetsDraw(chart) { const c = chart.ctx; c.save(); c.shadowColor = 'rgba(142, 196, 212, 0.733)'; c.shadowBlur = 8; c.shadowOffsetY = 4 }, afterDatasetsDraw(chart) { chart.ctx.restore() } };
-    function isDarkTheme(){ const t=(document.documentElement.getAttribute('data-bs-theme')||document.body.getAttribute('data-bs-theme')||'').toLowerCase(); if(t) return t==='dark'; return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches }
-    function isWhiteTheme(){ return !isDarkTheme() }
-    function themeAxis(){ const dark=isDarkTheme(); return { gridColor: dark? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.12)', tickColor: dark? '#ffffff' : '#212529', legendColor: dark? '#ffffff' : '#212529' } }
+    function isDarkTheme() { const t = (document.documentElement.getAttribute('data-bs-theme') || document.body.getAttribute('data-bs-theme') || '').toLowerCase(); if (t) return t === 'dark'; return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches }
+    function isWhiteTheme() { return !isDarkTheme() }
+    function themeAxis() { const dark = isDarkTheme(); return { gridColor: dark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.12)', tickColor: dark ? '#ffffff' : '#212529', legendColor: dark ? '#ffffff' : '#212529' } }
 
     function upsertCharts(labels, valoresCount, valoresSum) {
         const barCtx = totalPedidosCtx ? totalPedidosCtx.getContext('2d') : null;
@@ -273,11 +290,15 @@
         const data_inicial = dataInicioEl?.value || ini;
         const data_final = dataFimEl?.value || fim;
 
+        const empresa = localStorage.getItem('empresa_id') || '';
+        const filial = localStorage.getItem('filial_id') || '';
         const params = new URLSearchParams({
             data_inicial,
             data_final,
             limit: '250'
         });
+        if (empresa) params.set('empresa', empresa);
+        if (filial) params.set('filial', filial);
         if (nomeVendedor) params.set('nome_vendedor', nomeVendedor);
         // Endpoint: Pedidos gerais (usaremos para agregar por vendedor)
         const url = `/api/${slug}/pedidos/pedidos-geral/?${params.toString()}`;
@@ -307,6 +328,32 @@
         }
     }
 
+    async function carregarVendedores() {
+        try {
+            const slug = localStorage.getItem('slug');
+            const empresa = localStorage.getItem('empresa_id') || '';
+            if (!slug || !empresa) return;
+            const url = `/api/${slug}/entidades/entidades/?enti_empr=${encodeURIComponent(empresa)}&enti_tipo_enti=VE&limit=500`;
+            const resp = await authFetch(url);
+            if (!resp.ok) return;
+            const data = await resp.json();
+            const sel = document.getElementById('vendedor');
+            const atual = sel.value;
+            // Limpa mantendo a opção "Todos"
+            sel.innerHTML = '<option value="">Todos os Vendedores</option>';
+            const lista = Array.isArray(data) ? data : (data.results || []);
+            lista.forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = v.enti_nome;
+                opt.textContent = v.enti_nome;
+                sel.appendChild(opt);
+            });
+            if (atual) sel.value = atual;
+        } catch (e) {
+            console.error('Falha ao carregar vendedores:', e);
+        }
+    }
+
     // Submit: apenas recarrega os dados sem navegar
     (function () {
         const form = document.getElementById('filtroDashboard');
@@ -320,6 +367,7 @@
     // Inicializa ao carregar a página
     document.addEventListener('DOMContentLoaded', () => {
         loadData();
+        carregarVendedores();
     });
 
     // Kronos: abre o modal e carrega o histórico
@@ -333,16 +381,16 @@
     let pensando = false;
     let historico = [];
 
-    function setPensando(active){
+    function setPensando(active) {
         pensando = active;
-        if(!logoPulse) return;
-        if(active){
+        if (!logoPulse) return;
+        if (active) {
             logoPulse.classList.add('pulse-run');
         } else {
             logoPulse.classList.remove('pulse-run');
         }
     }
-    function mdFormat(text){
+    function mdFormat(text) {
         const link = /\[([^\]]+)\]\(([^\)]+)\)/g;
         const bold = /\*\*([^*]+)\*\*/g;
         const h3 = /^###\s+(.+)$/gm;
@@ -353,36 +401,36 @@
         t = t.replace(h2, '<h4>$1</h4>');
         t = t.replace(h3, '<h5>$1</h5>');
         t = t.replace(bold, '<strong>$1</strong>');
-        t = t.replace(link, (m, p1, p2)=>{
+        t = t.replace(link, (m, p1, p2) => {
             const url = String(p2 || '').replace(/^sandbox:\//, '');
             return `<a href="${url}" target="_blank" rel="noopener">${p1}</a>`;
         });
         const lines = t.split(/\r?\n/);
         let out = '';
         let inList = false;
-        for(const line of lines){
-            if(/^\s*[-•]\s+/.test(line)){
-                if(!inList){ out += '<ul style="margin:6px 0 10px 18px;">'; inList = true; }
+        for (const line of lines) {
+            if (/^\s*[-•]\s+/.test(line)) {
+                if (!inList) { out += '<ul style="margin:6px 0 10px 18px;">'; inList = true; }
                 out += `<li>${line.replace(/^\s*[-•]\s+/, '')}</li>`;
             } else {
-                if(inList){ out += '</ul>'; inList = false; }
-                if(line.trim()){ out += `<div>${line}</div>`; }
+                if (inList) { out += '</ul>'; inList = false; }
+                if (line.trim()) { out += `<div>${line}</div>`; }
             }
         }
-        if(inList) out += '</ul>';
+        if (inList) out += '</ul>';
         return out || t;
     }
 
-    function renderHistorico(){
+    function renderHistorico() {
         chatBox.innerHTML = '';
-        historico.forEach((msg)=>{
+        historico.forEach((msg) => {
             const row = document.createElement('div');
             row.style.display = 'flex';
             row.style.flexDirection = msg.tipo === 'user' ? 'row-reverse' : 'row';
             row.style.alignItems = 'flex-end';
             row.style.margin = '6px 0';
             const avatar = document.createElement('div');
-            if(msg.tipo === 'user'){
+            if (msg.tipo === 'user') {
                 avatar.style.width = '34px';
                 avatar.style.height = '34px';
                 avatar.style.borderRadius = '17px';
@@ -411,12 +459,12 @@
             row.appendChild(bubble);
             chatBox.appendChild(row);
         });
-        if(pensando){
+        if (pensando) {
             const dots = document.createElement('div');
             dots.style.display = 'flex';
             dots.style.alignItems = 'center';
             dots.style.margin = '6px 0 6px 8px';
-            for(let i=0;i<3;i++){
+            for (let i = 0; i < 3; i++) {
                 const d = document.createElement('div');
                 d.style.width = '8px';
                 d.style.height = '8px';
@@ -436,41 +484,41 @@
         }
         chatBox.scrollTop = chatBox.scrollHeight;
     }
-    async function enviarMsg(texto){
-        if(!texto) return;
-        historico.push({tipo:'user', texto});
+    async function enviarMsg(texto) {
+        if (!texto) return;
+        historico.push({ tipo: 'user', texto });
         setPensando(true);
         renderHistorico();
-        try{
+        try {
             const slug = localStorage.getItem('slug');
             const url = `/api/${slug}/assistente/chat/`;
-            const resp = await authFetch(url, {method:'POST', body: JSON.stringify({mensagem: texto})});
+            const resp = await authFetch(url, { method: 'POST', body: JSON.stringify({ mensagem: texto }) });
             const data = await resp.json();
             const textoSpart = (typeof data?.resposta === 'string' && data.resposta.trim()) ? data.resposta : (data?.erro || '⚠️ Sem retorno visível do agente.');
-            historico.push({tipo:'spart', texto: textoSpart});
-            if(data?.resposta_audio){
-                try{
+            historico.push({ tipo: 'spart', texto: textoSpart });
+            if (data?.resposta_audio) {
+                try {
                     const audio = new Audio(`data:audio/mp3;base64,${data.resposta_audio}`);
                     await audio.play();
-                }catch(e){}
+                } catch (e) { }
             }
-        }catch(err){
-            historico.push({tipo:'spart', texto: '❌ Erro ao falar com o agente.'});
+        } catch (err) {
+            historico.push({ tipo: 'spart', texto: '❌ Erro ao falar com o agente.' });
         } finally {
             setPensando(false);
             renderHistorico();
         }
     }
-    abrirBtn?.addEventListener('click', ()=>{
+    abrirBtn?.addEventListener('click', () => {
         const modal = new bootstrap.Modal(modalEl);
         modal.show();
     });
-    enviarBtn?.addEventListener('click', ()=>{
+    enviarBtn?.addEventListener('click', () => {
         const texto = mensagemInput.value.trim();
-        mensagemInput.value='';
+        mensagemInput.value = '';
         enviarMsg(texto);
     });
-    limparBtn?.addEventListener('click', ()=>{
+    limparBtn?.addEventListener('click', () => {
         historico = [];
         renderHistorico();
     });

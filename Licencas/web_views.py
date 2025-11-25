@@ -8,7 +8,9 @@ from core.middleware import get_licenca_slug
 from Licencas.models import Filiais
 from Licencas.crypto import encrypt_bytes, encrypt_str
 from cryptography.hazmat.primitives.serialization.pkcs12 import load_key_and_certificates
-from Licencas.utils import get_proxima_filial, get_proxima_empresa
+from Licencas.utils import get_proxima_filial, get_proxima_filial_empr, get_proxima_empresa
+from django.db.models import Max
+from django.http import Http404
 
 class FilialCertificadoUploadView(FormView):
     template_name = 'Licencas/filial_certificado_form.html'
@@ -107,7 +109,7 @@ class FilialListView(DBSlugMixin, ListView):
         empresa_id = self.request.GET.get('empresa_id')
         qs = Filiais.objects.using(self.db_alias).all()
         if empresa_id:
-            qs = qs.filter(empr_codi=int(empresa_id))
+            qs = qs.filter(empr_empr=int(empresa_id))
         return qs
 
 class FilialCreateView(DBSlugMixin, CreateView):
@@ -120,17 +122,36 @@ class FilialCreateView(DBSlugMixin, CreateView):
 
     def form_valid(self, form):
         obj = form.save(commit=False)
-        obj.empr_empr = get_proxima_filial(self.db_alias)
+        empresa_id = self.request.GET.get('empresa_id') or self.request.POST.get('empresa_id')
+        if not empresa_id:
+            from Licencas.models import Empresas
+            empresa = Empresas.objects.using(self.db_alias).order_by('empr_codi').first()
+            if not empresa:
+                form.add_error(None, 'Nenhuma empresa encontrada para vincular a filial.')
+                return self.form_invalid(form)
+            empresa_id = empresa.empr_codi
+        obj.empr_empr = int(empresa_id)
+        obj.empr_codi = ((Filiais.objects.using(self.db_alias)
+                           .filter(empr_empr=int(empresa_id))
+                           .aggregate(Max('empr_codi'))['empr_codi__max']) or 0) + 1
         senha = form.cleaned_data.get('senha_certificado')
         arquivo = form.cleaned_data.get('certificado')
         if senha:
             obj.empr_senh_cert = encrypt_str(senha)
         if arquivo:
             content = arquivo.read()
-            load_key_and_certificates(content, (senha or '').encode('utf-8'))
+            try:
+                load_key_and_certificates(content, (senha or '').encode('utf-8'))
+            except Exception:
+                form.add_error('certificado', 'Certificado inválido ou senha incorreta.')
+                return self.form_invalid(form)
             obj.empr_cert = getattr(arquivo, 'name', 'certificado.p12')
             obj.empr_cert_digi = encrypt_bytes(content)
-        obj.save(using=self.db_alias)
+        try:
+            obj.save(using=self.db_alias, force_insert=True)
+        except Exception as e:
+            form.add_error(None, 'Falha ao salvar filial: verifique vínculos e chaves.')
+            return self.form_invalid(form)
         messages.success(self.request, 'Filial criada com sucesso.')
         return super().form_valid(form)
 
@@ -142,6 +163,21 @@ class FilialUpdateView(DBSlugMixin, UpdateView):
 
     def get_queryset(self):
         return Filiais.objects.using(self.db_alias).all()
+
+    def get_object(self, queryset=None):
+        qs = queryset or self.get_queryset()
+        empresa = int(self.kwargs.get(self.pk_url_kwarg))
+        filial = self.request.GET.get('filial_id')
+        if not filial:
+            raise Http404('Parâmetro "filial_id" é obrigatório para editar a filial.')
+        try:
+            filial = int(filial)
+        except ValueError:
+            raise Http404('Parâmetro "filial_id" inválido.')
+        obj = qs.filter(empr_empr=empresa, empr_codi=filial).first()
+        if not obj:
+            raise Http404('Filial não encontrada para a empresa informada.')
+        return obj
 
     def get_initial(self):
         initial = super().get_initial()
@@ -161,11 +197,19 @@ class FilialUpdateView(DBSlugMixin, UpdateView):
         obj = form.save(commit=False)
         senha = form.cleaned_data.get('senha_certificado')
         arquivo = form.cleaned_data.get('certificado')
+        if not obj.empr_empr:
+            empresa_id = self.request.GET.get('empresa_id') or self.request.POST.get('empresa_id')
+            if empresa_id:
+                obj.empr_empr = int(empresa_id)
         if senha and senha != '********':
             obj.empr_senh_cert = encrypt_str(senha)
         if arquivo:
             content = arquivo.read()
-            load_key_and_certificates(content, (senha or '').encode('utf-8'))
+            try:
+                load_key_and_certificates(content, (senha or '').encode('utf-8'))
+            except Exception:
+                form.add_error('certificado', 'Certificado inválido ou senha incorreta.')
+                return self.form_invalid(form)
             obj.empr_cert = getattr(arquivo, 'name', 'certificado.p12')
             obj.empr_cert_digi = encrypt_bytes(content)
         obj.save(using=self.db_alias)

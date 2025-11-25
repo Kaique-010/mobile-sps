@@ -3,15 +3,15 @@ from django.contrib.auth.hashers import make_password
 from core.middleware import get_licenca_slug
 from core.registry import get_licenca_db_config
 from django.http import HttpRequest
-from .models import Usuarios
+from .models import Usuarios, Empresas, Filiais
 from django.db.models import Max
 
 def atualizar_senha(username, nova_senha, request=None):
 
     try:
         if request:
-            banco = get_licenca_db_config(request)
-            if banco and banco != "default":
+            banco = get_licenca_db_config(request) or 'default'
+            if banco != "default":
                 # Usar SQL direto para evitar problemas com tabelas de permissões
                 from django.db import connections
                 db_connection = connections[banco]
@@ -56,5 +56,11 @@ def get_proxima_empresa(banco):
 def get_proxima_filial(banco):
     """Gera próximo número de filial"""
     maior = Filiais.objects.using(banco).aggregate(Max('empr_codi'))['empr_codi__max'] or 0
+    print(f"Maior filial encontrado: {maior}")
+    return maior + 1
+
+def get_proxima_filial_empr(banco):
+    """Gera próximo número de filial"""
+    maior = Filiais.objects.using(banco).aggregate(Max('empr_empr'))['empr_empr__max'] or 0
     print(f"Maior filial encontrado: {maior}")
     return maior + 1

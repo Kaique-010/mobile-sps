@@ -5,6 +5,7 @@ from django.http import JsonResponse
 from core.registry import get_licenca_db_config
 from Entidades.models import Entidades
 from ..forms.banco_config_form import BancoConfigForm
+from ..forms.carteira_form import CNAB_CHOICES
 from ...services.validation_service import validate_caixa_config
 
 
@@ -54,18 +55,32 @@ class BancoConfigCreateView(TemplateView):
         ctx = super().get_context_data(**kwargs)
         ctx['form'] = BancoConfigForm()
         ctx['slug'] = self.kwargs.get('slug')
+        ctx['CNAB_CHOICES'] = CNAB_CHOICES
         return ctx
 
     def post(self, request, *args, **kwargs):
         banco = get_licenca_db_config(self.request) or 'default'
         form = BancoConfigForm(request.POST)
         if form.is_valid():
-            empresa = self.request.session.get('empresa_id')
+            empresa = (
+                self.request.session.get('empresa_id')
+                or self.request.headers.get('X-Empresa')
+                or self.request.POST.get('empresa')
+                or self.request.GET.get('empresa')
+            )
+            try:
+                if isinstance(empresa, str) and empresa.isdigit():
+                    empresa = int(empresa)
+            except Exception:
+                pass
+            if not empresa:
+                return JsonResponse({'ok': False, 'erro': 'empresa_obrigatoria'}, status=400)
             obj = form.save(commit=False)
             if not getattr(obj, 'enti_tien', None):
                 obj.enti_tien = 'B'
             obj.enti_empr = empresa
             obj.save(using=banco)
+            
             return JsonResponse({'ok': True, 'enti_clie': obj.enti_clie, 'enti_banc': obj.enti_banc})
         return JsonResponse({'ok': False, 'errors': form.errors}, status=400)
     
@@ -94,9 +109,26 @@ class BancoConfigUpdateView(UpdateView):
 
     def get_object(self, queryset=None):
         banco = get_licenca_db_config(self.request) or 'default'
-        empresa = self.request.session.get('empresa_id')
+        empresa = (
+            self.request.session.get('empresa_id')
+            or self.request.headers.get('X-Empresa')
+            or self.request.GET.get('empresa')
+        )
         pk = self.kwargs.get('enti_clie')
-        return Entidades.objects.using(banco).filter(enti_empr=str(empresa), enti_clie=str(pk)).first()
+        try:
+            if isinstance(empresa, str) and empresa.isdigit():
+                empresa = int(empresa)
+        except Exception:
+            empresa = None
+        try:
+            if isinstance(pk, str) and pk.isdigit():
+                pk = int(pk)
+        except Exception:
+            pass
+        qs = Entidades.objects.using(banco)
+        if empresa:
+            qs = qs.filter(enti_empr=empresa)
+        return qs.filter(enti_clie=pk).first()
 
     def form_valid(self, form):
         banco = get_licenca_db_config(self.request) or 'default'
@@ -122,4 +154,5 @@ class BancoConfigUpdateView(UpdateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['slug'] = self.kwargs.get('slug')
+        ctx['CNAB_CHOICES'] = CNAB_CHOICES
         return ctx

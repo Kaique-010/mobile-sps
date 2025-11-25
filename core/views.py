@@ -4,6 +4,7 @@ import json
 from Entidades.models import Entidades
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
+from core.utils import get_licenca_db_config, get_db_from_slug
 import logging
 
 logger = logging.getLogger(__name__)
@@ -39,9 +40,35 @@ def index(request):
 
 
 def home(request):
-    # Carrega vendedores e mantém seleção enviada por GET
+    try:
+        banco = get_licenca_db_config(request) or 'default'
+        logger.info(f"[home] banco: {banco}")
+    except Exception:
+        banco = 'default'
+    # Fallback: se banco for 'default', tentar usar slug salvo em sessão
+    if banco == 'default':
+        try:
+            slug_sess = request.session.get('slug')
+            if slug_sess:
+                banco = get_db_from_slug(slug_sess) or banco
+                logger.info(f"[home] banco via sessão.slug: {banco}")
+        except Exception:
+            pass
+
+    empresa_id = request.session.get('empresa_id')
+    try:
+        empresa_id = int(empresa_id) if empresa_id is not None else None
+    except Exception:
+        empresa_id = None
+
     vendedor_selecionado = (request.GET.get('vendedor') or '').strip()
-    vendedores_qs = Entidades.objects.filter(enti_tipo_enti='VE').order_by('enti_nome')
+    vendedores_qs = Entidades.objects.using(banco).filter(enti_tipo_enti='VE')
+    logger.info(f"[home] vendedores_qs: {vendedores_qs}")
+    if empresa_id is not None:
+        vendedores_qs = vendedores_qs.filter(enti_empr=empresa_id)
+    else:
+        vendedores_qs = vendedores_qs.filter(enti_empr=-1)
+    vendedores_qs = vendedores_qs.order_by('enti_nome')
 
     labels = []
     total_pedidos = []
@@ -69,6 +96,16 @@ def selecionar_empresa(request):
     GET: Renderiza formulário.
     POST: Salva empresa/filial na sessão e redireciona para a Home.
     """
+    # Persistir slug da licença na sessão para uso na Home sem slug
+    try:
+        parts = request.path.strip('/').split('/')
+        slug = parts[1] if len(parts) > 1 else None
+        if slug:
+            request.session['slug'] = slug
+            logger.info(f"[selecionar_empresa] slug salvo na sessão: {slug}")
+    except Exception:
+        pass
+
     if request.method == 'POST':
         try:
             empresa_id = request.POST.get('empresa_id') or request.POST.get('empresa')

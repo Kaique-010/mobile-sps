@@ -38,7 +38,7 @@ class OsListView(ListView):
         from Entidades.models import Entidades
         qs = Os.objects.using(banco).filter(
             os_empr=self.request.session.get('empresa_id', 1),
-            os_fili=self.request.session.get('filiacao_id', 1),
+            os_fili=self.request.session.get('filial_id', 1),
         )
         cliente_param = (self.request.GET.get('cliente') or '').strip()
         vendedor_param = (self.request.GET.get('vendedor') or '').strip()
@@ -98,7 +98,7 @@ class OsListView(ListView):
         from Entidades.models import Entidades
         qs_total = Os.objects.using(banco).filter(
             os_empr=self.request.session.get('empresa_id', 1),
-            os_fili=self.request.session.get('filiacao_id', 1),
+            os_fili=self.request.session.get('filial_id', 1),
         )
         cliente_param = (self.request.GET.get('cliente') or '').strip()
         vendedor_param = (self.request.GET.get('vendedor') or '').strip()

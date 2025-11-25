@@ -1,6 +1,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
-
+from django.db.models import Max
 try:
     from Entidades.models import Entidades
 except Exception:
@@ -110,8 +110,10 @@ class BancoConfigForm(forms.ModelForm):
             }),
             'enti_tien': forms.Select(),
             'enti_cep': forms.TextInput(attrs={
-                'placeholder': '00000-000',
-                'maxlength': 9,
+                'placeholder': 'Somente números',
+                'maxlength': 8,
+                'inputmode': 'numeric',
+                'pattern': '\\d{8}'
             }),
             'enti_ende': forms.TextInput(attrs={
                 'placeholder': 'Rua, Avenida, etc.'
@@ -232,14 +234,6 @@ class BancoConfigForm(forms.ModelForm):
                 raise ValidationError('UF inválida.')
         return esta
 
-    def clean_enti_cep(self):
-        cep = self.cleaned_data.get('enti_cep', '').strip()
-        if cep:
-            cep_limpo = cep.replace('-', '').replace(' ', '')
-            if not cep_limpo.isdigit() or len(cep_limpo) != 8:
-                raise ValidationError('CEP inválido. Use o formato 00000-000.')
-            return f'{cep_limpo[:5]}-{cep_limpo[5:]}'
-        return cep
 
     def clean(self):
         cleaned = super().clean()
@@ -251,10 +245,12 @@ class BancoConfigForm(forms.ModelForm):
     def save(self, commit=True, using='default'):
         """Override save para garantir que enti_banc seja salvo"""
         instance = super().save(commit=False)
-        
+        max_enti_clie = Entidades.objects.using(using).aggregate(Max('enti_clie'))['enti_clie__max'] or 0
         # Pegar o código do banco do cleaned_data
         if 'codigo_banco' in self.cleaned_data:
             instance.enti_banc = self.cleaned_data['codigo_banco']
+        
+        instance.enti_clie = max_enti_clie + 1
         
         if commit:
             if using:

@@ -22,17 +22,26 @@ class EmpresaForm(forms.ModelForm):
             'empr_docu': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'CNPJ'}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'empr_codi' in self.fields:
+            self.fields['empr_codi'].required = False
+            self.fields['empr_codi'].widget.attrs.setdefault('readonly', 'readonly')
+        for name, field in self.fields.items():
+            if isinstance(field.widget, forms.TextInput):
+                field.widget.attrs.setdefault('class', 'form-control')
+            if self.is_bound and self.errors.get(name):
+                css = field.widget.attrs.get('class', '')
+                field.widget.attrs['class'] = (css + ' is-invalid').strip()
+
 class FilialForm(forms.ModelForm):
     certificado = forms.FileField(required=False, widget=forms.ClearableFileInput(attrs={'class': 'form-control-file'}))
     senha_certificado = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control'}), required=False)
     class Meta:
         from Licencas.models import Filiais
         model = Filiais
-        fields = '__all__'
+        exclude = ['empr_empr','empr_codi']
         labels = {
-            'empr_empr': 'ID Filial',
-            'empr_codi': 'Código da Empresa',
-            'empr_nome': 'Nome da Filial',
             'empr_docu': 'CNPJ da Filial',
             'empr_insc_esta': 'Inscrição Estadual',
             'empr_insc_muni': 'Inscrição Municipal',
@@ -85,8 +94,6 @@ class FilialForm(forms.ModelForm):
             'empr_simp_naci_serv': 'Simples Nacional Serviços',
         }
         widgets = {
-            'empr_empr': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'ID Filial'}),
-            'empr_codi': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Código da Filial'}),
             'empr_nome': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome da Filial'}),
             'empr_docu': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'CNPJ da Filial'}),
             'empr_insc_esta': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Inscrição Estadual'}),
@@ -185,8 +192,6 @@ class FilialForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for name, field in self.fields.items():
-            if name in ['certificado', 'senha_certificado']:
-                continue
             if isinstance(field.widget, forms.TextInput):
                 field.widget.attrs.setdefault('class', 'form-control')
             if isinstance(field.widget, forms.NumberInput):
@@ -203,3 +208,6 @@ class FilialForm(forms.ModelForm):
                 field.widget.attrs.setdefault('rows', 3)
             if isinstance(field.widget, forms.CheckboxInput):
                 field.widget.attrs.setdefault('class', 'form-check-input')
+            if self.is_bound and self.errors.get(name):
+                css = field.widget.attrs.get('class', '')
+                field.widget.attrs['class'] = (css + ' is-invalid').strip()

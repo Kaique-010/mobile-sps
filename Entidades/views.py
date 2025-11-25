@@ -35,12 +35,16 @@ class EntidadesViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
         
         # Aplicar filtros de forma otimizada
         empresa_id = self.request.query_params.get('enti_empr')
+        tipo = self.request.query_params.get('enti_tipo_enti')
         search_query = self.request.query_params.get('search')
         
         # Filtro por empresa primeiro (mais eficiente)
         if empresa_id:
             queryset = queryset.filter(enti_empr=empresa_id)
-            
+        # Filtro por tipo de entidade (ex.: VE para vendedores)
+        if tipo:
+            queryset = queryset.filter(enti_tipo_enti=tipo)
+        
         # Filtro de busca otimizado
         if search_query:
             queryset = queryset.filter(

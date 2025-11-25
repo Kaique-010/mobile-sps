@@ -16,7 +16,7 @@ class OrcamentosListView(ListView):
         from Entidades.models import Entidades
         qs = Orcamentos.objects.using(banco).filter(
             pedi_empr=self.request.session.get('empresa_id', 1),
-            pedi_fili=self.request.session.get('filiacao_id', 1),
+            pedi_fili=self.request.session.get('filial_id', 1),
         )
         cliente_param = (self.request.GET.get('cliente') or '').strip()
         vendedor_param = (self.request.GET.get('vendedor') or '').strip()
@@ -72,7 +72,7 @@ class OrcamentosListView(ListView):
         from Entidades.models import Entidades
         qs_total = Orcamentos.objects.using(banco).filter(
             pedi_empr=self.request.session.get('empresa_id', 1),
-            pedi_fili=self.request.session.get('filiacao_id', 1),
+            pedi_fili=self.request.session.get('filial_id', 1),
         )
         cliente_param = (self.request.GET.get('cliente') or '').strip()
         vendedor_param = (self.request.GET.get('vendedor') or '').strip()

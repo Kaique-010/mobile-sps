@@ -42,7 +42,7 @@ class DBAndSlugMixin:
 class EntidadeListView(DBAndSlugMixin, ListView):
     template_name = 'Entidades/entidades.html'
     context_object_name = 'entidades'
-    paginate_by = 20
+    paginate_by = 18
 
     def get_queryset(self):
         request = self.request

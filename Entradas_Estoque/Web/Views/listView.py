@@ -13,7 +13,7 @@ class EntradaListView(ListView):
     model = EntradaEstoque
     template_name = 'Entradas/entradas_listar.html'
     context_object_name = 'entradas'
-    paginate_by = 50
+    paginate_by = 20
     
     def get_queryset(self):
         banco = get_licenca_db_config(self.request) or 'default'

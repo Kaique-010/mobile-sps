@@ -5,7 +5,7 @@
 <link rel="stylesheet" href="{% static 'css/form.css' %}">
 <div class="container page-container">
   <div class="page-header-custom">
-    <h2 class="page-title"><i class="bi bi-building"></i> Cadastro de Filial</h2>
+    <h2 class="page-title text-center"><i class="bi bi-building"></i> Cadastro de Filial</h2>
     <div class="page-actions">
       <a href="{% url 'filiais_web' slug=slug %}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left"></i> Voltar à Lista
@@ -20,6 +20,28 @@
       <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
     {% endfor %}
+  {% endif %}
+  {% if form.errors %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+      <strong>Erro:</strong> Corrija os erros abaixo.
+      <ul class="mt-2 mb-0 list-unstyled">
+        {% for field in form %}
+          {% if field.errors %}
+            <li><strong>{{ field.label }}:</strong> {{ field.errors|striptags }}</li>
+          {% endif %}
+        {% endfor %}
+        {% if form.non_field_errors %}
+          <li><strong>Formulário:</strong> {{ form.non_field_errors|striptags }}</li>
+        {% endif %}
+      </ul>
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endif %}
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+      {{ form.non_field_errors|striptags }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
   {% endif %}
 
   <div class="card">
@@ -55,67 +77,166 @@
         </ul>
 
         <div class="tab-content mt-3">
+
           <div class="tab-pane fade show active" id="principal">
             <div class="row">
-              <div class="col-md-3"><label for="{{ form.empr_empr.id_for_label }}">ID Filial</label>{{ form.empr_empr }}</div>
-              <div class="col-md-3"><label for="{{ form.empr_codi.id_for_label }}">Código da Empresa</label>{{ form.empr_codi }}</div>
+              
               <div class="col-md-6"><label for="{{ form.empr_nome.id_for_label }}">Nome da Filial</label>{{ form.empr_nome }}</div>
+              {% if form.empr_nome.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_nome.errors|striptags }}</div>
+              {% endif %}
             </div>
             <div class="row mt-2">
               <div class="col-md-4"><label for="{{ form.empr_docu.id_for_label }}">CNPJ da Filial</label>{{ form.empr_docu }}</div>
+              {% if form.empr_docu.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_docu.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-4"><label for="{{ form.empr_insc_esta.id_for_label }}">Inscrição Estadual</label>{{ form.empr_insc_esta }}</div>
+              {% if form.empr_insc_esta.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_insc_esta.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-4"><label for="{{ form.empr_insc_muni.id_for_label }}">Inscrição Municipal</label>{{ form.empr_insc_muni }}</div>
+              {% if form.empr_insc_muni.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_insc_muni.errors|striptags }}</div>
+              {% endif %}
             </div>
             <div class="row mt-2">
               <div class="col-md-3"><label for="{{ form.empr_sufr.id_for_label }}">SUFRAMA</label>{{ form.empr_sufr }}</div>
+              {% if form.empr_sufr.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_sufr.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_cei.id_for_label }}">CEI</label>{{ form.empr_cei }}</div>
+              {% if form.empr_cei.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_cei.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_nire.id_for_label }}">NIRE</label>{{ form.empr_nire }}</div>
+              {% if form.empr_nire.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_nire.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_data_nire.id_for_label }}">Data do NIRE</label>{{ form.empr_data_nire }}</div>
+              {% if form.empr_data_nire.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_data_nire.errors|striptags }}</div>
+              {% endif %}
             </div>
             <div class="row mt-2">
               <div class="col-md-3"><label for="{{ form.empr_cnae.id_for_label }}">CNAE</label>{{ form.empr_cnae }}</div>
+              {% if form.empr_cnae.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_cnae.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_cae.id_for_label }}">CAE</label>{{ form.empr_cae }}</div>
+              {% if form.empr_cae.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_cae.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_natu_juri.id_for_label }}">Natureza Jurídica</label>{{ form.empr_natu_juri }}</div>
+              {% if form.empr_natu_juri.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_natu_juri.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_regi.id_for_label }}">Registro</label>{{ form.empr_regi }}</div>
+              {% if form.empr_regi.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_regi.errors|striptags }}</div>
+              {% endif %}
             </div>
             <div class="row mt-2">
               <div class="col-md-3"><label for="{{ form.empr_data_regi.id_for_label }}">Data Registro</label>{{ form.empr_data_regi }}</div>
+              {% if form.empr_data_regi.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_data_regi.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_regi_junt.id_for_label }}">Registro Junta</label>{{ form.empr_regi_junt }}</div>
+              {% if form.empr_regi_junt.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_regi_junt.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_regi_outr.id_for_label }}">Outros Registros</label>{{ form.empr_regi_outr }}</div>
+              {% if form.empr_regi_outr.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_regi_outr.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_teso.id_for_label }}">Tesouraria</label>{{ form.empr_teso }}</div>
+              {% if form.empr_teso.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_teso.errors|striptags }}</div>
+              {% endif %}
             </div>
           </div>
 
           <div class="tab-pane fade" id="endereco">
             <div class="row">
               <div class="col-md-3"><label for="{{ form.empr_cep.id_for_label }}">CEP</label>{{ form.empr_cep }}</div>
+              {% if form.empr_cep.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_cep.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-5"><label for="{{ form.empr_ende.id_for_label }}">Endereço</label>{{ form.empr_ende }}</div>
+              {% if form.empr_ende.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_ende.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-2"><label for="{{ form.empr_nume.id_for_label }}">Número</label>{{ form.empr_nume }}</div>
+              {% if form.empr_nume.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_nume.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-2"><label for="{{ form.empr_comp.id_for_label }}">Complemento</label>{{ form.empr_comp }}</div>
+              {% if form.empr_comp.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_comp.errors|striptags }}</div>
+              {% endif %}
             </div>
             <div class="row mt-2">
               <div class="col-md-4"><label for="{{ form.empr_bair.id_for_label }}">Bairro</label>{{ form.empr_bair }}</div>
+              {% if form.empr_bair.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_bair.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-4"><label for="{{ form.empr_cida.id_for_label }}">Cidade</label>{{ form.empr_cida }}</div>
+              {% if form.empr_cida.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_cida.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-2"><label for="{{ form.empr_esta.id_for_label }}">UF</label>{{ form.empr_esta }}</div>
+              {% if form.empr_esta.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_esta.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-2"><label for="{{ form.empr_pais.id_for_label }}">País</label>{{ form.empr_pais }}</div>
+              {% if form.empr_pais.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_pais.errors|striptags }}</div>
+              {% endif %}
             </div>
             <div class="row mt-2">
               <div class="col-md-4"><label for="{{ form.empr_codi_cida.id_for_label }}">Código Cidade</label>{{ form.empr_codi_cida }}</div>
+              {% if form.empr_codi_cida.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_codi_cida.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-4"><label for="{{ form.empr_codi_esta.id_for_label }}">Código Estado</label>{{ form.empr_codi_esta }}</div>
+              {% if form.empr_codi_esta.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_codi_esta.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-4"><label for="{{ form.empr_codi_pais.id_for_label }}">Código País</label>{{ form.empr_codi_pais }}</div>
+              {% if form.empr_codi_pais.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_codi_pais.errors|striptags }}</div>
+              {% endif %}
             </div>
           </div>
 
           <div class="tab-pane fade" id="contato">
             <div class="row">
               <div class="col-md-3"><label for="{{ form.empr_fone.id_for_label }}">Telefone</label>{{ form.empr_fone }}</div>
+              {% if form.empr_fone.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_fone.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_resp.id_for_label }}">Responsável</label>{{ form.empr_resp }}</div>
+              {% if form.empr_resp.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_resp.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_celu.id_for_label }}">Celular</label>{{ form.empr_celu }}</div>
+              {% if form.empr_celu.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_celu.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_emai.id_for_label }}">Email</label>{{ form.empr_emai }}</div>
+              {% if form.empr_emai.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_emai.errors|striptags }}</div>
+              {% endif %}
             </div>
             <div class="row mt-2">
               <div class="col-md-6"><label for="{{ form.empr_emai_empr.id_for_label }}">Email Empresarial</label>{{ form.empr_emai_empr }}</div>
+              {% if form.empr_emai_empr.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_emai_empr.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-6"><label for="{{ form.empr_pagi.id_for_label }}">Página Web</label>{{ form.empr_pagi }}</div>
+              {% if form.empr_pagi.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_pagi.errors|striptags }}</div>
+              {% endif %}
             </div>
           </div>
 
@@ -124,6 +245,9 @@
               <div class="col-md-6">
                 <label>Certificado A1 (p12/pfx)</label>
                 {{ form.certificado }}
+                {% if form.certificado.errors %}
+                <div class="alert alert-danger mt-1">{{ form.certificado.errors|striptags }}</div>
+                {% endif %}
                 {% if has_cert %}
                   <div class="mt-2">
                     <span class="text-muted">Atual: {{ cert_name }}</span>
@@ -134,116 +258,305 @@
               <div class="col-md-6">
                 <label for="id_senha_certificado">Senha do Certificado</label>
                 {{ form.senha_certificado }}
+                {% if form.senha_certificado.errors %}
+                <div class="alert alert-danger mt-1">{{ form.senha_certificado.errors|striptags }}</div>
+                {% endif %}
               </div>
             </div>
             <div class="row mt-3">
               <div class="col-md-6"><label for="{{ form.empr_seri_cert_cte.id_for_label }}">Série Cert. CT-e</label>{{ form.empr_seri_cert_cte }}</div>
+              {% if form.empr_seri_cert_cte.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_seri_cert_cte.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-6"><label for="{{ form.empr_senh_cert_cte.id_for_label }}">Senha Cert. CT-e</label>{{ form.empr_senh_cert_cte }}</div>
+              {% if form.empr_senh_cert_cte.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_senh_cert_cte.errors|striptags }}</div>
+              {% endif %}
             </div>
             <div class="row mt-2">
               <div class="col-md-6"><label for="{{ form.empr_cert_nfs.id_for_label }}">Certificado NFS-e</label>{{ form.empr_cert_nfs }}</div>
+              {% if form.empr_cert_nfs.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_cert_nfs.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-6"><label for="{{ form.empr_senh_cert_nfs.id_for_label }}">Senha Cert. NFS-e</label>{{ form.empr_senh_cert_nfs }}</div>
+              {% if form.empr_senh_cert_nfs.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_senh_cert_nfs.errors|striptags }}</div>
+              {% endif %}
             </div>
           </div>
 
           <div class="tab-pane fade" id="smtp">
             <div class="row">
               <div class="col-md-3"><label for="{{ form.empr_smtp_host.id_for_label }}">SMTP Host</label>{{ form.empr_smtp_host }}</div>
+              {% if form.empr_smtp_host.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_smtp_host.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-2"><label for="{{ form.empr_smtp_port.id_for_label }}">SMTP Porta</label>{{ form.empr_smtp_port }}</div>
+              {% if form.empr_smtp_port.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_smtp_port.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_smtp_usua.id_for_label }}">SMTP Usuário</label>{{ form.empr_smtp_usua }}</div>
+              {% if form.empr_smtp_usua.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_smtp_usua.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-2"><label for="{{ form.empr_smtp_senh.id_for_label }}">SMTP Senha</label>{{ form.empr_smtp_senh }}</div>
+              {% if form.empr_smtp_senh.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_smtp_senh.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-2"><label for="{{ form.empr_smtp_emai.id_for_label }}">SMTP Email</label>{{ form.empr_smtp_emai }}</div>
+              {% if form.empr_smtp_emai.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_smtp_emai.errors|striptags }}</div>
+              {% endif %}
             </div>
             <div class="row mt-2">
               <div class="col-md-2"><label for="{{ form.empr_cone_segu.id_for_label }}">Conexão Segura</label>{{ form.empr_cone_segu }}</div>
+              {% if form.empr_cone_segu.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_cone_segu.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-2"><label for="{{ form.empr_ssl.id_for_label }}">SSL</label>{{ form.empr_ssl }}</div>
+              {% if form.empr_ssl.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_ssl.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-2"><label for="{{ form.empr_tls.id_for_label }}">TLS</label>{{ form.empr_tls }}</div>
+              {% if form.empr_tls.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_tls.errors|striptags }}</div>
+              {% endif %}
             </div>
             <hr>
             <div class="row">
               <div class="col-md-3"><label for="{{ form.empr_smtp_host_cte.id_for_label }}">SMTP Host CT-e</label>{{ form.empr_smtp_host_cte }}</div>
+              {% if form.empr_smtp_host_cte.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_smtp_host_cte.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-2"><label for="{{ form.empr_smtp_port_cte.id_for_label }}">SMTP Porta CT-e</label>{{ form.empr_smtp_port_cte }}</div>
+              {% if form.empr_smtp_port_cte.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_smtp_port_cte.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_smtp_usua_cte.id_for_label }}">SMTP Usuário CT-e</label>{{ form.empr_smtp_usua_cte }}</div>
+              {% if form.empr_smtp_usua_cte.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_smtp_usua_cte.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-2"><label for="{{ form.empr_smtp_senh_cte.id_for_label }}">SMTP Senha CT-e</label>{{ form.empr_smtp_senh_cte }}</div>
+              {% if form.empr_smtp_senh_cte.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_smtp_senh_cte.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-2"><label for="{{ form.empr_smtp_emai_cte.id_for_label }}">SMTP Email CT-e</label>{{ form.empr_smtp_emai_cte }}</div>
+              {% if form.empr_smtp_emai_cte.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_smtp_emai_cte.errors|striptags }}</div>
+              {% endif %}
             </div>
             <div class="row mt-2">
               <div class="col-md-2"><label for="{{ form.empr_cone_segu_cte.id_for_label }}">Conexão Segura CT-e</label>{{ form.empr_cone_segu_cte }}</div>
+              {% if form.empr_cone_segu_cte.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_cone_segu_cte.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-2"><label for="{{ form.empr_ssl_cte.id_for_label }}">SSL CT-e</label>{{ form.empr_ssl_cte }}</div>
+              {% if form.empr_ssl_cte.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_ssl_cte.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-2"><label for="{{ form.empr_tls_cte.id_for_label }}">TLS CT-e</label>{{ form.empr_tls_cte }}</div>
+              {% if form.empr_tls_cte.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_tls_cte.errors|striptags }}</div>
+              {% endif %}
             </div>
           </div>
 
           <div class="tab-pane fade" id="proxy">
             <div class="row">
               <div class="col-md-4"><label for="{{ form.empr_prox_host.id_for_label }}">Proxy Host</label>{{ form.empr_prox_host }}</div>
+              {% if form.empr_prox_host.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_prox_host.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-2"><label for="{{ form.empr_prox_port.id_for_label }}">Proxy Porta</label>{{ form.empr_prox_port }}</div>
+              {% if form.empr_prox_port.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_prox_port.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_prox_usua.id_for_label }}">Proxy Usuário</label>{{ form.empr_prox_usua }}</div>
+              {% if form.empr_prox_usua.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_prox_usua.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_prox_senh.id_for_label }}">Proxy Senha</label>{{ form.empr_prox_senh }}</div>
+              {% if form.empr_prox_senh.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_prox_senh.errors|striptags }}</div>
+              {% endif %}
             </div>
             <hr>
             <div class="row">
               <div class="col-md-4"><label for="{{ form.empr_prox_host_cte.id_for_label }}">Proxy Host CT-e</label>{{ form.empr_prox_host_cte }}</div>
+              {% if form.empr_prox_host_cte.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_prox_host_cte.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-2"><label for="{{ form.empr_prox_port_cte.id_for_label }}">Proxy Porta CT-e</label>{{ form.empr_prox_port_cte }}</div>
+              {% if form.empr_prox_port_cte.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_prox_port_cte.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_prox_user_cte.id_for_label }}">Proxy Usuário CT-e</label>{{ form.empr_prox_user_cte }}</div>
+              {% if form.empr_prox_user_cte.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_prox_user_cte.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_prox_pass_cte.id_for_label }}">Proxy Senha CT-e</label>{{ form.empr_prox_pass_cte }}</div>
+              {% if form.empr_prox_pass_cte.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_prox_pass_cte.errors|striptags }}</div>
+              {% endif %}
             </div>
             <hr>
             <div class="row">
               <div class="col-md-4"><label for="{{ form.empr_prox_host_nfs.id_for_label }}">Proxy Host NFS-e</label>{{ form.empr_prox_host_nfs }}</div>
+              {% if form.empr_prox_host_nfs.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_prox_host_nfs.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-2"><label for="{{ form.empr_prox_port_nfs.id_for_label }}">Proxy Porta NFS-e</label>{{ form.empr_prox_port_nfs }}</div>
+              {% if form.empr_prox_port_nfs.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_prox_port_nfs.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_prox_usua_nfs.id_for_label }}">Proxy Usuário NFS-e</label>{{ form.empr_prox_usua_nfs }}</div>
+              {% if form.empr_prox_usua_nfs.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_prox_usua_nfs.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_prox_senh_nfs.id_for_label }}">Proxy Senha NFS-e</label>{{ form.empr_prox_senh_nfs }}</div>
+              {% if form.empr_prox_senh_nfs.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_prox_senh_nfs.errors|striptags }}</div>
+              {% endif %}
             </div>
           </div>
 
           <div class="tab-pane fade" id="nfe">
             <div class="row">
               <div class="col-md-2"><label for="{{ form.empr_ambi_nfe.id_for_label }}">Ambiente NF-e</label>{{ form.empr_ambi_nfe }}</div>
+              {% if form.empr_ambi_nfe.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_ambi_nfe.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-2"><label for="{{ form.empr_lote_nfe.id_for_label }}">Lote NF-e</label>{{ form.empr_lote_nfe }}</div>
+              {% if form.empr_lote_nfe.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_lote_nfe.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-2"><label for="{{ form.empr_lote_even_nfe.id_for_label }}">Eventos NF-e</label>{{ form.empr_lote_even_nfe }}</div>
+              {% if form.empr_lote_even_nfe.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_lote_even_nfe.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-2"><label for="{{ form.empr_mdf_nfe.id_for_label }}">MDF-e NF-e</label>{{ form.empr_mdf_nfe }}</div>
+              {% if form.empr_mdf_nfe.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_mdf_nfe.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-2"><label for="{{ form.empr_cte_esta.id_for_label }}">CT-e Ativo</label>{{ form.empr_cte_esta }}</div>
+              {% if form.empr_cte_esta.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_cte_esta.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-2"><label for="{{ form.empr_mdf_cte.id_for_label }}">MDF-e CT-e</label>{{ form.empr_mdf_cte }}</div>
+              {% if form.empr_mdf_cte.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_mdf_cte.errors|striptags }}</div>
+              {% endif %}
             </div>
             <div class="row mt-2">
               <div class="col-md-2"><label for="{{ form.empr_ambi_cte.id_for_label }}">Ambiente CT-e</label>{{ form.empr_ambi_cte }}</div>
+              {% if form.empr_ambi_cte.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_ambi_cte.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-2"><label for="{{ form.empr_lote_cte.id_for_label }}">Lote CT-e</label>{{ form.empr_lote_cte }}</div>
+              {% if form.empr_lote_cte.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_lote_cte.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-2"><label for="{{ form.empr_lote_even_cte.id_for_label }}">Eventos CT-e</label>{{ form.empr_lote_even_cte }}</div>
+              {% if form.empr_lote_even_cte.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_lote_even_cte.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-2"><label for="{{ form.empr_ambi_nfe_nfs.id_for_label }}">Ambiente NFS-e</label>{{ form.empr_ambi_nfe_nfs }}</div>
+              {% if form.empr_ambi_nfe_nfs.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_ambi_nfe_nfs.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-2"><label for="{{ form.empr_rps.id_for_label }}">RPS</label>{{ form.empr_rps }}</div>
+              {% if form.empr_rps.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_rps.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-2"><label for="{{ form.empr_lote_nfes.id_for_label }}">Lote NFS-e</label>{{ form.empr_lote_nfes }}</div>
+              {% if form.empr_lote_nfes.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_lote_nfes.errors|striptags }}</div>
+              {% endif %}
             </div>
             <div class="row mt-2">
               <div class="col-md-3"><label for="{{ form.empr_seri_nfes.id_for_label }}">Série NFS-e</label>{{ form.empr_seri_nfes }}</div>
+              {% if form.empr_seri_nfes.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_seri_nfes.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_regi_trib_serv.id_for_label }}">Regime Trib. Serviços</label>{{ form.empr_regi_trib_serv }}</div>
+              {% if form.empr_regi_trib_serv.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_regi_trib_serv.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_simp_naci_serv.id_for_label }}">Simples Nacional Serv.</label>{{ form.empr_simp_naci_serv }}</div>
+              {% if form.empr_simp_naci_serv.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_simp_naci_serv.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_temp_resp_nfs.id_for_label }}">Tempo Resp. NFS-e</label>{{ form.empr_temp_resp_nfs }}</div>
+              {% if form.empr_temp_resp_nfs.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_temp_resp_nfs.errors|striptags }}</div>
+              {% endif %}
             </div>
             <div class="row mt-2">
               <div class="col-md-3"><label for="{{ form.empr_codi_serv.id_for_label }}">Código Serviço</label>{{ form.empr_codi_serv }}</div>
+              {% if form.empr_codi_serv.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_codi_serv.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_exig_iss.id_for_label }}">Exigência ISS</label>{{ form.empr_exig_iss }}</div>
+              {% if form.empr_exig_iss.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_exig_iss.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_perf_sped.id_for_label }}">Perfil SPED</label>{{ form.empr_perf_sped }}</div>
+              {% if form.empr_perf_sped.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_perf_sped.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_ativ_sped.id_for_label }}">Ativar SPED</label>{{ form.empr_ativ_sped }}</div>
+              {% if form.empr_ativ_sped.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_ativ_sped.errors|striptags }}</div>
+              {% endif %}
             </div>
           </div>
 
           <div class="tab-pane fade" id="outras">
             <div class="row">
               <div class="col-md-3"><label for="{{ form.empr_apur_ipi.id_for_label }}">Apuração IPI</label>{{ form.empr_apur_ipi }}</div>
+              {% if form.empr_apur_ipi.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_apur_ipi.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_lote_cart_corr.id_for_label }}">Lote CC-e</label>{{ form.empr_lote_cart_corr }}</div>
+              {% if form.empr_lote_cart_corr.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_lote_cart_corr.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_nsu.id_for_label }}">NSU</label>{{ form.empr_nsu }}</div>
+              {% if form.empr_nsu.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_nsu.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_danf_pais.id_for_label }}">DANF-e País</label>{{ form.empr_danf_pais }}</div>
+              {% if form.empr_danf_pais.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_danf_pais.errors|striptags }}</div>
+              {% endif %}
             </div>
             <div class="row mt-2">
               <div class="col-md-3"><label for="{{ form.empr_senh_elot.id_for_label }}">Senha E-lote</label>{{ form.empr_senh_elot }}</div>
+              {% if form.empr_senh_elot.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_senh_elot.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_id_toke.id_for_label }}">ID Token</label>{{ form.empr_id_toke }}</div>
+              {% if form.empr_id_toke.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_id_toke.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_csn_toke.id_for_label }}">CSN Token</label>{{ form.empr_csn_toke }}</div>
+              {% if form.empr_csn_toke.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_csn_toke.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-3"><label for="{{ form.empr_tipo_empr_ecd.id_for_label }}">Tipo Emp. ECD</label>{{ form.empr_tipo_empr_ecd }}</div>
+              {% if form.empr_tipo_empr_ecd.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_tipo_empr_ecd.errors|striptags }}</div>
+              {% endif %}
             </div>
             <div class="row mt-2">
               <div class="col-md-6"><label for="{{ form.empr_cabe_empr.id_for_label }}">Cabeçalho Empresa</label>{{ form.empr_cabe_empr }}</div>
+              {% if form.empr_cabe_empr.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_cabe_empr.errors|striptags }}</div>
+              {% endif %}
               <div class="col-md-6"><label for="{{ form.empr_desc_serv.id_for_label }}">Descrição Serviços</label>{{ form.empr_desc_serv }}</div>
+              {% if form.empr_desc_serv.errors %}
+              <div class="alert alert-danger mt-1">{{ form.empr_desc_serv.errors|striptags }}</div>
+              {% endif %}
             </div>
           </div>
         </div>
@@ -256,8 +569,5 @@
     </div>
   </div>
 
-  <footer class="text-center mt-4">
-    <p class="text-muted">&copy; {{ current_year }} Spartacus Sistemas</p>
-  </footer>
 </div>
 {% endblock %}
