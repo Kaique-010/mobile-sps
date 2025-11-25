@@ -3,6 +3,7 @@
 {% block title %}Lista de Famílias de Produtos{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
 
 <div class="container page-container">
     <div class="page-header">
@@ -57,7 +58,7 @@
                     </tbody>
                 </table>
             </div>
-            <a href="#" class="btn btn-plus custom-btn" title="Adicionar Novo Produto">
+            <a href="/web/login/" data-slug-route="/web/{slug}/produtos" class="btn btn-plus custom-btn" title="Adicionar Novo Produto">
                 <i class="bi bi-plus-circle"></i> Incluir Produto
               </a>
 

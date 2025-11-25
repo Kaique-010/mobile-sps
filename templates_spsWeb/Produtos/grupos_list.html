@@ -3,6 +3,7 @@
 {% block title %}Lista de Grupos{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
 
 <div class="container page-container">
     <div class="page-header">
@@ -29,14 +30,14 @@
             </div>
             {% endif %}
 
-            <form method="get" class="mb-0">
+            <form method="get" class="mb-4">
                 <div class="row">
                     <div class="col-md-8">
                         <label for="nome" class="form-label">Nome do Grupo</label>
                         <input type="text" id="nome" name="nome" class="form-control" value="{{ nome }}"
                                placeholder="Filtrar por nome">
                     </div>
-                    <div class="col-md-4 d-flex align-items-end">
+                    <div class="col-md-4  d-flex align-items-end">
                         <button type="submit" class="btn btn-primary">Filtrar</button>
                     </div>
                 </div>
@@ -70,7 +71,7 @@
                     </tbody>
                 </table>
             </div>
-            <a href="#" class="btn btn-plus custom-btn" title="Adicionar Novo Produto">
+            <a href="/web/login/" data-slug-route="/web/{slug}/produtos/" class="btn btn-plus custom-btn" title="Adicionar Novo Produto">
                 <i class="bi bi-plus-circle"></i> Incluir Produto
               </a>
             <div class="container-fluid">
