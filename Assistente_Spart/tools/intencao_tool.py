@@ -17,6 +17,7 @@ from .rag_tool import rag_url_resposta_vetorial
 from .web_tool import procura_web
 from .file_tool import ler_documentos
 from .tool_mapa_semantico import plotar_mapa_semantico
+from .fiscal import fiscal_router
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,8 @@ def executar_intencao(
     - Cadastro: "produto <nome> ncm <codigo>" -> cadastrar_produtos
     - Saldo: contém "saldo|estoque|quantidade" e "codigo|produto <número>" -> consultar_saldo
     - Pergunta de negócio (vendas, pedidos, clientes, etc.) -> consulta_inteligente_prime
+    - Fiscal: "nota fiscal|emissão|devolução|CFOP|CST|impostos|rejeições SEFAZ|erro fiscal" -> fiscal_router
+    
     - Histórico de pedidos do cliente: "meu histórico de pedidos" -> historico_de_pedidos_cliente
     - Pergunta sobre URL específica -> rag_url_resposta_vetorial
     - Pesquisa na web (google, web, internet) -> procura_web
@@ -56,6 +59,8 @@ def executar_intencao(
 
         logger.info(f"[EXECUTAR_INTENCAO] Banco: {real_banco} | Empresa: {empresa_id} | Filial: {filial_id}")
         msg_lower = mensagem.lower()
+        
+
 
         def mes_pt_para_num(m):
             mapa = {

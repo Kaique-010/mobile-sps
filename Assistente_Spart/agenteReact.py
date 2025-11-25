@@ -22,6 +22,7 @@ from .tools.rag_tool import rag_url_resposta_vetorial
 from .tools.web_tool import procura_web
 from .tools.intencao_tool import executar_intencao
 
+
 # ===== TOOLS VALIDADAS =====
 AGENT_TOOLS = [
     executar_intencao,
@@ -43,7 +44,9 @@ for tool in AGENT_TOOLS:
     if not hasattr(tool, 'name'):
         logger.warning(f"⚠️ Tool sem nome: {tool}")
     if not hasattr(tool, 'func'):
-        logger.warning(f"⚠️ Tool sem função: {tool.name if hasattr(tool, 'name') else tool}")
+        logger.warning(
+            f"⚠️ Tool sem função: {tool.name if hasattr(tool, 'name') else tool}"
+        )
 
 logger.info(f"✅ {len(AGENT_TOOLS)} tools carregadas")
 
@@ -58,31 +61,30 @@ SYSTEM_PROMPT = """Você é um assistente de ERP especializado.
 
 📋 TOOLS DISPONÍVEIS:
 - executar_intencao: Roteador inteligente (USE PRIMEIRO)
-- cadastrar_produtos: Cadastro de produtos
-- consultar_saldo: Saldo de estoque
-- historico_de_pedidos: Histórico de pedidos 
-- historico_de_pedidos_cliente: Histórico de pedidos do cliente
-- consultar_titulos_a_pagar: Contas a pagar
-- consultar_titulos_a_receber: Contas a receber
-- consulta_inteligente_prime: Consultas SQL no banco
-- ler_documentos: Leitura de arquivos
-- plotar_mapa_semantico: Visualizações
-- rag_url_resposta_vetorial: Consultas em URLs
-- procura_web: Pesquisa na internet
+- cadastrar_produtos
+- consultar_saldo
+- historico_de_pedidos
+- historico_de_pedidos_cliente
+- consultar_titulos_a_pagar
+- consultar_titulos_a_receber
+- consulta_inteligente_prime
+- ler_documentos
+- plotar_mapa_semantico
+- rag_url_resposta_vetorial
+- procura_web
 
 🚫 REGRAS CRÍTICAS:
 1. Sempre retorne uma resposta, mesmo se a tool falhar
 2. Se houver erro, informe ao usuário de forma clara
-3. Respostas concisas (máximo 300 palavras)
-4. Sempre valide os parâmetros antes de chamar uma tool
-5. Se a pergunta mencionar 'histórico' ou 'relatório de pedidos', prefira:
-   - historico_de_pedidos_cliente (se houver cliente)
-   - historico_de_pedidos (caso geral)
+3. Respostas concisas
+4. Valide parâmetros antes de chamar uma tool
+5. Consultas de histórico → prefira historico_de_pedidos_cliente quando aplicável
 
 📍 Contexto da sessão:
 - Banco: {banco}
 - Empresa: {empresa_id}
-- Filial: {filial_id}"""
+- Filial: {filial_id}
+"""
 
 # ===== CONFIGURAÇÃO DO LLM =====
 llm = ChatOpenAI(
@@ -105,7 +107,7 @@ try:
         checkpointer=memory
     )
     logger.info("✅ Agente React criado com sucesso")
-    
+
 except Exception as e:
     logger.error(f"❌ Erro crítico ao criar agente: {e}")
     raise RuntimeError(f"Falha na inicialização do agente: {e}")
@@ -127,56 +129,41 @@ def pre_rotear(mensagem: str) -> dict:
     """Roteamento ultra-rápido."""
     import re
     msg_lower = mensagem.lower()
-    
-    # Padrões DIRETOS
+
     PADROES_DIRETOS = [
         r"produto\s+.+\s+ncm\s+\d+",
         r"saldo\s+(do\s+)?produto\s+\d+",
         r"c[oó]digo\s+\d+",
         r"t[ií]tulo.*?(pagar|receber)",
         r"hist[oó]rico\s+de\s+pedidos",
-        r"hist[oó]rico\s+geral\s+de\s+pedidos",
         r"hist[oó]rico.*cliente",
         r"relat[óo]rio\s+de\s+pedidos",
         r"pedidos\s+por\s+cliente",
     ]
-    
+
     for padrao in PADROES_DIRETOS:
         if re.search(padrao, msg_lower):
-            return {
-                "tipo": "direto",
-                "precisa_faiss": False,
-                "confianca": 0.95
-            }
-    
-    # Padrões de CONTEXTO
+            return {"tipo": "direto", "precisa_faiss": False, "confianca": 0.95}
+
     PADROES_CONTEXTO = [
         r"como\s+(fa[çc]o|posso)",
         r"o\s+que\s+[ée]",
         r"qual\s+(a|o)",
         r"tutorial|manual",
     ]
-    
+
     for padrao in PADROES_CONTEXTO:
         if re.search(padrao, msg_lower):
-            return {
-                "tipo": "contexto",
-                "precisa_faiss": True,
-                "confianca": 0.90
-            }
-    
-    # Fallback
-    return {
-        "tipo": "geral",
-        "precisa_faiss": True,
-        "confianca": 0.5
-    }
+            return {"tipo": "contexto", "precisa_faiss": True, "confianca": 0.90}
+
+    return {"tipo": "geral", "precisa_faiss": True, "confianca": 0.5}
+
 
 # ===== MÉTRICAS =====
 class MetricasAgente:
     def __init__(self):
         self.chamadas = []
-    
+
     def registrar(self, tipo: str, tempo: float, tokens: int = 0):
         self.chamadas.append({
             "tipo": tipo,
@@ -184,7 +171,7 @@ class MetricasAgente:
             "tokens": tokens,
             "timestamp": __import__('time').time()
         })
-    
+
     def relatorio(self) -> dict:
         if not self.chamadas:
             return {}
@@ -192,10 +179,34 @@ class MetricasAgente:
         return {
             "total_chamadas": len(self.chamadas),
             "tempo_total": round(total, 2),
-            "breakdown": {c["tipo"]: round(c["tempo"], 2) for c in self.chamadas}
+            "breakdown": {
+                c["tipo"]: round(c["tempo"], 2) for c in self.chamadas
+            }
         }
-    
+
     def limpar(self):
         self.chamadas = []
 
+
 metricas = MetricasAgente()
+
+
+# ============================================================
+#  WRAPPER FINAL: onde você chama o agente de fato
+# ============================================================
+def processar_mensagem(mensagem: str, contexto: dict):
+    """
+    1) Fiscal primeiro
+    2) Se não for fiscal → agente ReAct
+    """
+    # --- camada fiscal ---
+    resposta_fiscal = fiscal_pre_handle(mensagem)
+    if resposta_fiscal:
+        return resposta_fiscal
+
+    # --- camada ReAct normal ---
+    resposta = agenteReact.invoke({
+        "input": mensagem,
+        **contexto
+    })
+    return resposta

@@ -190,3 +190,71 @@ def selecionar_empresa(request):
             })
 
     return render(request, 'Licencas/selecionar_empresa_filial.html')
+
+
+from django.http import HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+import json
+import requests
+
+VERIFY_TOKEN = "spartacus_whatsapp"   # você escolhe
+WHATSAPP_TOKEN = "EAAQgPjzxzfkBQGrnrbtrHYkOt32JZAxkGhmFNlS5eBWelW80swgkHXfoWQVOWbzafFRy6mkRHNV6l7Fs3PC4hVZCcVERSDWoqYI618ZAddXh6h8c6LVJq4xD8MeEqYwrMqlxJg4B7nIhkwZCr0Rw4Xpt9GnfNyrA22HSHicA5ZChokd29Ap7OoFPe66CflXVt2lnLGyv2ZCFeM2pApvphznrSbJdHJ7SOeYEIFPAz9ZCsao8xFuFUc6MoBHV2egP8Hfbxs8QfEdmQ1LI0Ip8BzDHl0L"   # da Meta
+PHONE_NUMBER_ID = "S762237033644517"  # da Meta
+
+# ====== Enviar mensagem pelo WhatsApp ======
+def enviar_whatsapp(to, texto):
+    url = f"https://graph.facebook.com/v20.0/{PHONE_NUMBER_ID}/messages"
+    headers = {
+        "Authorization": f"Bearer {WHATSAPP_TOKEN}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": to,
+        "text": {"body": texto},
+    }
+    requests.post(url, json=payload, headers=headers)
+
+
+# ====== Webhook ======
+@csrf_exempt
+def whatsapp_webhook(request):
+
+    # ---------- GET: verificação inicial ----------
+    if request.method == "GET":
+        mode = request.GET.get("hub.mode")
+        token = request.GET.get("hub.verify_token")
+        challenge = request.GET.get("hub.challenge")
+
+        if mode == "subscribe" and token == VERIFY_TOKEN:
+            return HttpResponse(challenge)
+
+        return HttpResponse("Erro de verificação", status=403)
+
+    # ---------- POST: mensagens vindas do WhatsApp ----------
+    if request.method == "POST":
+        data = json.loads(request.body)
+
+        try:
+            mensagem = data["entry"][0]["changes"][0]["value"]["messages"][0]
+            telefone = mensagem["from"]
+            texto = mensagem.get("text", {}).get("body", "")
+        except Exception:
+            return HttpResponse("OK")
+
+        # Seu agente
+        from Assistente_Spart.agenteReact import processar_mensagem
+
+        resposta = processar_mensagem(
+            texto,
+            contexto={
+                "banco": "default",
+                "empresa_id": "1",
+                "filial_id": "1"
+            }
+        )
+
+        enviar_whatsapp(telefone, resposta["output"])
+        return HttpResponse("OK")
+
+    return HttpResponse("Método não permitido", status=405)
