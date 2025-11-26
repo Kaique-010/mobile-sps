@@ -1,0 +1,20 @@
+{% load centrodecustos_tags %}
+<ul>
+    {% for cc in nodes %}
+    <li data-code="{{ cc.cecu_expa }}" data-name="{{ cc.cecu_nome }}" data-level="{{ cc.cecu_nive }}">
+        <button type="button" class="btn btn-sm btn-link toggle-node">⯈</button>
+        <strong>{{ cc.cecu_expa }}</strong> - {{ cc.cecu_nome }}
+        {% if cc.cecu_anal == "S" %}
+        <a href="{% url 'centrosdecustos:criar' slug=slug %}?parent={{ cc.cecu_expa }}" class="ms-2">[+] adicionar
+            filho</a>
+        {% endif %}
+        {% with children=cc|get_children:empresa %}
+        {% if children %}
+        <div class="children">
+            {% include 'CentrodeCustos/arvore.html' with nodes=children empresa=empresa %}
+        </div>
+        {% endif %}
+        {% endwith %}
+    </li>
+    {% endfor %}
+</ul>
