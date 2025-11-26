@@ -279,6 +279,7 @@ class Produtos(models.Model):
     prod_fami= models.ForeignKey(FamiliaProduto, on_delete=models.DO_NOTHING, db_column='prod_fami', related_name='produtos', blank= True, null= True) 
     prod_loca = models.CharField(max_length=255, db_column='prod_loca', blank= True, null= True) 
     prod_ncm = models.CharField(max_length=10, db_column='prod_ncm') 
+    prod_gtin = models.CharField(max_length=14, db_column='prod_gtin', blank= True, null= True, default='SEM GTIN')
     prod_marc = models.ForeignKey(Marca, on_delete=models.DO_NOTHING, db_column='prod_marc', related_name='produtos', blank= True, null= True) 
     prod_coba = models.CharField(max_length=50, db_column='prod_coba', blank= True, null= True)
     prod_foto = models.BinaryField(db_column='prod_foto', blank=True, null=True) 

@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="{% static 'css/form.css' %}">
 
 <style>
-  
+
 </style>
 
 <div class="container py-4">
@@ -135,20 +135,38 @@
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Ações -->
-        <div class="form-actions">
-          <div class="d-flex gap-2 justify-content-end">
-            <a href="{% url 'contas_a_pagar_web:titulos_pagar_list' slug=request.resolver_match.kwargs.slug %}"
-              class="btn btn-secondary">
-              <i class="bi bi-x-circle me-1"></i> Cancelar
-            </a>
-            <button type="submit" class="btn btn-success">
-              <i class="bi bi-check-circle me-1"></i> Salvar Título
-            </button>
+          <div class="field-group">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label" for="{{ form.titu_cecu.id_for_label }}">
+                  Centro de Custo
+                </label>
+                <div class="autocomplete-wrapper">
+                  <input type="text" class="form-control autocomplete-input" id="autocomplete-cecu"
+                    value="{{ form.titu_cecu.value|default:'' }}"
+                    placeholder="Digite o código ou nome do centro de custo...">
+                  <i class="bi bi-search autocomplete-icon"></i>
+                </div>
+                {{ form.titu_cecu.as_hidden }}
+                {% if form.titu_cecu.errors %}
+                <div class="invalid-feedback d-block">{{ form.titu_cecu.errors|striptags }}</div>
+                {% endif %}
+              </div>
+            </div>
           </div>
-        </div>
+          <!-- Ações -->
+          <div class="form-actions">
+            <div class="d-flex gap-2 justify-content-end">
+              <a href="{% url 'contas_a_pagar_web:titulos_pagar_list' slug=request.resolver_match.kwargs.slug %}"
+                class="btn btn-secondary">
+                <i class="bi bi-x-circle me-1"></i> Cancelar
+              </a>
+              <button type="submit" class="btn btn-success">
+                <i class="bi bi-check-circle me-1"></i> Salvar Título
+              </button>
+            </div>
+          </div>
       </form>
     </div>
   </div>
@@ -231,6 +249,76 @@
     document.addEventListener('click', e => {
       if (dd && !input.parentElement.contains(e.target)) {
         dd.innerHTML = '';
+      }
+    });
+  }
+
+  const inputCC = document.getElementById('autocomplete-cecu');
+  const hiddenCC = document.getElementById('{{ form.titu_cecu.id_for_label }}');
+
+  if (inputCC && hiddenCC) {
+    let controllerCC = null;
+    let ddCC = null;
+
+    function dropdownCC() {
+      if (ddCC) return ddCC;
+      ddCC = document.createElement('div');
+      ddCC.className = 'list-group position-absolute w-100';
+      ddCC.style.marginTop = '4px';
+      inputCC.parentElement.appendChild(ddCC);
+      return ddCC;
+    }
+
+    inputCC.addEventListener('input', async function () {
+      const term = this.value.trim();
+      if (term.length < 2) {
+        if (ddCC) ddCC.innerHTML = '';
+        return;
+      }
+
+      try {
+        if (controllerCC) controllerCC.abort();
+        controllerCC = new AbortController();
+
+        const r = await fetch(`/web/${slug}/contas-a-pagar/autocomplete/centrodecustos/?q=${encodeURIComponent(term)}`, {
+          signal: controllerCC.signal
+        });
+        const j = await r.json();
+        const results = j.results || [];
+        const d = dropdownCC();
+        d.innerHTML = '';
+
+        if (results.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'list-group-item text-muted';
+          empty.textContent = 'Nenhum centro de custo encontrado';
+          d.appendChild(empty);
+          return;
+        }
+
+        results.forEach(it => {
+          const a = document.createElement('a');
+          a.href = '#';
+          a.className = 'list-group-item list-group-item-action';
+          a.innerHTML = `<i class="bi bi-diagram-3 me-2"></i>${it.label || it.value || ''}`;
+          a.addEventListener('click', ev => {
+            ev.preventDefault();
+            hiddenCC.value = it.value || '';
+            inputCC.value = it.label || it.value || '';
+            d.innerHTML = '';
+          });
+          d.appendChild(a);
+        });
+      } catch (e) {
+        if (e.name !== 'AbortError') {
+          console.error('Erro ao buscar centros de custo:', e);
+        }
+      }
+    });
+
+    document.addEventListener('click', e => {
+      if (ddCC && !inputCC.parentElement.contains(e.target)) {
+        ddCC.innerHTML = '';
       }
     });
   }

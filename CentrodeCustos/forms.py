@@ -20,6 +20,7 @@ class CentrodecustosForm(forms.ModelForm):
         self.db_alias = kwargs.pop("db_alias", None)
         super().__init__(*args, **kwargs)
         self.fields['cecu_empr'].initial = self.empresa_id
+        self.fields['cecu_nome'].required = True
 
     def clean(self):
         cleaned = super().clean()
@@ -27,21 +28,24 @@ class CentrodecustosForm(forms.ModelForm):
 
         # checar se está tentando criar filho em analítico
         if parent:
-            from .models import Centrodecustos
             qs = Centrodecustos.objects
             if self.db_alias:
                 qs = qs.using(self.db_alias)
 
-            # aceitar parent como expa (com pontos) ou redu (inteiro)
-            if isinstance(parent, str) and "." in parent:
-                parent_expa = parent
-                parent_redu = int(parent.replace(".", ""))
-            else:
-                parent_redu = int(parent)
-                pai = qs.filter(cecu_expa__isnull=False, cecu_empr=self.empresa_id, cecu_redu=parent_redu).first()
-                if not pai:
-                    raise forms.ValidationError("Centro pai não encontrado.")
-                parent_expa = pai.cecu_expa
+            # identificar pai por expandido quando possível (mesmo sem ponto), senão por reduzido
+            pai = None
+            if isinstance(parent, str):
+                pai = qs.filter(cecu_empr=self.empresa_id, cecu_expa=parent).first()
+            if not pai:
+                try:
+                    parent_redu = int(str(parent))
+                    pai = qs.filter(cecu_empr=self.empresa_id, cecu_redu=parent_redu).first()
+                except Exception:
+                    pai = None
+            if not pai:
+                raise forms.ValidationError("Centro pai não encontrado.")
+            parent_expa = pai.cecu_expa
+            parent_redu = int(str(pai.cecu_redu))
 
             # validação por máscara (independe do dado gravado)
             nivel_parent = len(str(parent_expa).split("."))
@@ -61,32 +65,61 @@ class CentrodecustosForm(forms.ModelForm):
         parent = self.cleaned_data.get("parent", None)
         empresa = int(self.cleaned_data["cecu_empr"] or 0)
 
+        # Em edição, não alterar códigos/níveis/vínculos; apenas atualizar campos editáveis
+        if getattr(obj, 'cecu_redu', None):
+            if commit:
+                if self.db_alias:
+                    obj.save(using=self.db_alias)
+                else:
+                    obj.save()
+            return obj
+
         if parent:
-            from .models import Centrodecustos
             qs = Centrodecustos.objects
             if self.db_alias:
                 qs = qs.using(self.db_alias)
 
-            # aceitar parent em expa ou redu
-            if isinstance(parent, str) and "." in parent:
-                parent_expa = parent
-                parent_redu = int(parent.replace(".", ""))
-            else:
-                parent_redu = int(parent)
-                pai = qs.filter(cecu_empr=empresa, cecu_redu=parent_redu).first()
-                if not pai:
-                    raise forms.ValidationError("Centro pai não encontrado.")
-                parent_expa = pai.cecu_expa
+            # identificar pai por expandido quando possível (mesmo sem ponto), senão por reduzido
+            pai = None
+            if isinstance(parent, str):
+                pai = qs.filter(cecu_empr=empresa, cecu_expa=parent).first()
+            if not pai:
+                try:
+                    parent_redu = int(str(parent))
+                    pai = qs.filter(cecu_empr=empresa, cecu_redu=parent_redu).first()
+                except Exception:
+                    pai = None
+            if not pai:
+                raise forms.ValidationError("Centro pai não encontrado.")
+            parent_expa = pai.cecu_expa
+            parent_redu = int(str(pai.cecu_redu))
 
             partes = parent_expa.split(".")
             nivel_parent = len(partes)
 
-            # filhos por vínculo cecu_niv1
-            filhos_expas = list(
-                qs.filter(cecu_empr=empresa, cecu_niv1=parent_redu)
-                .order_by("cecu_redu")
-                .values_list("cecu_expa", flat=True)
-            )
+            # Normalizar referência e coletar existentes por prefixo + nível,
+            # para respeitar dados legados independentemente do `cecu_niv1` gravado
+            if nivel_parent >= 2:
+                pai_segundo_expa = f"{partes[0]}.{partes[1]}"
+                pai_segundo_redu = int(pai_segundo_expa.replace(".", ""))
+            else:
+                pai_segundo_expa = None
+                pai_segundo_redu = parent_redu
+
+            if nivel_parent == 1:
+                prefixo = f"{partes[0]}."
+                filhos_expas = list(
+                    qs.filter(cecu_empr=empresa, cecu_expa__startswith=prefixo, cecu_nive=2)
+                    .order_by("cecu_redu")
+                    .values_list("cecu_expa", flat=True)
+                )
+            else:
+                prefixo = f"{partes[0]}.{partes[1]}."
+                filhos_expas = list(
+                    qs.filter(cecu_empr=empresa, cecu_expa__startswith=prefixo, cecu_nive=3)
+                    .order_by("cecu_redu")
+                    .values_list("cecu_expa", flat=True)
+                )
 
             if nivel_parent == 1:
                 usados = []
@@ -101,12 +134,14 @@ class CentrodecustosForm(forms.ModelForm):
                 obj.cecu_nive = 2
             else:
                 usados = []
-                base_terceiro = int(partes[2]) if len(partes) >= 3 else 0
                 for expa in filhos_expas:
                     p = expa.split(".")
                     if len(p) >= 3 and p[0] == partes[0] and p[1] == partes[1]:
-                        usados.append(int(p[2]))
-                proximo_terceiro = (max(usados) + 1) if usados else (base_terceiro + 1)
+                        try:
+                            usados.append(int(p[2]))
+                        except Exception:
+                            pass
+                proximo_terceiro = (max(usados) + 1) if usados else 1
                 sufixo3 = str(proximo_terceiro).zfill(DIGITOS[2])
                 codigo = f"{partes[0]}.{partes[1]}.{sufixo3}"
                 tipo = MASCARA[2]
@@ -114,18 +149,26 @@ class CentrodecustosForm(forms.ModelForm):
 
             obj.cecu_expa = codigo
             obj.cecu_anal = tipo
-            obj.cecu_redu = int(codigo.replace(".", ""))
-            obj.cecu_niv1 = parent_redu
-        else:
-            # gerar raiz pelo serviço padrão
+            from django.db.models import Max
+            max_redu = qs.filter(cecu_empr=empresa).aggregate(m=Max("cecu_redu")).get("m")
+            obj.cecu_redu = (int(max_redu) + 1) if max_redu else 1
+            # Sempre referenciar o pai de primeiro nível em cecu_niv1 (valores 1,2,3,4)
             try:
-                codigo, tipo = gerar_proximo_codigo(None, empresa)
+                obj.cecu_niv1 = int(partes[0])
+            except Exception:
+                obj.cecu_niv1 = parent_redu
+        else:
+            try:
+                codigo, tipo = gerar_proximo_codigo(None, empresa, self.db_alias)
             except Exception as e:
                 raise forms.ValidationError(str(e))
             obj.cecu_expa = codigo
             obj.cecu_anal = tipo
             obj.cecu_nive = len(codigo.split("."))
-            obj.cecu_redu = int(codigo.replace(".", ""))
+            from django.db.models import Max
+            qs_all = Centrodecustos.objects.using(self.db_alias) if self.db_alias else Centrodecustos.objects
+            max_redu = qs_all.filter(cecu_empr=empresa).aggregate(m=Max("cecu_redu")).get("m")
+            obj.cecu_redu = (int(max_redu) + 1) if max_redu else 1
 
         if commit:
             if self.db_alias:

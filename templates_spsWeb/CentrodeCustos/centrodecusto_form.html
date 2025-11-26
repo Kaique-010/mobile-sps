@@ -1,31 +1,81 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block content %}
-<h3>Novo Centro de Custos</h3>
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
 
-<div class="card p-4">
+<div class="container page-container">
+  <div class="page-header-custom">
+    <h3 class="card-title mb-4 fs-4 text-center">
+      <i class="bi bi-bag-plus-fill"></i> Cadastro de Centro de Custos
+    </h3>
+    <div class="page-actions"></div>
+  </div>
+
+  <div class="card p-5">
     <form method="post">
-        {% csrf_token %}
+      {% csrf_token %}
 
-        {% if form.non_field_errors %}
-        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
-        {% endif %}
+      {% if form.non_field_errors %}
+      <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+      {% endif %}
 
+      <!-- Campos ocultos -->
+      <div style="display:none;">
         {{ form.cecu_empr }}
         {{ form.parent }}
+      </div>
 
-        <div class="mb-3">
-            <label>Nome</label>
-            {{ form.cecu_nome }}
-            {% if form.cecu_nome.errors %}
-            <div class="text-danger small">{{ form.cecu_nome.errors }}</div>
-            {% endif %}
-        </div>
+      <div class="mb-3">
+        <label>Nome</label>
+        {{ form.cecu_nome }}
+        {% if form.cecu_nome.errors %}
+        <div class="text-danger small">{{ form.cecu_nome.errors }}</div>
+        {% endif %}
+      </div>
 
-        <button class="btn btn-primary">Salvar</button>
-        <a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">Voltar</a>
+      <button type="submit" class="btn btn-outline-primary">Salvar</button>
+      <a href="javascript:history.back()" class="btn btn-outline-danger ms-2">Voltar</a>
     </form>
+  </div>
 </div>
 
+{% if messages %}
+<div class="position-fixed top-0 end-0 p-3" style="z-index:1080">
+  {% for message in messages %}
+  <div class="toast align-items-center border-0" role="alert" aria-live="assertive" aria-atomic="true"
+    data-bs-delay="4000" data-tag="{{ message.tags }}">
+    <div class="d-flex">
+      <div class="toast-body">{{ message }}</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
 {% endblock %}
-    
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    try {
+      document.querySelectorAll('.toast').forEach(function (t) {
+        var tag = t.getAttribute('data-tag') || '';
+        var cls = 'text-bg-secondary';
+        if (tag.indexOf('success') >= 0) cls = 'text-bg-success';
+        else if (tag.indexOf('error') >= 0) cls = 'text-bg-danger';
+        else if (tag.indexOf('warning') >= 0) cls = 'text-bg-warning';
+        else if (tag.indexOf('info') >= 0) cls = 'text-bg-info';
+        t.classList.add(cls);
+        if (window.bootstrap && bootstrap.Toast) {
+          new bootstrap.Toast(t).show();
+        } else {
+          t.classList.add('show');
+        }
+      });
+    } catch (e) {
+      console.error('Erro ao inicializar toasts:', e);
+    }
+  });
+</script>
+{% endblock %}

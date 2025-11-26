@@ -8,7 +8,8 @@
   <div class="card shadow-lg border-0">
     <div class="card-header text-center py-3">
       <h3 class="mb-0 d-flex align-items-center justify-content-center">
-        <i class="bi bi-file-break me-2"></i>{% if form.instance.pk %}Editar Orçamento{% else %}Novo Orçamento{% endif %}
+        <i class="bi bi-file-break me-2"></i>{% if form.instance.pk %}Editar Orçamento{% else %}Novo Orçamento{% endif
+        %}
       </h3>
     </div>
     <div class="card-body p-4">
@@ -17,25 +18,31 @@
 
         <div class="row g-3 mb-4">
           <div class="col-md-3">
-            <label class="form-label fw-semibold" for="{{ form.pedi_data.id_for_label }}"><i class="bi bi-calendar-event me-1"></i>Data</label>
+            <label class="form-label fw-semibold" for="{{ form.pedi_data.id_for_label }}"><i
+                class="bi bi-calendar-event me-1"></i>Data</label>
             {{ form.pedi_data }}
           </div>
           <div class="col-md-5 position-relative">
-            <label class="form-label fw-semibold" for="{{ form.pedi_forn.id_for_label }}"><i class="bi bi-person-circle me-1"></i>Cliente</label>
+            <label class="form-label fw-semibold" for="{{ form.pedi_forn.id_for_label }}"><i
+                class="bi bi-person-circle me-1"></i>Cliente</label>
             <input type="text" class="form-control form-control-lg" id="autocomplete-cliente"
-              placeholder="Buscar cliente por nome ou código" {% if is_edit and cliente_display %}value="{{ cliente_display }}"{% endif %}>
+              placeholder="Buscar cliente por nome ou código" {% if is_edit and cliente_display
+              %}value="{{ cliente_display }}" {% endif %}>
             {{ form.pedi_forn }}
             <small id="cliente-selecionado" class="text-success mt-1 d-block"></small>
           </div>
           <div class="col-md-4 position-relative">
-            <label class="form-label fw-semibold" for="{{ form.pedi_vend.id_for_label }}"><i class="bi bi-person-badge me-1"></i>Vendedor</label>
+            <label class="form-label fw-semibold" for="{{ form.pedi_vend.id_for_label }}"><i
+                class="bi bi-person-badge me-1"></i>Vendedor</label>
             <input type="text" class="form-control form-control-lg" id="autocomplete-vendedor"
-              placeholder="Buscar vendedor por nome ou código" {% if is_edit and vendedor_display %}value="{{ vendedor_display }}"{% endif %}>
+              placeholder="Buscar vendedor por nome ou código" {% if is_edit and vendedor_display
+              %}value="{{ vendedor_display }}" {% endif %}>
             {{ form.pedi_vend }}
             <small id="vendedor-selecionado" class="text-success mt-1 d-block"></small>
           </div>
           <div class="col-md-3">
-            <label class="form-label fw-semibold" for="{{ form.pedi_stat.id_for_label }}"><i class="bi bi-flag me-1"></i>Status</label>
+            <label class="form-label fw-semibold" for="{{ form.pedi_stat.id_for_label }}"><i
+                class="bi bi-flag me-1"></i>Status</label>
             {{ form.pedi_stat }}
           </div>
         </div>
@@ -44,12 +51,14 @@
 
         <ul class="nav nav-tabs nav-fill mb-5" role="tablist">
           <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="tab-itens" data-bs-toggle="tab" data-bs-target="#pane-itens" type="button" role="tab">
+            <button class="nav-link active" id="tab-itens" data-bs-toggle="tab" data-bs-target="#pane-itens"
+              type="button" role="tab">
               <i class="bi bi-cart me-2"></i>Itens do Orçamento
             </button>
           </li>
           <li class="nav-item" role="presentation">
-            <button class="nav-link" id="tab-financeiro" data-bs-toggle="tab" data-bs-target="#pane-financeiro" type="button" role="tab">
+            <button class="nav-link" id="tab-financeiro" data-bs-toggle="tab" data-bs-target="#pane-financeiro"
+              type="button" role="tab">
               <i class="bi bi-calculator me-2"></i>Resumo Financeiro
             </button>
           </li>
@@ -81,12 +90,16 @@
                     <td class="position-relative">
                       {{ form_item.iped_prod }}
                       <div class="d-none">{{ form_item.DELETE }}</div>
-                      <input type="text" class="form-control autocomplete-prod" data-index="{{ forloop.counter0 }}" placeholder="Buscar produto por nome ou código" {% if is_edit and form_item.initial.display_prod_text %}value="{{ form_item.initial.display_prod_text }}"{% endif %}>
+                      <input type="text" class="form-control autocomplete-prod" data-index="{{ forloop.counter0 }}"
+                        placeholder="Buscar produto por nome ou código" {% if is_edit and
+                        form_item.initial.display_prod_text %}value="{{ form_item.initial.display_prod_text }}" {% endif
+                        %}>
                     </td>
                     <td>{{ form_item.iped_quan }}</td>
                     <td>{{ form_item.iped_unit }}</td>
                     <td class="text-end item-total">R$ 0,00</td>
-                    <td class="text-center"><button type="button" class="btn btn-sm btn-danger remove-item"><i class="bi bi-trash"></i></button></td>
+                    <td class="text-center"><button type="button" class="btn btn-sm btn-danger remove-item"><i
+                          class="bi bi-trash"></i></button></td>
                   </tr>
                   {% endfor %}
                 </tbody>
@@ -137,7 +150,8 @@
             <i class="bi bi-x-circle me-2"></i>Cancelar
           </a>
           <button type="submit" class="btn btn-success btn-lg">
-            <i class="bi bi-check-circle me-2"></i>{% if form.instance.pk %}Salvar Orçamento{% else %}Criar Orçamento{% endif %}
+            <i class="bi bi-check-circle me-2"></i>{% if form.instance.pk %}Salvar Orçamento{% else %}Criar Orçamento{%
+            endif %}
           </button>
         </div>
       </form>

@@ -26,11 +26,14 @@ from .Views.web_views import (
     MarcaCreateView,
     MarcaUpdateView,
     MarcaDeleteView,
-    autocomplete_ncms,
-    ncm_aliquotas,
     SaldosDashboardView,
-    autocomplete_produtos
+    autocomplete_produtos,
+    UnidadeMedidaListView,
+    UnidadeMedidaCreateView,
+    UnidadeMedidaUpdateView,
+    UnidadeMedidaDeleteView,
 )
+from .Views.autocompletes import autocomplete_unidades, autocomplete_grupos, autocomplete_marcas, autocomplete_subgrupos, autocomplete_familias, autocomplete_ncms, ncm_aliquotas
 
 
 urlpatterns = [
@@ -48,6 +51,12 @@ urlpatterns = [
     path('<str:prod_codi>/delete/', ProdutoDeleteView.as_view(), name='produto_delete_web'),
     path('exportar/', ExportarProdutosView.as_view(), name='exportar_produtos_web'),
     path('<str:prod_codi>/foto/', ProdutoFotoView.as_view(), name='produto_foto_web'),
+    
+    # Unidades de Medida
+    path('unidades/', UnidadeMedidaListView.as_view(), name='unidades_web'),
+    path('unidades/new/', UnidadeMedidaCreateView.as_view(), name='unidade_create_web'),
+    path('unidades/<str:codigo>/edit/', UnidadeMedidaUpdateView.as_view(), name='unidade_edit_web'),
+    path('unidades/<str:codigo>/delete/', UnidadeMedidaDeleteView.as_view(), name='unidade_delete_web'),
     # Grupos
     path('grupos/', GrupoListView.as_view(), name='grupos_web'),
     path('grupos/new/', GrupoCreateView.as_view(), name='grupo_create_web'),
@@ -75,4 +84,11 @@ urlpatterns = [
     # Saldos
     path('saldos/', SaldosDashboardView.as_view(), name='saldos_web'),
     path('autocomplete/produtos/', autocomplete_produtos, name='autocomplete_produtos'),
+    
+    # Autocompletes
+    path('autocomplete/grupos/', autocomplete_grupos, name='autocomplete_grupos'),
+    path('autocomplete/unidades/', autocomplete_unidades, name='autocomplete_unidades'),
+    path('autocomplete/marcas/', autocomplete_marcas, name='autocomplete_marcas'),
+    path('autocomplete/subgrupos/', autocomplete_subgrupos, name='autocomplete_subgrupos'),
+    path('autocomplete/familias/', autocomplete_familias, name='autocomplete_familias'),
 ]

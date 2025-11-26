@@ -104,6 +104,14 @@ def selecionar_empresa(request):
             request.session['slug'] = slug
             logger.info(f"[selecionar_empresa] slug salvo na sessão: {slug}")
     except Exception:
+        pass# Persistir slug da licença na sessão para uso na Home sem slug
+    try:
+        parts = request.path.strip('/').split('/')
+        slug = parts[1] if len(parts) > 1 else None
+        if slug:
+            request.session['slug'] = slug
+            logger.info(f"[selecionar_empresa] slug salvo na sessão: {slug}")
+    except Exception:
         pass
 
     if request.method == 'POST':
@@ -294,7 +302,7 @@ def webhook_receive(request):
 
 # ========== ENVIO ==========
 def enviar_whatsapp(to, texto):
-    url = f"https://graph.facebook.com/v18.0/{WHATS_PHONE_ID}/messages"
+    url = f"https://graph.facebook.com18.0/{WHATS_PHONE_ID}/messages"
 
     payload = {
         "messaging_product": "whatsapp",

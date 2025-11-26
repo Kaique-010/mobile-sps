@@ -2,19 +2,24 @@
 <ul>
     {% for cc in nodes %}
     <li data-code="{{ cc.cecu_expa }}" data-name="{{ cc.cecu_nome }}" data-level="{{ cc.cecu_nive }}">
-        <button type="button" class="btn btn-sm btn-link toggle-node">⯈</button>
-        <strong>{{ cc.cecu_expa }}</strong> - {{ cc.cecu_nome }}
+        {% get_children_tag cc empresa as children %}
+        {% if children %}
+        <button type="button" class="btn btn-sm btn-link toggle-node">⯆</button>
+        {% else %}
+        <span class="btn btn-sm btn-link disabled" aria-disabled="true">•</span>
+        {% endif %}
+        <a href="{% url 'centrosdecustos:editar' slug=slug cecu_redu=cc.cecu_redu %}" class="text-decoration-none">
+            <strong>{{ cc.cecu_expa }}</strong> - {{ cc.cecu_nome }}
+        </a>
         {% if cc.cecu_anal == "S" %}
         <a href="{% url 'centrosdecustos:criar' slug=slug %}?parent={{ cc.cecu_expa }}" class="ms-2">[+] adicionar
             filho</a>
         {% endif %}
-        {% with children=cc|get_children:empresa %}
         {% if children %}
         <div class="children">
-            {% include 'CentrodeCustos/arvore.html' with nodes=children empresa=empresa %}
+            {% include 'CentrodeCustos/arvore.html' with nodes=children empresa=empresa slug=slug %}
         </div>
         {% endif %}
-        {% endwith %}
     </li>
     {% endfor %}
 </ul>

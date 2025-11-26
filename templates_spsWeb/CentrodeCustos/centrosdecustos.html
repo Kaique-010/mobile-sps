@@ -5,33 +5,39 @@
 {% block title %}Centros de Custos{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>Centros de Custos</h3>
-    <div>
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
+<div class="container page-container">
+  <div class="page-header-custom">
+    <div class="container align-items-center">
+      <h2 class="page-title">
+        <i class="bi bi-building-check fs-4"></i> Centros de Custos
+      </h2>
       <a href="{% url 'centrosdecustos:exportar' slug=slug %}?cecu_nome={{ cecu_nome }}&cecu_redu={{ cecu_redu }}"
-        class="btn btn-outline-secondary btn-sm">Exportar CSV</a>
-      <a href="{% url 'centrosdecustos:criar' slug=slug %}" class="btn btn-primary btn-sm">Novo</a>
+        class="btn btn-outline-secondary btn-sm"
+        style="margin-left: 10px; padding: 8px 16px; border-radius: 4px; margin-bottom: 20px; font-size: 16px; font-weight: 600; background-color: #215188; color: #fff;">Exportar
+        CSV</a>
+      <a href="{% url 'centrosdecustos:criar' slug=slug %}" class="btn btn-success btn-sm">Novo</a>
     </div>
   </div>
 
-  <form method="get" class="mb-3">
-    <div class="row g-2">
-      <div class="col-md-6">
-        <input type="text" name="cecu_nome" class="form-control" placeholder="Nome" value="{{ cecu_nome }}" />
-      </div>
-      <div class="col-md-3">
-        <input type="text" name="cecu_redu" class="form-control" placeholder="Código" value="{{ cecu_redu }}" />
-      </div>
-      <div class="col-md-3">
-        <button type="submit" class="btn btn-outline-primary w-100">Filtrar</button>
-      </div>
-    </div>
-  </form>
+
 
   <div class="card p-3">
-    {% include 'CentrodeCustos/arvore.html' with nodes=roots empresa=empresa slug=slug max_depth=max_depth depth=1 %}
+    {% include 'CentrodeCustos/arvore.html' with nodes=roots empresa=empresa_id slug=slug max_depth=max_depth depth=1 %}
   </div>
+  {% if messages %}
+  <div class="position-fixed top-0 end-0 p-3" style="z-index:1080">
+    {% for message in messages %}
+    <div class="toast align-items-center border-0" role="alert" aria-live="assertive" aria-atomic="true"
+      data-bs-delay="4000" data-tag="{{ message.tags }}">
+      <div class="d-flex">
+        <div class="toast-body">{{ message }}</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
   <div class="mt-3 d-flex gap-2">
     <input type="text" id="cc-search" class="form-control" placeholder="Buscar por código ou nome" />
     <button type="button" id="cc-expand" class="btn btn-outline-primary">Expandir</button>
@@ -69,17 +75,17 @@
       if (child) {
         var visible = child.style.display !== 'none';
         child.style.display = visible ? 'none' : '';
-        e.target.textContent = visible ? '⯆' : '⯈';
+        e.target.textContent = visible ? '⯈' : '⯆';
       }
     }
   });
   document.getElementById('cc-expand').addEventListener('click', function () {
     document.querySelectorAll('.children').forEach(function (c) { c.style.display = ''; });
-    document.querySelectorAll('.toggle-node').forEach(function (b) { b.textContent = '⯈'; });
+    document.querySelectorAll('.toggle-node').forEach(function (b) { b.textContent = '⯆'; });
   });
   document.getElementById('cc-collapse').addEventListener('click', function () {
     document.querySelectorAll('.children').forEach(function (c) { c.style.display = 'none'; });
-    document.querySelectorAll('.toggle-node').forEach(function (b) { b.textContent = '⯆'; });
+    document.querySelectorAll('.toggle-node').forEach(function (b) { b.textContent = '⯈'; });
   });
   document.getElementById('cc-search').addEventListener('input', function () {
     var q = this.value.toLowerCase().trim();
@@ -98,5 +104,21 @@
       }
     });
   });
+  try {
+    document.querySelectorAll('.toast').forEach(function (t) {
+      var tag = t.getAttribute('data-tag') || '';
+      var cls = 'text-bg-secondary';
+      if (tag.indexOf('success') >= 0) cls = 'text-bg-success';
+      else if (tag.indexOf('error') >= 0) cls = 'text-bg-danger';
+      else if (tag.indexOf('warning') >= 0) cls = 'text-bg-warning';
+      else if (tag.indexOf('info') >= 0) cls = 'text-bg-info';
+      t.classList.add(cls);
+      if (window.bootstrap && bootstrap.Toast) {
+        new bootstrap.Toast(t).show();
+      } else {
+        t.classList.add('show');
+      }
+    });
+  } catch (e) { }
 </script>
 {% endblock %}

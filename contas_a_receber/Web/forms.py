@@ -5,7 +5,7 @@ from ..models import Titulosreceber
 class TitulosReceberForm(forms.ModelForm):
     class Meta:
         model = Titulosreceber
-        fields = ['titu_clie', 'titu_seri', 'titu_parc', 'titu_valo', 'titu_emis', 'titu_venc', 'titu_titu']
+        fields = ['titu_clie', 'titu_seri', 'titu_parc', 'titu_valo', 'titu_emis', 'titu_venc', 'titu_titu', 'titu_cecu']
         widgets = {
             'titu_clie': forms.NumberInput(attrs={'class': 'form-control'}),
             'titu_seri': forms.TextInput(attrs={'class': 'form-control', 'maxlength': 5}),
@@ -14,4 +14,5 @@ class TitulosReceberForm(forms.ModelForm):
             'titu_emis': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'titu_venc': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'titu_titu': forms.TextInput(attrs={'class': 'form-control', 'maxlength': 13}),
+            'titu_cecu': forms.HiddenInput(),
         }

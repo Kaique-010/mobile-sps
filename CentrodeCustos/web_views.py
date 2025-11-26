@@ -46,7 +46,6 @@ class CentrodeCustosListView(DBAndSlugMixin, TemplateView):
 
         qs = Centrodecustos.objects.using(db_alias).filter(cecu_empr=empresa)
 
-        # Raízes da árvore
         ctx['roots'] = qs.filter(cecu_nive=1).order_by("cecu_expa")
 
         # Para filtros da lista

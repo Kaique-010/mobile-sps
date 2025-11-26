@@ -1,7 +1,7 @@
 from django import forms
 from django.forms.models import inlineformset_factory
 from django.forms import formset_factory
-from Produtos.models import Produtos, GrupoProduto, SubgrupoProduto, FamiliaProduto, Marca, Tabelaprecos
+from Produtos.models import Produtos, GrupoProduto, SubgrupoProduto, FamiliaProduto, Marca, Tabelaprecos, UnidadeMedida
 
 class ProdutosForm(forms.ModelForm):
     # Campo de upload de foto desacoplado do BinaryField do modelo
@@ -15,7 +15,7 @@ class ProdutosForm(forms.ModelForm):
         model = Produtos
         fields = [
             'prod_codi', 'prod_nome', 'prod_unme', 'prod_grup', 'prod_sugr',
-            'prod_fami', 'prod_loca', 'prod_ncm', 'prod_marc'
+            'prod_fami', 'prod_loca', 'prod_ncm', 'prod_marc', 'prod_gtin'
         ]
         widgets = {
             'prod_codi': forms.TextInput(attrs={
@@ -54,6 +54,10 @@ class ProdutosForm(forms.ModelForm):
                 'class': 'form-control', 
                 'placeholder': 'Marca'
             }),
+            'prod_gtin': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'GTIN'
+            }),
           
         }
     
@@ -67,13 +71,34 @@ class ProdutosForm(forms.ModelForm):
         self.fields['prod_marc'].required = False  
         self.fields['prod_foto'].required = False
         self.fields['prod_codi'].required = False
+        self.fields['prod_gtin'].required = False
+
+class UnidadeMedidaForm(forms.ModelForm):
+    class Meta:
+        model = UnidadeMedida
+        fields = ['unid_codi', 'unid_desc']
+        widgets = {
+            'unid_codi': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Código'
+            }),
+            'unid_desc': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Descrição'
+            }),
+            }
+        
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'unid_desc' in self.fields:
+            self.fields['unid_desc'].required = False
 
 class GrupoForm(forms.ModelForm):
    class Meta:
        model = GrupoProduto
        fields = '__all__'
        widgets = {
-            'codigo': forms.TextInput(attrs={
+            'codigo': forms.HiddenInput(attrs={
                 'class': 'form-control', 
                 'placeholder': 'Código'
             }),
@@ -82,6 +107,10 @@ class GrupoForm(forms.ModelForm):
                 'placeholder': 'Descrição'
             }),
             }
+   def __init__(self, *args, **kwargs):
+       super().__init__(*args, **kwargs)
+       if 'codigo' in self.fields:
+           self.fields['codigo'].required = False
        
 
 class SubgrupoForm(forms.ModelForm):
@@ -89,7 +118,7 @@ class SubgrupoForm(forms.ModelForm):
        model = SubgrupoProduto
        fields = '__all__'
        widgets = {
-            'codigo': forms.TextInput(attrs={
+            'codigo': forms.HiddenInput(attrs={
                 'class': 'form-control', 
                 'placeholder': 'Código'
             }),
@@ -98,6 +127,10 @@ class SubgrupoForm(forms.ModelForm):
                 'placeholder': 'Descrição'
             }),
             }
+   def __init__(self, *args, **kwargs):
+       super().__init__(*args, **kwargs)
+       if 'codigo' in self.fields:
+           self.fields['codigo'].required = False
 
 
 class FamiliaForm(forms.ModelForm):
@@ -105,7 +138,7 @@ class FamiliaForm(forms.ModelForm):
         model= FamiliaProduto
         fields = '__all__'
         widgets = {
-            'codigo': forms.TextInput(attrs={
+            'codigo': forms.HiddenInput(attrs={
                 'class': 'form-control', 
                 'placeholder': 'Código'
             }),
@@ -114,13 +147,17 @@ class FamiliaForm(forms.ModelForm):
                 'placeholder': 'Descrição'
             }),
             }
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'codigo' in self.fields:
+            self.fields['codigo'].required = False
         
 class MarcaForm(forms.ModelForm):
    class Meta:
        model = Marca
        fields = '__all__'
        widgets = {
-            'codigo': forms.TextInput(attrs={
+            'codigo': forms.HiddenInput(attrs={
                 'class': 'form-control', 
                 'placeholder': 'Código'
             }),
@@ -129,6 +166,10 @@ class MarcaForm(forms.ModelForm):
                 'placeholder': 'Nome'
             }),
             }
+   def __init__(self, *args, **kwargs):
+       super().__init__(*args, **kwargs)
+       if 'codigo' in self.fields:
+           self.fields['codigo'].required = False
     
 
 
@@ -178,23 +219,36 @@ class TabelaprecosForm(forms.ModelForm):
     def clean(self):
         cleaned = super().clean()
         from decimal import Decimal, ROUND_HALF_UP
-        D = lambda v: (v if isinstance(v, Decimal) else Decimal(str(v or 0)))
 
-        prco = D(cleaned.get('tabe_prco'))
-        perc_frete = D(cleaned.get('tabe_fret'))
-        cuge = D(cleaned.get('tabe_cuge'))
-        marg = D(cleaned.get('tabe_marg'))
-        perc_prazo = D(cleaned.get('tabe_praz'))
+        def norm(v):
+            if v is None:
+                return Decimal('0')
+            if isinstance(v, Decimal):
+                return v
+            try:
+                if isinstance(v, (int, float)):
+                    return Decimal(str(v))
+                s = str(v).strip().replace('.', '').replace(',', '.') if isinstance(v, str) else str(v)
+                return Decimal(s or '0')
+            except Exception:
+                return Decimal('0')
 
-        valor_frete = prco * (perc_frete / D(100))
-        custo_gerencial = prco + valor_frete + cuge
+        prco = norm(cleaned.get('tabe_prco'))
+        perc_frete = norm(cleaned.get('tabe_fret'))
+        despesas = norm(cleaned.get('tabe_desp'))
+        marg = norm(cleaned.get('tabe_marg'))
+        perc_prazo = norm(cleaned.get('tabe_praz'))
+
+        valor_frete = prco * (perc_frete / Decimal('100'))
+        custo_gerencial = prco + valor_frete + despesas
         custo_gerencial_q = custo_gerencial.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-        preco_vista = prco * (D(1) + (marg / D(100)))
+        preco_vista = prco * (Decimal('1') + (marg / Decimal('100')))
         preco_vista_q = preco_vista.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-        preco_prazo = preco_vista * (D(1) + (perc_prazo / D(100)))
+        preco_prazo = preco_vista * (Decimal('1') + (perc_prazo / Decimal('100')))
         preco_prazo_q = preco_prazo.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
         cleaned['tabe_cuge'] = custo_gerencial_q
+        cleaned['tabe_cust'] = custo_gerencial_q
         cleaned['tabe_avis'] = preco_vista_q
         cleaned['tabe_apra'] = preco_prazo_q
         return cleaned
@@ -210,7 +264,6 @@ TabelaprecosPlainFormSet = formset_factory(
     TabelaprecosForm,
     extra=0,
     can_delete=True,
-    formset=TabelaprecosFormSet,
 )
 
 TabelaprecosFormSetUpdate = forms.modelformset_factory(
