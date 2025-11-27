@@ -1,0 +1,26 @@
+<div class="row">
+    <div class="col-md-4">
+        <label for="{{ form.empr_codi.id_for_label }}">Código</label>
+        {{ form.empr_codi }}
+        {% if form.empr_codi.errors %}
+        <div class="alert alert-danger mt-1">{{ form.empr_codi.errors|striptags }}</div>
+        {% endif %}
+    </div>
+    <div class="col-md-8">
+        <label for="{{ form.empr_nome.id_for_label }}">Nome</label>
+        {{ form.empr_nome }}
+        {% if form.empr_nome.errors %}
+        <div class="alert alert-danger mt-1">{{ form.empr_nome.errors|striptags }}</div>
+        {% endif %}
+    </div>
+    <div class="col-md-12">
+        <label for="{{ form.empr_docu.id_for_label }}">CNPJ</label>
+        {{ form.empr_docu }}
+        {% if form.empr_docu.errors %}
+        <div class="alert alert-danger mt-1">{{ form.empr_docu.errors|striptags }}</div>
+        {% endif %}
+    </div>
+</div>
+{% if form.non_field_errors %}
+<div class="alert alert-danger mt-2">{{ form.non_field_errors|striptags }}</div>
+{% endif %}

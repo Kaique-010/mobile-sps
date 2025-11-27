@@ -28,37 +28,67 @@
     .bi-instagram:hover {
         color: #fff200;
     }
+
+    .mascot-container {
+        position: fixed;
+        bottom: 25px;
+        right: 25px;
+        width: 100px;
+        height: 100px;
+        z-index: 99999;
+        cursor: pointer;
+        animation: neonFloat 3.5s ease-in-out infinite;
+    }
+
+    .mascot-img {
+        width: 100%;
+        height: 70%;
+    }
+
+    @keyframes neonFloat {
+        0% {
+            transform: translateY(0px) scale(1);
+        }
+
+        40% {
+            transform: translateY(-10px) scale(1.03);
+        }
+
+        100% {
+            transform: translateY(0px) scale(1);
+        }
+    }
 </style>
 <footer class="bg-body text-center py-3">
     <div class="container">
         <p class="text-body-secondary mb-1">&copy; 2025 SPS. Todos os direitos reservados.</p>
         <div class="small text-body-secondary mb-2">
             <span id="empresaDisplay">
-            {% if empresa_nome %}
+                {% if empresa_nome %}
                 Empresa: {{ empresa_nome }}
-            {% elif request and request.session and request.session.empresa_nome %}
+                {% elif request and request.session and request.session.empresa_nome %}
                 Empresa: {{ request.session.empresa_nome }}
-            {% elif empresa_id %}
+                {% elif empresa_id %}
                 Empresa: {{ empresa_id }}
-            {% elif request and request.session and request.session.empresa_id %}
+                {% elif request and request.session and request.session.empresa_id %}
                 Empresa: {{ request.session.empresa_id }}
-            {% else %}
+                {% else %}
                 Empresa: não selecionada
-            {% endif %}
+                {% endif %}
             </span>
             |
             <span id="filialDisplay">
-            {% if filial_nome %}
+                {% if filial_nome %}
                 Filial: {{ filial_nome }}
-            {% elif request and request.session and request.session.filial_nome %}
+                {% elif request and request.session and request.session.filial_nome %}
                 Filial: {{ request.session.filial_nome }}
-            {% elif filial_id %}
+                {% elif filial_id %}
                 Filial: {{ filial_id }}
-            {% elif request and request.session and request.session.filial_id %}
+                {% elif request and request.session and request.session.filial_id %}
                 Filial: {{ request.session.filial_id }}
-            {% else %}
+                {% else %}
                 Filial: não selecionada
-            {% endif %}
+                {% endif %}
             </span>
         </div>
         <div class="small">
@@ -68,25 +98,36 @@
             <a href="#" class="link-secondary"><i class="bi bi-instagram"></i></a>
         </div>
     </div>
+    <div id="mascot-container" class="mascot-container" onclick="toggleAssistant()">
+        <img src="{% static 'assis.png' %}" class="mascot-img" style="border-radius: 65%;">
+    </div>
 
 </footer>
 <script>
-(function(){
-  try{
-    var eNome=localStorage.getItem('empresa_nome');
-    var eId=localStorage.getItem('empresa_id');
-    var fNome=localStorage.getItem('filial_nome');
-    var fId=localStorage.getItem('filial_id');
-    var eEl=document.getElementById('empresaDisplay');
-    var fEl=document.getElementById('filialDisplay');
-    if(eEl){
-      if(eNome){ eEl.textContent='Empresa: '+eNome; }
-      else if(eId){ eEl.textContent='Empresa: '+eId; }
+    (function () {
+        try {
+            var eNome = localStorage.getItem('empresa_nome');
+            var eId = localStorage.getItem('empresa_id');
+            var fNome = localStorage.getItem('filial_nome');
+            var fId = localStorage.getItem('filial_id');
+            var eEl = document.getElementById('empresaDisplay');
+            var fEl = document.getElementById('filialDisplay');
+            if (eEl) {
+                if (eNome) { eEl.textContent = 'Empresa: ' + eNome; }
+                else if (eId) { eEl.textContent = 'Empresa: ' + eId; }
+            }
+            if (fEl) {
+                if (fNome) { fEl.textContent = 'Filial: ' + fNome; }
+                else if (fId) { fEl.textContent = 'Filial: ' + fId; }
+            }
+        } catch (_) { }
+    })();
+    function toggleAssistant() {
+        const el = document.getElementById('assistant-bubble');
+        if (!el) return;
+        el.style.display =
+            (el.style.display === 'none' || el.style.display === '')
+                ? 'block'
+                : 'none';
     }
-    if(fEl){
-      if(fNome){ fEl.textContent='Filial: '+fNome; }
-      else if(fId){ fEl.textContent='Filial: '+fId; }
-    }
-  }catch(_){}
-})();
 </script>

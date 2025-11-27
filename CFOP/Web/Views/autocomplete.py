@@ -2,6 +2,9 @@
 from django.http import JsonResponse
 from django.views.generic import TemplateView
 from ...models import CFOPFiscal, CFOP, MapaCFOP
+from ...defaults_cfop import deduzir_defaults
+
+
 
 def cfop_autocomplete(request, slug=None):
     q = request.GET.get("q", "").strip()
@@ -23,26 +26,31 @@ def cfop_autocomplete(request, slug=None):
     })
 
 
-def cfop_sugerir(request, slug=None):
-    tipo = (request.GET.get('tipo') or '').strip()
-    uf_orig = (request.GET.get('uf_origem') or '').strip()
-    uf_dest = (request.GET.get('uf_destino') or '').strip()
-    data = []
-    if tipo and uf_orig and uf_dest:
-        qs = MapaCFOP.objects.all().select_related('cfop')
-        qs = qs.filter(tipo_oper=tipo, uf_origem=uf_orig, uf_destino=uf_dest)
-        for m in qs[:10]:
-            data.append({
-                'value': m.cfop.cfop_codi,
-                'label': f"{m.cfop.cfop_codi} - {m.cfop.cfop_desc}"
-            })
-    return JsonResponse({'results': data})
+# CFOP/Web/Views/ajax.py  (ou junto das outras views)
+from django.http import JsonResponse
+from core.utils import get_licenca_db_config
+from Licencas.models import Filiais
+from ...defaults_cfop import deduzir_defaults
 
 
-class CFOPWizardView(TemplateView):
-    template_name = 'CFOP/cfop_wizard.html'
+def cfop_exigencias_ajax(request, slug):
+    cfop = request.GET.get("cfop", "").strip()
+    if not cfop:
+        return JsonResponse({"error": "CFOP vazio"}, status=400)
 
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        ctx['slug'] = kwargs.get('slug')
-        return ctx
+    # mesmo critério da CreateView
+    banco = get_licenca_db_config(request) or "default"
+    empresa_id = request.session.get("empresa_id") or request.session.get("filial_id", 1)
+    filial_codi = request.session.get("filial_codi") or request.GET.get("filial_id")
+    qs = Filiais.objects.using(banco).filter(empr_codi=empresa_id)
+    if filial_codi:
+        try:
+            qs = qs.filter(empr_codi=int(filial_codi))
+        except Exception:
+            pass
+    empresa = qs.first()
+    regime = getattr(empresa, "empr_regi_trib", None)
+
+    defaults = deduzir_defaults(cfop, regime)
+
+    return JsonResponse(defaults)

@@ -137,9 +137,13 @@ class LicencaMiddleware:
 
         # Se cabeçalhos válidos vierem, sincronizar sessão mesmo que já tenha valores (mantém estado atualizado)
         if header_empresa is not None:
-            request.session['empresa_id'] = header_empresa
+            if request.session.get('empresa_id') != header_empresa:
+                request.session['empresa_id'] = header_empresa
+                request.session.modified = True
         if header_filial is not None:
-            request.session['filial_id'] = header_filial
+            if request.session.get('filial_id') != header_filial:
+                request.session['filial_id'] = header_filial
+                request.session.modified = True
         
         # Log para debug
         import logging

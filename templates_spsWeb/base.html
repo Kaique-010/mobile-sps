@@ -74,11 +74,14 @@
     {% block header %}{% include 'headerNav.html' %}{% endblock %}
     {% block content %}{% endblock %}
     {% block footer %}{% include 'footer.html' %}{% endblock %}
+    {% include 'onboarding/_assistant.html' %}
     <div id="globalToastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1080;">
-        <div id="globalToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div id="globalToast" class="toast align-items-center text-bg-success border-0" role="alert"
+            aria-live="assertive" aria-atomic="true">
             <div class="d-flex">
                 <div class="toast-body" id="globalToastBody"></div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+                    aria-label="Close"></button>
             </div>
         </div>
     </div>
@@ -88,7 +91,7 @@
         defer
         onerror="(function(){var s=document.createElement('script');s.src='https://unpkg.com/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js';s.defer=true;document.body.appendChild(s);})();"></script>
     <script>
-        window.showToast = function(message, opts) {
+        window.showToast = function (message, opts) {
             try {
                 var options = opts || {};
                 var variant = options.variant || 'success';
@@ -98,16 +101,16 @@
                 var bodyEl = document.getElementById('globalToastBody');
                 if (!container || !toastEl || !bodyEl) { alert(message); return; }
                 bodyEl.textContent = message || '';
-                var variants = ['primary','secondary','success','danger','warning','info','light','dark'];
-                variants.forEach(function(v){ toastEl.classList.remove('text-bg-'+v); });
-                toastEl.classList.add('text-bg-'+(variants.indexOf(variant)>=0?variant:'success'));
+                var variants = ['primary', 'secondary', 'success', 'danger', 'warning', 'info', 'light', 'dark'];
+                variants.forEach(function (v) { toastEl.classList.remove('text-bg-' + v); });
+                toastEl.classList.add('text-bg-' + (variants.indexOf(variant) >= 0 ? variant : 'success'));
                 if (typeof bootstrap !== 'undefined' && bootstrap.Toast) {
                     var t = new bootstrap.Toast(toastEl, { autohide: true, delay: delay });
                     t.show();
                 } else {
                     alert(message);
                 }
-            } catch(e) { try { alert(message); } catch(_) {} }
+            } catch (e) { try { alert(message); } catch (_) { } }
         };
     </script>
     <script>

@@ -1,0 +1,40 @@
+<div class="row">
+  <div class="col-md-6"><label for="{{ form.empr_nome.id_for_label }}">Nome da Filial</label>{{ form.empr_nome }}</div>
+  {% if form.empr_nome.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_nome.errors|striptags }}</div>
+  {% endif %}
+
+  <div class="col-md-6"><label for="{{ form.empr_fant.id_for_label }}">Nome Fantasia</label>{{ form.empr_fant }}</div>
+  {% if form.empr_fant.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_fant.errors|striptags }}</div>
+  {% endif %}
+</div>
+
+<div class="row mt-2">
+  <div class="col-md-4"><label for="{{ form.empr_docu.id_for_label }}">CNPJ da Filial</label>{{ form.empr_docu }}</div>
+  {% if form.empr_docu.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_docu.errors|striptags }}</div>
+  {% endif %}
+  <div class="col-md-4"><label for="{{ form.empr_insc_esta.id_for_label }}">Inscrição Estadual</label>{{ form.empr_insc_esta }}</div>
+  {% if form.empr_insc_esta.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_insc_esta.errors|striptags }}</div>
+  {% endif %}
+  <div class="col-md-4"><label for="{{ form.empr_insc_muni.id_for_label }}">Inscrição Municipal</label>{{ form.empr_insc_muni }}</div>
+  {% if form.empr_insc_muni.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_insc_muni.errors|striptags }}</div>
+  {% endif %}
+</div>
+<div class="row mt-2">
+  <div class="col-md-3"><label for="{{ form.empr_sufr.id_for_label }}">SUFRAMA</label>{{ form.empr_sufr }}</div>
+  {% if form.empr_sufr.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_sufr.errors|striptags }}</div>
+  {% endif %}
+  <div class="col-md-3"><label for="{{ form.empr_natu_juri.id_for_label }}">Natureza Jurídica</label>{{ form.empr_natu_juri }}</div>
+  {% if form.empr_natu_juri.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_natu_juri.errors|striptags }}</div>
+  {% endif %}
+  <div class="col-md-3"><label for="{{ form.empr_regi_trib.id_for_label }}">Regime Tributário</label>{{ form.empr_regi_trib }}</div>
+  {% if form.empr_regi_trib.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_regi_trib.errors|striptags }}</div>
+  {% endif %}
+</div>

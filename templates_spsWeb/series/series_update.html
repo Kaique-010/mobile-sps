@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Editar Série{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
+<div class="container py-4">
+  <div class="card shadow-lg border-0">
+    <div class="card-header text-center py-3">
+      <h3 class="mb-0">Editar Série</h3>
+    </div>
+    <div class="card-body p-4">
+      <form method="post" id="serie-update-form">
+        {% csrf_token %}
+        {% include 'series/_form_fields.html' %}
+        <div class="mt-3 form-actions">
+          <button type="submit" class="btn btn-outline-success">Salvar</button>
+          <a class="btn btn-outline-secondary" href="{% url 'series-list' slug=slug %}">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,5 +1,6 @@
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from django.urls import reverse
 import json
 from Entidades.models import Entidades
 from django.views.decorators.http import require_http_methods
@@ -317,3 +318,47 @@ def enviar_whatsapp(to, texto):
     }
 
     requests.post(url, headers=headers, json=payload)
+
+
+
+
+from onboarding.services import mark_step_done, get_onboarding_state
+
+def complete_onboarding_step(request, step, slug=None):
+    banco = 'default'
+    try:
+        banco = get_licenca_db_config(request) or banco
+    except Exception:
+        try:
+            slug_sess = request.session.get('slug')
+            if slug_sess:
+                banco = get_db_from_slug(slug_sess) or banco
+        except Exception:
+            pass
+    empresa_id = request.session.get('empresa_id')
+    logger.info(
+        "[complete_onboarding_step] Sessão atualizada: empresa_id=%s",
+        request.session.get('empresa_id')
+    )
+    try:
+        if empresa_id:
+            mark_step_done(request.user, empresa_id, step, db_alias=banco)
+    except Exception:
+        pass
+    next_url = reverse('home')
+    try:
+        state = get_onboarding_state(request.user, empresa_id, db_alias=banco)
+        nxt = state.get('next_step') if state else None
+        if nxt:
+            ns = nxt.get('slug')
+            if ns == 'empresa':
+                next_url = reverse('empresas_web', kwargs={'slug': slug}) if slug else reverse('empresas_web_default')
+            elif ns == 'filial':
+                next_url = reverse('filiais_web', kwargs={'slug': slug}) if slug else reverse('empresas_web_default')
+            elif ns == 'cfop':
+                next_url = reverse('cfop_list_web', kwargs={'slug': slug}) if slug else reverse('empresas_web_default')
+            elif ns == 'series':
+                next_url = reverse('series_list_web', kwargs={'slug': slug}) if slug else reverse('empresas_web_default')
+    except Exception:
+        pass
+    return redirect(next_url)

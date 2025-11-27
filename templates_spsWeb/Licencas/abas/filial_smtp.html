@@ -1,0 +1,52 @@
+<div class="row">
+  <div class="col-md-3"><label for="{{ form.empr_smtp_host.id_for_label }}">SMTP Host</label>{{ form.empr_smtp_host }}
+  </div>
+  {% if form.empr_smtp_host.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_smtp_host.errors|striptags }}</div>
+  {% endif %}
+  <div class="col-md-2"><label for="{{ form.empr_smtp_port.id_for_label }}">SMTP Porta</label>{{ form.empr_smtp_port }}
+  </div>
+  {% if form.empr_smtp_port.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_smtp_port.errors|striptags }}</div>
+  {% endif %}
+  <div class="col-md-3"><label for="{{ form.empr_smtp_usua.id_for_label }}">SMTP Usuário</label>{{ form.empr_smtp_usua }}
+  </div>
+  {% if form.empr_smtp_usua.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_smtp_usua.errors|striptags }}</div>
+  {% endif %}
+  <div class="col-md-2"><label for="{{ form.empr_smtp_senh.id_for_label }}">SMTP Senha</label>{{ form.empr_smtp_senh }}
+  </div>
+  {% if form.empr_smtp_senh.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_smtp_senh.errors|striptags }}</div>
+  {% endif %}
+  <div class="col-md-2"><label for="{{ form.empr_smtp_emai.id_for_label }}">SMTP Email</label>{{ form.empr_smtp_emai }}
+  </div>
+  {% if form.empr_smtp_emai.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_smtp_emai.errors|striptags }}</div>
+  {% endif %}
+</div>
+<div class="row mt-2">
+  <div class="col-md-2"><label for="{{ form.empr_cone_segu.id_for_label }}">Conexão Segura</label>{{ form.empr_cone_segu}}</div>
+  {% if form.empr_cone_segu.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_cone_segu.errors|striptags }}</div>
+  {% endif %}
+  <div class="col-md-2"><label for="{{ form.empr_ssl.id_for_label }}">SSL</label>{{ form.empr_ssl }}</div>
+  {% if form.empr_ssl.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_ssl.errors|striptags }}</div>
+  {% endif %}
+  <div class="col-md-2"><label for="{{ form.empr_tls.id_for_label }}">TLS</label>{{ form.empr_tls }}</div>
+  {% if form.empr_tls.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_tls.errors|striptags }}</div>
+  {% endif %}
+</div>
+<hr>
+<script>
+  (function () {
+    function setIfEmpty(id, val) { var el = document.getElementById(id); if (el && (!el.value || el.value === '')) el.value = val }
+    setIfEmpty('id_empr_smtp_host', 'smtp.savexml.com.br');
+    setIfEmpty('id_empr_smtp_port', '587');
+    setIfEmpty('id_empr_smtp_usua', 'notas@savexml.com.br');
+    setIfEmpty('id_empr_smtp_senh', 'sps@nfe');
+    setIfEmpty('id_empr_smtp_emai', 'notas@savexml.com.br');
+  })();
+</script>

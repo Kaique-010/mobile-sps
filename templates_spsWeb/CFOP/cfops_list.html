@@ -11,6 +11,11 @@
 
       <a class="btn btn-outline-secondary" href="/web/{{ slug }}/cfop/import/">Importar</a>
       <a class="btn btn-outline-secondary" href="/web/{{ slug }}/cfop/export/">Exportar</a>
+      {% if slug %}
+      <a class="btn btn-outline-primary" href="{% url 'onboarding_complete_slug' slug=slug step='cfop' %}">Concluir etapa</a>
+      {% else %}
+      <a class="btn btn-outline-primary" href="{% url 'onboarding_complete' step='cfop' %}">Concluir etapa</a>
+      {% endif %}
     </div>
   </div>
   <form method="get" class="row g-2 mb-3">

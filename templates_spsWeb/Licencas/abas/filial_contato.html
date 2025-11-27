@@ -1,0 +1,29 @@
+<div class="row">
+  <div class="col-md-3"><label for="{{ form.empr_fone.id_for_label }}">Telefone</label>{{ form.empr_fone }}</div>
+  {% if form.empr_fone.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_fone.errors|striptags }}</div>
+  {% endif %}
+  <div class="col-md-3"><label for="{{ form.empr_resp.id_for_label }}">Responsável</label>{{ form.empr_resp }}</div>
+  {% if form.empr_resp.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_resp.errors|striptags }}</div>
+  {% endif %}
+  <div class="col-md-3"><label for="{{ form.empr_celu.id_for_label }}">Celular</label>{{ form.empr_celu }}</div>
+  {% if form.empr_celu.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_celu.errors|striptags }}</div>
+  {% endif %}
+  <div class="col-md-3"><label for="{{ form.empr_emai.id_for_label }}">Email</label>{{ form.empr_emai }}</div>
+  {% if form.empr_emai.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_emai.errors|striptags }}</div>
+  {% endif %}
+</div>
+<div class="row mt-2">
+  <div class="col-md-6"><label for="{{ form.empr_emai_empr.id_for_label }}">Email Empresarial</label>{{ form.empr_emai_empr }}</div>
+  {% if form.empr_emai_empr.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_emai_empr.errors|striptags }}</div>
+  {% endif %}
+  <div class="col-md-6"><label for="{{ form.empr_pagi.id_for_label }}">Página Web</label>{{ form.empr_pagi }}</div>
+  {% if form.empr_pagi.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_pagi.errors|striptags }}</div>
+  {% endif %}
+</div>
+

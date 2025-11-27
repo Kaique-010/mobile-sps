@@ -121,21 +121,28 @@ INSTALLED_APPS = [
     'Financeiro',
     'CentrodeCustos',
     'boletos',
+    'onboarding',
+    'series',
 ]
 # Middleware
 MIDDLEWARE = [
-    'core.performance_middleware.PerformanceMiddleware',  # PRIMEIRO
+    'core.performance_middleware.PerformanceMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+
+    # AQUI:
+    'core.middleware_restore_auth.RestoreUserMiddleware',
+
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'core.middleware.LicencaMiddleware',
-    'auditoria.middleware.AuditoriaMiddleware',  # REATIVAR ESTE
+    'auditoria.middleware.AuditoriaMiddleware',
 ]
+
 
 # Configurações de CORS
 if DEBUG:
@@ -184,6 +191,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.empresa_filial_names',
+                'onboarding.context_processors.onboarding_context',
             ],
         },
     },

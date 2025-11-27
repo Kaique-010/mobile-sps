@@ -64,3 +64,31 @@ def get_proxima_filial_empr(banco):
     maior = Filiais.objects.using(banco).aggregate(Max('empr_empr'))['empr_empr__max'] or 0
     print(f"Maior filial encontrado: {maior}")
     return maior + 1
+
+def buscar_endereco(cep):
+    """Busca endereço a partir de um CEP"""
+    import requests
+    url = f"https://viacep.com.br/ws/{cep}/json/"
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        if 'erro' not in data:
+            ibge = str(data.get('ibge') or '')
+            estado_codigo = ibge[:2] if ibge else None
+            return {
+                "cep": data.get("cep"),
+                "logradouro": data.get("logradouro"),
+                "complemento": data.get("complemento"),
+                "bairro": data.get("bairro"),
+                "cidade": data.get("localidade"),
+                "estado": data.get("uf"),
+                "pais": "Brasil",
+                "codi_pais": "1058",
+                "ibge": ibge,
+                "estado_codigo": estado_codigo,
+            }
+    return None
+
+def buscar_endereco_por_cep(cep):
+    """Alias para compatibilidade: retorna o mesmo que buscar_endereco"""
+    return buscar_endereco(cep)

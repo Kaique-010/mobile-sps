@@ -1,5 +1,6 @@
 from django.db import models
 from Produtos.models import Ncm
+from .defaults_cfop import CFOP_DEFAULTS, deduzir_defaults
 
 
 class CFOPFiscal(models.Model):
@@ -12,7 +13,7 @@ class CFOPFiscal(models.Model):
 
     def __str__(self):
         return f"{self.cfop_codi} - {self.cfop_desc}"
-
+    
 class CFOP(models.Model):
     cfop_id = models.AutoField(primary_key=True)
     cfop_empr = models.IntegerField()
@@ -35,6 +36,64 @@ class CFOP(models.Model):
     def __str__(self):
         return f"{self.cfop_codi} - {self.cfop_desc}"
 
+
+    def aplicar_defaults(self, regime: str | None = None):
+        c = str(self.cfop_codi or "").strip()
+        if not c:
+            return
+        defaults = deduzir_defaults(c, regime)
+
+        self.cfop_exig_icms       = defaults.get("icms", False)
+        self.cfop_exig_ipi        = defaults.get("ipi", False)
+        self.cfop_exig_pis_cofins = defaults.get("pis_cofins", False)
+        self.cfop_exig_cbs        = defaults.get("cbs", False)
+        self.cfop_exig_ibs        = defaults.get("ibs", False)
+        self.cfop_gera_st         = defaults.get("st", False)
+        self.cfop_gera_difal      = defaults.get("difal", False)
+
+ 
+    def save(self, *args, **kwargs):
+        criando = self.pk is None
+
+        if criando:
+            regime = None
+            try:
+                from Licencas.models import Filiais
+                filial = Filiais.objects.filter(empr_empr=self.cfop_empr).first()
+                regime = getattr(filial, "empr_regi_trib", None)
+            except Exception:
+                regime = None
+            self.aplicar_defaults(regime=regime)
+
+        super().save(*args, **kwargs)
+
+
+    @property
+    def exigencias(self):
+        itens = []
+
+        if self.cfop_exig_icms:
+            itens.append("ICMS")
+
+        if self.cfop_exig_ipi:
+            itens.append("IPI")
+
+        if self.cfop_exig_pis_cofins:
+            itens.append("PIS/COFINS")
+
+        if self.cfop_gera_st:
+            itens.append("ICMS-ST")
+
+        if self.cfop_gera_difal:
+            itens.append("DIFAL")
+
+        if self.cfop_exig_cbs:
+            itens.append("CBS")
+
+        if self.cfop_exig_ibs:
+            itens.append("IBS")
+
+        return itens
 
 class MapaCFOP(models.Model):
     TIPO_OPER = [

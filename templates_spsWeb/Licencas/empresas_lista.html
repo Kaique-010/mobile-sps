@@ -14,6 +14,11 @@
       <a href="{% url 'empresa_create_web' slug=slug %}" class="btn btn-success btn-sm">
         <i class="bi bi-plus-lg"></i> Nova Empresa
       </a>
+      {% if slug %}
+      <a class="btn btn-outline-primary btn-sm" href="{% url 'onboarding_complete_slug' slug=slug step='empresa' %}">Concluir etapa</a>
+      {% else %}
+      <a class="btn btn-outline-primary btn-sm" href="{% url 'onboarding_complete' step='empresa' %}">Concluir etapa</a>
+      {% endif %}
     </div>
   </div>
   <div class="card">

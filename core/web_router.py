@@ -9,6 +9,8 @@ urlpatterns = [
     path("login/", views.web_login, name="web_login"),
     path("selecionar-empresa/", views.selecionar_empresa, name="selecionar_empresa"),
 
+    path("onboarding/complete/<str:step>/", views.complete_onboarding_step, name="onboarding_complete"),
+    path("<slug:slug>/series/", include("series.Web.web_urls")),
     path("<slug:slug>/entidades/", include("Entidades.web_urls")),
     path("<slug:slug>/produtos/", include("Produtos.Web.web_urls")),
     path("<slug:slug>/pedidos/", include("Pedidos.Web.web_urls")),
@@ -28,6 +30,7 @@ urlpatterns = [
     path("<slug:slug>/dre/", include("DRE.web_urls")),
     path("<slug:slug>/caixa-diario/", include("CaixaDiario.Web.web_urls")),
     path("<slug:slug>/licencas/", include("Licencas.web_urls")),
+    path("<slug:slug>/onboarding/complete/<str:step>/", views.complete_onboarding_step, name="onboarding_complete_slug"),
     path("<slug:slug>/notas-destinadas/", include("NotasDestinadas.web_urls")),
     path("<slug:slug>/notas-fiscais/", include("Notas_Fiscais.Web.web_urls")),
     path("<slug:slug>/cfop/", include("CFOP.Web.urls")),

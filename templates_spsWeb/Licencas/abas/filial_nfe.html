@@ -1,0 +1,28 @@
+<div class="row">
+  <div class="col-md-3"><label for="{{ form.empr_ambi_nfe.id_for_label }}">Ambiente NF-e</label>{{ form.empr_ambi_nfe }}</div>
+  {% if form.empr_ambi_nfe.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_ambi_nfe.errors|striptags }}</div>
+  {% endif %}
+  <div class="col-md-3"><label for="{{ form.empr_lote_nfe.id_for_label }}">Lote NF-e</label>{{ form.empr_lote_nfe }}</div>
+  {% if form.empr_lote_nfe.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_lote_nfe.errors|striptags }}</div>
+  {% endif %}
+  <div class="col-md-3"><label for="{{ form.empr_lote_even_nfe.id_for_label }}">Eventos NF-e</label>{{ form.empr_lote_even_nfe }}</div>
+  {% if form.empr_lote_even_nfe.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_lote_even_nfe.errors|striptags }}</div>
+  {% endif %}
+   <div class="col-md-3"><label for="{{ form.empr_ambi_nfec.id_for_label }}">Ambiente NFC-e</label>{{ form.empr_ambi_nfec }}</div>
+  {% if form.empr_ambi_nfec.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_ambi_nfec.errors|striptags }}</div>
+  {% endif %}
+  <div class="col-md-4 mb-5"><label for="{{ form.empr_id_toke.id_for_label }}">Id Token</label>{{ form.empr_id_toke }}</div>
+  {% if form.empr_id_toke.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_id_toke.errors|striptags }}</div>
+  {% endif %}
+   <div class="col-md-8 mb-5"><label for="{{ form.empr_csn_toke.id_for_label }}">CSN Token</label>{{ form.empr_csn_toke }}</div>
+  {% if form.empr_csn_toke.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_csn_toke.errors|striptags }}</div>
+  {% endif %}
+  
+</div>
+

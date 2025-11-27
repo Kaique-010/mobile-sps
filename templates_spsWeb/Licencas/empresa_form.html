@@ -3,15 +3,17 @@
 {% block title %}Cadastrar Empresa{% endblock %}
 {% block content %}
 <link rel="stylesheet" href="{% static 'css/form.css' %}">
-<div class="container page-container">
-  <div class="page-header-custom">
-    <h2 class="page-title"><i class="bi bi-buildings"></i> Cadastro de Empresa</h2>
-    <div class="page-actions">
-      <a href="{% url 'empresas_web' slug=slug %}" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-arrow-left"></i> Voltar à Lista
-      </a>
+
+<div class="container py-4">
+  <div class="card shadow-lg border-0">
+    <div class="card-header text-center py-3">
+      <h3 class="mb-0 d-flex align-items-center justify-content-center">
+        <i class="bi bi-buildings me-2"></i> Cadastro de Empresa
+      </h3>
+
     </div>
   </div>
+
 
   {% if messages %}
   {% for message in messages %}
@@ -40,32 +42,7 @@
 
         <div class="tab-content mt-3">
           <div class="tab-pane fade show active" id="empresa">
-            <div class="row">
-              <div class="col-md-4">
-                <label for="{{ form.empr_codi.id_for_label }}">Código</label>
-                {{ form.empr_codi }}
-                {% if form.empr_codi.errors %}
-                <div class="alert alert-danger mt-1">{{ form.empr_codi.errors|striptags }}</div>
-                {% endif %}
-              </div>
-              <div class="col-md-4">
-                <label for="{{ form.empr_nome.id_for_label }}">Nome</label>
-                {{ form.empr_nome }}
-                {% if form.empr_nome.errors %}
-                <div class="alert alert-danger mt-1">{{ form.empr_nome.errors|striptags }}</div>
-                {% endif %}
-              </div>
-              <div class="col-md-4">
-                <label for="{{ form.empr_docu.id_for_label }}">CNPJ</label>
-                {{ form.empr_docu }}
-                {% if form.empr_docu.errors %}
-                <div class="alert alert-danger mt-1">{{ form.empr_docu.errors|striptags }}</div>
-                {% endif %}
-              </div>
-            </div>
-            {% if form.non_field_errors %}
-            <div class="alert alert-danger mt-2">{{ form.non_field_errors|striptags }}</div>
-            {% endif %}
+            {% include 'Licencas/abas/empresa_dados.html' %}
           </div>
         </div>
 

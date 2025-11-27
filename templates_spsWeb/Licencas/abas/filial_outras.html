@@ -1,0 +1,55 @@
+<div class="row">
+    <div class="col-md-3"><label for="{{ form.empr_apur_ipi.id_for_label }}">Apuração IPI</label>{{ form.empr_apur_ipi
+        }}</div>
+    {% if form.empr_apur_ipi.errors %}
+    <div class="alert alert-danger mt-1">{{ form.empr_apur_ipi.errors|striptags }}</div>
+    {% endif %}
+    <div class="col-md-3"><label for="{{ form.empr_lote_cart_corr.id_for_label }}">Lote CC-e</label>{{
+        form.empr_lote_cart_corr }}</div>
+    {% if form.empr_lote_cart_corr.errors %}
+    <div class="alert alert-danger mt-1">{{ form.empr_lote_cart_corr.errors|striptags }}</div>
+    {% endif %}
+    <div class="col-md-3"><label for="{{ form.empr_nsu.id_for_label }}">NSU</label>{{ form.empr_nsu }}</div>
+    {% if form.empr_nsu.errors %}
+    <div class="alert alert-danger mt-1">{{ form.empr_nsu.errors|striptags }}</div>
+    {% endif %}
+    <div class="col-md-3"><label for="{{ form.empr_danf_pais.id_for_label }}">DANF-e País</label>{{ form.empr_danf_pais
+        }}</div>
+    {% if form.empr_danf_pais.errors %}
+    <div class="alert alert-danger mt-1">{{ form.empr_danf_pais.errors|striptags }}</div>
+    {% endif %}
+</div>
+<div class="row mt-2">
+    <div class="col-md-3"><label for="{{ form.empr_senh_elot.id_for_label }}">Senha E-lote</label>{{ form.empr_senh_elot
+        }}</div>
+    {% if form.empr_senh_elot.errors %}
+    <div class="alert alert-danger mt-1">{{ form.empr_senh_elot.errors|striptags }}</div>
+    {% endif %}
+    <div class="col-md-3"><label for="{{ form.empr_id_toke.id_for_label }}">ID Token</label>{{ form.empr_id_toke }}
+    </div>
+    {% if form.empr_id_toke.errors %}
+    <div class="alert alert-danger mt-1">{{ form.empr_id_toke.errors|striptags }}</div>
+    {% endif %}
+    <div class="col-md-3"><label for="{{ form.empr_csn_toke.id_for_label }}">CSN Token</label>{{ form.empr_csn_toke }}
+    </div>
+    {% if form.empr_csn_toke.errors %}
+    <div class="alert alert-danger mt-1">{{ form.empr_csn_toke.errors|striptags }}</div>
+    {% endif %}
+    <div class="col-md-3"><label for="{{ form.empr_tipo_empr_ecd.id_for_label }}">Tipo Emp. ECD</label>{{
+        form.empr_tipo_empr_ecd }}</div>
+    {% if form.empr_tipo_empr_ecd.errors %}
+    <div class="alert alert-danger mt-1">{{ form.empr_tipo_empr_ecd.errors|striptags }}</div>
+    {% endif %}
+</div>
+<div class="row mt-2">
+    <div class="col-md-6"><label for="{{ form.empr_cabe_empr.id_for_label }}">Cabeçalho Empresa</label>{{
+        form.empr_cabe_empr }}</div>
+    {% if form.empr_cabe_empr.errors %}
+    <div class="alert alert-danger mt-1">{{ form.empr_cabe_empr.errors|striptags }}</div>
+    {% endif %}
+    <div class="col-md-6"><label for="{{ form.empr_desc_serv.id_for_label }}">Descrição Serviços</label>{{
+        form.empr_desc_serv }}</div>
+    {% if form.empr_desc_serv.errors %}
+    <div class="alert alert-danger mt-1">{{ form.empr_desc_serv.errors|striptags }}</div>
+    {% endif %}
+</div>

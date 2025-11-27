@@ -2,6 +2,15 @@
 {% block title %}Filiais{% endblock %}
 {% block content %}
 {% load static %}
+
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+  {{ message }}
+  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
 <link rel="stylesheet" href="{% static 'css/list.css' %}">
 <div class="container page-container">
   <div class="page-header-custom">
@@ -11,41 +20,50 @@
       </h2>
     </div>
     <div class="page-actions">
-      <a id="btn-nova-filial" href="{% url 'filial_create_web' slug=slug %}{% if request.GET.empresa_id %}?empresa_id={{ request.GET.empresa_id }}{% endif %}" class="btn btn-success btn-sm">
+      <a id="btn-nova-filial"
+        href="{% url 'filial_create_web' slug=slug %}{% if request.GET.empresa_id %}?empresa_id={{ request.GET.empresa_id }}{% endif %}"
+        class="btn btn-success btn-sm">
         <i class="bi bi-plus-lg"></i> Nova Filial
       </a>
+      {% if slug %}
+      <a class="btn btn-outline-primary btn-sm"
+        href="{% url 'onboarding_complete_slug' slug=slug step='filial' %}">Concluir etapa</a>
+      {% else %}
+      <a class="btn btn-outline-primary btn-sm" href="{% url 'onboarding_complete' step='filial' %}">Concluir etapa</a>
+      {% endif %}
     </div>
   </div>
   <div class="card">
     <div class="card-body">
       <div class="table-responsive d-none d-md-block">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Id</th>
-            <th>Empresa</th>
-            <th>Nome</th>
-            <th>CNPJ</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for f in filiais %}
-          <tr>
-            <td>{{ f.empr_empr }}</td>
-            <td>{{ f.empr_codi }}</td>
-            <td>{{ f.empr_nome }}</td>
-            <td>{{ f.empr_docu }}</td>
-            <td><a class="btn btn-sm btn-outline-primary"
-                href="{% url 'filial_edit_web' slug=slug empr_empr=f.empr_empr %}?filial_id={{ f.empr_codi }}">Editar</a></td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="5">Nenhuma filial.</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Id</th>
+              <th>Empresa</th>
+              <th>Nome</th>
+              <th>CNPJ</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for f in filiais %}
+            <tr>
+              <td>{{ f.empr_empr }}</td>
+              <td>{{ f.empr_codi }}</td>
+              <td>{{ f.empr_nome }}</td>
+              <td>{{ f.empr_docu }}</td>
+              <td><a class="btn btn-sm btn-outline-primary"
+                  href="{% url 'filial_edit_web' slug=slug empr_empr=f.empr_empr %}?filial_id={{ f.empr_codi }}">Editar</a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5">Nenhuma filial.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
       <div class="card-list d-md-none">
         {% for f in filiais %}
@@ -60,7 +78,8 @@
               <div><strong>CNPJ:</strong> {{ f.empr_docu }}</div>
             </div>
             <div class="mt-3 d-flex gap-2">
-              <a class="btn btn-sm btn-outline-primary" href="{% url 'filial_edit_web' slug=slug empr_empr=f.empr_empr %}?filial_id={{ f.empr_codi }}">Editar</a>
+              <a class="btn btn-sm btn-outline-primary"
+                href="{% url 'filial_edit_web' slug=slug empr_empr=f.empr_empr %}?filial_id={{ f.empr_codi }}">Editar</a>
             </div>
           </div>
         </div>
@@ -72,7 +91,7 @@
   </div>
 </div>
 <script>
-  (function() {
+  (function () {
     const link = document.getElementById('btn-nova-filial');
     if (!link) return;
     const hasParam = /[?&]empresa_id=/.test(link.href);

@@ -1,0 +1,84 @@
+<div class="row">
+  <div class="col-md-3"><label for="{{ form.empr_cep.id_for_label }}">CEP</label>{{ form.empr_cep }}</div>
+  {% if form.empr_cep.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_cep.errors|striptags }}</div>
+  {% endif %}
+  <div class="col-md-5"><label for="{{ form.empr_ende.id_for_label }}">Endereço</label>{{ form.empr_ende }}</div>
+  {% if form.empr_ende.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_ende.errors|striptags }}</div>
+  {% endif %}
+  <div class="col-md-2"><label for="{{ form.empr_nume.id_for_label }}">Número</label>{{ form.empr_nume }}</div>
+  {% if form.empr_nume.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_nume.errors|striptags }}</div>
+  {% endif %}
+  <div class="col-md-2"><label for="{{ form.empr_comp.id_for_label }}">Complemento</label>{{ form.empr_comp }}</div>
+  {% if form.empr_comp.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_comp.errors|striptags }}</div>
+  {% endif %}
+</div>
+<div class="row mt-2">
+  <div class="col-md-4"><label for="{{ form.empr_bair.id_for_label }}">Bairro</label>{{ form.empr_bair }}</div>
+  {% if form.empr_bair.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_bair.errors|striptags }}</div>
+  {% endif %}
+  <div class="col-md-4"><label for="{{ form.empr_cida.id_for_label }}">Cidade</label>{{ form.empr_cida }}</div>
+  {% if form.empr_cida.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_cida.errors|striptags }}</div>
+  {% endif %}
+  <div class="col-md-2"><label for="{{ form.empr_esta.id_for_label }}">UF</label>{{ form.empr_esta }}</div>
+  {% if form.empr_esta.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_esta.errors|striptags }}</div>
+  {% endif %}
+  <div class="col-md-2"><label for="{{ form.empr_pais.id_for_label }}">País</label>{{ form.empr_pais }}</div>
+  {% if form.empr_pais.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_pais.errors|striptags }}</div>
+  {% endif %}
+</div>
+<div class="row mt-2">
+  <div class="col-md-4"><label for="{{ form.empr_codi_cida.id_for_label }}">Código Cidade</label>{{ form.empr_codi_cida }}</div>
+  {% if form.empr_codi_cida.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_codi_cida.errors|striptags }}</div>
+  {% endif %}
+  <div class="col-md-4"><label for="{{ form.empr_codi_esta.id_for_label }}">Código Estado</label>{{ form.empr_codi_esta }}</div>
+  {% if form.empr_codi_esta.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_codi_esta.errors|striptags }}</div>
+  {% endif %}
+  <div class="col-md-4"><label for="{{ form.empr_codi_pais.id_for_label }}">Código País</label>{{ form.empr_codi_pais }}</div>
+  {% if form.empr_codi_pais.errors %}
+  <div class="alert alert-danger mt-1">{{ form.empr_codi_pais.errors|striptags }}</div>
+  {% endif %}
+</div>
+
+<script>
+  (function() {
+    const cepInput = document.getElementById('id_empr_cep');
+    if (!cepInput) return;
+
+    function sanitizeCep(v) { return (v || '').replace(/\D/g, '').slice(0, 8); }
+    function setValue(id, val) { const el = document.getElementById(id); if (el) el.value = val || ''; }
+
+    cepInput.addEventListener('input', function(e){ e.target.value = sanitizeCep(e.target.value); });
+    cepInput.addEventListener('blur', function(){
+      const cep = sanitizeCep(cepInput.value);
+      if (cep.length !== 8) return;
+      fetch(`https://viacep.com.br/ws/${cep}/json/`)
+        .then(r => r.json())
+        .then(data => {
+          if (data && !data.erro) {
+            setValue('id_empr_ende', data.logradouro);
+            setValue('id_empr_comp', data.complemento);
+            setValue('id_empr_bair', data.bairro);
+            setValue('id_empr_cida', data.localidade);
+            setValue('id_empr_esta', data.uf);
+            setValue('id_empr_pais', 'Brasil');
+            setValue('id_empr_codi_pais', '1058');
+            const ibge = (data.ibge || '').toString();
+            setValue('id_empr_codi_cida', ibge);
+            if (ibge && ibge.length >= 2) setValue('id_empr_codi_esta', ibge.substring(0,2));
+          }
+        })
+        .catch(() => {});
+    });
+  })();
+</script>
+

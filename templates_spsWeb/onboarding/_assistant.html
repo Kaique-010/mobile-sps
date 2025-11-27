@@ -1,0 +1,84 @@
+<div id="assistant-bubble" class="assistant-bubble" style="display:none;">
+  <div class="assistant-header">
+    <strong>Assistente de Configuração</strong>
+    <button type="button" class="assistant-close" onclick="hideAssistant()">&times;</button>
+  </div>
+  <div class="assistant-body">
+    {% if onboarding_state and onboarding_state.next_step %}
+    <p>Já fez sua parametrização?</p>
+    <p>Próximo: <strong>{{ onboarding_state.next_step.nome }}</strong></p>
+    {% if slug %}
+    {% if onboarding_state.next_step.slug == 'empresa' %}
+    <a data-slug-route="/web/{slug}/licencas/empresas/" class="btn btn-sm btn-primary">Configurar agora</a>
+    {% elif onboarding_state.next_step.slug == 'filial' %}
+    <a data-slug-route="/web/{slug}/licencas/filiais/" class="btn btn-sm btn-primary">Configurar agora</a>
+    {% elif onboarding_state.next_step.slug == 'cfop' %}
+    <a data-slug-route="/web/{slug}/cfop/" class="btn btn-sm btn-primary">Configurar agora</a>
+    {% else %}
+    <a href="#" class="btn btn-sm btn-secondary disabled" aria-disabled="true">Indisponível</a>
+    {% endif %}
+    {% else %}
+    {% if onboarding_state.next_step.slug == 'empresa' %}
+    <a data-slug-route="/web/{slug}/licencas/empresas/" class="btn btn-sm btn-primary">Configurar agora</a>
+    {% else %}
+    <a href="#" class="btn btn-sm btn-secondary disabled" aria-disabled="true">Entre na empresa</a>
+    {% endif %}
+    {% endif %}
+    <button class="btn btn-sm btn-outline-secondary" onclick="hideAssistantTemporarily()">Depois</button>
+    {% else %}
+    <p>Nenhuma etapa disponível.</p>
+    {% endif %}
+  </div>
+  <div class="assistant-footer">
+    <small>
+      {% if onboarding_state and onboarding_state.steps %}
+      {% for step in onboarding_state.steps %}
+      <span class="badge {% if step.completed %}bg-success{% else %}bg-secondary{% endif %}">
+        {{ step.ordem }}. {{ step.nome }}
+      </span>
+      {% endfor %}
+      {% endif %}
+    </small>
+  </div>
+</div>
+<script>
+  function hideAssistant() { document.getElementById('assistant-bubble').style.display = 'none'; }
+  function hideAssistantTemporarily() { document.getElementById('assistant-bubble').style.display = 'none'; }
+</script>
+<style>
+  .assistant-bubble {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    max-width: 320px;
+    background: linear-gradient(135deg, #4b6a83 0%, #101620 100%);
+    color: #e5e7eb;
+    border-radius: 12px;
+    padding: 12px 14px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, .45);
+    z-index: 9999;
+    font-size: .9rem;
+  }
+
+  .assistant-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+
+  .assistant-close {
+    border: none;
+    background: transparent;
+    color: #95acd3;
+    cursor: pointer;
+  }
+
+  .assistant-body p {
+    margin-bottom: 25px;
+  }
+
+  .assistant-footer {
+    margin-top: 8px;
+  }
+</style>
