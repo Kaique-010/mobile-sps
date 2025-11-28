@@ -1,3 +1,0 @@
-#Comando para rodar as tabelas de Notas 
-
-$env:DJANGO_SETTINGS_MODULE='core.settings'; $env:DB_ALIAS='demonstracao'; $env:ACTION='criar-tabelas'; python -m Notas_Fiscais.Scripts.migrar_nfe_legacy

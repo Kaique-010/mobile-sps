@@ -60,5 +60,22 @@ class NotaCreateView(SPSViewMixin, FormView):
             filial=filial,
             database=banco,
         )
+        # Marca como rascunho
+        # Recupera última nota criada com a combinação chave
+        from ....models import Nota
+        nota = (
+            Nota.objects.using(banco)
+            .filter(
+                empresa=empresa,
+                filial=filial,
+                modelo=nota_data.get("modelo"),
+                serie=nota_data.get("serie"),
+                numero=nota_data.get("numero"),
+            )
+            .order_by("-id")
+            .first()
+        )
+        if nota:
+            NotaService.gravar(nota, descricao="Rascunho criado via WEB")
 
         return self.form_success()

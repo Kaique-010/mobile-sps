@@ -28,18 +28,19 @@ def get_empresa_uf_origem(empresa_id: int, filial_id: int | None = None, banco: 
 
 class MotorFiscal:
     """
-    Motor fiscal 2.0
     - Resolve CFOP automático com base em tipo_oper + UF origem/destino
     - Busca NCM e alíquotas padrão (IBPT)
     - Aplica overrides NCM+CFOP
     - Calcula tributos (ICMS/IPI/PIS/COFINS/CBS/IBS)
     """
 
-    def __init__(self, uf_origem: str):
+    def __init__(self, uf_origem: str, database: str | None = None):
         """
         uf_origem: UF da empresa (ex: 'MA')
+        database: alias do banco para consultas multi-tenant
         """
         self.uf_origem = uf_origem
+        self.database = database
 
     # -----------------------------
     # Helpers internos
@@ -67,7 +68,10 @@ class MotorFiscal:
             "[MotorFiscal.resolver_cfop] tipo=%s origem=%s destino=%s",
             pedi_tipo_oper, self.uf_origem, uf_destino
         )
-        mapa = MapaCFOP.objects.select_related("cfop").get(
+        qs = MapaCFOP.objects
+        if self.database:
+            qs = qs.using(self.database)
+        mapa = qs.select_related("cfop").get(
             tipo_oper=pedi_tipo_oper,
             uf_origem=self.uf_origem,
             uf_destino=uf_destino,
@@ -82,7 +86,10 @@ class MotorFiscal:
         if not codigo:
             return None
         try:
-            return Ncm.objects.get(ncm_codi=codigo)
+            qs = Ncm.objects
+            if self.database:
+                qs = qs.using(self.database)
+            return qs.get(ncm_codi=codigo)
         except Ncm.DoesNotExist:
             return None
 
@@ -121,27 +128,33 @@ class MotorFiscal:
     # -----------------------------
     # ICMS UF_ORIGEM x UF_DESTINO
     # -----------------------------
-    def obter_aliquotas_icms(self, uf_destino: str):
+    def obter_aliquotas_icms(self, uf_destino: str, empresa: int | None = None, banco: str | None = None):
         """
         Retorna alíquota de ICMS (interna/inter) e MVA ST (se houver).
         """
-        try:
-            tab = TabelaICMS.objects.get(
-                uf_origem=self.uf_origem,
-                uf_destino=uf_destino,
-            )
-        except TabelaICMS.DoesNotExist:
+        qs = TabelaICMS.objects
+        if banco:
+            qs = qs.using(banco)
+        filtro = {
+            'uf_origem': self.uf_origem,
+            'uf_destino': uf_destino,
+        }
+        if empresa is not None:
+            filtro['empresa'] = int(empresa)
+
+        tab = qs.filter(**filtro).values('aliq_interna', 'aliq_inter', 'mva_st').order_by('empresa').first()
+        if not tab:
             return {
                 "icms": None,
                 "mva_st": None,
             }
 
         mesma_uf = self.uf_origem == uf_destino
-        aliq_icms = tab.aliq_interna if mesma_uf else tab.aliq_inter
+        aliq_icms = tab['aliq_interna'] if mesma_uf else tab['aliq_inter']
 
         return {
             "icms": self._to_decimal(aliq_icms, 2),
-            "mva_st": self._to_decimal(tab.mva_st, 2),
+            "mva_st": self._to_decimal(tab['mva_st'], 2),
         }
 
     # -----------------------------
@@ -158,7 +171,10 @@ class MotorFiscal:
             return aliquotas, icms_data
 
         try:
-            dif = NCM_CFOP_DIF.objects.get(ncm=ncm, cfop=cfop)
+            qs = NCM_CFOP_DIF.objects
+            if self.database:
+                qs = qs.using(self.database)
+            dif = qs.get(ncm=ncm, cfop=cfop)
         except NCM_CFOP_DIF.DoesNotExist:
             return aliquotas, icms_data
 

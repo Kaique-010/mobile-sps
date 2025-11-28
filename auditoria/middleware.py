@@ -9,6 +9,7 @@ import logging
 import json
 import re
 from datetime import date, datetime
+from pprint import pformat
 from decimal import Decimal
 from core.utils import get_licenca_db_config
 
@@ -330,6 +331,67 @@ class AuditoriaMiddleware:
             dados_antes_json = json.dumps(dados_antes_serializavel, ensure_ascii=False) if dados_antes_serializavel is not None else None
             dados_depois_json = json.dumps(dados_depois_serializavel, ensure_ascii=False) if dados_depois_serializavel is not None else None
             campos_alterados_json = json.dumps(campos_alterados_serializavel, ensure_ascii=False) if campos_alterados_serializavel is not None else None
+
+            try:
+                if '/notasfiscais/notas-fiscais/notas/' in url and method in ['POST', 'PUT', 'PATCH']:
+                    base_payload = dados_depois if dados_depois is not None else data
+                    if base_payload is not None:
+                        try:
+                            printable = base_payload
+                            if isinstance(printable, str):
+                                try:
+                                    printable = json.loads(printable)
+                                except Exception:
+                                    import ast
+                                    try:
+                                        printable = ast.literal_eval(printable)
+                                    except Exception:
+                                        printable = {"raw": printable}
+                            printable = converter_para_json_serializavel(printable)
+                            logger.debug("\n=== Nota (pprint) ===\n" + pformat(printable, width=100, compact=False))
+                        except Exception:
+                            pretty_json = json.dumps(converter_para_json_serializavel(base_payload), ensure_ascii=False, indent=2)
+                            logger.debug("\n=== Nota (pprint) ===\n" + pretty_json)
+                        if isinstance(printable, dict):
+                            try:
+                                def fmt_nota(p):
+                                    linhas = []
+                                    nid = p.get('id') or p.get('nota')
+                                    linhas.append(f"Nota id: {nid}")
+                                    linhas.append(f"Modelo/Série/Número: {p.get('modelo')}-{p.get('serie')} #{p.get('numero')}")
+                                    linhas.append(f"Datas: emissao={p.get('data_emissao')} saida={p.get('data_saida')}")
+                                    emi = p.get('emitente') or {}
+                                    linhas.append(f"Emitente: {emi.get('empr_nome')} CNPJ={emi.get('empr_docu')}")
+                                    dest = p.get('destinatario') or {}
+                                    doc = dest.get('enti_cnpj') or dest.get('enti_cpf') or ''
+                                    linhas.append(f"Destinatario: {dest.get('enti_nome')} Doc={doc}")
+                                    linhas.append(f"Status/Ambiente: {p.get('status')}/{p.get('ambiente')}")
+                                    linhas.append(f"Chave: {p.get('chave_acesso')} Protocolo: {p.get('protocolo_autorizacao')}")
+                                    itens = p.get('itens') or []
+                                    linhas.append(f"Itens: {len(itens)}")
+                                    for i, it in enumerate(itens, 1):
+                                        linhas.append(f"  Item {i} id={it.get('id')} prod={it.get('produto')} quant={it.get('quantidade')} unit={it.get('unitario')} desc={it.get('desconto')} total={it.get('total')} cfop={it.get('cfop')} ncm={it.get('ncm')} cst_icms={it.get('cst_icms')} cst_pis={it.get('cst_pis')} cst_cofins={it.get('cst_cofins')}")
+                                        imp = it.get('impostos') or {}
+                                        if imp:
+                                            linhas.append(f"    Impostos: icms_base={imp.get('icms_base')} aliq={imp.get('icms_aliquota')} icms_valor={imp.get('icms_valor')} ipi={imp.get('ipi_valor')} pis={imp.get('pis_valor')} cofins={imp.get('cofins_valor')} fcp={imp.get('fcp_valor')}")
+                                    tr = p.get('transporte') or {}
+                                    if tr:
+                                        linhas.append(f"Transporte: modalidade={tr.get('modalidade_frete')} placa={tr.get('placa_veiculo')} uf={tr.get('uf_veiculo')} transportadora={tr.get('transportadora')}")
+                                    return "\n".join(linhas)
+                                logger.debug("\n=== Nota (chaves) ===\n" + fmt_nota(printable))
+                            except Exception:
+                                pass
+                if '/notasfiscais/notas-fiscais/emitir/' in url and isinstance(dados_depois_serializavel, dict):
+                    xml_str = dados_depois_serializavel.get('xml')
+                    if xml_str:
+                        try:
+                            from xml.dom import minidom
+                            parsed = minidom.parseString(xml_str)
+                            logger.debug("\n=== Nota (XML) ===\n" + parsed.toprettyxml(indent="  "))
+                        except Exception:
+                            logger.debug("\n=== Nota (XML) ===\n" + xml_str)
+            except Exception:
+                pass
             
             # Criar o log no banco da licença
             log = LogAcao.objects.using(banco).create(

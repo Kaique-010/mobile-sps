@@ -123,6 +123,7 @@ INSTALLED_APPS = [
     'boletos',
     'onboarding',
     'series',
+    'importador',
 ]
 # Middleware
 MIDDLEWARE = [

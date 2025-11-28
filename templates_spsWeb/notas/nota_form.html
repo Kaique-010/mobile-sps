@@ -1,0 +1,414 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+
+<link rel="stylesheet" href="{% static 'css/ui.css' %}">
+
+<div class="container page-container">
+  <div class="page-header-custom">
+    <h2 class="page-title"><i class="bi bi-pencil-square"></i> Editar Nota Fiscal</h2>
+    <div class="page-actions d-flex gap-2">
+      <a class="btn btn-outline-secondary" href="/web/{{ slug }}/notas-fiscais/">Voltar</a>
+    </div>
+  </div>
+
+  <form method="post" class="card p-3">
+    {% csrf_token %}
+    <div class="row g-3">
+      <div class="col-md-2">{{ form.modelo.label_tag }} {{ form.modelo }}</div>
+      <div class="col-md-2">{{ form.serie.label_tag }} {{ form.serie }}</div>
+      <div class="col-md-2">{{ form.numero.label_tag }} {{ form.numero }}</div>
+      <div class="col-md-3">{{ form.data_emissao.label_tag }} {{ form.data_emissao }}</div>
+      <div class="col-md-3">{{ form.data_saida.label_tag }} {{ form.data_saida }}</div>
+      <div class="col-md-6">
+        {{ form.destinatario.label_tag }}
+        <div class="position-relative">
+          <input type="text" id="destinatario-ac" class="form-control" autocomplete="off"
+            placeholder="Nome/CNPJ/CPF do cliente"
+            value="{% if nota and nota.destinatario %}{{ nota.destinatario.enti_nome }}{% endif %}">
+          <div class="d-none">{{ form.destinatario }}</div>
+          <div id="destinatario-ac-list" class="list-group position-absolute w-100" style="z-index:20"></div>
+        </div>
+      </div>
+      <div class="col-md-3">{{ form.tipo_operacao.label_tag }} {{ form.tipo_operacao }}</div>
+      <div class="col-md-3">{{ form.finalidade.label_tag }} {{ form.finalidade }}</div>
+    </div>
+
+    <hr />
+    <div class="d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">Itens</h5>
+      <button type="button" id="btn-add-item" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus"></i>
+        Adicionar Item</button>
+    </div>
+    {{ itens_formset.management_form }}
+    <div class="table-responsive">
+      <table class="table table-sm table-hover table-compact">
+        <thead>
+          <tr>
+            <th>Produto</th>
+            <th>Qtd</th>
+            <th>Unit</th>
+            <th>Desc</th>
+            <th>CFOP</th>
+            <th>NCM</th>
+            <th>CST ICMS</th>
+            <th>CST PIS</th>
+            <th>CST COFINS</th>
+            <th>Total</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for i in itens_formset %}
+          <tr>
+            <td>
+              <div class="position-relative">
+                <input type="text" class="form-control item-prod-ac" value="{{ i.produto.value }}" autocomplete="off"
+                  placeholder="Buscar produto">
+                <div class="d-none">{{ i.produto }}</div>
+                <div class="list-group position-absolute w-100 item-prod-list" style="z-index:20"></div>
+              </div>
+            </td>
+            <td>{{ i.quantidade }}</td>
+            <td>{{ i.unitario }}</td>
+            <td>{{ i.desconto }}</td>
+            <td>{{ i.cfop }}</td>
+            <td>{{ i.ncm }}</td>
+            <td>{{ i.cst_icms }}</td>
+            <td>{{ i.cst_pis }}</td>
+            <td>{{ i.cst_cofins }}</td>
+            <td>{{ i.total }}</td>
+            <td>
+              <div class="d-none">{{ i.DELETE }}</div>
+              <button type="button" class="btn btn-sm btn-outline-danger btn-remove-item"><i
+                  class="bi bi-trash"></i></button>
+            </td>
+          </tr>
+          {% endfor %}
+          {% with ef=itens_formset.empty_form %}
+          <tr id="itens-empty-row" class="d-none">
+            <td>
+              <div class="position-relative">
+                <input type="text" class="form-control item-prod-ac" autocomplete="off" placeholder="Buscar produto">
+                <div class="d-none">{{ ef.produto }}</div>
+                <div class="list-group position-absolute w-100 item-prod-list" style="z-index:20"></div>
+              </div>
+            </td>
+            <td>{{ ef.quantidade }}</td>
+            <td>{{ ef.unitario }}</td>
+            <td>{{ ef.desconto }}</td>
+            <td>{{ ef.cfop }}</td>
+            <td>{{ ef.ncm }}</td>
+            <td>{{ ef.cst_icms }}</td>
+            <td>{{ ef.cst_pis }}</td>
+            <td>{{ ef.cst_cofins }}</td>
+            <td>{{ ef.total }}</td>
+            <td>
+              <div class="d-none">{{ ef.DELETE }}</div>
+              <button type="button" class="btn btn-sm btn-outline-danger btn-remove-item"><i
+                  class="bi bi-trash"></i></button>
+            </td>
+          </tr>
+          {% endwith %}
+        </tbody>
+      </table>
+    </div>
+
+    <hr />
+    <h5>Transporte</h5>
+    <div class="row g-3">
+      <div class="col-md-3">{{ transporte_form.modalidade_frete.label_tag }} {{ transporte_form.modalidade_frete }}
+      </div>
+      <div class="col-md-5">
+        {{ transporte_form.transportadora.label_tag }}
+        <div class="position-relative">
+          <input type="text" id="transportadora-ac" class="form-control" autocomplete="off"
+            placeholder="Nome da transportadora"
+            value="{% if nota and nota.transporte and nota.transporte.transportadora %}{{ nota.transporte.transportadora.enti_nome }}{% endif %}">
+          <div class="d-none">{{ transporte_form.transportadora }}</div>
+          <div id="transportadora-ac-list" class="list-group position-absolute w-100" style="z-index:20"></div>
+        </div>
+      </div>
+      <div class="col-md-2">{{ transporte_form.placa_veiculo.label_tag }} {{ transporte_form.placa_veiculo }}</div>
+      <div class="col-md-2">{{ transporte_form.uf_veiculo.label_tag }} {{ transporte_form.uf_veiculo }}</div>
+    </div>
+
+    <div class="d-flex justify-content-end gap-2 mt-3">
+      <a class="btn btn-secondary" href="/web/{{ slug }}/notas-fiscais/">Voltar</a>
+      <button class="btn btn-outline-primary" type="button" id="btn-gravar"><span
+          class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span> <i class="bi bi-save"></i>
+        Gravar</button>
+      <button class="btn btn-success" type="submit"><span class="spinner-border spinner-border-sm me-1 d-none"
+          aria-hidden="true"></span> <i class="bi bi-check2"></i> Salvar</button>
+    </div>
+  </form>
+
+  {% if nota %}
+  <div class="mt-3">
+    <small class="text-muted">Status: {{ nota.get_status_display }}</small>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+  (() => {
+    const slug = localStorage.getItem('slug');
+    const empresa = localStorage.getItem('empresa_id') || '1';
+    const filial = localStorage.getItem('filial_id') || '1';
+    const authFetch = async (url, options = {}) => {
+      const token = localStorage.getItem('access');
+      const headers = { 'Content-Type': 'application/json', 'X-Empresa': empresa, 'X-Filial': filial };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      return fetch(url, { ...options, headers: { ...headers, ...(options.headers || {}) } });
+    };
+    const notaId = Number((window.location.pathname.match(/\/notas-fiscais\/(\d+)/) || [])[1] || 0);
+    const montarTotais = async () => {
+      try {
+        const resp = await authFetch(`/api/${slug}/notasfiscais/notas-fiscais/notas/${notaId}/`);
+        const data = await resp.json();
+        if (!resp.ok) return;
+        const itens = Array.isArray(data?.itens) ? data.itens : [];
+        const somaProdutos = itens.reduce((acc, it) => acc + Number(it.total || (Number(it.quantidade || 0) * Number(it.unitario || 0) - Number(it.desconto || 0))), 0);
+        let totIcms = 0, totIpi = 0, totPis = 0, totCofins = 0, totCbs = 0, totIbs = 0;
+        itens.forEach(it => {
+          const imp = it.impostos || {};
+          totIcms += Number(imp.icms_valor || 0);
+          totIpi += Number(imp.ipi_valor || 0);
+          totPis += Number(imp.pis_valor || 0);
+          totCofins += Number(imp.cofins_valor || 0);
+          totCbs += Number(imp.cbs_valor || 0);
+          totIbs += Number(imp.ibs_valor || 0);
+        });
+        const somaImpostos = totIcms + totIpi + totPis + totCofins + totCbs + totIbs;
+        const somaDescontos = itens.reduce((acc, it) => acc + Number(it.desconto || 0), 0);
+        const totalNota = somaProdutos + somaImpostos;
+        const totProdEl = document.getElementById('total');
+        const totDescEl = document.getElementById('total-desconto');
+        const totTribEl = document.getElementById('total-tributos');
+        const totNotaEl = document.getElementById('total-nota');
+        const totIcmsEl = document.getElementById('total-icms');
+        const totIpiEl = document.getElementById('total-ipi');
+        const totPisEl = document.getElementById('total-pis');
+        const totCofinsEl = document.getElementById('total-cofins');
+        const totCbsEl = document.getElementById('total-cbs');
+        const totIbsEl = document.getElementById('total-ibs');
+        if (totProdEl) totProdEl.value = somaProdutos.toFixed(2);
+        if (totDescEl) totDescEl.value = somaDescontos.toFixed(2);
+        if (totTribEl) totTribEl.value = somaImpostos.toFixed(2);
+        if (totNotaEl) totNotaEl.value = totalNota.toFixed(2);
+        if (totIcmsEl) totIcmsEl.value = totIcms.toFixed(2);
+        if (totIpiEl) totIpiEl.value = totIpi.toFixed(2);
+        if (totPisEl) totPisEl.value = totPis.toFixed(2);
+        if (totCofinsEl) totCofinsEl.value = totCofins.toFixed(2);
+        if (totCbsEl) totCbsEl.value = totCbs.toFixed(2);
+        if (totIbsEl) totIbsEl.value = totIbs.toFixed(2);
+
+        const dest = data?.destinatario;
+        if (dest) {
+          const destText = document.getElementById('destinatario-ac');
+          const destField = document.querySelector('[name="destinatario"]');
+          if (destText) destText.value = dest.enti_nome || dest.enti_cnpj || dest.enti_cpf || '';
+          if (destField) destField.value = dest.enti_clie || '';
+        }
+
+        const transp = data?.transporte;
+        if (transp) {
+          const transpText = document.getElementById('transportadora-ac');
+          const transpField = document.querySelector('[name="transportadora"]');
+          if (transpText) transpText.value = transp.transportadora_nome || '';
+          if (transpField) transpField.value = transp.transportadora || '';
+        }
+
+        const rows = Array.from(document.querySelectorAll('tbody tr')).filter(tr => !tr.id);
+        rows.forEach((row, idx) => {
+          const it = itens[idx];
+          if (!it) return;
+          const prodText = row.querySelector('.item-prod-ac');
+          const prodField = row.querySelector('[name$="-produto"]');
+          if (prodText) prodText.value = it.produto_nome || String(it.produto || '');
+          const qtd = row.querySelector('[name$="-quantidade"]');
+          const unit = row.querySelector('[name$="-unitario"]');
+          const desc = row.querySelector('[name$="-desconto"]');
+          const total = row.querySelector('[name$="-total"]');
+          if (qtd && it.quantidade != null) qtd.value = Number(it.quantidade).toFixed(4);
+          if (unit && it.unitario != null) unit.value = Number(it.unitario).toFixed(4);
+          if (desc && it.desconto != null) desc.value = Number(it.desconto).toFixed(4);
+          if (total && it.total != null) total.value = Number(it.total).toFixed(2);
+        });
+      } catch { }
+    };
+    const btnGravar = document.getElementById('btn-gravar');
+    btnGravar.addEventListener('click', async () => {
+      try {
+        const sp = btnGravar.querySelector('.spinner-border');
+        btnGravar.disabled = true; if (sp) sp.classList.remove('d-none');
+        const resp = await authFetch(`/api/${slug}/notasfiscais/notas-fiscais/notas/${notaId}/gravar/`, { method: 'POST', body: JSON.stringify({ descricao: 'Rascunho atualizado via WEB' }) });
+        const data = await resp.json();
+        if (resp.ok) { showToast('Rascunho gravado.', { variant: 'success' }); } else { showToast('Falha: ' + (data?.detail || 'Erro'), { variant: 'danger', delay: 4000 }); }
+        await montarTotais();
+      } catch (e) { showToast('Erro: ' + e, { variant: 'danger', delay: 4000 }); }
+      finally { btnGravar.disabled = false; const sp = btnGravar.querySelector('.spinner-border'); if (sp) sp.classList.add('d-none'); }
+    });
+
+    const mountAutocomplete = (input, source, onPick, listEl) => {
+      let timer = null;
+      const list = listEl || document.createElement('div');
+      if (!listEl) { list.className = 'list-group position-absolute w-100'; input.parentElement.appendChild(list); }
+      const render = (items) => {
+        list.innerHTML = '';
+        items.forEach(it => {
+          const a = document.createElement('a');
+          a.href = '#'; a.className = 'list-group-item list-group-item-action';
+          a.textContent = it.label;
+          a.addEventListener('click', (e) => { e.preventDefault(); onPick(it); list.innerHTML = ''; });
+          list.appendChild(a);
+        });
+      };
+      input.addEventListener('input', () => {
+        const q = input.value.trim();
+        clearTimeout(timer);
+        timer = setTimeout(async () => {
+          if (!q) { list.innerHTML = ''; return; }
+          const resp = await authFetch(source(q));
+          const data = await resp.json();
+          render(Array.isArray(data) ? data : []);
+        }, 250);
+      });
+    };
+
+    const destText = document.getElementById('destinatario-ac');
+    const destField = document.querySelector('[name="destinatario"]');
+    const destList = document.getElementById('destinatario-ac-list');
+    if (destText && destField) {
+      mountAutocomplete(destText, (q) => `/web/${slug}/notas-fiscais/entidades-autocomplete/?q=${encodeURIComponent(q)}`, (it) => { destText.value = it.label; destField.value = it.value; }, destList);
+    }
+
+    const attachItemRowBehaviors = (row) => {
+      const prodText = row.querySelector('.item-prod-ac');
+      const prodField = row.querySelector('[name$="-produto"]');
+      const listEl = row.querySelector('.item-prod-list');
+      if (prodText && prodField) {
+        mountAutocomplete(prodText, (q) => `/web/${slug}/notas-fiscais/produtos-autocomplete/?q=${encodeURIComponent(q)}`, async (item) => {
+          prodText.value = item.label; prodField.value = item.value;
+          try {
+            const resp = await authFetch(`/web/${slug}/notas-fiscais/produto-detalhe/${item.value}/`);
+            const data = await resp.json();
+            const ncm = row.querySelector('[name$="-ncm"]');
+            const un = row.querySelector('[name$="-quantidade"]');
+            const unit = row.querySelector('[name$="-unitario"]');
+            if (ncm && data?.prod_ncm) ncm.value = data.prod_ncm;
+            const preco = data?.prod_preco_vista || data?.prod_preco_normal || 0;
+            if (unit && Number(preco) > 0) unit.value = Number(preco).toFixed(2);
+          } catch { }
+        }, listEl);
+      }
+      const cfopInput = row.querySelector('[name$="-cfop"]');
+      const cstIcms = row.querySelector('[name$="-cst_icms"]');
+      const cstPis = row.querySelector('[name$="-cst_pis"]');
+      const cstCofins = row.querySelector('[name$="-cst_cofins"]');
+      if (cfopInput) {
+        mountAutocomplete(cfopInput, (q) => `/web/${slug}/notas-fiscais/cfop-autocomplete/?q=${encodeURIComponent(q)}`, (cf) => {
+          const codigo = cf.value || cf.cfop || cf.codigo || '';
+          if (codigo) cfopInput.value = codigo;
+          if (cstIcms && cf.cst_icms != null) cstIcms.value = cf.cst_icms;
+          if (cstPis && cf.cst_pis != null) cstPis.value = cf.cst_pis;
+          if (cstCofins && cf.cst_cofins != null) cstCofins.value = cf.cst_cofins;
+        });
+      }
+      const qtd = row.querySelector('[name$="-quantidade"]');
+      const unit = row.querySelector('[name$="-unitario"]');
+      const desc = row.querySelector('[name$="-desconto"]');
+      const total = row.querySelector('[name$="-total"]');
+      const recalc = () => {
+        const q = Number(qtd?.value || 0);
+        const u = Number(unit?.value || 0);
+        const d = Number(desc?.value || 0);
+        const t = q * u - d;
+        if (total) total.value = t.toFixed(2);
+      };
+      [qtd, unit, desc].forEach(el => el && el.addEventListener('input', recalc));
+      recalc();
+      const delBtn = row.querySelector('.btn-remove-item');
+      const delField = row.querySelector('[name$="-DELETE"]');
+      if (delBtn && delField) {
+        delBtn.addEventListener('click', () => { delField.checked = true; row.style.display = 'none'; });
+      }
+    };
+
+    document.querySelectorAll('tbody tr').forEach(attachItemRowBehaviors);
+
+    const btnAdd = document.getElementById('btn-add-item');
+    const emptyRow = document.getElementById('itens-empty-row');
+    const totalForms = document.querySelector('[name$="-TOTAL_FORMS"]');
+    btnAdd?.addEventListener('click', () => {
+      if (!emptyRow || !totalForms) return;
+      const idx = Number(totalForms.value || 0);
+      const clone = emptyRow.cloneNode(true);
+      clone.id = '';
+      clone.classList.remove('d-none');
+      clone.innerHTML = clone.innerHTML.replace(/__prefix__/g, String(idx));
+      emptyRow.parentElement.appendChild(clone);
+      totalForms.value = String(idx + 1);
+      attachItemRowBehaviors(clone);
+    });
+
+    const transpText = document.getElementById('transportadora-ac');
+    const transpField = document.querySelector('[name="transportadora"]');
+    const transpList = document.getElementById('transportadora-ac-list');
+    if (transpText && transpField) {
+      mountAutocomplete(transpText, (q) => `/web/${slug}/notas-fiscais/transportadoras-autocomplete/?q=${encodeURIComponent(q)}`, (it) => { transpText.value = it.label; transpField.value = it.value; }, transpList);
+    }
+    const totalsContainer = document.createElement('div');
+    totalsContainer.className = 'card mt-3 p-3';
+    totalsContainer.innerHTML = `
+      <h5>Totais</h5>
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">Total Produtos</label>
+          <input type="text" class="form-control" id="total" readonly />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Desconto</label>
+          <input type="text" class="form-control" id="total-desconto" readonly />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Tributos</label>
+          <input type="text" class="form-control" id="total-tributos" readonly />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Total Nota</label>
+          <input type="text" class="form-control" id="total-nota" readonly />
+        </div>
+      </div>
+      <div class="row g-3 mt-1">
+        <div class="col-md-2">
+          <label class="form-label">ICMS</label>
+          <input type="text" class="form-control" id="total-icms" readonly />
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">IPI</label>
+          <input type="text" class="form-control" id="total-ipi" readonly />
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">PIS</label>
+          <input type="text" class="form-control" id="total-pis" readonly />
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">COFINS</label>
+          <input type="text" class="form-control" id="total-cofins" readonly />
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">CBS</label>
+          <input type="text" class="form-control" id="total-cbs" readonly />
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">IBS</label>
+          <input type="text" class="form-control" id="total-ibs" readonly />
+        </div>
+      </div>`;
+    const formEl = document.querySelector('form.card.p-3');
+    if (formEl) formEl.appendChild(totalsContainer);
+    montarTotais();
+  })();
+</script>
+{% endblock %}

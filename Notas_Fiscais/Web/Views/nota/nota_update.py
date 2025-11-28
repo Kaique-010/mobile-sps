@@ -28,6 +28,8 @@ class NotaUpdateView(SPSViewMixin, UpdateView):
             context["itens_formset"] = NotaItemFormSet(instance=nota)
             context["transporte_form"] = TransporteForm(instance=nota.transporte)
 
+        context["slug"] = self.kwargs.get("slug")
+
         return context
 
     def form_valid(self, form):

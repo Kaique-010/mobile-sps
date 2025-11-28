@@ -1,11 +1,19 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block content %}
-<link rel="stylesheet" href="{% static 'css/list.css' %}">
-<div class="container py-3">
-  <h2 class="mb-3 text-center"><i class="bi bi-file-earmark-text-fill"></i> Notas Fiscais</h2>
 
-  <form class="row g-2 mb-3" method="get">
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
+<div class="container page-container px-5 pt-4 pb-5">
+  <div class="page-header-custom">
+    <div class="container align-items-center">
+      <h2 class="page-title">
+        <i class="bi bi-building-check"></i> Notas Fiscais
+      </h2>
+    </div>
+      <a class="btn btn-success" href="/web/{{ slug }}/notas-fiscais/emissao/"><i class="bi bi-upload"></i> Emitir Nota</a>
+    </div>
+
+  <form class="row g-2 mb-3 filters" method="get">
     <div class="col-md-2">
       <label class="form-label">Status</label>
       <select name="status" class="form-select">
@@ -31,22 +39,47 @@
       <div class="btn-group">
         <button class="btn btn-primary" type="submit"><i class="bi bi-funnel"></i> Filtrar</button>
         <a class="btn btn-outline-secondary" href="?"><i class="bi bi-x-circle"></i> Limpar</a>
-        <a class="btn btn-success" href="/web/{{ slug }}/notas-fiscais/emissao/"><i class="bi bi-upload"></i> Emitir Nota</a>
       </div>
     </div>
   </form>
 
-  <div class="table-responsive d-none d-md-block">
-    <table class="table table-sm table-striped">
+  <div class="table-responsive d-none d-md-block px-4 pt-4 pb-4">
+    <table class="table table-sm table-striped table-hover table-compact">
       <thead>
         <tr>
-          <th>Modelo</th>
-          <th>Série</th>
-          <th>Número</th>
-          <th>Emissão</th>
+          <th>
+            <a class="text-decoration-none" href="?status={{ preservado.status }}&cliente={{ preservado.cliente }}&data_ini={{ preservado.data_ini }}&data_fim={{ preservado.data_fim }}&ordering={% if ordering == 'modelo' %}-modelo{% else %}modelo{% endif %}">
+              Modelo
+              {% if ordering == 'modelo' %}<i class="bi bi-sort-down"></i>{% elif ordering == '-modelo' %}<i class="bi bi-sort-up"></i>{% endif %}
+            </a>
+          </th>
+          <th>
+            <a class="text-decoration-none" href="?status={{ preservado.status }}&cliente={{ preservado.cliente }}&data_ini={{ preservado.data_ini }}&data_fim={{ preservado.data_fim }}&ordering={% if ordering == 'serie' %}-serie{% else %}serie{% endif %}">
+              Série
+              {% if ordering == 'serie' %}<i class="bi bi-sort-down"></i>{% elif ordering == '-serie' %}<i class="bi bi-sort-up"></i>{% endif %}
+            </a>
+          </th>
+          <th>
+            <a class="text-decoration-none" href="?status={{ preservado.status }}&cliente={{ preservado.cliente }}&data_ini={{ preservado.data_ini }}&data_fim={{ preservado.data_fim }}&ordering={% if ordering == 'numero' %}-numero{% else %}numero{% endif %}">
+              Número
+              {% if ordering == 'numero' %}<i class="bi bi-sort-down"></i>{% elif ordering == '-numero' %}<i class="bi bi-sort-up"></i>{% endif %}
+            </a>
+          </th>
+          <th>
+            <a class="text-decoration-none" href="?status={{ preservado.status }}&cliente={{ preservado.cliente }}&data_ini={{ preservado.data_ini }}&data_fim={{ preservado.data_fim }}&ordering={% if ordering == 'data_emissao' %}-data_emissao{% else %}data_emissao{% endif %}">
+              Emissão
+              {% if ordering == 'data_emissao' %}<i class="bi bi-sort-down"></i>{% elif ordering == '-data_emissao' %}<i class="bi bi-sort-up"></i>{% endif %}
+            </a>
+          </th>
           <th>Emitente</th>
           <th>Destinatário</th>
-          <th>Status</th>
+          <th>
+            <a class="text-decoration-none" href="?status={{ preservado.status }}&cliente={{ preservado.cliente }}&data_ini={{ preservado.data_ini }}&data_fim={{ preservado.data_fim }}&ordering={% if ordering == 'status' %}-status{% else %}status{% endif %}">
+              Status
+              {% if ordering == 'status' %}<i class="bi bi-sort-down"></i>{% elif ordering == '-status' %}<i class="bi bi-sort-up"></i>{% endif %}
+            </a>
+          </th>
+          <th>Protocolo</th>
           <th>Ações</th>
         </tr>
       </thead>
@@ -57,14 +90,20 @@
           <td>{{ n.serie }}</td>
           <td>{{ n.numero }}</td>
           <td>{{ n.data_emissao }}</td>
-          <td>{{ n.emitente.empr_nome }}</td>
-          <td>{{ n.destinatario.enti_nome }}</td>
+          <td>{{ n.emitente_nome }}</td>
+          <td>{{ n.destinatario_nome }}</td>
           <td>{{ n.get_status_display }}</td>
+          <td>{{ n.ultimo_protocolo|default:"" }}</td>
           <td>
-            <div class="btn-group btn-group-sm">
-              <a class="btn btn-primary" href="/web/{{ slug }}/notas-fiscais/{{ n.id }}/">Detalhes</a>
+            <div class="botoes-listanotas">
+              <a class="btn btn-outline-dark" href="/web/{{ slug }}/notas-fiscais/{{ n.id }}/">Detalhes</a>
               {% if n.status == 0 %}
-                <button class="btn btn-outline-success" data-transmitir data-id="{{ n.id }}">Transmitir</button>
+                <button class="btn btn-outline-success" data-emitir data-id="{{ n.id }}"><span class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span> Emitir</button>
+                <button class="btn btn-outline-warning" data-inutilizar data-id="{{ n.id }}"><span class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span> Inutilizar</button>
+                <a class="btn btn-outline-secondary" href="/web/{{ slug }}/notas-fiscais/{{ n.id }}/editar/">Editar</a>
+              {% endif %}
+              {% if n.status == 100 %}
+                <button class="btn btn-outline-danger" data-cancelar data-id="{{ n.id }}"><span class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span> Cancelar</button>
               {% endif %}
             </div>
           </td>
@@ -88,14 +127,19 @@
         <div class="mt-2 small">
           <div><strong>Modelo:</strong> {{ n.modelo }}</div>
           <div><strong>Série:</strong> {{ n.serie }}</div>
-          <div><strong>Emitente:</strong> {{ n.emitente.empr_nome }}</div>
-          <div><strong>Destinatário:</strong> {{ n.destinatario.enti_nome }}</div>
+          <div><strong>Emitente:</strong> {{ n.emitente_nome }}</div>
+          <div><strong>Destinatário:</strong> {{ n.destinatario_nome }}</div>
           <div><strong>Status:</strong> {{ n.get_status_display }}</div>
+          <div><strong>Protocolo:</strong> {{ n.ultimo_protocolo|default:"—" }}</div>
         </div>
         <div class="mt-3 d-flex gap-2">
           <a class="btn btn-sm btn-outline-primary" href="/web/{{ slug }}/notas-fiscais/{{ n.id }}/">Detalhes</a>
           {% if n.status == 0 %}
-          <button class="btn btn-sm btn-outline-success" data-transmitir data-id="{{ n.id }}">Transmitir</button>
+          <button class="btn btn-sm btn-outline-success" data-emitir data-id="{{ n.id }}"><span class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span> Emitir</button>
+          <button class="btn btn-sm btn-outline-warning" data-inutilizar data-id="{{ n.id }}"><span class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span> Inutilizar</button>
+          {% endif %}
+          {% if n.status == 100 %}
+          <button class="btn btn-sm btn-outline-danger" data-cancelar data-id="{{ n.id }}"><span class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span> Cancelar</button>
           {% endif %}
         </div>
       </div>
@@ -132,27 +176,74 @@
       return fetch(url, { ...options, headers: { ...headers, ...(options.headers || {}) } });
     };
 
-    const onTransmitir = async (id) => {
-      const btn = document.querySelector(`[data-transmitir][data-id="${id}"]`);
-      if (btn) btn.disabled = true;
+    const onEmitir = async (id) => {
+      const btn = document.querySelector(`[data-emitir][data-id="${id}"]`);
+      const sp = btn?.querySelector('.spinner-border');
+      if (btn) { btn.disabled = true; if (sp) sp.classList.remove('d-none'); }
       try {
-        const resp = await authFetch(`/api/${slug}/notas-fiscais/notas/${id}/transmitir/`, { method: 'POST', body: JSON.stringify({}) });
+        const resp = await authFetch(`/api/${slug}/notasfiscais/notas-fiscais/emitir/${slug}/${id}/`, { method: 'GET' });
         const data = await resp.json();
         if (resp.ok) {
-          alert('Transmitida com sucesso. Chave: ' + (data?.resultado?.chave_acesso || ''));
+          showToast('Emitida com sucesso. Chave: ' + (data?.chave || data?.chave_acesso || ''), { variant: 'success' });
           location.reload();
         } else {
-          alert('Falha na transmissão: ' + (data?.motivo || data?.error || 'Erro'));
+          showToast('Falha na emissão: ' + (data?.motivo || data?.error || data?.detail || 'Erro'), { variant: 'danger', delay: 4000 });
         }
       } catch (e) {
-        alert('Erro: ' + e);
+        showToast('Erro: ' + e, { variant: 'danger', delay: 4000 });
       } finally {
-        if (btn) btn.disabled = false;
+        if (btn) { btn.disabled = false; if (sp) sp.classList.add('d-none'); }
       }
     };
 
-    document.querySelectorAll('[data-transmitir]')?.forEach(el => {
-      el.addEventListener('click', (ev) => { ev.preventDefault(); const id = el.getAttribute('data-id'); onTransmitir(id); });
+    const onCancelar = async (id) => {
+      const btn = document.querySelector(`[data-cancelar][data-id="${id}"]`);
+      if (!confirm('Confirma cancelar a nota?')) return;
+      const sp = btn?.querySelector('.spinner-border');
+      if (btn) { btn.disabled = true; if (sp) sp.classList.remove('d-none'); }
+      const descricao = 'Cancelamento via painel';
+      try {
+        const resp = await authFetch(`/api/${slug}/notasfiscais/notas-fiscais/notas/${id}/cancelar/`, { method: 'POST', body: JSON.stringify({ descricao }) });
+        const data = await resp.json();
+        if (resp.ok) {
+          showToast('Cancelada com sucesso.', { variant: 'success' });
+          location.reload();
+        } else {
+          showToast('Falha no cancelamento: ' + (data?.detail || data?.motivo || data?.error || 'Erro'), { variant: 'danger', delay: 4000 });
+        }
+      } catch (e) {
+        showToast('Erro: ' + e, { variant: 'danger', delay: 4000 });
+      } finally { if (btn) btn.disabled = false; }
+    };
+
+    const onInutilizar = async (id) => {
+      const btn = document.querySelector(`[data-inutilizar][data-id="${id}"]`);
+      if (!confirm('Confirma inutilizar a numeração da nota?')) return;
+      const sp = btn?.querySelector('.spinner-border');
+      if (btn) { btn.disabled = true; if (sp) sp.classList.remove('d-none'); }
+      const descricao = 'Inutilização via painel';
+      try {
+        const resp = await authFetch(`/api/${slug}/notasfiscais/notas-fiscais/notas/${id}/inutilizar/`, { method: 'POST', body: JSON.stringify({ descricao }) });
+        const data = await resp.json();
+        if (resp.ok) {
+          showToast('Inutilizada com sucesso.', { variant: 'success' });
+          location.reload();
+        } else {
+          showToast('Falha na inutilização: ' + (data?.detail || data?.motivo || data?.error || 'Erro'), { variant: 'danger', delay: 4000 });
+        }
+      } catch (e) {
+        showToast('Erro: ' + e, { variant: 'danger', delay: 4000 });
+      } finally { if (btn) btn.disabled = false; }
+    };
+
+    document.querySelectorAll('[data-emitir]')?.forEach(el => {
+      el.addEventListener('click', (ev) => { ev.preventDefault(); const id = el.getAttribute('data-id'); onEmitir(id); });
+    });
+    document.querySelectorAll('[data-cancelar]')?.forEach(el => {
+      el.addEventListener('click', (ev) => { ev.preventDefault(); const id = el.getAttribute('data-id'); onCancelar(id); });
+    });
+    document.querySelectorAll('[data-inutilizar]')?.forEach(el => {
+      el.addEventListener('click', (ev) => { ev.preventDefault(); const id = el.getAttribute('data-id'); onInutilizar(id); });
     });
   })();
 </script>

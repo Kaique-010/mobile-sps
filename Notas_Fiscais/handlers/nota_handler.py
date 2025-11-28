@@ -14,6 +14,11 @@ class NotaHandler:
         """
 
         data = data.copy()
+        # Remove campos que não pertencem ao modelo Nota
+        data.pop("itens", None)
+        data.pop("impostos", None)
+        data.pop("transporte", None)
+
         data["empresa"] = empresa
         data["filial"] = filial
 

@@ -24,13 +24,30 @@ class NotaService:
         except Entidades.DoesNotExist:
             raise ValidationError("Destinatário inválido.")
 
-        # 2. Emitente = filial da sessão
-        emitente = Filiais.objects.using(database).get(empr_empr=empresa)
+        # 2. Emitente = filial específica (empresa + filial)
+        emitente = Filiais.objects.using(database).get(empr_empr=empresa, empr_codi=filial)
 
         # 3. Prepara payload
         payload = NotaHandler.preparar_criacao(data, empresa, filial)
         payload["emitente"] = emitente
         payload["destinatario"] = destinatario
+
+        # 3.1. Número automático
+        modelo = str(payload.get("modelo") or "55")
+        serie = str(payload.get("serie") or "1")
+        numero = int(payload.get("numero") or 0)
+        if numero <= 0:
+            numero = NotaService.next_numero(empresa, filial, modelo, serie, database)
+            payload["numero"] = numero
+        else:
+            exists = (
+                Nota.objects.using(database)
+                .filter(empresa=empresa, filial=filial, modelo=modelo, serie=serie, numero=numero)
+                .exists()
+            )
+            if exists:
+                numero = NotaService.next_numero(empresa, filial, modelo, serie, database)
+                payload["numero"] = numero
 
         # 4. Cria a nota
         nota = Nota.objects.using(database).create(**payload)
@@ -43,6 +60,20 @@ class NotaService:
             TransporteService.definir(nota, transporte)
 
         return nota
+
+    @staticmethod
+    def next_numero(empresa: int, filial: int, modelo: str, serie: str, database: str = "default") -> int:
+        qs = (
+            Nota.objects.using(database)
+            .filter(empresa=empresa, filial=filial, modelo=modelo, serie=serie)
+        )
+        last_aut = qs.filter(status=100).order_by("-numero").values_list("numero", flat=True).first()
+        if last_aut:
+            return int(last_aut) + 1
+        last_any = qs.order_by("-numero").values_list("numero", flat=True).first()
+        if last_any:
+            return int(last_any) + 1
+        return 1
 
     @staticmethod
     @transaction.atomic
@@ -81,7 +112,7 @@ class NotaService:
     @staticmethod
     @transaction.atomic
     def cancelar(nota, descricao, xml=None, protocolo=None):
-        if nota.status == 200:
+        if nota.status == 101:
             raise ValidationError("Nota já cancelada.")
 
         EventoService.registrar(
@@ -92,7 +123,7 @@ class NotaService:
             protocolo=protocolo,
         )
 
-        nota.status = 200
+        nota.status = 101
         nota.save(update_fields=["status"])
         return nota
 
@@ -119,4 +150,35 @@ class NotaService:
 
         nota.status = 100
         nota.save(update_fields=["status", "chave_acesso", "protocolo_autorizacao", "xml_autorizado"])
+        return nota
+
+    @staticmethod
+    @transaction.atomic
+    def gravar(nota, descricao="Rascunho criado"):
+        if nota.status != 0:
+            nota.status = 0
+            nota.save(update_fields=["status"])
+        EventoService.registrar(
+            nota=nota,
+            tipo="rascunho",
+            descricao=descricao,
+        )
+        return nota
+
+    @staticmethod
+    @transaction.atomic
+    def inutilizar(nota, descricao, xml=None, protocolo=None):
+        if nota.status == 102:
+            raise ValidationError("Nota já inutilizada.")
+
+        EventoService.registrar(
+            nota=nota,
+            tipo="inutilizacao",
+            descricao=descricao,
+            xml=xml,
+            protocolo=protocolo,
+        )
+
+        nota.status = 102
+        nota.save(update_fields=["status"])
         return nota

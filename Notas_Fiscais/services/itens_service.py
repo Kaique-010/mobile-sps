@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 
 from ..models import NotaItem, NotaItemImposto
 from ..handlers.itens_handler import ItensHandler
+from Produtos.models import Produtos
 
 
 class ItensService:
@@ -20,6 +21,10 @@ class ItensService:
         itens_norm = ItensHandler.normalizar_itens(itens)
 
         for index, item_data in enumerate(itens_norm):
+            prod_val = item_data.get("produto")
+            if prod_val and not isinstance(prod_val, Produtos):
+                produto_obj = Produtos.objects.using(nota._state.db).get(pk=str(prod_val))
+                item_data["produto"] = produto_obj
             item_obj = NotaItem.objects.create(nota=nota, **item_data)
 
             # impostos

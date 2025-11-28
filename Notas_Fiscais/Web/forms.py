@@ -23,10 +23,14 @@ class NotaForm(forms.ModelForm):
         ]
 
         widgets = {
+            "modelo": forms.Select(attrs={"class": "form-control"}),
             "data_emissao": forms.DateInput(attrs={"type": "date", "class": "form-control"}),
             "data_saida": forms.DateInput(attrs={"type": "date", "class": "form-control"}),
             "serie": forms.TextInput(attrs={"class": "form-control"}),
             "numero": forms.NumberInput(attrs={"class": "form-control"}),
+            "tipo_operacao": forms.Select(attrs={"class": "form-control"}),
+            "finalidade": forms.Select(attrs={"class": "form-control"}),
+            "ambiente": forms.Select(attrs={"class": "form-control"}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -54,9 +58,16 @@ class NotaItemForm(forms.ModelForm):
             "total",
         ]
         widgets = {
+            "produto": forms.TextInput(attrs={"class": "form-control item-prod-ac"}),
             "quantidade": forms.NumberInput(attrs={"step": "0.0001", "class": "form-control"}),
             "unitario": forms.NumberInput(attrs={"step": "0.0001", "class": "form-control"}),
             "desconto": forms.NumberInput(attrs={"step": "0.0001", "class": "form-control"}),
+            "cfop": forms.TextInput(attrs={"class": "form-control"}),
+            "ncm": forms.TextInput(attrs={"class": "form-control"}),
+            "cest": forms.TextInput(attrs={"class": "form-control"}),
+            "cst_icms": forms.TextInput(attrs={"class": "form-control"}),
+            "cst_pis": forms.TextInput(attrs={"class": "form-control"}),
+            "cst_cofins": forms.TextInput(attrs={"class": "form-control"}),
         }
 
 
@@ -99,4 +110,9 @@ class TransporteForm(forms.ModelForm):
             "placa_veiculo",
             "uf_veiculo",
         ]
-
+        widgets = {
+            "modalidade_frete": forms.Select(attrs={"class": "form-control"}),
+            "transportadora": forms.TextInput(attrs={"class": "form-control"}),
+            "placa_veiculo": forms.TextInput(attrs={"class": "form-control"}),
+            "uf_veiculo": forms.TextInput(attrs={"class": "form-control"}),
+        }

@@ -87,31 +87,38 @@ def cfop_autocomplete(request, slug=None):
     empresa = request.session.get("empresa_id")
     q = (request.GET.get("q") or "").strip()
 
-    qs = Cfop.objects.using(banco).filter(cfop_empr=empresa)
+    qs = CFOP.objects.using(banco).filter(cfop_empr=empresa)
     if q:
-        qs = qs.filter(Q(cfop_cfop__icontains=q) | Q(cfop_desc__iregex=q))
+        qs = qs.filter(Q(cfop_codi__icontains=q) | Q(cfop_desc__iregex=q))
 
     qs = qs.only(
-        "cfop_cfop",
+        "cfop_codi",
         "cfop_desc",
-        "cfop_trib_cst_icms",
-        "cfop_trib_cst_pis",
-        "cfop_trib_cst_cofins",
-        "cfop_trib_aliq_ipi",
-        "cfop_trib_perc_pis",
-        "cfop_trib_perc_cofins",
-    ).order_by("cfop_cfop")[:20]
+        "cfop_exig_icms",
+        "cfop_exig_ipi",
+        "cfop_exig_pis_cofins",
+        "cfop_exig_cbs",
+        "cfop_exig_ibs",
+        "cfop_gera_st",
+        "cfop_gera_difal",
+    ).order_by("cfop_codi")[:20]
 
     data = [
         {
-            "value": str(x.cfop_cfop),
-            "label": f"{x.cfop_cfop} • {x.cfop_desc}",
-            "cst_icms": getattr(x, "cfop_trib_cst_icms", None),
-            "cst_pis": getattr(x, "cfop_trib_cst_pis", None),
-            "cst_cofins": getattr(x, "cfop_trib_cst_cofins", None),
-            "ipi_aliquota": getattr(x, "cfop_trib_aliq_ipi", None),
-            "pis_aliquota": getattr(x, "cfop_trib_perc_pis", None),
-            "cofins_aliquota": getattr(x, "cfop_trib_perc_cofins", None),
+            "value": str(x.cfop_codi),
+            "label": f"{x.cfop_codi} • {x.cfop_desc}",
+            "cst_icms": ("000" if getattr(x, "cfop_exig_icms", False) else None),
+            "cst_pis": ("01" if getattr(x, "cfop_exig_pis_cofins", False) else None),
+            "cst_cofins": ("01" if getattr(x, "cfop_exig_pis_cofins", False) else None),
+            "flags": {
+                "exig_icms": getattr(x, "cfop_exig_icms", False),
+                "exig_ipi": getattr(x, "cfop_exig_ipi", False),
+                "exig_pis_cofins": getattr(x, "cfop_exig_pis_cofins", False),
+                "exig_cbs": getattr(x, "cfop_exig_cbs", False),
+                "exig_ibs": getattr(x, "cfop_exig_ibs", False),
+                "gera_st": getattr(x, "cfop_gera_st", False),
+                "gera_difal": getattr(x, "cfop_gera_difal", False),
+            },
         }
         for x in qs
     ]

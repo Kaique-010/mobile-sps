@@ -1,17 +1,34 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block content %}
-<div class="container py-3">
-  <h2 class="mb-3">NF {{ nota.modelo }}-{{ nota.serie }} / Nº {{ nota.numero }}</h2>
+<link rel="stylesheet" href="{% static 'css/ui.css' %}">
+<div class="container page-container px-5 pt-4 pb-5">
+  <div class="page-header-custom">
+    <h2 style="font-size: 30px; justify-content: center; text-align: center;">Detalhes Nota Fiscal</h2>
+    <h4 style="font-size: 20px; justify-content: center; text-align: center;">Modelo {{ nota.modelo }}-{{ nota.serie }}
+      / Nº {{ nota.numero }}</h4>
+    <div class="page-actions btn-group">
+      {% if nota.status == 0 %}
+      <a class="btn btn-outline-primary" href="/web/{{ slug }}/notas-fiscais/{{ nota.id }}/editar/">Editar</a>
+      <button class="btn btn-success" id="btn-emitir"><span class="spinner-border spinner-border-sm me-1 d-none"
+          aria-hidden="true"></span> <i class="bi bi-upload"></i> Emitir</button>
+      {% endif %}
+      {% if nota.status == 100 %}
+      <button class="btn btn-outline-danger" id="btn-cancelar"><span
+          class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span> Cancelar</button>
+      {% endif %}
+    </div>
+  </div>
 
   <div class="row mb-3">
     <div class="col-md-6">
       <div class="card">
         <div class="card-header">Emitente</div>
         <div class="card-body">
-          <div><strong>Nome:</strong> {{ nota.emitente.empr_nome }}</div>
-          <div><strong>CNPJ:</strong> {{ nota.emitente.empr_cnpj }}</div>
-          <div><strong>Município/UF:</strong> {{ nota.emitente.empr_cida }}/{{ nota.emitente.empr_esta }}</div>
+          <div><strong>Nome:</strong> {{ emitente.empr_nome }}</div>
+          <div><strong>CNPJ:</strong> {{ emitente.empr_docu }}</div>
+          <div><strong>Município/UF:</strong> {{ emitente.empr_cida }}/{{ emitente.empr_esta }}</div>
+          <div><strong>Endereço:</strong> {{ emitente.empr_ende }} {{ emitente.empr_nume }} {{ emitente.empr_comp }}</div>
         </div>
       </div>
     </div>
@@ -19,9 +36,10 @@
       <div class="card">
         <div class="card-header">Destinatário</div>
         <div class="card-body">
-          <div><strong>Nome:</strong> {{ nota.destinatario.enti_nome }}</div>
-          <div><strong>Documento:</strong> {{ nota.destinatario.enti_cnpj }} {{ nota.destinatario.enti_cpf }}</div>
-          <div><strong>Município/UF:</strong> {{ nota.destinatario.enti_cida }}/{{ nota.destinatario.enti_esta }}</div>
+          <div><strong>Nome:</strong> {{ destinatario.enti_nome }}</div>
+          <div><strong>Documento:</strong> {{ destinatario.enti_cnpj }} {{ destinatario.enti_cpf }}</div>
+          <div><strong>Município/UF:</strong> {{ destinatario.enti_cida }}/{{ destinatario.enti_esta }}</div>
+          <div><strong>Endereço:</strong> {{ destinatario.enti_ende }} {{ destinatario.enti_nume }} {{ destinatario.enti_comp }}</div>
         </div>
       </div>
     </div>
@@ -33,56 +51,61 @@
         <div class="card-header">Informações</div>
         <div class="card-body">
           <div><strong>Emissão:</strong> {{ nota.data_emissao }} | <strong>Saída:</strong> {{ nota.data_saida }}</div>
-          <div><strong>Status:</strong> {{ nota.get_status_display }} | <strong>Ambiente:</strong> {{
-            nota.get_ambiente_display }}</div>
-          <div><strong>Chave:</strong> {{ nota.chave_acesso|default:"—" }} | <strong>Protocolo:</strong> {{
-            nota.protocolo_autorizacao|default:"—" }}</div>
+          <div class="d-flex gap-2 align-items-center">
+            <span class="badge bg-secondary">{{ nota.get_status_display }}</span>
+            <span class="badge bg-info text-dark">{{ nota.get_ambiente_display }}</span>
+          </div>
+          <div><strong>Chave:</strong> {{ nota.chave_acesso|default:"—" }} | <strong>Protocolo:</strong> {{ nota.protocolo_autorizacao|default:"—" }}</div>
         </div>
       </div>
     </div>
   </div>
-
-  <div class="card mb-3">
-    <div class="card-header">Itens</div>
-    <div class="card-body p-0">
-      <table class="table table-sm mb-0">
-        <thead>
-          <tr>
-            <th>Produto</th>
-            <th>Quant.</th>
-            <th>Unitário</th>
-            <th>Desconto</th>
-            <th>Total</th>
-            <th>CFOP</th>
-            <th>NCM</th>
-            <th>CST ICMS/PIS/COFINS</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for it in nota.itens.all %}
-          <tr>
-            <td>{{ it.produto }}</td>
-            <td>{{ it.quantidade }}</td>
-            <td>{{ it.unitario }}</td>
-            <td>{{ it.desconto }}</td>
-            <td>{{ it.total }}</td>
-            <td>{{ it.cfop }}</td>
-            <td>{{ it.ncm }}</td>
-            <td>{{ it.cst_icms }} / {{ it.cst_pis|default:"--" }} / {{ it.cst_cofins|default:"--" }}</td>
-          </tr>
-          {% if it.impostos %}
-          <tr class="table-light">
-            <td colspan="8">
-              <strong>Impostos:</strong>
-              ICMS Base {{ it.impostos.icms_base|default:"0.00" }} Aliq {{ it.impostos.icms_aliquota|default:"0.00" }} Valor {{ it.impostos.icms_valor|default:"0.00" }} |
-              IPI {{ it.impostos.ipi_valor|default:"0.00" }} | PIS {{ it.impostos.pis_valor|default:"0.00" }} | COFINS {{ it.impostos.cofins_valor|default:"0.00" }}
-              | FCP {{ it.impostos.fcp_valor|default:"0.00" }}
-            </td>
-          </tr>
-          {% endif %}
-          {% endfor %}
-        </tbody>
-      </table>
+  <div class="container px-3 pt-3 pb-5">
+    <div class="card mb-3">
+      <div class="card-header">Itens</div>
+      <div class="card-body p-0">
+        <div class="table-responsive" style="overflow-x:auto;">
+          <table class="table table-sm table-hover table-compact mb-0">
+            <thead>
+              <tr>
+                <th>Produto</th>
+                <th>Quant.</th>
+                <th>Unitário</th>
+                <th>Desconto</th>
+                <th>Total</th>
+                <th>CFOP</th>
+                <th>NCM</th>
+                <th>CST ICMS/PIS/COFINS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for it in nota.itens.all %}
+              <tr>
+                <td>{{ it.produto }}</td>
+                <td>{{ it.quantidade }}</td>
+                <td>{{ it.unitario }}</td>
+                <td>{{ it.desconto }}</td>
+                <td>{{ it.total }}</td>
+                <td>{{ it.cfop }}</td>
+                <td>{{ it.ncm }}</td>
+                <td>{{ it.cst_icms }} / {{ it.cst_pis|default:"--" }} / {{ it.cst_cofins|default:"--" }}</td>
+              </tr>
+              {% if it.impostos %}
+              <tr class="table-light">
+                <td colspan="8" class="text-break">
+                  <strong>Impostos:</strong>
+                  ICMS Base {{ it.impostos.icms_base|default:"0.00" }} Aliq {{ it.impostos.icms_aliquota|default:"0.00"}} Valor {{ it.impostos.icms_valor|default:"0.00" }} |
+                  IPI {{ it.impostos.ipi_valor|default:"0.00" }} | PIS {{ it.impostos.pis_valor|default:"0.00" }} |
+                  COFINS {{ it.impostos.cofins_valor|default:"0.00" }}
+                  | FCP {{ it.impostos.fcp_valor|default:"0.00" }}
+                </td>
+              </tr>
+              {% endif %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -100,5 +123,49 @@
   </div>
 
   <a class="btn btn-secondary" href="/web/{{ slug }}/notas-fiscais/">Voltar</a>
+  <script>
+    (() => {
+      const slug = localStorage.getItem('slug');
+      const empresa = localStorage.getItem('empresa_id') || '1';
+      const filial = localStorage.getItem('filial_id') || '1';
+      const authFetch = async (url, options = {}) => {
+        const token = localStorage.getItem('access');
+        const headers = { 'Content-Type': 'application/json', 'X-Empresa': empresa, 'X-Filial': filial };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        return fetch(url, { ...options, headers: { ...headers, ...(options.headers || {}) } });
+      };
+
+      const nid = {{ nota.id }};
+    };
+    const btnEmit = document.getElementById('btn-emitir');
+    const btnCanc = document.getElementById('btn-cancelar');
+    if (btnEmit) {
+      btnEmit.addEventListener('click', async () => {
+        const sp = btnEmit.querySelector('.spinner-border');
+        btnEmit.disabled = true; if (sp) sp.classList.remove('d-none');
+        try {
+          const resp = await authFetch(`/api/${slug}/notasfiscais/notas-fiscais/emitir/${slug}/${nid}/`, { method: 'GET' });
+          const data = await resp.json();
+          if (resp.ok) { showToast('Emitida com sucesso.', { variant: 'success' }); location.reload(); } else { showToast('Falha: ' + (data?.detail || 'Erro'), { variant: 'danger', delay: 4000 }); }
+        } catch (e) { showToast('Erro: ' + e, { variant: 'danger', delay: 4000 }); }
+        finally { btnEmit.disabled = false; if (sp) sp.classList.add('d-none'); }
+      });
+    }
+    if (btnCanc) {
+      btnCanc.addEventListener('click', async () => {
+        if (!confirm('Confirma cancelar esta nota?')) return;
+        const descricao = 'Cancelamento via detalhe';
+        const sp = btnCanc.querySelector('.spinner-border');
+        btnCanc.disabled = true; if (sp) sp.classList.remove('d-none');
+        try {
+          const resp = await authFetch(`/api/${slug}/notasfiscais/notas-fiscais/notas/${nid}/cancelar/`, { method: 'POST', body: JSON.stringify({ descricao }) });
+          const data = await resp.json();
+          if (resp.ok) { showToast('Cancelada com sucesso.', { variant: 'success' }); location.reload(); } else { showToast('Falha: ' + (data?.detail || 'Erro'), { variant: 'danger', delay: 4000 }); }
+        } catch (e) { showToast('Erro: ' + e, { variant: 'danger', delay: 4000 }); }
+        finally { btnCanc.disabled = false; if (sp) sp.classList.add('d-none'); }
+      });
+    }
+    }) ();
+  </script>
 </div>
 {% endblock %}

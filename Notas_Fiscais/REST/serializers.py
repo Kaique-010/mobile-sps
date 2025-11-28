@@ -37,10 +37,18 @@ class NotaItemImpostoSerializer(serializers.ModelSerializer):
 
 class NotaItemSerializer(serializers.ModelSerializer):
     impostos = NotaItemImpostoSerializer(read_only=True)
+    produto_nome = serializers.SerializerMethodField()
 
     class Meta:
         model = NotaItem
         fields = "__all__"
+
+    def get_produto_nome(self, obj):
+        try:
+            prod = obj.produto
+            return getattr(prod, "prod_nome", None)
+        except Exception:
+            return None
 
 
 # ============================================================
@@ -48,9 +56,25 @@ class NotaItemSerializer(serializers.ModelSerializer):
 # ============================================================
 
 class TransporteSerializer(serializers.ModelSerializer):
+    transportadora_nome = serializers.SerializerMethodField()
     class Meta:
         model = Transporte
         fields = "__all__"
+
+    def get_transportadora_nome(self, obj):
+        if not obj.transportadora_id:
+            return None
+        request = self.context.get("request") if hasattr(self, "context") else None
+        from core.utils import get_licenca_db_config
+        banco = get_licenca_db_config(request) if request is not None else obj._state.db or "default"
+        from Entidades.models import Entidades
+        row = (
+            Entidades.objects.using(banco)
+            .filter(enti_clie=obj.transportadora_id)
+            .values("enti_nome")
+            .first()
+        )
+        return row.get("enti_nome") if row else None
 
 
 # ============================================================
@@ -60,12 +84,36 @@ class TransporteSerializer(serializers.ModelSerializer):
 class NotaDetailSerializer(serializers.ModelSerializer):
     itens = NotaItemSerializer(many=True, read_only=True)
     transporte = TransporteSerializer(read_only=True)
-    emitente = EmitenteResumoSerializer(read_only=True)
-    destinatario = DestinatarioResumoSerializer(read_only=True)
+    emitente = serializers.SerializerMethodField()
+    destinatario = serializers.SerializerMethodField()
 
     class Meta:
         model = Nota
         fields = "__all__"
+
+    def get_emitente(self, obj):
+        request = self.context.get("request") if hasattr(self, "context") else None
+        from core.utils import get_licenca_db_config
+        banco = get_licenca_db_config(request) if request is not None else obj._state.db or "default"
+        data = (
+            Filiais.objects.using(banco)
+            .filter(empr_empr=obj.empresa, empr_codi=obj.filial)
+            .values("empr_empr", "empr_codi", "empr_nome", "empr_docu", "empr_cep", "empr_ende", "empr_cida", "empr_esta")
+            .first()
+        )
+        return data
+
+    def get_destinatario(self, obj):
+        request = self.context.get("request") if hasattr(self, "context") else None
+        from core.utils import get_licenca_db_config
+        banco = get_licenca_db_config(request) if request is not None else obj._state.db or "default"
+        data = (
+            Entidades.objects.using(banco)
+            .filter(enti_empr=obj.empresa, enti_clie=obj.destinatario_id)
+            .values("enti_clie", "enti_nome", "enti_cnpj", "enti_cpf", "enti_emai")
+            .first()
+        )
+        return data
 
 
 # ============================================================

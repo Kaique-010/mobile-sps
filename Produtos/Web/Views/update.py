@@ -62,6 +62,7 @@ class NcmAliquotaUpdateView(DBAndSlugMixin, UpdateView):
         except Exception:
             self.object.save()
         messages.success(self.request, "Alíquotas IBPT atualizadas com sucesso.")
+        print("salvar self.object", self.object)
         return super().form_valid(form)
 
     def get_queryset(self):
