@@ -6,6 +6,7 @@ from .Views.printView import PedidoPrintView
 from .Views.updateView import PedidoUpdateView
 from .Views.dashboardView import PedidosDashboardView
 from .Views.utils import autocomplete_clientes, autocomplete_vendedores, autocomplete_produtos, preco_produto
+from .Views.emissao_nota import PedidoEmitirNFeView
 
 app_name = "PedidosWeb"
 
@@ -21,4 +22,5 @@ urlpatterns = [
     path("autocomplete/vendedores/", autocomplete_vendedores, name="autocomplete_vendedores"),
     path("autocomplete/produtos/", autocomplete_produtos, name="autocomplete_produtos"),
     path("preco/", preco_produto, name="preco_produto"),
+    path("<int:pk>/emitir-nfe/", PedidoEmitirNFeView.as_view(), name="pedido_emitir_nfe"),
 ]

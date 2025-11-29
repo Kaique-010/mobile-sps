@@ -156,7 +156,8 @@ ALTER TABLE pedidosvenda add column if not exists pedi_tipo_oper VARCHAR(30) NOT
 -- criar a tabela ncm_cfop_dif se não existir
 CREATE TABLE IF NOT EXISTS ncm_cfop_dif (
     ncmdif_id SERIAL PRIMARY KEY,
-    ncm_id INTEGER NOT NULL REFERENCES ncm(id),
+    ncm_id VARCHAR(10) NOT NULL REFERENCES ncm(ncm_codi),
+    ncm_empr INTEGER NOT NULL,
     cfop_id INTEGER NOT NULL REFERENCES cfopweb(cfop_id),
     ncm_ipi_dif NUMERIC(6,2),
     ncm_pis_dif NUMERIC(6,2),
@@ -362,6 +363,38 @@ WHERE NOT EXISTS (SELECT 1 FROM parametrosmobile WHERE para_empr = 1 AND para_fi
 INSERT INTO parametrosmobile (para_empr, para_fili, para_modu_id, para_nome, para_desc, para_valo, para_ativ, para_data_alte, para_usua_alte)
 SELECT 1, 1, 6, 'obriga_lote_saida', 'Obriga informar lote nas saídas', false, false, CURRENT_TIMESTAMP, 1
 WHERE NOT EXISTS (SELECT 1 FROM parametrosmobile WHERE para_empr = 1 AND para_fili = 1 AND para_modu_id = 6 AND para_nome = 'obriga_lote_saida');
+"""
+
+# Ajustes de schema para ncm_cfop_dif
+SQL_FIX_NCM_CFOP_DIF = """
+ALTER TABLE ncm_cfop_dif ADD COLUMN IF NOT EXISTS ncm_empr INTEGER NOT NULL DEFAULT 1;
+DO $$
+DECLARE r RECORD;
+BEGIN
+  -- Drop all foreign key constraints on ncm_cfop_dif to avoid type mismatch
+  FOR r IN (
+    SELECT conname FROM pg_constraint 
+    WHERE conrelid = 'ncm_cfop_dif'::regclass AND contype = 'f'
+  ) LOOP
+    EXECUTE format('ALTER TABLE ncm_cfop_dif DROP CONSTRAINT %I', r.conname);
+  END LOOP;
+END $$;
+
+ALTER TABLE ncm_cfop_dif ALTER COLUMN ncm_id TYPE VARCHAR(10) USING ncm_id::text;
+
+-- Ensure ncm.ncm_codi is unique for FK reference
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'ncm_codi_unique' AND conrelid = 'ncm'::regclass
+  ) THEN
+    ALTER TABLE ncm ADD CONSTRAINT ncm_codi_unique UNIQUE (ncm_codi);
+  END IF;
+END $$;
+
+-- Recreate FK to ncm(ncm_codi)
+ALTER TABLE ncm_cfop_dif ADD CONSTRAINT ncm_cfop_dif_ncm_fkey FOREIGN KEY (ncm_id) REFERENCES ncm(ncm_codi);
 """
 
 # SQL de views
@@ -764,6 +797,97 @@ CREATE OR REPLACE VIEW public.extrato_caixa
   ORDER BY x.iped_pedi);
 """
 
+# Tabelas do módulo Notas Fiscais (NF-e)
+SQL_NOTAS_FISCAIS = """
+-- nf_nota (cabeçalho da nota)
+CREATE TABLE IF NOT EXISTS nf_nota (
+    id SERIAL PRIMARY KEY,
+    empresa INTEGER NOT NULL,
+    filial INTEGER NOT NULL,
+    modelo VARCHAR(2) NOT NULL DEFAULT '55',
+    serie VARCHAR(3) NOT NULL,
+    numero INTEGER NOT NULL,
+    data_emissao DATE NOT NULL DEFAULT CURRENT_DATE,
+    data_saida DATE,
+    tipo_operacao INTEGER NOT NULL,
+    finalidade INTEGER NOT NULL DEFAULT 1,
+    ambiente INTEGER NOT NULL DEFAULT 2,
+    emitente_id INTEGER NOT NULL,
+    destinatario_id INTEGER NOT NULL,
+    status INTEGER NOT NULL DEFAULT 0,
+    chave_acesso VARCHAR(50),
+    protocolo_autorizacao VARCHAR(60),
+    xml_assinado TEXT,
+    xml_autorizado TEXT,
+    criado_em TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT nf_nota_unique UNIQUE (empresa, filial, modelo, serie, numero)
+);
+
+-- nf_nota_item (itens da nota)
+CREATE TABLE IF NOT EXISTS nf_nota_item (
+    id SERIAL PRIMARY KEY,
+    nota_id INTEGER NOT NULL REFERENCES nf_nota(id) ON DELETE CASCADE,
+    produto_id VARCHAR(50) NOT NULL,
+    quantidade NUMERIC(15,4) NOT NULL,
+    unitario NUMERIC(15,4) NOT NULL,
+    desconto NUMERIC(15,4) NOT NULL DEFAULT 0,
+    cfop VARCHAR(4) NOT NULL,
+    ncm VARCHAR(8) NOT NULL,
+    cest VARCHAR(7),
+    cst_icms VARCHAR(3) NOT NULL,
+    cst_pis VARCHAR(2) NOT NULL,
+    cst_cofins VARCHAR(2) NOT NULL,
+    total NUMERIC(15,2) NOT NULL,
+    CONSTRAINT idx_nf_item_nota_id UNIQUE (id)
+);
+CREATE INDEX IF NOT EXISTS ix_nf_nota_item_nota ON nf_nota_item(nota_id);
+CREATE INDEX IF NOT EXISTS ix_nf_nota_item_produto ON nf_nota_item(produto_id);
+
+-- nf_item_imposto (impostos por item)
+CREATE TABLE IF NOT EXISTS nf_item_imposto (
+    id SERIAL PRIMARY KEY,
+    item_id INTEGER UNIQUE NOT NULL REFERENCES nf_nota_item(id) ON DELETE CASCADE,
+    icms_base NUMERIC(15,2),
+    icms_valor NUMERIC(15,2),
+    icms_aliquota NUMERIC(5,2),
+    ipi_valor NUMERIC(15,2),
+    pis_valor NUMERIC(15,2),
+    cofins_valor NUMERIC(15,2),
+    fcp_valor NUMERIC(15,2),
+    ibs_base NUMERIC(15,2),
+    ibs_aliquota NUMERIC(5,2),
+    ibs_valor NUMERIC(15,2),
+    cbs_base NUMERIC(15,2),
+    cbs_aliquota NUMERIC(5,2),
+    cbs_valor NUMERIC(15,2)
+);
+CREATE INDEX IF NOT EXISTS ix_nf_item_imposto_item ON nf_item_imposto(item_id);
+
+-- nf_transporte (dados de frete)
+CREATE TABLE IF NOT EXISTS nf_transporte (
+    id SERIAL PRIMARY KEY,
+    nota_id INTEGER UNIQUE NOT NULL REFERENCES nf_nota(id) ON DELETE CASCADE,
+    modalidade_frete INTEGER NOT NULL,
+    transportadora_id INTEGER,
+    placa_veiculo VARCHAR(8),
+    uf_veiculo VARCHAR(2)
+);
+CREATE INDEX IF NOT EXISTS ix_nf_transporte_nota ON nf_transporte(nota_id);
+
+-- nf_nota_evento (eventos da nota)
+CREATE TABLE IF NOT EXISTS nf_nota_evento (
+    id SERIAL PRIMARY KEY,
+    nota_id INTEGER NOT NULL REFERENCES nf_nota(id) ON DELETE CASCADE,
+    tipo VARCHAR(20) NOT NULL,
+    descricao TEXT NOT NULL,
+    xml TEXT,
+    protocolo VARCHAR(60),
+    criado_em TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS ix_nf_evento_nota_tipo ON nf_nota_evento(nota_id, tipo);
+"""
+
 def executar_sql(sql, titulo="SQL"):
     print(f"🚀 Executando: {titulo}")
     conn = psycopg2.connect(
@@ -803,10 +927,18 @@ def main():
     executar_sql(SQL_COMMANDS, "Criação e atualização de tabelas")
     executar_sql(SQL_INSERT_PERMISSAO, "Inserção de permissões para usuário 1")
     executar_sql(SQL_PARAMETROS_LOTE, "Inserção de parâmetros de controle de lote")
-    executar_sql(SQL_VIEWS, "Criação de views")
+    executar_sql(SQL_NOTAS_FISCAIS, "Criação de tabelas Notas Fiscais (NF-e)")
+    executar_sql(SQL_FIX_NCM_CFOP_DIF, "Ajustes de schema ncm_cfop_dif")
+    try:
+        executar_sql(SQL_VIEWS, "Criação de views")
+    except Exception as e:
+        print(f"⚠️ Falha ao criar views, continuando setup: {e}\n")
 
     print("📊 Populando parâmetros iniciais...")
     rodar_comando("python manage.py populate_parametros --empresa 1 --filial 1")
+
+    print("📦 Rodando migrações do app onboarding...")
+    rodar_comando("python manage.py migrate onboarding")
 
     print("🎉 Setup do banco finalizado com sucesso.")
 

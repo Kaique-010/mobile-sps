@@ -179,6 +179,9 @@
           <button type="submit" class="btn btn-outline-success btn-lg">
             <i class="bi bi-check-circle me-2"></i>{% if form.instance.pk %}Salvar Pedido{% else %}Criar Pedido{% endif %}
           </button>
+          <a class="btn btn-outline-primary btn-lg" href="{% url 'PedidosWeb:pedido_emitir_nfe' slug=slug pk=form.instance.pk %}">
+            <i class="bi bi-file-text me-2"></i>Emitir NF-e
+          </a>
         </div>
       </form>
     </div>
