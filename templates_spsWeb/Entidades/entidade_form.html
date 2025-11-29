@@ -163,12 +163,24 @@
             </div>
 
             <div class="row">
-              <div class="col-md-6">
+              <div class="col-md-3">
                 <div class="form-group">
                   <label for="{{ form.enti_cida.id_for_label }}">Cidade</label>
                   {{ form.enti_cida }} {% if form.enti_cida.errors %}
                   <div class="text-danger">
                     {% for error in form.enti_cida.errors %}
+                    <p>{{ error }}</p>
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="form-group">
+                  <label for="{{ form.enti_codi_cida.id_for_label }}">Código IBGE</label>
+                  {{ form.enti_codi_cida }} {% if form.enti_codi_cida.errors %}
+                  <div class="text-danger">
+                    {% for error in form.enti_codi_cida.errors %}
                     <p>{{ error }}</p>
                     {% endfor %}
                   </div>
@@ -265,6 +277,7 @@
             document.getElementById("id_enti_ende").value = data.logradouro;
             document.getElementById("id_enti_cida").value = data.localidade;
             document.getElementById("id_enti_esta").value = data.uf;
+            document.getElementById("id_enti_codi_cida").value = data.ibge;
           } else {
             alert("CEP não encontrado!");
           }

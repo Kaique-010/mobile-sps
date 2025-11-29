@@ -20,13 +20,17 @@ class NotaUpdateView(SPSViewMixin, UpdateView):
         context = super().get_context_data(**kwargs)
 
         nota = self.object
+        try:
+            transp_instance = nota.transporte
+        except Nota.transporte.RelatedObjectDoesNotExist:
+            transp_instance = None
 
         if self.request.POST:
             context["itens_formset"] = NotaItemFormSet(self.request.POST, instance=nota)
-            context["transporte_form"] = TransporteForm(self.request.POST, instance=nota.transporte)
+            context["transporte_form"] = TransporteForm(self.request.POST, instance=transp_instance)
         else:
             context["itens_formset"] = NotaItemFormSet(instance=nota)
-            context["transporte_form"] = TransporteForm(instance=nota.transporte)
+            context["transporte_form"] = TransporteForm(instance=transp_instance)
 
         context["slug"] = self.kwargs.get("slug")
 
@@ -42,7 +46,7 @@ class NotaUpdateView(SPSViewMixin, UpdateView):
 
         nota_data = form.cleaned_data
         itens = [f.cleaned_data for f in itens_fs if f.cleaned_data]
-        transp = transporte_form.cleaned_data
+        transp = transporte_form.cleaned_data if transporte_form.has_changed() else None
 
         banco = get_licenca_db_config(self.request) or "default"
 

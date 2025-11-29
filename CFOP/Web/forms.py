@@ -1,23 +1,13 @@
 from django import forms
 from ..models import CFOP
-
 class CFOPForm(forms.ModelForm):
-    
     class Meta:
         model = CFOP
         fields = [
-            "cfop_empr",
-            "cfop_codi",
-            "cfop_desc",
-
-            "cfop_exig_icms",
-            "cfop_exig_ipi",
-            "cfop_exig_pis_cofins",
-            "cfop_exig_cbs",
-            "cfop_exig_ibs",
-
-            "cfop_gera_st",
-            "cfop_gera_difal",
+            "cfop_empr", "cfop_codi", "cfop_desc",
+            "cfop_exig_icms", "cfop_exig_ipi", "cfop_exig_pis_cofins",
+            "cfop_exig_cbs", "cfop_exig_ibs",
+            "cfop_gera_st", "cfop_gera_difal",
         ]
 
         widgets = {

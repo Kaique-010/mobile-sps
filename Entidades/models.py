@@ -29,6 +29,7 @@ class Entidades(models.Model):
     enti_esta = models.CharField(max_length=2)
     enti_pais = models.CharField(max_length=60, default='1058')
     enti_codi_pais = models.CharField(max_length=6, default='1058')
+    enti_codi_cida = models.CharField(max_length=7, default='0000000')
     enti_bair = models.CharField(max_length=60)
     enti_comp = models.CharField(max_length=60, blank=True, null=True)
     enti_fone = models.CharField(max_length=14, blank=True, null=True)  

@@ -31,7 +31,7 @@ class CFOPListView(ListView):
             qs = qs.filter(cfop_desc__icontains=busca)
         if cfop_code:
             try:
-                qs = qs.filter(cfop_cfop=int(cfop_code))
+                qs = qs.filter(cfop_codi=int(cfop_code))
             except ValueError:
                 pass
         if tipo:

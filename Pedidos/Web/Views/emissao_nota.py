@@ -2,6 +2,7 @@ from django.views import View
 from django.shortcuts import redirect, get_object_or_404
 from django.contrib import messages
 from core.utils import get_licenca_db_config
+import logging
 
 from ...models import PedidoVenda
 from Notas_Fiscais.emissao.emissao_nota_service import EmissaoNotaService
@@ -43,8 +44,13 @@ class PedidoEmitirNFeView(View):
                 else:
                     cfop = "5102"
 
+                try:
+                    prod_id = int(item.iped_prod)
+                except Exception:
+                    raise Exception(f"Produto inválido no item: {item.iped_prod}")
+
                 itens.append({
-                    "produto": prod.prod_codi,
+                    "produto": prod_id,
                     "quantidade": float(item.iped_quan or 0),
                     "unitario": float(item.iped_unit or 0),
                     "desconto": float(item.iped_desc or 0),
@@ -93,6 +99,7 @@ class PedidoEmitirNFeView(View):
                 filial=pedido.pedi_fili,
                 database=banco
             )
+            logging.getLogger(__name__).info(f"Resultado da NF-e: {resultado}")
 
             sefaz = resultado["sefaz"]
 

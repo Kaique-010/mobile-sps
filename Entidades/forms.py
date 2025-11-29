@@ -13,7 +13,7 @@ class EntidadesForm(forms.ModelForm):
         fields = [
             'enti_nome', 'enti_tipo_enti', 'enti_fant', 
             'enti_cpf', 'enti_cnpj', 'enti_insc_esta', 'enti_cep', 'enti_ende', 
-            'enti_nume', 'enti_cida', 'enti_esta', 'enti_fone', 'enti_celu', 
+            'enti_nume', 'enti_cida','enti_codi_cida', 'enti_esta', 'enti_fone', 'enti_celu', 
             'enti_emai'
         ]
         widgets = {
@@ -27,6 +27,7 @@ class EntidadesForm(forms.ModelForm):
             'enti_ende': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Endereço'}),
             'enti_nume': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Número'}),
             'enti_cida': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Cidade'}),
+            'enti_codi_cida': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Código IBGE'}),
             'enti_esta': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Estado', 'maxlength': '2'}),
             'enti_fone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Telefone', 'maxlength': '14'}),
             'enti_celu': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Celular', 'maxlength': '15'}),
@@ -50,6 +51,17 @@ class EntidadesForm(forms.ModelForm):
         cpf = cleaned_data.get('enti_cpf')
         cnpj = cleaned_data.get('enti_cnpj')
         ie = cleaned_data.get('enti_insc_esta')
+        cep = cleaned_data.get('enti_cep')
+        
+        from .utils import buscar_endereco_por_cep
+        
+        if cep:
+            endereco = buscar_endereco_por_cep(cep)
+            if endereco:
+                cleaned_data.update(endereco)
+                cleaned_data['enti_codi_cida'] = endereco.get('codi_cidade')
+            else:
+                self.add_error('enti_cep', "CEP inválido ou não encontrado.")
 
         # Validação para não permitir CPF junto com CNPJ ou Inscrição Estadual
         if cpf and (cnpj or ie):

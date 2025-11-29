@@ -52,11 +52,31 @@ class EmissaoServiceCore:
         if not self.filial.empr_cert_digi:
             raise ErroEmissao("Filial não possui certificado digital cadastrado.")
 
+        data = self.filial.empr_cert_digi
+        try:
+            from Licencas.crypto import decrypt_bytes
+            if data is not None:
+                if isinstance(data, memoryview):
+                    data = data.tobytes()
+                elif isinstance(data, bytearray):
+                    data = bytes(data)
+                data = decrypt_bytes(data)
+        except Exception:
+            pass
+
+        senha = self.filial.empr_senh_cert
+        try:
+            from Licencas.crypto import decrypt_str
+            if senha:
+                senha = decrypt_str(senha)
+        except Exception:
+            pass
+
         arq = tempfile.NamedTemporaryFile(delete=False, suffix=".pfx")
-        arq.write(self.filial.empr_cert_digi)
+        arq.write(data)
         arq.flush()
 
-        return arq.name, self.filial.empr_senh_cert
+        return arq.name, senha
 
     # ----------------------------------------------------------
     def _resolve_url(self):
@@ -79,13 +99,11 @@ class EmissaoServiceCore:
             except Exception:
                 pass
 
-        # 2) Por filial: se houver indicação explícita de desabilitar (não recomendado)
-        # Mantemos verificação ativa por padrão
-        try:
-            flag = getattr(self.filial, "empr_cone_segu", True)
-            if flag is False:
-                return True  # ainda preferimos manter verificação ativa
-        except Exception:
-            pass
+        # 2) Sinal explícito via env para desabilitar verificação (temporário, não recomendado)
+        verify_env = os.getenv("SEFAZ_VERIFY")
+        if verify_env is not None:
+            val = (verify_env or "").strip().lower()
+            if val in {"false", "0", "no", "off"}:
+                return False
 
         return True

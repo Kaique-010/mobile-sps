@@ -62,7 +62,8 @@ class GeradorXML:
         ender = etree.SubElement(e, "enderEmit")
         etree.SubElement(ender, "xLgr").text = emit.get("logradouro")
         etree.SubElement(ender, "nro").text = emit.get("numero")
-        etree.SubElement(ender, "xBairro").text = emit.get("bairro")
+        bairro = emit.get("bairro") or "NAO INFORMADO"
+        etree.SubElement(ender, "xBairro").text = bairro
         etree.SubElement(ender, "cMun").text = str(emit.get("cod_municipio") or "9999999")
         etree.SubElement(ender, "xMun").text = emit.get("municipio")
         etree.SubElement(ender, "UF").text = emit.get("uf")
@@ -84,7 +85,11 @@ class GeradorXML:
         etree.SubElement(ender, "xLgr").text = dest.get("logradouro")
         etree.SubElement(ender, "nro").text = dest.get("numero")
         etree.SubElement(ender, "xBairro").text = dest.get("bairro")
-        etree.SubElement(ender, "cMun").text = str(dest.get("cod_municipio") or "9999999")
+        cmun = dest.get("cod_municipio")
+        if not cmun or len(str(cmun)) != 7:
+            raise Exception(f"Código IBGE inválido para destinatário: {cmun}")
+
+        etree.SubElement(ender, "cMun").text = str(cmun)
         etree.SubElement(ender, "xMun").text = dest.get("municipio")
         etree.SubElement(ender, "UF").text = dest.get("uf")
         etree.SubElement(ender, "CEP").text = dest.get("cep")
@@ -127,11 +132,33 @@ class GeradorXML:
 
         vnf = vprod - vdesc
 
-        etree.SubElement(icms, "vBC").text = "0.00"
-        etree.SubElement(icms, "vICMS").text = "0.00"
+        def z():
+            return "0.00"
+
+        etree.SubElement(icms, "vBC").text = z()
+        etree.SubElement(icms, "vICMS").text = z()
+        etree.SubElement(icms, "vICMSDeson").text = z()
+        etree.SubElement(icms, "vFCPUFDest").text = z()
+        etree.SubElement(icms, "vICMSUFDest").text = z()
+        etree.SubElement(icms, "vICMSUFRemet").text = z()
+        etree.SubElement(icms, "vFCP").text = z()
+        etree.SubElement(icms, "vBCST").text = z()
+        etree.SubElement(icms, "vST").text = z()
+        etree.SubElement(icms, "vFCPST").text = z()
+        etree.SubElement(icms, "vFCPSTRet").text = z()
         etree.SubElement(icms, "vProd").text = f"{vprod:.2f}"
+        etree.SubElement(icms, "vFrete").text = z()
+        etree.SubElement(icms, "vSeg").text = z()
         etree.SubElement(icms, "vDesc").text = f"{vdesc:.2f}"
+        etree.SubElement(icms, "vII").text = z()
+        etree.SubElement(icms, "vIPI").text = z()
+        etree.SubElement(icms, "vIPIDevol").text = z()
+        etree.SubElement(icms, "vPIS").text = z()
+        etree.SubElement(icms, "vCOFINS").text = z()
+        etree.SubElement(icms, "vOutro").text = z()
         etree.SubElement(icms, "vNF").text = f"{vnf:.2f}"
+        etree.SubElement(icms, "vTotTrib").text = z()
+
 
     # --------------------------------------------------------------
     def _pag(self, root, dto):
@@ -154,9 +181,9 @@ class GeradorXML:
     # --------------------------------------------------------------
     def _resp_tecnico(self, root):
         r = etree.SubElement(root, "infRespTec")
-        etree.SubElement(r, "CNPJ").text = "46123456000199"
-        etree.SubElement(r, "xContato").text = "SPS Sistemas"
-        etree.SubElement(r, "email").text = "suporte@mobile-sps.site"
+        etree.SubElement(r, "CNPJ").text = "20702018000142"
+        etree.SubElement(r, "xContato").text = "SPS Web"
+        etree.SubElement(r, "email").text = "suporte@spartacus.com.br"
 
     # --------------------------------------------------------------
     def _uf_to_cuf(self, uf):
