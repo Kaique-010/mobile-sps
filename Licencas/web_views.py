@@ -16,36 +16,57 @@ from Licencas.utils import get_proxima_filial, get_proxima_filial_empr, get_prox
 from django.db.models import Max
 from django.http import Http404, HttpResponseRedirect
 
+import logging
+logger = logging.getLogger(__name__)
+
 class FilialCertificadoUploadView(FormView):
-    template_name = 'Licencas/filial_certificado_form.html'
     form_class = FilialCertificadoForm
+    template_name = 'Licencas/filial_form.html'
+    
 
     def form_valid(self, form):
-        banco = get_licenca_db_config(self.request)
-        empresa_id = form.cleaned_data['empresa_id']
-        filial_id = form.cleaned_data['filial_id']
-        senha = form.cleaned_data['senha']
-        arquivo = form.cleaned_data['certificado']
-        filial = Filiais.objects.using(banco).filter(empr_empr=filial_id, empr_codi=empresa_id).first()
+        logger.info("Upload certificado iniciado")
+        banco = get_licenca_db_config(self.request) or 'default'
+
+        empresa_id = form.cleaned_data["empresa_id"]
+        filial_id = form.cleaned_data["filial_id"]
+        senha = form.cleaned_data["senha"]
+        arquivo = form.cleaned_data["certificado"]
+        logger.info(f"Upload certificado recebido para empresa {empresa_id}, filial {filial_id}")
+
+        filial = Filiais.objects.using(banco).filter(
+            empr_empr=empresa_id,
+            empr_codi=filial_id
+        ).first()
+
         if not filial:
-            messages.error(self.request, 'Filial não encontrada.')
+            messages.error(self.request, "Filial não encontrada.")
             return self.form_invalid(form)
+
         conteudo = arquivo.read()
+
         try:
-            load_key_and_certificates(conteudo, senha.encode('utf-8'))
-        except Exception:
-            messages.error(self.request, 'Certificado inválido ou senha incorreta.')
+            load_key_and_certificates(conteudo, senha.encode("utf-8"))
+        except Exception as e:
+            messages.error(self.request, "Certificado inválido ou senha incorreta.")
             return self.form_invalid(form)
-        filial.empr_cert = getattr(arquivo, 'name', 'certificado.p12')
-        filial.empr_senh_cert = encrypt_str(senha)
-        filial.empr_cert_digi = encrypt_bytes(conteudo)
-        filial.save(using=banco)
-        messages.success(self.request, 'Certificado salvo com sucesso.')
+
+        Filiais.objects.using(banco).filter(
+            empr_empr=empresa_id,
+            empr_codi=filial_id
+        ).update(
+            empr_cert=arquivo.name,
+            empr_senh_cert=encrypt_str(senha),
+            empr_cert_digi=encrypt_bytes(conteudo)
+        )
+        logger.info(f"Certificado salvo para empresa {empresa_id}, filial {filial_id}")
+
+        messages.success(self.request, "Certificado salvo com sucesso!")
         return super().form_valid(form)
 
     def get_success_url(self):
-        slug = self.kwargs.get('slug')
-        return reverse('web_licencas_certificado', kwargs={'slug': slug})
+        slug = self.kwargs.get("slug")
+        return reverse("filiais_web", kwargs={"slug": slug})
 
 
 
@@ -224,139 +245,53 @@ class FilialUpdateView(DBSlugMixin, UpdateView):
     form_class = FilialForm
     template_name = 'Licencas/filial_form.html'
     pk_url_kwarg = 'empr_empr'
-    
-    def get_initial(self):
-        initial = super().get_initial()
-        # Valores SMTP padrão
-        initial.update({
-            'empr_smtp_host': 'smtp.savexml.com.br',
-            'empr_smtp_port': '587',
-            'empr_smtp_usua': 'notas@savexml.com.br',
-            'empr_smtp_senh': 'sps@nfe',
-            'empr_smtp_emai': 'notas@savexml.com.br',            
-            'empr_cone_segu': True,
-            'empr_tls': True,
-            'empr_ssl': False,
-            
-        })
-        return initial
 
     def get_queryset(self):
-        return Filiais.objects.using(self.db_alias).all()
+        return Filiais.objects.using(self.db_alias)
 
     def get_object(self, queryset=None):
         qs = queryset or self.get_queryset()
         empresa = int(self.kwargs.get(self.pk_url_kwarg))
         filial = self.request.GET.get('filial_id')
+
         if not filial:
-            raise Http404('Parâmetro "filial_id" é obrigatório para editar a filial.')
+            raise Http404("Parâmetro 'filial_id' é obrigatório.")
+
         try:
             filial = int(filial)
         except ValueError:
-            raise Http404('Parâmetro "filial_id" inválido.')
+            raise Http404("filial_id inválido.")
+
         obj = qs.filter(empr_empr=empresa, empr_codi=filial).first()
         if not obj:
-            raise Http404('Filial não encontrada para a empresa informada.')
+            raise Http404("Filial não encontrada.")
         return obj
-
-    def get_initial(self):
-        initial = super().get_initial()
-        initial['senha_certificado'] = '********' if self.object and self.object.empr_senh_cert else ''
-        # SMTP defaults on edit when fields are empty
-        obj = getattr(self, 'object', None)
-        def is_empty(v):
-            return v is None or (isinstance(v, str) and v.strip() == '')
-        if not obj or is_empty(getattr(obj, 'empr_smtp_host', None)):
-            initial.setdefault('empr_smtp_host', 'smtp.savexml.com.br')
-        if not obj or is_empty(getattr(obj, 'empr_smtp_port', None)):
-            initial.setdefault('empr_smtp_port', '587')
-        if not obj or is_empty(getattr(obj, 'empr_smtp_usua', None)):
-            initial.setdefault('empr_smtp_usua', 'notas@savexml.com.br')
-        if not obj or is_empty(getattr(obj, 'empr_smtp_senh', None)):
-            initial.setdefault('empr_smtp_senh', 'sps@nfe')
-        if not obj or is_empty(getattr(obj, 'empr_smtp_emai', None)):
-            initial.setdefault('empr_smtp_emai', 'notas@savexml.com.br')
-        # Booleans: only set defaults if None
-        if not obj or getattr(obj, 'empr_cone_segu', None) is None:
-            initial.setdefault('empr_cone_segu', True)
-        if not obj or getattr(obj, 'empr_tls', None) is None:
-            initial.setdefault('empr_tls', True)
-        if not obj or getattr(obj, 'empr_ssl', None) is None:
-            initial.setdefault('empr_ssl', False)
-        return initial
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx['has_cert'] = bool(self.object and self.object.empr_cert_digi)
-        ctx['cert_name'] = self.object.empr_cert if self.object else ''
+
+        ctx["certificado_form"] = FilialCertificadoForm(initial={
+            "empresa_id": self.object.empr_empr,
+            "filial_id": self.object.empr_codi,
+        })
+
         return ctx
 
-    def get_success_url(self):
-        return reverse_lazy('filiais_web', kwargs={'slug': self.slug})
-
     def form_valid(self, form):
-        obj = form.save(commit=False)
-        senha = form.cleaned_data.get('senha_certificado')
-        arquivo = form.cleaned_data.get('certificado')
+        # Salvar apenas os campos NORMAIS da Filial
+        filial = form.save(commit=False)
+        Filiais.objects.using(self.db_alias).filter(
+            empr_empr=filial.empr_empr,
+            empr_codi=filial.empr_codi
+        ).update(**{
+            field: getattr(filial, field)
+            for field in form.cleaned_data.keys()
+            if field in [f.name for f in Filiais._meta.fields]
+        })
 
-        # Nunca alterar chaves na edição
-        chave_empr = self.object.empr_empr
-        chave_fili = self.object.empr_codi
-
-        update_fields = {k: v for k, v in form.cleaned_data.items() if k not in ['certificado', 'senha_certificado']}
-        # Somente campos do model
-        model_fields = {f.name for f in Filiais._meta.get_fields() if hasattr(f, 'attname') and not f.auto_created}
-        update_fields = {k: v for k, v in update_fields.items() if k in model_fields}
-        # Garantir tokens
-        update_fields['empr_id_toke'] = form.cleaned_data.get('empr_id_toke')
-        update_fields['empr_csn_toke'] = form.cleaned_data.get('empr_csn_toke')
-
-        if senha and senha != '********':
-            update_fields['empr_senh_cert'] = encrypt_str(senha)
-
-        if arquivo:
-            content = arquivo.read()
-            try:
-                load_key_and_certificates(content, (senha or '').encode('utf-8'))
-            except Exception:
-                form.add_error('certificado', 'Certificado inválido ou senha incorreta.')
-                return self.form_invalid(form)
-            update_fields['empr_cert'] = getattr(arquivo, 'name', 'certificado.p12')
-            update_fields['empr_cert_digi'] = encrypt_bytes(content)
-
-        try:
-            Filiais.objects.using(self.db_alias).filter(empr_empr=chave_empr, empr_codi=chave_fili).update(**update_fields)
-        except Exception as e:
-            form.add_error(None, f'Falha ao atualizar filial: {str(e)}')
-            return self.form_invalid(form)
-
-        # Atualização dedicada dos tokens para garantir persistência
-        Filiais.objects.using(self.db_alias).filter(empr_empr=chave_empr, empr_codi=chave_fili).update(
-            empr_id_toke=form.cleaned_data.get('empr_id_toke'),
-            empr_csn_toke=form.cleaned_data.get('empr_csn_toke')
-        )
-
-        messages.success(self.request, 'Filial atualizada com sucesso.')
-        self.object = Filiais.objects.using(self.db_alias).filter(empr_empr=chave_empr, empr_codi=chave_fili).first()
+        messages.success(self.request, "Filial atualizada com sucesso.")
         return HttpResponseRedirect(self.get_success_url())
 
-    @action(detail=False, methods=['get'], url_path='buscar-endereco')
-    def buscar_endereco(self, request, slug=None):
-        slug = get_licenca_slug()
-        if not slug:
-            return Response({"error": "Licença não encontrada."}, status=status.HTTP_404_NOT_FOUND)
-        cep = request.GET.get('cep')
-        if not cep:
-            return Response({"erro": "CEP não informado"}, status=400)
-        cache_key = f"endereco_cep_{cep}"
-        endereco = cache.get(cache_key)
-        
-        if not endereco:
-            endereco = buscar_endereco_por_cep(cep)
-            if endereco:
-                cache.set(cache_key, endereco, 3600)
-        
-        if endereco:
-            return Response(endereco)
-        else:
-            return Response({"erro": "CEP inválido ou não encontrado"}, status=404)
+    def get_success_url(self):
+        return reverse_lazy("filiais_web", kwargs={"slug": self.slug})
+

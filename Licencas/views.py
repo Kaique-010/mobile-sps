@@ -232,19 +232,23 @@ class UploadCertificadoA1View(APIView):
             filial_id = int(filial_id)
         except Exception:
             return Response({'error': 'IDs inválidos.'}, status=400)
-        filial = Filiais.objects.using(banco).filter(empr_empr=filial_id, empr_codi=empresa_id).first()
+        filial = Filiais.objects.using(banco).filter(empr_empr=empresa_id, empr_codi=filial_id).first()
+        logger.info(f"filial: {filial}")
         if not filial:
             return Response({'error': 'Filial não encontrada.'}, status=404)
         nome_arquivo = getattr(arquivo, 'name', 'certificado.p12')
+        logger.info(f"nome_arquivo: {nome_arquivo}")
         conteudo = arquivo.read()
+        logger.info(f"tamanho do arquivo: {len(conteudo)}")
         try:
             load_key_and_certificates(conteudo, senha.encode('utf-8'))
         except Exception:
             return Response({'error': 'Certificado inválido ou senha incorreta.'}, status=400)
         filial.empr_cert = nome_arquivo
         filial.empr_senh_cert = encrypt_str(senha)
-        filial.empr_cert_digi = encrypt_bytes(conteudo)
+        filial.empr_cert_digi = conteudo    # salva original
         filial.save(using=banco)
+        logger.info(f"certificado salvo: {filial.empr_cert}")
         return Response({'message': 'Certificado salvo com sucesso.'})
 
 class ModulosLiberadosView(APIView):
@@ -402,11 +406,13 @@ class FiliaisViewSet(viewsets.ModelViewSet):
     def certificado(self, request, pk=None):
         banco = get_licenca_db_config(request)
         filial = self.get_object()
+
         if not filial.empr_cert_digi:
             return Response({'error': 'Sem certificado'}, status=404)
-        from Licencas.crypto import decrypt_bytes
-        data = decrypt_bytes(filial.empr_cert_digi)
+
         from django.http import HttpResponse
+        data = bytes(filial.empr_cert_digi)
+
         resp = HttpResponse(data, content_type='application/x-pkcs12')
         resp['Content-Disposition'] = f'attachment; filename="{filial.empr_cert or "certificado.p12"}"'
         return resp

@@ -19,9 +19,11 @@ CREATE TABLE IF NOT EXISTS django_content_type (
     id SERIAL PRIMARY KEY,
     app_label VARCHAR(100) NOT NULL,
     model VARCHAR(100) NOT NULL,
-    name VARCHAR(100) NOT NULL,
     UNIQUE(app_label, model)
 );
+
+-- Ajuste de compatibilidade: remover coluna 'name' caso exista (Django 2.2 não usa)
+ALTER TABLE django_content_type DROP COLUMN IF EXISTS name;
 
 CREATE TABLE IF NOT EXISTS auth_permission (
     id SERIAL PRIMARY KEY,
@@ -97,6 +99,16 @@ CREATE TABLE IF NOT EXISTS django_migrations (
     applied TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
+--criar tabela de onboarding_step_progress se não existir
+CREATE TABLE IF NOT EXISTS onboarding_step_progress (
+    id SERIAL PRIMARY KEY,
+    usuario_id INTEGER NOT NULL REFERENCES auth_user(id),
+    empr_id INTEGER NOT NULL,
+    step_slug VARCHAR(50) NOT NULL,
+    completed_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    UNIQUE(usuario_id, empr_id, step_slug)
+);
+
 --cria a tabela cfopweb se não existir
 CREATE TABLE IF NOT EXISTS cfopweb (
     cfop_id SERIAL PRIMARY KEY,
@@ -156,7 +168,7 @@ ALTER TABLE pedidosvenda add column if not exists pedi_tipo_oper VARCHAR(30) NOT
 -- criar a tabela ncm_cfop_dif se não existir
 CREATE TABLE IF NOT EXISTS ncm_cfop_dif (
     ncmdif_id SERIAL PRIMARY KEY,
-    ncm_id VARCHAR(10) NOT NULL REFERENCES ncm(ncm_codi),
+    ncm_id VARCHAR(10) NOT NULL,
     ncm_empr INTEGER NOT NULL,
     cfop_id INTEGER NOT NULL REFERENCES cfopweb(cfop_id),
     ncm_ipi_dif NUMERIC(6,2),

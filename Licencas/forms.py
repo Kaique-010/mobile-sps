@@ -5,6 +5,22 @@ class FilialCertificadoForm(forms.Form):
     senha = forms.CharField(widget=forms.PasswordInput())
     empresa_id = forms.IntegerField(widget=forms.HiddenInput())
     filial_id = forms.IntegerField(widget=forms.HiddenInput())
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            # Garantir classes bootstrap
+            if name == 'certificado' and not isinstance(field.widget, forms.ClearableFileInput):
+                field.widget = forms.ClearableFileInput()
+            if name == 'senha' and not isinstance(field.widget, forms.PasswordInput):
+                field.widget = forms.PasswordInput()
+            css = field.widget.attrs.get('class', '')
+            if name == 'certificado':
+                field.widget.attrs['class'] = (css + ' form-control-file').strip()
+            elif name == 'senha':
+                field.widget.attrs['class'] = (css + ' form-control').strip()
+            # Associar ao form separado de upload
+            field.widget.attrs['form'] = 'certificadoUploadForm'
 
 class EmpresaForm(forms.ModelForm):
     class Meta:

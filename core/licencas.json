@@ -128,5 +128,19 @@
     "db_name": "savexml1023",
     "db_host": "base.rtalmeida.com.br",
     "db_port": "5432"
+  },
+  {
+    "slug": "spartacus",
+    "cnpj": "20702018000142",
+    "db_name": "savexml206",
+    "db_host": "base.rtalmeida.com.br",
+    "db_port": "5432"
+  },
+  {
+    "slug": "rta",
+    "cnpj": "13446907000120",
+    "db_name": "savexml366",
+    "db_host": "base.rtalmeida.com.br",
+    "db_port": "5432"
   }
 ]

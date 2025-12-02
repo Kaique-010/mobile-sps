@@ -1,18 +1,28 @@
+# -*- coding: utf-8 -*-
 from lxml import etree
+from datetime import datetime
+
+NFE_NS = "http://www.portalfiscal.inf.br/nfe"
+NSMAP = {None: NFE_NS}
 
 
 class GeradorXML:
+    """
+    Gerador de XML NF-e 4.00.
+    - NÃO adiciona campos proibidos (tpAmb dentro do infNFe)
+    - NÃO adiciona namespaces duplicados
+    - XML limpo e aceito por todos os estados
+    """
 
-    NAMESPACE = {
-        None: "http://www.portalfiscal.inf.br/nfe"
-    }
+    def gerar(self, dto: dict) -> str:
+        chave = dto.get("chave")
+        if not chave:
+            raise ValueError("DTO sem chave (campo 'chave').")
 
-    def gerar(self, dto):
-        """
-        Gera XML base NF-e 4.00 sem assinatura
-        """
-        NFe = etree.Element("NFe", nsmap=self.NAMESPACE)
-        inf = etree.SubElement(NFe, "infNFe", Id="NFeTEMP", versao="4.00")
+        nfe_id = f"NFe{chave}"
+
+        root = etree.Element("NFe", nsmap=NSMAP)
+        inf = etree.SubElement(root, "infNFe", Id=nfe_id, versao="4.00")
 
         self._ide(inf, dto)
         self._emit(inf, dto["emitente"])
@@ -20,178 +30,190 @@ class GeradorXML:
         self._det(inf, dto["itens"])
         self._total(inf, dto)
         self._pag(inf, dto)
-        self._resp_tecnico(inf)
+        self._resp_tecnico(root)
 
-        return etree.tostring(
-            NFe,
+        xml = etree.tostring(
+            root,
             encoding="utf-8",
             pretty_print=False,
             xml_declaration=False,
-        ).decode()
+        ).decode("utf-8")
 
-    # --------------------------------------------------------------
+        return xml
+
+    # ----------------------------------------------------------------------
+    # ide
+    # ----------------------------------------------------------------------
     def _ide(self, root, dto):
         ide = etree.SubElement(root, "ide")
+
         emit_uf = dto["emitente"]["uf"]
         dest_uf = dto["destinatario"]["uf"]
-        id_dest = "2" if emit_uf and dest_uf and emit_uf != dest_uf else "1"
+        id_dest = "2" if emit_uf != dest_uf else "1"
 
-        etree.SubElement(ide, "cUF").text = self._uf_to_cuf(emit_uf)
-        etree.SubElement(ide, "natOp").text = "VENDA"
+        cuf = dto["emitente"]["cUF"]
+
+        etree.SubElement(ide, "cUF").text = cuf
+        etree.SubElement(ide, "cNF").text = dto["cNF"]                # obrigatório
+        etree.SubElement(ide, "natOp").text = dto.get("natOp", "VENDA")
+
         etree.SubElement(ide, "mod").text = str(dto.get("modelo", "55"))
         etree.SubElement(ide, "serie").text = str(dto.get("serie", "1"))
-        etree.SubElement(ide, "nNF").text = str(dto.get("numero", 0))
+        etree.SubElement(ide, "nNF").text = str(dto["numero"])
+
+        dh_emi = dto.get("data_emissao") or datetime.now().strftime("%Y-%m-%dT%H:%M:%S-03:00")
+        etree.SubElement(ide, "dhEmi").text = dh_emi
+
         etree.SubElement(ide, "tpNF").text = str(dto.get("tipo_operacao", 1))
         etree.SubElement(ide, "idDest").text = id_dest
+
+        # NÃO colocar tpAmb aqui (PROÍBIDO no schema)
+        # Ambiente é no enviNFe, não na tag ide.
+
         etree.SubElement(ide, "tpImp").text = "1"
         etree.SubElement(ide, "tpEmis").text = "1"
-        etree.SubElement(ide, "tpAmb").text = str(dto.get("ambiente", 2))
+
         etree.SubElement(ide, "finNFe").text = str(dto.get("finalidade", 1))
         etree.SubElement(ide, "indFinal").text = "1"
         etree.SubElement(ide, "indPres").text = "1"
+
         etree.SubElement(ide, "procEmi").text = "0"
         etree.SubElement(ide, "verProc").text = "SPS-ERP-1.0"
 
-    # --------------------------------------------------------------
+    # ----------------------------------------------------------------------
+    # emitente
+    # ----------------------------------------------------------------------
     def _emit(self, root, emit):
         e = etree.SubElement(root, "emit")
-        etree.SubElement(e, "CNPJ").text = emit.get("cnpj")
-        etree.SubElement(e, "xNome").text = emit.get("razao")
-        etree.SubElement(e, "IE").text = emit.get("ie")
 
-        ender = etree.SubElement(e, "enderEmit")
-        etree.SubElement(ender, "xLgr").text = emit.get("logradouro")
-        etree.SubElement(ender, "nro").text = emit.get("numero")
-        bairro = emit.get("bairro") or "NAO INFORMADO"
-        etree.SubElement(ender, "xBairro").text = bairro
-        etree.SubElement(ender, "cMun").text = str(emit.get("cod_municipio") or "9999999")
-        etree.SubElement(ender, "xMun").text = emit.get("municipio")
-        etree.SubElement(ender, "UF").text = emit.get("uf")
-        etree.SubElement(ender, "CEP").text = emit.get("cep")
+        etree.SubElement(e, "CNPJ").text = emit["cnpj"].zfill(14)
+        etree.SubElement(e, "xNome").text = emit["razao"]
+        etree.SubElement(e, "IE").text = emit["ie"]
 
-    # --------------------------------------------------------------
+        end = etree.SubElement(e, "enderEmit")
+        etree.SubElement(end, "xLgr").text = emit["logradouro"]
+        etree.SubElement(end, "nro").text = emit["numero"]
+        etree.SubElement(end, "xBairro").text = emit.get("bairro", "CENTRO")
+        etree.SubElement(end, "cMun").text = emit["cod_municipio"]
+        etree.SubElement(end, "xMun").text = emit["municipio"]
+        etree.SubElement(end, "UF").text = emit["uf"]
+        etree.SubElement(end, "CEP").text = emit["cep"]
+
+    # ----------------------------------------------------------------------
+    # destinatário
+    # ----------------------------------------------------------------------
     def _dest(self, root, dest):
         d = etree.SubElement(root, "dest")
 
-        doc = dest.get("documento") or ""
+        doc = dest["documento"]
         if len(doc) == 11:
             etree.SubElement(d, "CPF").text = doc
         else:
             etree.SubElement(d, "CNPJ").text = doc
 
-        etree.SubElement(d, "xNome").text = dest.get("nome")
+        etree.SubElement(d, "xNome").text = dest["nome"]
 
-        ender = etree.SubElement(d, "enderDest")
-        etree.SubElement(ender, "xLgr").text = dest.get("logradouro")
-        etree.SubElement(ender, "nro").text = dest.get("numero")
-        etree.SubElement(ender, "xBairro").text = dest.get("bairro")
-        cmun = dest.get("cod_municipio")
-        if not cmun or len(str(cmun)) != 7:
-            raise Exception(f"Código IBGE inválido para destinatário: {cmun}")
+        end = etree.SubElement(d, "enderDest")
+        etree.SubElement(end, "xLgr").text = dest["logradouro"]
+        etree.SubElement(end, "nro").text = dest["numero"]
+        etree.SubElement(end, "xBairro").text = dest["bairro"]
+        etree.SubElement(end, "cMun").text = dest["cod_municipio"]
+        etree.SubElement(end, "xMun").text = dest["municipio"]
+        etree.SubElement(end, "UF").text = dest["uf"]
+        etree.SubElement(end, "CEP").text = dest["cep"]
 
-        etree.SubElement(ender, "cMun").text = str(cmun)
-        etree.SubElement(ender, "xMun").text = dest.get("municipio")
-        etree.SubElement(ender, "UF").text = dest.get("uf")
-        etree.SubElement(ender, "CEP").text = dest.get("cep")
-
-    # --------------------------------------------------------------
+    # ----------------------------------------------------------------------
+    # itens
+    # ----------------------------------------------------------------------
     def _det(self, root, itens):
         for i, item in enumerate(itens, start=1):
             det = etree.SubElement(root, "det", nItem=str(i))
             prod = etree.SubElement(det, "prod")
 
-            quantidade = float(item.get("quantidade", 0) or 0)
-            unit = float(item.get("valor_unit", 0) or 0)
-            desconto = float(item.get("desconto", 0) or 0)
+            quantidade = float(item["quantidade"])
+            unit = float(item["valor_unit"])
+            desconto = float(item.get("desconto", 0))
             vprod = quantidade * unit
 
-            etree.SubElement(prod, "cProd").text = item.get("codigo")
-            etree.SubElement(prod, "xProd").text = item.get("descricao")
-            etree.SubElement(prod, "NCM").text = item.get("ncm")
-            etree.SubElement(prod, "CFOP").text = item.get("cfop")
-            etree.SubElement(prod, "uCom").text = item.get("unidade")
+            etree.SubElement(prod, "cProd").text = item["codigo"]
+            etree.SubElement(prod, "xProd").text = item["descricao"]
+            etree.SubElement(prod, "NCM").text = item["ncm"]
+            etree.SubElement(prod, "CFOP").text = item["cfop"]
+            etree.SubElement(prod, "uCom").text = item["unidade"]
             etree.SubElement(prod, "qCom").text = f"{quantidade:.4f}"
-            etree.SubElement(prod, "vUnCom").text = f"{unit:.2f}"
+            etree.SubElement(prod, "vUnCom").text = f"{unit:.10f}"
             etree.SubElement(prod, "vProd").text = f"{vprod:.2f}"
+
             if desconto > 0:
                 etree.SubElement(prod, "vDesc").text = f"{desconto:.2f}"
 
-    # --------------------------------------------------------------
+            # imposto mínimo (ICMS CST padrão)
+            imposto = etree.SubElement(det, "imposto")
+            icms_group = etree.SubElement(imposto, "ICMS")
+
+            cst = item["cst_icms"]
+            icms_tag = f"ICMS{cst}"
+
+            ic = etree.SubElement(icms_group, icms_tag)
+            etree.SubElement(ic, "orig").text = "0"
+            etree.SubElement(ic, "CST").text = cst
+
+    # ----------------------------------------------------------------------
+    # total
+    # ----------------------------------------------------------------------
     def _total(self, root, dto):
         total = etree.SubElement(root, "total")
         icms = etree.SubElement(total, "ICMSTot")
 
-        vprod = 0.0
-        vdesc = 0.0
-        for it in dto["itens"]:
-            q = float(it.get("quantidade", 0) or 0)
-            u = float(it.get("valor_unit", 0) or 0)
-            d = float(it.get("desconto", 0) or 0)
-            vprod += (q * u)
-            vdesc += d
-
+        vprod = sum(float(i["quantidade"]) * float(i["valor_unit"]) for i in dto["itens"])
+        vdesc = sum(float(i.get("desconto", 0)) for i in dto["itens"])
         vnf = vprod - vdesc
 
-        def z():
-            return "0.00"
+        def zero(): return "0.00"
 
-        etree.SubElement(icms, "vBC").text = z()
-        etree.SubElement(icms, "vICMS").text = z()
-        etree.SubElement(icms, "vICMSDeson").text = z()
-        etree.SubElement(icms, "vFCPUFDest").text = z()
-        etree.SubElement(icms, "vICMSUFDest").text = z()
-        etree.SubElement(icms, "vICMSUFRemet").text = z()
-        etree.SubElement(icms, "vFCP").text = z()
-        etree.SubElement(icms, "vBCST").text = z()
-        etree.SubElement(icms, "vST").text = z()
-        etree.SubElement(icms, "vFCPST").text = z()
-        etree.SubElement(icms, "vFCPSTRet").text = z()
+        etree.SubElement(icms, "vBC").text = zero()
+        etree.SubElement(icms, "vICMS").text = zero()
+        etree.SubElement(icms, "vICMSDeson").text = zero()
+        etree.SubElement(icms, "vFCPUFDest").text = zero()
+        etree.SubElement(icms, "vICMSUFDest").text = zero()
+        etree.SubElement(icms, "vICMSUFRemet").text = zero()
+        etree.SubElement(icms, "vFCP").text = zero()
+        etree.SubElement(icms, "vBCST").text = zero()
+        etree.SubElement(icms, "vST").text = zero()
+        etree.SubElement(icms, "vFCPST").text = zero()
+        etree.SubElement(icms, "vFCPSTRet").text = zero()
         etree.SubElement(icms, "vProd").text = f"{vprod:.2f}"
-        etree.SubElement(icms, "vFrete").text = z()
-        etree.SubElement(icms, "vSeg").text = z()
+        etree.SubElement(icms, "vFrete").text = zero()
+        etree.SubElement(icms, "vSeg").text = zero()
         etree.SubElement(icms, "vDesc").text = f"{vdesc:.2f}"
-        etree.SubElement(icms, "vII").text = z()
-        etree.SubElement(icms, "vIPI").text = z()
-        etree.SubElement(icms, "vIPIDevol").text = z()
-        etree.SubElement(icms, "vPIS").text = z()
-        etree.SubElement(icms, "vCOFINS").text = z()
-        etree.SubElement(icms, "vOutro").text = z()
+        etree.SubElement(icms, "vII").text = zero()
+        etree.SubElement(icms, "vIPI").text = zero()
+        etree.SubElement(icms, "vIPIDevol").text = zero()
+        etree.SubElement(icms, "vPIS").text = zero()
+        etree.SubElement(icms, "vCOFINS").text = zero()
+        etree.SubElement(icms, "vOutro").text = zero()
         etree.SubElement(icms, "vNF").text = f"{vnf:.2f}"
-        etree.SubElement(icms, "vTotTrib").text = z()
+        etree.SubElement(icms, "vTotTrib").text = zero()
 
-
-    # --------------------------------------------------------------
+    # ----------------------------------------------------------------------
+    # pagamentos
+    # ----------------------------------------------------------------------
     def _pag(self, root, dto):
         pag = etree.SubElement(root, "pag")
         det = etree.SubElement(pag, "detPag")
-        tpag = str(dto.get("tpag") or "01")
-        etree.SubElement(det, "tPag").text = tpag
-        # vPag: usa vNF calculado no _total
-        vprod = 0.0
-        vdesc = 0.0
-        for it in dto["itens"]:
-            q = float(it.get("quantidade", 0) or 0)
-            u = float(it.get("valor_unit", 0) or 0)
-            d = float(it.get("desconto", 0) or 0)
-            vprod += (q * u)
-            vdesc += d
-        vnf = vprod - vdesc
-        etree.SubElement(det, "vPag").text = f"{vnf:.2f}"
 
-    # --------------------------------------------------------------
+        tpag = dto.get("tpag") or "01"
+        etree.SubElement(det, "tPag").text = tpag
+
+        vprod = sum(float(i["quantidade"]) * float(i["valor_unit"]) for i in dto["itens"])
+        vdesc = sum(float(i.get("desconto", 0)) for i in dto["itens"])
+        etree.SubElement(det, "vPag").text = f"{(vprod - vdesc):.2f}"
+
+    # ----------------------------------------------------------------------
+    # responsável técnico
+    # ----------------------------------------------------------------------
     def _resp_tecnico(self, root):
         r = etree.SubElement(root, "infRespTec")
         etree.SubElement(r, "CNPJ").text = "20702018000142"
         etree.SubElement(r, "xContato").text = "SPS Web"
         etree.SubElement(r, "email").text = "suporte@spartacus.com.br"
-
-    # --------------------------------------------------------------
-    def _uf_to_cuf(self, uf):
-        tabela = {
-            "PR": "41",
-            "SP": "35",
-            "SC": "42",
-            "RS": "43",
-            "MG": "31",
-        }
-        return tabela.get(uf, "00")

@@ -356,6 +356,12 @@ LOGGING = {
             'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': False,
         },
+        'Licencas': {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+            'formatter': 'verbose',
+        },
         'listacasamento.views': {
             'handlers': ['console'],
             'level': 'DEBUG' if DEBUG else 'INFO',

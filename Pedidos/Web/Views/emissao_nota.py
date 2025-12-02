@@ -12,10 +12,15 @@ class PedidoEmitirNFeView(View):
 
     def get(self, request, slug, pk):
         banco = get_licenca_db_config(request) or "default"
+        empresa_id = request.session.get('empresa_id', 1)
+        filial_id = request.session.get('filial_id', 1)
 
         pedido = get_object_or_404(
-            PedidoVenda.objects.using(banco),
-            pk=pk
+            PedidoVenda.objects.using(banco).filter(
+                pedi_empr=int(empresa_id),
+                pedi_fili=int(filial_id)
+            ),
+            pedi_nume=int(pk)
         )
 
         try:

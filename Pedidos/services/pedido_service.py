@@ -32,9 +32,9 @@ class PedidoVendaService:
             return Decimal(default)
     @staticmethod
     def _proximo_pedido_numero(banco: str, pedi_empr: int, pedi_fili: int) -> int:
+        # Número do pedido precisa ser único globalmente, pois é a PK.
         ultimo = (
             PedidoVenda.objects.using(banco)
-            .filter(pedi_empr=pedi_empr, pedi_fili=pedi_fili)
             .order_by('-pedi_nume')
             .first()
         )
@@ -46,11 +46,17 @@ class PedidoVendaService:
         pedi_empr = int(pedido_data.get('pedi_empr'))
         pedi_fili = int(pedido_data.get('pedi_fili'))
 
-        # Define número do pedido se não fornecido
-        if not pedido_data.get('pedi_nume'):
-            pedido_data['pedi_nume'] = PedidoVendaService._proximo_pedido_numero(
-                banco, pedi_empr, pedi_fili
-            )
+        # Define número do pedido e garante unicidade global (PK)
+        numero = pedido_data.get('pedi_nume')
+        if numero is None or numero == "":
+            numero = PedidoVendaService._proximo_pedido_numero(banco, pedi_empr, pedi_fili)
+        try:
+            numero = int(numero)
+        except Exception:
+            numero = PedidoVendaService._proximo_pedido_numero(banco, pedi_empr, pedi_fili)
+        while PedidoVenda.objects.using(banco).filter(pedi_nume=numero).exists():
+            numero += 1
+        pedido_data['pedi_nume'] = numero
 
         # Remover campo não persistente
         pedido_data.pop('tipo_oper', None)

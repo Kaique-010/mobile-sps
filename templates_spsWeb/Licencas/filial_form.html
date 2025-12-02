@@ -98,13 +98,17 @@
           </div>
         </div>
 
-        <div class="mt-3 form-actions">
-          <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> Salvar</button>
-          <a href="{% url 'filiais_web' slug=slug %}" class="btn btn-secondary">Cancelar</a>
-        </div>
+      <div class="mt-3 form-actions">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> Salvar</button>
+        <a href="{% url 'filiais_web' slug=slug %}" class="btn btn-secondary">Cancelar</a>
+      </div>
       </form>
     </div>
   </div>
+
+  <form id="certificadoUploadForm" action="{% url 'web_licencas_certificado' slug=slug %}" method="post" enctype="multipart/form-data" style="display:none;">
+    {% csrf_token %}
+  </form>
 
 </div>
 {% endblock %}

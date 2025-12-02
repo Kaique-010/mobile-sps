@@ -11,3 +11,4 @@ class OnboardingStepProgress(models.Model):
     class Meta:
         unique_together = ("usuario", "empr_id", "step_slug")
         db_table = "onboarding_step_progress"
+

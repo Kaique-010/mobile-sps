@@ -1,13 +1,5 @@
 # -*- coding: utf-8 -*-
 
-"""
-URLs oficiais dos WebServices da NF-e 4.00 por UF.
-Organizado para consumo direto pelo SefazClient.
-Ambiente:
-- 1 = Produção
-- 2 = Homologação
-"""
-
 URLS_SEFAZ = {
     "AC": {
         "autorizacao_producao":      "https://nfe.sefaznet.ac.gov.br/nfe/services/NFeAutorizacao4",
@@ -78,8 +70,8 @@ URLS_SEFAZ = {
         "autorizacao_homologacao":   "https://www.sefaz.pi.gov.br/nfe/services/NFeAutorizacao4",
     },
     "PR": {
-        "autorizacao_producao":      "https://nfe.sefa.pr.gov.br/ws/NFeAutorizacao4",
-        "autorizacao_homologacao":   "https://homologacao.sefa.pr.gov.br/ws/NFeAutorizacao4",
+        "autorizacao_producao":      "https://nfe.sefa.pr.gov.br/nfe/NFeAutorizacao4",
+        "autorizacao_homologacao":   "https://homologacao.nfe.sefa.pr.gov.br/nfe/NFeAutorizacao4",
     },
     "RJ": {
         "autorizacao_producao":      "https://nfe.fazenda.rj.gov.br/nfe/services/NFeAutorizacao4",
@@ -102,8 +94,6 @@ URLS_SEFAZ = {
         "autorizacao_homologacao":   "https://nfe-homologacao.sefaz.rs.gov.br/ws/NfeAutorizacao/NFeAutorizacao4.asmx",
     },
     "SC": {
-        # Santa Catarina NÃO usa SEFAZ própria
-        # usa WebService Nacional (SVRS)
         "autorizacao_producao":      "https://nfe.svrs.rs.gov.br/ws/NfeAutorizacao/NFeAutorizacao4.asmx",
         "autorizacao_homologacao":   "https://nfe-homologacao.svrs.rs.gov.br/ws/NfeAutorizacao/NFeAutorizacao4.asmx",
     },
@@ -119,10 +109,6 @@ URLS_SEFAZ = {
         "autorizacao_producao":      "https://nfe.sefaz.to.gov.br/nfe/services/NFeAutorizacao4",
         "autorizacao_homologacao":   "https://homologacao.sefaz.to.gov.br/nfe/services/NFeAutorizacao4",
     },
-
-    # ------------------------------------------------------------------
-    # CONTINGÊNCIA SVC (Sistema Virtual de Contingência)
-    # ------------------------------------------------------------------
     "SVC_AN": {
         "autorizacao": "https://www.svc.fazenda.gov.br/NFeAutorizacao4/NFeAutorizacao4.asmx"
     },

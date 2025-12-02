@@ -198,6 +198,17 @@
       "database": "savexml1",
       "username": "savexml1",
       "password": "0SvZrefA"
+    },
+    {
+      "ssh": "Disabled",
+      "previewLimit": 50,
+      "server": "base.rtalmeida.com.br",
+      "port": 5432,
+      "driver": "PostgreSQL",
+      "name": "spartacus",
+      "database": "savexml206",
+      "username": "savexml206",
+      "password": "U4gUfEMh"
     }
   ],
   "liveServer.settings.port": 5501

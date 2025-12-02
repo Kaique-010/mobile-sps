@@ -1,23 +1,20 @@
-<div class="row">
-    <div class="col-md-6">
-        <label>Certificado A1 (p12/pfx)</label>
-        {{ form.certificado }}
-        {% if form.certificado.errors %}
-        <div class="alert alert-danger mt-1">{{ form.certificado.errors|striptags }}</div>
-        {% endif %}
-        {% if has_cert %}
-        <div class="mt-2">
-            <span class="text-muted">Atual: {{ cert_name }}</span>
-            <a class="btn btn-outline-secondary btn-sm ms-2"
-                href="{% url 'filiais-crud-certificado' pk=object.empr_empr slug=slug %}">Baixar</a>
-        </div>
-        {% endif %}
-    </div>
-    <div class="col-md-6">
-        <label for="id_senha_certificado">Senha do Certificado</label>
-        {{ form.senha_certificado }}
-        {% if form.senha_certificado.errors %}
-        <div class="alert alert-danger mt-1">{{ form.senha_certificado.errors|striptags }}</div>
-        {% endif %}
-    </div>
+<div class="mb-3">
+    <label>Certificado A1 (pfx/p12)</label>
+    {{ certificado_form.certificado }}
+    {% if certificado_form.certificado.errors %}
+    <div class="alert alert-danger mt-1">{{ certificado_form.certificado.errors|striptags }}</div>
+    {% endif %}
 </div>
+
+<div class="mb-3">
+    <label>Senha do certificado</label>
+    {{ certificado_form.senha }}
+    {% if certificado_form.senha.errors %}
+    <div class="alert alert-danger mt-1">{{ certificado_form.senha.errors|striptags }}</div>
+    {% endif %}
+</div>
+
+{{ certificado_form.empresa_id }}
+{{ certificado_form.filial_id }}
+
+<button class="btn btn-primary" type="submit" form="certificadoUploadForm">Salvar Certificado</button>
