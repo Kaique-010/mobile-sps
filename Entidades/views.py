@@ -29,12 +29,11 @@ class EntidadesViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
         
         if not banco:
             return Entidades.objects.none()
-            
+        empresa_id = self.request.query_params.get('enti_empr') or self.request.session.get("empresa_id") or self.request.headers.get("Empresa_id")
         # Base queryset otimizada
-        queryset = Entidades.objects.using(banco).all()
-        
+        queryset = Entidades.objects.using(banco).filter(enti_empr= empresa_id)
         # Aplicar filtros de forma otimizada
-        empresa_id = self.request.query_params.get('enti_empr')
+        
         tipo = self.request.query_params.get('enti_tipo_enti')
         search_query = self.request.query_params.get('search')
         
@@ -97,6 +96,22 @@ class EntidadesViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
         context = super().get_serializer_context()
         context['banco'] = get_licenca_db_config(self.request)
         return context
+
+    def perform_create(self, serializer):
+        empresa_id = (
+            self.request.data.get('enti_empr')
+            or self.request.session.get("empresa_id")
+            or self.request.headers.get("Empresa_id")
+        )
+        try:
+            empresa_id = int(empresa_id) if empresa_id is not None else None
+        except Exception:
+            pass
+        serializer.save(enti_empr=empresa_id)
+
+    def perform_update(self, serializer):
+        instance = self.get_object()
+        serializer.save(enti_empr=instance.enti_empr)
 
     @action(detail=False, methods=['get'], url_path='buscar-endereco')
     @modulo_necessario('Entidades')

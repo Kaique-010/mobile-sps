@@ -97,8 +97,8 @@
   {
     "slug": "ipa",
     "cnpj": "37413384000184",
-    "db_name": "savexml952",
-    "db_host": "base.rtalmeida.com.br",
+    "db_name": "ipa",
+    "db_host": "localhost",
     "db_port": "5432"
   },
   {

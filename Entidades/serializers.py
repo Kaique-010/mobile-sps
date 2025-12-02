@@ -8,6 +8,7 @@ from Licencas.models  import Empresas
 class EntidadesSerializer(serializers.ModelSerializer):
     
     empresa_nome = serializers.SerializerMethodField()
+    enti_tien = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
     class Meta:
         model = Entidades
@@ -53,9 +54,20 @@ class EntidadesSerializer(serializers.ModelSerializer):
     
     
     def update(self, instance, validated_data):
-        
+        banco = self.context.get('banco')
+        if not banco:
+            raise serializers.ValidationError("Banco não encontrado")
         validated_data.pop('enti_clie', None)
-        return super().update(instance, validated_data)
+        validated_data.pop('enti_empr', None)
+        Entidades.objects.using(banco).filter(
+            enti_empr=instance.enti_empr,
+            enti_clie=instance.enti_clie,
+        ).update(**validated_data)
+        instance = Entidades.objects.using(banco).filter(
+            enti_empr=instance.enti_empr,
+            enti_clie=instance.enti_clie,
+        ).first() or instance
+        return instance
 
     
     

@@ -2,7 +2,7 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework import status, filters
 from rest_framework.response import Response
 from rest_framework.exceptions import NotFound, ValidationError
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from django_filters.rest_framework import DjangoFilterBackend
 from django_filters import rest_framework as django_filters
 from django.db import transaction, IntegrityError
@@ -1179,6 +1179,42 @@ class ImagemAntesViewSet(BaseMultiDBModelViewSet):
             serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+    @action(detail=True, methods=['get'], url_path='bin', permission_classes=[AllowAny])
+    def bin(self, request, *args, **kwargs):
+        banco = self.get_banco()
+        obj = self.get_object()
+        blob = getattr(obj, 'iman_imag', None)
+        if not blob:
+            return Response(status=404)
+        head = bytes(blob)[:12]
+        if len(head) >= 3 and head[0] == 0xFF and head[1] == 0xD8 and head[2] == 0xFF:
+            mime = 'image/jpeg'
+        elif len(head) >= 8 and head[:8] == b"\x89PNG\r\n\x1a\n":
+            mime = 'image/png'
+        elif len(head) >= 12 and head[:4] == b'RIFF' and head[8:12] == b'WEBP':
+            mime = 'image/webp'
+        else:
+            mime = 'application/octet-stream'
+        return HttpResponse(blob, content_type=mime)
+
+    @action(detail=False, methods=['get'], url_path=r'(?P<orde>\d+)/(?P<image_id>\d+)/bin', permission_classes=[AllowAny])
+    def bin_por_ordem(self, request, orde=None, image_id=None, *args, **kwargs):
+        banco = self.get_banco()
+        obj = Ordemservicoimgantes.objects.using(banco).filter(iman_orde=int(orde or 0), iman_id=int(image_id or 0)).first()
+        if not obj or not obj.iman_imag:
+            return Response(status=404)
+        blob = obj.iman_imag
+        head = bytes(blob)[:12]
+        if len(head) >= 3 and head[0] == 0xFF and head[1] == 0xD8 and head[2] == 0xFF:
+            mime = 'image/jpeg'
+        elif len(head) >= 8 and head[:8] == b"\x89PNG\r\n\x1a\n":
+            mime = 'image/png'
+        elif len(head) >= 12 and head[:4] == b'RIFF' and head[8:12] == b'WEBP':
+            mime = 'image/webp'
+        else:
+            mime = 'application/octet-stream'
+        return HttpResponse(blob, content_type=mime)
+
 
 class ImagemDuranteViewSet(BaseMultiDBModelViewSet):
     modulo_necessario = 'OrdemdeServico'
@@ -1248,6 +1284,42 @@ class ImagemDuranteViewSet(BaseMultiDBModelViewSet):
             serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+    @action(detail=True, methods=['get'], url_path='bin', permission_classes=[AllowAny])
+    def bin(self, request, *args, **kwargs):
+        banco = self.get_banco()
+        obj = self.get_object()
+        blob = getattr(obj, 'imdu_imag', None)
+        if not blob:
+            return Response(status=404)
+        head = bytes(blob)[:12]
+        if len(head) >= 3 and head[0] == 0xFF and head[1] == 0xD8 and head[2] == 0xFF:
+            mime = 'image/jpeg'
+        elif len(head) >= 8 and head[:8] == b"\x89PNG\r\n\x1a\n":
+            mime = 'image/png'
+        elif len(head) >= 12 and head[:4] == b'RIFF' and head[8:12] == b'WEBP':
+            mime = 'image/webp'
+        else:
+            mime = 'application/octet-stream'
+        return HttpResponse(blob, content_type=mime)
+
+    @action(detail=False, methods=['get'], url_path=r'(?P<orde>\d+)/(?P<image_id>\d+)/bin', permission_classes=[AllowAny])
+    def bin_por_ordem(self, request, orde=None, image_id=None, *args, **kwargs):
+        banco = self.get_banco()
+        obj = Ordemservicoimgdurante.objects.using(banco).filter(imdu_orde=int(orde or 0), imdu_id=int(image_id or 0)).first()
+        if not obj or not obj.imdu_imag:
+            return Response(status=404)
+        blob = obj.imdu_imag
+        head = bytes(blob)[:12]
+        if len(head) >= 3 and head[0] == 0xFF and head[1] == 0xD8 and head[2] == 0xFF:
+            mime = 'image/jpeg'
+        elif len(head) >= 8 and head[:8] == b"\x89PNG\r\n\x1a\n":
+            mime = 'image/png'
+        elif len(head) >= 12 and head[:4] == b'RIFF' and head[8:12] == b'WEBP':
+            mime = 'image/webp'
+        else:
+            mime = 'application/octet-stream'
+        return HttpResponse(blob, content_type=mime)
+
 
 class ImagemDepoisViewSet(BaseMultiDBModelViewSet):
     modulo_necessario = 'OrdemdeServico'
@@ -1316,3 +1388,39 @@ class ImagemDepoisViewSet(BaseMultiDBModelViewSet):
         with transaction.atomic(using=banco):
             serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['get'], url_path='bin', permission_classes=[AllowAny])
+    def bin(self, request, *args, **kwargs):
+        banco = self.get_banco()
+        obj = self.get_object()
+        blob = getattr(obj, 'imde_imag', None)
+        if not blob:
+            return Response(status=404)
+        head = bytes(blob)[:12]
+        if len(head) >= 3 and head[0] == 0xFF and head[1] == 0xD8 and head[2] == 0xFF:
+            mime = 'image/jpeg'
+        elif len(head) >= 8 and head[:8] == b"\x89PNG\r\n\x1a\n":
+            mime = 'image/png'
+        elif len(head) >= 12 and head[:4] == b'RIFF' and head[8:12] == b'WEBP':
+            mime = 'image/webp'
+        else:
+            mime = 'application/octet-stream'
+        return HttpResponse(blob, content_type=mime)
+
+    @action(detail=False, methods=['get'], url_path=r'(?P<orde>\d+)/(?P<image_id>\d+)/bin', permission_classes=[AllowAny])
+    def bin_por_ordem(self, request, orde=None, image_id=None, *args, **kwargs):
+        banco = self.get_banco()
+        obj = Ordemservicoimgdepois.objects.using(banco).filter(imde_orde=int(orde or 0), imde_id=int(image_id or 0)).first()
+        if not obj or not obj.imde_imag:
+            return Response(status=404)
+        blob = obj.imde_imag
+        head = bytes(blob)[:12]
+        if len(head) >= 3 and head[0] == 0xFF and head[1] == 0xD8 and head[2] == 0xFF:
+            mime = 'image/jpeg'
+        elif len(head) >= 8 and head[:8] == b"\x89PNG\r\n\x1a\n":
+            mime = 'image/png'
+        elif len(head) >= 12 and head[:4] == b'RIFF' and head[8:12] == b'WEBP':
+            mime = 'image/webp'
+        else:
+            mime = 'application/octet-stream'
+        return HttpResponse(blob, content_type=mime)

@@ -99,10 +99,36 @@ CREATE TABLE IF NOT EXISTS django_migrations (
     applied TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
+--Criação da Tabela para auditoria
+
+CREATE TABLE auditoria_logacao (
+id SERIAL PRIMARY KEY,
+usuario_id INTEGER REFERENCES usuarios(usua_codi) ON DELETE SET NULL,
+data_hora TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+tipo_acao VARCHAR(10) NOT NULL,
+url TEXT NOT NULL,
+ip INET,
+navegador VARCHAR(255) NOT NULL,
+dados JSONB,
+dados_antes JSONB,
+dados_depois JSONB,
+campos_alterados JSONB,
+objeto_id VARCHAR(100),
+modelo VARCHAR(100),
+empresa VARCHAR(100),
+licenca VARCHAR(100)
+);
+
+CREATE INDEX idx_auditoria_empresa_licenca_datahora ON auditoria_logacao (empresa, licenca, data_hora);
+CREATE INDEX idx_auditoria_usuario_datahora ON auditoria_logacao (usuario_id, data_hora);
+CREATE INDEX idx_auditoria_modelo_objeto ON auditoria_logacao (modelo, objeto_id);
+CREATE INDEX idx_auditoria_tipoacao_datahora ON auditoria_logacao (tipo_acao, data_hora);
+
+
 --criar tabela de onboarding_step_progress se não existir
 CREATE TABLE IF NOT EXISTS onboarding_step_progress (
     id SERIAL PRIMARY KEY,
-    usuario_id INTEGER NOT NULL REFERENCES auth_user(id),
+    usuario_id INTEGER NOT NULL REFERENCES usuarios(usua_codi),
     empr_id INTEGER NOT NULL,
     step_slug VARCHAR(50) NOT NULL,
     completed_at TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -900,7 +926,7 @@ CREATE TABLE IF NOT EXISTS nf_nota_evento (
 CREATE INDEX IF NOT EXISTS ix_nf_evento_nota_tipo ON nf_nota_evento(nota_id, tipo);
 """
 
-def executar_sql(sql, titulo="SQL"):
+def executar_sql(sql, titulo="SQL", ignore_errors=False):
     print(f"🚀 Executando: {titulo}")
     conn = psycopg2.connect(
         dbname=LOCAL_DB_NAME,
@@ -910,10 +936,19 @@ def executar_sql(sql, titulo="SQL"):
         port=LOCAL_DB_PORT
     )
     conn.autocommit = True
-    with conn.cursor() as cur:
-        cur.execute(sql)
-    conn.close()
-    print(f"✅ {titulo} executado com sucesso.\n")
+    try:
+        with conn.cursor() as cur:
+            statements = [s.strip() for s in sql.split(';') if s.strip()]
+            for stmt in statements:
+                try:
+                    cur.execute(stmt + ';')
+                except Exception as e:
+                    if not ignore_errors:
+                        raise
+                    print(f"⚠️ Falha ao executar statement, continuando: {e}\nSQL: {stmt[:200]}...")
+    finally:
+        conn.close()
+    print(f"✅ {titulo} executado.\n")
 
 def rodar_comando(cmd, ignore_errors=False):
     print(f"⚙️ Rodando comando: {cmd}")
@@ -929,18 +964,18 @@ def rodar_comando(cmd, ignore_errors=False):
 
 def main():
     print("🔧 Criando tabelas essenciais do Django...")
-    executar_sql(SQL_DJANGO_CORE, "Criação de tabelas essenciais do Django")
+    executar_sql(SQL_DJANGO_CORE, "Criação de tabelas essenciais do Django", ignore_errors=True)
     
     print("📦 Marcando todas as migrations como aplicadas...")
     # Marcar todas as migrations como aplicadas sem executar
     rodar_comando("python manage.py migrate --fake")
     
     print("📦 Executando SQL customizado...")
-    executar_sql(SQL_COMMANDS, "Criação e atualização de tabelas")
-    executar_sql(SQL_INSERT_PERMISSAO, "Inserção de permissões para usuário 1")
-    executar_sql(SQL_PARAMETROS_LOTE, "Inserção de parâmetros de controle de lote")
-    executar_sql(SQL_NOTAS_FISCAIS, "Criação de tabelas Notas Fiscais (NF-e)")
-    executar_sql(SQL_FIX_NCM_CFOP_DIF, "Ajustes de schema ncm_cfop_dif")
+    executar_sql(SQL_COMMANDS, "Criação e atualização de tabelas", ignore_errors=True)
+    executar_sql(SQL_INSERT_PERMISSAO, "Inserção de permissões para usuário 1", ignore_errors=True)
+    executar_sql(SQL_PARAMETROS_LOTE, "Inserção de parâmetros de controle de lote", ignore_errors=True)
+    executar_sql(SQL_NOTAS_FISCAIS, "Criação de tabelas Notas Fiscais (NF-e)", ignore_errors=True)
+    executar_sql(SQL_FIX_NCM_CFOP_DIF, "Ajustes de schema ncm_cfop_dif", ignore_errors=True)
     try:
         executar_sql(SQL_VIEWS, "Criação de views")
     except Exception as e:

@@ -1,6 +1,5 @@
 -- view para envio de cobrança 
-
- WITH titulos_abertos AS (
+WITH titulos_abertos AS (
          SELECT t_1.titu_empr,
             t_1.titu_fili,
             t_1.titu_clie,
@@ -13,7 +12,7 @@
             t_1.titu_form_reci
            FROM titulosreceber t_1
              LEFT JOIN baretitulos b ON b.bare_titu::text = t_1.titu_titu::text AND b.bare_parc::text = t_1.titu_parc::text AND b.bare_seri::text = t_1.titu_seri::text AND b.bare_clie = t_1.titu_clie AND b.bare_empr = t_1.titu_empr
-          WHERE t_1.titu_aber::text = 'A'::text AND b.bare_titu IS NULL AND t_1.titu_venc >= '2025-07-01'::date AND t_1.titu_venc <= '2025-07-31'::date
+          WHERE t_1.titu_aber::text = 'A'::text AND b.bare_titu IS NULL AND t_1.titu_venc >= '2023-07-01'::date AND t_1.titu_venc <= '2026-07-31'::date
         )
  SELECT t.titu_empr AS empresa,
     t.titu_fili AS filial,
@@ -48,3 +47,4 @@
    FROM titulos_abertos t
      LEFT JOIN entidades e ON e.enti_clie = t.titu_clie AND e.enti_empr = t.titu_empr
   ORDER BY t.titu_venc;
+-- Query para listar títulos em aberto que não possuem boleto gerado, com detalhes do cliente e forma de recebimento.   

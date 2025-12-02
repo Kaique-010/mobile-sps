@@ -43,7 +43,7 @@ class Entidades(models.Model):
 
     enti_banc = models.CharField(max_length=100, blank=True, null=True)
     enti_agen = models.CharField(max_length=100, blank=True, null=True)
-    enti_tien = models.CharField(max_length=100, blank=True, null=True, choices=[('B', 'BANCO'), ('C', 'CAIXA')])
+    enti_tien = models.CharField(max_length=100, blank=True, null=True, choices=[('B', 'BANCO'), ('C', 'CAIXA'), ('E','Entidade'), ('D','Outros')], default='E')
     enti_diag = models.CharField(max_length=100, blank=True, null=True)
     enti_coco = models.CharField(max_length=100, blank=True, null=True)
     enti_dico = models.CharField(max_length=100, blank=True, null=True)
