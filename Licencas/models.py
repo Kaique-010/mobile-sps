@@ -69,7 +69,6 @@ class Usuarios(AbstractBaseUser, PermissionsMixin):
         self._password = raw_password
 
 
-
     def atualizar_senha(self, nova_senha):
        
         from .utils import atualizar_senha

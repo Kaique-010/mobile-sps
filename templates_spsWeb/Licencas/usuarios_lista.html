@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% block title %}Usuários{% endblock %}
+{% block content %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
+<div class="container page-container">
+  <div class="page-header-custom">
+    <div class="container align-items-center">
+      <h2 class="page-title">
+        <i class="bi bi-person fs-4"></i> Usuários
+      </h2>
+    </div>
+    <div class="page-actions">
+      <a class="btn btn-success btn-sm" href="{% url 'users_create' slug=slug %}">
+        <i class="bi bi-plus-lg"></i> Novo Usuário
+      </a>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-body">
+      <form class="row g-2 mb-3" method="get">
+        <div class="col-sm-6 col-md-4">
+          <input type="text" name="nome" value="{{ request.GET.nome }}" class="form-control"
+            placeholder="Filtrar por nome">
+        </div>
+        <div class="col-auto">
+          <button class="btn btn-outline-secondary btn-sm" type="submit">Filtrar</button>
+        </div>
+      </form>
+      <div class="table-responsive d-none d-md-block">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Nome</th>
+              <th>Setor</th>
+              <th class="text-end">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in usuarios %}
+            <tr>
+              <td>{{ u.usua_codi }}</td>
+              <td>{{ u.usua_nome }}</td>
+              <td>{% if u.setor %}{{ u.setor.osfs_nome }}{% else %}{{ u.usua_seto }}{% endif %}</td>
+              <td class="text-end">
+                <a class="btn btn-sm btn-primary"
+                  href="{% url 'users_edit' slug=slug id=u.usua_codi %}">Editar</a>
+                <form class="d-inline" method="post" action="{% url 'users_delete' slug=slug id=u.usua_codi %}"
+                  onsubmit="return confirm('Excluir usuário?');">
+                  {% csrf_token %}
+                  <button class="btn btn-sm btn-danger" type="submit">Excluir</button>
+                </form>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="4">Nenhum usuário encontrado</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="card-list d-md-none">
+        {% for u in usuarios %}
+        <div class="card mb-2">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="fw-semibold">{{ u.usua_nome }}</div>
+              <div class="text-muted small">{{ u.usua_codi }}</div>
+            </div>
+            <div class="mt-2 small">
+              <div><strong>Setor:</strong> {% if u.setor %}{{ u.setor.osfs_nome }}{% else %}{{ u.usua_seto }}{% endif %}
+              </div>
+            </div>
+            <div class="mt-3 d-flex gap-2">
+              <a class="btn btn-sm btn-outline-primary"
+                href="{% url 'users_edit' slug=slug id=u.usua_codi %}">Editar</a>
+              <form class="d-inline" method="post" action="{% url 'users_delete' slug=slug id=u.usua_codi %}"
+                onsubmit="return confirm('Excluir usuário?');">
+                {% csrf_token %}
+                <button class="btn btn-sm btn-outline-danger" type="submit">Excluir</button>
+              </form>
+            </div>
+          </div>
+        </div>
+        {% empty %}
+        <div class="alert alert-info">Nenhum usuário encontrado</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

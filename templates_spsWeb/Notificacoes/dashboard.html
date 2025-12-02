@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
+<div class="container page-container py-3">
+  <h3 class="page-title">
+    <i class="bi bi-list-check" style="font-size: 1.5rem; text-align: center; justify-content: center;"></i> Central de
+    Notificações
+  </h3>
+  <div class="row g-3">
+    <div class="col-12 col-md-6 col-lg-3">
+      <a class="text-decoration-none" href="/web/{{ slug }}/notificacoes/pagar/?period=hoje">
+        <div class="card">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <span>Contas a Pagar Hoje</span>
+              <span class="badge bg-danger">{{ pagar_hoje_count }}</span>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-12 col-md-6 col-lg-3">
+      <a class="text-decoration-none" href="/web/{{ slug }}/notificacoes/pagar/?period=semana">
+        <div class="card">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <span>Contas a Pagar na Semana</span>
+              <span class="badge bg-warning text-dark">{{ pagar_semana_count }}</span>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-12 col-md-6 col-lg-3">
+      <a class="text-decoration-none" href="/web/{{ slug }}/notificacoes/receber/?period=hoje">
+        <div class="card">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <span>Contas a Receber Hoje</span>
+              <span class="badge bg-success">{{ receber_hoje_count }}</span>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-12 col-md-6 col-lg-3">
+      <a class="text-decoration-none" href="/web/{{ slug }}/notificacoes/receber/?period=semana">
+        <div class="card">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <span>Contas a Receber na Semana</span>
+              <span class="badge bg-info text-dark">{{ receber_semana_count }}</span>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+  <div class="row g-3 mt-3">
+    <div class="col-12 col-lg-6">
+      <div class="card h-100">
+        <div class="card-header">Títulos Criados Hoje</div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Tipo</th>
+                <th>Número</th>
+                <th>Parcela</th>
+                <th>Vencimento</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for t in titulos_criados_hoje %}
+              <tr>
+                <td>
+                  {% if t.tipo == 'Pagar' %}
+                  <span class="badge bg-danger">Pagar</span>
+                  {% else %}
+                  <span class="badge bg-success">Receber</span>
+                  {% endif %}
+                </td>
+                <td>{{ t.titu_titu }}</td>
+                <td>{{ t.titu_parc }}</td>
+                <td>{{ t.titu_venc }}</td>
+                <td>
+                  {% if t.titu_aber == 'T' %}
+                  <span class="badge bg-secondary">Quitado</span>
+                  {% else %}
+                  <span class="badge bg-primary">Aberto</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="5" class="text-center">Sem títulos</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="card-footer">
+
+        </div>
+        <a class="btn btn-primary btn-sm" href="/web/{{ slug }}/notificacoes/titulos-criados-hoje/">Ver
+          todos</a>
+      </div>
+    </div>
+    <div class="col-12 col-lg-6">
+      <div class="card h-100">
+        <div class="card-header">Hoje</div>
+        <div class="list-group list-group-flush">
+          <a class="list-group-item d-flex justify-content-between" href="/web/{{ slug }}/notificacoes/orcamentos/">
+            <span>Orçamentos Criados</span>
+            <span class="badge bg-dark">{{ orcamentos_hoje_count }}</span>
+          </a>
+          <a class="list-group-item d-flex justify-content-between" href="/web/{{ slug }}/notificacoes/pedidos/">
+            <span>Pedidos Criados</span>
+            <span class="badge bg-dark">{{ pedidos_hoje_count }}</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,4 +1,9 @@
 from django import forms
+from Licencas.models import Usuarios
+from OrdemdeServico.models import OrdemServicoFaseSetor
+import logging
+logger = logging.getLogger(__name__)
+
 
 class FilialCertificadoForm(forms.Form):
     certificado = forms.FileField()
@@ -232,3 +237,68 @@ class FilialForm(forms.ModelForm):
             if self.is_bound and self.errors.get(name):
                 css = field.widget.attrs.get('class', '')
                 field.widget.attrs['class'] = (css + ' is-invalid').strip()
+
+
+class UsuarioForm(forms.ModelForm):
+    setor = forms.ModelChoiceField(
+        queryset=OrdemServicoFaseSetor.objects.all(),
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        empty_label=None,
+        required=True,
+    )
+    class Meta:
+        model = Usuarios
+        fields = ['usua_codi', 'usua_nome', 'password', 'usua_seto']
+        widgets = {
+            'usua_codi': forms.HiddenInput(attrs={'class': 'form-control', 'placeholder': 'Código Usuário'}),
+            'usua_nome': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome Usuário'}),
+            'password': forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Senha Usuário'}),
+            'usua_seto': forms.HiddenInput(),
+        }
+        labels = {
+            'usua_codi': 'Código Usuário',
+            'usua_nome': 'Nome Usuário',
+            'password': 'Senha Usuário',
+            'usua_seto': 'Setor Usuário',
+        }
+
+    def __init__(self, *args, **kwargs):
+        request = kwargs.pop('request', None)
+        super().__init__(*args, **kwargs)
+        try:
+            if request:
+                from core.registry import get_licenca_db_config
+                banco = get_licenca_db_config(request)
+                self.fields['setor'].queryset = OrdemServicoFaseSetor.objects.using(banco).all()
+                logger.info('[UsuarioForm] queryset setor carregado do banco=%s', banco)
+        except Exception:
+            pass
+        # usua_seto é preenchido via campo 'setor' e não deve ser requerido no POST
+        if 'usua_seto' in self.fields:
+            self.fields['usua_seto'].required = False
+        inst = kwargs.get('instance') or getattr(self, 'instance', None)
+        if inst and hasattr(inst, 'setor') and inst.setor:
+            self.fields['setor'].initial = inst.setor
+            logger.debug('[UsuarioForm] inicial setor=%s', inst.setor)
+            # Em edição, senha pode ser opcional
+            if 'password' in self.fields:
+                self.fields['password'].required = False
+        else:
+            # Em criação, manter senha obrigatória
+            if 'password' in self.fields:
+                self.fields['password'].required = True
+        for name, field in self.fields.items():
+            if self.is_bound and self.errors.get(name):
+                css = field.widget.attrs.get('class', '')
+                field.widget.attrs['class'] = (css + ' is-invalid').strip()
+
+    def clean(self):
+        cleaned = super().clean()
+        setor = cleaned.get('setor')
+        if setor:
+            cleaned['usua_seto'] = getattr(setor, 'osfs_codi', getattr(setor, 'pk', None))
+            logger.info('[UsuarioForm] mapeado setor->usua_seto=%s', cleaned['usua_seto'])
+        if not cleaned.get('usua_seto'):
+            self.add_error('setor', 'Selecione o setor')
+            logger.warning('[UsuarioForm] usua_seto ausente, erro no setor')
+        return cleaned

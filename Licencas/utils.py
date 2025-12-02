@@ -6,6 +6,12 @@ from django.http import HttpRequest
 from .models import Usuarios, Empresas, Filiais
 from django.db.models import Max
 
+def proximo_usuario(request: HttpRequest):
+    """Gera próximo número de usuário"""
+    banco = get_licenca_db_config(request) or 'default'
+    
+    return get_proximo_usuario(banco)
+
 def atualizar_senha(username, nova_senha, request=None):
 
     try:

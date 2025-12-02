@@ -71,10 +71,12 @@
                             {% include 'parciais/navos.html' %}
 
                             {% include 'parciais/navagricola.html' %}
+                            {% include 'parciais/navnotificacoes.html' %}
                         </ul>
                     </div>
                 </div>
                 <div class="offcanvas-footer bg-body px-3 py-3 d-flex gap-2">
+
                     <a href="/web/selecionar-empresa/" class="btn btn-outline-primary">
                         <i class="bi bi-building"></i> Trocar Empresa/Filial
                     </a>
@@ -242,6 +244,7 @@
                     el.setAttribute('href', '/web/login/');
                 }
             });
+            // Itens por role são controlados no template via request.user
         });
 
         // Ordena alfabeticamente os itens de lista dentro dos menus colapsáveis

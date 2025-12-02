@@ -6,15 +6,19 @@ from rest_framework import status
 from django.core.cache import cache
 from django.contrib import messages
 from rest_framework.permissions import IsAuthenticated
-from Licencas.forms import FilialCertificadoForm
 from core.registry import get_licenca_db_config
 from core.middleware import get_licenca_slug
-from Licencas.models import Filiais
+from Licencas.models import Filiais, Empresas, Usuarios
+from Licencas.forms import FilialCertificadoForm,  EmpresaForm, FilialForm, UsuarioForm
 from Licencas.crypto import encrypt_bytes, encrypt_str
 from cryptography.hazmat.primitives.serialization.pkcs12 import load_key_and_certificates
 from Licencas.utils import get_proxima_filial, get_proxima_filial_empr, get_proxima_empresa, buscar_endereco_por_cep
 from django.db.models import Max
 from django.http import Http404, HttpResponseRedirect
+from django.views.generic import ListView, CreateView, UpdateView
+from django.urls import reverse_lazy
+from  .utils import proximo_usuario, atualizar_senha
+
 
 import logging
 logger = logging.getLogger(__name__)
@@ -68,13 +72,6 @@ class FilialCertificadoUploadView(FormView):
         slug = self.kwargs.get("slug")
         return reverse("filiais_web", kwargs={"slug": slug})
 
-
-
-from django.views.generic import ListView, CreateView, UpdateView
-from Licencas.models import Empresas
-from Licencas.forms import EmpresaForm, FilialForm
-from django.urls import reverse_lazy
-
 class DBSlugMixin:
     def dispatch(self, request, *args, **kwargs):
         self.slug = kwargs.get('slug') or get_licenca_slug()
@@ -85,6 +82,8 @@ class DBSlugMixin:
         ctx = super().get_context_data(**kwargs)
         ctx['slug'] = getattr(self, 'slug', None)
         return ctx
+
+
 
 class EmpresaListView(DBSlugMixin, ListView):
     model = Empresas
@@ -295,3 +294,179 @@ class FilialUpdateView(DBSlugMixin, UpdateView):
     def get_success_url(self):
         return reverse_lazy("filiais_web", kwargs={"slug": self.slug})
 
+
+class RoleRequiredMixin:
+    allowed_roles = ('admin', 'mobile')
+
+    def dispatch(self, request, *args, **kwargs):
+        import logging
+        banco = get_licenca_db_config(request)
+        setattr(request, 'db_alias', banco)
+        self.db_alias = banco
+        log = logging.getLogger(__name__)
+        raw_user = getattr(request, 'user', None)
+        username_guess = (getattr(raw_user, 'usua_nome', '') or getattr(raw_user, 'username', '') or '').lower()
+        db_user = None
+        try:
+            if hasattr(raw_user, 'usua_codi') and raw_user.usua_codi:
+                db_user = Usuarios.objects.using(self.db_alias).filter(usua_codi=raw_user.usua_codi).first()
+            elif username_guess:
+                db_user = Usuarios.objects.using(self.db_alias).filter(usua_nome__iexact=username_guess).first()
+        except Exception:
+            db_user = None
+        username = (getattr(db_user, 'usua_nome', '') or username_guess or '').lower()
+        role = username if username in {r.lower() for r in self.allowed_roles} else 'regular'
+        user_id = getattr(db_user, 'usua_codi', None) or getattr(raw_user, 'usua_codi', None)
+        log.info(f"[ACCESS] path={request.path} role={role} user_id={user_id}")
+        if role not in {r.lower() for r in self.allowed_roles}:
+            messages.error(request, 'Acesso negado: você não possui permissão para esta ação.')
+            from django.http import HttpResponseRedirect
+            return HttpResponseRedirect(reverse('home'))
+        return super().dispatch(request, *args, **kwargs)
+
+
+class UserListView(RoleRequiredMixin, DBSlugMixin, ListView):
+    model = Usuarios
+    template_name = 'Licencas/usuarios_lista.html'
+    context_object_name = 'usuarios'
+    
+
+    def get_queryset(self):
+        qs = Usuarios.objects.using(self.db_alias).order_by('-usua_codi')
+        nome = (self.request.GET.get('nome') or '').strip()
+        if nome:
+            qs = qs.filter(usua_nome__icontains=nome)
+        return qs.order_by('usua_nome')
+
+
+class UserCreateView(RoleRequiredMixin, DBSlugMixin, CreateView):
+    model= Usuarios
+    form_class = UsuarioForm
+    template_name = 'Licencas/usuario_form.html'
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['request'] = self.request
+        return kwargs
+
+    def form_valid(self, form):
+        logger.info("[UserCreate] Início form_valid alias=%s", self.db_alias)
+        logger.debug("[UserCreate] cleaned_data=%s", dict(form.cleaned_data))
+        usuario = form.save(commit=False)
+        # Gerar próximo código de usuário
+        usuario.usua_codi = proximo_usuario(self.request)
+        try:
+            logger.info("[UserCreate] Salvando usuario nome=%s codi=%s", usuario.usua_nome, usuario.usua_codi)
+            usuario.save(using=self.db_alias, force_insert=True)
+            try:
+                nova = (form.cleaned_data.get('password') or '').strip()
+                if nova:
+                    atualizar_senha(usuario.usua_nome, nova, request=self.request)
+            except Exception:
+                pass
+        except Exception:
+            logger.exception("[UserCreate] Erro ao salvar usuário")
+            form.add_error(None, 'Falha ao criar usuário. Verifique os dados informados.')
+            messages.error(self.request, 'Falha ao criar usuário. Verifique os dados informados.')
+            return self.form_invalid(form)
+        messages.success(self.request, "Usuário criado com sucesso.")
+        logger.info("[UserCreate] Concluído com sucesso usua_codi=%s", usuario.usua_codi)
+        return HttpResponseRedirect(self.get_success_url())
+
+    def form_invalid(self, form):
+        logger.warning("[UserCreate] FORM INVALID errors=%s", form.errors)
+        messages.error(self.request, 'Corrija os erros para continuar.')
+        return super().form_invalid(form)
+
+    def get_success_url(self):
+        return reverse_lazy('users_list', kwargs={'slug': self.slug})
+
+class UserEditView(RoleRequiredMixin, DBSlugMixin, UpdateView):
+    model = Usuarios
+    form_class = UsuarioForm
+    template_name = 'Licencas/usuario_form.html'
+    pk_url_kwarg = 'id'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['request'] = self.request
+        return kwargs
+
+    def get_queryset(self):
+        return Usuarios.objects.using(self.db_alias)
+
+    def get_object(self, queryset=None):
+        qs = queryset or self.get_queryset()
+      
+        user_id = self.kwargs.get(self.pk_url_kwarg)
+        try:
+            user_id = int(user_id)
+        except Exception:
+            raise Http404('Parâmetro inválido.')
+        obj = qs.filter(usua_codi=user_id).first()
+        if not obj:
+            raise Http404('Usuário não encontrado.')
+        return obj
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["usuario_id"] = self.object.usua_codi
+        return ctx
+    
+    def form_valid(self, form):
+        logger.info("[UserEdit] Início form_valid alias=%s", self.db_alias)
+        logger.debug("[UserEdit] cleaned_data=%s", dict(form.cleaned_data))
+        usuario = form.save(commit=False)
+        
+        try:
+            nova = (form.cleaned_data.get('password') or '').strip()
+            if not nova:
+                try:
+                    antigo = Usuarios.objects.using(self.db_alias).filter(usua_codi=usuario.usua_codi).values_list('password', flat=True).first()
+                    if antigo:
+                        usuario.password = antigo
+                except Exception:
+                    pass
+            logger.info("[UserEdit] Salvando usuario nome=%s codi=%s", usuario.usua_nome, usuario.usua_codi)
+            usuario.save(using=self.db_alias)
+            try:
+                if nova:
+                    atualizar_senha(usuario.usua_nome, nova, request=self.request)
+            except Exception:
+                pass
+        except Exception:
+            logger.exception("[UserEdit] Erro ao atualizar usuário")
+            form.add_error(None, 'Falha ao atualizar usuário.')
+            messages.error(self.request, 'Falha ao atualizar usuário.')
+            return self.form_invalid(form)
+        messages.success(self.request, "Usuário atualizado com sucesso.")
+        logger.info("[UserEdit] Concluído com sucesso usua_codi=%s", usuario.usua_codi)
+        return HttpResponseRedirect(self.get_success_url())
+
+    def form_invalid(self, form):
+        logger.warning("[UserEdit] FORM INVALID errors=%s", form.errors)
+        messages.error(self.request, 'Corrija os erros para continuar.')
+        return super().form_invalid(form)
+    def get_success_url(self):
+        return reverse_lazy('users_list', kwargs={'slug': self.slug})
+
+class UserDeleteView(RoleRequiredMixin, DBSlugMixin, FormView):
+    template_name = 'Licencas/usuario_confirm_delete.html'
+
+    def post(self, request, *args, **kwargs):
+        logger.info('[UserDelete] Solicitação de exclusão alias=%s', self.db_alias)
+        user_id = kwargs.get('id')
+        try:
+            user_id = int(user_id)
+        except Exception:
+            logger.warning('[UserDelete] ID inválido: %s', user_id)
+            messages.error(request, 'ID inválido.')
+            return HttpResponseRedirect(reverse('users_list', kwargs={'slug': self.slug}))
+        try:
+            logger.info('[UserDelete] Excluindo usuario id=%s', user_id)
+            Usuarios.objects.using(self.db_alias).filter(usua_codi=user_id).delete()
+            messages.success(request, 'Usuário excluído com sucesso.')
+        except Exception:
+            logger.exception('[UserDelete] Falha ao excluir usuario id=%s', user_id)
+            messages.error(request, 'Falha ao excluir usuário.')
+        return HttpResponseRedirect(reverse('users_list', kwargs={'slug': self.slug}))

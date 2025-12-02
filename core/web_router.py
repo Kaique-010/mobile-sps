@@ -36,4 +36,5 @@ urlpatterns = [
     path("<slug:slug>/cfop/", include("CFOP.Web.urls")),
     path("<slug:slug>/boletos/", include("boletos.Web.urls")),
     path("<slug:slug>/importador/", include("importador.urls")),
+    path("<slug:slug>/notificacoes/", include("notificacoes.Web.web_urls")),
 ]

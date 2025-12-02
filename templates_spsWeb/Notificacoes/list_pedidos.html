@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
+<div class="container py-3">
+  <h3 class="page-title">Pedidos Criados Hoje</h3>
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead>
+        <tr>
+          <th>Número</th>
+          <th>Cliente</th>
+          <th>Data</th>
+          <th>Total</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in object_list %}
+        <tr>
+          <td>{{ p.pedi_nume }}</td>
+          <td>{{ p.pedi_forn }}</td>
+          <td>{{ p.pedi_data }}</td>
+          <td>{{ p.pedi_tota }}</td>
+          <td>{{ p.get_pedi_stat_display }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center">Sem registros</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include 'components/pagination.html' %}
+</div>
+{% endblock %}
+

@@ -53,6 +53,15 @@
                         <li><a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/series/">Séries</a></li>
                         <li><a class="nav-link" href="/web/login/"
                                 data-slug-route="/web/{slug}/importador/">Importador</a></li>
+                        {% if request.user and request.user.usua_nome %}
+                        {% if request.user.usua_nome|lower == 'admin' or request.user.usua_nome|lower == 'mobile' %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/licencas/users/">
+                                <i class="bi bi-person"></i> Perfil / Usuários
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% endif %}
                     </ul>
                 </div>
             </li>

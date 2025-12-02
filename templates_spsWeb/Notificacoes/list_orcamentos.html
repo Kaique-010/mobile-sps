@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-3">
+  <h4>Orçamentos Criados Hoje</h4>
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead>
+        <tr>
+          <th>Número</th>
+          <th>Fornecedor</th>
+          <th>Data</th>
+          <th>Total</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in object_list %}
+        <tr>
+          <td>{{ o.pedi_nume }}</td>
+          <td>{{ o.pedi_forn }}</td>
+          <td>{{ o.pedi_data }}</td>
+          <td>{{ o.pedi_tota }}</td>
+          <td>{{ o.get_pedi_stat_display }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center">Sem registros</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include 'components/pagination.html' %}
+</div>
+{% endblock %}
+
