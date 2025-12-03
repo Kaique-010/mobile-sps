@@ -18,4 +18,4 @@ class ColetaEstoque(models.Model):
         verbose_name_plural = 'Coletas de Estoque'
 
     def __str__(self):
-        return f'Coleta de {self.cole_prod.prod_nome} ({self.cole_quan_lida}) em {self.cole_data_leit.strftime("%Y-%m-%d %H:%M")}'
+        return f'Coleta de {self.cole_prod} ({self.cole_quan_lida}) em {self.cole_data_leit.strftime("%Y-%m-%d %H:%M")}'

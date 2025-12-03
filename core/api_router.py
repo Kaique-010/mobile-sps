@@ -39,7 +39,7 @@ urlpatterns = [
     path("<slug>/controledevisitas/", include("controledevisitas.urls")),
     path("<slug>/pisos/", include("Pisos.urls")),
     path("<slug>/mcp-agent/", include("mcp_agent_db.urls")),
-    path("<slug>/coletaestoque/", include("coletaestoque.urls")),
+    path("<slug>/coletaestoque/", include("coletaestoque.REST.urls")),
     path("<slug>/Floresta/", include("Floresta.urls")),
     path("<slug>/lctobancario/", include("Lancamentos_Bancarios.urls")),
     path("<slug>/notasfiscais/", include("Notas_Fiscais.urls")),

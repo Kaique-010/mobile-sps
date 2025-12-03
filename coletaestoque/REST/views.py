@@ -6,8 +6,7 @@ from django.core.cache import cache
 from django.utils import timezone
 from core.utils import get_licenca_db_config
 from Produtos.models import Produtos, SaldoProduto
-from coletaestoque.models import ColetaEstoque
-from coletaestoque.serializers import ColetaEstoqueSerializer
+from coletaestoque.REST.serializers import ColetaEstoqueSerializer
 from Produtos.serializers import ProdutoSerializer
 
 
@@ -15,8 +14,10 @@ class ColetaEstoqueViewSet(viewsets.ModelViewSet):
     serializer_class = ColetaEstoqueSerializer
     
     def get_queryset(self):
+        empresa_id = self.request.headers.get('empresa-id', '1')
+        filial_id = self.request.headers.get('filial-id', '1')
         banco = get_licenca_db_config(self.request)
-        return ColetaEstoque.objects.using(banco).all()
+        return ColetaEstoque.objects.using(banco).filter(cole_empr=empresa_id, cole_fili=filial_id)
     
     def get_serializer_context(self):
         context = super().get_serializer_context()

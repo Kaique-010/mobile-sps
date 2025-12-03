@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Resumo das Coletas{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
+
+<div class="container page-container">
+    <div class="page-header-custom">
+        <div class="container align-items-center">
+            <h2 class="page-title"><i class="bi bi-clipboard-data"></i> Resumo das Coletas</h2>
+        </div>
+        <div class="container d-flex gap-2 justify-content-end">
+            <a class="btn btn-outline-secondary" href="/web/{{ slug }}/coleta-estoque/">Leituras</a>
+            <a class="btn btn-success" href="/web/{{ slug }}/coleta-estoque/novo/">
+                <i class="bi bi-plus"></i> Nova Leitura
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th>Produto</th>
+                            <th>Código</th>
+                            <th>Cód. Barras</th>
+                            <th>Total Coletado</th>
+                            <th>Leituras</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in resumo %}
+                        <tr>
+                            <td>{{ r.prod_nome|default:"" }}</td>
+                            <td>{{ r.prod_codi }}</td>
+                            <td>{{ r.prod_coba|default:"" }}</td>
+                            <td>{{ r.total_coletado }}</td>
+                            <td>{{ r.total_leituras }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center">Sem dados</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

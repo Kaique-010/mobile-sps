@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Coletas de Estoque{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
+
+<div class="container page-container">
+    <div class="page-header-custom">
+        <div class="container align-items-center">
+            <h2 class="page-title"><i class="bi bi-upc-scan"></i> Coletas de Estoque</h2>
+        </div>
+        <div class="container d-flex gap-2 justify-content-end">
+            <a class="btn btn-outline-secondary" href="/web/{{ slug }}/coleta-estoque/resumo/">Resumo</a>
+            <a class="btn btn-success" href="/web/{{ slug }}/coleta-estoque/novo/">
+                <i class="bi bi-plus"></i> Nova Leitura
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="get" class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <label class="form-label">Código do Produto</label>
+                    <input type="text" name="produto" value="{{ request.GET.produto }}" class="form-control"
+                        placeholder="Código do produto">
+                </div>
+                <div class="col-md-2 align-self-end">
+                    <button class="btn btn-primary w-100" type="submit">Filtrar</button>
+                </div>
+            </form>
+
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th>Produto</th>
+                            <th>Código</th>
+                            <th>Cód. Barras</th>
+                            <th>Quantidade</th>
+                            <th>Data</th>
+                            <th>Usuário</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in coletas_enriquecidas %}
+                        <tr>
+                            <td>{{ c.prod_nome|default:"" }}</td>
+                            <td>{{ c.cole_prod }}</td>
+                            <td>{{ c.prod_coba|default:"" }}</td>
+                            <td>{{ c.cole_quan_lida }}</td>
+                            <td>{{ c.cole_data_leit }}</td>
+                            <td>{{ c.cole_usua }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center">Sem leituras</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% include 'components/pagination.html' with page_obj=page_obj %}
+        </div>
+    </div>
+</div>
+{% endblock %}

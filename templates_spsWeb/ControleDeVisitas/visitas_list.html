@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>Controle de Visitas</h4>
+    <a href="/web/{{ slug }}/orcamentos/" class="btn btn-outline-primary">Orçamentos</a>
+  </div>
+  <form class="row g-2 mb-3" method="get">
+    <div class="col-md-4"><input type="text" name="cliente" value="{{ request.GET.cliente }}" placeholder="Cliente" class="form-control" /></div>
+    <div class="col-md-4"><input type="text" name="vendedor" value="{{ request.GET.vendedor }}" placeholder="Vendedor" class="form-control" /></div>
+    <div class="col-md-4"><button class="btn btn-primary w-100">Filtrar</button></div>
+  </form>
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead>
+        <tr>
+          <th>Número</th>
+          <th>Data</th>
+          <th>Cliente</th>
+          <th>Vendedor</th>
+          <th>Etapa</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in visitas %}
+        <tr>
+          <td>{{ v.ctrl_numero }}</td>
+          <td>{{ v.ctrl_data }}</td>
+          <td>{{ v.ctrl_cliente.enti_nome }}</td>
+          <td>{{ v.ctrl_vendedor.enti_nome }}</td>
+          <td>{{ v.ctrl_etapa.etap_descricao }}</td>
+          <td>
+            <a class="btn btn-sm btn-outline-secondary" href="/web/{{ slug }}/controle-de-visitas/resumo/{{ v.ctrl_id }}/">Resumo</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center">Nenhuma visita encontrada</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if is_paginated %}
+  <nav>
+    <ul class="pagination">
+      {% if page_obj.has_previous %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Anterior</a></li>
+      {% endif %}
+      <li class="page-item active"><span class="page-link">{{ page_obj.number }} / {{ paginator.num_pages }}</span></li>
+      {% if page_obj.has_next %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Próxima</a></li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+</div>
+{% endblock %}

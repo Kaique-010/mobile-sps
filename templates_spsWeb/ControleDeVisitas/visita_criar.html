@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+  <h4 class="mb-3">Nova Visita</h4>
+  <ul class="nav nav-pills mb-3" id="cv-tabs" role="tablist">
+    <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="pill"
+        data-bs-target="#tab-dados" type="button" role="tab">Dados Básicos</button></li>
+    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="pill"
+        data-bs-target="#tab-contato" type="button" role="tab">Contato</button></li>
+    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-ativ"
+        type="button" role="tab">Atividades</button></li>
+    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-itens"
+        type="button" role="tab">Itens</button></li>
+    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-extras"
+        type="button" role="tab">Extras</button></li>
+  </ul>
+  <form method="post" class="card p-3">
+    {% csrf_token %}
+    <div class="tab-content">
+      <div class="tab-pane fade show active" id="tab-dados" role="tabpanel">
+        <div class="row g-2">
+          <div class="col-md-3">{{ form.ctrl_data.label_tag }}{{ form.ctrl_data }}</div>
+          <div class="col-md-3 d-none">{{ form.ctrl_cliente_id.label_tag }}{{ form.ctrl_cliente_id }}</div>
+          <div class="col-md-3 d-none">{{ form.ctrl_vendedor_id.label_tag }}{{ form.ctrl_vendedor_id }}</div>
+          <div class="col-md-3 d-none">{{ form.ctrl_etapa_id.label_tag }}{{ form.ctrl_etapa_id }}</div>
+          <div class="col-md-4"><label class="form-label">Cliente</label><input type="text" id="cli-search"
+              class="form-control" placeholder="Buscar cliente" autocomplete="off" />
+            <div id="cli-results" class="list-group position-absolute w-100" style="z-index:1060;"></div>
+          </div>
+          <div class="col-md-4"><label class="form-label">Vendedor</label><input type="text" id="ven-search"
+              class="form-control" placeholder="Buscar vendedor" autocomplete="off" />
+            <div id="ven-results" class="list-group position-absolute w-100" style="z-index:1060;"></div>
+          </div>
+          <div class="col-md-4"><label class="form-label">Etapa</label><input type="text" id="eta-search"
+              class="form-control" placeholder="Buscar etapa" autocomplete="off" />
+            <div id="eta-results" class="list-group position-absolute w-100" style="z-index:1060;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="tab-pane fade" id="tab-contato" role="tabpanel">
+        <div class="row g-2">
+          <div class="col-md-4">{{ form.ctrl_contato.label_tag }}{{ form.ctrl_contato }}</div>
+          <div class="col-md-4">{{ form.ctrl_fone.label_tag }}{{ form.ctrl_fone }}</div>
+        </div>
+      </div>
+      <div class="tab-pane fade" id="tab-ativ" role="tabpanel">
+        <div class="row g-2">
+          <div class="col-md-2">
+            <div class="form-check">
+              {{ form.ctrl_novo }}<label class="form-check-label" for="id_ctrl_novo">Novo Cliente</label>
+            </div>
+          </div>
+          <div class="col-md-2">
+            <div class="form-check">
+              {{ form.ctrl_base }}<label class="form-check-label" for="id_ctrl_base">Base</label>
+            </div>
+          </div>
+          <div class="col-md-2">
+            <div class="form-check">
+              {{ form.ctrl_prop }}<label class="form-check-label" for="id_ctrl_prop">Proposta</label>
+            </div>
+          </div>
+          <div class="col-md-2">
+            <div class="form-check">
+              {{ form.ctrl_leva }}<label class="form-check-label" for="id_ctrl_leva">Levantamento</label>
+            </div>
+          </div>
+          <div class="col-md-4">{{ form.ctrl_proj.label_tag }}{{ form.ctrl_proj }}</div>
+        </div>
+        <div class="alert alert-secondary mt-2">Número de orçamento é preenchido automaticamente quando exportar para orçamento/pisos.</div>
+      </div>
+      <div class="tab-pane fade" id="tab-itens" role="tabpanel">
+        <div class="alert alert-info">Itens podem ser adicionados após criar a visita.</div>
+      </div>
+      <div class="tab-pane fade" id="tab-extras" role="tabpanel">
+        <div class="row g-2">
+          <div class="col-md-3">{{ form.ctrl_km_inic.label_tag }}{{ form.ctrl_km_inic }}</div>
+          <div class="col-md-3">{{ form.ctrl_km_fina.label_tag }}{{ form.ctrl_km_fina }}</div>
+          <div class="col-md-3">{{ form.ctrl_prox_visi.label_tag }}{{ form.ctrl_prox_visi }}</div>
+          <div class="col-md-12">{{ form.ctrl_obse.label_tag }}{{ form.ctrl_obse }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="mt-3 d-flex gap-2">
+      <button class="btn btn-primary">Criar</button>
+      <a href="/web/{{ slug }}/controle-de-visitas/" class="btn btn-outline-secondary">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function () {
+    const slug = '{{ slug }}';
+    const hidCli = document.getElementById('id_ctrl_cliente_id');
+    const hidVen = document.getElementById('id_ctrl_vendedor_id');
+    const hidEta = document.getElementById('id_ctrl_etapa_id');
+    const cliInput = document.getElementById('cli-search');
+    const venInput = document.getElementById('ven-search');
+    const etaInput = document.getElementById('eta-search');
+    const cliRes = document.getElementById('cli-results');
+    const venRes = document.getElementById('ven-results');
+    const etaRes = document.getElementById('eta-results');
+    let tCli, tVen, tEta;
+    function fetchAuto(path, term) {
+      const url = `/api/${slug}/controledevisitas/autocomplete/${path}/?q=${encodeURIComponent(term)}&limit=10&offset=0`;
+      return fetch(url, { headers: { 'Accept': 'application/json' } }).then(r => r.json()).catch(() => []);
+    }
+    function render(resEl, items, onPick) {
+      resEl.innerHTML = '';
+      items.forEach(it => {
+        const a = document.createElement('a');
+        a.href = '#';
+        a.className = 'list-group-item list-group-item-action';
+        a.textContent = it.label || '';
+        a.addEventListener('click', function (e) { e.preventDefault(); onPick(it); resEl.innerHTML = ''; });
+        resEl.appendChild(a);
+      });
+    }
+    cliInput.addEventListener('input', function () {
+      const v = this.value.trim();
+      clearTimeout(tCli);
+      if (v.length < 2) { cliRes.innerHTML = ''; return; }
+      tCli = setTimeout(function () { fetchAuto('clientes', v).then(arr => render(cliRes, arr, function (it) { hidCli.value = it.enti_clie; cliInput.value = it.enti_nome; })); }, 250);
+    });
+    venInput.addEventListener('input', function () {
+      const v = this.value.trim();
+      clearTimeout(tVen);
+      if (v.length < 2) { venRes.innerHTML = ''; return; }
+      tVen = setTimeout(function () { fetchAuto('vendedores', v).then(arr => render(venRes, arr, function (it) { hidVen.value = it.enti_clie; venInput.value = it.enti_nome; })); }, 250);
+    });
+    etaInput.addEventListener('input', function () {
+      const v = this.value.trim();
+      clearTimeout(tEta);
+      if (v.length < 1) { etaRes.innerHTML = ''; return; }
+      tEta = setTimeout(function () { fetchAuto('etapas', v).then(arr => render(etaRes, arr, function (it) { hidEta.value = it.etap_id; etaInput.value = it.etap_descricao; })); }, 250);
+    });
+    document.addEventListener('click', function (e) { [cliRes, venRes, etaRes].forEach(el => { if (el && !el.contains(e.target)) el.innerHTML = ''; }); });
+  })();
+</script>
+{% endblock %}
