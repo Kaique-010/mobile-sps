@@ -41,10 +41,57 @@ a.btn.btn-outline-primary:hover {
   color: #fff;
 }
 
+a.btn.btn-outline-secondary {
+  color: #b9b9b9;
+  border-color: #979ca0;
+  margin-bottom: 20px;
+  padding: 12px 20px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 4px;
+}
+a.btn.btn-outline-secondary:hover {
+  background-color: #d8bd44;
+  color: #fff;
+}
+
+a.btn.btn-outline-danger {
+  color: #e95136;
+  border-color: #ff1d1d;
+  margin-bottom: 20px;
+  padding: 12px 20px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 4px;
+}
+a.btn.btn-outline-danger:hover {
+  background-color: #ff1d1d;
+  color: #fff;
+}
+
+button.btn.btn-outline-success {
+  color: #439472;
+  border-color: #a4fcff;
+  margin-bottom: 20px;
+  padding: 12px 20px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 4px;
+}
+button.btn.btn-outline-success:hover {
+  background-color: #439472;
+  color: #fff;
+}
+
 /*Botões para a página de notas destinadas*/
 #btn-filtrar {
-  background-color: #1f6fb2;
-  border-color: #a4fcff;
+  color: #ffffff;
+  border-color: #3c1deb;
+  margin-bottom: 20px;
+  padding: 12px 20px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 4px;
 }
 
 #btn-filtrar:hover {

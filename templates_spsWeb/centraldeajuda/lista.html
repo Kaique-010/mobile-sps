@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<style>
+  .central-wrapper {
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .central-title {
+    text-align: center;
+    font-weight: 600;
+    letter-spacing: .2px;
+  }
+
+  .module-card .card {
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .08);
+    transition: transform .15s ease;
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-color: var(--bs-primary) !important;
+  }
+
+  .module-card .card:hover {
+    transform: translateY(-2px);
+  }
+
+  .module-card .card-body {
+    padding: 1rem 1.25rem;
+  }
+
+  .module-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: .5rem;
+  }
+
+  .module-header .badge {
+    font-size: .75rem;
+  }
+
+  .progress-sm {
+    height: 8px;
+    border-radius: 6px;
+  }
+
+  .progress-sm .progress-bar {
+    background: linear-gradient(90deg, var(--bs-primary), #27ae60);
+  }
+
+  .manual-item {
+    padding: .5rem .75rem;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, .12);
+    margin-bottom: .75rem;
+  }
+
+  .manual-item .title {
+    font-weight: 600;
+  }
+
+  .manual-item .actions {
+    display: flex;
+    gap: .5rem;
+  }
+
+  .card-header {
+    border-bottom: 1px solid rgba(255, 255, 255, .12);
+    background: transparent;
+  }
+
+  .principal {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .principal .btn-group {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+  }
+
+  .principal .btn-group .btn {
+    padding: .375rem .75rem;
+  }
+</style>
+
+<div class="container central-wrapper">
+  <h3 class="mb-4 central-title">Central de Ajuda</h3>
+  <p class="text-muted small mb-4 text-center">
+    Acesse os manuais de ajuda para cada módulo.
+  </p>
+  <div class="card principal">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center gap-2">
+        <select id="moduleFilter" class="form-select form-select-sm" style="max-width:240px;">
+          <option value="">Todos os módulos</option>
+          {% for card in module_cards %}
+          <option value="{{ card.code }}">{{ card.name }}</option>
+          {% endfor %}
+        </select>
+        <a class="btn btn-outline-success btn-sm" href="{% url 'central_criar' slug=slug %}"><i
+            class="bi bi-plus-lg"></i>
+          Novo</a>
+      </div>
+    </div>
+
+
+
+    {% if module_cards %}
+    <div class="row g-3 mb-4 module-card">
+      {% for card in module_cards %}
+      <div class="col-12 col-md-6 col-lg-4">
+        <div class="card border-primary h-100">
+          <div class="card-body">
+            <div class="module-header mb-2">
+              <span class="fw-semibold">{{ card.name }}</span>
+              <span class="badge text-bg-secondary">{{ card.count }} manuais</span>
+            </div>
+            <div class="progress progress-sm">
+              <div class="progress-bar" role="progressbar" style="width: {{ card.avg }}%;"
+                aria-valuenow="{{ card.avg }}" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+            <div class="mt-2 text-muted small">Média de progresso: {{ card.avg }}%</div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% regroup object_list by cent_modu as grupos %}
+
+    {% if grupos %}
+    <div class="row g-3">
+      {% for grupo in grupos %}
+      <div class="col-12 col-md-6 col-lg-4" data-module="{{ grupo.grouper }}">
+        <div class="card h-100 border-primary">
+          <div class="card-header fw-semibold">
+            {{ grupo.list.0.get_cent_modu_display }}
+          </div>
+          <div class="card-body">
+            {% for item in grupo.list %}
+            <div class="manual-item">
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="title">{{ item.cent_titu }}</span>
+                <span class="badge text-bg-{{ item.status_class }}">{{ item.status }}</span>
+                <a class="btn btn-outline-primary btn-sm"
+                  href="{% url 'central_detalhe' slug=slug pk=item.pk %}">Abrir</a>
+              </div>
+              <div class="progress mt-2 progress-sm">
+                <div class="progress-bar" role="progressbar" style="width: {{ item.prog|default:0 }}%;"
+                  aria-valuenow="{{ item.prog|default:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+              <div class="small text-muted mt-1">Progresso: {{ item.prog|default:0 }}%</div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p>Nenhum conteúdo cadastrado.</p>
+    {% endif %}
+    {% endblock %}
+    {% block extra_js %}
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        var sel = document.getElementById('moduleFilter');
+        if (!sel) return;
+        var cols = document.querySelectorAll('[data-module]');
+        sel.addEventListener('change', function () {
+          var val = this.value;
+          cols.forEach(function (el) {
+            el.style.display = (!val || el.getAttribute('data-module') === val) ? '' : 'none';
+          });
+        });
+      });
+    </script>
+    {% endblock %}

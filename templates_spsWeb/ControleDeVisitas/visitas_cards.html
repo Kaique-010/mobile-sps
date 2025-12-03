@@ -2,61 +2,147 @@
 {% load static %}
 
 {% block content %}
-<div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4>Visitas</h4>
-        <div class="d-flex gap-2">
-            <a href="/web/{{ slug }}/controle-de-visitas/nova/" class="btn btn-primary">Nova Visita</a>
-            <a href="/web/{{ slug }}/controle-de-visitas/dashboard/" class="btn btn-outline-secondary">Dashboard</a>
+<style>
+    .cv-dark .card {
+        border: 1px solid rgba(255, 255, 255, .08);
+        color: #e8eef5;
+    }
+
+    .cv-dark .card .small,
+    .cv-dark .card .text-muted {
+        color: #a8b4c2 !important;
+    }
+
+    .cv-dark .badge {
+        background: rgba(255, 255, 255, .12);
+        color: #e8eef5;
+    }
+
+    .btn-green {
+        background: #19c37d;
+        color: #08121f;
+        border: 0;
+    }
+
+    .btn-cyan {
+        background: #22b7d8;
+        color: #08121f;
+        border: 0;
+    }
+
+    .progress-bar.bg-success {
+        background: #19c37d;
+    }
+
+    .progress-bar.bg-warning {
+        background: #f0ad4e;
+    }
+
+    .progress-bar.bg-info {
+        background: #22b7d8;
+    }
+
+    .progress-bar.bg-primary {
+        background: #5b8def;
+    }
+
+    .progress-bar.bg-danger {
+        background: #ff6b6b;
+    }
+</style>
+<div class="container cv-dark py-2">
+    <div class="row mb-3">
+        <div class="col-12">
+            <h3 class="text-center m-0">Controle de Visitas</h3>
         </div>
-    </div>
-    <form class="row g-2 mb-3" method="get">
-        <div class="col-md-4"><input type="text" name="cliente" value="{{ request.GET.cliente }}" placeholder="Cliente"
-                class="form-control" /></div>
-        <div class="col-md-4"><input type="text" name="vendedor" value="{{ request.GET.vendedor }}"
-                placeholder="Vendedor" class="form-control" /></div>
-        <div class="col-md-4"><button class="btn btn-primary w-100">Filtrar</button></div>
-    </form>
-    <div class="row g-3">
-        {% for v in visitas %}
-        <div class="col-lg-4 col-md-6">
-            <div class="card h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h6 class="card-title mb-0">#{{ v.ctrl_numero }}</h6>
-                        <span class="badge text-bg-light">{{ v.ctrl_data }}</span>
-                    </div>
-                    <div class="mt-2 small">Cliente: {{ v.ctrl_cliente.enti_nome }}</div>
-                    <div class="small">Vendedor: {{ v.ctrl_vendedor.enti_nome }}</div>
-                    <div class="small">Etapa: {{ v.ctrl_etapa.etap_descricao }}</div>
-                </div>
-                <div class="card-footer d-flex justify-content-between">
-                    <a class="btn btn-sm btn-outline-primary"
-                        href="/web/{{ slug }}/controle-de-visitas/resumo/{{ v.ctrl_id }}/">Abrir</a>
-                    {% if v.ctrl_prox_visi %}<span class="small">Próx.: {{ v.ctrl_prox_visi }}</span>{% endif %}
-                </div>
+        <div class="col-md-12">
+            <div class="d-flex justify-content-end gap-2">
+                <a href="/web/{{ slug }}/controle-de-visitas/nova/" class="btn btn-green">Nova Visita</a>
+                <a href="/web/{{ slug }}/controle-de-visitas/dashboard/" class="btn btn-cyan">Dashboard</a>
             </div>
         </div>
-        {% empty %}
-        <div class="col-12">
-            <div class="alert alert-info">Nenhuma visita encontrada</div>
-        </div>
-        {% endfor %}
     </div>
-    {% if is_paginated %}
-    <nav class="mt-3">
-        <ul class="pagination">
-            {% if page_obj.has_previous %}
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Anterior</a>
-            </li>
-            {% endif %}
-            <li class="page-item active"><span class="page-link">{{ page_obj.number }} / {{ paginator.num_pages
-                    }}</span></li>
-            {% if page_obj.has_next %}
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Próxima</a></li>
-            {% endif %}
-        </ul>
-    </nav>
-    {% endif %}
-</div>
-{% endblock %}
+    <div class="container 1 justify-content-center">
+        <div class="row g-2 align-items-center mb-3">
+            <div class="col-md-12">
+                <form class="row g-2" method="get">
+                    <div class="col-md-4"><input type="text" name="cliente" value="{{ request.GET.cliente }}"
+                            placeholder="Cliente" class="form-control" /></div>
+                    <div class="col-md-4"><input type="text" name="vendedor" value="{{ request.GET.vendedor }}"
+                            placeholder="Vendedor" class="form-control" /></div>
+                    <div class="col-md-4"><button class="btn btn-outline-primary w-100">Filtrar</button></div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+    {% if funil %}
+    <div class="container 3">
+        <div class="row g-3 mb-3">
+            {% for f in funil %}
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="small text-muted">{{ f.label }}</span>
+                            <span class="badge text-bg-secondary">{{ f.qtd }}</span>
+                        </div>
+                        <div class="progress mt-2" style="height:6px;">
+                            <div class="progress-bar bg-{{ f.color }}" role="progressbar" style="width: {{ f.perc }}%;">
+                            </div>
+                        </div>
+                        <div class="small text-muted mt-1">{{ f.perc }}%</div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        <div class="row g-3">
+            {% for v in visitas %}
+            <div class="col-lg-4 col-md-6">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="card-title mb-0">#{{ v.ctrl_numero }}</h6>
+                            <span class="badge text-bg-light">{{ v.ctrl_data }}</span>
+                        </div>
+                        <div class="mt-2 small">Cliente: {{ v.ctrl_cliente.enti_nome }}</div>
+                        <div class="small">Vendedor: {{ v.ctrl_vendedor.enti_nome }}</div>
+                        <div class="small">Etapa: {{ v.ctrl_etapa.etap_descricao }}</div>
+                    </div>
+                    <div class="card-footer d-flex justify-content-between">
+                        <a class="btn btn-sm btn-outline-primary"
+                            href="/web/{{ slug }}/controle-de-visitas/resumo/{{ v.ctrl_id }}/">Abrir</a>
+                        {% if v.ctrl_prox_visi %}<span class="small">Próx.: {{ v.ctrl_prox_visi }}</span>{% endif %}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="alert alert-info">Nenhuma visita encontrada</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% if is_paginated %}
+        <nav class="mt-3">
+            <ul class="pagination">
+                {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link"
+                        href="?page={{ page_obj.previous_page_number }}&cliente={{ request.GET.cliente|urlencode }}&vendedor={{ request.GET.vendedor|urlencode }}">Anterior</a>
+                </li>
+                {% endif %}
+                <li class="page-item active"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+                {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link"
+                        href="?page={{ page_obj.next_page_number }}&cliente={{ request.GET.cliente|urlencode }}&vendedor={{ request.GET.vendedor|urlencode }}">Próxima</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+
+
+
+    {% endblock %}

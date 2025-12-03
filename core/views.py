@@ -3,6 +3,9 @@ from django.shortcuts import render, redirect
 from django.urls import reverse
 import json
 from Entidades.models import Entidades
+from Pedidos.models import PedidoVenda, Itenspedidovenda
+from django.db.models import Sum, F, ExpressionWrapper, DecimalField
+from datetime import datetime, timedelta
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from core.utils import get_licenca_db_config, get_db_from_slug
@@ -61,6 +64,11 @@ def home(request):
         empresa_id = int(empresa_id) if empresa_id is not None else None
     except Exception:
         empresa_id = None
+    filial_id = request.session.get('filial_id')
+    try:
+        filial_id = int(filial_id) if filial_id is not None else None
+    except Exception:
+        filial_id = None
 
     vendedor_selecionado = (request.GET.get('vendedor') or '').strip()
     vendedores_qs = Entidades.objects.using(banco).filter(enti_tipo_enti='VE')
@@ -71,17 +79,64 @@ def home(request):
         vendedores_qs = vendedores_qs.filter(enti_empr=-1)
     vendedores_qs = vendedores_qs.order_by('enti_nome')
 
-    labels = []
-    total_pedidos = []
-    total_valor_pedido = []
+    di = (request.GET.get('data_inicio') or '').strip()
+    df = (request.GET.get('data_fim') or '').strip()
+    try:
+        ini = datetime.strptime(di, '%Y-%m-%d').date() if di else (datetime.today().date() - timedelta(days=30))
+    except Exception:
+        ini = datetime.today().date() - timedelta(days=30)
+    try:
+        fim = datetime.strptime(df, '%Y-%m-%d').date() if df else datetime.today().date()
+    except Exception:
+        fim = datetime.today().date()
+
+    pedidos_qs = PedidoVenda.objects.using(banco).filter(pedi_canc=False, pedi_data__gte=ini, pedi_data__lte=fim)
+    if empresa_id is not None:
+        pedidos_qs = pedidos_qs.filter(pedi_empr=empresa_id)
+    if filial_id is not None:
+        pedidos_qs = pedidos_qs.filter(pedi_fili=filial_id)
+
+    if vendedor_selecionado:
+        try:
+            vend_ids = list(
+                Entidades.objects.using(banco)
+                .filter(enti_tipo_enti='VE', enti_nome__iexact=vendedor_selecionado)
+                .values_list('enti_clie', flat=True)
+            )
+            if vend_ids:
+                pedidos_qs = pedidos_qs.filter(pedi_vend__in=[str(v) for v in vend_ids])
+            else:
+                pedidos_qs = pedidos_qs.none()
+        except Exception:
+            pedidos_qs = pedidos_qs.none()
+
+    total_valor = pedidos_qs.aggregate(v=Sum('pedi_tota')).get('v') or 0
+    qtd_pedidos = pedidos_qs.count()
+    ticket_medio = (float(total_valor) / qtd_pedidos) if qtd_pedidos else 0.0
+
+    numeros = list(pedidos_qs.values_list('pedi_nume', flat=True))
+    itens_qs = Itenspedidovenda.objects.using(banco).filter(iped_pedi__in=[str(n) for n in numeros])
+    custo_expr = ExpressionWrapper(F('iped_cust') * F('iped_quan'), output_field=DecimalField(max_digits=15, decimal_places=4))
+    total_custo = itens_qs.aggregate(c=Sum(custo_expr)).get('c') or 0
+    lucro_valor = (float(total_valor) - float(total_custo)) if total_valor else 0.0
+    lucro_percent = (lucro_valor / float(total_valor) * 100.0) if total_valor else 0.0
+    itens_contagem = itens_qs.count()
+
     context = {
         'vendedores': vendedores_qs,
         'vendedor_selecionado': vendedor_selecionado,
-        'labels': json.dumps(labels),
-        'total_pedidos': json.dumps(total_pedidos),
-        'total_valor_pedido': json.dumps(total_valor_pedido),
-        'data_inicio': request.GET.get('data_inicio', ''),
-        'data_fim': request.GET.get('data_fim', ''),
+        'labels': json.dumps([]),
+        'total_pedidos': json.dumps([]),
+        'total_valor_pedido': json.dumps([]),
+        'data_inicio': di,
+        'data_fim': df,
+        'kpis': {
+            'total_valor': float(total_valor),
+            'lucro_percent': float(lucro_percent),
+            'ticket_medio': float(ticket_medio),
+            'qtd_pedidos': int(qtd_pedidos),
+            'itens_contagem': int(itens_contagem),
+        },
     }
     return render(request, 'home.html', context)
 

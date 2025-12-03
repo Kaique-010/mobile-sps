@@ -42,6 +42,20 @@ class GerarTitulosPedidoView(APIView):
         except PedidoVenda.DoesNotExist:
             return Response({"detail": "Pedido de venda não encontrado."}, status=404)
 
+        # Evita duplicidade: já existem títulos para este pedido/cliente
+        ja_existe = Titulosreceber.objects.using(banco).filter(
+            titu_empr=pedi_empr,
+            titu_fili=pedi_fili,
+            titu_seri="PEV",
+            titu_titu=str(pedi_nume),
+            titu_clie=pedi_forn,
+        ).exists()
+        if ja_existe:
+            return Response(
+                {"detail": "Já existe título com este pedido e cliente. Clique em Consultar."},
+                status=409,
+            )
+
         total_restante = (pedi_tota - entrada).quantize(Decimal("0.01"))
         valor_parcela = (total_restante / (parcelas if parcelas > 0 else 1)).quantize(Decimal("0.01"))
         diferenca = total_restante - (valor_parcela * (parcelas if parcelas > 0 else 1))
@@ -98,8 +112,15 @@ class GerarTitulosPedidoView(APIView):
                 titu_tipo="Receber"
             ))
 
-        with transaction.atomic(using=banco):
-            Titulosreceber.objects.using(banco).bulk_create(titulos)
+        try:
+            with transaction.atomic(using=banco):
+                Titulosreceber.objects.using(banco).bulk_create(titulos)
+        except Exception as e:
+            # Integridade/duplicidade: retorna mensagem amigável
+            return Response(
+                {"detail": "Já existe título com este pedido e cliente. Clique em Consultar."},
+                status=409,
+            )
 
         return Response({
             "detail": f"{len(titulos)} títulos gerados com sucesso.",
@@ -174,6 +195,7 @@ class ConsultarTitulosPedidoView(APIView):
             "vencimento": titulo.titu_venc,
             "forma_pagamento": titulo.titu_form_reci,
             "status": titulo.titu_situ,
+            "aberto": titulo.titu_aber,
             "empresa": titulo.titu_empr,
             "filial": titulo.titu_fili
         } for titulo in titulos]
@@ -196,6 +218,7 @@ class AtualizarTituloPedidoView(APIView):
         parcela = data.get("parcela")
         valor = data.get("valor")
         vencimento = data.get("vencimento")
+        forma_pagamento = data.get("forma_pagamento")
 
         if not all([pedi_nume, parcela, valor, vencimento]):
             return Response({"detail": "pedi_nume, parcela, valor e vencimento são obrigatórios."}, status=400)
@@ -216,13 +239,50 @@ class AtualizarTituloPedidoView(APIView):
         except Titulosreceber.DoesNotExist:
             return Response({"detail": "Título não encontrado."}, status=404)
 
+        if titulo.titu_aber and str(titulo.titu_aber).upper() != 'A':
+            return Response({"detail": "Título não pode ser editado pois não está aberto."}, status=409)
+
+        # Validação de limite: soma dos títulos não pode ultrapassar total do pedido
+        try:
+            novo_valor = Decimal(str(valor))
+        except Exception:
+            return Response({"detail": "Valor inválido."}, status=400)
+        if novo_valor < 0:
+            return Response({"detail": "Valor da parcela não pode ser negativo."}, status=400)
+
+        tota_limite = Decimal(str(getattr(pedido, 'pedi_tota', 0) or 0))
+        soma_atual = Titulosreceber.objects.using(banco).filter(
+            titu_empr=pedido.pedi_empr,
+            titu_fili=pedido.pedi_fili,
+            titu_seri="PEV",
+            titu_titu=str(pedi_nume)
+        ).aggregate(total=Sum('titu_valo'))['total'] or Decimal('0')
+        soma_sem_parcela = Decimal(str(soma_atual)) - Decimal(str(titulo.titu_valo or 0))
+        if (soma_sem_parcela + novo_valor) > tota_limite:
+            return Response({"detail": "Soma dos títulos excede o total do pedido."}, status=409)
+
         if isinstance(vencimento, str):
             vencimento = datetime.strptime(vencimento, "%Y-%m-%d").date()
 
         with transaction.atomic(using=banco):
-            titulo.titu_valo = Decimal(str(valor))
-            titulo.titu_venc = vencimento
-            titulo.save(using=banco)
+            Titulosreceber.objects.using(banco).filter(
+                titu_empr=pedido.pedi_empr,
+                titu_fili=pedido.pedi_fili,
+                titu_seri="PEV",
+                titu_titu=str(pedi_nume),
+                titu_parc=parcela
+            ).update(
+                titu_valo=Decimal(str(valor)),
+                titu_venc=vencimento,
+                **({"titu_form_reci": forma_pagamento} if forma_pagamento is not None else {})
+            )
+            titulo = Titulosreceber.objects.using(banco).get(
+                titu_empr=pedido.pedi_empr,
+                titu_fili=pedido.pedi_fili,
+                titu_seri="PEV",
+                titu_titu=str(pedi_nume),
+                titu_parc=parcela
+            )
 
         return Response({
             "detail": "Título atualizado com sucesso.",

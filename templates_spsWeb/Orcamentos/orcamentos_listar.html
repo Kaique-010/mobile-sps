@@ -74,12 +74,11 @@
   </form>
 
   <div class="table-responsive d-none d-md-block">
-    <table class="table table-hover align-left p-2">
+    <table class="table table-hover align-left" style="padding: 15px; gap: 10px; flex-wrap: wrap;">
       <thead class="table">
         <tr>
           <th>Nº</th>
           <th>Data</th>
-          <th>ID Cliente</th>
           <th>Nome do Cliente</th>
           <th>Nome do Vendedor</th>
           <th class="text-end">Total</th>
@@ -91,7 +90,6 @@
         <tr>
           <td>{{ o.pedi_nume }}</td>
           <td>{{ o.pedi_data|date:'d/m/Y' }}</td>
-          <td>{{ o.pedi_forn|default:"—" }}</td>
           <td>{{ o.cliente_nome|default:"—" }}</td>
           <td>{{ o.vendedor_nome|default:"—" }}</td>
           <td class="text-end">{{ o.pedi_tota|brl }}</td>
@@ -104,7 +102,7 @@
             <form method="post" action="{% url 'OrcamentosWeb:orcamento_transformar' slug=slug pk=o.pk %}"
               style="display:inline">
               {% csrf_token %}
-              <button type="submit" class="btn btn-sm btn-outline-success">Transformar em Pedido</button>
+              <button type="submit" class="btn btn-sm btn-outline-success">Transf. em Pedido</button>
             </form>
             {% endif %}
           </td>
@@ -117,8 +115,8 @@
       </tbody>
       <tfoot>
         <tr class="table-dark">
-          <td colspan="6" class="text-end fw-bold">Total ({{ total_registros }} registros):</td>
-          <td class="text-end">{{ total_valor|brl }}</td>
+          <td colspan="6" class="text-end fw-bold">Total ({{ total_registros }} registros): {{ total_valor|brl }}</td>
+          <td class="text-left"></td>
           <td></td>
         </tr>
       </tfoot>
@@ -138,10 +136,13 @@
           <div><strong>Total:</strong> {{ o.pedi_tota|brl }}</div>
         </div>
         <div class="mt-3 d-flex gap-2">
-          <a class="btn btn-sm btn-outline-primary" href="{% url 'OrcamentosWeb:orcamento_detalhe' slug=slug pk=o.pk %}">Detalhes</a>
-          <a class="btn btn-sm btn-outline-secondary" href="{% url 'OrcamentosWeb:orcamento_editar' slug=slug pk=o.pk %}">Editar</a>
+          <a class="btn btn-sm btn-outline-primary"
+            href="{% url 'OrcamentosWeb:orcamento_detalhe' slug=slug pk=o.pk %}">Detalhes</a>
+          <a class="btn btn-sm btn-outline-secondary"
+            href="{% url 'OrcamentosWeb:orcamento_editar' slug=slug pk=o.pk %}">Editar</a>
           {% if not o.pedi_nume_pedi %}
-          <form method="post" action="{% url 'OrcamentosWeb:orcamento_transformar' slug=slug pk=o.pk %}" style="display:inline">
+          <form method="post" action="{% url 'OrcamentosWeb:orcamento_transformar' slug=slug pk=o.pk %}"
+            style="display:inline">
             {% csrf_token %}
             <button type="submit" class="btn btn-sm btn-outline-success">Transformar</button>
           </form>

@@ -1,4 +1,6 @@
-<div id="financeiro-pedido" class="card shadow-sm" data-pedi-nume="{{ object.pedi_nume }}" data-pedi-forn="{{ object.pedi_forn }}" data-pedi-tota="{{ object.pedi_tota }}" data-pedi-topr="{{ object.pedi_topr }}" data-pedi-desc="{{ object.pedi_desc }}" data-slug="{{ slug }}">
+<div id="financeiro-pedido" class="card shadow-sm" data-pedi-nume="{{ object.pedi_nume }}"
+  data-pedi-forn="{{ object.pedi_forn }}" data-pedi-tota="{{ object.pedi_tota }}"
+  data-pedi-topr="{{ object.pedi_topr }}" data-pedi-desc="{{ object.pedi_desc }}" data-slug="{{ slug }}">
   <div class="card-body">
     <h5 class="card-title mb-3">Financeiro</h5>
     <div class="row g-3 mb-3">
@@ -52,10 +54,11 @@
           <option value="60">PIX</option>
         </select>
       </div>
-      <div class="col-md-3 d-flex gap-2">
+      <div class="col-md-3 d-flex gap-2 flex-wrap">
         <button type="button" class="btn btn-outline-success" id="fin-btn-gerar">Gerar Títulos</button>
         <button type="button" class="btn btn-outline-primary" id="fin-btn-consultar">Consultar</button>
         <button type="button" class="btn btn-outline-danger" id="fin-btn-remover">Remover</button>
+        <button type="button" class="btn btn-warning d-none" id="fin-btn-atualizar">Atualizar</button>
       </div>
     </div>
 
@@ -83,5 +86,5 @@
 </div>
 
 <script>
-{% include 'Pedidos/FinanceiroPedido.js' %}
+  {% include 'Pedidos/FinanceiroPedido.js' %}
 </script>

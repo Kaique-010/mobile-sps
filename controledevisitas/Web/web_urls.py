@@ -1,6 +1,12 @@
 from django.urls import path
 from .Views.list import ControleVisitaListView, ControleVisitaResumoView, ProximasVisitasDashboardView
 from .Views.registrar import RegistrarItemVisitaView, ControleVisitaCreateView, ControleVisitaEditView
+from .Views.etapas import (
+    EtapaVisitaListView,
+    EtapaVisitaCreateView,
+    EtapaVisitaUpdateView,
+    EtapaVisitaDeleteView,
+)
 
 
 urlpatterns = [
@@ -10,4 +16,9 @@ urlpatterns = [
     path('dashboard/', ProximasVisitasDashboardView.as_view(), name='visitas_dashboard_web'),
     path('nova/', ControleVisitaCreateView.as_view(), name='visita_criar_web'),
     path('editar/<int:ctrl_id>/', ControleVisitaEditView.as_view(), name='visita_editar_web'),
+    # Etapas
+    path('etapas/', EtapaVisitaListView.as_view(), name='etapas_list_web'),
+    path('etapas/nova/', EtapaVisitaCreateView.as_view(), name='etapa_criar_web'),
+    path('etapas/editar/<int:etap_id>/', EtapaVisitaUpdateView.as_view(), name='etapa_editar_web'),
+    path('etapas/excluir/<int:etap_id>/', EtapaVisitaDeleteView.as_view(), name='etapa_excluir_web'),
 ]

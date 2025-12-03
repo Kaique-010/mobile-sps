@@ -93,8 +93,12 @@
           <label class="form-label">Venc. Final</label>
           <input type="date" name="venc_fim" value="{{ filters.venc_fim }}" class="form-control">
         </div>
+        <div class="col-md-2">
+          <label class="form-label">Série</label>
+          <input type="text" name="titu_seri" value="{{ filters.titu_seri }}" class="form-control" placeholder="Ex.: PEV, ORS">
+        </div>
         <div class="col-12">
-          <button type="submit" class="btn btn-outline-primary">Filtrar</button>
+          <button type="submit" class="btn btn-outline-primary" id="btn-filtrar">Filtrar</button>
           <a href="?" class="btn btn-outline-secondary">Limpar</a>
         </div>
       </form>

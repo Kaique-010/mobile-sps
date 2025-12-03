@@ -5,7 +5,8 @@ from .views import *
 from ..views_financeiro import (
     GerarTitulosOS, 
     RemoverTitulosOSView,
-    ConsultarTitulosOSView
+    ConsultarTitulosOSView,
+    AtualizarTituloOSView
 )
 from ..view_dash import OrdemServicoGeralViewSet
 
@@ -22,4 +23,5 @@ urlpatterns += [
     path('financeiro/gerar-titulos/', GerarTitulosOS.as_view(), name='gerar_titulos'),
     path('financeiro/remover-titulos/', RemoverTitulosOSView.as_view(), name='remover_titulos'),
     path('financeiro/consultar-titulos/<int:orde_nume>/', ConsultarTitulosOSView.as_view(), name='consultar_titulos'),
+    path('financeiro/atualizar-titulo/', AtualizarTituloOSView.as_view(), name='atualizar_titulo'),
 ]

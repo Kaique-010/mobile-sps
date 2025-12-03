@@ -35,7 +35,7 @@ class Controlevisita(models.Model):
 
     ctrl_id = models.IntegerField(primary_key=True, verbose_name='ID')
     ctrl_empresa = models.ForeignKey(Empresas,on_delete=models.DO_NOTHING,db_column='ctrl_empresa',verbose_name='Empresa',blank=True,null=True)
-    ctrl_filial = models.ForeignKey(Filiais,on_delete=models.DO_NOTHING,db_column='ctrl_filial',verbose_name='Filial',blank=True,null=True)
+    ctrl_filial = models.IntegerField(db_column='ctrl_filial', verbose_name='Filial', blank=True, null=True)
     ctrl_numero = models.IntegerField(verbose_name='Número', blank=True, null=True)
     ctrl_cliente = models.ForeignKey(Entidades,on_delete=models.DO_NOTHING,db_column='ctrl_cliente',verbose_name='Cliente',related_name='visitas_cliente',blank=True,null=True)
     ctrl_data = models.DateField(verbose_name='Data da Visita', blank=True, null=True)

@@ -2,19 +2,115 @@
 {% load static %}
 
 {% block content %}
-<div class="container">
+<style>
+  .cv-dark .card {
+
+    border: 1px solid rgba(255, 255, 255, .08);
+    color: #e8eef5;
+  }
+
+  .cv-dark .badge {
+    background: rgba(255, 255, 255, .12);
+    color: #e8eef5;
+  }
+
+  .metric-teal .card {
+    background: #21c7b7;
+    color: #08121f;
+  }
+
+  .metric-orange .card {
+    background: #f0ad4e;
+    color: #08121f;
+  }
+
+  .metric-purple .card {
+    background: #8e7df5;
+    color: #08121f;
+  }
+
+  .metric-aqua .card {
+    background: #22b7d8;
+    color: #08121f;
+  }
+
+  .metric-red .card {
+    background: #ff6b6b;
+    color: #08121f;
+  }
+
+  .chart-wrap {
+    position: relative;
+    height: 240px;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+</style>
+<div class="container cv-dark py-2">
   <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4>Dashboard de Visitas</h4>
+    <div class="container">
+      <h4 class="text-center">Dashboard de Visitas</h4>
+    </div>
     <a href="/web/{{ slug }}/controle-de-visitas/" class="btn btn-outline-secondary">Voltar</a>
   </div>
   <div class="row g-3">
-    <div class="col-md-4">
+    <div class="col-md-3 metric-aqua">
       <div class="card">
         <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center">
-            <span>Total Próximas</span>
-            <h5 class="mb-0">{{ total }}</h5>
+          <div class="d-flex justify-content-between align-items-center"><span>Total de Visitas</span>
+            <h5 class="mb-0">{{ metricas.total_visitas }}</h5>
           </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 metric-teal">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center"><span>Hoje</span>
+            <h5 class="mb-0">{{ metricas.hoje }}</h5>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 metric-orange">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center"><span>Esta Semana</span>
+            <h5 class="mb-0">{{ metricas.semana }}</h5>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 metric-purple">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center"><span>Este Mês</span>
+            <h5 class="mb-0">{{ metricas.mes }}</h5>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="row g-3 mt-1">
+    <div class="col-md-12 metric-red">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center"><span>KM Percorrido</span>
+            <h5 class="mb-0">{{ metricas.km_total }} km</h5>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="row g-3 mt-3">
+    <div class="col-md-12">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2"><span>Visitas por Etapa</span></div>
+          <div class="chart-wrap">
+            <canvas id="graficoEtapas"></canvas>
+          </div>
+          <script id="funilData" type="application/json">{{ funil_json|safe }}</script>
         </div>
       </div>
     </div>
@@ -39,4 +135,47 @@
     </div>
   </div>
 </div>
+{% endblock %}
+{% block extra_js %}
+<script>
+  (function () {
+    try {
+      const el = document.getElementById('funilData');
+      const data = el ? JSON.parse(el.textContent || '[]') : [];
+      if (!Array.isArray(data) || data.length === 0) return;
+      const labels = data.map(x => x.label);
+      const valores = data.map(x => x.qtd);
+      const cores = data.map(x => x.color);
+      const ctx = document.getElementById('graficoEtapas');
+      if (!ctx) return;
+      if (window.Chart && window.ChartDataLabels) { Chart.register(ChartDataLabels); }
+      const chart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: valores,
+            backgroundColor: cores,
+            borderColor: '#0d1a2b',
+            borderWidth: 2,
+            hoverOffset: 4,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '60%',
+          plugins: {
+            legend: { position: 'bottom', labels: { color: '#e8eef5' } },
+            datalabels: {
+              color: '#08121f',
+              formatter: function (val) { return val; },
+              font: { size: 10 }
+            }
+          }
+        }
+      });
+    } catch (e) { console.warn('Falha ao renderizar gráfico de etapas', e); }
+  })();
+</script>
 {% endblock %}

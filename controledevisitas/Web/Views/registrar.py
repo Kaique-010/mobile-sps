@@ -1,9 +1,11 @@
 from django.views.generic import FormView
 from django.contrib import messages
+import logging
 from core.utils import get_licenca_db_config
 from django.urls import reverse
 from django.http import HttpResponseRedirect
 from controledevisitas.models import Controlevisita, ItensVisita
+from core.mixins.vendedor_mixin import VendedorEntidadeMixin
 from ..forms import ItemVisitaForm, ControleVisitaForm
 
 
@@ -25,11 +27,11 @@ class RegistrarItemVisitaView(FormView):
 
     def form_valid(self, form):
         dados = form.cleaned_data
-        visita = Controlevisita.objects.using(self.db_alias).get(ctrl_id=self.ctrl_id)
+        visita = Controlevisita.objects.using(self.db_alias).select_related('ctrl_empresa').get(ctrl_id=self.ctrl_id)
         try:
             ItensVisita.objects.using(self.db_alias).create(
-                item_empr=visita.ctrl_empresa,
-                item_fili=visita.ctrl_filial.empr_empr if hasattr(visita.ctrl_filial, 'empr_empr') else visita.ctrl_filial_id,
+                item_empr=getattr(getattr(visita, 'ctrl_empresa', None), 'empr_codi', None) or self.request.session.get('empresa_id', 1),
+                item_fili=getattr(visita, 'ctrl_filial', None) or self.request.session.get('filial_id', 1),
                 item_visita=visita,
                 item_prod=dados['produto_codigo'],
                 item_quan=dados['quantidade'],
@@ -46,7 +48,7 @@ class RegistrarItemVisitaView(FormView):
         return f"/web/{self.slug}/controle-de-visitas/resumo/{self.ctrl_id}/"
 
 
-class ControleVisitaCreateView(FormView):
+class ControleVisitaCreateView(VendedorEntidadeMixin, FormView):
     template_name = 'ControleDeVisitas/visita_criar.html'
     form_class = ControleVisitaForm
 
@@ -66,16 +68,16 @@ class ControleVisitaCreateView(FormView):
         dados = form.cleaned_data
         from Entidades.models import Entidades
         from Licencas.models import Empresas, Filiais
+        empresa_id = self.request.session.get('empresa_id', 1)
+        filial_id = self.request.session.get('filial_id', 1) 
         try:
-            empresa = Empresas.objects.using(self.db_alias).get(empr_codi=int(self.empresa_id))
+            empresa_id = int(self.empresa_id)
         except Exception:
-            messages.error(self.request, 'Empresa inválida')
-            return self.form_invalid(form)
+            empresa_id = int(self.request.session.get('empresa_id', 1) or 1)
         try:
-            filial = Filiais.objects.using(self.db_alias).get(empr_empr=int(self.filial_id))
+            filial_id = int(self.filial_id)
         except Exception:
-            messages.error(self.request, 'Filial inválida')
-            return self.form_invalid(form)
+            filial_id = int(self.request.session.get('filial_id', 1) or 1)
         try:
             cliente = Entidades.objects.using(self.db_alias).get(enti_clie=dados['ctrl_cliente_id'])
         except Exception:
@@ -87,6 +89,8 @@ class ControleVisitaCreateView(FormView):
                 vendedor = Entidades.objects.using(self.db_alias).get(enti_clie=dados['ctrl_vendedor_id'])
             except Exception:
                 vendedor = None
+        if not vendedor:
+            vendedor = self.get_entidade_vendedor()
         etapa = None
         if dados.get('ctrl_etapa_id'):
             from controledevisitas.models import Etapavisita
@@ -94,26 +98,38 @@ class ControleVisitaCreateView(FormView):
                 etapa = Etapavisita.objects.using(self.db_alias).get(etap_id=dados['ctrl_etapa_id'])
             except Exception:
                 etapa = None
+        # Obter objetos de empresa e filial da sessão
         try:
-            max_numero = Controlevisita.objects.using(self.db_alias).filter(
-                ctrl_empresa=empresa,
-                ctrl_filial=filial,
-            ).aggregate_max('ctrl_numero') if hasattr(Controlevisita.objects.using(self.db_alias), 'aggregate_max') else None
+            empresa_obj = Empresas.objects.using(self.db_alias).get(empr_codi=empresa_id)
         except Exception:
-            max_numero = None
-        if not max_numero:
-            from django.db.models import Max
-            max_numero = Controlevisita.objects.using(self.db_alias).filter(
-                ctrl_empresa=empresa,
-                ctrl_filial=filial,
-            ).aggregate(Max('ctrl_numero')).get('ctrl_numero__max') or 0
-        from django.db.models import Max
-        max_id = Controlevisita.objects.using(self.db_alias).aggregate(Max('ctrl_id')).get('ctrl_id__max') or 0
+            messages.error(self.request, 'Empresa inválida')
+            return self.form_invalid(form)
         try:
+            filial_obj = Filiais.objects.using(self.db_alias).get(empr_empr=empresa_id, empr_codi=filial_id)
+        except Exception:
+            messages.error(self.request, 'Filial inválida')
+            return self.form_invalid(form)
+
+        # Número da visita máximo por empresa+filial
+        from django.db.models import Max
+        max_numero = Controlevisita.objects.using(self.db_alias).filter(
+            ctrl_empresa_id=empresa_id,
+            ctrl_filial=filial_id,
+        ).aggregate(Max('ctrl_numero')).get('ctrl_numero__max') or 0
+
+        # ID máximo por empresa+filial (conforme solicitado) e global para garantir unicidade
+        max_id_pair = Controlevisita.objects.using(self.db_alias).filter(
+            ctrl_empresa_id=empresa_id,
+            ctrl_filial=filial_id,
+        ).aggregate(Max('ctrl_id')).get('ctrl_id__max') or 0
+        max_id_global = Controlevisita.objects.using(self.db_alias).aggregate(Max('ctrl_id')).get('ctrl_id__max') or 0
+        new_ctrl_id = max(max_id_pair, max_id_global) + 1
+        try:
+            logging.info(f"Criando visita: empresa_id={empresa_id}, filial_id={filial_id}, ctrl_id={new_ctrl_id}, ctrl_numero={int(max_numero)+1}")
             obj = Controlevisita.objects.using(self.db_alias).create(
-                ctrl_id=int(max_id) + 1,
-                ctrl_empresa=empresa,
-                ctrl_filial=filial,
+                ctrl_id=int(new_ctrl_id),
+                ctrl_empresa=empresa_obj,
+                ctrl_filial=filial_id,
                 ctrl_numero=int(max_numero) + 1,
                 ctrl_cliente=cliente,
                 ctrl_data=dados['ctrl_data'],
@@ -135,6 +151,7 @@ class ControleVisitaCreateView(FormView):
             self.created_id = obj.ctrl_id
             return HttpResponseRedirect(self.get_success_url())
         except Exception as e:
+            logging.exception("Falha ao criar visita")
             messages.error(self.request, f'Falha ao criar visita: {e}')
             return self.form_invalid(form)
 

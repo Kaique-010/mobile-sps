@@ -39,3 +39,15 @@ class ControleVisitaForm(forms.Form):
                 field.widget.attrs['class'] = (css + ' form-check-input').strip()
             else:
                 field.widget.attrs['class'] = (css + ' form-control').strip()
+
+
+class EtapaVisitaForm(forms.Form):
+    etap_nume = forms.IntegerField(label='Número da Etapa', required=False)
+    etap_descricao = forms.CharField(label='Descrição', max_length=50)
+    etap_obse = forms.CharField(label='Observações', max_length=200, required=False, widget=forms.Textarea)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            css = field.widget.attrs.get('class', '')
+            field.widget.attrs['class'] = (css + ' form-control').strip()

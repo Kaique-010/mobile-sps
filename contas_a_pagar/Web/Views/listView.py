@@ -21,10 +21,12 @@ class TitulosPagarListView(DBAndSlugMixin, ListView):
 
     def get_queryset(self):
         qs = Titulospagar.objects.using(self.db_alias).all()
+        data_min = '1900-01-01'
+        data_max = '2100-12-31'
         qs = qs.filter(
-            Q(titu_emis__isnull=True) | Q(titu_emis__gte='1900-01-01'),
-            Q(titu_venc__isnull=True) | Q(titu_venc__gte='1900-01-01'),
-        )
+            Q(titu_emis__isnull=True) | Q(titu_emis__range=(data_min, data_max)),
+            Q(titu_venc__isnull=True) | Q(titu_venc__range=(data_min, data_max)),
+        ).only('titu_empr','titu_fili','titu_forn','titu_titu','titu_seri','titu_parc','titu_valo','titu_venc','titu_emis','titu_aber')
 
         # Filtros padrão
         fornecedor_id = self.request.GET.get('titu_forn')
@@ -32,6 +34,7 @@ class TitulosPagarListView(DBAndSlugMixin, ListView):
         status_aber = self.request.GET.get('titu_aber')
         venc_ini = self.request.GET.get('venc_ini')
         venc_fim = self.request.GET.get('venc_fim')
+        serie = self.request.GET.get('titu_seri')
 
         if self.empresa_id:
             qs = qs.filter(titu_empr=self.empresa_id)
@@ -45,6 +48,8 @@ class TitulosPagarListView(DBAndSlugMixin, ListView):
             qs = qs.filter(titu_venc__gte=venc_ini)
         if venc_fim:
             qs = qs.filter(titu_venc__lte=venc_fim)
+        if serie:
+            qs = qs.filter(titu_seri__iexact=serie)
 
         # Filtro por nome do fornecedor via Entidades
         if fornecedor_nome:
@@ -54,7 +59,6 @@ class TitulosPagarListView(DBAndSlugMixin, ListView):
                 qs = qs.filter(titu_forn__in=fornecedor_ids)
             else:
                 qs = qs.none()
-        print("qs.query:", qs.query)
         return qs.order_by('titu_venc', 'titu_titu')
       
 
@@ -137,6 +141,7 @@ class TitulosPagarListView(DBAndSlugMixin, ListView):
             'titu_aber': self.request.GET.get('titu_aber') or '',
             'venc_ini': self.request.GET.get('venc_ini') or '',
             'venc_fim': self.request.GET.get('venc_fim') or '',
+            'titu_seri': self.request.GET.get('titu_seri') or '',
         }
         preserved_qs = {k: v for k, v in preserved.items() if v}
 

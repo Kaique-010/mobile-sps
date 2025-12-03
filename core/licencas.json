@@ -142,5 +142,20 @@
     "db_name": "savexml366",
     "db_host": "base.rtalmeida.com.br",
     "db_port": "5432"
+  },
+
+  {
+    "slug": "pgpisos",
+    "cnpj": "09583163000119",
+    "db_name": "savexml896",
+    "db_host": "base.rtalmeida.com.br",
+    "db_port": "5432"
+  },
+  {
+    "slug": "uliana",
+    "cnpj": "82223207000190",
+    "db_name": "savexml978",
+    "db_host": "base.rtalmeida.com.br",
+    "db_port": "5432"
   }
 ]

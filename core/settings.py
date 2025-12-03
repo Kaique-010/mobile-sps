@@ -124,6 +124,7 @@ INSTALLED_APPS = [
     'onboarding',
     'series',
     'importador',
+    'centraldeajuda',
 ]
 # Middleware
 MIDDLEWARE = [
@@ -395,6 +396,12 @@ LOGGING = {
         'performance': {
             'handlers': ['console'],
             'level': 'DEBUG' if DEBUG else 'WARNING',
+            'propagate': False,
+            'formatter': 'verbose',
+        },
+        'ControleDeVisitas': {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': False,
             'formatter': 'verbose',
         },

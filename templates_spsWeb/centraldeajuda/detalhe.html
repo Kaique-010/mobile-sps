@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-3">
+    <h1 class="mb-4 text-center">{{ object.cent_titu }}</h1>
+
+
+
+    {% if object.cent_video %}
+    <iframe width="100%" height="400"
+        src="https://www.youtube.com/embed/{{ object.cent_video|cut:'https://youtu.be/'|cut:'https://www.youtube.com/watch?v=' }}"
+        frameborder="0" allowfullscreen>
+    </iframe>
+    <p class="text-muted small mb-4 mt-5 text-center">
+        Detalhes sobre o conteúdo
+    </p>
+    <div>
+        {{ object.cent_cont|safe }}
+    </div>
+    {% endif %}
+    <a class="btn btn-outline-success btn-sm mt-4 d-block mx-auto" href="{% url 'central_lista' slug=slug %}">
+        Voltar para a lista
+    </a>
+</div>
+{% endblock %}

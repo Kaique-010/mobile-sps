@@ -231,6 +231,95 @@
                 </div>
               </div>
             </div>
+
+            <div id="financeiro-os" class="card shadow-sm mt-4" data-os-os="{{ form.instance.os_os }}"
+              data-os-clie="{{ form.instance.os_clie }}" data-os-tota="{{ form.instance.os_tota }}"
+              data-os-topr="{{ form.instance.os_topr }}" data-os-desc="{{ form.instance.os_desc }}"
+              data-slug="{{ request.resolver_match.kwargs.slug }}">
+              <div class="card-body">
+                <h5 class="card-title mb-3">Financeiro – Títulos</h5>
+                <div class="row g-3 mb-3">
+                  <div class="col-md-4">
+                    <div class="form-label">Subtotal</div>
+                    <div id="os-fin-resumo-subtotal" class="fw-semibold">R$ 0,00</div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="form-label">Desconto</div>
+                    <div id="os-fin-resumo-desconto" class="fw-semibold">R$ 0,00</div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="form-label">Total</div>
+                    <div id="os-fin-resumo-total" class="fw-bold">R$ 0,00</div>
+                  </div>
+                </div>
+                <div class="row g-3 align-items-end mb-2">
+                  <div class="col-md-3">
+                    <label class="form-label">Entrada (R$)</label>
+                    <input type="number" min="0" step="0.01" class="form-control" id="os-fin-entrada"
+                      placeholder="0,00">
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Restante</label>
+                    <div id="os-fin-resumo-restante" class="fw-bold">R$ 0,00</div>
+                  </div>
+                </div>
+                <div class="row g-3 align-items-end mb-3">
+                  <div class="col-md-3">
+                    <label class="form-label">Parcelas</label>
+                    <input type="number" min="1" value="1" class="form-control" id="os-fin-parcelas">
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Data base</label>
+                    <input type="date" class="form-control" id="os-fin-data-base">
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Forma pagamento</label>
+                    <select class="form-select" id="os-fin-forma">
+                      <option value="" selected>Selecione...</option>
+                      <option value="00">DUPLICATA</option>
+                      <option value="01">CHEQUE</option>
+                      <option value="02">PROMISSÓRIA</option>
+                      <option value="03">RECIBO</option>
+                      <option value="50">CHEQUE PRÉ</option>
+                      <option value="51">CARTAO DE CRÉDITO</option>
+                      <option value="52">CARTAO DE DÉBITO</option>
+                      <option value="53">BOLETO BANCÁRIO</option>
+                      <option value="54">DINHEIRO</option>
+                      <option value="55">DEPÓSITO EM CONTA</option>
+                      <option value="56">VENDA À VISTA</option>
+                      <option value="60">PIX</option>
+                    </select>
+                  </div>
+                  <div class="col-md-3 d-flex gap-2 flex-wrap">
+                    <button type="button" class="btn btn-outline-success" id="os-fin-btn-gerar">Gerar Títulos</button>
+                    <button type="button" class="btn btn-outline-primary" id="os-fin-btn-consultar">Consultar</button>
+                    <button type="button" class="btn btn-outline-danger" id="os-fin-btn-remover">Remover</button>
+                    <button type="button" class="btn btn-warning d-none" id="os-fin-btn-atualizar">Atualizar</button>
+                  </div>
+                </div>
+
+                <div class="table-responsive">
+                  <table class="table table-sm table-hover align-middle">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Parcela</th>
+                        <th class="text-end">Valor</th>
+                        <th>Vencimento</th>
+                        <th>Forma</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody id="os-fin-titulos-body"></tbody>
+                    <tfoot>
+                      <tr class="table-dark">
+                        <td colspan="3" class="text-end fw-bold">Total</td>
+                        <td colspan="2" class="text-end" id="os-fin-total"></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -254,7 +343,7 @@
 
 {% block extra_js %}
 <script>
-  
+
 
   document.addEventListener('DOMContentLoaded', () => {
     if (typeof jQuery === 'undefined') {
@@ -539,5 +628,203 @@
 
     updateTotals();
   });
+</script>
+<script>
+  (() => {
+    const byId = (id) => document.getElementById(id);
+    const getSlug = () => {
+      const el = document.getElementById('financeiro-os');
+      const tpl = el?.dataset?.slug || '';
+      if (tpl) return tpl;
+      try { const p = location.pathname.split('/'); return p.length > 2 ? p[2] : (localStorage.getItem('slug') || ''); } catch (e) { return localStorage.getItem('slug') || ''; }
+    };
+    const getCSRF = () => { const m = document.cookie.match(/csrftoken=([^;]+)/); return m ? m[1] : ''; };
+    const authFetch = async (url, options = {}) => { const token = localStorage.getItem('access'); const headers = Object.assign({}, options.headers || {}); if (token) headers['Authorization'] = `Bearer ${token}`; return fetch(url, Object.assign({}, options, { headers })); };
+    const fmtBRL = (v) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+    const mount = () => {
+      const root = document.getElementById('financeiro-os');
+      if (!root) return;
+      const slug = getSlug();
+      let os = root.dataset.osOs || '';
+      let clie = root.dataset.osClie || '';
+      let tota = root.dataset.osTota || '';
+      const parcelasEl = byId('os-fin-parcelas');
+      const dataBaseEl = byId('os-fin-data-base');
+      const formaEl = byId('os-fin-forma');
+      const btnGerar = byId('os-fin-btn-gerar');
+      const btnConsultar = byId('os-fin-btn-consultar');
+      const btnRemover = byId('os-fin-btn-remover');
+      const body = byId('os-fin-titulos-body');
+      const totalEl = byId('os-fin-total');
+      const resSub = byId('os-fin-resumo-subtotal');
+      const resDesc = byId('os-fin-resumo-desconto');
+      const resTot = byId('os-fin-resumo-total');
+      const resRest = byId('os-fin-resumo-restante');
+      const entradaEl = byId('os-fin-entrada');
+      const formaOpts = [
+        { v: '00', l: 'DUPLICATA' },
+        { v: '01', l: 'CHEQUE' },
+        { v: '02', l: 'PROMISSÓRIA' },
+        { v: '03', l: 'RECIBO' },
+        { v: '50', l: 'CHEQUE PRÉ' },
+        { v: '51', l: 'CARTÃO CRÉDITO' },
+        { v: '52', l: 'CARTÃO DÉBITO' },
+        { v: '53', l: 'BOLETO' },
+        { v: '54', l: 'DINHEIRO' },
+        { v: '55', l: 'DEPÓSITO' },
+        { v: '56', l: 'À VISTA' },
+        { v: '60', l: 'PIX' },
+      ];
+
+      if (dataBaseEl && !dataBaseEl.value) {
+        const d = new Date(); const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        dataBaseEl.value = iso;
+      }
+
+      const syncResumo = () => {
+        let sub = document.getElementById('id_os_topr')?.value;
+        let des = document.getElementById('id_os_desc')?.value;
+        let tot = document.getElementById('id_os_tota')?.value;
+        if (sub == null) sub = root.dataset.osTopr || 0;
+        if (des == null) des = root.dataset.osDesc || 0;
+        if (tot == null || tot === '') tot = root.dataset.osTota || 0;
+        if (resSub) resSub.textContent = fmtBRL(sub);
+        if (resDesc) resDesc.textContent = fmtBRL(des);
+        if (resTot) resTot.textContent = fmtBRL(tot);
+        const entrada = Number(entradaEl?.value || 0);
+        const restante = Math.max(Number(tot || 0) - entrada, 0);
+        if (resRest) resRest.textContent = fmtBRL(restante);
+      };
+      syncResumo();
+      ['id_os_topr', 'id_os_desc', 'id_os_tota'].forEach(id => { const el = document.getElementById(id); el?.addEventListener('input', syncResumo); el?.addEventListener('change', syncResumo); });
+      entradaEl?.addEventListener('input', syncResumo); entradaEl?.addEventListener('change', syncResumo);
+
+      const consultar = async () => {
+        if (!os) { alert('Salve a O.S para consultar os títulos.'); return; }
+        const empresa = localStorage.getItem('empresa_id') || '';
+        const filial = localStorage.getItem('filial_id') || '';
+        const q = new URLSearchParams({ empr: empresa, fili: filial }).toString();
+        const url = `/api/${slug}/Os/financeiro/consultar-titulos/${encodeURIComponent(os)}/?${q}`;
+        const resp = await authFetch(url, { method: 'GET' });
+        const data = await resp.json();
+        const titulos = data.titulos || [];
+        body.innerHTML = '';
+
+        titulos.forEach(t => {
+          const tr = document.createElement('tr');
+          const aberto = String(t.aberto || '').toUpperCase();
+          const editBtn = aberto === 'A' ? `<button type="button" class="btn btn-sm btn-outline-secondary os-fin-edit" data-parcela="${t.parcela}"><i class="bi bi-pencil"></i></button>` : '';
+          tr.innerHTML = `
+            <td>${t.parcela} ${editBtn}</td>
+            <td class="text-end">R$ ${Number(t.valor || 0).toFixed(2)}</td>
+            <td>${t.vencimento || ''}</td>
+            <td data-forma="${t.forma_pagamento || ''}">${t.forma_pagamento || ''}</td>
+            <td>${String(t.status || '').toUpperCase()}</td>
+          `;
+          tr.dataset.aberto = t.aberto || '';
+          tr.dataset.valor = t.valor || '';
+          tr.dataset.vencimento = t.vencimento || '';
+          tr.dataset.forma = t.forma_pagamento || '';
+          body.appendChild(tr);
+        });
+        const total = Number(data.total || 0);
+        totalEl.textContent = `R$ ${total.toFixed(2)}`;
+        const totOS = Number((document.getElementById('id_os_tota')?.value || root.dataset.osTota || 0));
+        const restante = Math.max(totOS - total, 0);
+        if (resRest) resRest.textContent = fmtBRL(restante);
+        const btn = byId('os-fin-btn-atualizar');
+        if (btn) { btn.classList.remove('d-none'); btn.disabled = true; }
+      };
+
+      const gerar = async () => {
+        if (!os) { alert('Salve a O.S para gerar os títulos.'); return; }
+        if (!clie) { alert('Selecione o cliente antes de gerar os títulos.'); return; }
+        tota = document.getElementById('id_os_tota')?.value || tota;
+        const parcelas = Math.max(Number(parcelasEl.value || 1), 1);
+        const forma = (formaEl.value || '').trim();
+        const url = `/api/${slug}/Os/financeiro/gerar-titulos/`;
+        const entrada = Math.max(Number(entradaEl?.value || 0), 0);
+        if (entrada > Number(tota || 0)) { alert('Entrada não pode ser maior que o total.'); return; }
+        const payload = { os_os: Number(os), os_clie: Number(clie), os_tota: String(tota), entrada: String(entrada), forma_pagamento: forma, parcelas: parcelas, data_base: (dataBaseEl.value || '').trim() };
+        const resp = await authFetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRF() }, body: JSON.stringify(payload) });
+        if (!resp.ok) {
+          let msg = 'Erro ao gerar títulos';
+          try { const data = await resp.json(); msg = data?.detail || msg; } catch (e) { const txt = await resp.text(); if (txt) msg = txt; }
+          alert(msg); return;
+        }
+        await consultar();
+      };
+
+      const remover = async () => {
+        if (!os) { alert('Salve a O.S para remover os títulos.'); return; }
+        const url = `/api/${slug}/Os/financeiro/remover-titulos/`;
+        const resp = await authFetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRF() }, body: JSON.stringify({ os_os: Number(os) }) });
+        if (!resp.ok) { const txt = await resp.text(); alert(txt || 'Erro ao remover títulos'); return; }
+        body.innerHTML = ''; totalEl.textContent = '';
+      };
+
+      btnConsultar?.addEventListener('click', consultar);
+      btnGerar?.addEventListener('click', gerar);
+      btnRemover?.addEventListener('click', remover);
+
+      const btnAtualizar = byId('os-fin-btn-atualizar');
+      const edits = new Map();
+      body.addEventListener('click', (e) => {
+        const btn = e.target.closest('.os-fin-edit');
+        if (!btn) return;
+        const parcela = Number(btn.dataset.parcela);
+        const tr = btn.closest('tr');
+        if (String(tr?.dataset?.aberto || '').toUpperCase() !== 'A') { alert('Título não pode ser editado.'); return; }
+        const tdValor = tr.children[1];
+        const tdVenc = tr.children[2];
+        const tdForma = tr.children[3];
+        const valorAtual = Number(tr.dataset.valor || 0);
+        const vencAtual = tr.dataset.vencimento || tdVenc.textContent || '';
+        const formaAtual = tr.dataset.forma || tdForma.dataset.forma || tdForma.textContent || '';
+        tdValor.innerHTML = `<input type="number" step="0.01" class="form-control form-control-sm text-end" value="${String(valorAtual)}">`;
+        tdVenc.innerHTML = `<input type="date" class="form-control form-control-sm" value="${(vencAtual || '').slice(0, 10)}">`;
+        tdForma.innerHTML = `<select class="form-select form-select-sm">${formaOpts.map(o => `<option value="${o.v}" ${o.v === formaAtual ? 'selected' : ''}>${o.v}</option>`).join('')}</select>`;
+        btnAtualizar?.classList.remove('d-none');
+        if (btnAtualizar) btnAtualizar.disabled = false;
+        const inputValor = tdValor.querySelector('input');
+        const inputVenc = tdVenc.querySelector('input');
+        const inputForma = tdForma.querySelector('select');
+        const storeEdit = () => {
+          const v = Number(inputValor.value || 0);
+          const d = inputVenc.value || vencAtual;
+          const f = inputForma.value || formaAtual;
+          edits.set(parcela, { valor: v, vencimento: d, forma_pagamento: f });
+          btnAtualizar?.classList.remove('d-none');
+        };
+        inputValor.addEventListener('change', storeEdit);
+        inputValor.addEventListener('input', storeEdit);
+        inputVenc.addEventListener('change', storeEdit);
+        inputForma.addEventListener('change', storeEdit);
+      });
+
+      btnAtualizar?.addEventListener('click', async () => {
+        if (!os) return;
+        if (edits.size === 0) { alert('Nenhuma alteração pendente'); return; }
+        for (const [parcela, ch] of edits.entries()) {
+          const url = `/api/${slug}/Os/financeiro/atualizar-titulo/`;
+          const resp = await authFetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRF() },
+            body: JSON.stringify({ os_os: Number(os), parcela, valor: String(ch.valor), vencimento: ch.vencimento, forma_pagamento: ch.forma_pagamento })
+          });
+          if (!resp.ok) {
+            const txt = await resp.text();
+            alert(txt || 'Falha ao atualizar título');
+            return;
+          }
+        }
+        edits.clear();
+        btnAtualizar?.classList.add('d-none');
+        await consultar();
+      });
+    };
+    document.addEventListener('DOMContentLoaded', mount);
+  })();
 </script>
 {% endblock %}

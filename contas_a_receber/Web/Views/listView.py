@@ -17,10 +17,12 @@ class TitulosReceberListView(DBAndSlugMixin, ListView):
 
     def get_queryset(self):
         qs = Titulosreceber.objects.using(self.db_alias).all()
+        data_min = '1900-01-01'
+        data_max = '2100-12-31'
         qs = qs.filter(
-            Q(titu_emis__isnull=True) | Q(titu_emis__gte='1900-01-01'),
-            Q(titu_venc__isnull=True) | Q(titu_venc__gte='1900-01-01'),
-        )
+            Q(titu_emis__isnull=True) | Q(titu_emis__range=(data_min, data_max)),
+            Q(titu_venc__isnull=True) | Q(titu_venc__range=(data_min, data_max)),
+        ).only('titu_empr','titu_fili','titu_clie','titu_titu','titu_seri','titu_parc','titu_valo','titu_venc','titu_emis','titu_aber')
 
         cliente_id = self.request.GET.get('titu_clie')
         cliente_nome = self.request.GET.get('cliente_nome')
@@ -28,6 +30,7 @@ class TitulosReceberListView(DBAndSlugMixin, ListView):
         venc_ini = self.request.GET.get('venc_ini')
         venc_fim = self.request.GET.get('venc_fim')
         parcela = self.request.GET.get('titu_parc')
+        serie = self.request.GET.get('titu_seri')
 
         if self.empresa_id:
             qs = qs.filter(titu_empr=self.empresa_id)
@@ -43,6 +46,8 @@ class TitulosReceberListView(DBAndSlugMixin, ListView):
             qs = qs.filter(titu_parc=parcela)
         if venc_fim:
             qs = qs.filter(titu_venc__lte=venc_fim)
+        if serie:
+            qs = qs.filter(titu_seri__iexact=serie)
 
         if cliente_nome:
             entidades_qs = Entidades.objects.using(self.db_alias).filter(enti_nome__icontains=cliente_nome)
@@ -77,11 +82,18 @@ class TitulosReceberListView(DBAndSlugMixin, ListView):
             'titu_aber': self.request.GET.get('titu_aber') or '',
             'venc_ini': self.request.GET.get('venc_ini') or '',
             'venc_fim': self.request.GET.get('venc_fim') or '',
+            'titu_seri': self.request.GET.get('titu_seri') or '',
         }
         preserved_qs = {k: v for k, v in preserved.items() if v}
 
         # Cálculo dos indicadores de resumo (Total Recebido, Em Aberto, Percentuais)
         qs_total = Titulosreceber.objects.using(self.db_alias).all()
+        data_min = '1900-01-01'
+        data_max = '2100-12-31'
+        qs_total = qs_total.filter(
+            Q(titu_emis__isnull=True) | Q(titu_emis__range=(data_min, data_max)),
+            Q(titu_venc__isnull=True) | Q(titu_venc__range=(data_min, data_max)),
+        )
         if self.empresa_id:
             qs_total = qs_total.filter(titu_empr=self.empresa_id)
         if self.filial_id:

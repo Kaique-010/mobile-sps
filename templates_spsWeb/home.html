@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load finance_tags %}
 
 {% block title %}Métricas{% endblock %}
 
@@ -28,7 +29,8 @@
     }
 
     .chart-card .card-body {
-        padding: 20px
+        padding: 5px;
+
     }
 
     .chart-canvas {
@@ -83,34 +85,116 @@
             </div>
         </div>
     </div>
+    <div class="card card-corporate">
+        <div class="card-body">
+            <div class="page-header">
+
+            </div>
+            <div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-3 mt-2">
+                <div class="col">
+                    <div class="card chart-card h-100">
+                        <div class="card-body d-flex align-items-center gap-2">
+                            <div
+                                style="width:34px;height:34px;border-radius:17px;background:#19875422;display:flex;align-items:center;justify-content:center">
+                                <i class="bi bi-cash-stack text-success"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">Total vendido</div>
+                                <div class="fs-6 fw-semibold text-success">{{ kpis.total_valor|brl }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card chart-card h-100">
+                        <div class="card-body d-flex align-items-center gap-2">
+                            <div
+                                style="width:34px;height:34px;border-radius:17px;background:#20c99722;display:flex;align-items:center;justify-content:center">
+                                <i class="bi bi-graph-up-arrow text-info"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">Lucro (%)</div>
+                                <div class="fs-6 fw-semibold text-info">{{ kpis.lucro_percent|floatformat:2 }}%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card chart-card h-100">
+                        <div class="card-body d-flex align-items-center gap-2">
+                            <div
+                                style="width:34px;height:34px;border-radius:17px;background:#fd7e1422;display:flex;align-items:center;justify-content:center">
+                                <i class="bi bi-receipt text-warning"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">Ticket médio</div>
+                                <div class="fs-6 fw-semibold text-warning">{{ kpis.ticket_medio|brl }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card chart-card h-100">
+                        <div class="card-body d-flex align-items-center gap-2">
+                            <div
+                                style="width:34px;height:34px;border-radius:17px;background:#0d6efd22;display:flex;align-items:center;justify-content:center">
+                                <i class="bi bi-clipboard-check text-primary"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">Pedidos</div>
+                                <div class="fs-6 fw-semibold text-primary">{{ kpis.qtd_pedidos }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card chart-card h-100">
+                        <div class="card-body d-flex align-items-center gap-2">
+                            <div
+                                style="width:34px;height:34px;border-radius:17px;background:#6f42c122;display:flex;align-items:center;justify-content:center">
+                                <i class="bi bi-box-seam" style="color:#6f42c1"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">Itens vendidos</div>
+                                <div class="fs-6 fw-semibold" style="color:#6f42c1">{{ kpis.itens_contagem }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <form id="filtroDashboard" class="filter-panel mb-4 mt-4" method="get" action="">
-        <div class="row g-3">
-            <div class="col-md-4 mb-3 my-3">
+        <div class="row g-3 align-items-end">
+            <div class="col-12 col-md-3">
                 <label for="vendedor" class="form-label">Vendedor</label>
-                <select id="vendedor" name="vendedor" class="form-select">
+                <select id="vendedor" name="vendedor" class="form-select"
+                    data-selected-vendedor="{{ vendedor_selecionado }}">
                     <option value="">Todos os Vendedores</option>
                 </select>
             </div>
-            <div class="col-md-4">
+            <div class="col-12 col-md-3">
                 <label for="data_inicio" class="form-label">Data Início</label>
                 <input type="date" id="data_inicio" name="data_inicio" class="form-control" value="{{ data_inicio }}">
             </div>
-            <div class="col-md-4">
+            <div class="col-12 col-md-3">
                 <label for="data_fim" class="form-label">Data Fim</label>
                 <input type="date" id="data_fim" name="data_fim" class="form-control" value="{{ data_fim }}">
             </div>
+            <div class="col-12 col-md-3 d-flex align-items-end justify-content-end">
+                <button type="submit" class="btn btn-outline-primary w-100 w-md-auto">Filtrar</button>
+            </div>
         </div>
-        <div class="mt-3 d-flex justify-content-center">
-            <button type="submit" class="btn btn-primary">Filtrar</button>
-        </div>
+
     </form>
 
     <div class="row g-3 align-items-stretch">
         <div class="col-lg-6 d-flex">
             <div class="card chart-card w-100">
                 <div class="card-body">
-                    <h3 class="h6 text-body">Pedidos por Vendedor</h3>
+                    <h3 class="h6 text-body mb-3 text-center">Pedidos por Vendedor</h3>
                     <canvas id="totalPedidosChart" class="chart-canvas"></canvas>
                 </div>
             </div>
@@ -118,7 +202,7 @@
         <div class="col-lg-6 d-flex">
             <div class="card chart-card w-100">
                 <div class="card-body">
-                    <h3 class="h6 text-body">Valor Pedidos por Vendedor</h3>
+                    <h3 class="h6 text-body mb-3 text-center">Valor Pedidos por Vendedor</h3>
                     <canvas id="totalValorPedidoChart" class="chart-canvas"></canvas>
                     <button id="abrirKronos" class="btn btn-outline-custom2 ms-2"><img src="{% static 'logo.png' %}"
                             style="height:24px" />Fale com Kronos</button>
@@ -286,7 +370,8 @@
         if (dataInicioEl && !dataInicioEl.value) dataInicioEl.value = ini;
         if (dataFimEl && !dataFimEl.value) dataFimEl.value = fim;
 
-        const nomeVendedor = (document.getElementById('vendedor')?.value || '').trim();
+        const selVend = document.getElementById('vendedor');
+        const nomeVendedor = ((selVend?.value || selVend?.dataset?.selectedVendedor || '')).trim();
         const data_inicial = dataInicioEl?.value || ini;
         const data_final = dataFimEl?.value || fim;
 
@@ -348,20 +433,16 @@
                 opt.textContent = v.enti_nome;
                 sel.appendChild(opt);
             });
-            if (atual) sel.value = atual;
+            const prefer = sel.dataset.selectedVendedor || atual;
+            if (prefer) sel.value = prefer;
         } catch (e) {
             console.error('Falha ao carregar vendedores:', e);
         }
     }
 
-    // Submit: apenas recarrega os dados sem navegar
     (function () {
         const form = document.getElementById('filtroDashboard');
         if (!form) return;
-        form.addEventListener('submit', function (e) {
-            e.preventDefault();
-            loadData();
-        });
     })();
 
     // Inicializa ao carregar a página
