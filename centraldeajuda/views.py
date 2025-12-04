@@ -11,7 +11,7 @@ from Licencas.web_views import DBSlugMixin, RoleRequiredMixin
 from django.db.models import OuterRef, Subquery, IntegerField, CharField, Value, Case, When
 from django.db.models.functions import Coalesce
 
-class CentralListView(LoginRequiredMixin, DBSlugMixin, ListView):
+class CentralListView(DBSlugMixin, ListView):
     model = CentralDeAjuda
     template_name = "centraldeajuda/lista.html"
 
