@@ -3,68 +3,277 @@
 {% block content %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
 <link rel="stylesheet" href="{% static 'css/list.css' %}">
-<div class="container page-container py-3">
-  <h3 class="page-title">
-    <i class="bi bi-list-check" style="font-size: 1.5rem; text-align: center; justify-content: center;"></i> Central de
-    Notificações
+
+<style>
+  .notif-wrapper {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .page-title {
+    text-align: center;
+    font-weight: 600;
+    letter-spacing: .2px;
+    margin-bottom: 1.5rem;
+  }
+
+  .stat-card {
+    border-radius: 12px;
+    border: 2px solid;
+    transition: all .2s ease;
+    overflow: hidden;
+    position: relative;
+    text-decoration: none;
+    display: block;
+    height: 100%;
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    opacity: 0;
+    transition: opacity .2s ease;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .15);
+  }
+
+  .stat-card:hover::before {
+    opacity: 1;
+  }
+
+  .stat-card-danger {
+    border-color: #ec8579;
+    background: linear-gradient(135deg, rgba(231, 76, 60, 0.08), rgba(231, 76, 60, 0.02));
+  }
+
+  .stat-card-danger::before {
+    background: #bb5348;
+  }
+
+  .stat-card-warning {
+    border-color: #e9bb71;
+    background: linear-gradient(135deg, rgba(243, 156, 18, 0.08), rgba(243, 156, 18, 0.02));
+  }
+
+  .stat-card-warning::before {
+    background: #f0ad43;
+  }
+
+  .stat-card-success {
+    border-color: #7fdba5;
+    background: linear-gradient(135deg, rgba(39, 174, 96, 0.08), rgba(39, 174, 96, 0.02));
+  }
+
+  .stat-card-success::before {
+    background: #62c089;
+  }
+
+  .stat-card-info {
+    border-color: #3498db;
+    background: linear-gradient(135deg, rgba(52, 152, 219, 0.08), rgba(52, 152, 219, 0.02));
+  }
+
+  .stat-card-info::before {
+    background: #3498db;
+  }
+
+  .stat-card .card-body {
+    padding: 1.25rem;
+  }
+
+  .stat-icon {
+    font-size: 2rem;
+    opacity: 0.2;
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .stat-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #666;
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+
+  .stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .content-card {
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, .12);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .08);
+  }
+
+  .content-card .card-header {
+    background: transparent;
+    border-bottom: 1px solid rgba(255, 255, 255, .12);
+    font-weight: 600;
+    padding: 1rem 1.25rem;
+  }
+
+  .table-responsive {
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  .table-responsive::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .table-responsive::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, .05);
+    border-radius: 4px;
+  }
+
+  .table-responsive::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, .2);
+    border-radius: 4px;
+  }
+
+  .table-responsive::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, .3);
+  }
+
+  .quick-actions {
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, .12);
+    overflow: hidden;
+  }
+
+  .quick-actions .list-group-item {
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+    padding: 1rem 1.25rem;
+    transition: all .2s ease;
+    background: transparent;
+  }
+
+  .quick-actions .list-group-item:hover {
+    background: rgba(255, 255, 255, .05);
+    padding-left: 1.5rem;
+  }
+
+  .quick-actions .list-group-item:last-child {
+    border-bottom: none;
+  }
+
+  .section-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    padding-left: 0.5rem;
+    border-left: 4px solid var(--bs-primary);
+  }
+
+  .content-card .card-footer {
+    background: transparent;
+    border-top: 1px solid rgba(255, 255, 255, .12);
+    padding: 0.75rem 1.25rem;
+  }
+
+  .badge-pulse {
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+</style>
+
+<div class="container notif-wrapper py-3">
+  <h3 class="page-title" style="font-size: 2.5rem;">
+    <i class="bi bi-bell"></i> Central de Notificações
   </h3>
-  <div class="row g-3">
-    <div class="col-12 col-md-6 col-lg-3">
-      <a class="text-decoration-none" href="/web/{{ slug }}/notificacoes/pagar/?period=hoje">
-        <div class="card">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center">
-              <span>Contas a Pagar Hoje</span>
-              <span class="badge bg-danger">{{ pagar_hoje_count }}</span>
-            </div>
+  <p class="text-muted text-center mb-4" style="font-size: 0.9rem;">
+    Acompanhe suas contas, títulos e movimentações em tempo real
+  </p>
+
+  <!-- Cards de Estatísticas -->
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-sm-6 col-lg-3">
+      <a class="stat-card stat-card-danger" href="/web/{{ slug }}/notificacoes/pagar/?period=hoje">
+        <div class="card-body position-relative">
+          <i class="bi bi-exclamation-circle stat-icon text-danger"></i>
+          <span class="stat-label">Contas a Pagar</span>
+          <div class="d-flex align-items-center justify-content-between">
+            <span class="stat-value text-danger">{{ pagar_hoje_count }}</span>
+            <span class="badge bg-danger badge-pulse">HOJE</span>
           </div>
         </div>
       </a>
     </div>
-    <div class="col-12 col-md-6 col-lg-3">
-      <a class="text-decoration-none" href="/web/{{ slug }}/notificacoes/pagar/?period=semana">
-        <div class="card">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center">
-              <span>Contas a Pagar na Semana</span>
-              <span class="badge bg-warning text-dark">{{ pagar_semana_count }}</span>
-            </div>
+
+    <div class="col-12 col-sm-6 col-lg-3">
+      <a class="stat-card stat-card-warning" href="/web/{{ slug }}/notificacoes/pagar/?period=semana">
+        <div class="card-body position-relative">
+          <i class="bi bi-calendar-week stat-icon text-warning"></i>
+          <span class="stat-label">Contas a Pagar</span>
+          <div class="d-flex align-items-center justify-content-between">
+            <span class="stat-value text-warning">{{ pagar_semana_count }}</span>
+            <span class="badge bg-warning text-dark">SEMANA</span>
           </div>
         </div>
       </a>
     </div>
-    <div class="col-12 col-md-6 col-lg-3">
-      <a class="text-decoration-none" href="/web/{{ slug }}/notificacoes/receber/?period=hoje">
-        <div class="card">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center">
-              <span>Contas a Receber Hoje</span>
-              <span class="badge bg-success">{{ receber_hoje_count }}</span>
-            </div>
+
+    <div class="col-12 col-sm-6 col-lg-3">
+      <a class="stat-card stat-card-success" href="/web/{{ slug }}/notificacoes/receber/?period=hoje">
+        <div class="card-body position-relative">
+          <i class="bi bi-cash-coin stat-icon text-success"></i>
+          <span class="stat-label">Contas a Receber</span>
+          <div class="d-flex align-items-center justify-content-between">
+            <span class="stat-value text-success">{{ receber_hoje_count }}</span>
+            <span class="badge bg-success badge-pulse">HOJE</span>
           </div>
         </div>
       </a>
     </div>
-    <div class="col-12 col-md-6 col-lg-3">
-      <a class="text-decoration-none" href="/web/{{ slug }}/notificacoes/receber/?period=semana">
-        <div class="card">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center">
-              <span>Contas a Receber na Semana</span>
-              <span class="badge bg-info text-dark">{{ receber_semana_count }}</span>
-            </div>
+
+    <div class="col-12 col-sm-6 col-lg-3">
+      <a class="stat-card stat-card-info" href="/web/{{ slug }}/notificacoes/receber/?period=semana">
+        <div class="card-body position-relative">
+          <i class="bi bi-calendar-check stat-icon text-info"></i>
+          <span class="stat-label">Contas a Receber</span>
+          <div class="d-flex align-items-center justify-content-between">
+            <span class="stat-value text-info">{{ receber_semana_count }}</span>
+            <span class="badge bg-info text-dark">SEMANA</span>
           </div>
         </div>
       </a>
     </div>
   </div>
-  <div class="row g-3 mt-3">
-    <div class="col-12 col-lg-6">
-      <div class="card h-100">
-        <div class="card-header">Títulos Criados Hoje</div>
+
+  <!-- Seção de Conteúdo -->
+  <h5 class="section-title">Movimentações Recentes</h5>
+  
+  <div class="row g-3">
+    <div class="col-12 col-lg-8">
+      <div class="card content-card h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-file-text me-2"></i>Títulos Criados Hoje</span>
+          <span class="badge bg-primary">{{ titulos_criados_hoje|length }}</span>
+        </div>
         <div class="table-responsive">
-          <table class="table table-sm align-middle mb-0">
-            <thead>
+          <table class="table table-sm table-hover align-middle mb-0">
+            <thead class="table-light">
               <tr>
                 <th>Tipo</th>
                 <th>Número</th>
@@ -78,52 +287,83 @@
               <tr>
                 <td>
                   {% if t.tipo == 'Pagar' %}
-                  <span class="badge bg-danger">Pagar</span>
+                  <span class="badge bg-danger"><i class="bi bi-arrow-up-right"></i> Pagar</span>
                   {% else %}
-                  <span class="badge bg-success">Receber</span>
+                  <span class="badge bg-success"><i class="bi bi-arrow-down-left"></i> Receber</span>
                   {% endif %}
                 </td>
-                <td>{{ t.titu_titu }}</td>
+                <td class="fw-semibold">{{ t.titu_titu }}</td>
                 <td>{{ t.titu_parc }}</td>
                 <td>{{ t.titu_venc }}</td>
                 <td>
                   {% if t.titu_aber == 'T' %}
-                  <span class="badge bg-secondary">Quitado</span>
+                  <span class="badge bg-secondary"><i class="bi bi-check-circle"></i> Quitado</span>
                   {% else %}
-                  <span class="badge bg-primary">Aberto</span>
+                  <span class="badge bg-primary"><i class="bi bi-clock"></i> Aberto</span>
                   {% endif %}
                 </td>
               </tr>
               {% empty %}
               <tr>
-                <td colspan="5" class="text-center">Sem títulos</td>
+                <td colspan="5" class="text-center text-muted py-4">
+                  <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                  <p class="mb-0 mt-2">Nenhum título criado hoje</p>
+                </td>
               </tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
         <div class="card-footer">
-
+          <a class="btn btn-outline-primary btn-sm w-100" href="/web/{{ slug }}/notificacoes/titulos-criados-hoje/">
+            <i class="bi bi-arrow-right-circle me-1"></i> Ver Todos os Títulos
+          </a>
         </div>
-        <a class="btn btn-primary btn-sm" href="/web/{{ slug }}/notificacoes/titulos-criados-hoje/">Ver
-          todos</a>
       </div>
     </div>
-    <div class="col-12 col-lg-6">
-      <div class="card h-100">
-        <div class="card-header">Hoje</div>
-        <div class="list-group list-group-flush">
-          <a class="list-group-item d-flex justify-content-between" href="/web/{{ slug }}/notificacoes/orcamentos/">
-            <span>Orçamentos Criados</span>
-            <span class="badge bg-dark">{{ orcamentos_hoje_count }}</span>
+
+    <div class="col-12 col-lg-4">
+      <div class="card content-card h-100">
+        <div class="card-header">
+          <i class="bi bi-lightning-charge me-2"></i>Ações Rápidas
+        </div>
+        <div class="quick-actions list-group list-group-flush">
+          <a class="list-group-item d-flex justify-content-between align-items-center" 
+             href="/web/{{ slug }}/notificacoes/orcamentos/">
+            <span>
+              <i class="bi bi-file-earmark-text me-2 text-primary"></i>
+              Orçamentos Criados
+            </span>
+            <span class="badge bg-primary rounded-pill">{{ orcamentos_hoje_count }}</span>
           </a>
-          <a class="list-group-item d-flex justify-content-between" href="/web/{{ slug }}/notificacoes/pedidos/">
-            <span>Pedidos Criados</span>
-            <span class="badge bg-dark">{{ pedidos_hoje_count }}</span>
+          <a class="list-group-item d-flex justify-content-between align-items-center" 
+             href="/web/{{ slug }}/notificacoes/pedidos/">
+            <span>
+              <i class="bi bi-cart-check me-2 text-success"></i>
+              Pedidos Criados
+            </span>
+            <span class="badge bg-success rounded-pill">{{ pedidos_hoje_count }}</span>
+          </a>
+          <a class="list-group-item d-flex justify-content-between align-items-center" 
+             href="/web/{{ slug }}/notificacoes/pagar/?period=hoje">
+            <span>
+              <i class="bi bi-wallet2 me-2 text-danger"></i>
+              Pagar Hoje
+            </span>
+            <span class="badge bg-danger rounded-pill">{{ pagar_hoje_count }}</span>
+          </a>
+          <a class="list-group-item d-flex justify-content-between align-items-center" 
+             href="/web/{{ slug }}/notificacoes/receber/?period=hoje">
+            <span>
+              <i class="bi bi-cash-stack me-2 text-success"></i>
+              Receber Hoje
+            </span>
+            <span class="badge bg-success rounded-pill">{{ receber_hoje_count }}</span>
           </a>
         </div>
       </div>
     </div>
   </div>
 </div>
+
 {% endblock %}

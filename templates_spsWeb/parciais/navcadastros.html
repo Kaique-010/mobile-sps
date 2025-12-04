@@ -50,21 +50,43 @@
                         <li><a class="nav-link" href="/web/login/"
                                 data-slug-route="/web/{slug}/licencas/filiais/">Filiais</a></li>
                         <li><a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/cfop/">CFOP</a></li>
-                        <li><a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/series/">Séries</a></li>
-                        <li><a class="nav-link" href="/web/login/"
-                                data-slug-route="/web/{slug}/importador/">Importador</a></li>
-                        {% if request.user and request.user.usua_nome %}
-                        {% if request.user.usua_nome|lower == 'admin' or request.user.usua_nome|lower == 'mobile' %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/licencas/users/">
-                                <i class="bi bi-person"></i> Perfil / Usuários
+                        <li><a class="nav-link flex-grow-1" href="/web/login/" data-slug-route="/web/{slug}/series/">
+                                <div class="d-flex align-items-center">Séries
                             </a>
-                        </li>
-                        {% endif %}
-                        {% endif %}
-                    </ul>
-                </div>
-            </li>
-        </ul>
-    </div>
+                            <a href="https://youtu.be/sf9hj6Ge9Zg" target="_blank" class="text-decoration-none ms-2"
+                                title="Ver tutorial no YouTube" onclick="event.stopPropagation();">
+                                <i class="bi bi-youtube" style="font-size: 1.2rem; color: #ff2f2f;"></i>
+                            </a>
+                         </div>
+                      </li>
+
+
+                <a class="nav-link flex-grow-1" href="/web/login/" data-slug-route="/web/{slug}/importador/">
+                    <div class="d-flex align-items-center">Importador
+                </a>
+                <a href="https://youtu.be/sf9hj6Ge9Zg" target="_blank" class="text-decoration-none ms-2"
+                    title="Ver tutorial no YouTube" onclick="event.stopPropagation();">
+                    <i class="bi bi-youtube" style="font-size: 1.2rem; color: #ff2f2f;"></i>
+                </a>
+     </div>
+        </li>
+        {% if request.user and request.user.usua_nome %}
+        {% if request.user.usua_nome|lower == 'admin' or request.user.usua_nome|lower == 'mobile' %}
+        <li class="nav-item">
+            <div class="d-flex align-items-center">
+                <a class="nav-link flex-grow-1" href="/web/login/" data-slug-route="/web/{slug}/licencas/users/">
+                    <i class="bi bi-person"></i> Perfil / Usuários
+                </a>
+                <a href="" target="_blank" class="text-decoration-none ms-2" title="Ver tutorial no YouTube"
+                    onclick="event.stopPropagation();">
+                    <i class="bi bi-youtube" style="font-size: 1.2rem; color: #ff2f2f;"></i>
+                </a>
+            </div>
+        </li>
+{% endif %}
+{% endif %}
+</div>
+</li>
+</ul>
+</div>
 </li>
