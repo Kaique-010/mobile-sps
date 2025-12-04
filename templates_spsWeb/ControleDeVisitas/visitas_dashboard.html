@@ -126,7 +126,7 @@
         </div>
         <div class="text-end">
           <div class="small">Data: {{ v.prox }}</div>
-          <span class="badge text-bg-{{ v.badge_class }}">{{ v.dias_restantes }} dias</span>
+          <span class="badge-{{ v.badge_class }}">{{ v.dias_restantes }} dias</span>
         </div>
       </a>
       {% empty %}
@@ -166,7 +166,7 @@
           maintainAspectRatio: false,
           cutout: '60%',
           plugins: {
-            legend: { position: 'bottom', labels: { color: '#e8eef5' } },
+            legend: { position: 'bottom', labels: { color: '#8d8b8b' } },
             datalabels: {
               color: '#08121f',
               formatter: function (val) { return val; },

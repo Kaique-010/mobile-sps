@@ -24,6 +24,7 @@ class CentralDeAjuda(models.Model):
 
     class Meta:
         ordering = ['-cent_data_cria']
+        db_table = 'central_centraldeajuda'
 
     def __str__(self):
         return self.cent_titu
@@ -35,3 +36,5 @@ class CentralProgresso(models.Model):
     ajuda = models.ForeignKey(CentralDeAjuda, on_delete=models.CASCADE)
     progresso = models.IntegerField(default=0)  # porcentagem
     atualizado = models.DateTimeField(auto_now=True)
+    class Meta:
+        db_table = 'central_centralprogresso'

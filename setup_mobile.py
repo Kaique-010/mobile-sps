@@ -966,9 +966,13 @@ def main():
     print("🔧 Criando tabelas essenciais do Django...")
     executar_sql(SQL_DJANGO_CORE, "Criação de tabelas essenciais do Django", ignore_errors=True)
     
-    print("📦 Marcando todas as migrations como aplicadas...")
-    # Marcar todas as migrations como aplicadas sem executar
-    rodar_comando("python manage.py migrate --fake")
+    print("📦 Aplicando migrações respeitando dependências (user model customizado)...")
+    # Com AUTH_USER_MODEL = 'Licencas.Usuarios', o app admin depende de Licencas.
+    # Usamos --fake-initial para marcar as iniciais quando as tabelas já existem pelo SQL, mas
+    # garantimos que Licencas rode antes para evitar InconsistentMigrationHistory.
+    rodar_comando("python manage.py migrate contenttypes --fake-initial", ignore_errors=True)
+    rodar_comando("python manage.py migrate Licencas --fake-initial")
+    rodar_comando("python manage.py migrate --fake-initial")
     
     print("📦 Executando SQL customizado...")
     executar_sql(SQL_COMMANDS, "Criação e atualização de tabelas", ignore_errors=True)

@@ -243,8 +243,8 @@ class UsuarioForm(forms.ModelForm):
     setor = forms.ModelChoiceField(
         queryset=OrdemServicoFaseSetor.objects.all(),
         widget=forms.Select(attrs={'class': 'form-control'}),
-        empty_label=None,
-        required=True,
+        empty_label='Sem setor',
+        required=False,
     )
     class Meta:
         model = Usuarios
@@ -298,7 +298,6 @@ class UsuarioForm(forms.ModelForm):
         if setor:
             cleaned['usua_seto'] = getattr(setor, 'osfs_codi', getattr(setor, 'pk', None))
             logger.info('[UsuarioForm] mapeado setor->usua_seto=%s', cleaned['usua_seto'])
-        if not cleaned.get('usua_seto'):
-            self.add_error('setor', 'Selecione o setor')
-            logger.warning('[UsuarioForm] usua_seto ausente, erro no setor')
+        else:
+            logger.info('[UsuarioForm] setor opcional não informado')
         return cleaned

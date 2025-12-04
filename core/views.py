@@ -6,6 +6,7 @@ from Entidades.models import Entidades
 from Pedidos.models import PedidoVenda, Itenspedidovenda
 from Pisos.models import Pedidospisos, Itenspedidospisos
 from django.db.models import Sum, F, ExpressionWrapper, DecimalField, Q
+from django.db import connections
 from datetime import datetime, timedelta
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
@@ -92,16 +93,26 @@ def home(request):
         fim = datetime.today().date()
 
     pedidos_qs = PedidoVenda.objects.using(banco).filter(pedi_canc=False, pedi_data__gte=ini, pedi_data__lte=fim)
-    pedidopisos = Pedidospisos.objects.using(banco).filter(pedi_data__gte=ini, pedi_data__lte=fim).exclude(pedi_stat=1)
+    mods = getattr(request, 'modulos_disponiveis', []) or []
+    usa_pisos = any(str(m).strip().lower() == 'pisos' for m in mods)
+    pedidopisos = None
+    tabela_pisos_ok = False
+    if usa_pisos:
+        try:
+            tabela_pisos_ok = 'pedidospisos' in connections[banco].introspection.table_names()
+        except Exception:
+            tabela_pisos_ok = False
+        if tabela_pisos_ok:
+            pedidopisos = Pedidospisos.objects.using(banco).filter(pedi_data__gte=ini, pedi_data__lte=fim).exclude(pedi_stat=1)
     if empresa_id is not None:
         pedidos_qs = pedidos_qs.filter(pedi_empr=empresa_id)
         
-    if empresa_id is not None:
+    if empresa_id is not None and pedidopisos is not None:
         pedidopisos = pedidopisos.filter(pedi_empr=empresa_id)
     
     if filial_id is not None:
         pedidos_qs = pedidos_qs.filter(pedi_fili=filial_id)
-    if filial_id is not None:
+    if filial_id is not None and pedidopisos is not None:
         pedidopisos = pedidopisos.filter(pedi_fili=filial_id)
     
     if vendedor_selecionado:
@@ -113,27 +124,27 @@ def home(request):
             )
             if vend_ids:
                 pedidos_qs = pedidos_qs.filter(pedi_vend__in=[str(v) for v in vend_ids])
-                pedidopisos = pedidopisos.filter(pedi_vend__in=[str(v) for v in vend_ids])
+                if pedidopisos is not None:
+                    pedidopisos = pedidopisos.filter(pedi_vend__in=[str(v) for v in vend_ids])
             else:
                 pedidos_qs = pedidos_qs.none()
-                pedidopisos = pedidopisos.none()
+                pedidopisos = pedidopisos.none() if pedidopisos is not None else None
         except Exception:
             pedidos_qs = pedidos_qs.none()
-            pedidopisos = pedidopisos.none()
+            pedidopisos = pedidopisos.none() if pedidopisos is not None else None
 
     total_valor = pedidos_qs.aggregate(v=Sum('pedi_tota')).get('v') or 0
-    total_valor_pisos = pedidopisos.aggregate(v=Sum('pedi_tota')).get('v') or 0
+    total_valor_pisos = (pedidopisos.aggregate(v=Sum('pedi_tota')).get('v') if pedidopisos is not None else 0) or 0
     
     qtd_pedidos = pedidos_qs.count()
-    qtd_pedidos_pisos = pedidopisos.count()
+    qtd_pedidos_pisos = pedidopisos.count() if pedidopisos is not None else 0
     ticket_medio = (float(total_valor) / qtd_pedidos) if qtd_pedidos else 0.0
     ticket_medio_pisos = (float(total_valor_pisos) / qtd_pedidos_pisos) if qtd_pedidos_pisos else 0.0
 
     numeros = list(pedidos_qs.values_list('pedi_nume', flat=True))
-    numeros_pisos = list(pedidopisos.values_list('pedi_nume', flat=True))
+    numeros_pisos = list(pedidopisos.values_list('pedi_nume', flat=True)) if pedidopisos is not None else []
     itens_qs = Itenspedidovenda.objects.using(banco).filter(iped_pedi__in=[str(n) for n in numeros])
-    from Pisos.models import Itenspedidospisos
-    itens_qs_pisos = Itenspedidospisos.objects.using(banco).filter(item_pedi__in=[int(n) for n in numeros_pisos])        
+    itens_qs_pisos = Itenspedidospisos.objects.using(banco).filter(item_pedi__in=[int(n) for n in numeros_pisos]) if numeros_pisos else Itenspedidospisos.objects.none()
     custo_expr = ExpressionWrapper(F('iped_cust') * F('iped_quan'), output_field=DecimalField(max_digits=15, decimal_places=4))
     
     total_custo = itens_qs.aggregate(c=Sum(custo_expr)).get('c') or 0
@@ -145,8 +156,7 @@ def home(request):
     itens_contagem = itens_qs.count()
     itens_contagem_pisos = itens_qs_pisos.count()
 
-    mods = getattr(request, 'modulos_disponiveis', []) or []
-    usa_pisos = any(str(m).strip().lower() == 'pisos' for m in mods)
+    # 'usa_pisos' já definido acima e só será verdadeiro se houver módulo e tabela disponível
 
     kpis_normal = {
         'total_valor': float(total_valor),

@@ -36,7 +36,7 @@ class Usuarios(AbstractBaseUser, PermissionsMixin):
     usua_codi = models.AutoField(primary_key=True)
     usua_nome = models.CharField(max_length=150, unique=True)
     password = models.CharField(max_length=128, db_column='usua_senh_mobi')
-    usua_seto = models.IntegerField(db_column='usua_seto') 
+    usua_seto = models.IntegerField(db_column='usua_seto', blank=True, null=True) 
     USERNAME_FIELD = 'usua_nome'
     PASSWORD_FIELD = 'password'
     REQUIRED_FIELDS = []

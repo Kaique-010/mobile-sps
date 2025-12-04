@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,13 +8,19 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    .delphi-window { 
-      background: #f0f0f0; 
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .delphi-window {
+      background: #8d8b8b;
       color: #d69292;
       border: 2px solid #1b2b38;
       box-shadow: 0 4px 20px rgba(12, 11, 11, 0.3);
     }
+
     .delphi-titlebar {
       background: linear-gradient(to bottom, #C5D3E1 0%, #005a9e 100%);
       color: rgb(3, 3, 3);
@@ -22,18 +29,21 @@
       justify-content: space-between;
       align-items: center;
     }
+
     .delphi-panel {
       background: white;
       border: 1px solid #ccc;
-      box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
     }
+
     .delphi-card {
       background: white;
       border: 2px solid #ddd;
       border-radius: 4px;
       padding: 12px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
+
     .grid-header {
       background: linear-gradient(to bottom, #3b82f6 0%, #2563eb 100%);
       color: white;
@@ -42,14 +52,17 @@
       text-align: center;
       padding: 8px;
     }
+
     .grid-cell {
       border: 1px solid #ddd;
       padding: 8px;
       background: white;
     }
+
     .grid-row:hover .grid-cell {
       background: #e8f4ff;
     }
+
     .btn-expand {
       background: #f0f0f0;
       border: 1px solid #999;
@@ -58,11 +71,20 @@
       font-weight: bold;
       border-radius: 2px;
     }
+
     .btn-expand:hover {
       background: #e0e0e0;
     }
-    .nivel-1 { background: #f0f0ff !important; font-weight: bold; }
-    .nivel-2 { background: #f8f8ff !important; }
+
+    .nivel-1 {
+      background: #f0f0ff !important;
+      font-weight: bold;
+    }
+
+    .nivel-2 {
+      background: #f8f8ff !important;
+    }
+
     .progress-bar {
       height: 8px;
       background: #e0e0e0;
@@ -71,50 +93,52 @@
       display: inline-block;
       width: 80px;
     }
+
     .progress-fill {
       height: 100%;
       transition: width 0.3s;
     }
   </style>
 </head>
+
 <body class="bg-gray-800">
 
   <!-- Janela Estilo Delphi -->
   <div class="delphi-window m-4" style="width: calc(100% - 32px); height: calc(100vh - 32px);">
-    
+
     <!-- Barra de Título -->
     <div class="delphi-titlebar">
-      <span>...RTA9000... Resultado  Financeiro por Centros de Custo</span>
+      <span>...RTA9000... Resultado Financeiro por Centros de Custo</span>
       <span style="font-family: monospace;">_ ⬜ ✕</span>
     </div>
 
     <!-- Conteúdo Principal -->
     <div class="p-3" style="height: calc(100% - 40px); overflow-y: auto; background: #f0f0f0;">
-      
+
       <!-- Painel Superior - Cards -->
       <div class="delphi-panel p-3 mb-3">
         <div class="grid grid-cols-4 gap-3">
-          
+
           <div class="delphi-card border-l-4 border-blue-600" style="padding: 10px;">
             <div class="text-xs text-gray-600 font-bold mb-1">ORÇADO TOTAL</div>
             <div class="text-xl font-bold text-gray-800" id="totalOrcado">R$ 0,00</div>
           </div>
-          
+
           <div class="delphi-card border-l-4 border-green-600" style="padding: 10px;">
             <div class="text-xs text-gray-600 font-bold mb-1">REALIZADO TOTAL</div>
             <div class="text-xl font-bold text-gray-800" id="totalRealizado">R$ 0,00</div>
           </div>
-          
+
           <div class="delphi-card border-l-4 border-purple-600" style="padding: 10px;">
             <div class="text-xs text-gray-600 font-bold mb-1">DIFERENÇA</div>
             <div class="text-xl font-bold" id="totalDiferenca">R$ 0,00</div>
           </div>
-          
+
           <div class="delphi-card border-l-4 border-orange-600" style="padding: 10px;">
             <div class="text-xs text-gray-600 font-bold mb-1">% EXECUÇÃO</div>
             <div class="text-xl font-bold text-gray-800" id="percExecucao">0,0%</div>
           </div>
-          
+
         </div>
       </div>
 
@@ -151,7 +175,7 @@
           </div>
           <div class="col-span-2">
             <label class="block text-sm font-bold text-gray-700 mb-1">Buscar:</label>
-            <input type="text" id="busca" placeholder="Digite código ou nome..." 
+            <input type="text" id="busca" placeholder="Digite código ou nome..."
               class="w-full border border-gray-400 rounded px-2 py-1">
           </div>
         </div>
@@ -179,28 +203,28 @@
 
       <!-- Gráficos -->
       <div class="grid grid-cols-3 gap-3">
-        
+
         <div class="delphi-panel p-3">
           <h3 class="text-sm font-bold text-gray-700 mb-2 text-center">Orçado vs Realizado por Mês</h3>
           <div style="height: 220px;">
             <canvas id="graficoMensal"></canvas>
           </div>
         </div>
-        
+
         <div class="delphi-panel p-3">
           <h3 class="text-sm font-bold text-gray-700 mb-2 text-center">Variação Orçamentária (%)</h3>
           <div style="height: 220px;">
             <canvas id="graficoVariacao"></canvas>
           </div>
         </div>
-        
+
         <div class="delphi-panel p-3">
           <h3 class="text-sm font-bold text-gray-700 mb-2 text-center">Top 10 - Maior Diferença</h3>
           <div style="height: 220px;">
             <canvas id="graficoTop10"></canvas>
           </div>
         </div>
-        
+
       </div>
 
     </div>
@@ -208,30 +232,30 @@
 
   <script>
     const dados = [
-      {codigo: "1", expandido: "1", nivel: 1, nome: "CUSTO TOTAL COM INVESTIMENTOS", tipo: "S", expandir: false},
-      {codigo: "2", expandido: "1.01", nivel: 2, nome: "TAXAS E IMPOSTOS", tipo: "S", expandir: false},
-      {codigo: "3", expandido: "1.01.001", nivel: 3, nome: "Contribuicao Social", tipo: "A", expandir: false},
-      {codigo: "4", expandido: "1.01.002", nivel: 3, nome: "Imposto de Renda IRPJ", tipo: "A", expandir: false},
-      {codigo: "5", expandido: "1.01.003", nivel: 3, nome: "PIS", tipo: "A", expandir: false},
-      {codigo: "6", expandido: "1.01.004", nivel: 3, nome: "COFINS", tipo: "A", expandir: false},
-      {codigo: "8", expandido: "1.02", nivel: 2, nome: "TRANSPORTE DE MADEIRA", tipo: "S", expandir: false},
-      {codigo: "9", expandido: "1.02.001", nivel: 3, nome: "Transporte de Madeira", tipo: "A", expandir: false},
-      {codigo: "10", expandido: "1.03", nivel: 2, nome: "CUSTOS VARIAVEIS COLHEITA", tipo: "S", expandir: false},
-      {codigo: "11", expandido: "1.03.001", nivel: 3, nome: "SERVICO TERCEIROS", tipo: "S", expandir: false},
-      {codigo: "12", expandido: "1.03.001.0001", nivel: 4, nome: "M de Obra Empreiteiro Colheita", tipo: "A", expandir: false},
-      {codigo: "85", expandido: "2", nivel: 1, nome: "INVESTIMENTOS FLORESTAS", tipo: "S", expandir: false},
-      {codigo: "86", expandido: "2.01", nivel: 2, nome: "SILVICULTURA", tipo: "S", expandir: false},
-      {codigo: "87", expandido: "2.01.001", nivel: 3, nome: "SILVICULTURA", tipo: "S", expandir: false},
-      {codigo: "88", expandido: "2.01.001.0001", nivel: 4, nome: "Mudas", tipo: "A", expandir: false},
-      {codigo: "89", expandido: "2.01.001.0002", nivel: 4, nome: "Plantio", tipo: "A", expandir: false},
-      {codigo: "114", expandido: "3", nivel: 1, nome: "AGROPECUARIA", tipo: "S", expandir: false},
-      {codigo: "115", expandido: "3.01", nivel: 2, nome: "AGROPECURIA", tipo: "S", expandir: false},
-      {codigo: "116", expandido: "3.01.001", nivel: 3, nome: "Salarios Agropecuaria", tipo: "A", expandir: false},
-      {codigo: "117", expandido: "3.01.002", nivel: 3, nome: "Veterinario", tipo: "A", expandir: false},
-      {codigo: "122", expandido: "3.01.007", nivel: 3, nome: "Adubacao", tipo: "A", expandir: false},
-      {codigo: "133", expandido: "4", nivel: 1, nome: "MOVIMENTACOES FINANCEIRAS", tipo: "S", expandir: false},
-      {codigo: "134", expandido: "4.01", nivel: 2, nome: "PAGAMENTOS", tipo: "S", expandir: false},
-      {codigo: "135", expandido: "4.01.001", nivel: 3, nome: "Aportes", tipo: "A", expandir: false},
+      { codigo: "1", expandido: "1", nivel: 1, nome: "CUSTO TOTAL COM INVESTIMENTOS", tipo: "S", expandir: false },
+      { codigo: "2", expandido: "1.01", nivel: 2, nome: "TAXAS E IMPOSTOS", tipo: "S", expandir: false },
+      { codigo: "3", expandido: "1.01.001", nivel: 3, nome: "Contribuicao Social", tipo: "A", expandir: false },
+      { codigo: "4", expandido: "1.01.002", nivel: 3, nome: "Imposto de Renda IRPJ", tipo: "A", expandir: false },
+      { codigo: "5", expandido: "1.01.003", nivel: 3, nome: "PIS", tipo: "A", expandir: false },
+      { codigo: "6", expandido: "1.01.004", nivel: 3, nome: "COFINS", tipo: "A", expandir: false },
+      { codigo: "8", expandido: "1.02", nivel: 2, nome: "TRANSPORTE DE MADEIRA", tipo: "S", expandir: false },
+      { codigo: "9", expandido: "1.02.001", nivel: 3, nome: "Transporte de Madeira", tipo: "A", expandir: false },
+      { codigo: "10", expandido: "1.03", nivel: 2, nome: "CUSTOS VARIAVEIS COLHEITA", tipo: "S", expandir: false },
+      { codigo: "11", expandido: "1.03.001", nivel: 3, nome: "SERVICO TERCEIROS", tipo: "S", expandir: false },
+      { codigo: "12", expandido: "1.03.001.0001", nivel: 4, nome: "M de Obra Empreiteiro Colheita", tipo: "A", expandir: false },
+      { codigo: "85", expandido: "2", nivel: 1, nome: "INVESTIMENTOS FLORESTAS", tipo: "S", expandir: false },
+      { codigo: "86", expandido: "2.01", nivel: 2, nome: "SILVICULTURA", tipo: "S", expandir: false },
+      { codigo: "87", expandido: "2.01.001", nivel: 3, nome: "SILVICULTURA", tipo: "S", expandir: false },
+      { codigo: "88", expandido: "2.01.001.0001", nivel: 4, nome: "Mudas", tipo: "A", expandir: false },
+      { codigo: "89", expandido: "2.01.001.0002", nivel: 4, nome: "Plantio", tipo: "A", expandir: false },
+      { codigo: "114", expandido: "3", nivel: 1, nome: "AGROPECUARIA", tipo: "S", expandir: false },
+      { codigo: "115", expandido: "3.01", nivel: 2, nome: "AGROPECURIA", tipo: "S", expandir: false },
+      { codigo: "116", expandido: "3.01.001", nivel: 3, nome: "Salarios Agropecuaria", tipo: "A", expandir: false },
+      { codigo: "117", expandido: "3.01.002", nivel: 3, nome: "Veterinario", tipo: "A", expandir: false },
+      { codigo: "122", expandido: "3.01.007", nivel: 3, nome: "Adubacao", tipo: "A", expandir: false },
+      { codigo: "133", expandido: "4", nivel: 1, nome: "MOVIMENTACOES FINANCEIRAS", tipo: "S", expandir: false },
+      { codigo: "134", expandido: "4.01", nivel: 2, nome: "PAGAMENTOS", tipo: "S", expandir: false },
+      { codigo: "135", expandido: "4.01.001", nivel: 3, nome: "Aportes", tipo: "A", expandir: false },
     ];
 
     let dadosProcessados = [];
@@ -262,8 +286,8 @@
       const dadosFiltrados = dadosProcessados.filter(d => {
         const matchNivel = !nivel || d.nivel == nivel;
         const matchTipo = !tipo || d.tipo === tipo;
-        const matchBusca = !busca || 
-          d.expandido.toLowerCase().includes(busca) || 
+        const matchBusca = !busca ||
+          d.expandido.toLowerCase().includes(busca) ||
           d.nome.toLowerCase().includes(busca);
         return matchNivel && matchTipo && matchBusca;
       });
@@ -275,8 +299,8 @@
         if (d.nivel === 2) tr.className += ' nivel-2';
 
         const indent = '&nbsp;&nbsp;'.repeat(d.nivel - 1);
-        const btnExpand = d.tipo === 'S' ? 
-          `<button class="btn-expand" onclick="toggleExpand('${d.expandido}')">${expandidos.has(d.expandido) ? '−' : '+'}</button>` : 
+        const btnExpand = d.tipo === 'S' ?
+          `<button class="btn-expand" onclick="toggleExpand('${d.expandido}')">${expandidos.has(d.expandido) ? '−' : '+'}</button>` :
           '<span style="display:inline-block;width:30px;"></span>';
 
         const corDif = d.diferenca >= 0 ? 'green' : 'red';
@@ -348,15 +372,15 @@
           labels: ['Janeiro', 'Fevereiro', 'Março'],
           datasets: [
             {
-              label: 'Orçado', 
-              data: [850000, 920000, 880000], 
+              label: 'Orçado',
+              data: [850000, 920000, 880000],
               backgroundColor: 'rgba(59, 130, 246, 0.85)',
               borderColor: 'rgba(59, 130, 246, 1)',
               borderWidth: 1
             },
             {
-              label: 'Realizado', 
-              data: [780000, 890000, 920000], 
+              label: 'Realizado',
+              data: [780000, 890000, 920000],
               backgroundColor: 'rgba(16, 185, 129, 0.85)',
               borderColor: 'rgba(16, 185, 129, 1)',
               borderWidth: 1
@@ -364,19 +388,19 @@
           ]
         },
         options: {
-          responsive: true, 
-          maintainAspectRatio: false, 
+          responsive: true,
+          maintainAspectRatio: false,
           plugins: {
             legend: {
               position: 'bottom',
               labels: {
-                font: {size: 11},
+                font: { size: 11 },
                 padding: 10
               }
             },
             tooltip: {
               callbacks: {
-                label: function(context) {
+                label: function (context) {
                   return context.dataset.label + ': ' + fmt(context.parsed.y);
                 }
               }
@@ -386,8 +410,8 @@
             y: {
               beginAtZero: true,
               ticks: {
-                callback: function(value) {
-                  return 'R$ ' + (value/1000).toFixed(0) + 'k';
+                callback: function (value) {
+                  return 'R$ ' + (value / 1000).toFixed(0) + 'k';
                 }
               }
             }
@@ -415,19 +439,19 @@
           }]
         },
         options: {
-          responsive: true, 
-          maintainAspectRatio: false, 
+          responsive: true,
+          maintainAspectRatio: false,
           plugins: {
             legend: {
               position: 'bottom',
               labels: {
-                font: {size: 11},
+                font: { size: 11 },
                 padding: 10
               }
             },
             tooltip: {
               callbacks: {
-                label: function(context) {
+                label: function (context) {
                   return 'Variação: ' + context.parsed.y + '%';
                 }
               }
@@ -436,7 +460,7 @@
           scales: {
             y: {
               ticks: {
-                callback: function(value) {
+                callback: function (value) {
                   return value + '%';
                 }
               }
@@ -468,10 +492,10 @@
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: {display: false},
+            legend: { display: false },
             tooltip: {
               callbacks: {
-                label: function(context) {
+                label: function (context) {
                   return 'Diferença: ' + fmt(context.parsed.x);
                 }
               }
@@ -480,8 +504,8 @@
           scales: {
             x: {
               ticks: {
-                callback: function(value) {
-                  return 'R$ ' + (value/1000).toFixed(0) + 'k';
+                callback: function (value) {
+                  return 'R$ ' + (value / 1000).toFixed(0) + 'k';
                 }
               }
             }
@@ -491,7 +515,7 @@
     }
 
     function fmt(v) {
-      return v.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+      return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     }
 
     // Inicializar
@@ -514,4 +538,5 @@
     });
   </script>
 </body>
+
 </html>
