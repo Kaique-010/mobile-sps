@@ -101,6 +101,10 @@ class LoginView(APIView):
         refresh['empresa_id'] = empresa_id
         refresh['filial_id'] = filial_id
         access = refresh.access_token
+        try:
+            request.session.cycle_key()
+        except Exception:
+            pass
         request.session["usua_codi"] = usuario.usua_codi
         access['username'] = usuario.usua_nome
         access['usuario_id'] = usuario.usua_codi

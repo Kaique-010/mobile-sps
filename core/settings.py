@@ -444,7 +444,7 @@ if USE_LOCAL_DB:
         'default': {
             'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
             'LOCATION': 'mobile-sps-cache',
-            'TIMEOUT': 3600,
+            'TIMEOUT': 150, # 2 minutos
         }
     }
 else:
