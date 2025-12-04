@@ -1,0 +1,209 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load finance_tags %}
+{% block title %}Métricas O.S{% endblock %}
+{% block content %}
+<style>
+    .card-corporate {
+        box-shadow: 0 6px 18px rgba(142, 196, 212, .733);
+        border-radius: 12px;
+        border: 1px solid var(--bs-border-color);
+        background: var(--bs-card-bg)
+    }
+
+    .filter-panel {
+        background: var(--bs-card-bg);
+        box-shadow: 0 4px 14px rgba(142, 196, 212, .733);
+        border-radius: 12px;
+        border: 1px solid var(--bs-border-color);
+        padding: 16px
+    }
+
+    .chart-card {
+        background: var(--bs-card-bg);
+        box-shadow: 0 4px 14px rgba(142, 196, 212, .733);
+        border-radius: 12px;
+        border: 1px solid var(--bs-border-color)
+    }
+
+    .chart-card .card-body {
+        padding: 5px
+    }
+
+    .chart-canvas {
+        display: block;
+        width: 90% !important;
+        height: clamp(220px, 38vh, 380px) !important;
+        color: var(--bs-body-color)
+    }
+
+    .btn-outline-custom2 {
+        border-color: #8ec4d4;
+        transition: all .3s ease-in-out;
+        padding: 8px 12px;
+        position: absolute;
+        right: 5px;
+        bottom: -5px;
+        font-size: 10px
+    }
+
+    .btn-outline-custom2:hover {
+        background-color: #8ec4d4;
+        color: var(--bs-white)
+    }
+</style>
+<div class="container page-container">
+    <div class="card card-corporate">
+        <div class="card-body">
+            <div class="page-header">
+                <h2 class="page-title text-center"><i class="bi bi-graph-up fs-3"></i> Overview Ordem de Serviço</h2>
+            </div>
+        </div>
+    </div>
+    <div class="card card-corporate">
+        <div class="card-body">
+            <div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-3 mt-2">
+                <div class="col">
+                    <div class="card chart-card h-100">
+                        <div class="card-body d-flex align-items-center gap-2">
+                            <div
+                                style="width:34px;height:34px;border-radius:17px;background:#19875422;display:flex;align-items:center;justify-content:center">
+                                <i class="bi bi-cash-stack text-success"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">Total</div>
+                                <div class="fs-6 fw-semibold text-success">{{ kpis.total_valor|brl }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card chart-card h-100">
+                        <div class="card-body d-flex align-items-center gap-2">
+                            <div
+                                style="width:34px;height:34px;border-radius:17px;background:#20c99722;display:flex;align-items:center;justify-content:center">
+                                <i class="bi bi-graph-up-arrow text-info"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">Clientes distintos</div>
+                                <div class="fs-6 fw-semibold text-info">{{ kpis.clientes_distintos }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card chart-card h-100">
+                        <div class="card-body d-flex align-items-center gap-2">
+                            <div
+                                style="width:34px;height:34px;border-radius:17px;background:#fd7e1422;display:flex;align-items:center;justify-content:center">
+                                <i class="bi bi-receipt text-warning"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">Ticket médio</div>
+                                <div class="fs-6 fw-semibold text-warning">{{ kpis.ticket_medio|brl }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card chart-card h-100">
+                        <div class="card-body d-flex align-items-center gap-2">
+                            <div
+                                style="width:34px;height:34px;border-radius:17px;background:#0d6efd22;display:flex;align-items:center;justify-content:center">
+                                <i class="bi bi-clipboard-check text-primary"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">O.S.</div>
+                                <div class="fs-6 fw-semibold text-primary">{{ kpis.qtd_pedidos }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card chart-card h-100">
+                        <div class="card-body d-flex align-items-center gap-2">
+                            <div
+                                style="width:34px;height:34px;border-radius:17px;background:#6f42c122;display:flex;align-items:center;justify-content:center">
+                                <i class="bi bi-box-seam" style="color:#6f42c1"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">Itens</div>
+                                <div class="fs-6 fw-semibold" style="color:#6f42c1">{{ kpis.itens_contagem }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <form id="filtroDashboard" class="filter-panel mb-4 mt-4" method="get" action="">
+        <div class="row g-3 align-items-end">
+            <div class="col-12 col-md-3"><label for="vendedor" class="form-label">Responsável</label><select
+                    id="vendedor" name="vendedor" class="form-select"
+                    data-selected-vendedor="{{ vendedor_selecionado }}">
+                    <option value="">Todos</option>
+                </select></div>
+            <div class="col-12 col-md-3"><label for="data_inicio" class="form-label">Data Início</label><input
+                    type="date" id="data_inicio" name="data_inicio" class="form-control" value="{{ data_inicio }}">
+            </div>
+            <div class="col-12 col-md-3"><label for="data_fim" class="form-label">Data Fim</label><input type="date"
+                    id="data_fim" name="data_fim" class="form-control" value="{{ data_fim }}"></div>
+            <div class="col-12 col-md-3 d-flex align-items-end justify-content-end"><button type="submit"
+                    class="btn btn-outline-primary w-100 w-md-auto">Filtrar</button></div>
+        </div>
+    </form>
+    <div class="row g-3 align-items-stretch">
+        <div class="col-lg-6 d-flex">
+            <div class="card chart-card w-100">
+                <div class="card-body">
+                    <h3 class="h6 text-body mb-3 text-center">O.S por Cliente</h3><canvas id="totalPedidosChart"
+                        class="chart-canvas"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 d-flex">
+            <div class="card chart-card w-100">
+                <div class="card-body">
+                    <h3 class="h6 text-body mb-3 text-center">Valor por Cliente</h3><canvas id="totalValorPedidoChart"
+                        class="chart-canvas"></canvas><button id="abrirKronos" class="btn btn-outline-custom2 ms-2"><img
+                            src="{% static 'logo.png' %}" style="height:24px" />Fale com Kronos</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="kronosModal" class="modal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content" style="background-color:#121212;border:1px solid #00bfff">
+                <div class="modal-header" style="border-bottom-color:#00bfff">
+                    <div class="d-flex align-items-center">
+                        <div id="logoPulse"
+                            style="width:30px;height:30px;border-radius:15px;background:#00bfff93;margin-right:14px">
+                            <img src="{% static 'logo.png' %}" style="height:18px; margin-left:7px">
+                        </div>
+                        <h5 class="modal-title" style="color:#00bfff">Kronos — Agente I.A Spartacus</h5>
+                    </div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" style="height:50vh;display:flex;flex-direction:column">
+                    <div id="chatBox" style="flex:1;overflow:auto"></div>
+                    <div class="d-flex justify-content-end mb-2"><button id="limparChat"
+                            class="btn btn-secondary btn-sm">🗑</button></div>
+                    <div class="input-group"><input id="mensagemInput" type="text" class="form-control"
+                            placeholder="Diga algo para o Kronos..." /><button id="enviarMensagem"
+                            class="btn btn-primary">Enviar</button></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    function getDefaultDates() { const hoje = new Date(); const fim = hoje.toISOString().slice(0, 10); const iniDate = new Date(hoje); iniDate.setDate(hoje.getDate() - 7); const ini = iniDate.toISOString().slice(0, 10); return { ini, fim } }
+    function getAuthHeaders(token) { return token ? { 'Authorization': `Bearer ${token}` } : {} }
+    async function authFetch(url, options = {}) { const slug = localStorage.getItem('slug'); const token = localStorage.getItem('access'); const empresa = localStorage.getItem('empresa_id') || '1'; const filial = localStorage.getItem('filial_id') || '1'; let resp = await fetch(url, { ...options, headers: { 'Content-Type': 'application/json', 'X-Empresa': empresa, 'X-Filial': filial, ...getAuthHeaders(token), ...(options.headers || {}) } }); if (resp.status !== 401) return resp; const refresh = localStorage.getItem('refresh'); if (!refresh) return resp; try { const refreshResp = await fetch(`/api/${slug}/auth/token/refresh/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh }) }); if (!refreshResp.ok) return resp; const data = await refreshResp.json(); const newAccess = data?.access; if (!newAccess) return resp; localStorage.setItem('access', newAccess); resp = await fetch(url, { ...options, headers: { 'Content-Type': 'application/json', 'X-Empresa': empresa, 'X-Filial': filial, ...getAuthHeaders(newAccess), ...(options.headers || {}) } }); return resp } catch (e) { return resp } }
+    const totalPedidosCtx = document.getElementById('totalPedidosChart'); const totalValorPedidoCtx = document.getElementById('totalValorPedidoChart'); let totalPedidosChart = null; let totalValorChart = null; function createBarGradient(ctx) { const g = ctx.createLinearGradient(0, ctx.canvas.height, 0, 0); g.addColorStop(0, '#4a6cf7'); g.addColorStop(1, '#82a0ff'); return g } const shadowPlugin = { id: 'barShadow', beforeDatasetsDraw(chart) { const c = chart.ctx; c.save(); c.shadowColor = 'rgba(142, 196, 212, 0.733)'; c.shadowBlur = 8; c.shadowOffsetY = 4 }, afterDatasetsDraw(chart) { chart.ctx.restore() } }; function isDarkTheme() { const t = (document.documentElement.getAttribute('data-bs-theme') || document.body.getAttribute('data-bs-theme') || '').toLowerCase(); if (t) return t === 'dark'; return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches } function themeAxis() { const dark = isDarkTheme(); return { gridColor: dark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.12)', tickColor: dark ? '#ffffff' : '#212529', legendColor: dark ? '#ffffff' : '#212529' } }
+    function upsertCharts(labels, valoresCount, valoresSum) { const barCtx = totalPedidosCtx ? totalPedidosCtx.getContext('2d') : null; const pieCtx = totalValorPedidoCtx ? totalValorPedidoCtx.getContext('2d') : null; const countData = { labels, datasets: [{ label: 'Total', data: valoresCount, backgroundColor: barCtx ? createBarGradient(barCtx) : '#82a0ff', borderColor: '#4a6cf7', borderWidth: 1, borderRadius: 6 }] }; const palette = ['#4a6cf7', '#6ea8fe', '#06b6d4', '#82d4a0', '#8b5cf6', '#e99e60', '#e2b783', '#d69292', '#0ea5e9', '#10b981', '#c084fc', '#84cc16']; const sumData = { labels, datasets: [{ label: 'Valor Total', data: valoresSum, backgroundColor: labels.map((_, i) => palette[i % palette.length]), borderColor: '#ffffff', borderWidth: 1, hoverOffset: 8 }] }; const axis = themeAxis(); if (totalPedidosChart) { totalPedidosChart.data = countData; totalPedidosChart.options.scales.y.grid.color = axis.gridColor; totalPedidosChart.options.scales.y.ticks.color = axis.tickColor; totalPedidosChart.options.scales.x.grid.color = axis.gridColor; totalPedidosChart.options.scales.x.ticks.color = axis.tickColor; totalPedidosChart.update() } else if (barCtx) { totalPedidosChart = new Chart(barCtx, { type: 'bar', data: countData, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } }, x: { grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } } }, plugins: { legend: { display: false } } }, plugins: [shadowPlugin] }) } if (totalValorChart && totalValorChart.config.type !== 'pie') { totalValorChart.destroy(); totalValorChart = null } if (totalValorChart) { totalValorChart.data = sumData; totalValorChart.options.plugins.legend.labels.color = axis.legendColor; totalValorChart.update() } else if (pieCtx) { totalValorChart = new Chart(pieCtx, { type: 'pie', data: sumData, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: axis.legendColor } } }, layout: { padding: 8 } } }) } }
+    async function loadData() { const slug = localStorage.getItem('slug'); const token = localStorage.getItem('access'); if (!slug || !token) { window.location.href = '/web/login/'; return } const { ini, fim } = getDefaultDates(); const dataInicioEl = document.getElementById('data_inicio'); const dataFimEl = document.getElementById('data_fim'); if (dataInicioEl && !dataInicioEl.value) dataInicioEl.value = ini; if (dataFimEl && !dataFimEl.value) dataFimEl.value = fim; const selVend = document.getElementById('vendedor'); const nomeResp = ((selVend?.value || selVend?.dataset?.selectedVendedor || '')).trim(); const empresa = localStorage.getItem('empresa_id') || ''; const filial = localStorage.getItem('filial_id') || ''; const params = new URLSearchParams({ data_inicial: dataInicioEl?.value || ini, data_final: dataFimEl?.value || fim, limit: '250' }); if (empresa) params.set('empresa', empresa); if (filial) params.set('filial', filial); const url = `/api/${slug}/ordemdeservico/ordens-eletro/?${params.toString()}`; let items = []; try { const resp = await authFetch(url); if (!resp.ok) throw new Error(`Erro ${resp.status}`); const data = await resp.json(); items = Array.isArray(data) ? data : (data.results || []); } catch (err) { items = []; } const porClienteCount = {}; const porClienteValor = {}; if (items && items.length) { for (const item of items) { const clienteNome = item.nome_cliente || 'N/D'; const respNome = item.nome_responsavel || ''; if (nomeResp && respNome !== nomeResp) continue; const valor = parseFloat(item.total_orde || item.total_os) || 0; porClienteCount[clienteNome] = (porClienteCount[clienteNome] || 0) + 1; porClienteValor[clienteNome] = (porClienteValor[clienteNome] || 0) + valor } } else { try { const p2 = new URLSearchParams({ limit: '500' }); if (empresa) p2.set('orde_empr', empresa); if (filial) p2.set('orde_fili', filial); const url2 = `/api/${slug}/ordemdeservico/ordens/?${p2.toString()}`; const r2 = await authFetch(url2); if (r2.ok) { const d2 = await r2.json(); const lista = Array.isArray(d2) ? d2 : (d2.results || []); const mapClientes = window.__clientesMap || {}; for (const os of lista) { const dataAber = os.orde_data_aber; const okDataIni = !dataInicioEl?.value || dataAber >= (dataInicioEl?.value || ini); const okDataFim = !dataFimEl?.value || dataAber <= (dataFimEl?.value || fim); if (!okDataIni || !okDataFim) continue; const clienteId = String(os.orde_enti || '0'); const nome = mapClientes[clienteId] || clienteId; const valor = parseFloat(os.orde_tota || 0) || 0; porClienteCount[nome] = (porClienteCount[nome] || 0) + 1; porClienteValor[nome] = (porClienteValor[nome] || 0) + valor } } } catch (e) { } } const labels = Object.keys(porClienteCount); const valoresCount = labels.map(v => porClienteCount[v]); const valoresSum = labels.map(v => porClienteValor[v]); upsertCharts(labels, valoresCount, valoresSum) }
+    async function carregarVendedores() { try { const slug = localStorage.getItem('slug'); const empresa = localStorage.getItem('empresa_id') || ''; if (!slug || !empresa) return; const url = `/api/${slug}/entidades/entidades/?enti_empr=${encodeURIComponent(empresa)}&enti_tipo_enti=VE&limit=500`; const resp = await authFetch(url); if (!resp.ok) return; const data = await resp.json(); const sel = document.getElementById('vendedor'); const atual = sel.value; sel.innerHTML = '<option value="">Todos</option>'; const lista = Array.isArray(data) ? data : (data.results || []); lista.forEach(v => { const opt = document.createElement('option'); opt.value = v.enti_nome; opt.textContent = v.enti_nome; sel.appendChild(opt) }); const prefer = sel.dataset.selectedVendedor || atual; if (prefer) sel.value = prefer } catch (e) { } }
+    async function carregarClientesMap() { try { const slug = localStorage.getItem('slug'); const empresa = localStorage.getItem('empresa_id') || ''; if (!slug || !empresa) return; const url = `/api/${slug}/entidades/entidades/?enti_empr=${encodeURIComponent(empresa)}&limit=1000`; const resp = await authFetch(url); if (!resp.ok) return; const data = await resp.json(); const lista = Array.isArray(data) ? data : (data.results || []); const map = {}; lista.forEach(v => { map[String(v.enti_clie)] = v.enti_nome }); window.__clientesMap = map } catch (e) { } }
+    document.addEventListener('DOMContentLoaded', () => { carregarClientesMap().then(() => loadData()); carregarVendedores() });
+</script>
+{% endblock %}

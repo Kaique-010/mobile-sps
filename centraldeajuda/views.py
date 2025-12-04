@@ -5,7 +5,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseForbidden
 from .models import CentralDeAjuda, CentralProgresso
 from .forms import CentralDeAjudaForm
-from core.registry import get_licenca_db_config
+from core.utils import get_db_from_slug
 from Licencas.models import Usuarios
 from Licencas.web_views import DBSlugMixin, RoleRequiredMixin
 from django.db.models import OuterRef, Subquery, IntegerField, CharField, Value, Case, When
@@ -16,7 +16,7 @@ class CentralListView(LoginRequiredMixin, DBSlugMixin, ListView):
     template_name = "centraldeajuda/lista.html"
 
     def get_queryset(self):
-        db_alias = get_licenca_db_config(self.request)
+        db_alias = get_db_from_slug('save1') or 'savexml1'
         banco = self.request.session.get("empresa_id")
         usuario_obj = None
         try:
@@ -104,6 +104,11 @@ class CentralDetailView(LoginRequiredMixin, DBSlugMixin, DetailView):
     model = CentralDeAjuda
     template_name = "centraldeajuda/detalhe.html"
 
+    def get_queryset(self):
+        db_alias = get_db_from_slug('save1') or 'savexml1'
+        banco = self.request.session.get("empresa_id")
+        return CentralDeAjuda.objects.using(db_alias).filter(cent_empr=banco)
+
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         try:
@@ -124,7 +129,7 @@ class CentralCreateView(LoginRequiredMixin, RoleRequiredMixin, DBSlugMixin, Crea
 
     def form_valid(self, form):
         form.instance.cent_empr = self.request.session.get("empresa_id")
-        banco = get_licenca_db_config(self.request)
+        banco = get_db_from_slug('save1') or 'savexml1'
         usuario_obj = None
         try:
             usuario_id = (
@@ -158,6 +163,8 @@ class CentralCreateView(LoginRequiredMixin, RoleRequiredMixin, DBSlugMixin, Crea
             except Exception:
                 usuario_obj = None
         form.instance.cent_usua_crio = usuario_obj
+        obj = form.save(commit=False)
+        obj.save(using=banco)
         return super().form_valid(form)
 
 
@@ -169,3 +176,14 @@ class CentralUpdateView(LoginRequiredMixin, RoleRequiredMixin, DBSlugMixin, Upda
 
     def get_success_url(self):
         return reverse_lazy("central_lista", kwargs={"slug": self.slug})
+
+    def get_queryset(self):
+        db_alias = get_db_from_slug('save1') or 'savexml1'
+        banco = self.request.session.get("empresa_id")
+        return CentralDeAjuda.objects.using(db_alias).filter(cent_empr=banco)
+
+    def form_valid(self, form):
+        banco = get_db_from_slug('save1') or 'savexml1'
+        obj = form.save(commit=False)
+        obj.save(using=banco)
+        return super().form_valid(form)

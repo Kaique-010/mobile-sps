@@ -234,13 +234,29 @@ class PedidospisosViewSet(BaseMultiDBModelViewSet, VendedorEntidadeMixin):
         empresa_id = self.request.query_params.get('pedi_empr')
         filial_id = self.request.query_params.get('pedi_fili')
         cliente_id = self.request.query_params.get('pedi_clie')
-        
+        data_ini = self.request.query_params.get('data_inicial') or self.request.query_params.get('data_inicio')
+        data_fim = self.request.query_params.get('data_final') or self.request.query_params.get('data_fim')
+
         if empresa_id:
             queryset = queryset.filter(pedi_empr=empresa_id)
         if filial_id:
             queryset = queryset.filter(pedi_fili=filial_id)
         if cliente_id:
             queryset = queryset.filter(pedi_clie=cliente_id)
+        try:
+            from datetime import datetime
+            if data_ini and data_fim:
+                di = datetime.strptime(data_ini, '%Y-%m-%d').date()
+                df = datetime.strptime(data_fim, '%Y-%m-%d').date()
+                queryset = queryset.filter(pedi_data__range=(di, df))
+            elif data_ini:
+                di = datetime.strptime(data_ini, '%Y-%m-%d').date()
+                queryset = queryset.filter(pedi_data__gte=di)
+            elif data_fim:
+                df = datetime.strptime(data_fim, '%Y-%m-%d').date()
+                queryset = queryset.filter(pedi_data__lte=df)
+        except Exception:
+            pass
             
         return queryset.order_by('-pedi_data', '-pedi_nume')
     

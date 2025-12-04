@@ -95,7 +95,7 @@ class Itensorcapisos(models.Model):
     item_caix = models.IntegerField(blank=True, null=True)
     item_desc = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
     item_queb = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
-    item_inst_incl = models.BooleanField(blank=True, null=True)
+    #item_inst_incl = models.BooleanField(blank=True, null=True)
 
     class Meta:
         managed = False
@@ -158,7 +158,7 @@ class Pedidospisos(models.Model):
     pedi_comp_fone = models.CharField(max_length=20, blank=True, null=True)
     pedi_moti_canc = models.TextField(blank=True, null=True)
     pedi_cred = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
-    pedi_clon = models.BooleanField(blank=True, null=True)
+    #pedi_clon = models.BooleanField(blank=True, null=True)
     pedi_taxa_cart = models.DecimalField(max_digits=16, decimal_places=2, blank=True, null=True)
 
     class Meta:
@@ -196,7 +196,7 @@ class Itenspedidospisos(models.Model):
     item_stat_manu_data = models.DateField(blank=True, null=True)
     item_stat_manu_user = models.IntegerField(blank=True, null=True)
     item_prod_nome = models.CharField(max_length=100, blank=True, null=True)
-    item_inst_incl = models.BooleanField(blank=True, null=True)
+    #item_inst_incl = models.BooleanField(blank=True, null=True)
     item_quan_entr = models.DecimalField(max_digits=16, decimal_places=2, blank=True, null=True)
     item_caix_entr = models.DecimalField(max_digits=16, decimal_places=2, blank=True, null=True)
 

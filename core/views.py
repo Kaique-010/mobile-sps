@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect
 from django.urls import reverse
 import json
 from Entidades.models import Entidades
-from Pedidos.models import PedidoVenda, Itenspedidovenda
+from Pedidos.models import PedidoVenda, Itenspedidovenda, PedidosGeral
 from Pisos.models import Pedidospisos, Itenspedidospisos
 from django.db.models import Sum, F, ExpressionWrapper, DecimalField, Q
 from django.db import connections
@@ -11,9 +11,36 @@ from datetime import datetime, timedelta
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from core.utils import get_licenca_db_config, get_db_from_slug
+from core.middleware import get_licenca_slug
+from OrdemdeServico.models import Ordemservico, Ordemservicopecas, Ordemservicoservicos     
 import logging
 
 logger = logging.getLogger(__name__)
+
+def _get_slug(request):
+    try:
+        s = get_licenca_slug()
+    except Exception:
+        s = None
+    if not s:
+        try:
+            s = request.session.get('slug')
+        except Exception:
+            s = None
+    return (s or '').strip().lower()
+
+def identificar_tipo_cliente(request):
+    s = _get_slug(request)
+    if not s:
+        return 'default'
+    pisos_keys = ['indusparquet', 'indus', 'uliana', 'pgpisos', 'pisos', 'JULIANO DE SOUZA MONTEIRO E CIA LTDA']
+    logger.info(f"[identificar_tipo_cliente] slug: {s}")
+    os_keys = ['eletrocometa', 'eletro', 'cometa']
+    if any(k in s for k in pisos_keys):
+        return 'pisos'
+    if any(k in s for k in os_keys):
+        return 'os'
+    return 'default'
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -43,15 +70,28 @@ def health_check(request):
 
 def index(request):
     return render(request, 'index.html')
-
-
 def home(request):
     try:
         banco = get_licenca_db_config(request) or 'default'
         logger.info(f"[home] banco: {banco}")
     except Exception:
         banco = 'default'
-    # Fallback: se banco for 'default', tentar usar slug salvo em sessão
+    # Fallbacks: tentar slug atual do middleware, depois sessão
+    if banco == 'default':
+        try:
+            slug_cur = get_licenca_slug()
+        except Exception:
+            slug_cur = None
+        if slug_cur:
+            try:
+                banco = get_db_from_slug(slug_cur) or banco
+                try:
+                    request.session['slug'] = slug_cur
+                except Exception:
+                    pass
+                logger.info(f"[home] banco via middleware.slug: {banco}")
+            except Exception:
+                pass
     if banco == 'default':
         try:
             slug_sess = request.session.get('slug')
@@ -92,86 +132,91 @@ def home(request):
     except Exception:
         fim = datetime.today().date()
 
-    pedidos_qs = PedidoVenda.objects.using(banco).filter(pedi_canc=False, pedi_data__gte=ini, pedi_data__lte=fim)
-    mods = getattr(request, 'modulos_disponiveis', []) or []
-    usa_pisos = any(str(m).strip().lower() == 'pisos' for m in mods)
-    pedidopisos = None
-    tabela_pisos_ok = False
-    if usa_pisos:
-        try:
-            tabela_pisos_ok = 'pedidospisos' in connections[banco].introspection.table_names()
-        except Exception:
-            tabela_pisos_ok = False
-        if tabela_pisos_ok:
-            pedidopisos = Pedidospisos.objects.using(banco).filter(pedi_data__gte=ini, pedi_data__lte=fim).exclude(pedi_stat=1)
-    if empresa_id is not None:
-        pedidos_qs = pedidos_qs.filter(pedi_empr=empresa_id)
-        
-    if empresa_id is not None and pedidopisos is not None:
-        pedidopisos = pedidopisos.filter(pedi_empr=empresa_id)
-    
-    if filial_id is not None:
-        pedidos_qs = pedidos_qs.filter(pedi_fili=filial_id)
-    if filial_id is not None and pedidopisos is not None:
-        pedidopisos = pedidopisos.filter(pedi_fili=filial_id)
-    
-    if vendedor_selecionado:
-        try:
-            vend_ids = list(
-                Entidades.objects.using(banco)
-                .filter(enti_tipo_enti='VE', enti_nome__iexact=vendedor_selecionado)
-                .values_list('enti_clie', flat=True)
-            )
-            if vend_ids:
-                pedidos_qs = pedidos_qs.filter(pedi_vend__in=[str(v) for v in vend_ids])
-                if pedidopisos is not None:
-                    pedidopisos = pedidopisos.filter(pedi_vend__in=[str(v) for v in vend_ids])
-            else:
+    dashboard_tipo = identificar_tipo_cliente(request)
+    template_name = 'home.html'
+    total_valor = 0
+    qtd_pedidos = 0
+    ticket_medio = 0.0
+    lucro_percent = 0.0
+    itens_contagem = 0
+    clientes_distintos = 0
+
+    if dashboard_tipo == 'pisos':
+        pedidos_qs = Pedidospisos.objects.using(banco).filter(pedi_data__gte=ini, pedi_data__lte=fim)
+        if empresa_id is not None:
+            pedidos_qs = pedidos_qs.filter(pedi_empr=empresa_id)
+        if filial_id is not None:
+            pedidos_qs = pedidos_qs.filter(pedi_fili=filial_id)
+        if vendedor_selecionado:
+            try:
+                vend_ids = list(
+                    Entidades.objects.using(banco)
+                    .filter(enti_tipo_enti='VE', enti_nome__iexact=vendedor_selecionado)
+                    .values_list('enti_clie', flat=True)
+                )
+                if vend_ids:
+                    pedidos_qs = pedidos_qs.filter(pedi_vend__in=[str(v) for v in vend_ids])
+                else:
+                    pedidos_qs = pedidos_qs.none()
+            except Exception:
                 pedidos_qs = pedidos_qs.none()
-                pedidopisos = pedidopisos.none() if pedidopisos is not None else None
+        total_valor = pedidos_qs.aggregate(v=Sum('pedi_tota')).get('v') or 0
+        qtd_pedidos = pedidos_qs.count()
+        ticket_medio = (float(total_valor) / qtd_pedidos) if qtd_pedidos else 0.0
+        numeros = list(pedidos_qs.values_list('pedi_nume', flat=True))
+        itens_qs = Itenspedidospisos.objects.using(banco).filter(item_pedi__in=[str(n) for n in numeros])
+        itens_contagem = itens_qs.count()
+        try:
+            clientes_distintos = pedidos_qs.exclude(pedi_clie__isnull=True).values('pedi_clie').distinct().count()
         except Exception:
-            pedidos_qs = pedidos_qs.none()
-            pedidopisos = pedidopisos.none() if pedidopisos is not None else None
-
-    total_valor = pedidos_qs.aggregate(v=Sum('pedi_tota')).get('v') or 0
-    total_valor_pisos = (pedidopisos.aggregate(v=Sum('pedi_tota')).get('v') if pedidopisos is not None else 0) or 0
-    
-    qtd_pedidos = pedidos_qs.count()
-    qtd_pedidos_pisos = pedidopisos.count() if pedidopisos is not None else 0
-    ticket_medio = (float(total_valor) / qtd_pedidos) if qtd_pedidos else 0.0
-    ticket_medio_pisos = (float(total_valor_pisos) / qtd_pedidos_pisos) if qtd_pedidos_pisos else 0.0
-
-    numeros = list(pedidos_qs.values_list('pedi_nume', flat=True))
-    numeros_pisos = list(pedidopisos.values_list('pedi_nume', flat=True)) if pedidopisos is not None else []
-    itens_qs = Itenspedidovenda.objects.using(banco).filter(iped_pedi__in=[str(n) for n in numeros])
-    itens_qs_pisos = Itenspedidospisos.objects.using(banco).filter(item_pedi__in=[int(n) for n in numeros_pisos]) if numeros_pisos else Itenspedidospisos.objects.none()
-    custo_expr = ExpressionWrapper(F('iped_cust') * F('iped_quan'), output_field=DecimalField(max_digits=15, decimal_places=4))
-    
-    total_custo = itens_qs.aggregate(c=Sum(custo_expr)).get('c') or 0
-    total_custo_pisos = 0
-    lucro_valor = (float(total_valor) - float(total_custo)) if total_valor else 0.0
-    lucro_valor_pisos = 0.0
-    lucro_percent = (lucro_valor / float(total_valor) * 100.0) if total_valor else 0.0
-    lucro_percent_pisos = 0.0    
-    itens_contagem = itens_qs.count()
-    itens_contagem_pisos = itens_qs_pisos.count()
-
-    # 'usa_pisos' já definido acima e só será verdadeiro se houver módulo e tabela disponível
-
-    kpis_normal = {
-        'total_valor': float(total_valor),
-        'lucro_percent': float(lucro_percent),
-        'ticket_medio': float(ticket_medio),
-        'qtd_pedidos': int(qtd_pedidos),
-        'itens_contagem': int(itens_contagem),
-    }
-    kpis_pisos = {
-        'total_valor': float(total_valor_pisos),
-        'lucro_percent': float(lucro_percent_pisos),
-        'ticket_medio': float(ticket_medio_pisos),
-        'qtd_pedidos': int(qtd_pedidos_pisos),
-        'itens_contagem': int(itens_contagem_pisos),
-    }
+            clientes_distintos = 0
+        template_name = 'Home/home_pisos.html'
+    elif dashboard_tipo == 'os':
+        pedidos_qs = Ordemservico.objects.using(banco).filter(orde_data_aber__gte=ini, orde_data_aber__lte=fim)
+        if empresa_id is not None:
+            pedidos_qs = pedidos_qs.filter(orde_empr=empresa_id)
+        if filial_id is not None:
+            pedidos_qs = pedidos_qs.filter(orde_fili=filial_id)
+        total_valor = pedidos_qs.aggregate(v=Sum('orde_tota')).get('v') or 0
+        qtd_pedidos = pedidos_qs.count()
+        ticket_medio = (float(total_valor) / qtd_pedidos) if qtd_pedidos else 0.0
+        total_pecas = Ordemservicopecas.objects.using(banco).filter(peca_orde__in=pedidos_qs.values_list('orde_nume', flat=True)).count()
+        total_servicos = Ordemservicoservicos.objects.using(banco).filter(serv_orde__in=pedidos_qs.values_list('orde_nume', flat=True)).count()
+        itens_contagem = qtd_pedidos + total_pecas + total_servicos
+        try:
+            clientes_distintos = pedidos_qs.exclude(orde_enti__isnull=True).values('orde_enti').distinct().count()
+        except Exception:
+            clientes_distintos = 0
+        template_name = 'Home/home_os.html'
+    else:
+        pedidos_qs = PedidoVenda.objects.using(banco).filter(pedi_canc=False, pedi_data__gte=ini, pedi_data__lte=fim)
+        if empresa_id is not None:
+            pedidos_qs = pedidos_qs.filter(pedi_empr=empresa_id)
+        if filial_id is not None:
+            pedidos_qs = pedidos_qs.filter(pedi_fili=filial_id)
+        if vendedor_selecionado:
+            try:
+                vend_ids = list(
+                    Entidades.objects.using(banco)
+                    .filter(enti_tipo_enti='VE', enti_nome__iexact=vendedor_selecionado)
+                    .values_list('enti_clie', flat=True)
+                )
+                if vend_ids:
+                    pedidos_qs = pedidos_qs.filter(pedi_vend__in=[str(v) for v in vend_ids])
+                else:
+                    pedidos_qs = pedidos_qs.none()
+            except Exception:
+                pedidos_qs = pedidos_qs.none()
+        total_valor = pedidos_qs.aggregate(v=Sum('pedi_tota')).get('v') or 0
+        qtd_pedidos = pedidos_qs.count()
+        ticket_medio = (float(total_valor) / qtd_pedidos) if qtd_pedidos else 0.0
+        numeros = list(pedidos_qs.values_list('pedi_nume', flat=True))
+        itens_qs = Itenspedidovenda.objects.using(banco).filter(iped_pedi__in=[str(n) for n in numeros])
+        custo_expr = ExpressionWrapper(F('iped_cust') * F('iped_quan'), output_field=DecimalField(max_digits=15, decimal_places=4))
+        total_custo = itens_qs.aggregate(c=Sum(custo_expr)).get('c') or 0
+        lucro_valor = (float(total_valor) - float(total_custo)) if total_valor else 0.0
+        lucro_percent = (lucro_valor / float(total_valor) * 100.0) if total_valor else 0.0
+        itens_contagem = itens_qs.count()
 
     context = {
         'vendedores': vendedores_qs,
@@ -181,12 +226,18 @@ def home(request):
         'total_valor_pedido': json.dumps([]),
         'data_inicio': di,
         'data_fim': df,
-        'usa_pisos': usa_pisos,
-        'kpis': (kpis_pisos if usa_pisos else kpis_normal),
-        'kpis_normal': kpis_normal,
-        'kpis_pisos': kpis_pisos,
+        'dashboard_variant': dashboard_tipo,
+        'kpis': {
+            'total_valor': float(total_valor),
+            'lucro_percent': float(lucro_percent),
+            'ticket_medio': float(ticket_medio),
+            'qtd_pedidos': int(qtd_pedidos),
+            'itens_contagem': int(itens_contagem),
+            'clientes_distintos': int(clientes_distintos),
+        },
     }
-    return render(request, 'home.html', context)
+    return render(request, template_name, context)
+
 
 
 def web_login(request):
