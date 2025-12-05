@@ -282,8 +282,6 @@ def selecionar_empresa(request):
             )
 
             if not empresa_id or not filial_id:
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({'error': 'Empresa e filial são obrigatórias.'}, status=400)
                 return render(request, 'Licencas/selecionar_empresa_filial.html', {
                     'error': 'Empresa e filial são obrigatórias.'
                 })
@@ -294,8 +292,6 @@ def selecionar_empresa(request):
                 filial_id_int = int(filial_id)
             except (TypeError, ValueError) as exc:
                 logger.exception("IDs inválidos na seleção de empresa/filial: empresa=%s filial=%s", empresa_id, filial_id)
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({'error': 'IDs inválidos para empresa/filial.'}, status=400)
                 return render(request, 'Licencas/selecionar_empresa_filial.html', {
                     'error': 'IDs inválidos para empresa/filial.'
                 })
@@ -340,14 +336,10 @@ def selecionar_empresa(request):
                 request.session.get('filial_id'), request.session.get('filial_nome')
             )
 
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'success': True, 'redirect': '/web/home/'})
             from django.shortcuts import redirect
             return redirect('home')
         except Exception as exc:
             logger.exception("Erro inesperado em selecionar_empresa: %s", exc)
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'error': 'Erro interno ao salvar seleção.'}, status=500)
             return render(request, 'Licencas/selecionar_empresa_filial.html', {
                 'error': 'Erro interno ao salvar seleção.'
             })
