@@ -56,9 +56,34 @@ def get_db_from_slug(slug):
     return slug
 
 def get_licenca_db_config(request):
-    path_parts = request.path.strip('/').split('/')
-    slug = path_parts[1] if len(path_parts) > 1 else None
-    return get_db_from_slug(slug)
+    try:
+        parts = request.path.strip('/').split('/')
+        slug = None
+        if parts and parts[0] == 'api':
+            slug = parts[1] if len(parts) > 1 else None
+        elif parts and parts[0] == 'web':
+            if len(parts) > 2:
+                slug_candidate = parts[1]
+                try:
+                    from core.licenca_context import LICENCAS_MAP
+                    if any(l.get('slug') == slug_candidate for l in LICENCAS_MAP):
+                        slug = slug_candidate
+                except Exception:
+                    pass
+        if not slug:
+            try:
+                from core.middleware import get_licenca_slug
+                slug = get_licenca_slug() or request.session.get('slug')
+            except Exception:
+                slug = request.session.get('slug')
+        if not slug:
+            return 'default'
+        try:
+            return get_db_from_slug(slug)
+        except Exception:
+            return 'default'
+    except Exception:
+        return 'default'
 
 
 from decimal import Decimal, ROUND_HALF_UP

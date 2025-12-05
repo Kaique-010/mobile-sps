@@ -77,9 +77,13 @@ def home(request):
     except Exception:
         banco = 'default'
     # Fallbacks: tentar slug atual do middleware, depois sessão
+    try:
+        slug_client = get_licenca_slug()
+    except Exception:
+        slug_client = None
     if banco == 'default':
         try:
-            slug_cur = get_licenca_slug()
+            slug_cur = slug_client
         except Exception:
             slug_cur = None
         if slug_cur:
@@ -95,6 +99,8 @@ def home(request):
     if banco == 'default':
         try:
             slug_sess = request.session.get('slug')
+            if not slug_client and slug_sess:
+                slug_client = slug_sess
             if slug_sess:
                 banco = get_db_from_slug(slug_sess) or banco
                 logger.info(f"[home] banco via sessão.slug: {banco}")
@@ -227,6 +233,7 @@ def home(request):
         'data_inicio': di,
         'data_fim': df,
         'dashboard_variant': dashboard_tipo,
+        'slug': slug_client or (request.session.get('slug') or ''),
         'kpis': {
             'total_valor': float(total_valor),
             'lucro_percent': float(lucro_percent),

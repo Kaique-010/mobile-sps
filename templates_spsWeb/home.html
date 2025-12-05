@@ -447,6 +447,12 @@
 
     // Inicializa ao carregar a página
     document.addEventListener('DOMContentLoaded', () => {
+        try {
+            const slugTpl = '{{ slug|default:"" }}';
+            if (slugTpl && (!localStorage.getItem('slug') || localStorage.getItem('slug') !== slugTpl)) {
+                localStorage.setItem('slug', slugTpl);
+            }
+        } catch(e){}
         loadData();
         carregarVendedores();
     });
