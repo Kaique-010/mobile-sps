@@ -13,6 +13,12 @@
         class="form-control" /></div>
     <div class="col-md-4"><input type="text" name="vendedor" value="{{ request.GET.vendedor }}" placeholder="Vendedor"
         class="form-control" /></div>
+    <div class="col-md-4"><input type="text" name="etapa" value="{{ request.GET.etapa }}" placeholder="Etapa"
+        class="form-control" /></div>
+    <div class="col-md-4"><input type="date" name="data_inicio" value="{{ request.GET.data_inicio }}" placeholder="Data Início"
+        class="form-control" /></div>
+    <div class="col-md-4"><input type="date" name="data_fim" value="{{ request.GET.data_fim }}" placeholder="Data Fim"
+        class="form-control" /></div>
     <div class="col-md-4"><button class="btn btn-primary w-100">Filtrar</button></div>
   </form>
   <div class="table-responsive">

@@ -1,3 +1,4 @@
+from tarfile import data_filter
 from django.views.generic import ListView, TemplateView
 from core.utils import get_licenca_db_config
 from controledevisitas.models import Controlevisita, ItensVisita
@@ -29,11 +30,21 @@ class ControleVisitaListView(VendedorEntidadeMixin, ListView):
         logger.info(f'Queryset: {qs.query}')
         cliente = self.request.GET.get('cliente')
         vendedor = self.request.GET.get('vendedor')
+        etapa = self.request.GET.get('etapa')
+        data_inicio = self.request.GET.get('data_inicio')
+        data_fim = self.request.GET.get('data_fim')
         if cliente:
             qs = qs.filter(ctrl_cliente__enti_nome__icontains=cliente)
         if vendedor:
             qs = qs.filter(ctrl_vendedor__enti_nome__icontains=vendedor)
+        if etapa:
+            qs = qs.filter(ctrl_etapa__etap_descricao__icontains=etapa)
+        if data_inicio:
+            qs = qs.filter(ctrl_data__gte=data_inicio)
+        if data_fim:
+            qs = qs.filter(ctrl_data__lte=data_fim)
         return qs.order_by('-ctrl_data', '-ctrl_numero')
+    
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -46,6 +57,21 @@ class ControleVisitaListView(VendedorEntidadeMixin, ListView):
             ctrl_filial=filial_id,
         )
         base = self.filter_por_vendedor(base, 'ctrl_vendedor')
+        cliente = self.request.GET.get('cliente')
+        vendedor = self.request.GET.get('vendedor')
+        etapa = self.request.GET.get('etapa')
+        data_inicio = self.request.GET.get('data_inicio')
+        data_fim = self.request.GET.get('data_fim')
+        if cliente:
+            base = base.filter(ctrl_cliente__enti_nome__icontains=cliente)
+        if vendedor:
+            base = base.filter(ctrl_vendedor__enti_nome__icontains=vendedor)
+        if etapa:
+            base = base.filter(ctrl_etapa__etap_descricao__icontains=etapa)
+        if data_inicio:
+            base = base.filter(ctrl_data__gte=data_inicio)
+        if data_fim:
+            base = base.filter(ctrl_data__lte=data_fim)
         total = base.count() or 1
         from django.db.models import Count
         funil_rows = list(
@@ -54,23 +80,47 @@ class ControleVisitaListView(VendedorEntidadeMixin, ListView):
         mapa = {
             'AGENDAMENTO': 'success',
             'CONTATO INICIAL': 'warning',
+            'INVESTIGACAO': 'indigo',
+            'INVESTIGAÇÃO': 'indigo',
+            'LEAD': 'purple',
+            'NEGOCIACAO': 'primary',
+            'NEGOCIAÇÃO': 'primary',
+            'ORÇAMENTOS GANHOS': 'success',
+            'ORCAMENTOS GANHOS': 'success',
+            'ORÇAMENTOS PERDIDOS': 'danger',
+            'ORCAMENTOS PERDIDOS': 'danger',
+            'POS VENDA - OCORRÊNCIAS GERAIS': 'teal',
+            'POS VENDA - OCORRENCIAS GERAIS': 'teal',
             'PROSPECÇÃO': 'info',
             'PROSPECCAO': 'info',
+            'PROSPECÇÕES': 'info',
+            'PROSPECCÕES': 'info',
+            'PRE-ORÇAMENTOS': 'amber',
+            'PRE-ORCAMENTOS': 'amber',
+            'PEDIDOS ANTIGOS PESQUISA': 'pink',
+            'POSATORE OCORRÊNCIAS EM OBRAS.': 'warning',
+            'POSATORE OCORRENCIAS EM OBRAS.': 'warning',
+            'RT - RESERVA TÉCNICA.': 'amber',
+            'RT - RESERVA TECNICA.': 'amber',
+            'SAIDAS PARTICULARES': 'brown',
+            'VISITA EXTERNA': 'cyan',
+            'VISITA CLIENTE LOJA': 'slate',
             'ETAPA INICIAL DE CONTATOS': 'primary',
             'FLUXO GANHO': 'success',
             'PERDA': 'danger',
             'PERCA': 'danger',
             'FOLLOW UP': 'secondary',
         }
+        palette = ['success','warning','info','primary','danger','indigo','purple','pink','teal','amber','brown','slate']
         ctx['funil'] = []
-        for r in funil_rows:
+        for i, r in enumerate(funil_rows):
             lbl = r['ctrl_etapa__etap_descricao'] or 'Não informado'
             key = (lbl or '').upper()
             ctx['funil'].append({
                 'label': lbl,
                 'qtd': r['qtd'],
                 'perc': round((r['qtd'] * 100.0) / total, 1),
-                'color': mapa.get(key, 'secondary')
+                'color': mapa.get(key) or palette[i % len(palette)]
             })
         return ctx
 

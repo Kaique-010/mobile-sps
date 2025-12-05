@@ -70,7 +70,19 @@ def health_check(request):
 
 def index(request):
     return render(request, 'index.html')
-def home(request):
+def home(request, slug=None):
+    try:
+        if slug:
+            request.session['slug'] = slug
+    except Exception:
+        pass
+    if not slug:
+        try:
+            sess_slug = request.session.get('slug')
+        except Exception:
+            sess_slug = None
+        if sess_slug:
+            return redirect('home_slug', slug=sess_slug)
     try:
         banco = get_licenca_db_config(request) or 'default'
         logger.info(f"[home] banco: {banco}")
@@ -78,9 +90,9 @@ def home(request):
         banco = 'default'
     # Fallbacks: tentar slug atual do middleware, depois sessão
     try:
-        slug_client = get_licenca_slug()
+        slug_client = slug or get_licenca_slug()
     except Exception:
-        slug_client = None
+        slug_client = slug
     if banco == 'default':
         try:
             slug_cur = slug_client
@@ -344,6 +356,13 @@ def selecionar_empresa(request):
             )
 
             from django.shortcuts import redirect
+            try:
+                from core.middleware import get_licenca_slug
+                slug_cur = get_licenca_slug() or request.session.get('slug')
+            except Exception:
+                slug_cur = request.session.get('slug')
+            if slug_cur:
+                return redirect('home_slug', slug=slug_cur)
             return redirect('home')
         except Exception as exc:
             logger.exception("Erro inesperado em selecionar_empresa: %s", exc)

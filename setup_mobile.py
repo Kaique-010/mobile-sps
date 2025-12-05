@@ -282,6 +282,9 @@ CREATE INDEX IF NOT EXISTS idx_auditoria_usuario_datahora ON auditoria_logacao (
 CREATE INDEX IF NOT EXISTS idx_auditoria_modelo_objeto ON auditoria_logacao (modelo, objeto_id);
 CREATE INDEX IF NOT EXISTS idx_auditoria_tipoacao_datahora ON auditoria_logacao (tipo_acao, data_hora);
 
+ALTER TABLE orcamentosvenda ADD COLUMN IF NOT EXISTS pedi_stat VARCHAR(2) NOT NULL DEFAULT '1';
+ALTER TABLE pedidosvenda ADD COLUMN IF NOT EXISTS pedi_stat VARCHAR(2) NOT NULL DEFAULT '1';
+
 """
 
 # SQL de tabelas e inserções
@@ -402,6 +405,7 @@ INSERT INTO parametrosmobile (para_empr, para_fili, para_modu_id, para_nome, par
 SELECT 1, 1, 6, 'obriga_lote_saida', 'Obriga informar lote nas saídas', false, false, CURRENT_TIMESTAMP, 1
 WHERE NOT EXISTS (SELECT 1 FROM parametrosmobile WHERE para_empr = 1 AND para_fili = 1 AND para_modu_id = 6 AND para_nome = 'obriga_lote_saida');
 """
+
 
 # Ajustes de schema para ncm_cfop_dif
 SQL_FIX_NCM_CFOP_DIF = """

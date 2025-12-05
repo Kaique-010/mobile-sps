@@ -88,10 +88,10 @@
     "db_port": "5432"
   },
   {
-    "slug": "indus",
+    "slug": "indusparquet",
     "cnpj": "82223207000270",
-    "db_name": "indus",
-    "db_host": "localhost",
+    "db_name": "savexml963",
+    "db_host": "base.rtalmeida.com.br",
     "db_port": "5432"
   },
 

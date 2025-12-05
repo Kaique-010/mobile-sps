@@ -1,8 +1,9 @@
 from django.views.generic import TemplateView, ListView
 from django.utils import timezone
 from django.db.models import Q
-from datetime import timedelta
+from datetime import timedelta, date
 from .mixin import DBAndSlugMixin
+from Entidades.models import Entidades
 from contas_a_pagar.models import Titulospagar
 from contas_a_receber.models import Titulosreceber
 from Pedidos.models import PedidoVenda
@@ -40,6 +41,9 @@ class NotificacoesDashboardView(DBAndSlugMixin, TemplateView):
         today = _local_today()
         w_start, w_end = _week_range(today)
         d_start, d_end = _day_bounds(today)
+        
+        forncedor_nome = Entidades.objects.using(self.db_alias).filter(enti_empr=self.empresa_id).values('enti_clie', 'enti_nome')
+        logger.info(f'forncedor_nome: {forncedor_nome}')
 
         pagar_qs = Titulospagar.objects.using(self.db_alias).filter(titu_empr=self.empresa_id, titu_fili=self.filial_id)
         logger.info(f'pagar_qs: {pagar_qs}')
@@ -55,6 +59,9 @@ class NotificacoesDashboardView(DBAndSlugMixin, TemplateView):
                 'tipo': tipo,
                 'titu_titu': getattr(obj, 'titu_titu', ''),
                 'titu_parc': getattr(obj, 'titu_parc', ''),
+                'titu_valo': getattr(obj, 'titu_valo', ''),
+                'titu_forn': getattr(obj, 'titu_forn', ''),
+                'forncedor_nome': forncedor_nome.filter(enti_clie=getattr(obj, 'titu_forn', '')).first().get('enti_nome') if forncedor_nome.filter(enti_clie=getattr(obj, 'titu_forn', '')).exists() else '',
                 'titu_venc': getattr(obj, 'titu_venc', ''),
                 'titu_aber': getattr(obj, 'titu_aber', ''),
             }
@@ -84,7 +91,7 @@ class NotificacoesDashboardView(DBAndSlugMixin, TemplateView):
 
 class TitulosCriadosHojeListView(DBAndSlugMixin, ListView):
     template_name = 'Notificacoes/list_titulos.html'
-    paginate_by = 20
+    paginate_by = 50
 
     def get_queryset(self):
         today = _local_today()
@@ -98,6 +105,9 @@ class TitulosCriadosHojeListView(DBAndSlugMixin, ListView):
                 'tipo': tipo_label,
                 'titu_titu': getattr(obj, 'titu_titu', ''),
                 'titu_parc': getattr(obj, 'titu_parc', ''),
+                'titu_valo': getattr(obj, 'titu_valo', ''),
+                'titu_forn': getattr(obj, 'titu_forn', ''),
+                'forncedor_nome': forncedor_nome.filter(enti_clie=getattr(obj, 'titu_forn', '')).first().get('enti_nome') if forncedor_nome.filter(enti_clie=getattr(obj, 'titu_forn', '')).exists() else '',
                 'titu_venc': getattr(obj, 'titu_venc', ''),
                 'titu_aber': getattr(obj, 'titu_aber', ''),
             }
@@ -116,12 +126,16 @@ class TitulosCriadosHojeListView(DBAndSlugMixin, ListView):
 class TitulosAPagarListView(DBAndSlugMixin, ListView):
     model = Titulospagar
     template_name = 'Notificacoes/list_pagar.html'
-    paginate_by = 20
+    paginate_by = 50
 
     def get_queryset(self):
         today = _local_today()
         period = (self.request.GET.get('period') or 'hoje').lower()
         qs = Titulospagar.objects.using(self.db_alias).filter(titu_empr=self.empresa_id, titu_fili=self.filial_id)
+        qs = qs.filter(
+            (Q(titu_emis__isnull=True) | Q(titu_emis__gte=date(1900,1,1))),
+            (Q(titu_venc__isnull=True) | Q(titu_venc__gte=date(1900,1,1))),
+        )
         if period == 'semana':
             w_start, w_end = _week_range(today)
             qs = qs.filter(titu_venc__gte=w_start, titu_venc__lt=w_end + timedelta(days=1))
@@ -133,23 +147,51 @@ class TitulosAPagarListView(DBAndSlugMixin, ListView):
             qs = qs.filter(titu_aber='A')
         if status == 'quitado':
             qs = qs.filter(titu_aber='T')
-        return qs.order_by('titu_venc', 'titu_titu')
+        qs = qs.order_by('titu_forn', 'titu_venc', 'titu_titu').only('titu_titu','titu_parc','titu_venc','titu_aber','titu_forn','titu_valo')
+        fornecedores = dict(
+            Entidades.objects.using(self.db_alias)
+            .filter(enti_empr=self.empresa_id)
+            .values_list('enti_clie', 'enti_nome')
+        )
+        def _to_row(o):
+            return {
+                'titu_titu': getattr(o, 'titu_titu', ''),
+                'titu_forn': getattr(o, 'titu_forn', ''),
+                'fornecedor_nome': fornecedores.get(getattr(o, 'titu_forn', ''), ''),
+                'titu_valo': getattr(o, 'titu_valo', ''),
+                'titu_parc': getattr(o, 'titu_parc', ''),
+                'titu_venc': getattr(o, 'titu_venc', ''),
+                'titu_aber': getattr(o, 'titu_aber', ''),
+            }
+        return [
+            _to_row(o) for o in qs
+        ]
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx.update({'today': _local_today(), 'period': (self.request.GET.get('period') or 'hoje').lower(), 'slug': self.slug})
+        objs = ctx.get('object_list') or getattr(self, 'object_list', [])
+        try:
+            total_count = len(objs)
+            total_sum = sum(float((o.get('titu_valo') if isinstance(o, dict) else getattr(o, 'titu_valo', 0)) or 0) for o in objs)
+        except Exception:
+            total_count, total_sum = 0, 0.0
+        ctx.update({'today': _local_today(), 'period': (self.request.GET.get('period') or 'hoje').lower(), 'slug': self.slug, 'total_count': total_count, 'total_sum': total_sum})
         return ctx
 
 
 class TitulosAReceberListView(DBAndSlugMixin, ListView):
     model = Titulosreceber
     template_name = 'Notificacoes/list_receber.html'
-    paginate_by = 20
+    paginate_by = 50
 
     def get_queryset(self):
         today = _local_today()
         period = (self.request.GET.get('period') or 'hoje').lower()
         qs = Titulosreceber.objects.using(self.db_alias).filter(titu_empr=self.empresa_id, titu_fili=self.filial_id)
+        qs = qs.filter(
+            (Q(titu_emis__isnull=True) | Q(titu_emis__gte=date(1900,1,1))),
+            (Q(titu_venc__isnull=True) | Q(titu_venc__gte=date(1900,1,1))),
+        )
         if period == 'semana':
             w_start, w_end = _week_range(today)
             qs = qs.filter(titu_venc__gte=w_start, titu_venc__lt=w_end + timedelta(days=1))
@@ -161,18 +203,43 @@ class TitulosAReceberListView(DBAndSlugMixin, ListView):
             qs = qs.filter(titu_aber='A')
         if status == 'quitado':
             qs = qs.filter(titu_aber='T')
-        return qs.order_by('titu_venc', 'titu_titu')
+        qs = qs.order_by('titu_clie', 'titu_venc', 'titu_titu').only('titu_titu','titu_parc','titu_venc','titu_aber','titu_clie','titu_valo')
+        clientes = dict(
+            Entidades.objects.using(self.db_alias)
+            .filter(enti_empr=self.empresa_id)
+            .values_list('enti_clie', 'enti_nome')
+        )
+        def _to_row(o):
+            return {
+                'titu_titu': getattr(o, 'titu_titu', ''),
+                'titu_clie': getattr(o, 'titu_clie', ''),
+                'cliente_nome': clientes.get(getattr(o, 'titu_clie', ''), ''),
+                'titu_valo': getattr(o, 'titu_valo', ''),
+                'titu_parc': getattr(o, 'titu_parc', ''),
+                'titu_venc': getattr(o, 'titu_venc', ''),
+                'titu_aber': getattr(o, 'titu_aber', ''),
+            }
+        return [
+            _to_row(o) for o in qs
+        ]
+
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx.update({'today': _local_today(), 'period': (self.request.GET.get('period') or 'hoje').lower(), 'slug': self.slug})
+        objs = ctx.get('object_list') or getattr(self, 'object_list', [])
+        try:
+            total_count = len(objs)
+            total_sum = sum(float((o.get('titu_valo') if isinstance(o, dict) else getattr(o, 'titu_valo', 0)) or 0) for o in objs)
+        except Exception:
+            total_count, total_sum = 0, 0.0
+        ctx.update({'today': _local_today(), 'period': (self.request.GET.get('period') or 'hoje').lower(), 'slug': self.slug, 'total_count': total_count, 'total_sum': total_sum})
         return ctx
 
 
 class OrcamentosHojeListView(DBAndSlugMixin, ListView):
     model = Orcamentos
     template_name = 'Notificacoes/list_orcamentos.html'
-    paginate_by = 20
+    paginate_by = 50
 
     def get_queryset(self):
         today = _local_today()
@@ -188,7 +255,7 @@ class OrcamentosHojeListView(DBAndSlugMixin, ListView):
 class PedidosHojeListView(DBAndSlugMixin, ListView):
     model = PedidoVenda
     template_name = 'Notificacoes/list_pedidos.html'
-    paginate_by = 20
+    paginate_by = 50
 
     def get_queryset(self):
         today = _local_today()

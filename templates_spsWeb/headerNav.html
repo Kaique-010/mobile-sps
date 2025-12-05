@@ -34,7 +34,7 @@
 <header class="bg-body">
     <nav class="navbar fixed-top bg-body" id="main-navbar">
         <div class="container-fluid">
-            <a class="navbar-brand" href="/web/home/">SPS WEB</a>
+            <a class="navbar-brand" href="/web/login/" data-slug-route="/web/{slug}/home/">SPS WEB</a>
             <img src="{% static 'logo.png' %}" style="height:32px; margin-right: 35Px;" />
             <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas"
                 data-bs-target="#offcanvasDarkNavbar" aria-controls="offcanvasDarkNavbar" aria-label="Abrir menu">
@@ -51,7 +51,7 @@
                         <div id="login-warning" class="alert alert-warning d-none">Necessário Estar Logado</div>
                         <ul class="navbar-nav justify-content-end flex-grow-1 pe-3">
                             <li class="nav-item">
-                                <a class="nav-link active" aria-current="page" href="{% url 'home' %}">
+                                <a class="nav-link active" aria-current="page" href="/web/login/" data-slug-route="/web/{slug}/home/">
                                     <i class="bi bi-house fs-3"></i> Home
                                 </a>
                             </li>

@@ -26,6 +26,9 @@
       <thead>
         <tr>
           <th>Título</th>
+          <th>Fornecedor</th>
+          <th>Nome fornecedor</th>
+          <th>Valor</th>
           <th>Parcela</th>
           <th>Vencimento</th>
           <th>Estado</th>
@@ -35,6 +38,9 @@
         {% for t in object_list %}
         <tr>
           <td>{{ t.titu_titu }}</td>
+          <td>{{ t.titu_forn }}</td>
+          <td>{{ t.fornecedor_nome }}</td>
+          <td>{{ t.titu_valo }}</td>
           <td>{{ t.titu_parc }}</td>
           <td>{{ t.titu_venc }}</td>
           <td>
@@ -55,9 +61,15 @@
         <tr><td colspan="4" class="text-center">Sem registros</td></tr>
         {% endfor %}
       </tbody>
+      <tfoot>
+        <tr>
+          <th colspan="3" class="text-end">Totais</th>
+          <th>{{ total_sum|floatformat:2 }}</th>
+          <th colspan="3">Títulos: {{ total_count }}</th>
+        </tr>
+      </tfoot>
     </table>
   </div>
   {% include 'components/pagination.html' %}
 </div>
 {% endblock %}
-
