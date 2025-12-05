@@ -10,16 +10,10 @@ jobs:
     environment: Mobile-Sps
 
     steps:
-      # -------------------------------------------------------
-      # CHECKOUT DO CÓDIGO
-      # -------------------------------------------------------
       - name: Checkout do código
         uses: actions/checkout@v3
 
-      # -------------------------------------------------------
-      # CACHE DO PIP (acelera muito o deploy)
-      # -------------------------------------------------------
-      - name: Cache das dependências do pip
+      - name: Cache pip
         uses: actions/cache@v3
         with:
           path: ~/.cache/pip
@@ -27,9 +21,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      # -------------------------------------------------------
-      # DEPLOY BLUE/GREEN NO SERVIDOR
-      # -------------------------------------------------------
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -37,20 +28,19 @@ jobs:
           username: ${{ secrets.ORACLE_USER }}
           key: ${{ secrets.ORACLE_SSH_KEY }}
           script: |
-
             BASE=/home/ubuntu/mobile-sps
             REPO=$BASE/repo
 
-            echo ">> Atualizando repositório local em $REPO ..."
+            echo ">> Atualizando repositório local..."
             if [ ! -d "$REPO/.git" ]; then
+              rm -rf $REPO
               mkdir -p $REPO
-              git clone git@github.com:Kaique-010/mobile-sps.git $REPO
+              git clone https://github.com/Kaique-010/mobile-sps.git $REPO
             else
               cd $REPO
               git fetch --all
               git reset --hard origin/main
             fi
-
 
             echo ">> Descobrindo ambiente atual..."
             if [ -L "$BASE/current" ]; then
@@ -65,65 +55,50 @@ jobs:
               TARGET="$BASE/blue"
             fi
 
-            echo ">> Ambiente atual:  $CURRENT"
-            echo ">> Novo target:     $TARGET"
+            echo ">> Atual: $CURRENT"
+            echo ">> Target: $TARGET"
 
-
-            echo ">> Sincronizando repositório para o ambiente alvo..."
+            echo ">> Sincronizando código..."
             rsync -av --delete $REPO/ $TARGET/
 
-
-            echo ">> Ativando ambiente virtual..."
+            echo ">> Usando venv..."
             source $BASE/venv/bin/activate
-
 
             echo ">> Instalando dependências..."
             pip install -r $TARGET/requirements.txt
 
-
-            echo ">> Rodando collectstatic..."
+            echo ">> collectstatic..."
             cd $TARGET
             python manage.py collectstatic --noinput
 
-
-            echo ">> Validando health-check do novo ambiente..."
-            STATUS=$(curl -k -s -o /dev/null -w "%{http_code}" https://localhost/health/ || true)
+            echo ">> Health-check..."
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/health/ || true)
 
             if [ "$STATUS" != "200" ]; then
-              echo "!! Health-check falhou ($STATUS). Abortando deploy."
+              echo "!! Health-check falhou ($STATUS). Abortando."
               exit 1
             fi
 
-            echo ">> Health-check OK — Alternando symlink para o novo ambiente..."
+            echo ">> OK — alternando versão..."
             ln -sfn $TARGET $BASE/current
 
-
-            echo ">> Reiniciando serviços..."
+            echo ">> Restart Gunicorn + Daphne..."
             sudo systemctl restart gunicorn
             sudo systemctl restart daphne
 
-
             echo ">> Deploy Blue/Green finalizado com sucesso!"
 
-      # -------------------------------------------------------
-      # TELEGRAM — SUCESSO
-      # -------------------------------------------------------
-      - name: Notificar sucesso no Telegram
+      - name: Telegram — Sucesso
         if: success()
         uses: appleboy/telegram-action@master
         with:
           to: ${{ secrets.TELEGRAM_CHAT_ID }}
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           message: |
-            🚀 Deploy Mobile-SPS concluído com sucessoS!
-            Ambiente Blue/Green atualizado.
-            Branch: main
-            Status: OK ✔
+            🚀 Deploy Mobile-SPS concluído com sucesso!
+            Blue/Green atualizado.
 
-      # -------------------------------------------------------
-      # TELEGRAM — FALHA
-      # -------------------------------------------------------
-      - name: Notificar falha no Telegram
+      - name: Telegram — Falha
         if: failure()
         uses: appleboy/telegram-action@master
         with:
@@ -131,4 +106,4 @@ jobs:
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           message: |
             ❌ Deploy Mobile-SPS FALHOU!
-            O ambiente anterior foi mantido.
+            Última versão mantida.
