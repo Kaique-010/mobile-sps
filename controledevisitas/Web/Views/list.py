@@ -144,14 +144,40 @@ class ProximasVisitasDashboardView(VendedorEntidadeMixin, TemplateView):
             ctrl_prox_visi__gte=hoje,
             ctrl_empresa_id=empresa_id,
             ctrl_filial=filial_id,
-        ).order_by('ctrl_prox_visi')[:100]
+        ).order_by('ctrl_prox_visi')
         visitas = self.filter_por_vendedor(visitas, 'ctrl_vendedor')
+        cliente = (self.request.GET.get('cliente') or '').strip()
+        vendedor = (self.request.GET.get('vendedor') or '').strip()
+        etapa = (self.request.GET.get('etapa') or '').strip()
+        data_inicial = self.request.GET.get('data_inicio')
+        data_final = self.request.GET.get('data_fim')
+        if cliente:
+            visitas = visitas.filter(ctrl_cliente__enti_nome__icontains=cliente)
+        if vendedor:
+            visitas = visitas.filter(ctrl_vendedor__enti_nome__icontains=vendedor)
+        if etapa:
+            visitas = visitas.filter(ctrl_etapa__etap_descricao__icontains=etapa)
+        if data_inicial:
+            visitas = visitas.filter(ctrl_data__gte=data_inicial)
+        if data_final:
+            visitas = visitas.filter(ctrl_data__lte=data_final)
+        visitas = visitas[:100]
         # Métricas
         total_visitas = Controlevisita.objects.using(self.db_alias).filter(
             ctrl_empresa_id=empresa_id,
             ctrl_filial=filial_id,
         )
         total_visitas = self.filter_por_vendedor(total_visitas, 'ctrl_vendedor')
+        if cliente:
+            total_visitas = total_visitas.filter(ctrl_cliente__enti_nome__icontains=cliente)
+        if vendedor:
+            total_visitas = total_visitas.filter(ctrl_vendedor__enti_nome__icontains=vendedor)
+        if etapa:
+            total_visitas = total_visitas.filter(ctrl_etapa__etap_descricao__icontains=etapa)
+        if data_inicial:
+            total_visitas = total_visitas.filter(ctrl_data__gte=data_inicial)
+        if data_final:
+            total_visitas = total_visitas.filter(ctrl_data__lte=data_final)
         hoje_count = total_visitas.filter(ctrl_data=hoje).count()
         import datetime
         inicio_semana = hoje - datetime.timedelta(days=hoje.weekday())
@@ -193,21 +219,52 @@ class ProximasVisitasDashboardView(VendedorEntidadeMixin, TemplateView):
         mapa = {
             'AGENDAMENTO': '#19c37d',
             'CONTATO INICIAL': '#f0ad4e',
+            'INVESTIGAÇÃO': '#6c5ce7',
+            'INVESTIGACAO': '#6c5ce7',
+            'LEAD': '#9b59b6',
+            'NEGOCIACAO': '#5b8def',
+            'NEGOCIAÇÃO': '#5b8def',
+            'ORÇAMENTOS GANHOS': '#19c37d',
+            'ORCAMENTOS GANHOS': '#19c37d',
+            'ORÇAMENTOS PERDIDOS': '#ff6b6b',
+            'ORCAMENTOS PERDIDOS': '#ff6b6b',
+            'POS VENDA - OCORRÊNCIAS GERAIS': '#20c997',
+            'POS VENDA - OCORRENCIAS GERAIS': '#20c997',
             'PROSPECÇÃO': '#22b7d8',
             'PROSPECCAO': '#22b7d8',
+            'PROSPECÇÕES': '#22b7d8',
+            'PROSPECCÕES': '#22b7d8',
+            'PRE-ORÇAMENTOS': '#ffc107',
+            'PRE-ORCAMENTOS': '#ffc107',
+            'PEDIDOS ANTIGOS PESQUISA': '#ff7eb6',
+            'POSATORE OCORRÊNCIAS EM OBRAS.': '#f0ad4e',
+            'POSATORE OCORRENCIAS EM OBRAS.': '#f0ad4e',
+            'RT - RESERVA TÉCNICA.': '#ffc107',
+            'RT - RESERVA TECNICA.': '#ffc107',
+            'SAIDAS PARTICULARES': '#8d6e63',
+            'VISITA EXTERNA': '#22b7d8',
+            'VISITA CLIENTE LOJA': '#7f8c8d',
             'ETAPA INICIAL DE CONTATOS': '#5b8def',
             'FLUXO GANHO': '#19c37d',
             'PERDA': '#ff6b6b',
             'PERCA': '#ff6b6b',
             'FOLLOW UP': '#a8b4c2',
         }
+        palette = ['#19c37d','#f0ad4e','#22b7d8','#5b8def','#ff6b6b','#6c5ce7','#9b59b6','#ff7eb6','#20c997','#ffc107','#8d6e63','#7f8c8d']
         funil = []
-        for r in funil_rows:
+        for i, r in enumerate(funil_rows):
             lbl = r['ctrl_etapa__etap_descricao'] or 'Não informado'
             key = (lbl or '').upper()
-            funil.append({ 'label': lbl, 'qtd': r['qtd'], 'color': mapa.get(key, '#a8b4c2') })
+            funil.append({ 'label': lbl, 'qtd': r['qtd'], 'color': mapa.get(key) or palette[i % len(palette)] })
 
         ctx['slug'] = self.slug
+        ctx['filtros'] = {
+            'cliente': cliente,
+            'vendedor': vendedor,
+            'etapa': etapa,
+            'data_inicio': data_inicial,
+            'data_fim': data_final,
+        }
         ctx['proximas'] = proximas
         ctx['total'] = len(proximas)
         ctx['metricas'] = {

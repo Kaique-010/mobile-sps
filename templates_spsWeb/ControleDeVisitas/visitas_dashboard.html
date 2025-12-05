@@ -53,6 +53,14 @@
     </div>
     <a href="/web/{{ slug }}/controle-de-visitas/" class="btn btn-outline-secondary">Voltar</a>
   </div>
+  <form class="row g-2 mb-3" method="get">
+    <div class="col-md-2"><input type="text" name="cliente" value="{{ filtros.cliente }}" placeholder="Cliente" class="form-control" /></div>
+    <div class="col-md-2"><input type="text" name="vendedor" value="{{ filtros.vendedor }}" placeholder="Vendedor" class="form-control" /></div>
+    <div class="col-md-2"><input type="text" name="etapa" value="{{ filtros.etapa }}" placeholder="Etapa" class="form-control" /></div>
+    <div class="col-md-2"><input type="date" name="data_inicio" value="{{ filtros.data_inicio }}" placeholder="Data Início" class="form-control" /></div>
+    <div class="col-md-2"><input type="date" name="data_fim" value="{{ filtros.data_fim }}" placeholder="Data Fim" class="form-control" /></div>
+    <div class="col-md-2"><button class="btn btn-outline-primary w-100">Filtrar</button></div>
+  </form>
   <div class="row g-3">
     <div class="col-md-3 metric-aqua">
       <div class="card">
@@ -106,7 +114,7 @@
     <div class="col-md-12">
       <div class="card">
         <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center mb-2"><span>Visitas por Etapa</span></div>
+          <div class="d-flex justify-content_between align-items-center mb-2"><span>Visitas por Etapa</span></div>
           <div class="chart-wrap">
             <canvas id="graficoEtapas"></canvas>
           </div>
