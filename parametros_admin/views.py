@@ -11,6 +11,7 @@ from core.utils import get_licenca_db_config
 from .models import (PermissaoModulo, Modulo, ParametroSistema)
 from .permissions import PermissaoAdministrador
 from .utils import get_modulo_by_name
+from django.core.cache import cache
 import logging
 from .serializers import (PermissaoModuloSerializer, ModuloSerializer, ParametroSistemaSerializer)
 
@@ -33,10 +34,16 @@ class PermissaoModuloViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         banco = get_licenca_db_config(self.request)
         return PermissaoModulo.objects.using(banco).all()
     
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        ctx['banco'] = get_licenca_db_config(self.request)
+        ctx['usuario_id'] = getattr(self.request.user, 'usua_codi', 0)
+        return ctx
+
     def perform_create(self, serializer):
         banco = get_licenca_db_config(self.request)
         serializer.save(
-            perm_usua_libe=self.request.user.usua_nome,
+            perm_usua_libe=getattr(self.request.user, 'usua_codi', 0),
             using=banco
         )
     
@@ -124,16 +131,20 @@ class PermissaoModuloViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             modulo_obj = get_modulo_by_name(nome_modulo, banco)
             
             if modulo_obj:
-                PermissaoModulo.objects.using(banco).create(
-                    perm_empr=empresa_id,
-                    perm_fili=filial_id,
-                    perm_modu=modulo_obj,
-                    perm_ativ=True,
-                    perm_usua_libe=request.user.usua_nome
-                )
-                liberados += 1
+                    PermissaoModulo.objects.using(banco).create(
+                        perm_empr=empresa_id,
+                        perm_fili=filial_id,
+                        perm_modu=modulo_obj,
+                        perm_ativ=True,
+                        perm_usua_libe=getattr(request.user, 'usua_codi', 0)
+                    )
+                    liberados += 1
             else:
                 logger.warning(f"Módulo '{nome_modulo}' não encontrado no sistema")
+        try:
+            cache.delete(f"modulos_licenca_{slug}_{empresa_id}_{filial_id}")
+        except Exception:
+            pass
         
         return Response({'message': f'{liberados} módulos liberados'})
     
@@ -144,36 +155,54 @@ class PermissaoModuloViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         """Sincroniza módulos com a licença atual"""
         try:
             banco = get_licenca_db_config(request)
-            modulos_licenca = getattr(request, 'modulos_disponiveis', [])
-            
-            empr = request.data.get('perm_empr', 1)
-            fili = request.data.get('perm_fili', 1)
+            def _to_int(v, default=None):
+                try:
+                    return int(v)
+                except (TypeError, ValueError):
+                    return default
+            empr = _to_int(request.headers.get('X-Empresa')) or _to_int(request.data.get('perm_empr')) or request.session.get('empresa_id') or _to_int(getattr(request.user, 'usua_empr', None), 1) or 1
+            fili = _to_int(request.headers.get('X-Filial')) or _to_int(request.data.get('perm_fili')) or request.session.get('filial_id') or _to_int(getattr(request.user, 'usua_fili', None), 1) or 1
+
+            # Garantir sincronização dos módulos instalados no banco do slug
+            Modulo.sync_installed_apps(alias=banco, force=False)
+            modulos_qs = Modulo.objects.using(banco).all().order_by('modu_orde', 'modu_nome')
+            from .utils import sync_permissoes_com_modulos
+            criadas, existentes = sync_permissoes_com_modulos(
+                banco,
+                empr,
+                fili,
+                usuario_id=getattr(request.user, 'usua_codi', 0),
+                default_ativ=False,
+            )
             
             sincronizados = 0
-            for nome_modulo in modulos_licenca:
-                # Buscar o módulo pelo nome
-                from .utils import get_modulo_by_name
-                modulo_obj = get_modulo_by_name(nome_modulo, banco)
-                
-                if modulo_obj:
-                    obj, created = PermissaoModulo.objects.using(banco).get_or_create(
-                        perm_empr=empr,
-                        perm_fili=fili,
-                        perm_modu=modulo_obj,
-                        defaults={
-                            'perm_ativ': True,
-                            'perm_usua_libe': request.user.usua_nome,
-                            'perm_obse': 'Sincronizado automaticamente'
-                        }
-                    )
-                    if created:
-                        sincronizados += 1
+            for modulo_obj in modulos_qs:
+                obj, created = PermissaoModulo.objects.using(banco).get_or_create(
+                    perm_empr=empr,
+                    perm_fili=fili,
+                    perm_modu=modulo_obj,
+                    defaults={
+                        'perm_ativ': True,
+                        'perm_usua_libe': getattr(request.user, 'usua_codi', 0),
+                    }
+                )
+                if created:
+                    sincronizados += 1
                 else:
-                    logger.warning(f"Módulo '{nome_modulo}' não encontrado no sistema")
+                    if obj.perm_ativ is False:
+                        obj.perm_ativ = True
+                        obj.perm_usua_libe = getattr(request.user, 'usua_codi', 0)
+                        obj.save(using=banco)
+            try:
+                cache.delete(f"modulos_licenca_{slug}_{empr}_{fili}")
+            except Exception:
+                pass
             
             return Response({
-                'message': f'{sincronizados} módulos sincronizados',
-                'sincronizados': sincronizados
+                'message': f'{sincronizados} módulos sincronizados; {criadas} permissões criadas',
+                'sincronizados': sincronizados,
+                'permissoes_criadas': criadas,
+                'permissoes_existentes': existentes,
             })
         except Exception as e:
             logger.error(f"Erro ao sincronizar módulos: {e}")
@@ -265,11 +294,16 @@ class PermissaoModuloViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                         perm_fili=filial_id,
                         perm_modu=modulo_obj,
                         perm_ativ=True,
-                        perm_usua_libe=request.user.usua_nome
+                        perm_usua_libe=getattr(request.user, 'usua_codi', 0)
                     )
                     liberados += 1
                 else:
                     logger.warning(f"Módulo '{nome_modulo}' não encontrado no sistema")
+            try:
+                slug_val = get_licenca_slug()
+                cache.delete(f"modulos_licenca_{slug_val}_{empresa_id}_{filial_id}")
+            except Exception:
+                pass
             
             return Response({
                 'message': f'{liberados} módulos configurados para empresa {empresa_id}/filial {filial_id}',
@@ -475,6 +509,12 @@ class AtualizaPermissoesModulosView(APIView):
             except Exception as e:
                 logger.error(f"Erro ao atualizar módulo {nome}: {e}")
                 continue
+
+        try:
+            slug_val = get_licenca_slug()
+            cache.delete(f"modulos_licenca_{slug_val}_{empresa_id}_{filial_id}")
+        except Exception:
+            pass
 
         return Response({
             "mensagem": f"Permissões e módulos atualizados com sucesso ({atualizados})"

@@ -5,15 +5,19 @@ from django.db.models import Subquery, OuterRef, BigIntegerField, Sum, Count
 from django.db.models.functions import Cast
 from core.utils import get_licenca_db_config
 from ...models import PedidoVenda
+from core.decorator import ModuloRequeridoMixin
+
+
 
 logger = logging.getLogger(__name__)
 
 
-class PedidosListView(ListView):
+class PedidosListView(ModuloRequeridoMixin, ListView):
     model = PedidoVenda
     template_name = 'Pedidos/pedidos_listar.html'
     context_object_name = 'pedidos'
     paginate_by = 50
+    modulo_requerido = 'Pedidos'
 
     def get_queryset(self):
         banco = get_licenca_db_config(self.request) or 'default'

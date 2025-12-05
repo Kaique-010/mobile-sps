@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gerenciar Módulos</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    body {
+      font-family: 'Roboto', system-ui, -apple-system, Segoe UI, Arial;
+      margin: 0;
+      background: #0f1419;
+      color: #e2e8f0;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 24px auto;
+      padding: 0 16px;
+    }
+
+    .card {
+      background: #121826;
+      border: 1px solid rgba(100, 255, 218, 0.15);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .title {
+      font-weight: 700;
+      color: #64ffda;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+    }
+
+    .item {
+      background: #0e1523;
+      border: 1px solid rgba(100, 255, 218, 0.1);
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      color: #e2e8f0;
+    }
+
+    .desc {
+      color: #94a3b8;
+      font-size: 0.9rem;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge {
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+    }
+
+    .badge.ok {
+      background: #0f766e;
+      color: #e2e8f0;
+    }
+
+    .badge.off {
+      background: #7c2d12;
+      color: #e2e8f0;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      border: none;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .btn.primary {
+      background: #64ffda;
+      color: #0a0a0d;
+    }
+
+    .btn.secondary {
+      background: #1f2937;
+      color: #e2e8f0;
+      border: 1px solid rgba(226, 232, 240, 0.12);
+    }
+
+    @media (max-width: 640px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="header">
+        <div class="title">Módulos da Licença</div>
+        <div style="display:flex; align-items:center; gap:8px">
+          <div style="color:#94a3b8; font-size:0.9rem">Empresa {{ empresa_id }} · Filial {{ filial_id }} · Slug {{ slug
+            }}</div>
+          <form method="post" action="{% url 'parametros_admin_sync' slug=slug %}">
+            {% csrf_token %}
+            <input type="hidden" name="empresa_id" value="{{ empresa_id }}" />
+            <input type="hidden" name="filial_id" value="{{ filial_id }}" />
+            <button class="btn primary" type="submit">Atualizar Módulos</button>
+          </form>
+          <input id="filtroNome" type="text" placeholder="Filtrar por nome"
+            style="padding:8px 10px; border-radius:8px; border:1px solid rgba(226,232,240,0.12); background:#0e1523; color:#e2e8f0;" />
+        </div>
+      </div>
+
+      {% if messages %}
+      <ul>
+        {% for message in messages %}
+        <li style="color:#64ffda">{{ message }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      <div class="grid">
+        {% for m in modulos %}
+        <div class="item" data-nome="{{ m.nome|lower }}">
+          <div class="name">
+            <i class="fa {{ m.icone|default:'fa-cube' }}"></i>
+            {{ m.nome }}
+          </div>
+          <div class="desc">{{ m.desc }}</div>
+          <div class="status">
+            <span class="badge {% if m.permitido %}ok{% else %}off{% endif %}">
+              {% if m.permitido %}Liberado{% else %}Bloqueado{% endif %}
+            </span>
+            <span class="badge {% if m.ativo_global %}ok{% else %}off{% endif %}">
+              {% if m.ativo_global %}Ativo Global{% else %}Desativado Global{% endif %}
+            </span>
+          </div>
+          <div class="actions">
+            <form method="post" action="{% url 'parametros_admin_toggle' modulo_slug=m.slug slug=slug %}">
+              {% csrf_token %}
+              <input type="hidden" name="empresa_id" value="{{ empresa_id }}" />
+              <input type="hidden" name="filial_id" value="{{ filial_id }}" />
+              <button class="btn primary" type="submit">
+                {% if m.permitido %}Desativar{% else %}Ativar{% endif %}
+              </button>
+            </form>
+            <a class="btn secondary" href="#">Detalhes</a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      var input = document.getElementById('filtroNome');
+      if (!input) return;
+      var grid = document.querySelector('.grid');
+      if (!grid) return;
+      var items = grid.querySelectorAll('.item');
+      function filtrar() {
+        var q = (input.value || '').trim().toLowerCase();
+        items.forEach(function (el) {
+          var nome = el.getAttribute('data-nome') || '';
+          el.style.display = !q || nome.indexOf(q) !== -1 ? '' : 'none';
+        });
+      }
+      input.addEventListener('input', filtrar);
+    })();
+  </script>
+</body>
+
+</html>
+{% endblock %}

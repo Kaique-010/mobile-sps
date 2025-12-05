@@ -5,13 +5,15 @@ from controledevisitas.models import Controlevisita, ItensVisita
 from Produtos.models import Produtos
 from logging import getLogger
 from core.mixins.vendedor_mixin import VendedorEntidadeMixin
+from core.decorator import ModuloRequeridoMixin
 logger = getLogger(__name__)
 
 
-class ControleVisitaListView(VendedorEntidadeMixin, ListView):
+class ControleVisitaListView(ModuloRequeridoMixin, VendedorEntidadeMixin, ListView):
     template_name = 'ControleDeVisitas/visitas_cards.html'
     context_object_name = 'visitas'
     paginate_by = 9
+    modulo_requerido = 'controledevisitas'
 
     def dispatch(self, request, *args, **kwargs):
         self.slug = kwargs.get('slug')
@@ -125,8 +127,9 @@ class ControleVisitaListView(VendedorEntidadeMixin, ListView):
         return ctx
 
 
-class ProximasVisitasDashboardView(VendedorEntidadeMixin, TemplateView):
+class ProximasVisitasDashboardView(ModuloRequeridoMixin, VendedorEntidadeMixin, TemplateView):
     template_name = 'ControleDeVisitas/visitas_dashboard.html'
+    modulo_requerido = 'controledevisitas'
 
     def dispatch(self, request, *args, **kwargs):
         self.slug = kwargs.get('slug')
@@ -284,8 +287,9 @@ class ProximasVisitasDashboardView(VendedorEntidadeMixin, TemplateView):
         return ctx
 
 
-class ControleVisitaResumoView(VendedorEntidadeMixin, TemplateView):
+class ControleVisitaResumoView(ModuloRequeridoMixin, VendedorEntidadeMixin, TemplateView):
     template_name = 'ControleDeVisitas/visita_resumo.html'
+    modulo_requerido = 'controledevisitas'
 
     def dispatch(self, request, *args, **kwargs):
         self.slug = kwargs.get('slug')

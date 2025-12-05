@@ -61,7 +61,9 @@ def capturar_dados_antes_salvar(sender, instance, **kwargs):
     # Só capturar se é uma atualização (objeto já existe)
     if instance.pk:
         try:
-            dados_anteriores = sender.objects.get(pk=instance.pk)
+            db_alias = getattr(getattr(instance, '_state', None), 'db', None)
+            manager = sender.objects if not db_alias else sender.objects.using(db_alias)
+            dados_anteriores = manager.get(pk=instance.pk)
             # Armazenar no contexto da thread
             if not hasattr(_thread_locals, 'dados_antes'):
                 _thread_locals.dados_antes = {}
@@ -89,6 +91,7 @@ def log_criacao_atualizacao(sender, instance, created, **kwargs):
         
         # Obter licença
         licenca_slug = get_licenca_slug()
+        db_alias = getattr(getattr(instance, '_state', None), 'db', None) or licenca_slug or 'default'
         if not licenca_slug:
             logger.debug(f'Signal ignorado - sem licença para {sender.__name__} ID {instance.pk}')
             return
@@ -114,7 +117,7 @@ def log_criacao_atualizacao(sender, instance, created, **kwargs):
             empresa = path_parts[1] if len(path_parts) > 1 else None
         
         # Criar log
-        LogAcao.objects.create(
+        LogAcao.objects.using(db_alias).create(
             usuario=user,
             data_hora=timezone.now(),
             tipo_acao=tipo_acao,
@@ -155,6 +158,7 @@ def log_exclusao(sender, instance, **kwargs):
         
         # Obter licença
         licenca_slug = get_licenca_slug()
+        db_alias = getattr(getattr(instance, '_state', None), 'db', None) or licenca_slug or 'default'
         if not licenca_slug:
             logger.debug(f'Signal de exclusão ignorado - sem licença para {sender.__name__} ID {instance.pk}')
             return
@@ -168,7 +172,7 @@ def log_exclusao(sender, instance, **kwargs):
             empresa = path_parts[1] if len(path_parts) > 1 else None
         
         # Criar log
-        LogAcao.objects.create(
+        LogAcao.objects.using(db_alias).create(
             usuario=user,
             data_hora=timezone.now(),
             tipo_acao='DELETE',

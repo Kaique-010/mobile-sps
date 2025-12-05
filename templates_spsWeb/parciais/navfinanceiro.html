@@ -1,60 +1,58 @@
 <!-- Seção: Financeira -->
-                            <li class="nav-item">
-                                <a class="nav-link collapsed" data-bs-toggle="collapse" href="#" role="button"
-                                    data-bs-target="#collapseFinanceira" aria-expanded="false"
-                                    aria-controls="collapseFinanceira">
-                                    <i class="bi bi-cash-stack fs-4"></i> Financeiro
-                                </a>
-                                <div class="collapse" id="collapseFinanceira">
-                                    <ul class="list-unstyled ps-4">
-                                        <!-- Mantém módulo Financeiro e seus subitens -->
-                                        <li class="nav-item" data-modulo="Financeiro">
-                                            <a class="nav-link collapsed" data-bs-toggle="collapse" href="#"
-                                                role="button" data-bs-target="#collapseFinanceiro" aria-expanded="false"
-                                                aria-controls="collapseFinanceiro">
-                                                <i class="bi bi-cash"></i> Módulos Financeiros
-                                            </a>
-                                            <div class="collapse" id="collapseFinanceiro">
-                                                <ul class="list-unstyled ps-4">
-                                                    <li>
-                                                        <a class="nav-link" href="/web/login/"
-                                                            data-slug-route="/web/{slug}/contas-a-pagar/">Contas a
-                                                            Pagar</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="nav-link" href="/web/login/"
-                                                            data-slug-route="/web/{slug}/contas-a-receber/">Contas a
-                                                            Receber</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="nav-link" href="/web/login/"
-                                                            data-slug-route="/web/{slug}/fluxo-de-caixa/">Fluxo de
-                                                            Caixa</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="nav-link" href="/web/login/"
-                                                            data-slug-route="/web/{slug}/boletos/bancos/">Emissão de
-                                                            Boletos</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="nav-link" href="/web/login/"
-                                                            data-slug-route="/web/{slug}/boletos/bancos/configuracao/">Bancos
-                                                            Caixa</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="nav-link" href="/web/login/"
-                                                            data-slug-route="/web/{slug}/boletos/retorno/">Retorno de
-                                                            Remessas</a>
-                                                    </li>
-                                                    <li class="nav-item" data-modulo="CaixaDiario">
-                                                        <a class="nav-link" href="/web/login/"
-                                                            data-slug-route="/web/{slug}/caixa-diario/geral">
-                                                            <i class="bi bi-cash-coin"></i> Caixa Diário
-                                                        </a>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </li>
+<li class="nav-item">
+    <a class="nav-link collapsed" data-bs-toggle="collapse" href="#" role="button" data-bs-target="#collapseFinanceira"
+        aria-expanded="false" data-modulo-requerido="financeiro" data-modulo-requerido="financeiro"
+        aria-controls="collapseFinanceira">
+        <i class="bi bi-cash-stack fs-4"></i> Financeiro
+    </a>
+    <div class="collapse" id="collapseFinanceira">
+        <ul class="list-unstyled ps-4">
+            <!-- Mantém módulo Financeiro e seus subitens -->
+            <li class="nav-item" data-modulo="Financeiro">
+                <a class="nav-link collapsed" data-bs-toggle="collapse" href="#" role="button"
+                    data-bs-target="#collapseFinanceiro" aria-expanded="false" aria-controls="collapseFinanceiro">
+                    <i class="bi bi-cash"></i> Módulos Financeiros
+                </a>
+                <div class="collapse" id="collapseFinanceiro">
+                    <ul class="list-unstyled ps-4">
+                        <li>
+                            <a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/contas-a-pagar/">Contas
+                                a
+                                Pagar</a>
+                        </li>
+                        <li>
+                            <a class="nav-link" href="/web/login/"
+                                data-slug-route="/web/{slug}/contas-a-receber/">Contas a
+                                Receber</a>
+                        </li>
+                        <li>
+                            <a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/fluxo-de-caixa/">Fluxo
+                                de
+                                Caixa</a>
+                        </li>
+                        <li>
+                            <a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/boletos/bancos/">Emissão
+                                de
+                                Boletos</a>
+                        </li>
+                        <li>
+                            <a class="nav-link" href="/web/login/"
+                                data-slug-route="/web/{slug}/boletos/bancos/configuracao/">Bancos
+                                Caixa</a>
+                        </li>
+                        <li>
+                            <a class="nav-link" href="/web/login/"
+                                data-slug-route="/web/{slug}/boletos/retorno/">Retorno de
+                                Remessas</a>
+                        </li>
+                        <li class="nav-item" data-modulo="CaixaDiario">
+                            <a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/caixa-diario/geral">
+                                <i class="bi bi-cash-coin"></i> Caixa Diário
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+        </ul>
+    </div>
+</li>

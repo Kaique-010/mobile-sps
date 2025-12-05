@@ -25,3 +25,4 @@ def get_processar_pergunta_com_agente_v2():
     """Importação lazy da função processar_pergunta_com_agente_v2"""
     from .agente_inteligente_v2 import processar_pergunta_com_agente_v2
     return processar_pergunta_com_agente_v2
+default_app_config = 'mcp_agent_db.apps.McpAgentDbConfig'

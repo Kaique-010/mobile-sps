@@ -4,6 +4,7 @@ from django.db.models import Subquery, OuterRef, BigIntegerField, Sum, Count
 from django.db.models.functions import Cast
 from core.utils import get_licenca_db_config
 from ...models import Os
+from core.decorator import ModuloRequeridoMixin
 
 STATUS_ORDENS = [
     {'value': 0, 'label': 'Aberto'},
@@ -27,11 +28,12 @@ MAP_CORES = {
     21: '#DC3545',
 }
 
-class OsListView(ListView):
+class OsListView(ModuloRequeridoMixin, ListView):
     model = Os
     template_name = 'Os/os_listar.html'
     context_object_name = 'os'
     paginate_by = 20
+    modulo_requerido = 'O_S'
 
     def get_queryset(self):
         banco = get_licenca_db_config(self.request) or 'default'

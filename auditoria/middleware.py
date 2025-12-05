@@ -1,6 +1,6 @@
 from django.utils import timezone
 from .models import LogAcao
-from core.middleware import get_licenca_slug
+from core.middleware import get_licenca_slug, get_modulos_disponiveis
 from rest_framework.request import Request
 from django.forms.models import model_to_dict
 from django.apps import apps
@@ -210,6 +210,32 @@ class AuditoriaMiddleware:
             logger.debug(f'Ignorando log para endpoint de configuração: {request.path}')
             return self.get_response(request)
 
+
+        # Ignorar endpoint público de mapa de licenças
+        if request.path.startswith('/api/licencas/mapa/'):
+            return self.get_response(request)
+
+        # Verificação de permissão por módulo
+        try:
+            parts = request.path.strip('/').split('/')
+            if len(parts) >= 3 and parts[0] == 'api':
+                # Endpoints públicos/essenciais (login, refresh, mapa)
+                if (len(parts) >= 4 and parts[2] == 'licencas' and parts[3] == 'login') \
+                   or (len(parts) >= 3 and parts[2] == 'auth'):
+                    return self.get_response(request)
+                # Endpoints de licenças (empresas/filiais e afins) não devem ser bloqueados
+                if parts[2] == 'licencas':
+                    return self.get_response(request)
+
+                app_candidate = parts[2]
+                modulos = getattr(request, 'modulos_disponiveis', []) or get_modulos_disponiveis()
+                modulos_lower = {m.lower() for m in modulos}
+                app_slug = app_candidate.lower()
+                if app_slug not in modulos_lower and not request.path.startswith('/api/auditoria/'):
+                    from django.http import JsonResponse
+                    return JsonResponse({'erro': 'Módulo não liberado para a empresa/filial atual.'}, status=403)
+        except Exception:
+            pass
 
         # Capturar dados antes da alteração (para PUT, PATCH, DELETE)
         dados_antes = None
@@ -431,4 +457,10 @@ class AuditoriaMiddleware:
             logger.error(f'Método que causou o erro: {request.method}')
             logger.exception('Detalhes completos do erro:')
 
+        try:
+            mods = getattr(request, 'modulos_disponiveis', []) or get_modulos_disponiveis()
+            if isinstance(mods, list):
+                response['X-Modulos'] = ','.join(sorted(set(mods)))
+        except Exception:
+            pass
         return response

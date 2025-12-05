@@ -128,6 +128,39 @@ def debug_modulo_pisos(banco, empresa_id=1, filial_id=1):
         logger.error(f"Erro no debug do módulo Pisos: {e}")
 
 
+def sync_permissoes_com_modulos(banco, empresa_id, filial_id, usuario_id=0, default_ativ=False):
+    """Cria permissões ausentes para todos os módulos existentes no banco do slug.
+    Retorna tupla (criadas, existentes).
+    """
+    try:
+        from .models import Modulo, PermissaoModulo
+        todos_ids = list(Modulo.objects.using(banco).values_list('modu_codi', flat=True))
+        existentes = set(PermissaoModulo.objects.using(banco).filter(
+            perm_empr=empresa_id,
+            perm_fili=filial_id
+        ).values_list('perm_modu_id', flat=True))
+
+        faltantes = [mid for mid in todos_ids if mid not in existentes]
+        if not faltantes:
+            return 0, len(existentes)
+
+        objs = [
+            PermissaoModulo(
+                perm_empr=empresa_id,
+                perm_fili=filial_id,
+                perm_modu_id=mid,
+                perm_ativ=bool(default_ativ),
+                perm_usua_libe=usuario_id or 0,
+            )
+            for mid in faltantes
+        ]
+        PermissaoModulo.objects.using(banco).bulk_create(objs, batch_size=100)
+        logger.info(f"Permissoes sincronizadas: criadas={len(objs)} empresa={empresa_id} filial={filial_id} banco={banco}")
+        return len(objs), len(existentes)
+    except Exception as e:
+        logger.error(f"Erro ao sincronizar permissões com módulos: {e}")
+        return 0, 0
+
 def get_empresas_usuario(usuario_id, banco):
     """Retorna empresas que o usuário tem acesso"""
     cache_key = f"empresas_usuario_{usuario_id}_{banco}"

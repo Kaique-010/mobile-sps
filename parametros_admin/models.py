@@ -1,4 +1,7 @@
 from django.db import models
+from django.apps import apps
+from django.core.cache import cache
+import logging
 
 class Modulo(models.Model):
     modu_codi = models.AutoField(primary_key=True)
@@ -11,6 +14,55 @@ class Modulo(models.Model):
     class Meta:
         db_table = 'modulosmobile'        
         ordering = ['modu_orde', 'modu_nome']
+
+    @classmethod
+    def _installed_app_slugs(cls):
+        slugs = []
+        for app_config in apps.get_app_configs():
+            label = app_config.label
+            if label.startswith('django') or label in ['rest_framework', 'channels', 'corsheaders', 'debug_toolbar']:
+                continue
+            slugs.append(label)
+        return sorted(set(slugs))
+
+    @classmethod
+    def sync_installed_apps(cls, alias='default', force=False):
+        logger = logging.getLogger(__name__)
+        cache_key = 'installed_app_slugs'
+        slugs = None if force else cache.get(cache_key)
+        if slugs is None:
+            slugs = cls._installed_app_slugs()
+            cache.set(cache_key, slugs, 3600)
+
+        created = 0
+        updated = 0
+        order = 1
+        for slug in slugs:
+            try:
+                obj = cls.objects.using(alias).get(modu_nome=slug)
+                changed = False
+                if obj.modu_ativ is False:
+                    obj.modu_ativ = True
+                    changed = True
+                if obj.modu_orde != order:
+                    obj.modu_orde = order
+                    changed = True
+                if changed:
+                    obj.save(using=alias)
+                    updated += 1
+            except cls.DoesNotExist:
+                obj = cls(
+                    modu_nome=slug,
+                    modu_desc=f"Módulo {slug}",
+                    modu_ativ=True,
+                    modu_icon='',
+                    modu_orde=order,
+                )
+                obj.save(using=alias)
+                created += 1
+            order += 1
+        logger.info(f"Sincronização de módulos concluída: {created} criados, {updated} atualizados")
+        return {'created': created, 'updated': updated, 'total': len(slugs)}
 
 
 class PermissaoModulo(models.Model):
@@ -27,6 +79,74 @@ class PermissaoModulo(models.Model):
         db_table = 'permissoesmodulosmobile'
         unique_together = ('perm_empr', 'perm_fili', 'perm_modu')
         ordering = ['perm_empr', 'perm_fili', 'perm_modu']
+
+    def save(self, *args, **kwargs):
+        alias = kwargs.get('using') or getattr(getattr(self, '_state', None), 'db', None) or 'default'
+        old_val = None
+        if self.pk:
+            try:
+                old_val = type(self).objects.using(alias).values_list('perm_ativ', flat=True).get(pk=self.pk)
+            except Exception:
+                pass
+
+        super().save(*args, **kwargs)
+
+        try:
+            from django.db import transaction
+            from .models import LogParametroSistema
+            from django.core.cache import cache
+            from core.middleware import get_licenca_slug
+
+            def write_log():
+                try:
+                    LogParametroSistema.objects.using(alias).create(
+                        log_tabe='permissoesmodulosmobile',
+                        log_regi=self.perm_codi,
+                        log_acao='update' if old_val is not None else 'create',
+                        log_valo_ante=old_val,
+                        log_valo_novo=self.perm_ativ,
+                        log_usua=self.perm_usua_libe or 0,
+                    )
+                except Exception:
+                    try:
+                        LogParametroSistema.objects.using('default').create(
+                            log_tabe='permissoesmodulosmobile',
+                            log_regi=self.perm_codi,
+                            log_acao='update' if old_val is not None else 'create',
+                            log_valo_ante=old_val,
+                            log_valo_novo=self.perm_ativ,
+                            log_usua=self.perm_usua_libe or 0,
+                        )
+                    except Exception:
+                        pass
+
+            def invalidate_cache():
+                try:
+                    slug = get_licenca_slug() or alias
+                    cache.delete(f"modulos_licenca_{slug}_{self.perm_empr}_{self.perm_fili}")
+                except Exception:
+                    pass
+
+            try:
+                transaction.on_commit(lambda: (write_log(), invalidate_cache()))
+            except Exception:
+                write_log()
+                invalidate_cache()
+        except Exception:
+            pass
+
+    @classmethod
+    def has_permission(cls, empresa_id, filial_id, modulo_slug, alias='default'):
+        try:
+            modulo = Modulo.objects.using(alias).get(modu_nome=modulo_slug, modu_ativ=True)
+            return cls.objects.using(alias).filter(
+                perm_empr=empresa_id,
+                perm_fili=filial_id,
+                perm_modu=modulo,
+                perm_ativ=True,
+            ).exists()
+        except Modulo.DoesNotExist:
+            return False
 
 
 
