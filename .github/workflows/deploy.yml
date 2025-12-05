@@ -59,27 +59,46 @@ jobs:
             echo ">> Target: $TARGET"
 
             echo ">> Sincronizando código..."
-            rsync -av --delete $REPO/ $TARGET/
+            rsync -av --delete \
+              --exclude ".git" \
+              --exclude "__pycache__" \
+              $REPO/ $TARGET/
 
-            echo ">> Usando venv..."
+            echo ">> Ativando venv..."
             source $BASE/venv/bin/activate
 
             echo ">> Instalando dependências..."
             pip install -r $TARGET/requirements.txt
 
             echo ">> collectstatic..."
+            export DJANGO_SETTINGS_MODULE=core.settings
             cd $TARGET
             python manage.py collectstatic --noinput
 
-            echo ">> Health-check..."
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/health/ || true)
+            echo ">> Subindo Gunicorn temporário..."
+            gunicorn core.wsgi:application \
+              --bind 127.0.0.1:9000 \
+              --daemon \
+              --chdir $TARGET \
+              --pid $TARGET/guni_test.pid
+
+            sleep 5
+
+            echo ">> Health-check no TARGET..."
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:9000/health/ || true)
 
             if [ "$STATUS" != "200" ]; then
-              echo "!! Health-check falhou ($STATUS). Abortando."
+              echo "!! Health-check falhou ($STATUS). Abortando e limpando Gunicorn temporário."
+              kill $(cat $TARGET/guni_test.pid) || true
+              rm -f $TARGET/guni_test.pid
               exit 1
             fi
 
-            echo ">> OK — alternando versão..."
+            echo ">> Health-check OK — limpando Gunicorn temporário..."
+            kill $(cat $TARGET/guni_test.pid) || true
+            rm -f $TARGET/guni_test.pid
+
+            echo ">> Alternando versão..."
             ln -sfn $TARGET $BASE/current
 
             echo ">> Restart Gunicorn + Daphne..."
