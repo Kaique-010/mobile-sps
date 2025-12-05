@@ -266,19 +266,9 @@ def web_login(request):
 
 @ensure_csrf_cookie
 def selecionar_empresa(request):
-    """Página para seleção de empresa e filial após login.
-    GET: Renderiza formulário.
-    POST: Salva empresa/filial na sessão e redireciona para a Home.
-    """
-    # Persistir slug da licença na sessão para uso na Home sem slug
-    try:
-        parts = request.path.strip('/').split('/')
-        slug = parts[1] if len(parts) > 1 else None
-        if slug:
-            request.session['slug'] = slug
-            logger.info(f"[selecionar_empresa] slug salvo na sessão: {slug}")
-    except Exception:
-        pass# Persistir slug da licença na sessão para uso na Home sem slug
+    # -----------------------------
+    # SALVAR SLUG (UMA VEZ SÓ)
+    # -----------------------------
     try:
         parts = request.path.strip('/').split('/')
         slug = parts[1] if len(parts) > 1 else None
@@ -288,89 +278,85 @@ def selecionar_empresa(request):
     except Exception:
         pass
 
-    if request.method == 'POST':
-        try:
-            empresa_id = request.POST.get('empresa_id') or request.POST.get('empresa')
-            filial_id = request.POST.get('filial_id') or request.POST.get('filial')
-            empresa_nome = request.POST.get('empresa_nome')
-            filial_nome = request.POST.get('filial_nome')
+    # -----------------------------
+    # GET → só renderiza
+    # -----------------------------
+    if request.method == 'GET':
+        return render(request, 'Licencas/selecionar_empresa_filial.html')
 
-            logger.info(
-                "[selecionar_empresa] POST recebido: empresa_id=%s filial_id=%s empresa_nome=%s filial_nome=%s",
-                empresa_id, filial_id, empresa_nome, filial_nome
-            )
+    # -----------------------------
+    # POST
+    # -----------------------------
+    try:
+        empresa_id = request.POST.get('empresa_id') or request.POST.get('empresa')
+        filial_id = request.POST.get('filial_id') or request.POST.get('filial')
+        empresa_nome = request.POST.get('empresa_nome')
+        filial_nome = request.POST.get('filial_nome')
 
-            if not empresa_id or not filial_id:
-                return render(request, 'Licencas/selecionar_empresa_filial.html', {
-                    'error': 'Empresa e filial são obrigatórias.'
-                })
+        logger.info(
+            "[selecionar_empresa] POST recebido: empresa_id=%s filial_id=%s empresa_nome=%s filial_nome=%s",
+            empresa_id, filial_id, empresa_nome, filial_nome
+        )
 
-            # Persistir na sessão com validação
-            try:
-                empresa_id_int = int(empresa_id)
-                filial_id_int = int(filial_id)
-            except (TypeError, ValueError) as exc:
-                logger.exception("IDs inválidos na seleção de empresa/filial: empresa=%s filial=%s", empresa_id, filial_id)
-                return render(request, 'Licencas/selecionar_empresa_filial.html', {
-                    'error': 'IDs inválidos para empresa/filial.'
-                })
-
-            request.session['empresa_id'] = empresa_id_int
-            request.session['filial_id'] = filial_id_int
-
-            # Popular nomes na sessão caso não venham do POST
-            if not empresa_nome or not filial_nome:
-                try:
-                    # Importar utilitário e modelos localmente para evitar dependência global
-                    from core.utils import get_licenca_db_config
-                    from Licencas.models import Empresas, Filiais
-                    banco = get_licenca_db_config(request) or 'default'
-                    if not empresa_nome:
-                        emp_obj = (
-                            Empresas.objects.using(banco)
-                            .filter(empr_codi=empresa_id_int)
-                            .only('empr_nome')
-                            .first()
-                        )
-                        empresa_nome = getattr(emp_obj, 'empr_nome', None) if emp_obj else None
-                    if not filial_nome:
-                        fil_obj = (
-                            Filiais.objects.using(banco)
-                            .filter(empr_empr=empresa_id_int, empr_codi=filial_id_int)
-                            .only('empr_nome')
-                            .first()
-                        )
-                        filial_nome = getattr(fil_obj, 'empr_nome', None) if fil_obj else None
-                except Exception as e:
-                    logger.warning("[selecionar_empresa] Falha ao obter nomes pelo banco da licença: %s", e)
-
-            if empresa_nome:
-                request.session['empresa_nome'] = empresa_nome
-            if filial_nome:
-                request.session['filial_nome'] = filial_nome
-
-            logger.info(
-                "[selecionar_empresa] Sessão atualizada: empresa_id=%s (%s) filial_id=%s (%s)",
-                request.session.get('empresa_id'), request.session.get('empresa_nome'),
-                request.session.get('filial_id'), request.session.get('filial_nome')
-            )
-
-            from django.shortcuts import redirect
-            try:
-                from core.middleware import get_licenca_slug
-                slug_cur = get_licenca_slug() or request.session.get('slug')
-            except Exception:
-                slug_cur = request.session.get('slug')
-            if slug_cur:
-                return redirect('home_slug', slug=slug_cur)
-            return redirect('home')
-        except Exception as exc:
-            logger.exception("Erro inesperado em selecionar_empresa: %s", exc)
+        if not empresa_id or not filial_id:
             return render(request, 'Licencas/selecionar_empresa_filial.html', {
-                'error': 'Erro interno ao salvar seleção.'
+                'error': 'Empresa e filial são obrigatórias.'
             })
 
-    return render(request, 'Licencas/selecionar_empresa_filial.html')
+        try:
+            empresa_id_int = int(empresa_id)
+            filial_id_int = int(filial_id)
+        except ValueError:
+            logger.exception("IDs inválidos na seleção de empresa/filial")
+            return render(request, 'Licencas/selecionar_empresa_filial.html', {
+                'error': 'IDs inválidos.'
+            })
+
+        request.session['empresa_id'] = empresa_id_int
+        request.session['filial_id'] = filial_id_int
+
+        # Buscar nomes se não vierem
+        if not empresa_nome or not filial_nome:
+            try:
+                from core.utils import get_licenca_db_config
+                from Licencas.models import Empresas, Filiais
+
+                banco = get_licenca_db_config(request) or 'default'
+
+                if not empresa_nome:
+                    emp = Empresas.objects.using(banco).filter(empr_codi=empresa_id_int).only('empr_nome').first()
+                    empresa_nome = getattr(emp, 'empr_nome', None)
+
+                if not filial_nome:
+                    fil = Filiais.objects.using(banco).filter(
+                        empr_empr=empresa_id_int,
+                        empr_codi=filial_id_int
+                    ).only('empr_nome').first()
+                    filial_nome = getattr(fil, 'empr_nome', None)
+            except Exception as e:
+                logger.warning("[selecionar_empresa] falha buscar nomes: %s", e)
+
+        if empresa_nome:
+            request.session['empresa_nome'] = empresa_nome
+        if filial_nome:
+            request.session['filial_nome'] = filial_nome
+
+        logger.info(
+            "[selecionar_empresa] Sessão atualizada OK: emp=%s (%s) fil=%s (%s)",
+            empresa_id_int, empresa_nome, filial_id_int, filial_nome
+        )
+
+        # REDIRECT
+        slug_cur = request.session.get('slug')
+        if slug_cur:
+            return redirect('home_slug', slug=slug_cur)
+        return redirect('home')
+
+    except Exception as exc:
+        logger.exception("Erro inesperado em selecionar_empresa: %s", exc)
+        return render(request, 'Licencas/selecionar_empresa_filial.html', {
+            'error': 'Erro interno ao salvar seleção.'
+        })
 
 
 from django.http import HttpResponse
