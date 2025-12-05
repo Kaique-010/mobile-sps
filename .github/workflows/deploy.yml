@@ -64,6 +64,14 @@ jobs:
               --exclude "__pycache__" \
               $REPO/ $TARGET/
 
+            echo ">> Copiando .env real para o TARGET..."
+            if [ -f "$BASE/.env" ]; then
+              cp $BASE/.env $TARGET/.env
+              echo ">> .env copiado."
+            else
+              echo "!! .env não encontrado no servidor!"
+            fi
+
             echo ">> Ativando venv..."
             source $BASE/venv/bin/activate
 
@@ -74,6 +82,11 @@ jobs:
             export DJANGO_SETTINGS_MODULE=core.settings
             cd $TARGET
             python manage.py collectstatic --noinput
+
+            echo ">> Variáveis temporárias para health-check..."
+            export DJANGO_SETTINGS_MODULE=core.settings
+            export ALLOWED_HOSTS="*"
+            export DEBUG="False"
 
             echo ">> Subindo Gunicorn temporário..."
             gunicorn core.wsgi:application \
