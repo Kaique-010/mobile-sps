@@ -159,19 +159,21 @@
             const allowSet = new Set(modulosLiberados.map(m => String(m).toLowerCase()));
             document.querySelectorAll('[data-modulo]')?.forEach(el => {
                 const nome = (el.getAttribute('data-modulo') || '').toLowerCase();
-                // Alguns aliases comuns
+                // Alguns aliases comuns para módulos
                 const aliases = {
                     'dashboard': ['dashboard', 'dashboards', 'métricas', 'dash'],
                     'o_s': ['o_s', 'ordens de serviço', 'os'],
                     'parametros_admin': ['parametros_admin', 'parametrizações', 'parametros'],
                     // Aliases comuns para módulo de pedidos/vendas
-                    'pedidos': ['pedidos', 'pedido', 'pedido venda', 'pedido_venda', 'pv', 'vendas', 'Pedidos', 'listacasamento'],
+                    'pedidos': ['pedidos', 'pedido', 'pedido venda', 'pedido_venda', 'pv', 'vendas', 'Pedidos', 'listacasamento', 'pedidosvenda'],
                     // Aliases para orçamentos
                     'orcamentos': ['orcamentos', 'orçamentos', 'orcamento', 'orçamento', 'budget'],
                     // Aliases para Centros de Custos
                     'centrosdecustos': ['centrosdecustos', 'centrodecustos', 'centros de custos', 'centro de custos', 'cc'],
                     // Aliases para Entidades
-                    'entidades': ['entidades', 'entidade', 'cadastro entidades']
+                    'entidades': ['entidades', 'entidade', 'cadastro entidades'],
+                    // Aliases para Visitas
+                    'visitas': ['visitas', 'visita', 'visitas dashboard', 'visitas_dashboard', 'controle_de_visitas', 'controle de visitas', 'ControleDeVisitas']
                 };
                 const nomeMatch = allowSet.has(nome) || Object.entries(aliases).some(([key, vals]) => {
                     const isAliasName = vals.includes(nome);
