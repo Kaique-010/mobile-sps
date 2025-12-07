@@ -149,15 +149,19 @@ jobs:
 
             echo ">> Deploy Blue/Green finalizado com sucesso!"
 
+      - name: Debug — Gmail secrets
+        run: |
+          [ -z "${{ secrets.GMAIL_USERNAME }}" ] && echo "GMAIL_USERNAME missing" || echo "GMAIL_USERNAME present"
+          [ -z "${{ secrets.GMAIL_APP_PASSWORD }}" ] && echo "GMAIL_APP_PASSWORD missing" || echo "GMAIL_APP_PASSWORD present"
+          [ -z "${{ secrets.DEPLOY_NOTIFY_EMAILS }}" ] && echo "DEPLOY_NOTIFY_EMAILS missing" || echo "DEPLOY_NOTIFY_EMAILS present"
+          [ -z "${{ secrets.GMAIL_CONNECTION_URL }}" ] && echo "GMAIL_CONNECTION_URL missing" || echo "GMAIL_CONNECTION_URL present"
+
       - name: Email — Sucesso
         if: success()
         uses: dawidd6/action-send-mail@v4
+        continue-on-error: true
         with:
-          server_address: smtp.gmail.com
-          server_port: 465
-          secure: true
-          username: ${{ secrets.GMAIL_USERNAME }}
-          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          connection_url: ${{ secrets.GMAIL_CONNECTION_URL }}
           subject: 'Deploy SPS — Sucesso (${% raw %}{{ github.run_number }}{% endraw %})'
           to: ${{ secrets.DEPLOY_NOTIFY_EMAILS }}
           from: ${{ secrets.GMAIL_USERNAME }}
@@ -170,12 +174,9 @@ jobs:
       - name: Email — Falha
         if: failure()
         uses: dawidd6/action-send-mail@v4
+        continue-on-error: true
         with:
-          server_address: smtp.gmail.com
-          server_port: 465
-          secure: true
-          username: ${{ secrets.GMAIL_USERNAME }}
-          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          connection_url: ${{ secrets.GMAIL_CONNECTION_URL }}
           subject: 'Deploy SPS — Falha (${% raw %}{{ github.run_number }}{% endraw %})'
           to: ${{ secrets.DEPLOY_NOTIFY_EMAILS }}
           from: ${{ secrets.GMAIL_USERNAME }}
