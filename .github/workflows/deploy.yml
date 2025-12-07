@@ -92,7 +92,14 @@ jobs:
             export ALLOWED_HOSTS="*"
             export DEBUG="False"
 
+            echo ">> Pré-validação WSGI..."
+            cd $TARGET && python -c "import core.wsgi; print('WSGI import OK')" || {
+              echo "!! Falha ao importar core.wsgi"
+              exit 1
+            }
+
             echo ">> Subindo Gunicorn temporário..."
+            lsof -t -i:9000 | xargs -r kill -9 || true
             gunicorn core.wsgi:application \
               --bind 127.0.0.1:9000 \
               --daemon \
@@ -110,7 +117,12 @@ jobs:
             sleep 5
 
             if [ ! -f "$TARGET/guni_test.pid" ]; then
-              echo "!! Gunicorn não iniciou. Logs de erro:" && tail -n 200 $TARGET/guni_error.log || true
+              echo "!! Gunicorn não iniciou. Logs de erro:"
+              if [ -f "$TARGET/guni_error.log" ]; then
+                tail -n 200 $TARGET/guni_error.log || true
+              else
+                echo "(sem arquivo de erro)"
+              fi
               exit 1
             fi
 
