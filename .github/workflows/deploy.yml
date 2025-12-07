@@ -93,17 +93,26 @@ jobs:
             lsof -t -i:9000 | xargs -r kill -9 || true
             sleep 2
 
-            timeout 60 gunicorn core.wsgi:application \
+            # Criar arquivos de log antes
+            touch $TARGET/guni_error.log $TARGET/guni_access.log
+
+            echo ">> Verificando se gunicorn está disponível..."
+            which gunicorn || { echo "!! Gunicorn não encontrado no PATH"; exit 1; }
+
+            echo ">> Iniciando Gunicorn em $TARGET..."
+            cd $TARGET
+            gunicorn core.wsgi:application \
               --bind 127.0.0.1:9000 \
               --daemon \
-              --chdir $TARGET \
               --pid $TARGET/guni_test.pid \
               --timeout 30 \
               --workers 2 \
               --error-logfile $TARGET/guni_error.log \
-              --log-file $TARGET/guni_access.log || { \
+              --access-logfile $TARGET/guni_access.log \
+              --log-level debug 2>&1 | tee -a $TARGET/guni_error.log || { \
                 echo "!! Falha ao iniciar Gunicorn"; \
-                if [ -f "$TARGET/guni_error.log" ]; then tail -n 200 $TARGET/guni_error.log; else echo "(sem arquivo de erro)"; fi; \
+                echo ">> Conteúdo do erro:"; \
+                cat $TARGET/guni_error.log 2>/dev/null || echo "(arquivo vazio)"; \
                 exit 1; \
               }
 
@@ -111,12 +120,15 @@ jobs:
             sleep 10
 
             if [ ! -f "$TARGET/guni_test.pid" ]; then
-              echo "!! Gunicorn não iniciou. Logs de erro:"
-              if [ -f "$TARGET/guni_error.log" ]; then
-                tail -n 200 $TARGET/guni_error.log || true
-              else
-                echo "(sem arquivo de erro)"
-              fi
+              echo "!! Gunicorn não iniciou. Verificando logs..."
+              echo ">> Log de erro:"
+              cat $TARGET/guni_error.log 2>/dev/null || echo "(arquivo vazio)"
+              echo ""
+              echo ">> Log de acesso:"
+              cat $TARGET/guni_access.log 2>/dev/null || echo "(arquivo vazio)"
+              echo ""
+              echo ">> Processos Gunicorn:"
+              ps aux | grep gunicorn || echo "(nenhum processo)"
               exit 1
             fi
 
