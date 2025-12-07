@@ -27,6 +27,8 @@ jobs:
           host: ${{ secrets.ORACLE_HOST }}
           username: ${{ secrets.ORACLE_USER }}
           key: ${{ secrets.ORACLE_SSH_KEY }}
+          command_timeout: 30m
+          timeout: 30m
           script: |
             BASE=/home/ubuntu/mobile-sps
             REPO=$BASE/repo
@@ -87,25 +89,16 @@ jobs:
 
             # Sem collectstatic e sem migrate/check neste fluxo
 
-            echo ">> Variáveis temporárias para health-check..."
-            export DJANGO_SETTINGS_MODULE=core.settings
-            export ALLOWED_HOSTS="*"
-            export DEBUG="False"
-
-            echo ">> Pré-validação WSGI..."
-            cd $TARGET && python -c "import core.wsgi; print('WSGI import OK')" || {
-              echo "!! Falha ao importar core.wsgi"
-              exit 1
-            }
-
-            echo ">> Subindo Gunicorn temporário..."
+            echo ">> Subindo Gunicorn temporário para teste..."
             lsof -t -i:9000 | xargs -r kill -9 || true
-            gunicorn core.wsgi:application \
+            sleep 2
+
+            timeout 60 gunicorn core.wsgi:application \
               --bind 127.0.0.1:9000 \
               --daemon \
               --chdir $TARGET \
               --pid $TARGET/guni_test.pid \
-              --timeout 90 \
+              --timeout 30 \
               --workers 2 \
               --error-logfile $TARGET/guni_error.log \
               --log-file $TARGET/guni_access.log || { \
@@ -114,7 +107,8 @@ jobs:
                 exit 1; \
               }
 
-            sleep 5
+            echo ">> Aguardando Gunicorn inicializar (10s)..."
+            sleep 10
 
             if [ ! -f "$TARGET/guni_test.pid" ]; then
               echo "!! Gunicorn não iniciou. Logs de erro:"
@@ -127,7 +121,25 @@ jobs:
             fi
 
             echo ">> Health-check no TARGET..."
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:9000/health/ || true)
+            MAX_ATTEMPTS=10
+            ATTEMPT=0
+            STATUS=""
+
+            while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+              ATTEMPT=$((ATTEMPT + 1))
+              echo ">> Tentativa $ATTEMPT/$MAX_ATTEMPTS..."
+              STATUS=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 http://127.0.0.1:9000/health/ || echo "000")
+              
+              if [ "$STATUS" = "200" ]; then
+                echo ">> Health-check OK!"
+                break
+              fi
+              
+              if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+                echo ">> Status: $STATUS - aguardando 3s..."
+                sleep 3
+              fi
+            done
 
             if [ "$STATUS" != "200" ]; then
               echo "!! Health-check falhou ($STATUS). Abortando e limpando Gunicorn temporário."
