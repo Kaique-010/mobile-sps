@@ -149,77 +149,40 @@ jobs:
 
             echo ">> Deploy Blue/Green finalizado com sucesso!"
 
-      - name: Debug — Gmail secrets
-        run: |
-          [ -z "${{ secrets.GMAIL_USERNAME }}" ] && echo "GMAIL_USERNAME missing" || echo "GMAIL_USERNAME present"
-          [ -z "${{ secrets.GMAIL_APP_PASSWORD }}" ] && echo "GMAIL_APP_PASSWORD missing" || echo "GMAIL_APP_PASSWORD present"
-          [ -z "${{ secrets.DEPLOY_NOTIFY_EMAILS }}" ] && echo "DEPLOY_NOTIFY_EMAILS missing" || echo "DEPLOY_NOTIFY_EMAILS present"
-          if [ -z "${{ secrets.GMAIL_CONNECTION_URL }}" ]; then echo "GMAIL_CONNECTION_URL missing"; echo "CONNURL_PRESENT=false" >> $GITHUB_ENV; else echo "GMAIL_CONNECTION_URL present"; echo "CONNURL_PRESENT=true" >> $GITHUB_ENV; fi
-
       - name: Email — Sucesso
-        if: ${{ success() && secrets.GMAIL_CONNECTION_URL != '' }}
+        if: success()
         uses: dawidd6/action-send-mail@v4
         continue-on-error: true
         with:
-          connection_url: ${{ secrets.GMAIL_CONNECTION_URL }}
-          subject: 'Deploy SPS — Sucesso (${% raw %}{{ github.run_number }}{% endraw %})'
-          to: ${{ secrets.DEPLOY_NOTIFY_EMAILS }}
-          from: ${{ secrets.GMAIL_USERNAME }}
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: leokaique7@gmail.com
+          password: eyicdldkhmjscwfw
+          subject: 'Deploy SPS — Sucesso (${{ github.run_number }})'
+          to: leokaique7@gmail.com
+          from: leokaique7@gmail.com
           body: |
             Deploy concluído com sucesso.
             Ambiente alternado via Blue/Green.
-            Repo: ${% raw %}{{ github.repository }}{% endraw %}
-            SHA: ${% raw %}{{ github.sha }}{% endraw %}
+            Repo: ${{ github.repository }}
+            SHA: ${{ github.sha }}
 
-      - name: Email — Sucesso (fallback)
-        if: ${{ success() && secrets.GMAIL_CONNECTION_URL == '' }}
+      - name: Email — Falha
+        if: failure()
         uses: dawidd6/action-send-mail@v4
         continue-on-error: true
         with:
           server_address: smtp.gmail.com
           server_port: 465
           secure: true
-          username: ${{ secrets.GMAIL_USERNAME }}
-          password: ${{ secrets.GMAIL_APP_PASSWORD }}
-          subject: 'Deploy SPS — Sucesso (${% raw %}{{ github.run_number }}{% endraw %})'
-          to: ${{ secrets.DEPLOY_NOTIFY_EMAILS }}
-          from: ${{ secrets.GMAIL_USERNAME }}
-          body: |
-            Deploy concluído com sucesso (fallback).
-            Ambiente alternado via Blue/Green.
-            Repo: ${% raw %}{{ github.repository }}{% endraw %}
-            SHA: ${% raw %}{{ github.sha }}{% endraw %}
-
-      - name: Email — Falha
-        if: ${{ failure() && secrets.GMAIL_CONNECTION_URL != '' }}
-        uses: dawidd6/action-send-mail@v4
-        continue-on-error: true
-        with:
-          connection_url: ${{ secrets.GMAIL_CONNECTION_URL }}
-          subject: 'Deploy SPS — Falha (${% raw %}{{ github.run_number }}{% endraw %})'
-          to: ${{ secrets.DEPLOY_NOTIFY_EMAILS }}
-          from: ${{ secrets.GMAIL_USERNAME }}
+          username: leokaique7@gmail.com
+          password: eyicdldkhmjscwfw
+          subject: 'Deploy SPS — Falha (${{ github.run_number }})'
+          to: leokaique7@gmail.com
+          from: leokaique7@gmail.com
           body: |
             Deploy falhou.
             Última versão mantida.
-            Repo: ${% raw %}{{ github.repository }}{% endraw %}
-            SHA: ${% raw %}{{ github.sha }}{% endraw %}
-
-      - name: Email — Falha (fallback)
-        if: ${{ failure() && secrets.GMAIL_CONNECTION_URL == '' }}
-        uses: dawidd6/action-send-mail@v4
-        continue-on-error: true
-        with:
-          server_address: smtp.gmail.com
-          server_port: 465
-          secure: true
-          username: ${{ secrets.GMAIL_USERNAME }}
-          password: ${{ secrets.GMAIL_APP_PASSWORD }}
-          subject: 'Deploy SPS — Falha (${% raw %}{{ github.run_number }}{% endraw %})'
-          to: ${{ secrets.DEPLOY_NOTIFY_EMAILS }}
-          from: ${{ secrets.GMAIL_USERNAME }}
-          body: |
-            Deploy falhou (fallback).
-            Última versão mantida.
-            Repo: ${% raw %}{{ github.repository }}{% endraw %}
-            SHA: ${% raw %}{{ github.sha }}{% endraw %}
+            Repo: ${{ github.repository }}
+            SHA: ${{ github.sha }}
