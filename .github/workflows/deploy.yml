@@ -101,7 +101,11 @@ jobs:
               --timeout 90 \
               --workers 2 \
               --error-logfile $TARGET/guni_error.log \
-              --log-file $TARGET/guni_access.log
+              --log-file $TARGET/guni_access.log || { \
+                echo "!! Falha ao iniciar Gunicorn"; \
+                if [ -f "$TARGET/guni_error.log" ]; then tail -n 200 $TARGET/guni_error.log; else echo "(sem arquivo de erro)"; fi; \
+                exit 1; \
+              }
 
             sleep 5
 
@@ -138,7 +142,7 @@ jobs:
         uses: dawidd6/action-send-mail@v4
         with:
           server_address: smtp.gmail.com
-          server_port: 587
+          server_port: 465
           secure: true
           username: ${{ secrets.GMAIL_USERNAME }}
           password: ${{ secrets.GMAIL_APP_PASSWORD }}
@@ -156,7 +160,7 @@ jobs:
         uses: dawidd6/action-send-mail@v4
         with:
           server_address: smtp.gmail.com
-          server_port: 587
+          server_port: 465
           secure: true
           username: ${{ secrets.GMAIL_USERNAME }}
           password: ${{ secrets.GMAIL_APP_PASSWORD }}
