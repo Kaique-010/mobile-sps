@@ -75,7 +75,19 @@ jobs:
             echo ">> Ativando venv..."
             source $BASE/venv/bin/activate
 
-           
+            echo ">> Instalando dependências..."
+            pip install -r $TARGET/requirements.txt
+
+            echo ">> collectstatic..."
+            export DJANGO_SETTINGS_MODULE=core.settings
+            cd $TARGET
+            python manage.py collectstatic --noinput
+
+            echo ">> Django check..."
+            python manage.py check || {
+              echo "!! Django check falhou"
+              exit 1
+            }
 
             echo ">> Variáveis temporárias para health-check..."
             export DJANGO_SETTINGS_MODULE=core.settings
@@ -87,9 +99,18 @@ jobs:
               --bind 127.0.0.1:9000 \
               --daemon \
               --chdir $TARGET \
-              --pid $TARGET/guni_test.pid
+              --pid $TARGET/guni_test.pid \
+              --timeout 90 \
+              --workers 2 \
+              --error-logfile $TARGET/guni_error.log \
+              --log-file $TARGET/guni_access.log
 
             sleep 5
+
+            if [ ! -f "$TARGET/guni_test.pid" ]; then
+              echo "!! Gunicorn não iniciou. Logs de erro:" && tail -n 200 $TARGET/guni_error.log || true
+              exit 1
+            fi
 
             echo ">> Health-check no TARGET..."
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:9000/health/ || true)
@@ -114,12 +135,12 @@ jobs:
 
             echo ">> Deploy Blue/Green finalizado com sucesso!"
 
-      - name: Telegram — Sucesso
+      - name: Email — Sucesso
         if: success()
         uses: dawidd6/action-send-mail@v4
         with:
-          server: smtp.gmail.com
-          port: 587
+          server_address: smtp.gmail.com
+          server_port: 587
           secure: true
           username: ${{ secrets.GMAIL_USERNAME }}
           password: ${{ secrets.GMAIL_APP_PASSWORD }}
@@ -132,12 +153,12 @@ jobs:
             Repo: ${% raw %}{{ github.repository }}{% endraw %}
             SHA: ${% raw %}{{ github.sha }}{% endraw %}
 
-      - name: Telegram — Falha
+      - name: Email — Falha
         if: failure()
         uses: dawidd6/action-send-mail@v4
         with:
-          server: smtp.gmail.com
-          port: 587
+          server_address: smtp.gmail.com
+          server_port: 587
           secure: true
           username: ${{ secrets.GMAIL_USERNAME }}
           password: ${{ secrets.GMAIL_APP_PASSWORD }}
