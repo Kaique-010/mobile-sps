@@ -106,6 +106,14 @@ class LoginView(APIView):
         except Exception:
             pass
         request.session["usua_codi"] = usuario.usua_codi
+        try:
+            request.session["docu"] = docu
+            from Licencas.views import get_banco_por_docu
+            slug_from_docu = get_banco_por_docu(docu)
+            if slug_from_docu:
+                request.session["slug"] = slug_from_docu
+        except Exception:
+            pass
         access['username'] = usuario.usua_nome
         access['usuario_id'] = usuario.usua_codi
         access['setor'] = usuario.usua_seto

@@ -31,9 +31,34 @@ class LicencaMiddleware:
                 return self.get_response(request)
             slug = path_parts[2] if len(path_parts) >= 3 else None
             if not slug:
+                docu = request.session.get('docu')
+                if docu:
+                    expected = next((x['slug'] for x in LICENCAS_MAP if x.get('cnpj') == docu), None)
+                    if expected:
+                        from django.http import HttpResponseRedirect
+                        from urllib.parse import urlencode
+                        qs = request.GET.dict()
+                        new_path = f"/web/home/{expected}/"
+                        url = new_path + (f"?{urlencode(qs)}" if qs else "")
+                        return HttpResponseRedirect(url)
                 return self.get_response(request)
             licenca = next((lic for lic in LICENCAS_MAP if lic["slug"] == slug), None)
             if not licenca:
+                docu = request.session.get('docu')
+                expected = next((x['slug'] for x in LICENCAS_MAP if x.get('cnpj') == docu), None) if docu else None
+                if expected:
+                    from django.http import HttpResponseRedirect
+                    from urllib.parse import urlencode
+                    qs = request.GET.dict()
+                    parts = request.path.strip('/').split('/')
+                    emp = parts[3] if len(parts) >= 4 else None
+                    fil = parts[4] if len(parts) >= 5 else None
+                    if emp and fil:
+                        new_path = f"/web/home/{expected}/{emp}/{fil}/"
+                    else:
+                        new_path = f"/web/home/{expected}/"
+                    url = new_path + (f"?{urlencode(qs)}" if qs else "")
+                    return HttpResponseRedirect(url)
                 return self.get_response(request)
             set_licenca_slug(slug)
             request.slug = slug

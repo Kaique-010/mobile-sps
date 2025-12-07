@@ -540,6 +540,20 @@ def complete_onboarding_step(request, step, slug=None):
     return redirect(next_url)
 def home_redirect_legacy(request, slug):
     try:
+        try:
+            docu = request.session.get('docu')
+            expected = None
+            if docu:
+                from core.licenca_context import LICENCAS_MAP
+                expected = next((x['slug'] for x in LICENCAS_MAP if x.get('cnpj') == docu), None)
+            if expected and expected != slug:
+                emp = request.session.get('empresa_id')
+                fil = request.session.get('filial_id')
+                if emp is not None and fil is not None:
+                    return redirect('home_slug_context', slug=expected, empresa=int(emp), filial=int(fil))
+                return redirect('home_slug', slug=expected)
+        except Exception:
+            pass
         emp = request.session.get('empresa_id')
         fil = request.session.get('filial_id')
         if emp is not None and fil is not None:
