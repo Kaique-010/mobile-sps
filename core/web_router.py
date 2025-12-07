@@ -4,7 +4,11 @@ from . import views
 urlpatterns = [
     path("", views.index, name="index"),
     path("home/", views.home, name="home"),
-    path("<slug:slug>/home/", views.home, name="home_slug"),
+    path("home/<slug:slug>/", views.home, name="home_slug"),
+    path("home/<slug:slug>/<int:empresa>/<int:filial>/", views.home, name="home_slug_context"),
+    path("<slug:slug>/home/", views.home_redirect_legacy, name="home_legacy"),
+    path("home/selecionar-empresa/<int:empresa>/<int:filial>/", views.selecionar_empresa_redirect, name="selecionar_empresa_redirect"),
+    path("home/<slug:slug>/selecionar-empresa/<int:empresa>/<int:filial>/", views.selecionar_empresa_redirect_slug, name="selecionar_empresa_redirect_slug"),
 
     # Páginas web
     path("login/", views.web_login, name="web_login"),

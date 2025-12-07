@@ -70,10 +70,19 @@ def health_check(request):
 
 def index(request):
     return render(request, 'index.html')
-def home(request, slug=None):
+def home(request, slug=None, empresa=None, filial=None):
     try:
         if slug:
             request.session['slug'] = slug
+    except Exception:
+        pass
+    try:
+        if empresa is not None:
+            request.session['empresa_id'] = int(empresa)
+            request.session.modified = True
+        if filial is not None:
+            request.session['filial_id'] = int(filial)
+            request.session.modified = True
     except Exception:
         pass
     if not slug:
@@ -266,15 +275,17 @@ def web_login(request):
 
 @ensure_csrf_cookie
 def selecionar_empresa(request):
-    # -----------------------------
-    # SALVAR SLUG (UMA VEZ SÓ)
-    # -----------------------------
+    # Tentar capturar slug do Referer caso não esteja na sessão
     try:
-        parts = request.path.strip('/').split('/')
-        slug = parts[1] if len(parts) > 1 else None
-        if slug:
-            request.session['slug'] = slug
-            logger.info(f"[selecionar_empresa] slug salvo na sessão: {slug}")
+        if not request.session.get('slug'):
+            from urllib.parse import urlparse
+            ref = request.META.get('HTTP_REFERER', '')
+            p = urlparse(ref).path.strip('/').split('/')
+            if len(p) >= 3 and p[0] == 'web' and p[1] == 'home':
+                cand = (p[2] or '').strip()
+                if cand:
+                    request.session['slug'] = cand
+                    logger.info(f"[selecionar_empresa] slug via Referer: {cand}")
     except Exception:
         pass
 
@@ -349,6 +360,13 @@ def selecionar_empresa(request):
         # REDIRECT
         slug_cur = request.session.get('slug')
         if slug_cur:
+            emp = request.session.get('empresa_id')
+            fil = request.session.get('filial_id')
+            if emp is not None and fil is not None:
+                try:
+                    return redirect('home_slug_context', slug=slug_cur, empresa=int(emp), filial=int(fil))
+                except Exception:
+                    return redirect('home_slug', slug=slug_cur)
             return redirect('home_slug', slug=slug_cur)
         return redirect('home')
 
@@ -520,3 +538,45 @@ def complete_onboarding_step(request, step, slug=None):
     except Exception:
         pass
     return redirect(next_url)
+def home_redirect_legacy(request, slug):
+    try:
+        emp = request.session.get('empresa_id')
+        fil = request.session.get('filial_id')
+        if emp is not None and fil is not None:
+            try:
+                emp_i = int(emp)
+                fil_i = int(fil)
+                return redirect('home_slug_context', slug=slug, empresa=emp_i, filial=fil_i)
+            except Exception:
+                return redirect('home_slug', slug=slug)
+        return redirect('home_slug', slug=slug)
+    except Exception:
+        return redirect('home')
+
+def selecionar_empresa_redirect(request, empresa, filial):
+    try:
+        request.session['empresa_id'] = int(empresa)
+        request.session['filial_id'] = int(filial)
+        request.session.modified = True
+    except Exception:
+        pass
+    slug_cur = request.session.get('slug')
+    if slug_cur:
+        try:
+            return redirect('home_slug_context', slug=slug_cur, empresa=int(empresa), filial=int(filial))
+        except Exception:
+            return redirect('home_slug', slug=slug_cur)
+    return redirect('home')
+
+def selecionar_empresa_redirect_slug(request, slug, empresa, filial):
+    try:
+        request.session['slug'] = (slug or '').strip()
+        request.session['empresa_id'] = int(empresa)
+        request.session['filial_id'] = int(filial)
+        request.session.modified = True
+    except Exception:
+        pass
+    try:
+        return redirect('home_slug_context', slug=slug, empresa=int(empresa), filial=int(filial))
+    except Exception:
+        return redirect('home_slug', slug=slug)

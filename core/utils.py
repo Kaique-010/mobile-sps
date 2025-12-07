@@ -23,9 +23,6 @@ def get_db_from_slug(slug):
     if slug in settings.DATABASES:
         logger.info(f"🔄 Conexão {slug} já existe (reutilizada)")
         return slug
-
-    # Log de diagnóstico de rede
-    logger.warning(f"🌐 Criando nova conexão para {slug} -> {licenca['db_host']}:{licenca['db_port']}")
     
     prefixo = slug.upper()
     db_user = config(f"{prefixo}_DB_USER")

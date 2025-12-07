@@ -25,11 +25,41 @@ class LicencaMiddleware:
 
     def __call__(self, request):
         start_time = time.time()
+        path_parts = request.path.strip('/').split('/')
+        if len(path_parts) >= 2 and path_parts[0] == 'web' and path_parts[1] == 'home':
+            if len(path_parts) >= 3 and (path_parts[2] == 'selecionar-empresa'):
+                return self.get_response(request)
+            slug = path_parts[2] if len(path_parts) >= 3 else None
+            if not slug:
+                return self.get_response(request)
+            licenca = next((lic for lic in LICENCAS_MAP if lic["slug"] == slug), None)
+            if not licenca:
+                return self.get_response(request)
+            set_licenca_slug(slug)
+            request.slug = slug
+            set_current_request(request)
+            try:
+                if len(path_parts) >= 5:
+                    emp = int(path_parts[3])
+                    fil = int(path_parts[4])
+                    if request.session.get('empresa_id') != emp:
+                        request.session['empresa_id'] = emp
+                        request.session.modified = True
+                    if request.session.get('filial_id') != fil:
+                        request.session['filial_id'] = fil
+                        request.session.modified = True
+            except Exception:
+                pass
+            return self.get_response(request)
         
         # Rotas que devem ser ignoradas pelo middleware
         ignored_paths = [
             '/api/warm-cache/',
             '/api/licencas/mapa/',
+            '/api/selecionar-empresa/',
+            '/api/entidades-login/',
+            '/web/',
+            '/web/selecionar-empresa/',
             '/admin/',
             '/static/',
             '/media/',

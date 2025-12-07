@@ -135,8 +135,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-
-    # AQUI:
+    
     'core.middleware_restore_auth.RestoreUserMiddleware',
 
     'django.contrib.messages.middleware.MessageMiddleware',

@@ -86,14 +86,12 @@ def log_criacao_atualizacao(sender, instance, created, **kwargs):
         
         # Se não há usuário ou requisição, pode ser uma operação interna
         if not user or not request:
-            logger.debug(f'Signal ignorado - sem contexto de usuário/requisição para {sender.__name__} ID {instance.pk}')
             return
         
         # Obter licença
         licenca_slug = get_licenca_slug()
         db_alias = getattr(getattr(instance, '_state', None), 'db', None) or licenca_slug or 'default'
         if not licenca_slug:
-            logger.debug(f'Signal ignorado - sem licença para {sender.__name__} ID {instance.pk}')
             return
         
         dados_depois = model_to_dict(instance)
