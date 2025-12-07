@@ -157,7 +157,7 @@ jobs:
           if [ -z "${{ secrets.GMAIL_CONNECTION_URL }}" ]; then echo "GMAIL_CONNECTION_URL missing"; echo "CONNURL_PRESENT=false" >> $GITHUB_ENV; else echo "GMAIL_CONNECTION_URL present"; echo "CONNURL_PRESENT=true" >> $GITHUB_ENV; fi
 
       - name: Email — Sucesso
-        if: success()
+        if: ${{ success() && secrets.GMAIL_CONNECTION_URL != '' }}
         uses: dawidd6/action-send-mail@v4
         continue-on-error: true
         with:
@@ -172,7 +172,7 @@ jobs:
             SHA: ${% raw %}{{ github.sha }}{% endraw %}
 
       - name: Email — Sucesso (fallback)
-        if: success() && env.CONNURL_PRESENT == 'false'
+        if: ${{ success() && secrets.GMAIL_CONNECTION_URL == '' }}
         uses: dawidd6/action-send-mail@v4
         continue-on-error: true
         with:
@@ -191,7 +191,7 @@ jobs:
             SHA: ${% raw %}{{ github.sha }}{% endraw %}
 
       - name: Email — Falha
-        if: failure()
+        if: ${{ failure() && secrets.GMAIL_CONNECTION_URL != '' }}
         uses: dawidd6/action-send-mail@v4
         continue-on-error: true
         with:
@@ -206,7 +206,7 @@ jobs:
             SHA: ${% raw %}{{ github.sha }}{% endraw %}
 
       - name: Email — Falha (fallback)
-        if: failure() && env.CONNURL_PRESENT == 'false'
+        if: ${{ failure() && secrets.GMAIL_CONNECTION_URL == '' }}
         uses: dawidd6/action-send-mail@v4
         continue-on-error: true
         with:
