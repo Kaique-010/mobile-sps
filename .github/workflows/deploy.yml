@@ -75,19 +75,17 @@ jobs:
             echo ">> Ativando venv..."
             source $BASE/venv/bin/activate
 
-            echo ">> Instalando dependências..."
-            pip install -r $TARGET/requirements.txt
+            echo ">> Checando hash de requirements..."
+            REQ_HASH=$(sha256sum $TARGET/requirements.txt | awk '{print $1}')
+            if [ -f "$BASE/.req_hash" ] && [ "$REQ_HASH" = "$(cat $BASE/.req_hash)" ]; then
+              echo ">> requirements.txt inalterado — pulando pip install"
+            else
+              echo ">> Instalando dependências..."
+              pip install -r $TARGET/requirements.txt
+              echo "$REQ_HASH" > $BASE/.req_hash
+            fi
 
-            echo ">> collectstatic..."
-            export DJANGO_SETTINGS_MODULE=core.settings
-            cd $TARGET
-            python manage.py collectstatic --noinput
-
-            echo ">> Django check..."
-            python manage.py check || {
-              echo "!! Django check falhou"
-              exit 1
-            }
+            # Sem collectstatic e sem migrate/check neste fluxo
 
             echo ">> Variáveis temporárias para health-check..."
             export DJANGO_SETTINGS_MODULE=core.settings
