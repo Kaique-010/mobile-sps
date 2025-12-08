@@ -75,3 +75,27 @@ ORDER BY os.os_data_aber DESC, os.os_os DESC
 );
 
 
+
+ALTER TABLE os ADD COLUMN os_assi_clie bytea;
+ALTER TABLE os ADD COLUMN os_assi_oper bytea;
+
+CREATE TABLE IF NOT EXISTS os_hora (
+  os_hora_empr integer NOT NULL,
+  os_hora_fili integer NOT NULL,
+  os_hora_os integer NOT NULL,
+  os_hora_item integer PRIMARY KEY,
+  os_hora_data date NOT NULL,
+  os_hora_manh_ini time NULL,
+  os_hora_manh_fim time NULL,
+  os_hora_tard_ini time NULL,
+  os_hora_tard_fim time NULL,
+  os_hora_tota numeric(6,2) NULL,
+  os_hora_km_sai integer NULL,
+  os_hora_km_che integer NULL,
+  os_hora_oper integer NULL,
+  os_hora_equi varchar(100) NULL,
+  os_hora_obse text NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS os_hora_uk ON os_hora (os_hora_empr, os_hora_fili, os_hora_os, os_hora_item);
+CREATE INDEX IF NOT EXISTS idx_os_hora_context ON os_hora (os_hora_empr, os_hora_fili, os_hora_os);

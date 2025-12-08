@@ -165,7 +165,7 @@
                 'o_s': ['o_s', 'ordens de serviço', 'os'],
                 'parametros_admin': ['parametros_admin', 'parametrizações', 'parametros'],
                 // Aliases comuns para módulo de pedidos/vendas
-                'pedidos': ['pedidos', 'pedido', 'pedido venda', 'pedido_venda', 'pv', 'vendas', 'Pedidos', 'listacasamento', 'pedidosvenda'],
+                'pedidos': ['pedidos', 'pedido', 'pedido venda', 'pedido_venda', 'pv', 'vendas', 'Pedidos', 'listacasamento', 'pedidosvenda', 'métricas'],
                 // Aliases para orçamentos
                 'orcamentos': ['orcamentos', 'orçamentos', 'orcamento', 'orçamento', 'budget'],
                 // Aliases para Centros de Custos
@@ -215,6 +215,22 @@
             document.querySelectorAll('[data-modulo-requerido]')?.forEach(el => {
                 const req = el.getAttribute('data-modulo-requerido');
                 if (!tokenMatchStrict(req)) {
+                    const li = el.closest('li.nav-item') || el;
+                    if (li) li.style.display = 'none';
+                    const target = el.getAttribute('data-bs-target');
+                    if (target) {
+                        const collapse = document.querySelector(target);
+                        if (collapse) collapse.remove();
+                    }
+                }
+            });
+
+            // Exibir itens que aceitam qualquer entre múltiplos módulos
+            document.querySelectorAll('[data-modulos-any]')?.forEach(el => {
+                const raw = el.getAttribute('data-modulos-any') || '';
+                const list = raw.split(',').map(s => String(s).trim()).filter(Boolean);
+                const ok = list.some(t => tokenMatch(t));
+                if (!ok) {
                     const li = el.closest('li.nav-item') || el;
                     if (li) li.style.display = 'none';
                     const target = el.getAttribute('data-bs-target');

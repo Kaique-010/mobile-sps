@@ -15,6 +15,7 @@ router.register(r'ordens', OsViewSet, basename='ordens')
 router.register(r'pecas', PecasOsViewSet, basename='pecas')
 router.register(r'servicos', ServicosOsViewSet, basename='servicos')
 router.register(r'os-geral', OrdemServicoGeralViewSet, basename='os-geral')
+router.register(r'os-hora', OsHoraViewSet, basename='os-hora')
 
 urlpatterns = router.urls
 

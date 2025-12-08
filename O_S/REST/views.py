@@ -12,9 +12,11 @@ from rest_framework.parsers import JSONParser
 from ..utils import get_next_item_number_sequence, get_next_service_id
 from listacasamento.utils import get_next_item_number
 from ..permissions import PodeVerOrdemDoSetor
-from ..models import Os, PecasOs, ServicosOs
+from ..models import Os, PecasOs, ServicosOs, OsHora
 from .serializers import (
-    OsSerializer, PecasOsSerializer, ServicosOsSerializer)
+                            OsSerializer, PecasOsSerializer, 
+                            ServicosOsSerializer, OsHoraSerializer)
+from django.db import models
 from django.db.models import Prefetch
 from core.middleware import get_licenca_slug
 from core.registry import get_licenca_db_config
@@ -25,7 +27,6 @@ logger = logging.getLogger(__name__)
 
 
 class BaseMultiDBModelViewSet(ModuloRequeridoMixin, ModelViewSet):
-    permission_classes = [IsAuthenticated]
 
     def get_banco(self):
         banco = get_licenca_db_config(self.request)
@@ -66,8 +67,7 @@ class BaseMultiDBModelViewSet(ModuloRequeridoMixin, ModelViewSet):
 
 
 class OsViewSet(BaseMultiDBModelViewSet):
-    permission_classes = [IsAuthenticated, PodeVerOrdemDoSetor]
-    modulo_necessario = 'O_S'
+    permission_classes = [PodeVerOrdemDoSetor]
     serializer_class = OsSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
     filterset_fields = ['os_stat_os', 'os_clie']
@@ -76,13 +76,11 @@ class OsViewSet(BaseMultiDBModelViewSet):
    
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        context['banco'] = get_licenca_db_config(self.request)
+        context['banco'] = self.get_banco()
         return context
 
     def get_queryset(self):
         banco = self.get_banco()
-        user_setor = self.request.user.setor
-
         qs = Os.objects.using(banco).all()
 
         return qs.order_by('-os_data_aber')
@@ -176,12 +174,10 @@ class OsViewSet(BaseMultiDBModelViewSet):
             )
 
 
-class PecasOsViewSet(BaseMultiDBModelViewSet,ModelViewSet):
+class PecasOsViewSet(BaseMultiDBModelViewSet):
     serializer_class = PecasOsSerializer
-    permission_classes = [IsAuthenticated]
     parser_classes = [JSONParser]
- 
-   
+
     def atualizar_total_ordem(self, peca_empr, peca_fili, peca_os):
         banco = self.get_banco()
         try:
@@ -193,37 +189,29 @@ class PecasOsViewSet(BaseMultiDBModelViewSet,ModelViewSet):
             ordem.calcular_total()
             ordem.save(using=banco)
         except Os.DoesNotExist:
-            logger.error(f"Ordem de serviço não encontrada: {peca_os}")
+            logger.error(f"Ordem não encontrada para recalcular: {peca_os}")
 
     def get_queryset(self):
-        banco = get_licenca_db_config(self.request)
-        if not banco:
-            logger.error("Banco de dados não encontrado.")
-            raise NotFound("Banco de dados não encontrado.")
+        banco = self.get_banco()
 
         peca_empr = self.request.query_params.get('peca_empr')
         peca_fili = self.request.query_params.get('peca_fili')
         peca_os = self.request.query_params.get('peca_os')
 
         if not all([peca_empr, peca_fili, peca_os]):
-            logger.warning("Parâmetros obrigatórios não fornecidos (peca_empr, peca_fili, peca_os)")
+            logger.warning("Query sem parâmetros (peca_empr, peca_fili, peca_os). Retornando vazio.")
             return PecasOs.objects.none()
 
-        queryset = PecasOs.objects.using(banco).filter(
+        qs = PecasOs.objects.using(banco).filter(
             peca_empr=peca_empr,
             peca_fili=peca_fili,
             peca_os=peca_os
         )
 
-        logger.info(f"Parâmetros recebidos: peca_empr={peca_empr}, peca_fili={peca_fili}, peca_os={peca_os}")
-        logger.info(f"Queryset filtrado: {queryset.query}")
-        return queryset.order_by('peca_item')
+        return qs.order_by('peca_item')
 
     def get_object(self):
-        banco = get_licenca_db_config(self.request)
-        if not banco:
-            logger.error("Banco de dados não encontrado.")
-            raise NotFound("Banco de dados não encontrado.")
+        banco = self.get_banco()
 
         peca_item = self.kwargs.get('pk')
         peca_os = self.request.query_params.get("peca_os")
@@ -231,64 +219,87 @@ class PecasOsViewSet(BaseMultiDBModelViewSet,ModelViewSet):
         peca_fili = self.request.query_params.get("peca_fili")
 
         if not all([peca_os, peca_empr, peca_fili, peca_item]):
-            raise ValidationError("Parâmetros peca_os, peca_empr, peca_fili e pk (peca_item) são obrigatórios.")
+            raise ValidationError("Faltam parâmetros: peca_item, peca_os, peca_empr, peca_fili.")
 
         try:
-            return self.get_queryset().get(
+            return PecasOs.objects.using(banco).get(
                 peca_item=peca_item,
                 peca_os=peca_os,
                 peca_empr=peca_empr,
                 peca_fili=peca_fili
             )
         except PecasOs.DoesNotExist:
-            raise NotFound("peca não encontrado na lista especificada.")
+            raise NotFound("Peça não encontrada.")
         except PecasOs.MultipleObjectsReturned:
-            raise ValidationError("Mais de um peca encontrado com essa chave composta.")
+            raise ValidationError("Chave composta retornou múltiplos registros.")
 
     def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context['banco'] = get_licenca_db_config(self.request)
-        return context
+        ctx = super().get_serializer_context()
+        ctx['banco'] = self.get_banco()
+        return ctx
 
-    def destroy(self, request, *args, **kwargs):
-        peca = self.get_object()
-        if peca.peca_pedi != 0:
-            return Response({"detail": "Não é possível excluir peca já associado a pedido."}, status=400)
-        return super().destroy(request, *args, **kwargs)
 
+
+    # CREATE único e correto
     @transaction.atomic
     def create(self, request, *args, **kwargs):
-        banco = get_licenca_db_config(self.request)
-        if not banco:
-            return Response({"error": "Banco de dados não encontrado."}, status=status.HTTP_404_NOT_FOUND)
+        banco = self.get_banco()
 
         try:
-            logger.info(f"Criação de peca(s) por {request.user.pk if request.user else 'None'}")
+            is_many = isinstance(request.data, list)
+            serializer = self.get_serializer(data=request.data, many=is_many)
+            serializer.is_valid(raise_exception=True)
 
-            if isinstance(request.data, list):
-                serializer = self.get_serializer(data=request.data, many=True)
-                serializer.is_valid(raise_exception=True)
-                self.perform_create(serializer)
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            with transaction.atomic(using=banco):
+                objs = serializer.save()
 
-            return super().create(request, *args, **kwargs)
+            # recalcula total da OS
+            if is_many:
+                exemplo = request.data[0]
+            else:
+                exemplo = request.data
+
+            self.atualizar_total_ordem(
+                exemplo.get('peca_empr'),
+                exemplo.get('peca_fili'),
+                exemplo.get('peca_os')
+            )
+
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         except ValidationError as e:
-            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+            return Response(e.detail, status=400)
         except IntegrityError:
-            return Response({'detail': 'Erro de integridade.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Erro de integridade.'}, status=400)
         except Exception as e:
-            return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-  
-  
-  
+            logger.error(str(e))
+            return Response({'detail': str(e)}, status=500)
+
+    def update(self, request, *args, **kwargs):
+        response = super().update(request, *args, **kwargs)
+        if response.status_code == 200:
+            instance = self.get_object()
+            self.atualizar_total_ordem(
+                instance.peca_empr, instance.peca_fili, instance.peca_os
+            )
+        return response
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        empr, fili, orde = instance.peca_empr, instance.peca_fili, instance.peca_os
+        response = super().destroy(request, *args, **kwargs)
+
+        if response.status_code == 204:
+            self.atualizar_total_ordem(empr, fili, orde)
+
+        return response
+
+    # atualização em lote padronizada
     @action(detail=False, methods=['post'], url_path='update-lista')
     def update_lista(self, request, slug=None):
-        banco = get_licenca_db_config(request)
-        if not banco:
-            return Response({"error": "Banco de dados não encontrado."}, status=404)
-
+        banco = self.get_banco()
         data = request.data
+
         adicionar = data.get('adicionar', [])
         editar = data.get('editar', [])
         remover = data.get('remover', [])
@@ -297,56 +308,31 @@ class PecasOsViewSet(BaseMultiDBModelViewSet,ModelViewSet):
 
         try:
             with transaction.atomic(using=banco):
-                # Validar e adicionar novos itens
-                for item in adicionar:
-                    # Validar campos obrigatórios
-                    campos_obrigatorios = ['peca_os', 'peca_empr', 'peca_fili', 'peca_prod']
-                    campos_faltantes = [campo for campo in campos_obrigatorios if not item.get(campo)]
-                    
-                    if campos_faltantes:
-                        raise ValidationError({
-                            'error': f"Campos obrigatórios faltando: {', '.join(campos_faltantes)}",
-                            'item': item
-                        })
 
-                    # Converter campos numéricos
-                    try:
-                        item['peca_os'] = int(item['peca_os'])
-                        item['peca_empr'] = int(item['peca_empr'])
-                        item['peca_fili'] = int(item['peca_fili'])
-                        item['peca_quan'] = float(item.get('peca_quan', 0))
-                        item['peca_unit'] = float(item.get('peca_unit', 0))
-                        item['peca_tota'] = float(item.get('peca_tota', 0))
-                    except (ValueError, TypeError) as e:
-                        raise ValidationError({
-                            'error': f"Erro ao converter valores numéricos: {str(e)}",
-                            'item': item
-                        })
+                # ADICIONAR
+                for item in adicionar:
+                    campos_obrig = ['peca_os', 'peca_empr', 'peca_fili', 'peca_prod']
+                    faltando = [c for c in campos_obrig if not item.get(c)]
+                    if faltando:
+                        raise ValidationError(f"Faltam campos: {', '.join(faltando)}")
 
                     item['peca_item'] = get_next_item_number_sequence(
                         banco, item['peca_os'], item['peca_empr'], item['peca_fili']
                     )
-                    serializer = PecasOsSerializer(data=item, context={'banco': banco})
-                    serializer.is_valid(raise_exception=True)
-                    obj = serializer.save()
 
-                    obj_refetch = PecasOs.objects.using(banco).get(
-                        peca_empr=obj.peca_empr,
-                        peca_fili=obj.peca_fili,
-                        peca_os=obj.peca_os,
-                        peca_item=obj.peca_item,
-                    )
+                    s = PecasOsSerializer(data=item, context={'banco': banco})
+                    s.is_valid(raise_exception=True)
+                    obj = s.save()
+
                     resposta['adicionados'].append(
-                        PecasOsSerializer(obj_refetch, context={'banco': banco}).data
+                        PecasOsSerializer(obj, context={'banco': banco}).data
                     )
 
-                # Validar e editar itens existentes
+                # EDITAR
                 for item in editar:
-                    if not all(k in item for k in ['peca_item', 'peca_os', 'peca_empr', 'peca_fili']):
-                        raise ValidationError({
-                            'error': "Campos obrigatórios faltando para edição",
-                            'item': item
-                        })
+                    required = ['peca_item', 'peca_os', 'peca_empr', 'peca_fili']
+                    if not all(k in item for k in required):
+                        raise ValidationError("Campos obrigatórios para edição faltando.")
 
                     try:
                         obj = PecasOs.objects.using(banco).get(
@@ -356,21 +342,18 @@ class PecasOsViewSet(BaseMultiDBModelViewSet,ModelViewSet):
                             peca_fili=item['peca_fili']
                         )
                     except PecasOs.DoesNotExist:
-                        logger.warning(f"Peça não encontrada para edição: {item}")
                         continue
 
-                    serializer = PecasOsSerializer(obj, data=item, context={'banco': banco}, partial=True)
-                    serializer.is_valid(raise_exception=True)
-                    serializer.save()
-                    resposta['editados'].append(serializer.data)
+                    s = PecasOsSerializer(obj, data=item, partial=True, context={'banco': banco})
+                    s.is_valid(raise_exception=True)
+                    s.save()
+                    resposta['editados'].append(s.data)
 
-                # Validar e remover itens
+                # REMOVER
                 for item in remover:
-                    if not all(k in item for k in ['peca_item', 'peca_os', 'peca_empr', 'peca_fili']):
-                        raise ValidationError({
-                            'error': "Campos obrigatórios faltando para remoção",
-                            'item': item
-                        })
+                    required = ['peca_item', 'peca_os', 'peca_empr', 'peca_fili']
+                    if not all(k in item for k in required):
+                        raise ValidationError("Campos obrigatórios para remover faltando.")
 
                     PecasOs.objects.using(banco).filter(
                         peca_item=item['peca_item'],
@@ -378,54 +361,24 @@ class PecasOsViewSet(BaseMultiDBModelViewSet,ModelViewSet):
                         peca_empr=item['peca_empr'],
                         peca_fili=item['peca_fili']
                     ).delete()
+
                     resposta['removidos'].append(item['peca_item'])
 
             return Response(resposta)
-            print(resposta)
 
         except ValidationError as e:
-            logger.error(f"Erro de validação ao processar update_lista: {str(e)}")
             return Response(e.detail, status=400)
         except Exception as e:
-            logger.error(f"Erro ao processar update_lista: {str(e)}")
+            logger.error(str(e))
             return Response({"error": str(e)}, status=400)
 
-    def create(self, request, *args, **kwargs):
-        response = super().create(request, *args, **kwargs)
-        if response.status_code == 201:  # Se criou com sucesso
-            data = request.data
-            self.atualizar_total_ordem(
-                data.get('peca_empr'),
-                data.get('peca_fili'),
-                data.get('peca_os')
-            )
-        return response
 
-    def update(self, request, *args, **kwargs):
-        response = super().update(request, *args, **kwargs)
-        if response.status_code == 200:  # Se atualizou com sucesso
-            instance = self.get_object()
-            self.atualizar_total_ordem(
-                instance.peca_empr,
-                instance.peca_fili,
-                instance.peca_os
-            )
-        return response
-
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        empr, fili, orde = instance.peca_empr, instance.peca_fili, instance.peca_os
-        response = super().destroy(request, *args, **kwargs)
-        if response.status_code == 204:  # Se deletou com sucesso
-            self.atualizar_total_ordem(empr, fili, orde)
-        return response
 
 class ServicosOsViewSet(BaseMultiDBModelViewSet):
-    modulo_necessario = 'O_S'
     serializer_class = ServicosOsSerializer
-    permission_classes = [IsAuthenticated]
     parser_classes = [JSONParser]
 
+    # ---- UTILIDADES ----
     def atualizar_total_ordem(self, serv_empr, serv_fili, serv_os):
         banco = self.get_banco()
         try:
@@ -437,180 +390,92 @@ class ServicosOsViewSet(BaseMultiDBModelViewSet):
             ordem.calcular_total()
             ordem.save(using=banco)
         except Os.DoesNotExist:
-            logger.error(f"Ordem de serviço não encontrada: {serv_os}")
+            logger.error(f"Ordem de serviço não encontrada para recalcular: {serv_os}")
 
+    # ---- QUERYSET ----
     def get_queryset(self):
         banco = self.get_banco()
-        serv_empr = self.request.query_params.get('serv_empr') or self.request.query_params.get('empr')
-        serv_fili = self.request.query_params.get('serv_fili') or self.request.query_params.get('fili')
-        serv_os = self.request.query_params.get('serv_os') or self.request.query_params.get('ordem')
+
+        serv_empr = self.request.query_params.get("serv_empr")
+        serv_fili = self.request.query_params.get("serv_fili")
+        serv_os = self.request.query_params.get("serv_os")
 
         if not all([serv_empr, serv_fili, serv_os]):
-            logger.warning("Parâmetros obrigatórios não fornecidos (serv_empr/empr, serv_fili/fili, serv_os/ordem)")
-            return ServicosOs.objects.using(banco).none()
+            logger.warning("Parâmetros obrigatórios faltando (serv_empr, serv_fili, serv_os)")
+            return ServicosOs.objects.none()
 
         qs = ServicosOs.objects.using(banco).filter(
             serv_empr=serv_empr,
             serv_fili=serv_fili,
             serv_os=serv_os
         )
-        
-        logger.info(f"Filtrando serviços com: ordem={serv_os}, empresa={serv_empr}, filial={serv_fili}")
-        return qs.order_by('serv_item')
 
-    @action(detail=False, methods=['post'], url_path='update-lista')
-    def update_lista(self, request, slug=None):
+        return qs.order_by("serv_item")
+
+    # ---- GET OBJECT ----
+    def get_object(self):
         banco = self.get_banco()
-        if not banco:
-            return Response({"error": "Banco de dados não encontrado."}, status=404)
 
-        data = request.data
-        adicionar = data.get('adicionar', [])
-        editar = data.get('editar', [])
-        remover = data.get('remover', [])
+        serv_item = self.kwargs.get("pk")
+        serv_os = self.request.query_params.get("serv_os")
+        serv_empr = self.request.query_params.get("serv_empr")
+        serv_fili = self.request.query_params.get("serv_fili")
 
-        resposta = {'adicionados': [], 'editados': [], 'removidos': []}
+        if not all([serv_item, serv_os, serv_empr, serv_fili]):
+            raise ValidationError("Campos serv_os, serv_empr, serv_fili e pk (serv_item) são obrigatórios.")
 
         try:
+            return self.get_queryset().get(
+                serv_item=serv_item,
+                serv_os=serv_os,
+                serv_empr=serv_empr,
+                serv_fili=serv_fili
+            )
+        except ServicosOs.DoesNotExist:
+            raise NotFound("Serviço não encontrado na lista especificada.")
+        except ServicosOs.MultipleObjectsReturned:
+            raise ValidationError("Mais de um serviço encontrado com essa chave composta.")
+
+    # ---- CONTEXT ----
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['banco'] = self.get_banco()
+        return context
+
+    # ---- CREATE ----
+    @transaction.atomic
+    def create(self, request, *args, **kwargs):
+        banco = self.get_banco()
+        try:
+            is_many = isinstance(request.data, list)
+            serializer = self.get_serializer(data=request.data, many=is_many)
+            serializer.is_valid(raise_exception=True)
+
             with transaction.atomic(using=banco):
-                # ADICIONAR
-                for item in adicionar:
-                    # Verifica campos obrigatórios
-                    campos_obrigatorios = ['serv_os', 'serv_empr', 'serv_fili', 'serv_prod']
-                    campos_faltantes = [campo for campo in campos_obrigatorios if not item.get(campo)]
-                    if campos_faltantes:
-                        raise ValidationError({
-                            'error': f"Campos obrigatórios faltando: {', '.join(campos_faltantes)}",
-                            'item': item
-                        })
+                objs = serializer.save()
 
-                    # Converte campos numéricos
-                    try:
-                        item['serv_os'] = int(item['serv_os'])
-                        item['serv_empr'] = int(item['serv_empr'])
-                        item['serv_fili'] = int(item['serv_fili'])
-                        item['serv_quan'] = float(item.get('serv_quan') or 0)
-                        item['serv_unit'] = float(item.get('serv_unit') or 0)
-                        item['serv_tota'] = float(item.get('serv_tota') or (item['serv_quan'] * item['serv_unit']))
-                    except (ValueError, TypeError) as e:
-                        raise ValidationError({
-                            'error': f"Erro ao converter valores numéricos: {str(e)}",
-                            'item': item
-                        })
+            exemplo = request.data[0] if is_many else request.data
 
-                    # Gera novo ID sequencial (recebe tupla)
-                    novo_id, _ = get_next_service_id(
-                        banco,
-                        item['serv_os'],
-                        item['serv_empr'],
-                        item['serv_fili']
-                    )
-                    item['serv_item'] = novo_id
+            self.atualizar_total_ordem(
+                exemplo.get('serv_empr'),
+                exemplo.get('serv_fili'),
+                exemplo.get('serv_os')
+            )
 
-                    # Cria via serializer
-                    serializer = self.get_serializer(data=item, context={'banco': banco})
-                    serializer.is_valid(raise_exception=True)
-                    obj = serializer.save()
-                    resposta['adicionados'].append(serializer.data)
-
-                # EDITAR
-                for item in editar:
-                    if not all(k in item for k in ['serv_item', 'serv_os', 'serv_empr', 'serv_fili']):
-                        raise ValidationError({
-                            'error': "Campos obrigatórios faltando para edição",
-                            'item': item
-                        })
-
-                    # Normaliza numéricos e calcula total quando necessário
-                    try:
-                        serv_quan = float(item.get('serv_quan') or 0)
-                        serv_unit = float(item.get('serv_unit') or 0)
-                        serv_desc = float(item.get('serv_desc') or 0)
-                        serv_tota = float(item.get('serv_tota') or (serv_quan * serv_unit))
-                    except (ValueError, TypeError) as e:
-                        raise ValidationError({
-                            'error': f"Erro ao converter valores numéricos na edição: {str(e)}",
-                            'item': item
-                        })
-
-                    defaults = {
-                        'serv_prod': item.get('serv_prod'),
-                        'serv_quan': serv_quan,
-                        'serv_unit': serv_unit,
-                        'serv_tota': serv_tota,
-                        'serv_desc': serv_desc,
-                        'serv_obse': item.get('serv_obse'),
-                        'serv_prof': item.get('serv_prof'),
-                        'serv_data': item.get('serv_data'),
-                        'serv_impr': item.get('serv_impr'),
-                        'serv_stat': item.get('serv_stat'),
-                        'serv_data_hora_impr': item.get('serv_data_hora_impr'),
-                        'serv_stat_seto': item.get('serv_stat_seto'),
-                    }
-
-                    updated = ServicosOs.objects.using(banco).filter(
-                        serv_item=item['serv_item'],
-                        serv_os=item['serv_os'],
-                        serv_empr=item['serv_empr'],
-                        serv_fili=item['serv_fili']
-                    ).update(**defaults)
-
-                    if updated:
-                        obj = ServicosOs.objects.using(banco).get(
-                            serv_item=item['serv_item'],
-                            serv_os=item['serv_os'],
-                            serv_empr=item['serv_empr'],
-                            serv_fili=item['serv_fili']
-                        )
-                        resposta['editados'].append(ServicosOsSerializer(obj, context={'banco': banco}).data)
-                    else:
-                        logger.warning(f"Serviço não encontrado para edição: {item}")
-
-                # REMOVER
-                for item in remover:
-                    if not all(k in item for k in ['serv_item', 'serv_os', 'serv_empr', 'serv_fili']):
-                        raise ValidationError({
-                            'error': "Campos obrigatórios faltando para remoção",
-                            'item': item
-                        })
-
-                    deleted, _ = ServicosOs.objects.using(banco).filter(
-                        serv_item=item['serv_item'],
-                        serv_os=item['serv_os'],
-                        serv_empr=item['serv_empr'],
-                        serv_fili=item['serv_fili']
-                    ).delete()
-
-                    if deleted:
-                        resposta['removidos'].append(item['serv_item'])
-
-                # Sequência é garantida pelo gerador (formato ordem+NNN); não compactar
-
-            return Response(resposta)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         except ValidationError as e:
-            logger.error(f"Erro de validação ao processar update_lista: {str(e)}")
             return Response(e.detail, status=400)
-
+        except IntegrityError:
+            return Response({'detail': 'Erro de integridade.'}, status=400)
         except Exception as e:
-            logger.exception("Erro inesperado ao processar update_lista")
-            return Response({"error": str(e)}, status=400)
+            logger.error(str(e))
+            return Response({'detail': str(e)}, status=500)
 
-
-    def create(self, request, *args, **kwargs):
-        response = super().create(request, *args, **kwargs)
-        if response.status_code == 201:  # Se criou com sucesso
-            data = request.data
-            self.atualizar_total_ordem(
-                data.get('serv_empr'),
-                data.get('serv_fili'),
-                data.get('serv_os')
-            )
-        return response
-
+    # ---- UPDATE ----
     def update(self, request, *args, **kwargs):
         response = super().update(request, *args, **kwargs)
-        if response.status_code == 200:  # Se atualizou com sucesso
+        if response.status_code == 200:
             instance = self.get_object()
             self.atualizar_total_ordem(
                 instance.serv_empr,
@@ -619,11 +484,307 @@ class ServicosOsViewSet(BaseMultiDBModelViewSet):
             )
         return response
 
+    # ---- DELETE ----
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         empr, fili, orde = instance.serv_empr, instance.serv_fili, instance.serv_os
         response = super().destroy(request, *args, **kwargs)
-        if response.status_code == 204:  # Se deletou com sucesso
+
+        if response.status_code == 204:
             self.atualizar_total_ordem(empr, fili, orde)
+
         return response
 
+    # ---- UPDATE LISTA (LOTE) ----
+    @action(detail=False, methods=['post'], url_path='update-lista')
+    def update_lista(self, request):
+        banco = self.get_banco()
+        data = request.data
+
+        adicionar = data.get('adicionar', [])
+        editar = data.get('editar', [])
+        remover = data.get('remover', [])
+
+        resposta = {'adicionados': [], 'editados': [], 'removidos': []}
+
+        try:
+            with transaction.atomic(using=banco):
+
+                # ADICIONAR
+                for item in adicionar:
+                    obrig = ['serv_os', 'serv_empr', 'serv_fili', 'serv_serv']
+                    faltando = [c for c in obrig if not item.get(c)]
+                    if faltando:
+                        raise ValidationError(f"Faltam campos: {', '.join(faltando)}")
+
+                    item['serv_item'] = get_next_service_id(
+                        banco,
+                        item['serv_os'],
+                        item['serv_empr'],
+                        item['serv_fili']
+                    )
+
+                    s = ServicosOsSerializer(data=item, context={'banco': banco})
+                    s.is_valid(raise_exception=True)
+                    obj = s.save()
+
+                    resposta['adicionados'].append(
+                        ServicosOsSerializer(obj, context={'banco': banco}).data
+                    )
+
+                # EDITAR
+                for item in editar:
+                    obrig = ['serv_item', 'serv_os', 'serv_empr', 'serv_fili']
+                    if not all(k in item for k in obrig):
+                        raise ValidationError("Campos obrigatórios para edição faltando.")
+
+                    try:
+                        obj = ServicosOs.objects.using(banco).get(
+                            serv_item=item['serv_item'],
+                            serv_os=item['serv_os'],
+                            serv_empr=item['serv_empr'],
+                            serv_fili=item['serv_fili']
+                        )
+                    except ServicosOs.DoesNotExist:
+                        continue
+
+                    s = ServicosOsSerializer(obj, data=item, partial=True, context={'banco': banco})
+                    s.is_valid(raise_exception=True)
+                    s.save()
+                    resposta['editados'].append(s.data)
+
+                # REMOVER
+                for item in remover:
+                    obrig = ['serv_item', 'serv_os', 'serv_empr', 'serv_fili']
+                    if not all(k in item for k in obrig):
+                        raise ValidationError("Campos obrigatórios para remover faltando.")
+
+                    ServicosOs.objects.using(banco).filter(
+                        serv_item=item['serv_item'],
+                        serv_os=item['serv_os'],
+                        serv_empr=item['serv_empr'],
+                        serv_fili=item['serv_fili']
+                    ).delete()
+
+                    resposta['removidos'].append(item['serv_item'])
+
+            return Response(resposta)
+
+        except ValidationError as e:
+            return Response(e.detail, status=400)
+        except Exception as e:
+            logger.error(str(e))
+            return Response({"error": str(e)}, status=400)
+
+
+
+class OsHoraViewSet(BaseMultiDBModelViewSet):
+    serializer_class = OsHoraSerializer
+    parser_classes = [JSONParser]
+
+    def get_queryset(self):
+        banco = self.get_banco()
+        
+        os_hora_empr = self.request.query_params.get('os_hora_empr')
+        os_hora_fili = self.request.query_params.get('os_hora_fili')
+        os_hora_os = self.request.query_params.get('os_hora_os')
+        
+        if not all([os_hora_empr, os_hora_fili, os_hora_os]):
+            logger.warning("Parâmetros obrigatórios faltando para OsHora")
+            return OsHora.objects.none()
+        
+        return OsHora.objects.using(banco).filter(
+            os_hora_empr=os_hora_empr,
+            os_hora_fili=os_hora_fili,
+            os_hora_os=os_hora_os
+        ).order_by('os_hora_data', 'os_hora_item')
+    
+    def get_object(self):
+        banco = self.get_banco()
+        
+        os_hora_item = self.kwargs.get('pk')
+        os_hora_os = self.request.query_params.get('os_hora_os')
+        os_hora_empr = self.request.query_params.get('os_hora_empr')
+        os_hora_fili = self.request.query_params.get('os_hora_fili')
+        
+        if not all([os_hora_item, os_hora_os, os_hora_empr, os_hora_fili]):
+            raise ValidationError("Parâmetros obrigatórios faltando")
+        
+        try:
+            return OsHora.objects.using(banco).get(
+                os_hora_item=os_hora_item,
+                os_hora_os=os_hora_os,
+                os_hora_empr=os_hora_empr,
+                os_hora_fili=os_hora_fili
+            )
+        except OsHora.DoesNotExist:
+            raise NotFound("Registro de horas não encontrado")
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['banco'] = self.get_banco()
+        return context
+    
+    @transaction.atomic
+    def create(self, request, *args, **kwargs):
+        banco = self.get_banco()
+        
+        try:
+            is_many = isinstance(request.data, list)
+            data_copy = request.data.copy() if not is_many else [item.copy() for item in request.data]
+            
+            # Gerar os_hora_item automaticamente
+            if is_many:
+                for item in data_copy:
+                    if not item.get('os_hora_item'):
+                        item['os_hora_item'] = self._get_next_item_number(
+                            banco,
+                            item['os_hora_os'],
+                            item['os_hora_empr'],
+                            item['os_hora_fili']
+                        )
+            else:
+                if not data_copy.get('os_hora_item'):
+                    data_copy['os_hora_item'] = self._get_next_item_number(
+                        banco,
+                        data_copy['os_hora_os'],
+                        data_copy['os_hora_empr'],
+                        data_copy['os_hora_fili']
+                    )
+            
+            serializer = self.get_serializer(data=data_copy, many=is_many)
+            serializer.is_valid(raise_exception=True)
+            
+            with transaction.atomic(using=banco):
+                serializer.save()
+            
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
+        except ValidationError as e:
+            return Response(e.detail, status=400)
+        except Exception as e:
+            logger.error(f"Erro ao criar registro de horas: {str(e)}")
+            return Response({'detail': str(e)}, status=500)
+    
+    def _get_next_item_number(self, banco, os_os, os_empr, os_fili):
+        """Gera próximo número de item"""
+        ultimo = OsHora.objects.using(banco).filter(
+            os_hora_os=os_os,
+            os_hora_empr=os_empr,
+            os_hora_fili=os_fili
+        ).aggregate(Max('os_hora_item'))['os_hora_item__max']
+        return (ultimo or 0) + 1
+    
+    @action(detail=False, methods=['get'], url_path='total-horas')
+    def total_horas(self, request, slug=None):
+        """Retorna total de horas trabalhadas na OS"""
+        banco = self.get_banco()
+        
+        os_hora_os = request.query_params.get('os_hora_os')
+        os_hora_empr = request.query_params.get('os_hora_empr')
+        os_hora_fili = request.query_params.get('os_hora_fili')
+        
+        if not all([os_hora_os, os_hora_empr, os_hora_fili]):
+            return Response(
+                {'error': 'Parâmetros obrigatórios faltando'},
+                status=400
+            )
+        
+        registros = OsHora.objects.using(banco).filter(
+            os_hora_os=os_hora_os,
+            os_hora_empr=os_hora_empr,
+            os_hora_fili=os_hora_fili
+        )
+        
+        # Calcula total usando o método do serializer
+        total = 0.0
+        for registro in registros:
+            serializer = OsHoraSerializer(registro, context={'banco': banco})
+            total += serializer.data.get('total_horas', 0)
+        
+        return Response({
+            'total_horas': round(total, 2),
+            'total_registros': registros.count()
+        })
+    
+    @action(detail=False, methods=['post'], url_path='update-lista')
+    def update_lista(self, request, slug=None):
+        """Atualização em lote de registros de horas"""
+        banco = self.get_banco()
+        data = request.data
+
+        adicionar = data.get('adicionar', [])
+        editar = data.get('editar', [])
+        remover = data.get('remover', [])
+
+        resposta = {'adicionados': [], 'editados': [], 'removidos': []}
+
+        try:
+            with transaction.atomic(using=banco):
+
+                # ADICIONAR
+                for item in adicionar:
+                    obrig = ['os_hora_os', 'os_hora_empr', 'os_hora_fili', 'os_hora_data']
+                    faltando = [c for c in obrig if not item.get(c)]
+                    if faltando:
+                        raise ValidationError(f"Faltam campos: {', '.join(faltando)}")
+
+                    if not item.get('os_hora_item'):
+                        item['os_hora_item'] = self._get_next_item_number(
+                            banco,
+                            item['os_hora_os'],
+                            item['os_hora_empr'],
+                            item['os_hora_fili']
+                        )
+
+                    s = OsHoraSerializer(data=item, context={'banco': banco})
+                    s.is_valid(raise_exception=True)
+                    obj = s.save()
+
+                    resposta['adicionados'].append(
+                        OsHoraSerializer(obj, context={'banco': banco}).data
+                    )
+
+                # EDITAR
+                for item in editar:
+                    obrig = ['os_hora_item', 'os_hora_os', 'os_hora_empr', 'os_hora_fili']
+                    if not all(k in item for k in obrig):
+                        raise ValidationError("Campos obrigatórios para edição faltando.")
+
+                    try:
+                        obj = OsHora.objects.using(banco).get(
+                            os_hora_item=item['os_hora_item'],
+                            os_hora_os=item['os_hora_os'],
+                            os_hora_empr=item['os_hora_empr'],
+                            os_hora_fili=item['os_hora_fili']
+                        )
+                    except OsHora.DoesNotExist:
+                        continue
+
+                    s = OsHoraSerializer(obj, data=item, partial=True, context={'banco': banco})
+                    s.is_valid(raise_exception=True)
+                    s.save()
+                    resposta['editados'].append(s.data)
+
+                # REMOVER
+                for item in remover:
+                    obrig = ['os_hora_item', 'os_hora_os', 'os_hora_empr', 'os_hora_fili']
+                    if not all(k in item for k in obrig):
+                        raise ValidationError("Campos obrigatórios para remover faltando.")
+
+                    OsHora.objects.using(banco).filter(
+                        os_hora_item=item['os_hora_item'],
+                        os_hora_os=item['os_hora_os'],
+                        os_hora_empr=item['os_hora_empr'],
+                        os_hora_fili=item['os_hora_fili']
+                    ).delete()
+
+                    resposta['removidos'].append(item['os_hora_item'])
+
+            return Response(resposta)
+
+        except ValidationError as e:
+            return Response(e.detail, status=400)
+        except Exception as e:
+            logger.error(str(e))
+            return Response({"error": str(e)}, status=400)

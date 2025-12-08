@@ -55,7 +55,7 @@ class Os(models.Model):
     os_moti_canc = models.TextField(blank=True, null=True)
     field_log_data = models.DateField(db_column='_log_data', blank=True, null=True) 
     field_log_time = models.TimeField(db_column='_log_time', blank=True, null=True) 
-    os_loca_apli = models.TextField(blank=True, null=True)
+    os_loca_apli = models.TextField(blank=True, null=True, verbose_name="Localização da Aplicação/Trabalho")
     os_ende_apli = models.TextField(blank=True, null=True)
     os_resp = models.IntegerField(blank=True, null=True)
     os_obse = models.TextField(blank=True, null=True)
@@ -72,6 +72,8 @@ class Os(models.Model):
     os_moto = models.CharField(max_length=255, blank=True, null=True)
     os_fech_obse = models.TextField(blank=True, null=True)
     os_seto = models.IntegerField(blank=True, null=True)    
+    os_assi_clie = models.BinaryField(null=True, blank=True)   # assinatura do cliente
+    os_assi_oper = models.BinaryField(null=True, blank=True)   # assinatura do operador
 
     class Meta:
         managed = False
@@ -155,6 +157,37 @@ class ServicosOs(models.Model):
         db_table = 'servicosos'
         unique_together = (('serv_empr', 'serv_fili', 'serv_os', 'serv_item'),)
         
+
+class OsHora(models.Model):
+    os_hora_empr = models.IntegerField()
+    os_hora_fili = models.IntegerField()
+    os_hora_os = models.IntegerField() 
+    os_hora_item = models.IntegerField(primary_key=True)
+
+    os_hora_data = models.DateField()
+
+    # Manhã
+    os_hora_manh_ini = models.TimeField(null=True, blank=True)
+    os_hora_manh_fim = models.TimeField(null=True, blank=True)
+
+    # Tarde
+    os_hora_tard_ini = models.TimeField(null=True, blank=True)
+    os_hora_tard_fim = models.TimeField(null=True, blank=True)
+
+    os_hora_tota = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+
+    # KM
+    os_hora_km_sai = models.IntegerField(null=True, blank=True)
+    os_hora_km_che = models.IntegerField(null=True, blank=True)
+
+    os_hora_oper = models.IntegerField(null=True, blank=True)       # operador
+    os_hora_equi = models.CharField(max_length=100, null=True, blank=True)
+    os_hora_obse = models.TextField(null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = 'os_hora'
+        unique_together = (('os_hora_empr', 'os_hora_fili', 'os_hora_os', 'os_hora_item'),)
 
 
 

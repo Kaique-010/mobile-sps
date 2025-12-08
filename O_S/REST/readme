@@ -1,0 +1,117 @@
+# Ordem de Serviço
+GET    /ordens/
+POST   /ordens/
+GET    /ordens/{id}/
+PUT    /ordens/{id}/
+DELETE /ordens/{id}/
+POST   /ordens/{id}/atualizar_total/
+POST   /ordens/{id}/finalizar_os/
+
+Exemplo POST /ordens/
+{
+  "os_empr": 1,
+  "os_fili": 1,
+  "os_clie": 123,
+  "os_prof_aber": 88,
+  "os_fina_os": 53,
+  "os_obje_os": "Troca de pastilhas + revisão",
+  "os_plac": "ABC-1234",
+  "os_pref": "Cliente pediu urgência",
+  "os_cont": "João da Silva",
+  "os_prob_rela": "Ruído nas rodas",
+  "os_loca_apli": "Oficina 02",
+  "os_ende_apli": "Av. Brasil, 4000",
+  "os_resp": 77,
+  "os_auto": "Ford Ka",
+  "os_moto": "1.0 Flex",
+  "os_seto": 12,
+  "os_assi_clie": "<base64>",
+  "os_assi_oper": "<base64>"
+}
+
+# Peças
+GET    /pecas/?peca_os=10001&peca_empr=1&peca_fili=1
+POST   /pecas/
+PUT    /pecas/{id}/?peca_os=10001&peca_empr=1&peca_fili=1
+DELETE /pecas/{id}/?peca_os=10001&peca_empr=1&peca_fili=1
+POST   /pecas/update-lista/
+
+Exemplo POST /pecas/
+{
+  "peca_empr": 1,
+  "peca_fili": 1,
+  "peca_os": 10001,
+  "peca_prod": "12345",
+  "peca_quan": 2,
+  "peca_unit": 150.90
+}
+
+Exemplo GET item peça
+{
+  "peca_item": 7,
+  "peca_prod": "12345",
+  "produto_nome": "Pastilha de freio dianteira",
+  "peca_quan": 2,
+  "peca_unit": 150.90,
+  "peca_tota": 301.80
+}
+
+# Serviços
+GET    /servicos/?serv_os=10001&serv_empr=1&serv_fili=1
+POST   /servicos/
+PUT    /servicos/{id}/?serv_os=10001&serv_empr=1&serv_fili=1
+DELETE /servicos/{id}/?serv_os=10001&serv_empr=1&serv_fili=1
+POST   /servicos/update-lista/
+
+Exemplo POST /servicos/
+{
+  "serv_empr": 1,
+  "serv_fili": 1,
+  "serv_os": 10001,
+  "serv_prod": "90010",
+  "serv_quan": 1,
+  "serv_unit": 200.00
+}
+
+Exemplo GET item serviço
+{
+  "serv_item": 3,
+  "serv_prod": "90010",
+  "serv_quan": 1,
+  "serv_unit": 200.00,
+  "serv_tota": 200.00
+}
+
+# Horas da OS
+GET    /os-hora/?os_hora_os=10001&os_hora_empr=1&os_hora_fili=1
+POST   /os-hora/
+PUT    /os-hora/{id}/?os_hora_os=10001&os_hora_empr=1&os_hora_fili=1
+DELETE /os-hora/{id}/?os_hora_os=10001&os_hora_empr=1&os_hora_fili=1
+GET    /os-hora/total-horas/?os_hora_os=10001&os_hora_empr=1&os_hora_fili=1
+POST   /os-hora/update-lista/
+
+Exemplo POST /os-hora/
+{
+  "os_hora_empr": 1,
+  "os_hora_fili": 1,
+  "os_hora_os": 10001,
+  "os_hora_data": "2025-12-01",
+  "os_hora_manh_ini": "08:00",
+  "os_hora_manh_fim": "11:30",
+  "os_hora_tard_ini": "13:00",
+  "os_hora_tard_fim": "17:00",
+  "os_hora_km_sai": 10200,
+  "os_hora_km_che": 10240,
+  "os_hora_oper": 88,
+  "os_hora_equi": "Elevador 2",
+  "os_hora_obse": "Troca de freio + teste"
+}
+
+Exemplo GET total de horas
+{
+  "total_horas": 7.5,
+  "total_registros": 1
+}
+
+# Dashboard Geral
+GET    /os-geral/

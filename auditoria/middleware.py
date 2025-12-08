@@ -223,6 +223,13 @@ class AuditoriaMiddleware:
                 if (len(parts) >= 4 and parts[2] == 'licencas' and parts[3] == 'login') \
                    or (len(parts) >= 3 and parts[2] == 'auth'):
                     return self.get_response(request)
+
+                # Documentação da API não deve ter associação a módulos
+                if request.path.startswith('/api/schema/') \
+                   or request.path.startswith('/api/schemas/') \
+                   or request.path.startswith('/api/swagger'):
+                    return self.get_response(request)
+
                 # Endpoints de licenças (empresas/filiais e afins) não devem ser bloqueados
                 if parts[2] == 'licencas':
                     return self.get_response(request)
@@ -231,7 +238,18 @@ class AuditoriaMiddleware:
                 modulos = getattr(request, 'modulos_disponiveis', []) or get_modulos_disponiveis()
                 modulos_lower = {m.lower() for m in modulos}
                 app_slug = app_candidate.lower()
-                if app_slug not in modulos_lower and not request.path.startswith('/api/auditoria/'):
+
+                aliases = {
+                    'os': ['o_s', 'ordemdeservico'],
+                    'o_s': ['os', 'ordemdeservico'],
+                    'ordemdeservico': ['o_s', 'os'],
+                }
+                candidates = {app_slug}
+                for alt in aliases.get(app_slug, []):
+                    candidates.add(alt)
+
+                allowed = any(c in modulos_lower for c in candidates)
+                if not allowed and not request.path.startswith('/api/auditoria/'):
                     from django.http import JsonResponse
                     return JsonResponse({'erro': 'Módulo não liberado para a empresa/filial atual.'}, status=403)
         except Exception:

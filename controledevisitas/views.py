@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 class ControleVisitaViewSet(BancoContextMixin, ModuloRequeridoMixin, VendedorEntidadeMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
-    modulo_requerido = 'Pedidos'
+    modulo_requerido = 'Pisos'
     serializer_class = ControleVisitaSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = [

@@ -91,6 +91,12 @@ class LicencaMiddleware:
             '/ws/',
             '/api/schema/', 
             '/api/schema/swagger-ui/',  
+            '/api/schema/swagger',
+            '/api/schema/swagger/',
+            '/api/schemas/',
+            '/api/schemas/swagger',
+            '/api/swagger',
+            '/api/swagger/',
         ]
         
         # Verificar se a rota deve ser ignorada
