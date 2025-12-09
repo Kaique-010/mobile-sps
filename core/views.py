@@ -29,6 +29,32 @@ def _get_slug(request):
             s = None
     return (s or '').strip().lower()
 
+def bad_request(request, exception=None):
+    try:
+        logger.error("[handler400] path=%s err=%s", getattr(request, 'path', None), str(exception))
+    except Exception:
+        pass
+    try:
+        accept = request.META.get('HTTP_ACCEPT', '')
+    except Exception:
+        accept = ''
+    try:
+        path = request.path or ''
+    except Exception:
+        path = ''
+    if path.startswith('/api/') or 'application/json' in accept:
+        from django.http import JsonResponse
+        return JsonResponse({
+            'error': 'Bad Request',
+            'code': 'SESSION_INVALID',
+            'next': '/web/selecionar-empresa/'
+        }, status=401)
+    try:
+        return redirect('web_login')
+    except Exception:
+        from django.http import HttpResponseRedirect
+        return HttpResponseRedirect('/web/login/')
+
 def identificar_tipo_cliente(request):
     s = _get_slug(request)
     if not s:

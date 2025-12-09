@@ -24,6 +24,9 @@ urlpatterns = [
     path("web/", include(web_router)),
 ]
 
+# Custom error handlers
+handler400 = 'core.views.bad_request'
+
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
