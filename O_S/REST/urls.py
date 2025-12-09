@@ -17,7 +17,15 @@ router.register(r'servicos', ServicosOsViewSet, basename='servicos')
 router.register(r'os-geral', OrdemServicoGeralViewSet, basename='os-geral')
 router.register(r'os-hora', OsHoraViewSet, basename='os-hora')
 
-urlpatterns = router.urls
+urlpatterns = []
+
+urlpatterns += [
+    path('ordens/patch/', OsViewSet.as_view({'patch': 'patch_ordem'}), name='ordens-patch'),
+    path('ordens/', OsViewSet.as_view({'get': 'list'}), name='ordens-list-compat'),
+]
+
+# Adiciona as rotas padrão do router após a rota explícita
+urlpatterns += router.urls
 
 # Rotas Financeiras
 urlpatterns += [

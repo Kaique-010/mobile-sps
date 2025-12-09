@@ -1,6 +1,8 @@
 from rest_framework.viewsets import ModelViewSet
 from rest_framework import status, filters
 from rest_framework.response import Response
+from django.http import HttpResponse
+from core.impressoes.documentos.os import OrdemServicoPrinter
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
@@ -9,7 +11,7 @@ from django.db.models import Max
 from django.utils import timezone
 from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser
-from ..utils import get_next_item_number_sequence, get_next_service_id
+from ..utils import get_next_item_number_sequence, get_next_service_id, get_next_global_peca_item_id, get_next_global_serv_item_id, get_next_global_os_hora_item_id
 from listacasamento.utils import get_next_item_number
 from ..permissions import PodeVerOrdemDoSetor
 from ..models import Os, PecasOs, ServicosOs, OsHora
@@ -24,6 +26,7 @@ from core.decorator import modulo_necessario, ModuloRequeridoMixin
 
 import logging
 logger = logging.getLogger(__name__)
+import base64
 
 
 class BaseMultiDBModelViewSet(ModuloRequeridoMixin, ModelViewSet):
@@ -84,6 +87,14 @@ class OsViewSet(BaseMultiDBModelViewSet):
         qs = Os.objects.using(banco).all()
 
         return qs.order_by('-os_data_aber')
+    
+    def get_object(self):
+        banco = self.get_banco()
+        try:
+            logger.info(f"Buscando OS com pk={self.kwargs['pk']} no banco {banco}")
+            return Os.objects.using(banco).get(pk=self.kwargs['pk'])
+        except Os.DoesNotExist:
+            raise NotFound("Ordem de Serviço não encontrada.")
         
     @action(detail=True, methods=['post'])
     def finalizar_os(self, request, pk=None):
@@ -172,6 +183,71 @@ class OsViewSet(BaseMultiDBModelViewSet):
                 {"error": "Erro ao atualizar total da ordem de serviço"}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
+    
+    @action(detail=False, methods=['patch'], url_path='patch')
+    def patch_ordem(self, request, slug=None):
+        banco = self.get_banco()
+        os_pk = request.data.get('os_os') or request.data.get('pk')
+        if not os_pk:
+            return Response({'detail': 'os_os obrigatório'}, status=400)
+        try:
+            instance = Os.objects.using(banco).get(pk=os_pk)
+        except Os.DoesNotExist:
+            raise NotFound('Ordem de Serviço não encontrada.')
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        with transaction.atomic(using=banco):
+            serializer.save()
+        return Response(serializer.data)
+    
+    
+    @action(detail=True, methods=['get'])
+    def imprimir(self, request, pk=None, slug=None):
+        from Entidades.models import Entidades
+        from Licencas.models import Filiais
+        banco = self.get_banco()
+        os = self.get_object()  
+
+        cliente = Entidades.objects.using(banco).get(enti_clie=os.os_clie)
+        filial = Filiais.objects.using(banco).filter(empr_empr=os.os_empr, empr_codi=os.os_fili).first()
+        pecas = PecasOs.objects.using(banco).filter(
+            peca_empr=os.os_empr,
+            peca_fili=os.os_fili,
+            peca_os=os.os_os
+        )
+        servicos = ServicosOs.objects.using(banco).filter(
+            serv_empr=os.os_empr,
+            serv_fili=os.os_fili,
+            serv_os=os.os_os
+        )
+        horas = OsHora.objects.using(banco).filter(
+            os_hora_empr=os.os_empr,
+            os_hora_fili=os.os_fili,
+            os_hora_os=os.os_os
+        ).order_by('os_hora_item')
+
+        printer = OrdemServicoPrinter(
+            filial=filial or os.os_fili,
+            documento=os.os_os,
+            cliente=cliente,
+            modelo=os,
+            itens=pecas,
+            servicos=servicos,
+            assinaturas=(lambda d: (
+                (lambda cl, op: {**d, **({"Assinatura do Cliente": cl} if cl else {}), **({"Assinatura do Operador": op} if op else {})})(
+                    (lambda v: (base64.b64encode(v.tobytes()).decode('utf-8') if isinstance(v, memoryview) else (base64.b64encode(v).decode('utf-8') if v else None)))(getattr(os, 'os_assi_clie', None)),
+                    (lambda v: (base64.b64encode(v.tobytes()).decode('utf-8') if isinstance(v, memoryview) else (base64.b64encode(v).decode('utf-8') if v else None)))(getattr(os, 'os_assi_oper', None))
+                )
+            ))(request.data.get('assinaturas', {}))
+        )
+        printer.horas = horas
+      
+        
+        pdf_bytes = printer.render()
+
+        response = HttpResponse(pdf_bytes.getvalue(), content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="os_{os.os_os}.pdf"'
+        return response
 
 
 class PecasOsViewSet(BaseMultiDBModelViewSet):
@@ -316,9 +392,8 @@ class PecasOsViewSet(BaseMultiDBModelViewSet):
                     if faltando:
                         raise ValidationError(f"Faltam campos: {', '.join(faltando)}")
 
-                    item['peca_item'] = get_next_item_number_sequence(
-                        banco, item['peca_os'], item['peca_empr'], item['peca_fili']
-                    )
+                    # peca_item é PK globalmente; garantir ID único mesmo entre ordens distintas
+                    item['peca_item'] = get_next_global_peca_item_id(banco)
 
                     s = PecasOsSerializer(data=item, context={'banco': banco})
                     s.is_valid(raise_exception=True)
@@ -448,13 +523,23 @@ class ServicosOsViewSet(BaseMultiDBModelViewSet):
         banco = self.get_banco()
         try:
             is_many = isinstance(request.data, list)
-            serializer = self.get_serializer(data=request.data, many=is_many)
+            data_in = request.data
+            data_copy = [d.copy() for d in data_in] if is_many else data_in.copy()
+            if is_many:
+                for item in data_copy:
+                    if not item.get('serv_item'):
+                        item['serv_item'] = get_next_global_serv_item_id(banco)
+            else:
+                if not data_copy.get('serv_item'):
+                    data_copy['serv_item'] = get_next_global_serv_item_id(banco)
+
+            serializer = self.get_serializer(data=data_copy, many=is_many)
             serializer.is_valid(raise_exception=True)
 
             with transaction.atomic(using=banco):
                 objs = serializer.save()
 
-            exemplo = request.data[0] if is_many else request.data
+            exemplo = data_copy[0] if is_many else data_copy
 
             self.atualizar_total_ordem(
                 exemplo.get('serv_empr'),
@@ -497,7 +582,7 @@ class ServicosOsViewSet(BaseMultiDBModelViewSet):
 
     # ---- UPDATE LISTA (LOTE) ----
     @action(detail=False, methods=['post'], url_path='update-lista')
-    def update_lista(self, request):
+    def update_lista(self, request, slug=None):
         banco = self.get_banco()
         data = request.data
 
@@ -512,17 +597,12 @@ class ServicosOsViewSet(BaseMultiDBModelViewSet):
 
                 # ADICIONAR
                 for item in adicionar:
-                    obrig = ['serv_os', 'serv_empr', 'serv_fili', 'serv_serv']
+                    obrig = ['serv_os', 'serv_empr', 'serv_fili', 'serv_prod']
                     faltando = [c for c in obrig if not item.get(c)]
                     if faltando:
                         raise ValidationError(f"Faltam campos: {', '.join(faltando)}")
 
-                    item['serv_item'] = get_next_service_id(
-                        banco,
-                        item['serv_os'],
-                        item['serv_empr'],
-                        item['serv_fili']
-                    )
+                    item['serv_item'] = get_next_global_serv_item_id(banco)
 
                     s = ServicosOsSerializer(data=item, context={'banco': banco})
                     s.is_valid(raise_exception=True)
@@ -633,24 +713,14 @@ class OsHoraViewSet(BaseMultiDBModelViewSet):
             is_many = isinstance(request.data, list)
             data_copy = request.data.copy() if not is_many else [item.copy() for item in request.data]
             
-            # Gerar os_hora_item automaticamente
+            # Gerar os_hora_item automaticamente (global)
             if is_many:
                 for item in data_copy:
                     if not item.get('os_hora_item'):
-                        item['os_hora_item'] = self._get_next_item_number(
-                            banco,
-                            item['os_hora_os'],
-                            item['os_hora_empr'],
-                            item['os_hora_fili']
-                        )
+                        item['os_hora_item'] = get_next_global_os_hora_item_id(banco)
             else:
                 if not data_copy.get('os_hora_item'):
-                    data_copy['os_hora_item'] = self._get_next_item_number(
-                        banco,
-                        data_copy['os_hora_os'],
-                        data_copy['os_hora_empr'],
-                        data_copy['os_hora_fili']
-                    )
+                    data_copy['os_hora_item'] = get_next_global_os_hora_item_id(banco)
             
             serializer = self.get_serializer(data=data_copy, many=is_many)
             serializer.is_valid(raise_exception=True)
@@ -730,12 +800,7 @@ class OsHoraViewSet(BaseMultiDBModelViewSet):
                         raise ValidationError(f"Faltam campos: {', '.join(faltando)}")
 
                     if not item.get('os_hora_item'):
-                        item['os_hora_item'] = self._get_next_item_number(
-                            banco,
-                            item['os_hora_os'],
-                            item['os_hora_empr'],
-                            item['os_hora_fili']
-                        )
+                        item['os_hora_item'] = get_next_global_os_hora_item_id(banco)
 
                     s = OsHoraSerializer(data=item, context={'banco': banco})
                     s.is_valid(raise_exception=True)

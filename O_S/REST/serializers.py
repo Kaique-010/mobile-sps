@@ -14,16 +14,53 @@ logger = logging.getLogger(__name__)
 
 class Base64BinaryField(serializers.Field):
     def to_representation(self, value):
-        if not value:
+        if value is None:
             return None
+        # DB pode retornar memoryview/bytes/texto
+        if isinstance(value, memoryview):
+            value = value.tobytes()
+        if isinstance(value, bytes):
+            return base64.b64encode(value).decode()
+        if isinstance(value, str):
+            # Caso já esteja como data URL
+            if value.startswith('data:image/'):
+                try:
+                    return value.split('base64,', 1)[1]
+                except Exception:
+                    return value
+            # Caso seja base64 que ao decodificar vira data URL
+            try:
+                decoded = base64.b64decode(value)
+                decoded_str = None
+                try:
+                    decoded_str = decoded.decode('utf-8')
+                except Exception:
+                    decoded_str = None
+                if decoded_str and decoded_str.startswith('data:image/'):
+                    return decoded_str.split('base64,', 1)[1]
+            except Exception:
+                pass
+            # Caso seja base64 puro da imagem
+            return value
+        # Fallback
         try:
-            data = value.tobytes() if hasattr(value, 'tobytes') else (bytes(value) if isinstance(value, memoryview) else value)
+            return base64.b64encode(str(value).encode()).decode()
         except Exception:
-            data = value
-        return base64.b64encode(data).decode()
+            return None
 
     def to_internal_value(self, data):
-        return base64.b64decode(data) if data else None
+        if not data:
+            return None
+        # Aceitar tanto data URL quanto base64 puro
+        if isinstance(data, str) and "base64," in data:
+            data = data.split("base64,", 1)[1]
+        try:
+            return base64.b64decode(data)
+        except Exception:
+            # Se não for base64 válido, armazena como texto
+            return data
+
+
 
 
 class BancoModelSerializer(BancoContextMixin, serializers.ModelSerializer):

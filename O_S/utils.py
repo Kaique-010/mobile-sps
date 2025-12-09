@@ -48,6 +48,23 @@ def get_next_item_number_sequence(banco, peca_os, peca_empr, peca_fili):
     )
 
 
+def get_next_global_peca_item_id(banco):
+    with connections[banco].cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT peca_item
+            FROM pecasos
+            WHERE peca_item IS NOT NULL
+            ORDER BY peca_item DESC
+            LIMIT 1
+            FOR UPDATE
+            """
+        )
+        row = cursor.fetchone()
+        ultimo = int(row[0]) if row and row[0] is not None else 0
+        return ultimo + 1
+
+
 def get_next_service_id(banco, ordem_id, empresa_id, filial_id):
     """
     Gera próximo número sequencial simples (1..N) para serviços da ordem.
@@ -79,6 +96,23 @@ def get_next_service_id(banco, ordem_id, empresa_id, filial_id):
     return sequ, sequ
 
 
+def get_next_global_serv_item_id(banco):
+    with connections[banco].cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT serv_item
+            FROM servicosos
+            WHERE serv_item IS NOT NULL
+            ORDER BY serv_item DESC
+            LIMIT 1
+            FOR UPDATE
+            """
+        )
+        row = cursor.fetchone()
+        ultimo = int(row[0]) if row and row[0] is not None else 0
+        return ultimo + 1
+
+
 def compactar_servicos(banco, serv_empr, serv_fili, serv_os):
     """
     Reatribui os valores de serv_item para 1..N sem buracos
@@ -101,3 +135,20 @@ def compactar_servicos(banco, serv_empr, serv_fili, serv_os):
             """,
             [serv_empr, serv_fili, serv_os]
         )
+
+
+def get_next_global_os_hora_item_id(banco):
+    with connections[banco].cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT os_hora_item
+            FROM os_hora
+            WHERE os_hora_item IS NOT NULL
+            ORDER BY os_hora_item DESC
+            LIMIT 1
+            FOR UPDATE
+            """
+        )
+        row = cursor.fetchone()
+    ultimo = int(row[0]) if row and row[0] is not None else 0
+    return ultimo + 1

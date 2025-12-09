@@ -27,6 +27,7 @@ urlpatterns = [
     path("<slug>/ordemdeservico/", include("OrdemdeServico.urls")),
     path("<slug>/caixadiario/", include("CaixaDiario.urls")),
     path("<slug>/Os/", include("O_S.urls")),
+    path("<slug>/osexterna/", include("osexterna.urls")),
     path("<slug>/auditoria/", include("auditoria.urls")),
     path("<slug>/notificacoes/", include("notificacoes.urls")),
     path("<slug>/Sdk_recebimentos/", include("Sdk_recebimentos.urls")),

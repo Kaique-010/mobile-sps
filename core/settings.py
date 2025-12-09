@@ -125,6 +125,7 @@ INSTALLED_APPS = [
     'series',
     'importador',
     'centraldeajuda',
+    'osexterna',
 ]
 # Middleware
 MIDDLEWARE = [
