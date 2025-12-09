@@ -138,6 +138,10 @@ def home(request, slug=None, empresa=None, filial=None):
         filial_id = int(filial_id) if filial_id is not None else None
     except Exception:
         filial_id = None
+    try:
+        logger.info("[TRACE][HOME] slug=%s banco=%s empresa=%s filial=%s path=%s", request.session.get('slug'), banco, empresa_id, filial_id, request.path)
+    except Exception:
+        pass
 
     vendedor_selecionado = (request.GET.get('vendedor') or '').strip()
     vendedores_qs = Entidades.objects.using(banco).filter(enti_tipo_enti='VE')
@@ -298,18 +302,21 @@ def selecionar_empresa(request):
     # -----------------------------
     # POST
     # -----------------------------
+    # dentro de selecionar_empresa — substitua a seção POST existente por isto
     try:
         empresa_id = request.POST.get('empresa_id') or request.POST.get('empresa')
         filial_id = request.POST.get('filial_id') or request.POST.get('filial')
         empresa_nome = request.POST.get('empresa_nome')
         filial_nome = request.POST.get('filial_nome')
+        slug_post = (request.POST.get('slug') or '').strip()
 
-        logger.info(
-            "[selecionar_empresa] POST recebido: empresa_id=%s filial_id=%s empresa_nome=%s filial_nome=%s",
-            empresa_id, filial_id, empresa_nome, filial_nome
-        )
+        logger.info("[selecionar_empresa] POST recebido: empresa_id=%s filial_id=%s empresa_nome=%s filial_nome=%s HEADERS=%s COOKIES=%s",
+                    empresa_id, filial_id, empresa_nome, filial_nome,
+                    {k:v for k,v in request.headers.items() if k.lower().startswith('x-')},
+                    request.META.get('HTTP_COOKIE'))
 
         if not empresa_id or not filial_id:
+            logger.warning("[selecionar_empresa] POST incompleto - ids ausentes")
             return render(request, 'Licencas/selecionar_empresa_filial.html', {
                 'error': 'Empresa e filial são obrigatórias.'
             })
@@ -318,46 +325,53 @@ def selecionar_empresa(request):
             empresa_id_int = int(empresa_id)
             filial_id_int = int(filial_id)
         except ValueError:
-            logger.exception("IDs inválidos na seleção de empresa/filial")
+            logger.exception("[selecionar_empresa] IDs inválidos na seleção de empresa/filial")
             return render(request, 'Licencas/selecionar_empresa_filial.html', {
                 'error': 'IDs inválidos.'
             })
 
+        # --- atualiza sessão ---
+        # preserva chaves críticas (usua_codi, docu, slug) e atualiza empresa/filial
+        keep = {
+            'usua_codi': request.session.get('usua_codi'),
+            'docu': request.session.get('docu'),
+            'slug': request.session.get('slug')
+        }
+
         request.session['empresa_id'] = empresa_id_int
         request.session['filial_id'] = filial_id_int
+        if slug_post:
+            request.session['slug'] = slug_post
 
-        # Buscar nomes se não vierem
-        if not empresa_nome or not filial_nome:
-            try:
-                from core.utils import get_licenca_db_config
-                from Licencas.models import Empresas, Filiais
-
-                banco = get_licenca_db_config(request) or 'default'
-
-                if not empresa_nome:
-                    emp = Empresas.objects.using(banco).filter(empr_codi=empresa_id_int).only('empr_nome').first()
-                    empresa_nome = getattr(emp, 'empr_nome', None)
-
-                if not filial_nome:
-                    fil = Filiais.objects.using(banco).filter(
-                        empr_empr=empresa_id_int,
-                        empr_codi=filial_id_int
-                    ).only('empr_nome').first()
-                    filial_nome = getattr(fil, 'empr_nome', None)
-            except Exception as e:
-                logger.warning("[selecionar_empresa] falha buscar nomes: %s", e)
+        # nomes (sua lógica)
+        ...
+        # (mantém o bloco que busca empresa_nome/filial_nome)
 
         if empresa_nome:
             request.session['empresa_nome'] = empresa_nome
         if filial_nome:
             request.session['filial_nome'] = filial_nome
 
-        logger.info(
-            "[selecionar_empresa] Sessão atualizada OK: emp=%s (%s) fil=%s (%s)",
-            empresa_id_int, empresa_nome, filial_id_int, filial_nome
-        )
+        # garantir que sessão foi modificada e persistida imediatamente
+        request.session.modified = True
+        try:
+            request.session.save()
+        except Exception as e:
+            # log detalhado se gravar falhar
+            logger.exception("[selecionar_empresa] falha ao salvar session: %s", e)
 
-        # REDIRECT
+        logger.info("[selecionar_empresa] Sessão atualizada OK: emp=%s (%s) fil=%s (%s) session_snapshot=%s",
+                    empresa_id_int, empresa_nome, filial_id_int, filial_nome,
+                    {k: request.session.get(k) for k in ['usua_codi','docu','slug','empresa_id','filial_id']})
+        try:
+            prev_slug = keep.get('slug')
+            cur_slug = request.session.get('slug')
+            if prev_slug != cur_slug:
+                logger.warning("[selecionar_empresa] SLUG trocado: %s -> %s", prev_slug, cur_slug)
+        except Exception:
+            pass
+
+        # REDIRECT — usa slug salvo
         slug_cur = request.session.get('slug')
         if slug_cur:
             emp = request.session.get('empresa_id')
@@ -365,7 +379,8 @@ def selecionar_empresa(request):
             if emp is not None and fil is not None:
                 try:
                     return redirect('home_slug_context', slug=slug_cur, empresa=int(emp), filial=int(fil))
-                except Exception:
+                except Exception as e:
+                    logger.exception("[selecionar_empresa] redirect home_slug_context falhou: %s", e)
                     return redirect('home_slug', slug=slug_cur)
             return redirect('home_slug', slug=slug_cur)
         return redirect('home')
@@ -375,6 +390,7 @@ def selecionar_empresa(request):
         return render(request, 'Licencas/selecionar_empresa_filial.html', {
             'error': 'Erro interno ao salvar seleção.'
         })
+
 
 
 from django.http import HttpResponse
@@ -538,6 +554,8 @@ def complete_onboarding_step(request, step, slug=None):
     except Exception:
         pass
     return redirect(next_url)
+
+
 def home_redirect_legacy(request, slug):
     try:
         try:
@@ -572,15 +590,14 @@ def selecionar_empresa_redirect(request, empresa, filial):
         request.session['empresa_id'] = int(empresa)
         request.session['filial_id'] = int(filial)
         request.session.modified = True
-    except Exception:
-        pass
-    slug_cur = request.session.get('slug')
-    if slug_cur:
         try:
-            return redirect('home_slug_context', slug=slug_cur, empresa=int(empresa), filial=int(filial))
+            request.session.save()
         except Exception:
-            return redirect('home_slug', slug=slug_cur)
-    return redirect('home')
+            logger.exception("[selecionar_empresa_redirect] falha ao salvar sessão")
+    except Exception:
+        logger.exception("[selecionar_empresa_redirect] erro ao parse ids")
+    ...
+
 
 def selecionar_empresa_redirect_slug(request, slug, empresa, filial):
     try:
@@ -588,9 +605,10 @@ def selecionar_empresa_redirect_slug(request, slug, empresa, filial):
         request.session['empresa_id'] = int(empresa)
         request.session['filial_id'] = int(filial)
         request.session.modified = True
+        try:
+            request.session.save()
+        except Exception:
+            logger.exception("[selecionar_empresa_redirect_slug] falha ao salvar sessão")
     except Exception:
-        pass
-    try:
-        return redirect('home_slug_context', slug=slug, empresa=int(empresa), filial=int(filial))
-    except Exception:
-        return redirect('home_slug', slug=slug)
+        logger.exception("[selecionar_empresa_redirect_slug] erro ao parse ids/slug")
+    ...

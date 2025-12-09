@@ -6,13 +6,16 @@
   .login-wrapper {
     padding: 1rem;
   }
+
   .login-card {
     max-width: 640px;
     box-shadow: 0 0 20px rgba(127, 198, 255, 0.938);
   }
+
   .login-header .subtitle {
     color: var(--bs-secondary-color);
   }
+
   [data-bs-theme="dark"] .login-header .subtitle {
     color: var(--bs-secondary-color);
   }
@@ -26,12 +29,16 @@
     </div>
 
     <div class="px-4 pt-3">
-      <div id="alert" class="alert alert-danger {% if not error %}d-none{% endif %}" role="alert">{% if error %}{{ error }}{% endif %}</div>
+      <div id="alert" class="alert alert-danger {% if not error %}d-none{% endif %}" role="alert">{% if error %}{{ error
+        }}{% endif %}</div>
     </div>
 
     <div class="login-body p-4 pt-0">
       <form id="selForm" method="post" action="/web/selecionar-empresa/">
         {% csrf_token %}
+        <input type="hidden" id="slugInput" name="slug" />
+        <input type="hidden" id="empresaNomeInput" name="empresa_nome" />
+        <input type="hidden" id="filialNomeInput" name="filial_nome" />
         <div class="form-floating mb-3">
           <select class="form-select" id="empresa" name="empresa_id" required>
             <option value="" selected disabled>Carregando...</option>
@@ -84,16 +91,42 @@
   L.log('access presente:', !!access);
   L.groupEnd();
 
-  const authFetch = (url) => {
-    L.group('authFetch');
-    L.log('URL:', url);
-    L.groupEnd();
-    return fetch(url, {
-    headers: {
-      'Authorization': `Bearer ${access}`,
-      'Content-Type': 'application/json'
-    }
+  const authFetch = async (url, options = {}) => {
+    const empresa = localStorage.getItem('empresa_id') || '1';
+    const filial = localStorage.getItem('filial_id') || '1';
+    const makeHeaders = (token) => ({
+      'Authorization': token ? `Bearer ${token}` : '',
+      'Content-Type': 'application/json',
+      'X-Empresa': empresa,
+      'X-Filial': filial,
+      ...(options.headers || {})
     });
+    let resp = await fetch(url, { ...options, headers: makeHeaders(access) });
+    if (resp.status !== 401) return resp;
+    try {
+      const data = await resp.json();
+      if (data && data.next) {
+        window.location.href = data.next;
+        return resp;
+      }
+    } catch (e) { }
+    const refresh = localStorage.getItem('refresh');
+    if (!refresh) return resp;
+    try {
+      const refreshResp = await fetch(`/api/${slug}/auth/token/refresh/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh })
+      });
+      if (!refreshResp.ok) return resp;
+      const d = await refreshResp.json();
+      const newAccess = d && d.access;
+      if (!newAccess) return resp;
+      localStorage.setItem('access', newAccess);
+      return await fetch(url, { ...options, headers: makeHeaders(newAccess) });
+    } catch (e) {
+      return resp;
+    }
   };
 
   const carregarEmpresas = async () => {
@@ -196,6 +229,10 @@
       localStorage.setItem('filial_id', String(filialId));
       if (empresaNome) localStorage.setItem('empresa_nome', empresaNome);
       if (filialNome) localStorage.setItem('filial_nome', filialNome);
+      // Incluir slug e nomes no POST
+      document.getElementById('slugInput').value = slug || '';
+      document.getElementById('empresaNomeInput').value = empresaNome || '';
+      document.getElementById('filialNomeInput').value = filialNome || '';
       L.info('Submit nativo: LocalStorage atualizado', { empresaId, filialId });
     } catch (err) {
       L.warn('Falha ao persistir no localStorage:', err?.message);
@@ -206,7 +243,7 @@
 
   // Inicializa
   if (!slug || !access) {
-    showError('Sessão inválida. Faça login novamente.');
+    window.location.href = '/web/login/';
   } else {
     L.info('Inicializando carregamento de empresas...');
     carregarEmpresas();

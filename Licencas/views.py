@@ -90,7 +90,7 @@ class LoginView(APIView):
         # Os módulos reais serão carregados após seleção da empresa/filial
         modulos_login = []  # Não retornar módulos no login
 
-        # Log: Gerar token JWT
+        slug_from_docu = get_banco_por_docu(docu)
         jwt_start = time.time()
         refresh = RefreshToken.for_user(usuario)
         refresh['username'] = usuario.usua_nome
@@ -100,16 +100,25 @@ class LoginView(APIView):
         refresh['lice_nome'] = licenca.lice_nome
         refresh['empresa_id'] = empresa_id
         refresh['filial_id'] = filial_id
+        refresh['lice_slug'] = slug_from_docu
         access = refresh.access_token
+        access['lice_slug'] = slug_from_docu
         try:
             request.session.cycle_key()
         except Exception:
-            pass
-        request.session["usua_codi"] = usuario.usua_codi
+            logger.exception("[LOGIN] cycle_key falhou")
+            request.session["usua_codi"] = usuario.usua_codi
+            request.session["docu"] = docu
+            request.session["slug"] = slug_from_docu if slug_from_docu else request.session.get('slug')
+            request.session.modified = True
+            request.session["usua_codi"] = usuario.usua_codi
+        try:
+            request.session.save()
+        except Exception:
+            logger.exception("[LOGIN] falha ao salvar sessão após login")
+        logger.info("[LOGIN] sessão gravada: %s", {k: request.session.get(k) for k in ['usua_codi','docu','slug','empresa_id','filial_id']})
         try:
             request.session["docu"] = docu
-            from Licencas.views import get_banco_por_docu
-            slug_from_docu = get_banco_por_docu(docu)
             if slug_from_docu:
                 request.session["slug"] = slug_from_docu
         except Exception:
@@ -127,6 +136,10 @@ class LoginView(APIView):
 
         total_time = (time.time() - start_time) * 1000
         logger.info(f"[LOGIN] TOTAL: {total_time:.2f}ms para usuário {username}")
+        try:
+            logger.info("[TRACE][LOGIN] slug=%s banco=%s empresa=%s filial=%s user_id=%s", slug_from_docu, banco, empresa_id, filial_id, usuario.usua_codi)
+        except Exception:
+            pass
 
         return Response({
             'access': str(access),
@@ -154,7 +167,7 @@ class TokenRefreshCustomView(APIView):
                 return Response({'error': 'refresh ausente'}, status=400)
             rt = RefreshToken(raw_refresh)
             acc = rt.access_token
-            for k in ['username','usuario_id','setor','lice_id','lice_nome','empresa_id','filial_id']:
+            for k in ['username','usuario_id','setor','lice_id','lice_nome','empresa_id','filial_id','lice_slug']:
                 try:
                     acc[k] = rt.get(k)
                 except Exception:
@@ -212,12 +225,10 @@ class FiliaisPorEmpresaView(APIView):
 
         banco = get_licenca_db_config(request)
 
-        # Verificar se o 'empresa_id' foi passado na query string
         empresa_id = request.query_params.get('empresa_id')
-        logger.info(f"empresa_id: {empresa_id}")
-
         if not empresa_id:
-            return Response({'error': 'Empresa não fornecida.'}, status=status.HTTP_400_BAD_REQUEST)
+            empresa_id = request.session.get('empresa_id') or request.headers.get('X-Empresa')
+        logger.info(f"empresa_id: {empresa_id}")
 
         try:
             empresa_id_int = int((empresa_id or '').strip())

@@ -1,9 +1,12 @@
 import time
+import logging
+from threading import local
 from django.core.cache import cache
 from django.conf import settings
-from threading import local
 from core.licenca_context import set_current_request, LICENCAS_MAP
 from core.utils import get_licenca_db_config
+
+logger = logging.getLogger("licenca.middleware")
 
 _local = local()
 
@@ -19,282 +22,199 @@ def set_modulos_disponiveis(modulos):
 def get_modulos_disponiveis():
     return getattr(_local, 'modulos_disponiveis', [])
 
+
 class LicencaMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        start_time = time.time()
-        path_parts = request.path.strip('/').split('/')
-        if len(path_parts) >= 2 and path_parts[0] == 'web' and path_parts[1] == 'home':
-            if len(path_parts) >= 3 and (path_parts[2] == 'selecionar-empresa'):
+        start = time.time()
+
+        logger.info(
+            "REQ IN   path=%s method=%s cookies=%s session_keys=%s",
+            request.path, request.method,
+            request.META.get('HTTP_COOKIE'),
+            list(request.session.keys())[:20],
+        )
+
+        # -----------------------------------------------------------
+        # 1. IGNORAR ROTAS QUE NÃO USAM LICENÇA
+        # -----------------------------------------------------------
+        ignored = [
+            '/api/warm-cache/', '/api/licencas/mapa/',
+            '/api/selecionar-empresa/', '/api/entidades-login/',
+            '/web/', '/admin/', '/static/', '/media/', '/ws/',
+            '/api/schema/', '/api/swagger', '/api/schemas/',
+        ]
+        for prefix in ignored:
+            if request.path.startswith(prefix):
+                logger.info("IGNORED path=%s", request.path)
                 return self.get_response(request)
-            slug = path_parts[2] if len(path_parts) >= 3 else None
-            if not slug:
-                docu = request.session.get('docu')
-                if docu:
-                    expected = next((x['slug'] for x in LICENCAS_MAP if x.get('cnpj') == docu), None)
-                    if expected:
-                        from django.http import HttpResponseRedirect
-                        from urllib.parse import urlencode
-                        qs = request.GET.dict()
-                        new_path = f"/web/home/{expected}/"
-                        url = new_path + (f"?{urlencode(qs)}" if qs else "")
-                        return HttpResponseRedirect(url)
+
+        # -----------------------------------------------------------
+        # 2. TRATAMENTO WEB / SLUG / EMPRESA / FILIAL
+        # -----------------------------------------------------------
+        parts = request.path.strip("/").split("/")
+
+        if len(parts) >= 2 and parts[0] == "web" and parts[1] == "home":
+            logger.info("WEB FLOW parts=%s", parts)
+
+            # Tela de seleção de empresa NÃO deve carregar licenças
+            if len(parts) >= 3 and parts[2] == "selecionar-empresa":
+                logger.info("Tela de seleção detectada, passando direto")
                 return self.get_response(request)
-            licenca = next((lic for lic in LICENCAS_MAP if lic["slug"] == slug), None)
-            if not licenca:
-                docu = request.session.get('docu')
-                expected = next((x['slug'] for x in LICENCAS_MAP if x.get('cnpj') == docu), None) if docu else None
-                if expected:
-                    from django.http import HttpResponseRedirect
-                    from urllib.parse import urlencode
-                    qs = request.GET.dict()
-                    parts = request.path.strip('/').split('/')
-                    emp = parts[3] if len(parts) >= 4 else None
-                    fil = parts[4] if len(parts) >= 5 else None
-                    if emp and fil:
-                        new_path = f"/web/home/{expected}/{emp}/{fil}/"
-                    else:
-                        new_path = f"/web/home/{expected}/"
-                    url = new_path + (f"?{urlencode(qs)}" if qs else "")
-                    return HttpResponseRedirect(url)
+
+            slug = parts[2] if len(parts) >= 3 else None
+
+            if slug:
+                logger.info("WEB SLUG=%s", slug)
+            else:
+                logger.warning("WEB sem slug, tentando recuperar do session.docu")
                 return self.get_response(request)
+
+            lic = next((l for l in LICENCAS_MAP if l["slug"] == slug), None)
+            if not lic:
+                logger.error("Slug inexistente WEB slug=%s", slug)
+                from django.http import HttpResponseNotFound
+                return HttpResponseNotFound("Licença não encontrada.")
+
             set_licenca_slug(slug)
             request.slug = slug
             set_current_request(request)
-            try:
-                if len(path_parts) >= 5:
-                    emp = int(path_parts[3])
-                    fil = int(path_parts[4])
-                    if request.session.get('empresa_id') != emp:
-                        request.session['empresa_id'] = emp
+
+            # Empresa/filial no path
+            if len(parts) >= 5:
+                try:
+                    emp = int(parts[3])
+                    fil = int(parts[4])
+
+                    logger.info("WEB emp=%s fil=%s", emp, fil)
+
+                    if request.session.get("empresa_id") != emp:
+                        request.session["empresa_id"] = emp
                         request.session.modified = True
-                    if request.session.get('filial_id') != fil:
-                        request.session['filial_id'] = fil
+
+                    if request.session.get("filial_id") != fil:
+                        request.session["filial_id"] = fil
                         request.session.modified = True
-            except Exception:
-                pass
-            return self.get_response(request)
-        
-        # Rotas que devem ser ignoradas pelo middleware
-        ignored_paths = [
-            '/api/warm-cache/',
-            '/api/licencas/mapa/',
-            '/api/selecionar-empresa/',
-            '/api/entidades-login/',
-            '/web/',
-            '/web/selecionar-empresa/',
-            '/admin/',
-            '/static/',
-            '/media/',
-            '/ws/',
-            '/api/schema/', 
-            '/api/schema/swagger-ui/',  
-            '/api/schema/swagger',
-            '/api/schema/swagger/',
-            '/api/schemas/',
-            '/api/schemas/swagger',
-            '/api/swagger',
-            '/api/swagger/',
-        ]
-        
-        # Verificar se a rota deve ser ignorada
-        for ignored_path in ignored_paths:
-            if request.path.startswith(ignored_path):
-                return self.get_response(request)
-        
-        path_parts = request.path.strip('/').split('/')
-        
-        if not path_parts or path_parts[0] != 'api':
+
+                except Exception as e:
+                    logger.error("Falha ao aplicar empresa/filial WEB: %s", e)
+
             return self.get_response(request)
 
-        # Rotas públicas que não precisam de validação
-        if request.path.startswith('/api/licencas/mapa/'):
-            return self.get_response(request)
-            
-        # Nova exceção para login de clientes
-        if len(path_parts) >= 3 and path_parts[2] == 'entidades-login':
-            # Extrair slug e definir no request sem validação completa
-            slug = path_parts[1]
-            request.slug = slug
-            set_licenca_slug(slug)
+        # -----------------------------------------------------------
+        # 3. API — SLUG DEVE EXISTIR EM /api/<slug>/...
+        # -----------------------------------------------------------
+        if not parts or parts[0] != "api":
             return self.get_response(request)
 
-        # Login simplificado para clientes
-        if len(path_parts) >= 3 and path_parts[2] == 'entidades-login-simple':
-            slug = path_parts[1]
-            request.slug = slug
-            set_licenca_slug(slug)
-            return self.get_response(request)
+        if len(parts) < 2:
+            logger.error("API sem slug no path=%s", request.path)
+            return self._bad_request("API malformatada. Faltando slug.")
 
-        if len(path_parts) < 3 or path_parts[0] != "api":
-            raise Exception("URL malformada. Esperado /api/<slug>/...")
+        slug = parts[1]
+        logger.info("API SLUG=%s", slug)
 
-        slug = path_parts[1]
-        
-        # Se slug for 'null' ou 'undefined', tentar extrair do JWT
-        if slug in ['null', 'undefined']:
+        # Slug null/undefined → extrai do JWT
+        if slug in ["null", "undefined"]:
+            logger.warning("Slug null/undefined, tentando JWT")
+            auth = request.headers.get("Authorization", "")
+            if not auth.startswith("Bearer "):
+                return self._bad_request("Token ausente ao tentar recuperar slug.")
+
             try:
                 import jwt
-                
-                auth_header = request.headers.get('Authorization', '')
-                if auth_header.startswith('Bearer '):
-                    token = auth_header.split(' ')[1]
-                    decoded = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-                    jwt_slug = decoded.get('lice_slug')
-                    
-                    if jwt_slug:
-                        slug = jwt_slug
-                        path_parts[1] = slug  # Atualizar o path
-                    else:
-                        from django.http import JsonResponse
-                        return JsonResponse(
-                            {'error': 'Slug não encontrado no token. Faça login novamente.'},
-                            status=401
-                        )
-                else:
-                    from django.http import JsonResponse
-                    return JsonResponse(
-                        {'error': 'Token de autorização não encontrado.'},
-                        status=401
-                    )
+                token = auth.split(" ")[1]
+                dec = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+                slug = dec.get("lice_slug") or request.session.get("slug")
+                logger.info("Slug recuperado via JWT: slug=%s", slug)
             except Exception as e:
-                from django.http import JsonResponse
-                return JsonResponse(
-                    {'error': f'Erro ao processar token: {str(e)}'},
-                    status=401
-                )
-        
-        licenca_check_start = time.time()
-        licenca = next((lic for lic in LICENCAS_MAP if lic["slug"] == slug), None)
-        if not licenca:
-            raise Exception(f"Licença com slug '{slug}' não encontrada.")
-        licenca_check_time = (time.time() - licenca_check_start) * 1000
+                return self._bad_request(f"Erro JWT: {e}")
 
-        # Set no contexto local e request
+        lic = next((l for l in LICENCAS_MAP if l["slug"] == slug), None)
+        if not lic:
+            return self._bad_request(f"Licença slug {slug} não encontrada.")
+
         set_licenca_slug(slug)
         request.slug = slug
         set_current_request(request)
-        
-        # Medição do tempo de cache/banco
-        cache_start = time.time()
-        
-        # Cache de módulos por licença (30 minutos)
-        # Priorizar cabeçalhos (pedido atual) sobre sessão (estado anterior)
-        def _to_int(value, default=None):
+
+        # -----------------------------------------------------------
+        # 4. EMPRESA/FILIAL — cabeçalho > sessão
+        # -----------------------------------------------------------
+        def _num(v): 
+            try: return int(v)
+            except: return None
+
+        h_emp = _num(request.headers.get("X-Empresa"))
+        h_fil = _num(request.headers.get("X-Filial"))
+
+        s_emp = request.session.get("empresa_id")
+        s_fil = request.session.get("filial_id")
+
+        empresa = h_emp or s_emp or 1
+        filial = h_fil or s_fil or 1
+
+        logger.info("Empresa/Filial — header=(%s,%s) session=(%s,%s) final=(%s,%s)",
+                    h_emp, h_fil, s_emp, s_fil, empresa, filial)
+        try:
+            logger.info("[TRACE][MW] slug=%s empresa=%s filial=%s path=%s", slug, empresa, filial, request.path)
+        except Exception:
+            pass
+
+        if h_emp is not None and s_emp != h_emp:
+            request.session["empresa_id"] = h_emp
+            request.session.modified = True
+
+        if h_fil is not None and s_fil != h_fil:
+            request.session["filial_id"] = h_fil
+            request.session.modified = True
+
+        # -----------------------------------------------------------
+        # 5. CACHE DE MÓDULOS
+        # -----------------------------------------------------------
+        key = f"mod_{slug}_{empresa}_{filial}"
+        mods = cache.get(key)
+
+        if mods:
+            logger.info("CACHE HIT key=%s count=%s", key, len(mods))
+        else:
+            logger.info("CACHE MISS key=%s → consultando banco", key)
             try:
-                return int(value)
-            except (TypeError, ValueError):
-                return default
-
-        header_empresa = _to_int(request.headers.get("X-Empresa"))
-        header_filial = _to_int(request.headers.get("X-Filial"))
-        session_empresa = request.session.get('empresa_id')
-        session_filial = request.session.get('filial_id')
-
-        empresa_id = header_empresa or session_empresa or 1
-        filial_id = header_filial or session_filial or 1
-
-        # Se cabeçalhos válidos vierem, sincronizar sessão mesmo que já tenha valores (mantém estado atualizado)
-        if header_empresa is not None:
-            if request.session.get('empresa_id') != header_empresa:
-                request.session['empresa_id'] = header_empresa
-                request.session.modified = True
-        if header_filial is not None:
-            if request.session.get('filial_id') != header_filial:
-                request.session['filial_id'] = header_filial
-                request.session.modified = True
-        
-        # Log para debug
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.info(f"MIDDLEWARE DEBUG - Slug: {slug}, Empresa: {empresa_id}, Filial: {filial_id}")
-        logger.info(f"MIDDLEWARE DEBUG - Session empresa_id: {request.session.get('empresa_id')}, filial_id: {request.session.get('filial_id')}")
-        logger.info(f"MIDDLEWARE DEBUG - Headers X-Empresa: {request.headers.get('X-Empresa')}, X-Filial: {request.headers.get('X-Filial')}")
-        
-        cache_key = f"modulos_licenca_{slug}_{empresa_id}_{filial_id}"
-        modulos_disponiveis = cache.get(cache_key)
-        
-        cache_hit = modulos_disponiveis is not None
-        
-        if modulos_disponiveis is None:
-            db_start = time.time()
-            try:
-                # Importar aqui para evitar circular import
                 from parametros_admin.models import PermissaoModulo
-                
-                # Obter configuração do banco
                 banco = get_licenca_db_config(request)
 
                 if banco:
-                    # Query otimizada: buscar apenas campos necessários
-                    permissoes = PermissaoModulo.objects.using(banco).filter(
-                        perm_empr=empresa_id,
-                        perm_fili=filial_id,
+                    qs = PermissaoModulo.objects.using(banco).filter(
+                        perm_empr=empresa,
+                        perm_fili=filial,
                         perm_ativ=True,
-                        perm_modu__modu_ativ=True  # Filtrar módulos ativos na query
-                    ).select_related('perm_modu').only(
-                        'perm_modu__modu_nome',  # Apenas o campo necessário
-                        'perm_modu__modu_ativ'
-                    )
-                    
-                    # Converter para lista de nomes
-                    modulos_disponiveis = [p.perm_modu.modu_nome for p in permissoes]
-                    
-                    # Cache por 30 minutos (mais tempo)
-                    cache.set(cache_key, modulos_disponiveis, 1800)
+                        perm_modu__modu_ativ=True,
+                    ).select_related("perm_modu")
+
+                    mods = [x.perm_modu.modu_nome for x in qs]
+                    cache.set(key, mods, 1800)
+
                 else:
-                    modulos_disponiveis = []
-                     
+                    mods = []
+
             except Exception as e:
-                print(f"Erro ao obter módulos do banco: {e}")
-                print("AVISO: Não foi possível obter módulos do banco. Verifique se a tabela modulosmobile está populada.")
-                modulos_disponiveis = []
-                # Cache vazio por 5 minutos para evitar queries repetidas em caso de erro
-                cache.set(cache_key, modulos_disponiveis, 300)
-            
-            db_time = (time.time() - db_start) * 1000
-        else:
-            db_time = 0
-            
-        cache_total_time = (time.time() - cache_start) * 1000
-        
-        set_modulos_disponiveis(modulos_disponiveis)
-        request.modulos_disponiveis = modulos_disponiveis
-        
-        middleware_total = (time.time() - start_time) * 1000
-        
-        # Log detalhado da performance apenas em DEBUG
-        if settings.DEBUG:
-            print(f"🔍 LICENÇA MIDDLEWARE:")
-            print(f"   📋 Licença check: {licenca_check_time:.2f}ms")
-            print(f"   💾 Cache {'HIT' if cache_hit else 'MISS'}: {cache_total_time:.2f}ms")
-            if not cache_hit:
-                print(f"   🗄️  Query DB: {db_time:.2f}ms")
-            print(f"   ⏱️  Total middleware: {middleware_total:.2f}ms")
-            print(f"   📊 Módulos encontrados: {len(modulos_disponiveis)}")
+                logger.error("Erro ao consultar módulos: %s", e)
+                mods = []
+
+        set_modulos_disponiveis(mods)
+        request.modulos_disponiveis = mods
+
+        logger.info("MÓDULOS=%s", mods)
+
+        total = (time.time() - start) * 1000
+        logger.info("REQ OUT path=%s time=%.2fms", request.path, total)
 
         return self.get_response(request)
 
-    def process_request(self, request):
-        # Priorizar cabeçalhos sobre token JWT
-        empresa_id = request.META.get('HTTP_X_EMPRESA')
-        filial_id = request.META.get('HTTP_X_FILIAL')
-        
-        # Se não há cabeçalhos, usar valores do token
-        if not empresa_id and hasattr(request, 'user') and hasattr(request.user, 'usua_empr'):
-            empresa_id = getattr(request.user, 'usua_empr', 1)
-        if not filial_id and hasattr(request, 'user') and hasattr(request.user, 'usua_fili'):
-            filial_id = getattr(request.user, 'usua_fili', 1)
-        
-        # Converter para inteiro
-        try:
-            empresa_id = int(empresa_id) if empresa_id else 1
-            filial_id = int(filial_id) if filial_id else 1
-        except (ValueError, TypeError):
-            empresa_id = 1
-            filial_id = 1
-        
-        print(f"🔍 [MIDDLEWARE] Empresa: {empresa_id}, Filial: {filial_id}")
-        print(f"🔍 [MIDDLEWARE] Headers - X-Empresa: {request.META.get('HTTP_X_EMPRESA')}, X-Filial: {request.META.get('HTTP_X_FILIAL')}")
+    def _bad_request(self, msg):
+        from django.http import JsonResponse
+        logger.error("400 ERROR → %s", msg)
+        next_url = "/web/selecionar-empresa/"
+        return JsonResponse({"error": msg, "code": "SESSION_INVALID", "next": next_url}, status=401)

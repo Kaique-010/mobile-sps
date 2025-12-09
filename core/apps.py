@@ -16,22 +16,7 @@ class CoreConfig(AppConfig):
         if os.environ.get('RUN_MAIN') != 'true':
             return
             
-        logger.info("🚀 Core app inicializado - preparando cache warming")
-        
-        # Executar cache warming após 2 segundos (dar tempo para tudo inicializar)
-        import threading
-        import time
-        
-        def delayed_warming():
-            time.sleep(2)
-            try:
-                from core.cache_warming import warm_cache_async
-                warm_cache_async()
-            except Exception as e:
-                logger.error(f"❌ Erro ao iniciar cache warming: {e}")
-        
-        thread = threading.Thread(target=delayed_warming, daemon=True)
-        thread.start()
+        logger.info("🚀 Core app inicializado")
         
         # REMOVIDO: pré-carregamento de conexões (causa do delay)
         # try:

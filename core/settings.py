@@ -362,6 +362,24 @@ LOGGING = {
             'propagate': False,
             'formatter': 'verbose',
         },
+        'core.views': {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+            'formatter': 'verbose',
+        },
+        'core.middleware': {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+            'formatter': 'verbose',
+        },
+        'licenca.middleware': {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+            'formatter': 'verbose',
+        },
         'listacasamento.views': {
             'handlers': ['console'],
             'level': 'DEBUG' if DEBUG else 'INFO',
