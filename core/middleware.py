@@ -215,6 +215,6 @@ class LicencaMiddleware:
 
     def _bad_request(self, msg):
         from django.http import JsonResponse
-        logger.error("400 ERROR → %s", msg)
+        logger.error("401 ERROR → %s", msg)
         next_url = "/web/selecionar-empresa/"
         return JsonResponse({"error": msg, "code": "SESSION_INVALID", "next": next_url}, status=401)
