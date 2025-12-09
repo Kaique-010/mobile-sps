@@ -30,7 +30,7 @@ class LicencaMiddleware:
     def __call__(self, request):
         start = time.time()
 
-        logger.info(
+        logger.debug(
             "REQ IN   path=%s method=%s cookies=%s session_keys=%s",
             request.path, request.method,
             request.META.get('HTTP_COOKIE'),
@@ -48,7 +48,7 @@ class LicencaMiddleware:
         ]
         for prefix in ignored:
             if request.path.startswith(prefix):
-                logger.info("IGNORED path=%s", request.path)
+                logger.debug("IGNORED path=%s", request.path)
                 return self.get_response(request)
 
         # -----------------------------------------------------------
@@ -57,17 +57,17 @@ class LicencaMiddleware:
         parts = request.path.strip("/").split("/")
 
         if len(parts) >= 2 and parts[0] == "web" and parts[1] == "home":
-            logger.info("WEB FLOW parts=%s", parts)
+            logger.debug("WEB FLOW parts=%s", parts)
 
             # Tela de seleção de empresa NÃO deve carregar licenças
             if len(parts) >= 3 and parts[2] == "selecionar-empresa":
-                logger.info("Tela de seleção detectada, passando direto")
+                logger.debug("Tela de seleção detectada, passando direto")
                 return self.get_response(request)
 
             slug = parts[2] if len(parts) >= 3 else None
 
             if slug:
-                logger.info("WEB SLUG=%s", slug)
+                logger.debug("WEB SLUG=%s", slug)
             else:
                 logger.warning("WEB sem slug, tentando recuperar do session.docu")
                 return self.get_response(request)
@@ -114,7 +114,7 @@ class LicencaMiddleware:
             return self._bad_request("API malformatada. Faltando slug.")
 
         slug = parts[1]
-        logger.info("API SLUG=%s", slug)
+        logger.debug("API SLUG=%s", slug)
 
         # Slug null/undefined → extrai do JWT
         if slug in ["null", "undefined"]:
@@ -156,10 +156,10 @@ class LicencaMiddleware:
         empresa = h_emp or s_emp or 1
         filial = h_fil or s_fil or 1
 
-        logger.info("Empresa/Filial — header=(%s,%s) session=(%s,%s) final=(%s,%s)",
+        logger.debug("Empresa/Filial — header=(%s,%s) session=(%s,%s) final=(%s,%s)",
                     h_emp, h_fil, s_emp, s_fil, empresa, filial)
         try:
-            logger.info("[TRACE][MW] slug=%s empresa=%s filial=%s path=%s", slug, empresa, filial, request.path)
+            logger.debug("[TRACE][MW] slug=%s empresa=%s filial=%s path=%s", slug, empresa, filial, request.path)
         except Exception:
             pass
 
@@ -178,9 +178,9 @@ class LicencaMiddleware:
         mods = cache.get(key)
 
         if mods:
-            logger.info("CACHE HIT key=%s count=%s", key, len(mods))
+            logger.debug("CACHE HIT key=%s count=%s", key, len(mods))
         else:
-            logger.info("CACHE MISS key=%s → consultando banco", key)
+            logger.debug("CACHE MISS key=%s → consultando banco", key)
             try:
                 from parametros_admin.models import PermissaoModulo
                 banco = get_licenca_db_config(request)
@@ -206,10 +206,10 @@ class LicencaMiddleware:
         set_modulos_disponiveis(mods)
         request.modulos_disponiveis = mods
 
-        logger.info("MÓDULOS=%s", mods)
+        logger.debug("MÓDULOS=%s", mods)
 
         total = (time.time() - start) * 1000
-        logger.info("REQ OUT path=%s time=%.2fms", request.path, total)
+        logger.debug("REQ OUT path=%s time=%.2fms", request.path, total)
 
         return self.get_response(request)
 

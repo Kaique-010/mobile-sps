@@ -120,7 +120,7 @@ def home(request, slug=None, empresa=None, filial=None):
             return redirect('home_slug', slug=sess_slug)
     try:
         banco = get_licenca_db_config(request) or 'default'
-        logger.info(f"[home] banco: {banco}")
+        logger.debug(f"[home] banco: {banco}")
     except Exception:
         banco = 'default'
     # Fallbacks: tentar slug atual do middleware, depois sessão
@@ -140,7 +140,7 @@ def home(request, slug=None, empresa=None, filial=None):
                     request.session['slug'] = slug_cur
                 except Exception:
                     pass
-                logger.info(f"[home] banco via middleware.slug: {banco}")
+                logger.debug(f"[home] banco via middleware.slug: {banco}")
             except Exception:
                 pass
     if banco == 'default':
@@ -150,7 +150,7 @@ def home(request, slug=None, empresa=None, filial=None):
                 slug_client = slug_sess
             if slug_sess:
                 banco = get_db_from_slug(slug_sess) or banco
-                logger.info(f"[home] banco via sessão.slug: {banco}")
+                logger.debug(f"[home] banco via sessão.slug: {banco}")
         except Exception:
             pass
 
@@ -165,13 +165,13 @@ def home(request, slug=None, empresa=None, filial=None):
     except Exception:
         filial_id = None
     try:
-        logger.info("[TRACE][HOME] slug=%s banco=%s empresa=%s filial=%s path=%s", request.session.get('slug'), banco, empresa_id, filial_id, request.path)
+        logger.debug("[TRACE][HOME] slug=%s banco=%s empresa=%s filial=%s path=%s", request.session.get('slug'), banco, empresa_id, filial_id, request.path)
     except Exception:
         pass
 
     vendedor_selecionado = (request.GET.get('vendedor') or '').strip()
     vendedores_qs = Entidades.objects.using(banco).filter(enti_tipo_enti='VE')
-    logger.info(f"[home] vendedores_qs: {vendedores_qs}")
+    logger.debug(f"[home] vendedores_qs: {vendedores_qs}")
     if empresa_id is not None:
         vendedores_qs = vendedores_qs.filter(enti_empr=empresa_id)
     else:
@@ -393,7 +393,7 @@ def selecionar_empresa(request):
             prev_slug = keep.get('slug')
             cur_slug = request.session.get('slug')
             if prev_slug != cur_slug:
-                logger.warning("[selecionar_empresa] SLUG trocado: %s -> %s", prev_slug, cur_slug)
+                logger.debug("[selecionar_empresa] SLUG trocado: %s -> %s", prev_slug, cur_slug)
         except Exception:
             pass
 

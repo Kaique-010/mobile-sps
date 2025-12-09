@@ -37,7 +37,7 @@ class LoginView(APIView):
     
     def post(self, request, slug=None):  
         start_time = time.time()
-        logger.info(f"[LOGIN] Iniciando login para slug: {slug}")
+        logger.debug(f"[LOGIN] Iniciando login para slug: {slug}")
         
         data = request.data
         username = data.get("username")
@@ -53,7 +53,7 @@ class LoginView(APIView):
         db_start = time.time()
         banco = get_licenca_db_config(request)
         db_time = (time.time() - db_start) * 1000
-        logger.info(f"[LOGIN] get_licenca_db_config: {db_time:.2f}ms")
+        logger.debug(f"[LOGIN] get_licenca_db_config: {db_time:.2f}ms")
         
         if not banco:
             return Response({'error': 'CNPJ inválido ou licença não encontrada.'}, status=404)
@@ -62,7 +62,7 @@ class LoginView(APIView):
         licenca_start = time.time()
         licenca = Licencas.objects.using(banco).filter(lice_docu=docu).first()
         licenca_time = (time.time() - licenca_start) * 1000
-        logger.info(f"[LOGIN] Buscar licença: {licenca_time:.2f}ms")
+        logger.debug(f"[LOGIN] Buscar licença: {licenca_time:.2f}ms")
         
         if not licenca :
             return Response({'error': 'CNPJ inválido ou licença bloqueada.'}, status=403)
@@ -74,14 +74,14 @@ class LoginView(APIView):
         except Usuarios.DoesNotExist:
             return Response({'error': 'Usuário não encontrado.'}, status=404)
         user_time = (time.time() - user_start) * 1000
-        logger.info(f"[LOGIN] Buscar usuário: {user_time:.2f}ms")
+        logger.debug(f"[LOGIN] Buscar usuário: {user_time:.2f}ms")
 
         # Log: Validar senha
         password_start = time.time()
         if not usuario.check_password(password):
             return Response({'error': 'Senha incorreta.'}, status=401)
         password_time = (time.time() - password_start) * 1000
-        logger.info(f"[LOGIN] Validar senha: {password_time:.2f}ms")
+        logger.debug(f"[LOGIN] Validar senha: {password_time:.2f}ms")
 
         # REMOVIDO: Query desnecessária de módulos globais
         # modulos_globais = list(get_modulos_globais(banco))
@@ -116,7 +116,7 @@ class LoginView(APIView):
             request.session.save()
         except Exception:
             logger.exception("[LOGIN] falha ao salvar sessão após login")
-        logger.info("[LOGIN] sessão gravada: %s", {k: request.session.get(k) for k in ['usua_codi','docu','slug','empresa_id','filial_id']})
+        logger.debug("[LOGIN] sessão gravada: %s", {k: request.session.get(k) for k in ['usua_codi','docu','slug','empresa_id','filial_id']})
         try:
             request.session["docu"] = docu
             if slug_from_docu:
@@ -130,14 +130,14 @@ class LoginView(APIView):
         access['lice_nome'] = licenca.lice_nome
         access['empresa_id'] = empresa_id
         access['filial_id'] = filial_id
-        logger.info(f"[LOGIN] Token claims: setor refresh={refresh.get('setor')} access={access.get('setor')}")
+        logger.debug(f"[LOGIN] Token claims: setor refresh={refresh.get('setor')} access={access.get('setor')}")
         jwt_time = (time.time() - jwt_start) * 1000
-        logger.info(f"[LOGIN] Gerar JWT: {jwt_time:.2f}ms")
+        logger.debug(f"[LOGIN] Gerar JWT: {jwt_time:.2f}ms")
 
         total_time = (time.time() - start_time) * 1000
-        logger.info(f"[LOGIN] TOTAL: {total_time:.2f}ms para usuário {username}")
+        logger.debug(f"[LOGIN] TOTAL: {total_time:.2f}ms para usuário {username}")
         try:
-            logger.info("[TRACE][LOGIN] slug=%s banco=%s empresa=%s filial=%s user_id=%s", slug_from_docu, banco, empresa_id, filial_id, usuario.usua_codi)
+            logger.debug("[TRACE][LOGIN] slug=%s banco=%s empresa=%s filial=%s user_id=%s", slug_from_docu, banco, empresa_id, filial_id, usuario.usua_codi)
         except Exception:
             pass
 
