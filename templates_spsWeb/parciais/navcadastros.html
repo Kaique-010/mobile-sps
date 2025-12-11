@@ -18,6 +18,15 @@
             </li>
             <li class="nav-item">
                 <div class="d-flex align-items-center">
+                    <a class="nav-link flex-grow-1" href="/web/login/"
+                        data-slug-route="/web/{slug}/entidades/relatorio/">
+                        <i class="bi bi-bar-chart-fill"></i> Relatório de Entidades
+                    </a>
+                </div>
+            </li>
+
+            <li class="nav-item">
+                <div class="d-flex align-items-center">
                     <a class="nav-link collapsed flex-grow-1" data-bs-toggle="collapse" href="#" role="button"
                         data-bs-target="#collapseCentros" aria-expanded="false" aria-controls="collapseCentros">
                         <i class="bi bi-diagram-3"></i> Centros de Custo
@@ -57,32 +66,32 @@
                                 title="Ver tutorial no YouTube" onclick="event.stopPropagation();">
                                 <i class="bi bi-youtube" style="font-size: 1.2rem; color: #ff2f2f;"></i>
                             </a>
-                         </div>
-                      </li>
+                </div>
+            </li>
 
 
-                <a class="nav-link flex-grow-1" href="/web/login/" data-slug-route="/web/{slug}/importador/">
-                    <div class="d-flex align-items-center">Importador
-                </a>
-                <a href="https://youtu.be/sf9hj6Ge9Zg" target="_blank" class="text-decoration-none ms-2"
-                    title="Ver tutorial no YouTube" onclick="event.stopPropagation();">
-                    <i class="bi bi-youtube" style="font-size: 1.2rem; color: #ff2f2f;"></i>
-                </a>
-     </div>
-        </li>
-        {% if request.user and request.user.usua_nome %}
-        {% if request.user.usua_nome|lower == 'admin' or request.user.usua_nome|lower == 'mobile' %}
-        <li class="nav-item">
-            <div class="d-flex align-items-center">
-                <a class="nav-link flex-grow-1" href="/web/login/" data-slug-route="/web/{slug}/licencas/users/">
-                    <i class="bi bi-person"></i> Perfil / Usuários
-                </a>
-                <a href="" target="_blank" class="text-decoration-none ms-2" title="Ver tutorial no YouTube"
-                    onclick="event.stopPropagation();">
-                    <i class="bi bi-youtube" style="font-size: 1.2rem; color: #ff2f2f;"></i>
-                </a>
-            </div>
-        </li>
+            <a class="nav-link flex-grow-1" href="/web/login/" data-slug-route="/web/{slug}/importador/">
+                <div class="d-flex align-items-center">Importador
+            </a>
+            <a href="https://youtu.be/sf9hj6Ge9Zg" target="_blank" class="text-decoration-none ms-2"
+                title="Ver tutorial no YouTube" onclick="event.stopPropagation();">
+                <i class="bi bi-youtube" style="font-size: 1.2rem; color: #ff2f2f;"></i>
+            </a>
+    </div>
+</li>
+{% if request.user and request.user.usua_nome %}
+{% if request.user.usua_nome|lower == 'admin' or request.user.usua_nome|lower == 'mobile' %}
+<li class="nav-item">
+    <div class="d-flex align-items-center">
+        <a class="nav-link flex-grow-1" href="/web/login/" data-slug-route="/web/{slug}/licencas/users/">
+            <i class="bi bi-person"></i> Perfil / Usuários
+        </a>
+        <a href="" target="_blank" class="text-decoration-none ms-2" title="Ver tutorial no YouTube"
+            onclick="event.stopPropagation();">
+            <i class="bi bi-youtube" style="font-size: 1.2rem; color: #ff2f2f;"></i>
+        </a>
+    </div>
+</li>
 {% endif %}
 {% endif %}
 </div>

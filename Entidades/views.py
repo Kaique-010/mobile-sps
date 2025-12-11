@@ -8,6 +8,7 @@ from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from rest_framework import status
 from core.middleware import get_licenca_slug
 from core.registry import get_licenca_db_config
+from core.utils import get_db_from_slug
 from .models import Entidades
 from .serializers import EntidadesSerializer
 from .utils import buscar_endereco_por_cep
@@ -139,3 +140,77 @@ class EntidadesViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
         else:
             return Response({"erro": "CEP inválido ou não encontrado"}, status=404)
 
+
+
+# api_entidades.py
+from rest_framework.views import APIView
+from django.db.models import Count
+
+class EntidadesRelatorioAPI(APIView):
+    
+    def get(self, request, slug=None):
+        empresa_param = request.GET.get("empresa")
+        banco = None
+        try:
+            if slug:
+                banco = get_db_from_slug(slug)
+        except Exception:
+            banco = None
+        if not banco:
+            try:
+                banco = get_licenca_db_config(request)
+            except Exception:
+                banco = 'default'
+
+        qs = Entidades.objects.using(banco).all()
+
+        if empresa_param is None:
+            empresa_sess = request.session.get("empresa_id") or request.headers.get("X-Empresa")
+            empresa = empresa_sess
+        else:
+            empresa = empresa_param.strip()
+
+        if empresa:
+            qs = qs.filter(enti_empr=str(empresa))
+
+        # ativos/inativos
+        ativos = qs.filter(enti_situ='1').count()
+        inativos = qs.filter(enti_situ='0').count()
+
+        # agrupamento por tipo
+        por_tipo = list(
+            qs.values("enti_tipo_enti")
+              .annotate(total=Count("enti_clie"))
+              .order_by("-total")
+        )
+
+        listar = (request.GET.get("listar") or "").strip()
+        situacao = (request.GET.get("situacao") or "").strip().lower()
+        tipo = (request.GET.get("tipo") or "").strip()
+
+        payload = {
+            "ativos": ativos,
+            "inativos": inativos,
+            "por_tipo": por_tipo,
+        }
+
+        if listar == "situacao" and situacao in {"ativos", "inativos"}:
+            alvo = '1' if situacao == 'ativos' else '0'
+            entidades = list(
+                qs.filter(enti_situ=alvo)
+                  .values("enti_clie", "enti_nome", "enti_tipo_enti", "enti_emai", "enti_fone", "enti_celu", "enti_cida", "enti_esta")
+                  .order_by("enti_nome")[:500]
+            )
+            payload["entidades"] = entidades
+            payload["filtro"] = {"tipo": "situacao", "valor": situacao}
+
+        elif listar == "tipo" and tipo:
+            entidades = list(
+                qs.filter(enti_tipo_enti=tipo)
+                  .values("enti_clie", "enti_nome", "enti_tipo_enti", "enti_emai", "enti_fone", "enti_celu", "enti_cida", "enti_esta", "enti_situ")
+                  .order_by("enti_nome")[:500]
+            )
+            payload["entidades"] = entidades
+            payload["filtro"] = {"tipo": "tipo", "valor": tipo}
+
+        return Response(payload)

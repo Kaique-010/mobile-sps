@@ -38,6 +38,7 @@ class Entidades(models.Model):
     enti_mobi_usua = models.CharField(max_length=100, blank=True, null=True)  
     enti_mobi_senh = models.CharField(max_length=100, blank=True, null=True)  
     enti_vend = models.IntegerField(blank=True, null=True)  
+    enti_situ = models.CharField(max_length=100,choices=[('0', 'INATIVO'), ('1', 'ATIVO')], default='1')
 
     # Campos adicionais para banco/caixa
 

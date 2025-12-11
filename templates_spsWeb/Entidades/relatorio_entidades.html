@@ -1,0 +1,306 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+
+
+<style>
+    .metric-card {
+        border-radius: 12px;
+    }
+
+    .metric-card .card-body {
+        padding: 1rem 1.25rem;
+    }
+
+    .chart-box {
+        height: 120px;
+        position: relative;
+    }
+
+    .chart-box canvas {
+        position: absolute;
+        inset: 0;
+        width: 100% !important;
+        height: 100% !important;
+    }
+</style>
+<div class="container mt-4">
+    <h2 class="mb-4 text-center">Relatório de Entidades</h2>
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <label class="me-2">Empresa:</label>
+        <select id="filtro-empresa" class="form-select form-select-sm" style="max-width: 280px;">
+            <option value="">Todas</option>
+            {% for empresa in empresas %}
+            <option value="{{ empresa.empr_codi }}">{{ empresa.empr_nome }}</option>
+            {% endfor %}
+            <option value="Outros">Outros</option>
+        </select>
+        <button id="btn-filtrar" class="btn btn-primary btn-sm">Filtrar</button>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-6">
+            <div class="card shadow-sm h-100 border-0" id="card-ativos" role="button">
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-secondary">Ativos</div>
+                        <div class="fs-3 fw-bold" id="kpi-ativos">...</div>
+                    </div>
+                    <i class="bi bi-person-check fs-1 text-success"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6">
+            <div class="card shadow-sm h-100 border-0" id="card-inativos" role="button">
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-secondary">Inativos</div>
+                        <div class="fs-3 fw-bold" id="kpi-inativos">...</div>
+                    </div>
+                    <i class="bi bi-person-x fs-1 text-danger"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 align-items-stretch">
+        <div class="col-12 col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-transparent fw-semibold">Entidades por Tipo</div>
+                <div class="card-body">
+                    <div class="chart-box"><canvas id="graficoTipos"></canvas></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-transparent fw-semibold">Distribuição (Ativos x Inativos)</div>
+                <div class="card-body">
+                    <div class="chart-box"><canvas id="graficoSituacao"></canvas></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-transparent fw-semibold">Resumo</div>
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-secondary">Total</div>
+                        <div class="fs-5" id="kpi-total">...</div>
+                    </div>
+                    <div class="text-secondary small">Clique nas métricas para listar</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-4 shadow-sm">
+        <div class="card-header bg-transparent fw-semibold">Entidades</div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm align-middle" id="tabela-entidades">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nome</th>
+                            <th>Tipo</th>
+                            <th>Cidade/UF</th>
+                            <th>Contato</th>
+                            <th>Email</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="d-flex align-items-center justify-content-between mt-2" id="paginacao-entidades">
+                <div class="d-flex align-items-center gap-2">
+                    <label class="text-secondary">Itens por página</label>
+                    <select id="page-size" class="form-select form-select-sm" style="width: 100px;">
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                    </select>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-outline-secondary btn-sm" id="btn-prev">Anterior</button>
+                    <span id="page-info" class="text-secondary"></span>
+                    <button class="btn btn-outline-secondary btn-sm" id="btn-next">Próxima</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // static/js/relatorio_entidades.js
+
+    async function carregarDados(filtros = {}) {
+        const slug = localStorage.getItem('slug');
+        const qs = new URLSearchParams(filtros).toString();
+        const f = window.authFetch || fetch;
+        const resp = await f(`/api/${slug}/entidades/relatorio/?${qs}`);
+        if (!resp.ok) throw new Error(`Erro ao carregar dados: ${resp.status}`);
+        return await resp.json();
+    }
+
+    function atualizarKPIs(d) {
+        document.getElementById("kpi-ativos").innerText = d.ativos;
+        document.getElementById("kpi-inativos").innerText = d.inativos;
+        const totalEl = document.getElementById("kpi-total");
+        if (totalEl) totalEl.innerText = (Number(d.ativos || 0) + Number(d.inativos || 0));
+    }
+
+    let graficoTipos = null;
+    let graficoSituacao = null;
+
+    function atualizarGrafico(dados, kpis) {
+        const labels = dados.map(x => x.enti_tipo_enti);
+        const valores = dados.map(x => x.total);
+
+        if (graficoTipos) graficoTipos.destroy();
+        if (graficoSituacao) graficoSituacao.destroy();
+
+        const ctxBar = document.getElementById("graficoTipos");
+        const colors = ['#2a62ff', '#00c4b3', '#ff7d00', '#7a53ff', '#17a2b8', '#dc3545'];
+        graficoTipos = new Chart(ctxBar, {
+            type: "bar",
+            data: {
+                labels,
+                datasets: [{
+                    label: "Quantidade",
+                    data: valores,
+                    backgroundColor: labels.map((_, i) => colors[i % colors.length]),
+                    borderRadius: 6,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: true },
+                },
+                scales: {
+                    y: { beginAtZero: true, grid: { drawBorder: false } },
+                    x: { grid: { display: false } }
+                },
+                onClick: async (evt, elements) => {
+                    if (!elements?.length) return;
+                    const idx = elements[0].index;
+                    const tipo = labels[idx];
+                    await listarPorTipo(tipo);
+                }
+            }
+        });
+
+        const ctxPie = document.getElementById("graficoSituacao");
+        graficoSituacao = new Chart(ctxPie, {
+            type: "doughnut",
+            data: {
+                labels: ["Ativos", "Inativos"],
+                datasets: [{
+                    data: [kpis.ativos, kpis.inativos],
+                    backgroundColor: ["#00c4b3", "#dc3545"],
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } },
+                cutout: '60%',
+                onClick: async (evt, elements) => {
+                    if (!elements?.length) return;
+                    const idx = elements[0].index;
+                    const situacao = idx === 0 ? 'ativos' : 'inativos';
+                    await listarPorSituacao(situacao);
+                }
+            }
+        });
+    }
+
+    let allEntidades = [];
+    let currentPage = 1;
+    let pageSize = 10;
+
+    function setListaEntidades(items) {
+        allEntidades = Array.isArray(items) ? items : [];
+        currentPage = 1;
+        renderPagina();
+    }
+
+    function renderPagina() {
+        const tbody = document.querySelector('#tabela-entidades tbody');
+        tbody.innerHTML = '';
+        const start = (currentPage - 1) * pageSize;
+        const end = start + pageSize;
+        const pageItems = allEntidades.slice(start, end);
+        pageItems.forEach(e => {
+            const tr = document.createElement('tr');
+            const contato = e.enti_fone || e.enti_celu || '';
+            tr.innerHTML = `
+                <td>${e.enti_clie ?? ''}</td>
+                <td>${e.enti_nome ?? ''}</td>
+                <td>${e.enti_tipo_enti ?? ''}</td>
+                <td>${(e.enti_cida ?? '')}${e.enti_esta ? '/' + e.enti_esta : ''}</td>
+                <td>${contato}</td>
+                <td>${e.enti_emai ?? ''}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+        updatePagerUI();
+    }
+
+    function updatePagerUI() {
+        const totalPages = Math.max(1, Math.ceil(allEntidades.length / pageSize));
+        const info = document.getElementById('page-info');
+        info.textContent = `${currentPage} / ${totalPages}`;
+        document.getElementById('btn-prev').disabled = currentPage <= 1;
+        document.getElementById('btn-next').disabled = currentPage >= totalPages;
+    }
+
+    async function listarPorSituacao(situacao) {
+        const slug = localStorage.getItem('slug');
+        const empresa = document.getElementById("filtro-empresa").value;
+        const qs = new URLSearchParams({ empresa, listar: 'situacao', situacao }).toString();
+        const f = window.authFetch || fetch;
+        const resp = await f(`/api/${slug}/entidades/relatorio/?${qs}`);
+        const data = await resp.json();
+        setListaEntidades(data.entidades || []);
+    }
+
+    async function listarPorTipo(tipo) {
+        const slug = localStorage.getItem('slug');
+        const empresa = document.getElementById("filtro-empresa").value;
+        const qs = new URLSearchParams({ empresa, listar: 'tipo', tipo }).toString();
+        const f = window.authFetch || fetch;
+        const resp = await f(`/api/${slug}/entidades/relatorio/?${qs}`);
+        const data = await resp.json();
+        setListaEntidades(data.entidades || []);
+    }
+
+    async function aplicarFiltros() {
+        try {
+            const filtros = {
+                empresa: document.getElementById("filtro-empresa").value,
+            };
+            const dados = await carregarDados(filtros);
+            atualizarKPIs(dados);
+            atualizarGrafico(dados.por_tipo || [], { ativos: dados.ativos, inativos: dados.inativos });
+        } catch (e) {
+            if (window.showToast) window.showToast("Falha ao carregar relatório", { variant: "danger", delay: 4000 });
+            console.warn(e);
+        }
+    }
+
+    document.getElementById("btn-filtrar").addEventListener("click", aplicarFiltros);
+    document.getElementById("card-ativos").addEventListener("click", () => listarPorSituacao('ativos'));
+    document.getElementById("card-inativos").addEventListener("click", () => listarPorSituacao('inativos'));
+    document.getElementById('btn-prev').addEventListener('click', () => { currentPage = Math.max(1, currentPage - 1); renderPagina(); });
+    document.getElementById('btn-next').addEventListener('click', () => { currentPage = currentPage + 1; renderPagina(); });
+    document.getElementById('page-size').addEventListener('change', (e) => { pageSize = parseInt(e.target.value || '10', 10); currentPage = 1; renderPagina(); });
+
+    // carrega ao abrir
+    aplicarFiltros();
+
+</script>
+{% endblock %}

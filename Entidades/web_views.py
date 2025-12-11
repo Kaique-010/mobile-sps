@@ -178,3 +178,19 @@ class ExportarEntidadesView(DBAndSlugMixin, View):
             ])
 
         return response
+
+
+
+from django.views.generic import TemplateView
+
+class RelatorioEntidadesView(TemplateView):
+    template_name = "Entidades/relatorio_entidades.html"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        try:
+            from Licencas.models import Empresas
+            ctx["empresas"] = list(Empresas.objects.all().values("empr_codi", "empr_nome"))
+        except Exception:
+            ctx["empresas"] = []
+        return ctx

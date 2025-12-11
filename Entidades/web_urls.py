@@ -5,6 +5,7 @@ from .web_views import (
     EntidadeUpdateView,
     EntidadeDeleteView,
     ExportarEntidadesView,
+    RelatorioEntidadesView,
 )
 
 urlpatterns = [
@@ -13,4 +14,5 @@ urlpatterns = [
     path('<int:enti_clie>/editar/', EntidadeUpdateView.as_view(), name='entidade_update_web'),
     path('<int:enti_clie>/excluir/', EntidadeDeleteView.as_view(), name='entidade_delete_web'),
     path('exportar/', ExportarEntidadesView.as_view(), name='exportar_entidades_web'),
+    path('relatorio/', RelatorioEntidadesView.as_view(), name='relatorio_entidades_web'),
 ]
