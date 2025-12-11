@@ -1,14 +1,10 @@
 import tiktoken
 import requests
 from langchain_core.tools import tool
-from openai import OpenAI
 from bs4 import BeautifulSoup
 from ..utils.sqlite_manuais import inserir_manual_com_embedding
-from ..utils.rag_memory import rag_memory
-from ..configuracoes.config import API_KEY, TOKENIZER_ENCODING, DEFAULT_TOP_K
-
-client = OpenAI(api_key=API_KEY)
-tokenizador = tiktoken.get_encoding(TOKENIZER_ENCODING)
+from ..utils.rag_memory import get_rag_memory, get_tokenizador
+from ..configuracoes.config import DEFAULT_TOP_K
 
 
 @tool
@@ -16,6 +12,7 @@ def rag_url_resposta(url: str, pergunta: str, k: int = DEFAULT_TOP_K) -> str:
     """Extrai conteúdo de uma URL e responde perguntas usando RAG"""
     # 0) Tenta responder diretamente do FAISS
     try:
+        rag_memory = get_rag_memory()
         contexto = "\n\n".join(rag_memory.query(pergunta, k=k))
         if contexto.strip():
             return contexto
@@ -56,6 +53,7 @@ def rag_url_resposta(url: str, pergunta: str, k: int = DEFAULT_TOP_K) -> str:
         return "Não encontrei o artigo na página."
 
     texto = artigo.get_text(separator="\n", strip=True)
+    rag_memory = get_rag_memory()
     chunks = rag_memory.chunk_text(texto)
     rag_memory.add_texts(chunks)
 
@@ -66,6 +64,7 @@ def rag_url_resposta(url: str, pergunta: str, k: int = DEFAULT_TOP_K) -> str:
 @tool
 def inspector_faiss(pergunta: str, top_n: int = 5) -> str:
     """Inspeciona o índice FAISS e retorna informações sobre chunks relevantes"""
+    rag_memory = get_rag_memory()
     if rag_memory.index.ntotal == 0:
         return "Índice FAISS vazio. Adicione documentos primeiro."
     
@@ -76,7 +75,7 @@ def inspector_faiss(pergunta: str, top_n: int = 5) -> str:
     resultado += f"Total de chunks no índice: {rag_memory.index.ntotal}\n"
     resultado += f"Top {len(I[0])} chunks mais relevantes:\n\n"
     
-    tokenizador = tiktoken.get_encoding("cl100k_base")
+    tokenizador = get_tokenizador()
     
     for i, (idx, dist) in enumerate(zip(I[0], D[0])):
         if idx < len(rag_memory.meta):

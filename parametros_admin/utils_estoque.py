@@ -75,19 +75,14 @@ def verificar_saida_automatica(empresa_id, filial_id, request):
     """
     Verifica se saída automática está habilitada
     """
-    print(f"🔍 [DEBUG] Verificando saída automática - Empresa: {empresa_id}, Filial: {filial_id}")
+
     
     parametros = obter_parametros_estoque(empresa_id, filial_id, request)
-    print(f"🔍 [DEBUG] Parâmetros obtidos: {parametros}")
     
     param = parametros.get('saida_automatica_estoque', {})
-    print(f"🔍 [DEBUG] Parâmetro saida_automatica_estoque: {param}")
     
     valor = param.get('valor', 'false')
     ativo = param.get('ativo', False)
-    
-    print(f"🔍 [DEBUG] Valor: {valor} (tipo: {type(valor)})")
-    print(f"🔍 [DEBUG] Ativo: {ativo} (tipo: {type(ativo)})")
     
     # Corrigir para tratar tanto string quanto boolean
     if isinstance(valor, bool):
@@ -95,7 +90,6 @@ def verificar_saida_automatica(empresa_id, filial_id, request):
     else:
         resultado = ativo and str(valor).lower() == 'true'
     
-    print(f"🔍 [DEBUG] Resultado final: {resultado}")
     return resultado
 
 

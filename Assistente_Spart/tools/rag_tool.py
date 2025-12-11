@@ -1,7 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 from langchain_core.tools import tool
-from ..utils.rag_memory import rag_memory
+from ..utils.rag_memory import get_rag_memory
 from ..utils.sqlite_manuais import buscar_manual_por_pergunta_vetorial, inserir_manual_com_embedding
 from ..configuracoes.config import DEFAULT_TOP_K
 
@@ -21,6 +21,7 @@ def rag_url_resposta_vetorial(pergunta: str, url: str = None, k: int = DEFAULT_T
         return "Pergunta muito curta para RAG. Seja mais específico."
     # 1) Tenta responder diretamente do FAISS (rápido)
     try:
+        rag_memory = get_rag_memory()
         contexto = "\n\n".join(rag_memory.query(pergunta, k=k))
         if contexto.strip():
             return contexto
@@ -67,6 +68,7 @@ def rag_url_resposta_vetorial(pergunta: str, url: str = None, k: int = DEFAULT_T
 
     # 4) Indexa conteúdo no FAISS (só adiciona chunks novos)
     texto = artigo.get_text(separator="\n", strip=True)
+    rag_memory = get_rag_memory()
     chunks = rag_memory.chunk_text(texto)
     rag_memory.add_texts(chunks)
 

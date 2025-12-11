@@ -2,7 +2,7 @@
 from decouple import config
 from django.db import connections
 from core import settings
-from core.licenca_context import LICENCAS_MAP
+from core.licenca_context import get_licencas_map
 from decimal import Decimal, ROUND_HALF_UP
 
 
@@ -16,7 +16,7 @@ def get_db_from_slug(slug):
     if not slug:
         return "default"
 
-    licenca = next((lic for lic in LICENCAS_MAP if lic["slug"] == slug), None)
+    licenca = next((lic for lic in get_licencas_map() if lic["slug"] == slug), None)
     if not licenca:
         raise Exception(f"Licença com slug '{slug}' não encontrada.")
 
@@ -25,8 +25,10 @@ def get_db_from_slug(slug):
         return slug
     
     prefixo = slug.upper()
-    db_user = config(f"{prefixo}_DB_USER")
-    db_password = config(f"{prefixo}_DB_PASSWORD")
+    db_user = licenca.get("db_user") or config(f"{prefixo}_DB_USER", default=None)
+    db_password = licenca.get("db_password") or config(f"{prefixo}_DB_PASSWORD", default=None)
+    if not db_user or not db_password:
+        raise Exception(f"Credenciais não encontradas para {slug}")
 
     settings.DATABASES[slug] = {
         'ENGINE': 'django.db.backends.postgresql',
@@ -62,8 +64,8 @@ def get_licenca_db_config(request):
             if len(parts) > 2:
                 slug_candidate = parts[1]
                 try:
-                    from core.licenca_context import LICENCAS_MAP
-                    if any(l.get('slug') == slug_candidate for l in LICENCAS_MAP):
+                    from core.licenca_context import get_licencas_map
+                    if any(l.get('slug') == slug_candidate for l in get_licencas_map()):
                         slug = slug_candidate
                 except Exception:
                     pass
@@ -81,6 +83,8 @@ def get_licenca_db_config(request):
             return 'default'
     except Exception:
         return 'default'
+
+
 
 
 from decimal import Decimal, ROUND_HALF_UP
@@ -207,8 +211,7 @@ def calcular_total_item_com_desconto(quantidade, valor_unitario, desconto_item=N
     # Garantir que o resultado não exceda os limites do campo (max_digits=15, decimal_places=2)
     # Máximo: 9999999999999.99 (13 dígitos inteiros + 2 decimais = 15 total)
     resultado = Decimal(str(round(max(total_item, Decimal('0.00')), 2)))
-    
-    print(f"🔍 [DEBUG] Total após round: {resultado}, Dígitos: {len(str(resultado).replace('.', ''))}")
+
     
     # Validar se não excede o limite do campo
     if resultado >= Decimal('10000000000000.00'):  # 10^13

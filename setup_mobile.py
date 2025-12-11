@@ -1,6 +1,9 @@
 import os
 import psycopg2
 import subprocess
+import os
+import django
+from django.core.management import call_command
 from decouple import config  
 
 
@@ -19,11 +22,11 @@ CREATE TABLE IF NOT EXISTS django_content_type (
     id SERIAL PRIMARY KEY,
     app_label VARCHAR(100) NOT NULL,
     model VARCHAR(100) NOT NULL,
+    name VARCHAR(100) NOT NULL DEFAULT '',
     UNIQUE(app_label, model)
 );
 
--- Ajuste de compatibilidade: remover coluna 'name' caso exista (Django 2.2 não usa)
-ALTER TABLE django_content_type DROP COLUMN IF EXISTS name;
+ALTER TABLE django_content_type ADD COLUMN IF NOT EXISTS name VARCHAR(100) NOT NULL DEFAULT '';
 
 CREATE TABLE IF NOT EXISTS auth_permission (
     id SERIAL PRIMARY KEY,
@@ -964,9 +967,14 @@ def rodar_comando(cmd, ignore_errors=False):
             print(f"⚠️ Comando falhou mas continuando: {e}\n")
         else:
             raise e
-
+    
 
 def main():
+    os.environ['DISABLE_AUDIT_SIGNALS'] = '1'
+    os.environ['DISABLE_PARAM_ADMIN_READY'] = '1'
+    if not django.apps.apps.ready:
+        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
+        django.setup()
     print("🔧 Criando tabelas essenciais do Django...")
     executar_sql(SQL_DJANGO_CORE, "Criação de tabelas essenciais do Django", ignore_errors=True)
     
@@ -974,9 +982,23 @@ def main():
     # Com AUTH_USER_MODEL = 'Licencas.Usuarios', o app admin depende de Licencas.
     # Usamos --fake-initial para marcar as iniciais quando as tabelas já existem pelo SQL, mas
     # garantimos que Licencas rode antes para evitar InconsistentMigrationHistory.
-    rodar_comando("python manage.py migrate contenttypes --fake-initial", ignore_errors=True)
-    rodar_comando("python manage.py migrate Licencas --fake-initial")
-    rodar_comando("python manage.py migrate --fake-initial")
+    try:
+        call_command('migrate', 'contenttypes', '0001', fake=True, interactive=False, verbosity=0)
+        call_command('migrate', 'contenttypes', '0002', fake=True, interactive=False, verbosity=0)
+        call_command('migrate', 'Licencas', fake_initial=True, interactive=False, verbosity=0)
+        call_command('migrate', fake_initial=True, interactive=False, verbosity=0)
+    except Exception as e:
+        print(f"⚠️ Migração inicial com call_command falhou, continuando com subprocess: {e}")
+        rodar_comando("python manage.py migrate contenttypes 0001 --fake --noinput --verbosity 0", ignore_errors=True)
+        rodar_comando("python manage.py migrate contenttypes 0002 --fake --noinput --verbosity 0", ignore_errors=True)
+        rodar_comando("python manage.py migrate Licencas --fake-initial --noinput --verbosity 0")
+        rodar_comando("python manage.py migrate --fake-initial --noinput --verbosity 0")
+    # Migração consolidada sem varrer app a app (mais leve)
+    try:
+        call_command('migrate', fake_initial=True, interactive=False, verbosity=0)
+    except Exception as e:
+        print(f"⚠️ Migração consolidada falhou, usando subprocess: {e}")
+        rodar_comando("python manage.py migrate --fake-initial --noinput --verbosity 0", ignore_errors=True)
     
     print("📦 Executando SQL customizado...")
     executar_sql(SQL_COMMANDS, "Criação e atualização de tabelas", ignore_errors=True)
@@ -990,10 +1012,18 @@ def main():
         print(f"⚠️ Falha ao criar views, continuando setup: {e}\n")
 
     print("📊 Populando parâmetros iniciais...")
-    rodar_comando("python manage.py populate_parametros --empresa 1 --filial 1")
+    try:
+        call_command('populate_parametros', empresa='1', filial='1', verbosity=0)
+    except Exception as e:
+        print(f"⚠️ Comando populate_parametros via call_command falhou, usando subprocess: {e}")
+        rodar_comando("python manage.py populate_parametros --empresa 1 --filial 1")
 
     print("📦 Rodando migrações do app onboarding...")
-    rodar_comando("python manage.py migrate onboarding")
+    try:
+        call_command('migrate', 'onboarding', fake_initial=True, interactive=False, verbosity=0)
+    except Exception as e:
+        print(f"⚠️ Migração do app onboarding via call_command falhou, usando subprocess: {e}")
+        rodar_comando("python manage.py migrate onboarding --fake-initial", ignore_errors=True)
 
     print("🎉 Setup do banco finalizado com sucesso.")
 

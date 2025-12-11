@@ -18,7 +18,7 @@ from parametros_admin.models import PermissaoModulo, Modulo
 from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from django.contrib.auth.hashers import check_password
 from core.middleware import get_licenca_slug
-from core.registry import LICENCAS_MAP, get_licenca_db_config, get_modulos_por_docu
+from core.registry import get_licenca_db_config, get_modulos_por_docu
 from parametros_admin.utils import  get_modulos_globais, get_codigos_modulos_liberados
 from Licencas.permissions import UsuariosPermission
 import time
@@ -28,8 +28,8 @@ logger = logging.getLogger(__name__)
 
 
 def get_banco_por_docu(docu):
-    from core.registry import LICENCAS_MAP
-    match = next((x for x in LICENCAS_MAP if x['cnpj'] == docu), None)
+    from core.licenca_context import get_licencas_map
+    match = next((x for x in get_licencas_map() if x['cnpj'] == docu), None)
     return match['slug'] if match else None
 
 
@@ -197,7 +197,8 @@ class EmpresaUsuarioView(APIView):
 
     def get(self, request, *args, **kwargs):
         slug = get_licenca_slug()
-        licenca_info = next((item for item in LICENCAS_MAP if item['slug'] == slug), None)
+        from core.licenca_context import get_licencas_map
+        licenca_info = next((item for item in get_licencas_map() if item['slug'] == slug), None)
 
         if not licenca_info:
             return Response({"error": "Licença não encontrada."}, status=404)
@@ -332,8 +333,8 @@ def licencas_mapa(request, slug=None):
     
     
     # Retorna as licenças públicas sem depender de slug
-    from core.licenca_context import LICENCAS_MAP
-    return Response(LICENCAS_MAP)
+    from core.licenca_context import get_licencas_map
+    return Response(get_licencas_map())
 
 
 class UsuariosViewSet(viewsets.ModelViewSet):

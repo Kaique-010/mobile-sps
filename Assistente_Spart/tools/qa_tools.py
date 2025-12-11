@@ -1,11 +1,7 @@
 import tiktoken
 from langchain_core.tools import tool
-from openai import OpenAI
-from ..utils.rag_memory import rag_memory
-from ..configuracoes.config import API_KEY, TOKENIZER_ENCODING, DEFAULT_TOP_K, DEFAULT_SIMILARITY_THRESHOLD
-
-client = OpenAI(api_key=API_KEY)
-tokenizador = tiktoken.get_encoding(TOKENIZER_ENCODING)
+from ..utils.rag_memory import get_rag_memory, get_tokenizador
+from ..configuracoes.config import DEFAULT_TOP_K, DEFAULT_SIMILARITY_THRESHOLD
 
 
 @tool
@@ -17,6 +13,7 @@ def faiss_context_qa(pergunta: str, top_n: int = DEFAULT_TOP_K, limiar_similarid
     - Não use isoladamente para responder métricas de negócio; combine com DB.
     - Se índice estiver vazio ou nenhum chunk passar o limiar, retorna vazio.
     """
+    rag_memory = get_rag_memory()
     if rag_memory.index.ntotal == 0:
         return ""
     query_emb = rag_memory.embed_text(pergunta).reshape(1, -1)
@@ -48,6 +45,7 @@ def faiss_condicional_qa(pergunta: str, top_n: int = DEFAULT_TOP_K, limiar_simil
     - `mostrar_chunks=True` exibe inspeção com similaridade e preview.
     - Não é indicado para perguntas estritamente numéricas de banco.
     """
+    rag_memory = get_rag_memory()
     query_emb = rag_memory.embed_text(pergunta).reshape(1, -1)
     if rag_memory.index.ntotal == 0:
         return "Índice FAISS vazio. Use 'rag_url_resposta' ou 'rag_url_resposta_vetorial' para popular o índice."
@@ -62,6 +60,7 @@ def faiss_condicional_qa(pergunta: str, top_n: int = DEFAULT_TOP_K, limiar_simil
             continue
         similaridade = 1 / (1 + dist)
         chunk = rag_memory.meta[i]
+        tokenizador = get_tokenizador()
         info_chunk = f"Chunk {i}: {chunk[:100]}... Tokens: {len(tokenizador.encode(chunk))} Hash: {hash(chunk)} Similaridade: {similaridade:.2f}"
         
         if similaridade >= limiar_similaridade:

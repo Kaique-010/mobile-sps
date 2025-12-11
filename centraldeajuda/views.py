@@ -16,7 +16,7 @@ class CentralListView(DBSlugMixin, ListView):
     template_name = "centraldeajuda/lista.html"
 
     def get_queryset(self):
-        db_alias = get_db_from_slug('save1') or 'savexml1'
+        db_alias = get_db_from_slug('savexml1') or 'save1'
         banco = self.request.session.get("empresa_id")
         usuario_obj = None
         try:
@@ -100,12 +100,12 @@ class CentralListView(DBSlugMixin, ListView):
         return ctx
 
 
-class CentralDetailView(LoginRequiredMixin, DBSlugMixin, DetailView):
+class CentralDetailView(DBSlugMixin, DetailView):
     model = CentralDeAjuda
     template_name = "centraldeajuda/detalhe.html"
 
     def get_queryset(self):
-        db_alias = get_db_from_slug('save1') or 'savexml1'
+        db_alias = get_db_from_slug('savexml1') or 'save1'
         banco = self.request.session.get("empresa_id")
         return CentralDeAjuda.objects.using(db_alias).filter(cent_empr=banco)
 
@@ -118,7 +118,7 @@ class CentralDetailView(LoginRequiredMixin, DBSlugMixin, DetailView):
         return ctx
 
 
-class CentralCreateView(LoginRequiredMixin, RoleRequiredMixin, DBSlugMixin, CreateView):
+class CentralCreateView(RoleRequiredMixin, DBSlugMixin, CreateView):
     model = CentralDeAjuda
     form_class = CentralDeAjudaForm
     template_name = "centraldeajuda/form.html"
@@ -129,7 +129,7 @@ class CentralCreateView(LoginRequiredMixin, RoleRequiredMixin, DBSlugMixin, Crea
 
     def form_valid(self, form):
         form.instance.cent_empr = self.request.session.get("empresa_id")
-        banco = get_db_from_slug('save1') or 'savexml1'
+        banco = get_db_from_slug('savexml1') or 'save1'
         usuario_obj = None
         try:
             usuario_id = (
@@ -168,7 +168,7 @@ class CentralCreateView(LoginRequiredMixin, RoleRequiredMixin, DBSlugMixin, Crea
         return super().form_valid(form)
 
 
-class CentralUpdateView(LoginRequiredMixin, RoleRequiredMixin, DBSlugMixin, UpdateView):
+class CentralUpdateView(RoleRequiredMixin, DBSlugMixin, UpdateView):
     model = CentralDeAjuda
     form_class = CentralDeAjudaForm
     template_name = "centraldeajuda/form.html"
@@ -178,12 +178,12 @@ class CentralUpdateView(LoginRequiredMixin, RoleRequiredMixin, DBSlugMixin, Upda
         return reverse_lazy("central_lista", kwargs={"slug": self.slug})
 
     def get_queryset(self):
-        db_alias = get_db_from_slug('save1') or 'savexml1'
+        db_alias = get_db_from_slug('savexml1') or 'save1'
         banco = self.request.session.get("empresa_id")
         return CentralDeAjuda.objects.using(db_alias).filter(cent_empr=banco)
 
     def form_valid(self, form):
-        banco = get_db_from_slug('save1') or 'savexml1'
+        banco = get_db_from_slug('savexml1') or 'save1'
         obj = form.save(commit=False)
         obj.save(using=banco)
         return super().form_valid(form)

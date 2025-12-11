@@ -4,8 +4,8 @@ import tiktoken
 from openai import OpenAI
 from ..configuracoes.config import API_KEY, CAMINHO_FAISS, CAMINHO_META, EMBED_DIM, EMBEDDING_MODEL, TOKENIZER_ENCODING, MAX_TOKENS_PER_CHUNK
 
-client = OpenAI(api_key=API_KEY)
-tokenizador = tiktoken.get_encoding(TOKENIZER_ENCODING)
+_client = None
+_tokenizador = None
 
 class RAGMemory:
     def __init__(self, embed_dim=EMBED_DIM):
@@ -36,10 +36,12 @@ class RAGMemory:
         self.ids_set = set(hash(text) for text in self.meta)
 
     def embed_text(self, texto: str):
+        client = get_client()
         resp = client.embeddings.create(model=EMBEDDING_MODEL, input=texto)
         return np.array(resp.data[0].embedding, dtype="float32")
 
     def chunk_text(self, texto: str, max_tokens=MAX_TOKENS_PER_CHUNK):
+        tokenizador = get_tokenizador()
         tokens = tokenizador.encode(texto)
         chunks = []
         for i in range(0, len(tokens), max_tokens):
@@ -55,7 +57,7 @@ class RAGMemory:
                 novos_chunks.append(t)
                 self.ids_set.add(h)
         if novos_chunks:
-            # Embeddings em batch para reduzir latência
+            client = get_client()
             resp = client.embeddings.create(model=EMBEDDING_MODEL, input=novos_chunks)
             embeddings = [np.array(item.embedding, dtype="float32") for item in resp.data]
             self.index.add(np.array(embeddings))
@@ -69,7 +71,7 @@ class RAGMemory:
             pickle.dump(self.meta, f)
 
     def _rebuild_from_meta(self):
-        # Re-embeddings em batch e reconstrução do índice
+        client = get_client()
         resp = client.embeddings.create(model=EMBEDDING_MODEL, input=self.meta)
         embeddings = [np.array(item.embedding, dtype="float32") for item in resp.data]
         self.index.reset()
@@ -89,4 +91,21 @@ class RAGMemory:
                 resultados.append(self.meta[i])
         return resultados
 
-rag_memory = RAGMemory()
+def get_client():
+    global _client
+    if _client is None:
+        _client = OpenAI(api_key=API_KEY)
+    return _client
+
+def get_tokenizador():
+    global _tokenizador
+    if _tokenizador is None:
+        _tokenizador = tiktoken.get_encoding(TOKENIZER_ENCODING)
+    return _tokenizador
+
+_rag_memory = None
+def get_rag_memory():
+    global _rag_memory
+    if _rag_memory is None:
+        _rag_memory = RAGMemory()
+    return _rag_memory

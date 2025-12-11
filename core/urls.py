@@ -24,6 +24,11 @@ urlpatterns = [
     path("web/", include(web_router)),
 ]
 
+# Branding do Admin
+admin.site.site_header = "Mobile SPS Admin"
+admin.site.site_title = "Mobile SPS"
+admin.site.index_title = "Painel Administrativo"
+
 # Custom error handlers
 handler400 = 'core.views.bad_request'
 

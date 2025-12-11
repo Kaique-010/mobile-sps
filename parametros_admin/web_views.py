@@ -32,7 +32,7 @@ def _resolve_empresa_filial(request):
 
 
 class ModulosListView(ModuloRequeridoMixin, TemplateView):
-    modulo_requerido = 'parametros_admin'
+  
     template_name = 'ParametrosAdmin/modulos_list.html'
 
     def get_context_data(self, **kwargs):
@@ -69,7 +69,7 @@ class ModulosListView(ModuloRequeridoMixin, TemplateView):
 
 
 class ModuloToggleView(ModuloRequeridoMixin, View):
-    modulo_requerido = 'parametros_admin'
+  
 
     def post(self, request, slug, modulo_slug):
         banco = get_licenca_db_config(request)
@@ -112,7 +112,7 @@ class ModuloToggleView(ModuloRequeridoMixin, View):
         return redirect(reverse('parametros_admin_modulos', kwargs={'slug': slug}))
 
 class ModulosSyncView(ModuloRequeridoMixin, View):
-    modulo_requerido = 'parametros_admin'
+  
 
     def post(self, request, slug):
         banco = get_licenca_db_config(request)

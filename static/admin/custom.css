@@ -1,0 +1,36 @@
+:root {
+  --admin-brand: #083351;
+  --admin-accent: #364153;
+}
+
+#header {
+  background-color: var(--admin-brand);
+}
+
+.breadcrumbs {
+  background-color: var(--admin-accent) !important;
+}
+
+.module h2,
+.module caption {
+  background-color: var(--admin-accent) !important;
+  color: #fff !important;
+}
+
+#branding #site-name a {
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.module h2,
+.module caption {
+  color: var(--admin-brand);
+}
+
+.button,
+input[type='submit'],
+.submit-row input {
+  background-color: var(--admin-accent);
+  border-color: var(--admin-accent);
+}

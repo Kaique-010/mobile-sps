@@ -381,9 +381,23 @@ def selecionar_empresa(request):
         # garantir que sessão foi modificada e persistida imediatamente
         request.session.modified = True
         try:
-            request.session.save()
+            saved = False
+            for _ in range(2):
+                try:
+                    request.session.save()
+                    saved = True
+                    break
+                except RuntimeError as e:
+                    if "session was deleted" in str(e) or "session was deleted before the request completed" in str(e):
+                        try:
+                            request.session.cycle_key()
+                        except Exception:
+                            pass
+                        continue
+                    raise
+            if not saved:
+                logger.exception("[selecionar_empresa] falha ao salvar session")
         except Exception as e:
-            # log detalhado se gravar falhar
             logger.exception("[selecionar_empresa] falha ao salvar session: %s", e)
 
         logger.info("[selecionar_empresa] Sessão atualizada OK: emp=%s (%s) fil=%s (%s) session_snapshot=%s",
@@ -588,8 +602,8 @@ def home_redirect_legacy(request, slug):
             docu = request.session.get('docu')
             expected = None
             if docu:
-                from core.licenca_context import LICENCAS_MAP
-                expected = next((x['slug'] for x in LICENCAS_MAP if x.get('cnpj') == docu), None)
+                from core.licenca_context import get_licencas_map
+                expected = next((x['slug'] for x in get_licencas_map() if x.get('cnpj') == docu), None)
             if expected and expected != slug:
                 emp = request.session.get('empresa_id')
                 fil = request.session.get('filial_id')
@@ -617,7 +631,22 @@ def selecionar_empresa_redirect(request, empresa, filial):
         request.session['filial_id'] = int(filial)
         request.session.modified = True
         try:
-            request.session.save()
+            saved = False
+            for _ in range(2):
+                try:
+                    request.session.save()
+                    saved = True
+                    break
+                except RuntimeError as e:
+                    if "session was deleted" in str(e) or "session was deleted before the request completed" in str(e):
+                        try:
+                            request.session.cycle_key()
+                        except Exception:
+                            pass
+                        continue
+                    raise
+            if not saved:
+                logger.exception("[selecionar_empresa_redirect] falha ao salvar sessão")
         except Exception:
             logger.exception("[selecionar_empresa_redirect] falha ao salvar sessão")
     except Exception:
@@ -632,7 +661,22 @@ def selecionar_empresa_redirect_slug(request, slug, empresa, filial):
         request.session['filial_id'] = int(filial)
         request.session.modified = True
         try:
-            request.session.save()
+            saved = False
+            for _ in range(2):
+                try:
+                    request.session.save()
+                    saved = True
+                    break
+                except RuntimeError as e:
+                    if "session was deleted" in str(e) or "session was deleted before the request completed" in str(e):
+                        try:
+                            request.session.cycle_key()
+                        except Exception:
+                            pass
+                        continue
+                    raise
+            if not saved:
+                logger.exception("[selecionar_empresa_redirect_slug] falha ao salvar sessão")
         except Exception:
             logger.exception("[selecionar_empresa_redirect_slug] falha ao salvar sessão")
     except Exception:

@@ -3,7 +3,7 @@ import time
 from django.db import connections
 from django.conf import settings
 from decouple import config
-from core.licenca_context import LICENCAS_MAP
+from core.licenca_context import get_licencas_map
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +14,7 @@ def preload_database_connections():
     
     loaded_connections = 0
     
-    for licenca in LICENCAS_MAP:
+    for licenca in get_licencas_map():
         try:
             slug = licenca["slug"]
             
@@ -24,8 +24,8 @@ def preload_database_connections():
                 
             # Configurar conexão
             prefixo = slug.upper()
-            db_user = config(f"{prefixo}_DB_USER", default=None)
-            db_password = config(f"{prefixo}_DB_PASSWORD", default=None)
+            db_user = licenca.get("db_user") or config(f"{prefixo}_DB_USER", default=None)
+            db_password = licenca.get("db_password") or config(f"{prefixo}_DB_PASSWORD", default=None)
             
             if not db_user or not db_password:
                 logger.warning(f"⚠️  Credenciais não encontradas para {slug}")

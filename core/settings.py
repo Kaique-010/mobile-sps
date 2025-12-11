@@ -126,6 +126,7 @@ INSTALLED_APPS = [
     'importador',
     'centraldeajuda',
     'osexterna',
+    'licencas_web',
 ]
 # Middleware
 MIDDLEWARE = [
@@ -202,10 +203,16 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 
 AUTHENTICATION_BACKENDS = [
-    'Licencas.backends.UserBackend', 
+    'Licencas.backends.UserBackend',
+    'django.contrib.auth.backends.ModelBackend',
 ]
 
 AUTH_USER_MODEL = 'Licencas.Usuarios'
+
+# URLs de autenticação para redirecionar corretamente páginas protegidas (LoginRequired)
+LOGIN_URL = '/web/login/'
+LOGIN_REDIRECT_URL = '/web/home/'
+LOGOUT_REDIRECT_URL = '/web/login/'
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -316,17 +323,6 @@ LOGGING = {
             'level': 'ERROR' if not DEBUG else 'WARNING',  # Reduce server logs
             'propagate': False,
         },
-        'performance': {
-            'handlers': ['console'],
-            'level': 'WARNING' if not DEBUG else 'INFO',  # Only slow requests in production
-            'propagate': False,
-        },
-
-        'core.utils': {
-            'handlers': ['console'],
-            'level': 'ERROR' if not DEBUG else 'WARNING',  # Reduce connection logs
-            'propagate': False,
-        },
         'django.request': {
             'handlers': ['console'],  # Removido 'file'
             'level': 'ERROR',
@@ -334,7 +330,7 @@ LOGGING = {
         },
         'django.db.backends': {
             'handlers': ['console'],
-            'level': 'DEBUG' if DEBUG else 'INFO',
+            'level': 'INFO',
             'propagate': False,
         },
         'Orcamentos': {
@@ -344,7 +340,7 @@ LOGGING = {
         },
         'Entidades': {
             'handlers': ['console'],
-            'level': 'DEBUG' if DEBUG else 'INFO',
+            'level': 'DEBUG' if DEBUG else 'INFO',  
             'propagate': False,
         },
         'Produtos': {
@@ -358,24 +354,6 @@ LOGGING = {
             'propagate': False,
         },
         'Licencas': {
-            'handlers': ['console'],
-            'level': 'DEBUG' if DEBUG else 'WARNING',
-            'propagate': False,
-            'formatter': 'verbose',
-        },
-        'core.views': {
-            'handlers': ['console'],
-            'level': 'DEBUG' if DEBUG else 'WARNING',
-            'propagate': False,
-            'formatter': 'verbose',
-        },
-        'core.middleware': {
-            'handlers': ['console'],
-            'level': 'DEBUG' if DEBUG else 'WARNING',
-            'propagate': False,
-            'formatter': 'verbose',
-        },
-        'licenca.middleware': {
             'handlers': ['console'],
             'level': 'DEBUG' if DEBUG else 'WARNING',
             'propagate': False,
@@ -411,15 +389,15 @@ LOGGING = {
             'propagate': False,
             'formatter': 'verbose',
         },
-        'performance': {
-            'handlers': ['console'],
-            'level': 'DEBUG' if DEBUG else 'WARNING',
-            'propagate': False,
-            'formatter': 'verbose',
-        },
         'ControleDeVisitas': {
             'handlers': ['console'],
             'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+            'formatter': 'verbose',
+        },
+        'core': {
+            'handlers': ['console'],
+            'level': 'WARNING',
             'propagate': False,
             'formatter': 'verbose',
         },
@@ -427,6 +405,37 @@ LOGGING = {
 
 
     },
+}
+
+# Desabilitar migrações para apps legados (tabelas já existem)
+# Mantém apenas 'licencas_web' com migrações ativas
+MIGRATION_MODULES = {
+    'CaixaDiario': None,
+    'Entidades': None,
+    'Entradas_Estoque': None,
+    'EnvioCobranca': None,
+    'Licencas': None,
+    'O_S': None,
+    'OrdemProducao': None,
+    'OrdemdeServico': None,
+    'Pedidos': None,
+    'Produtos': None,
+    'Saidas_Estoque': None,
+    'Sdk_recebimentos': None,
+    'SpsComissoes': None,
+    'auditoria': None,
+    'centraldeajuda': None,
+    'coletaestoque': None,
+    'contas_a_pagar': None,
+    'contas_a_receber': None,
+    'contratos': None,
+    'controledevisitas': None,
+    'dashboards': None,
+    'implantacao': None,
+    'listacasamento': None,
+    'notificacoes': None,
+    'onboarding': None,
+    'parametros_admin': None,
 }
 
 # Configurações de E-mail

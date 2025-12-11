@@ -2,7 +2,7 @@ import logging
 import time
 from django.core.cache import cache
 from django.db import connections
-from core.licenca_context import LICENCAS_MAP
+from core.licenca_context import get_licencas_map
 from core.utils import get_db_from_slug
 
 logger = logging.getLogger(__name__)
@@ -14,7 +14,7 @@ def warm_modules_cache():
     
     warmed_count = 0
     
-    for licenca in LICENCAS_MAP:
+    for licenca in get_licencas_map():
         try:
             slug = licenca["slug"]
             

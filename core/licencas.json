@@ -8,31 +8,13 @@
     "modulos": []
   },
   {
-    "slug": "save1",
+    "slug": "savexml1",
     "cnpj": "13446907000120",
     "db_name": "savexml1",
     "db_host": "base.rtalmeida.com.br",
     "db_port": "5432",
     "modulos": []
   },
-
-  {
-    "slug": "casaealma",
-    "cnpj": "43131832000150",
-    "db_name": "savexml1014",
-    "db_host": "base.rtalmeida.com.br",
-    "db_port": "5432",
-    "modulos": []
-  },
-  {
-    "slug": "operario",
-    "cnpj": "75603316000177",
-    "db_name": "savexml894",
-    "db_host": "base.rtalmeida.com.br",
-    "db_port": "5432",
-    "modulos": []
-  },
-
   {
     "slug": "itajara",
     "cnpj": "78071149000159",
@@ -69,21 +51,6 @@
     "slug": "casaas",
     "cnpj": "43131832000151",
     "db_name": "casaas",
-    "db_host": "localhost",
-    "db_port": "5432"
-  },
-
-  {
-    "slug": "alma",
-    "cnpj": "99999999999999",
-    "db_name": "alma",
-    "db_host": "localhost",
-    "db_port": "5432"
-  },
-  {
-    "slug": "ola",
-    "cnpj": "00000000000000",
-    "db_name": "ola",
     "db_host": "localhost",
     "db_port": "5432"
   },

@@ -1,4 +1,7 @@
 from django.apps import AppConfig
+import os
+import sys
+import logging
 
 
 class ParametrosAdminConfig(AppConfig):
@@ -7,22 +10,23 @@ class ParametrosAdminConfig(AppConfig):
     verbose_name = 'Parâmetros Administrativos'
     
     def ready(self):
+        logger = logging.getLogger(__name__)
+        try:
+            if os.environ.get('DISABLE_PARAM_ADMIN_READY') == '1':
+                return
+            mgmt_cmds = {'makemigrations', 'migrate', 'collectstatic', 'shell', 'test'}
+            if any(cmd in sys.argv for cmd in mgmt_cmds):
+                return
+            if os.environ.get('RUN_MAIN') != 'true' and 'runserver' in sys.argv:
+                return
+        except Exception:
+            pass
+        if getattr(self, '_synced_once', False):
+            return
+        self._synced_once = True
         try:
             from .models import Modulo
-            # Sincroniza no banco padrão
-            Modulo.sync_installed_apps(force=True)
-            # Sincroniza para todas as licenças conhecidas
-            try:
-                from core.licenca_context import LICENCAS_MAP
-                from core.dbtools import get_db_from_slug
-                for lic in LICENCAS_MAP:
-                    slug = lic.get('slug')
-                    try:
-                        alias = get_db_from_slug(slug) or 'default'
-                        Modulo.sync_installed_apps(alias=alias, force=True)
-                    except Exception:
-                        continue
-            except Exception:
-                pass
+            Modulo.sync_installed_apps(alias='default', force=False)
+            logger.info('parametros_admin: módulos sincronizados no alias default')
         except Exception:
             pass

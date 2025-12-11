@@ -8,6 +8,8 @@ from core.middleware import get_licenca_slug
 import threading
 import logging
 import json
+import sys
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +55,8 @@ class AuditoriaSignalMiddleware:
 
 @receiver(pre_save)
 def capturar_dados_antes_salvar(sender, instance, **kwargs):
-    """Captura dados antes de salvar para detectar alterações"""
+    if _skip_signals():
+        return
     # Ignorar o próprio modelo de auditoria
     if sender == LogAcao:
         return
@@ -75,7 +78,8 @@ def capturar_dados_antes_salvar(sender, instance, **kwargs):
 
 @receiver(post_save)
 def log_criacao_atualizacao(sender, instance, created, **kwargs):
-    """Registra logs de criação e atualização"""
+    if _skip_signals():
+        return
     # Ignorar o próprio modelo de auditoria
     if sender == LogAcao:
         return
@@ -132,7 +136,7 @@ def log_criacao_atualizacao(sender, instance, created, **kwargs):
             licenca=licenca_slug
         )
 
-        logger.info(f'Log signal criado: {tipo_acao} {sender.__name__} ID {instance.pk}')
+        pass
         
     except Exception as e:
         logger.error(f'Erro ao criar log via signal: {str(e)}')
@@ -140,7 +144,8 @@ def log_criacao_atualizacao(sender, instance, created, **kwargs):
 
 @receiver(post_delete)
 def log_exclusao(sender, instance, **kwargs):
-    """Registra logs de exclusão"""
+    if _skip_signals():
+        return
     # Ignorar o próprio modelo de auditoria
     if sender == LogAcao:
         return
@@ -151,14 +156,12 @@ def log_exclusao(sender, instance, **kwargs):
         
         # Se não há usuário ou requisição, pode ser uma operação interna
         if not user or not request:
-            logger.debug(f'Signal de exclusão ignorado - sem contexto para {sender.__name__} ID {instance.pk}')
             return
         
         # Obter licença
         licenca_slug = get_licenca_slug()
         db_alias = getattr(getattr(instance, '_state', None), 'db', None) or licenca_slug or 'default'
         if not licenca_slug:
-            logger.debug(f'Signal de exclusão ignorado - sem licença para {sender.__name__} ID {instance.pk}')
             return
         
         dados_antes = model_to_dict(instance)
@@ -187,7 +190,7 @@ def log_exclusao(sender, instance, **kwargs):
             licenca=licenca_slug
         )
 
-        logger.info(f'Log signal de exclusão criado: {sender.__name__} ID {instance.pk}')
+        pass
         
     except Exception as e:
         logger.error(f'Erro ao criar log de exclusão via signal: {str(e)}')
@@ -223,3 +226,10 @@ def comparar_dados_signal(dados_antes, dados_depois):
             }
     
     return alteracoes if alteracoes else None
+def _skip_signals():
+    cmds = {'makemigrations', 'migrate', 'collectstatic', 'loaddata', 'test'}
+    if any(cmd in sys.argv for cmd in cmds):
+        return True
+    if os.environ.get('DISABLE_AUDIT_SIGNALS') == '1':
+        return True
+    return False

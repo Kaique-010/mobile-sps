@@ -61,7 +61,6 @@ class OsUpdateView(UpdateView):
         ).order_by("serv_sequ")
         servicos_initial = [
             {
-                "serv_prod": s.serv_prod,
                 "serv_quan": s.serv_quan,
                 "serv_valo_unit": s.serv_valo_unit,
                 "serv_desc": s.serv_desc,
@@ -78,7 +77,7 @@ class OsUpdateView(UpdateView):
                 for prod in produtos
             }
         servicos_display = [
-            prod_map.get(item["serv_prod"], item["serv_prod"]) for item in servicos_initial
+            prod_map.get(item["serv_desc"], item["serv_desc"]) for item in servicos_initial
         ]
         for i, item in enumerate(servicos_initial):
             item["display_prod_text"] = servicos_display[i]

@@ -35,7 +35,7 @@ class TitulosreceberViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
     }
     search_fields = ['titu_titu', 'titu_clie', 'titu_aber']  
     ordering_fields = ['titu_venc', 'titu_valo']
-    ordering = ['titu_venc']
+    ordering = ['-titu_venc']
 
     
     def get_serializer_context(self):
@@ -51,7 +51,7 @@ class TitulosreceberViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
             'titu_form_reci','titu_aber'
         )
         queryset = queryset.filter(
-            (models.Q(titu_emis__isnull=True) | models.Q(titu_emis__gte=date(1900,1,1))),
+            (models.Q(titu_emis__isnull=True) | models.Q(titu_emis__gte=date(2020,1,1))),
             (models.Q(titu_venc__isnull=True) | models.Q(titu_venc__gte=date(1900,1,1))),
         )
 

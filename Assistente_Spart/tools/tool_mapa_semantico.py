@@ -6,7 +6,7 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from sklearn.metrics.pairwise import cosine_similarity
 from langchain_core.tools import tool
-from ..utils.rag_memory import rag_memory
+from ..utils.rag_memory import get_rag_memory
 from openai import OpenAI
 from ..configuracoes.config import API_KEY
 from ..utils.sqlite_manuais import buscar_manual_por_id
@@ -25,6 +25,7 @@ def plotar_mapa_semantico(pergunta: str = None, metodo: str = "pca", limite: int
     print("[INFO] Gerando mapa semântico com dados do SQLite...")
 
     # === 1. Extrai embeddings do FAISS ===
+    rag_memory = get_rag_memory()
     vetores = rag_memory.index.reconstruct_n(0, min(limite, rag_memory.index.ntotal))
     vetores = np.array(vetores)
     metas = rag_memory.meta[:len(vetores)]

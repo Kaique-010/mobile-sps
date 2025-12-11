@@ -1,4 +1,5 @@
 from rest_framework.viewsets import ModelViewSet
+from rest_framework.views import APIView
 from rest_framework import status, filters
 from rest_framework.response import Response
 from django.http import HttpResponse
@@ -134,6 +135,8 @@ class OsViewSet(BaseMultiDBModelViewSet):
         banco = self.get_banco()
         ultimo = Os.objects.using(banco).filter(os_empr=empre, os_fili=fili).aggregate(Max('os_os'))['os_os__max']
         return (ultimo or 0) + 1
+    
+    
 
     def create(self, request, *args, **kwargs):
         banco = self.get_banco()
@@ -203,53 +206,176 @@ class OsViewSet(BaseMultiDBModelViewSet):
     
     @action(detail=True, methods=['get'])
     def imprimir(self, request, pk=None, slug=None):
+        """
+        Endpoint para imprimir uma Ordem de Serviço em PDF.
+        
+        URL: /api/ordem-servico/{id}/imprimir/
+        Método: GET
+        
+        Returns:
+            HttpResponse com PDF inline (visualização no navegador)
+        """
+        # ===============================================================
+        # 1. BUSCA DADOS DO BANCO
+        # ===============================================================
+        
+        # Importa models necessários
         from Entidades.models import Entidades
         from Licencas.models import Filiais
+        from ..models import PecasOs, ServicosOs, OsHora
+        
+        # Obtém nome do banco (multi-tenant)
         banco = self.get_banco()
-        os = self.get_object()  
+        
+        # Obtém a Ordem de Serviço específica
+        os = self.get_object()
 
-        cliente = Entidades.objects.using(banco).get(enti_clie=os.os_clie)
-        filial = Filiais.objects.using(banco).filter(empr_empr=os.os_empr, empr_codi=os.os_fili).first()
+        # ---------------------------------------------------------------
+        # Busca entidades relacionadas
+        # ---------------------------------------------------------------
+        
+        # Cliente da OS
+        cliente = Entidades.objects.using(banco).filter(
+            enti_clie=os.os_clie
+        ).first()
+        
+        # Filial/Empresa que está executando
+        filial = Filiais.objects.using(banco).filter(
+            empr_empr=os.os_empr,
+            empr_codi=os.os_fili
+        ).first()
+        
+        # Solicitante (quem pediu o serviço)
+        solicitante = Entidades.objects.using(banco).filter(
+            enti_clie=os.os_clie
+        ).first()
+        
+        # Responsável em campo (quem executou)
+        responsavel_campo = None
+        if getattr(os, 'os_resp', None):
+            responsavel_campo = Entidades.objects.using(banco).filter(
+                enti_clie=os.os_resp
+            ).first()
+
+        # ---------------------------------------------------------------
+        # Busca itens relacionados
+        # ---------------------------------------------------------------
+        
+        # Peças utilizadas
         pecas = PecasOs.objects.using(banco).filter(
             peca_empr=os.os_empr,
             peca_fili=os.os_fili,
             peca_os=os.os_os
         )
+        
+        # Serviços executados
         servicos = ServicosOs.objects.using(banco).filter(
             serv_empr=os.os_empr,
             serv_fili=os.os_fili,
             serv_os=os.os_os
         )
+        
+        # Horas trabalhadas (ordenadas por item)
         horas = OsHora.objects.using(banco).filter(
             os_hora_empr=os.os_empr,
             os_hora_fili=os.os_fili,
             os_hora_os=os.os_os
         ).order_by('os_hora_item')
 
-        printer = OrdemServicoPrinter(
-            filial=filial or os.os_fili,
-            documento=os.os_os,
-            cliente=cliente,
-            modelo=os,
-            itens=pecas,
-            servicos=servicos,
-            assinaturas=(lambda d: (
-                (lambda cl, op: {**d, **({"Assinatura do Cliente": cl} if cl else {}), **({"Assinatura do Operador": op} if op else {})})(
-                    (lambda v: (base64.b64encode(v.tobytes()).decode('utf-8') if isinstance(v, memoryview) else (base64.b64encode(v).decode('utf-8') if v else None)))(getattr(os, 'os_assi_clie', None)),
-                    (lambda v: (base64.b64encode(v.tobytes()).decode('utf-8') if isinstance(v, memoryview) else (base64.b64encode(v).decode('utf-8') if v else None)))(getattr(os, 'os_assi_oper', None))
-                )
-            ))(request.data.get('assinaturas', {}))
-        )
-        printer.horas = horas
-      
+        # ===============================================================
+        # 2. PROCESSA ASSINATURAS
+        # ===============================================================
         
-        pdf_bytes = printer.render()
+        def process_signature(signature_data):
+            """
+            Processa assinatura em diferentes formatos.
+            
+            Banco de dados pode retornar:
+            - memoryview (PostgreSQL bytea)
+            - bytes (SQLite blob)
+            - None (sem assinatura)
+            
+            Returns:
+                String base64 ou None
+            """
+            if not signature_data:
+                return None
+            
+            try:
+                # Se for memoryview, converte para bytes
+                if isinstance(signature_data, memoryview):
+                    return base64.b64encode(signature_data.tobytes()).decode('utf-8')
+                
+                # Se for bytes direto
+                if isinstance(signature_data, bytes):
+                    return base64.b64encode(signature_data).decode('utf-8')
+                
+                # Se já for string, retorna como está
+                if isinstance(signature_data, str):
+                    return signature_data
+            except Exception:
+                return None
+            
+            return None
+        
+        # Monta dicionário de assinaturas
+        assinaturas = {}
+        
+        # Assinatura do cliente (se existir)
+        assin_cliente = process_signature(getattr(os, 'os_assi_clie', None))
+        if assin_cliente:
+            assinaturas['Assinatura do Cliente'] = assin_cliente
+        
+        # Assinatura do operador (se existir)
+        assin_operador = process_signature(getattr(os, 'os_assi_oper', None))
+        if assin_operador:
+            assinaturas['Assinatura do Operador'] = assin_operador
+        
+        # Permite assinaturas adicionais via request (opcional)
+        if request.data.get('assinaturas'):
+            assinaturas.update(request.data.get('assinaturas', {}))
 
-        response = HttpResponse(pdf_bytes.getvalue(), content_type='application/pdf')
+        # ===============================================================
+        # 3. CRIA INSTÂNCIA DO PRINTER
+        # ===============================================================
+        
+        printer = OrdemServicoPrinter(
+            filial=filial or os.os_fili,  # Fallback para código se não achar objeto
+            documento=os.os_os,            # Número da OS
+            cliente=cliente,               # Objeto cliente
+            solicitante=solicitante,       # Quem solicitou
+            responsavel_campo=responsavel_campo,  # Quem executou
+            modelo=os,                     # Objeto principal da OS
+            itens=pecas,                   # QuerySet de peças
+            servicos=servicos,             # QuerySet de serviços
+            horas=horas,                   # QuerySet de horas
+            assinaturas=assinaturas,       # Dict de assinaturas processadas
+        )
+
+        # ===============================================================
+        # 4. GERA O PDF
+        # ===============================================================
+        
+        # Chama render() que executa toda a lógica de geração
+        pdf_buffer = printer.render()
+
+        # ===============================================================
+        # 5. RETORNA RESPOSTA HTTP
+        # ===============================================================
+        
+        # Cria resposta HTTP com o PDF
+        response = HttpResponse(
+            pdf_buffer.getvalue(),  # Obtém bytes do buffer
+            content_type='application/pdf'
+        )
+        
+        # Define visualização inline no navegador (não download)
+        # Para forçar download, use 'attachment' ao invés de 'inline'
         response['Content-Disposition'] = f'inline; filename="os_{os.os_os}.pdf"'
+        
         return response
-
-
+    
+    
 class PecasOsViewSet(BaseMultiDBModelViewSet):
     serializer_class = PecasOsSerializer
     parser_classes = [JSONParser]
@@ -853,3 +979,100 @@ class OsHoraViewSet(BaseMultiDBModelViewSet):
         except Exception as e:
             logger.error(str(e))
             return Response({"error": str(e)}, status=400)
+
+
+
+class MegaProdutosView(ModuloRequeridoMixin, APIView):
+
+    def get(self, request, *args, **kwargs):
+        banco = get_licenca_db_config('savexml960')
+        if not banco:
+            return Response({"detail": "Banco não encontrado."}, status=400)
+
+        try:
+            empresa_id = request.headers.get('X-Empresa') or request.query_params.get('empr') or request.query_params.get('prod_empr') or 1
+            filial_id = request.headers.get('X-Filial') or request.query_params.get('fili') or 1
+
+            saldo_subquery = Subquery(
+                SaldoProduto.objects.using(banco).filter(
+                    produto_codigo=OuterRef('pk'),
+                    empresa=empresa_id,
+                    filial=filial_id
+                ).values('saldo_estoque')[:1],
+                output_field=DecimalField()
+            )
+
+            preco_vista_subquery = Subquery(
+                Tabelaprecos.objects.using(banco).filter(
+                    tabe_prod=OuterRef('prod_codi'),
+                    tabe_empr=OuterRef('prod_empr')
+                ).exclude(
+                    tabe_entr__year__lt=1900
+                ).exclude(
+                    tabe_entr__year__gt=2100
+                ).values('tabe_avis')[:1],
+                output_field=DecimalField()
+            )
+
+            qs = Produtos.objects.using(banco).annotate(
+                saldo_estoque=Coalesce(saldo_subquery, V(0), output_field=DecimalField()),
+                prod_preco_vista=Coalesce(preco_vista_subquery, V(0), output_field=DecimalField()),
+            )
+
+            if empresa_id:
+                qs = qs.filter(prod_empr=empresa_id)
+
+            limit = int(request.query_params.get('limit') or 500)
+            qs = qs.order_by('prod_empr', 'prod_codi')[:limit]
+
+            data = [
+                {
+                    'prod_codi': p.prod_codi,
+                    'prod_empr': p.prod_empr,
+                    'prod_nome': p.prod_nome,
+                    'preco_vista': float(getattr(p, 'prod_preco_vista', 0) or 0),
+                    'saldo': float(getattr(p, 'saldo_estoque', 0) or 0),
+                    'marca_nome': None,
+                    'imagem_base64': None,
+                }
+                for p in qs
+            ]
+
+            return Response(data)
+        except Exception as e:
+            return Response({'detail': f'Erro interno: {str(e)}'}, status=500)
+
+
+class MegaEntidadesApiView(ModuloRequeridoMixin, APIView):
+
+
+    def get(self, request, *args, **kwargs):
+        banco = get_licenca_db_config('savexml960')
+        if not banco:
+            return Response({"detail": "Banco não encontrado."}, status=400)
+
+        try:
+            empresa_id = request.headers.get('X-Empresa') or request.query_params.get('enti_empr')
+            qs = Entidades.objects.using(banco).all()
+            if empresa_id:
+                qs = qs.filter(enti_empr=int(empresa_id))
+
+            limit = int(request.query_params.get('limit') or 500)
+            qs = qs.order_by('enti_empr', 'enti_nome')[:limit]
+
+            data = [
+                {
+                    'enti_clie': e.enti_clie,
+                    'enti_empr': e.enti_empr,
+                    'enti_nome': e.enti_nome,
+                    'enti_tipo_enti': e.enti_tipo_enti,
+                    'enti_cpf': getattr(e, 'enti_cpf', None),
+                    'enti_cnpj': getattr(e, 'enti_cnpj', None),
+                    'enti_cida': getattr(e, 'enti_cida', None),
+                }
+                for e in qs
+            ]
+
+            return Response(data)
+        except Exception as e:
+            return Response({'detail': f'Erro interno: {str(e)}'}, status=500)

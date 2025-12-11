@@ -21,7 +21,8 @@ urlpatterns = []
 
 urlpatterns += [
     path('ordens/patch/', OsViewSet.as_view({'patch': 'patch_ordem'}), name='ordens-patch'),
-    path('ordens/', OsViewSet.as_view({'get': 'list'}), name='ordens-list-compat'),
+    path('produtos/mega/', MegaProdutosView.as_view(), name='produtos-mega'),
+    path('entidades/mega/', MegaEntidadesApiView.as_view(), name='entidades-mega'),
 ]
 
 # Adiciona as rotas padrão do router após a rota explícita

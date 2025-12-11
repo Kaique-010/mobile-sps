@@ -43,7 +43,7 @@ class TitulospagarViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         banco = get_licenca_db_config(self.request)
         queryset = Titulospagar.objects.using(banco).all()
         queryset = queryset.filter(
-            (models.Q(titu_emis__isnull=True) | models.Q(titu_emis__gte=date(1900,1,1))),
+            (models.Q(titu_emis__isnull=True) | models.Q(titu_emis__gte=date(2020,1,1))),
             (models.Q(titu_venc__isnull=True) | models.Q(titu_venc__gte=date(1900,1,1))),
         )
 

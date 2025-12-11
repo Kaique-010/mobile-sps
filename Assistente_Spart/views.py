@@ -9,14 +9,15 @@ from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from openai import OpenAI
 import base64, tempfile, logging, time, json, asyncio
-from .agenteReact import agenteReact, AGENT_TOOLS, faiss_cached, pre_rotear, metricas
-from .tools.describer import gerar_descricao_tools
 from core.utils import configurar_logger_colorido
 
 configurar_logger_colorido()
 logger = logging.getLogger(__name__)
 
-descricao_tools = gerar_descricao_tools(AGENT_TOOLS)
+def _lazy_agente_refs():
+    from .agenteReact import agenteReact, AGENT_TOOLS, faiss_cached, pre_rotear, metricas
+    from .tools.describer import gerar_descricao_tools
+    return agenteReact, AGENT_TOOLS, faiss_cached, pre_rotear, metricas, gerar_descricao_tools
 
 
 class SpartView(APIView):
@@ -54,6 +55,7 @@ class SpartView(APIView):
         """Resposta padrão OTIMIZADA com pre-roteador"""
         inicio_total = time.time()
         client = OpenAI()
+        agenteReact, AGENT_TOOLS, faiss_cached, pre_rotear, metricas, gerar_descricao_tools = _lazy_agente_refs()
 
         # ======== CONTEXTO ========
         slug = get_licenca_slug()
@@ -117,7 +119,7 @@ class SpartView(APIView):
 Ela já faz o roteamento inteligente para a tool correta.""")
         
         prompt = "\n".join(prompt_parts)
-        logger.debug(f"[PROMPT] Tamanho: {len(prompt)} chars")
+        # Evitar logs debug verbosos
 
         # ======== AGENTE ========
         # ======== AGENTE ========
@@ -258,6 +260,7 @@ Ela já faz o roteamento inteligente para a tool correta.""")
         async def generate():
             client = OpenAI()
             inicio = time.time()
+            agenteReact, AGENT_TOOLS, faiss_cached, pre_rotear, metricas, gerar_descricao_tools = _lazy_agente_refs()
             
             # Contexto
             slug = get_licenca_slug()

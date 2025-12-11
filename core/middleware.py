@@ -3,7 +3,7 @@ import logging
 from threading import local
 from django.core.cache import cache
 from django.conf import settings
-from core.licenca_context import set_current_request, LICENCAS_MAP
+from core.licenca_context import set_current_request, get_licencas_map
 from core.utils import get_licenca_db_config
 
 logger = logging.getLogger("licenca.middleware")
@@ -49,7 +49,7 @@ class LicencaMiddleware:
         for prefix in ignored:
             if request.path.startswith(prefix):
                 logger.debug("IGNORED path=%s", request.path)
-                return self.get_response(request)
+                return self._safe_response(request)
 
         # -----------------------------------------------------------
         # 2. TRATAMENTO WEB / SLUG / EMPRESA / FILIAL
@@ -62,7 +62,7 @@ class LicencaMiddleware:
             # Tela de seleção de empresa NÃO deve carregar licenças
             if len(parts) >= 3 and parts[2] == "selecionar-empresa":
                 logger.debug("Tela de seleção detectada, passando direto")
-                return self.get_response(request)
+                return self._safe_response(request)
 
             slug = parts[2] if len(parts) >= 3 else None
 
@@ -70,9 +70,9 @@ class LicencaMiddleware:
                 logger.debug("WEB SLUG=%s", slug)
             else:
                 logger.warning("WEB sem slug, tentando recuperar do session.docu")
-                return self.get_response(request)
+                return self._safe_response(request)
 
-            lic = next((l for l in LICENCAS_MAP if l["slug"] == slug), None)
+            lic = next((l for l in get_licencas_map() if l["slug"] == slug), None)
             if not lic:
                 logger.error("Slug inexistente WEB slug=%s", slug)
                 from django.http import HttpResponseNotFound
@@ -101,13 +101,13 @@ class LicencaMiddleware:
                 except Exception as e:
                     logger.error("Falha ao aplicar empresa/filial WEB: %s", e)
 
-            return self.get_response(request)
+            return self._safe_response(request)
 
         # -----------------------------------------------------------
         # 3. API — SLUG DEVE EXISTIR EM /api/<slug>/...
         # -----------------------------------------------------------
         if not parts or parts[0] != "api":
-            return self.get_response(request)
+            return self._safe_response(request)
 
         if len(parts) < 2:
             logger.error("API sem slug no path=%s", request.path)
@@ -132,7 +132,7 @@ class LicencaMiddleware:
             except Exception as e:
                 return self._bad_request(f"Erro JWT: {e}")
 
-        lic = next((l for l in LICENCAS_MAP if l["slug"] == slug), None)
+        lic = next((l for l in get_licencas_map() if l["slug"] == slug), None)
         if not lic:
             return self._bad_request(f"Licença slug {slug} não encontrada.")
 
@@ -205,13 +205,39 @@ class LicencaMiddleware:
 
         set_modulos_disponiveis(mods)
         request.modulos_disponiveis = mods
-
-        logger.debug("MÓDULOS=%s", mods)
-
         total = (time.time() - start) * 1000
         logger.debug("REQ OUT path=%s time=%.2fms", request.path, total)
 
-        return self.get_response(request)
+        return self._safe_response(request)
+
+    def _safe_response(self, request):
+        try:
+            return self.get_response(request)
+        except RuntimeError as e:
+            msg = str(e)
+            try:
+                accept = request.META.get("HTTP_ACCEPT", "")
+            except Exception:
+                accept = ""
+            try:
+                path = request.path or ""
+            except Exception:
+                path = ""
+            if "session was deleted" in msg or "session was deleted before the request completed" in msg:
+                if path.startswith("/api/") or "application/json" in accept:
+                    from django.http import JsonResponse
+                    return JsonResponse({
+                        "error": "Bad Request",
+                        "code": "SESSION_INVALID",
+                        "next": "/web/selecionar-empresa/"
+                    }, status=401)
+                try:
+                    from django.shortcuts import redirect
+                    return redirect("web_login")
+                except Exception:
+                    from django.http import HttpResponseRedirect
+                    return HttpResponseRedirect("/web/login/")
+            raise
 
     def _bad_request(self, msg):
         from django.http import JsonResponse

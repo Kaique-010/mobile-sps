@@ -16,10 +16,10 @@ class ModuloAdmin(admin.ModelAdmin):
 
     def sincronizar_todas_licencas(self, request, queryset):
         try:
-            from core.licenca_context import LICENCAS_MAP
+            from core.licenca_context import get_licencas_map
             from core.dbtools import get_db_from_slug
             Modulo.sync_installed_apps(force=True)
-            for lic in LICENCAS_MAP:
+            for lic in get_licencas_map():
                 alias = get_db_from_slug(lic.get('slug')) or 'default'
                 Modulo.sync_installed_apps(alias=alias, force=True)
         except Exception:

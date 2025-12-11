@@ -8,7 +8,8 @@ from rest_framework import viewsets
 from rest_framework_simplejwt.tokens import RefreshToken
 from Entidades.models import Entidades 
 from django.db.models import Q
-from core.registry import get_licenca_db_config, LICENCAS_MAP
+from core.registry import get_licenca_db_config
+from core.licenca_context import get_licencas_map
 from django.conf import settings
 from django.db import connections
 from decouple import config
@@ -33,7 +34,9 @@ class EntidadesLoginViewSet(viewsets.ViewSet):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         # Buscar em todas as licenças disponíveis
-        for licenca in LICENCAS_MAP:
+        licencas = get_licencas_map()
+        logger.warning(f"[LOGIN ENTIDADES] inicio documento={documento} licencas_count={len(licencas)}")
+        for licenca in licencas:
             try:
                 banco_slug = licenca['slug']
                 
@@ -75,8 +78,10 @@ class EntidadesLoginViewSet(viewsets.ViewSet):
         """Configura banco dinamicamente"""
         prefixo = licenca["slug"].upper()
         try:
-            db_user = config(f"{prefixo}_DB_USER")
-            db_password = config(f"{prefixo}_DB_PASSWORD")
+            db_user = licenca.get("db_user") or config(f"{prefixo}_DB_USER", default=None)
+            db_password = licenca.get("db_password") or config(f"{prefixo}_DB_PASSWORD", default=None)
+            if not db_user or not db_password:
+                raise Exception("Credenciais ausentes para a licença")
             
             settings.DATABASES[licenca["slug"]] = {
                 'ENGINE': 'django.db.backends.postgresql',

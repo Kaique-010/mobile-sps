@@ -34,12 +34,6 @@ class AuditoriaMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
     
-   
-    def __call__(self, request):
-        if not request.path.startswith('/api/'):
-            return self.get_response(request)
-    # REMOVER ESTE RETURN DUPLICADO:
-    # return self.get_response(request)  # <- Esta linha está causando o problema
 
     def extrair_modelo_e_id_da_url(self, url):
         """Extrai o nome do modelo e ID do objeto da URL"""
@@ -191,7 +185,7 @@ class AuditoriaMiddleware:
                 if content:
                     return json.loads(content)
         except (json.JSONDecodeError, UnicodeDecodeError) as e:
-            logger.debug(f'Erro ao processar dados da resposta: {str(e)}')
+            pass
         
         return None
     #Vamos chamar o middleware apenas para as rotas da api de todos os apps, em todos os metodos http
@@ -202,12 +196,12 @@ class AuditoriaMiddleware:
         # Ignorar logs para rotas de auditoria (exceto a rota principal)
         # Ignorar logs para rotas de auditoria e notificações
         if '/auditoria/logs/' in request.path or '/notificacoes/' in request.path:
-            logger.debug(f'Ignorando log para rota: {request.path}')
+            pass
             return self.get_response(request)
 
         # Ignorar logs para endpoints de configuração que podem ser acessados sem autenticação
         if '/parametros-admin/' in request.path and request.method == 'GET':
-            logger.debug(f'Ignorando log para endpoint de configuração: {request.path}')
+            pass
             return self.get_response(request)
 
 
@@ -261,17 +255,17 @@ class AuditoriaMiddleware:
         objeto_id = None
         
         if request.method in ['PUT', 'PATCH', 'DELETE']:
-            logger.debug(f'Método {request.method} detectado, tentando capturar dados antes')
+            pass
             modelo, objeto_id = self.extrair_modelo_e_id_da_url(request.path)
-            logger.debug(f'Modelo extraído: {modelo.__name__ if modelo else None}, ID: {objeto_id}')
+            pass
             if modelo and objeto_id:
                 dados_antes = self.obter_dados_objeto(modelo, objeto_id)
                 if dados_antes:
-                    logger.debug(f'Dados antes capturados com sucesso para {modelo.__name__} ID {objeto_id}: {list(dados_antes.keys())}')
+                    pass
                 else:
                     logger.warning(f'Falha ao capturar dados antes para {modelo.__name__} ID {objeto_id}')
             else:
-                logger.debug(f'Modelo ou ID não encontrado na URL: {request.path}')
+                pass
 
         # Tentar obter os dados da requisição ANTES de processar a resposta
         data = None
@@ -311,18 +305,10 @@ class AuditoriaMiddleware:
                 licenca_slug = get_licenca_slug()
 
             # Log detalhado das informações capturadas
-            logger.debug('Informações da requisição:')
-            logger.debug(f'URL: {url}')
-            logger.debug(f'Método: {method}')
-            logger.debug(f'IP: {ip}')
-            logger.debug(f'User Agent: {user_agent}')
-            logger.debug(f'Usuário: {user}')
-            logger.debug(f'Licença: {licenca_slug}')
+            pass
 
             # Debug log inicial
-            logger.debug(f'Processando log para: {method} {url}')
-            logger.debug(f'Usuário autenticado: {user is not None}')
-            logger.debug(f'Licença encontrada: {licenca_slug}')
+            pass
 
             # Verificações detalhadas de usuário e licença
             # Permitir endpoints públicos sem autenticação
@@ -353,7 +339,7 @@ class AuditoriaMiddleware:
                 # Para atualizações, comparar dados antes e depois
                 if request.method in ['PUT', 'PATCH'] and dados_antes and dados_depois:
                     campos_alterados = self.comparar_dados(dados_antes, dados_depois)
-                    logger.debug(f'Campos alterados detectados: {list(campos_alterados.keys()) if campos_alterados else "Nenhum"}')
+                    pass
             
             # Para DELETE, usar dados_antes como dados_depois (o que foi excluído)
             elif request.method == 'DELETE' and dados_antes:
@@ -368,10 +354,7 @@ class AuditoriaMiddleware:
             empresa = path_parts[1] if len(path_parts) > 1 else None  # casaa, por exemplo
 
             # Debug dos dados que serão salvos
-            logger.debug(f'Dados que serão salvos no log:')
-            logger.debug(f'  - dados_antes: {"Sim" if dados_antes else "Não"} ({len(dados_antes) if dados_antes else 0} campos)')
-            logger.debug(f'  - dados_depois: {"Sim" if dados_depois else "Não"} ({len(dados_depois) if dados_depois else 0} campos)')
-            logger.debug(f'  - campos_alterados: {"Sim" if campos_alterados else "Não"} ({len(campos_alterados) if campos_alterados else 0} campos)')
+            pass
             
             # Converter dados para tipos serializáveis em JSON
             # Serializar objetos Python diretamente (sem json.dumps) para JSONField
@@ -403,10 +386,9 @@ class AuditoriaMiddleware:
                                     except Exception:
                                         printable = {"raw": printable}
                             printable = converter_para_json_serializavel(printable)
-                            logger.debug("\n=== Nota (pprint) ===\n" + pformat(printable, width=100, compact=False))
+                            pass
                         except Exception:
-                            pretty_json = json.dumps(converter_para_json_serializavel(base_payload), ensure_ascii=False, indent=2)
-                            logger.debug("\n=== Nota (pprint) ===\n" + pretty_json)
+                            pass
                         if isinstance(printable, dict):
                             try:
                                 def fmt_nota(p):
@@ -433,7 +415,7 @@ class AuditoriaMiddleware:
                                     if tr:
                                         linhas.append(f"Transporte: modalidade={tr.get('modalidade_frete')} placa={tr.get('placa_veiculo')} uf={tr.get('uf_veiculo')} transportadora={tr.get('transportadora')}")
                                     return "\n".join(linhas)
-                                logger.debug("\n=== Nota (chaves) ===\n" + fmt_nota(printable))
+                                pass
                             except Exception:
                                 pass
                 if '/notasfiscais/notas-fiscais/emitir/' in url and isinstance(dados_depois_serializavel, dict):
@@ -442,9 +424,9 @@ class AuditoriaMiddleware:
                         try:
                             from xml.dom import minidom
                             parsed = minidom.parseString(xml_str)
-                            logger.debug("\n=== Nota (XML) ===\n" + parsed.toprettyxml(indent="  "))
+                            pass
                         except Exception:
-                            logger.debug("\n=== Nota (XML) ===\n" + xml_str)
+                            pass
             except Exception:
                 pass
             
@@ -467,7 +449,7 @@ class AuditoriaMiddleware:
             )
 
             logger.info(f'Log criado com sucesso: {log.id} - {method} {url}')
-            logger.debug(f'Log salvo com dados_antes: {"Sim" if log.dados_antes else "Não"}')
+            pass
 
         except Exception as e:
             logger.error(f'Erro ao criar log de auditoria: {str(e)}')

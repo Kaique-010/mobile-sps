@@ -48,15 +48,14 @@ class HistoricoWorkflowViewSet(viewsets.ReadOnlyModelViewSet):
         
         # DEBUG: vamos ver quantos eventos vieram
         total_eventos = queryset.count()
-        print(f"[DEBUG] Total de eventos encontrados: {total_eventos}")
+        print(f"Total de eventos encontrados: {total_eventos}")
         
         # Agrupa eventos por OS
         for h in queryset:
             workflows[h.hist_orde].append(h)
         
-        print(f"[DEBUG] OSs únicas encontradas: {list(workflows.keys())}")
         for os, eventos in workflows.items():
-            print(f"[DEBUG] OS {os} tem {len(eventos)} eventos")
+            print(f"OS {os} tem {len(eventos)} eventos")
         
         # Processa cada OS
         from datetime import datetime, timezone

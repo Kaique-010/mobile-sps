@@ -1,4 +1,4 @@
-# core/printing/base_printer.py
+
 from io import BytesIO
 import base64
 from reportlab.platypus import Table, TableStyle, Paragraph, Image
@@ -7,8 +7,9 @@ from .pdf import PDFBuilder
 
 class BasePrinter:
     title = "Documento"
+    default_header = True
 
-    def __init__(self, filial, documento, cliente, modelo, itens=None, servicos=None, horas=None, assinaturas=None):
+    def __init__(self, filial, documento, cliente, modelo, itens=None, servicos=None, horas=None, assinaturas=None, solicitante=None, responsavel_campo=None):
         self.filial = filial
         self.documento = documento
         self.cliente = cliente
@@ -17,6 +18,8 @@ class BasePrinter:
         self.servicos = servicos or []
         self.horas = horas or []
         self.assinaturas = assinaturas or {}
+        self.solicitante = solicitante
+        self.responsavel_campo = responsavel_campo
 
     def render(self):
         buf = BytesIO()
@@ -24,18 +27,17 @@ class BasePrinter:
 
         pdf.add_title(self.title)
 
-        # Filial + número na linha superior
-        filial_nome = (
-            getattr(self.filial, "empr_nome", None)
-            or getattr(self.filial, "nome", None)
-            or str(self.filial)
-        )
-        pdf.add_label_value("Filial", filial_nome)
-        pdf.add_label_value("Documento Nº", self.documento)
+        if self.default_header:
+            filial_nome = (
+                getattr(self.filial, "empr_nome", None)
+                or getattr(self.filial, "nome", None)
+                or str(self.filial)
+            )
+            pdf.add_label_value("Filial", filial_nome)
+            pdf.add_label_value("Documento Nº", self.documento)
 
-        # Cliente
-        pdf.add_label_value("Cliente", self.cliente.enti_nome)
-        pdf.add_label_value("CNPJ/CPF", self.cliente.enti_cpf or self.cliente.enti_cnpj)
+            pdf.add_label_value("Cliente", self.cliente.enti_nome)
+            pdf.add_label_value("CNPJ/CPF", self.cliente.enti_cpf or self.cliente.enti_cnpj)
 
         self.render_body(pdf)
         self.render_signatures(pdf)
@@ -70,8 +72,8 @@ class BasePrinter:
             flowables = []
             flowables.append(Paragraph(lbl, pdf.styles['Heading3']))
             if img_buf:
-                flowables.append(Image(img_buf, width=360, height=120))
-            cell = Table([[f] for f in flowables], colWidths=[360])
+                flowables.append(Image(img_buf, width=90, height=28))
+            cell = Table([[f] for f in flowables], colWidths=[150])
             cell.setStyle(TableStyle([
                 ('VALIGN', (0,0), (-1,-1), 'TOP'),
             ]))
@@ -89,10 +91,10 @@ class BasePrinter:
             rows.append([left, right])
 
         if rows:
-            tbl = Table(rows, colWidths=[390, 390])
+            tbl = Table(rows, colWidths=[350, 350])
             tbl.setStyle(TableStyle([
                 ('GRID', (0,0), (-1,-1), 0.5, colors.black),
                 ('VALIGN', (0,0), (-1,-1), 'TOP'),
             ]))
             pdf.flow.append(tbl)
-            pdf.add_spacer(15)
+            pdf.add_spacer(6)

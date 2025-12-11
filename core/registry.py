@@ -1,4 +1,3 @@
-import json
 import os
 from pathlib import Path
 import re
@@ -7,10 +6,9 @@ from django.conf import settings
 from django.db import connections
 from core.licenca_context import get_current_request
 from core.middleware import get_licenca_slug 
+from core.licenca_context import get_licencas_map
 
-# Carrega o arquivo licencas.json
 json_path = Path(__file__).resolve().parent / 'licencas.json'
-LICENCAS_MAP = json.load(open(json_path))
 
 
 
@@ -26,17 +24,18 @@ def get_licenca_db_config(request):
     if not slug:
         return "default"  # Ou lança erro, se quiser
 
-    licenca = next((lic for lic in LICENCAS_MAP if lic["slug"] == slug), None)
+    licenca = next((lic for lic in get_licencas_map() if lic["slug"] == slug), None)
     if not licenca:
         raise Exception(f"Licença com slug '{slug}' não encontrada.")
 
     if slug in settings.DATABASES:
         return slug
 
-    # Carrega credenciais do .env
     prefixo = slug.upper()
-    db_user = config(f"{prefixo}_DB_USER")
-    db_password = config(f"{prefixo}_DB_PASSWORD")
+    db_user = licenca.get("db_user") or config(f"{prefixo}_DB_USER", default=None)
+    db_password = licenca.get("db_password") or config(f"{prefixo}_DB_PASSWORD", default=None)
+    if not db_user or not db_password:
+        raise Exception(f"Credenciais não encontradas para {slug}")
 
     settings.DATABASES[slug] = {
         'ENGINE': 'django.db.backends.postgresql',
@@ -54,6 +53,5 @@ def get_licenca_db_config(request):
 
 
 def get_modulos_por_docu(docu):
-    from core.registry import LICENCAS_MAP
-    licenca = next((x for x in LICENCAS_MAP if x['cnpj'] == docu), None)
+    licenca = next((x for x in get_licencas_map() if x['cnpj'] == docu), None)
     return licenca.get('modulos', []) if licenca else []

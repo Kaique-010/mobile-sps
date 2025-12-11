@@ -1,0 +1,18 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}Mobile SPS Admin{% endblock %}
+
+{% block branding %}
+<h1 id="site-name">
+  <a href="{% url 'admin:index' %}">
+    <img src="{% static 'logo.png' %}" alt="Mobile SPS" style="height:28px;vertical-align:middle;margin-right:8px;">
+    Mobile Web/Mobile
+
+  </a>
+</h1>
+{% endblock %}
+
+{% block extrastyle %}
+<link rel="stylesheet" href="{% static 'admin/custom.css' %}">
+{% endblock %}
