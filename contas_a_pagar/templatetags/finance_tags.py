@@ -26,3 +26,4 @@ def brl(value) -> str:
         except Exception:
             return "R$ 0,00"
     return _format_brl(val)
+

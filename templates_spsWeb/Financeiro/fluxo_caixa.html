@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load finance_tags %}
+{% load data_tags %}
 {% block content %}
 <!DOCTYPE html>
 <html>
@@ -101,7 +102,8 @@
                             <tr>
                                 <td>
                                     {{ m.mes|date:'m/Y' }}
-                                    <a href="#" class="ms-2" data-role="show-details-caixa" data-year="{{ m.mes|date:'Y' }}" data-month="{{ m.mes|date:'m' }}">
+                                    <a href="#" class="ms-2" data-role="show-details-caixa"
+                                        data-year="{{ m.mes|date:'Y' }}" data-month="{{ m.mes|date:'m' }}">
                                         <i class="bi bi-plus-circle"></i>
                                     </a>
                                 </td>
@@ -135,7 +137,10 @@
                             <table class="table table-sm">
                                 <thead>
                                     <tr>
-                                        <th>Título</th><th>Parc</th><th>Data</th><th>Valor</th>
+                                        <th>Título</th>
+                                        <th>Parc</th>
+                                        <th>Data</th>
+                                        <th>Valor</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tbl-recebimentos-caixa"></tbody>
@@ -146,7 +151,10 @@
                             <table class="table table-sm">
                                 <thead>
                                     <tr>
-                                        <th>Título</th><th>Parc</th><th>Data</th><th>Valor</th>
+                                        <th>Título</th>
+                                        <th>Parc</th>
+                                        <th>Data</th>
+                                        <th>Valor</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tbl-pagamentos-caixa"></tbody>
@@ -162,31 +170,37 @@
     </div>
 
     <script>
-    (function(){
-        const modalEl = document.getElementById('modalDetalhesCaixa');
-        const modal = typeof bootstrap !== 'undefined' ? new bootstrap.Modal(modalEl) : null;
-        document.addEventListener('click', async function(e){
-            const link = e.target.closest('[data-role="show-details-caixa"]');
-            if(!link) return;
-            e.preventDefault();
-            const year = link.getAttribute('data-year');
-            const month = link.getAttribute('data-month');
-            const url = `/web/${encodeURIComponent('{{ slug }}')}/fluxo-de-caixa/detalhes/caixa/${year}/${month}/`;
-            try {
-                const res = await fetch(url, { credentials: 'same-origin' });
-                if(!res.ok) throw new Error(`HTTP ${res.status}`);
-                const data = await res.json();
-                const recTbody = document.getElementById('tbl-recebimentos-caixa');
-                const pagTbody = document.getElementById('tbl-pagamentos-caixa');
-                recTbody.innerHTML = (data.recebimentos || []).map(i => `<tr><td>${i.titulo}</td><td>${i.parcela}</td><td>${i.data_pagamento||''}</td><td>${Number(i.valor).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td></tr>`).join('');
-                pagTbody.innerHTML = (data.pagamentos || []).map(i => `<tr><td>${i.titulo}</td><td>${i.parcela}</td><td>${i.data_pagamento||''}</td><td>${Number(i.valor).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td></tr>`).join('');
-                if(modal) modal.show();
-            } catch(err) {
-                console.error('Falha ao carregar detalhes de caixa:', err, url);
-                if(window.showToast) window.showToast('Não foi possível carregar movimentos do mês', { variant: 'danger', delay: 2500 });
-            }
-        });
-    })();
+        function formatDateBR(dateStr) {
+            if (!dateStr) return "";
+            const parts = dateStr.split("T")[0].split("-");
+            const [y, m, d] = parts;
+            return `${d}/${m}/${y}`;
+        }
+        (function () {
+            const modalEl = document.getElementById('modalDetalhesCaixa');
+            const modal = typeof bootstrap !== 'undefined' ? new bootstrap.Modal(modalEl) : null;
+            document.addEventListener('click', async function (e) {
+                const link = e.target.closest('[data-role="show-details-caixa"]');
+                if (!link) return;
+                e.preventDefault();
+                const year = link.getAttribute('data-year');
+                const month = link.getAttribute('data-month');
+                const url = `/web/${encodeURIComponent('{{ slug }}')}/fluxo-de-caixa/detalhes/caixa/${year}/${month}/`;
+                try {
+                    const res = await fetch(url, { credentials: 'same-origin' });
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    const data = await res.json();
+                    const recTbody = document.getElementById('tbl-recebimentos-caixa');
+                    const pagTbody = document.getElementById('tbl-pagamentos-caixa');
+                    recTbody.innerHTML = (data.recebimentos || []).map(i => `<tr><td>${i.titulo}</td><td>${i.parcela}</td><td>${formatDateBR(i.data_pagamento || '')}</td><td>${Number(i.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td></tr>`).join('');
+                    pagTbody.innerHTML = (data.pagamentos || []).map(i => `<tr><td>${i.titulo}</td><td>${i.parcela}</td><td>${formatDateBR(i.data_pagamento || '')}</td><td>${Number(i.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td></tr>`).join('');
+                    if (modal) modal.show();
+                } catch (err) {
+                    console.error('Falha ao carregar detalhes de caixa:', err, url);
+                    if (window.showToast) window.showToast('Não foi possível carregar movimentos do mês', { variant: 'danger', delay: 2500 });
+                }
+            });
+        })();
     </script>
 </body>
 
