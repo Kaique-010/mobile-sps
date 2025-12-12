@@ -74,8 +74,8 @@ class OsViewSet(BaseMultiDBModelViewSet):
     permission_classes = [PodeVerOrdemDoSetor]
     serializer_class = OsSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
-    filterset_fields = ['os_stat_os', 'os_clie']
-    ordering_fields = ['os_data_aber', 'os_data_fech']
+    filterset_fields = ['os_stat_os', 'os_clie', 'os_empr', 'os_fili']
+    ordering_fields = ['os_data_aber', 'os_data_fech', 'os_os']
     search_fields = ['os_prob_rela', 'os_obse']
    
     def get_serializer_context(self):
@@ -140,26 +140,48 @@ class OsViewSet(BaseMultiDBModelViewSet):
 
     def create(self, request, *args, **kwargs):
         banco = self.get_banco()
-        data = request.data.copy()
+        base_data = request.data.copy()
 
-        data['os_stat_os'] = 0
+        base_data['os_stat_os'] = 0
         if request.user and request.user.pk:
-            data['os_usua_aber'] = request.user.pk
+            base_data['os_usua_aber'] = request.user.pk
 
-        empre = data.get('os_empr') or data.get('empr')
-        fili = data.get('os_fili') or data.get('fili')
+        empre = base_data.get('os_empr') or base_data.get('empr')
+        fili = base_data.get('os_fili') or base_data.get('fili')
         if not empre or not fili:
             return Response({"detail": "Empresa e Filial são obrigatórios."}, status=400)
 
-        data['os_os'] = self.get_next_ordem_numero(empre, fili)
-        data['os_prof_aber'] = request.user.pk if request.user else None
-        serializer = self.get_serializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        with transaction.atomic(using=banco):
-            instance = serializer.save()
-        logger.info(f"O.S. {instance.os_os} aberta por user {request.user.pk if request.user else 'anon'}")
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        base_data['os_prof_aber'] = request.user.pk if request.user else None
+
+        # Tentativas para lidar com concorrência e colisões de número
+        max_tentativas = 5
+        for tentativa in range(max_tentativas):
+            data = base_data.copy()
+            data['os_os'] = self.get_next_ordem_numero(empre, fili)
+            serializer = self.get_serializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            try:
+                with transaction.atomic(using=banco):
+                    instance = serializer.save()
+                logger.info(
+                    f"O.S. {instance.os_os} aberta por user {request.user.pk if request.user else 'anon'}"
+                )
+                headers = self.get_success_headers(serializer.data)
+                return Response(
+                    serializer.data,
+                    status=status.HTTP_201_CREATED,
+                    headers=headers,
+                )
+            except IntegrityError:
+                logger.warning(
+                    f"Colisão de número de OS detectada (tentativa {tentativa+1}/{max_tentativas}). Recalculando..."
+                )
+                continue
+
+        return Response(
+            {"detail": "Falha ao gerar número da O.S. Tente novamente."},
+            status=status.HTTP_409_CONFLICT,
+        )
 
     @action(
         detail=True, 

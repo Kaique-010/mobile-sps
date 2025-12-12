@@ -99,7 +99,12 @@
                         <tbody>
                             {% for m in movimentos_mensais %}
                             <tr>
-                                <td>{{ m.mes|date:'m/Y' }}</td>
+                                <td>
+                                    {{ m.mes|date:'m/Y' }}
+                                    <a href="#" class="ms-2" data-role="show-details-caixa" data-year="{{ m.mes|date:'Y' }}" data-month="{{ m.mes|date:'m' }}">
+                                        <i class="bi bi-plus-circle"></i>
+                                    </a>
+                                </td>
                                 <td class="text-success">{{ m.recebimentos|brl }}</td>
                                 <td class="text-danger">{{ m.pagamentos|brl }}</td>
                                 <td>{{ m.saldo|brl }}</td>
@@ -115,6 +120,74 @@
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="modalDetalhesCaixa" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Movimentos do mês</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-12 col-md-6">
+                            <h6>Recebimentos</h6>
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Título</th><th>Parc</th><th>Data</th><th>Valor</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbl-recebimentos-caixa"></tbody>
+                            </table>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <h6>Pagamentos</h6>
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Título</th><th>Parc</th><th>Data</th><th>Valor</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbl-pagamentos-caixa"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function(){
+        const modalEl = document.getElementById('modalDetalhesCaixa');
+        const modal = typeof bootstrap !== 'undefined' ? new bootstrap.Modal(modalEl) : null;
+        document.addEventListener('click', async function(e){
+            const link = e.target.closest('[data-role="show-details-caixa"]');
+            if(!link) return;
+            e.preventDefault();
+            const year = link.getAttribute('data-year');
+            const month = link.getAttribute('data-month');
+            const url = `/web/${encodeURIComponent('{{ slug }}')}/fluxo-de-caixa/detalhes/caixa/${year}/${month}/`;
+            try {
+                const res = await fetch(url, { credentials: 'same-origin' });
+                if(!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                const recTbody = document.getElementById('tbl-recebimentos-caixa');
+                const pagTbody = document.getElementById('tbl-pagamentos-caixa');
+                recTbody.innerHTML = (data.recebimentos || []).map(i => `<tr><td>${i.titulo}</td><td>${i.parcela}</td><td>${i.data_pagamento||''}</td><td>${Number(i.valor).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td></tr>`).join('');
+                pagTbody.innerHTML = (data.pagamentos || []).map(i => `<tr><td>${i.titulo}</td><td>${i.parcela}</td><td>${i.data_pagamento||''}</td><td>${Number(i.valor).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td></tr>`).join('');
+                if(modal) modal.show();
+            } catch(err) {
+                console.error('Falha ao carregar detalhes de caixa:', err, url);
+                if(window.showToast) window.showToast('Não foi possível carregar movimentos do mês', { variant: 'danger', delay: 2500 });
+            }
+        });
+    })();
+    </script>
 </body>
 
 {% endblock %}

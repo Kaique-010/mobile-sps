@@ -3,6 +3,7 @@ import logging
 from threading import local
 from django.core.cache import cache
 from django.conf import settings
+from django.http import JsonResponse
 from core.licenca_context import set_current_request, get_licencas_map
 from core.utils import get_licenca_db_config
 
@@ -57,7 +58,6 @@ class LicencaMiddleware:
             if path.startswith(prefix):
                 return self._safe(request)
 
-
         # ---------------------------
         # 1. WEB: /web/home/<slug>/...
         # ---------------------------
@@ -81,7 +81,7 @@ class LicencaMiddleware:
             set_current_request(request)
 
             # Empresa e filial: /web/home/<slug>/<emp>/<fil>/
-            self._apply_empresa_filial(request, parts, pos_emp=3, pos_fil=4)
+            self._apply_empresa_filial_safe(request, parts, pos_emp=3, pos_fil=4)
 
             return self._safe(request)
 
@@ -108,7 +108,7 @@ class LicencaMiddleware:
         set_licenca_slug(slug)
         set_current_request(request)
 
-        self._apply_empresa_filial_api(request)
+        self._apply_empresa_filial_api_safe(request)
 
         self._load_modulos(request)
 
@@ -118,25 +118,51 @@ class LicencaMiddleware:
         return self._safe(request)
 
     # ======================================================
-    # Helpers
+    # Helpers - COM PROTEÇÃO CONTRA SESSÃO DELETADA
     # ======================================================
 
-    def _apply_empresa_filial(self, request, parts, pos_emp, pos_fil):
+    def _session_get(self, request, key, default=None):
+        """Acessa sessão com proteção contra sessão deletada."""
+        try:
+            if not hasattr(request, 'session') or request.session is None:
+                return default
+            return request.session.get(key, default)
+        except (AttributeError, RuntimeError) as e:
+            logger.warning("Erro ao acessar sessão: %s", e)
+            return default
+
+    def _session_set(self, request, key, value):
+        """Modifica sessão com proteção contra sessão deletada."""
+        try:
+            if not hasattr(request, 'session') or request.session is None:
+                return False
+            
+            # Só modifica se o valor realmente mudou
+            current = request.session.get(key)
+            if current != value:
+                request.session[key] = value
+                request.session.modified = True
+            return True
+        except (AttributeError, RuntimeError) as e:
+            logger.warning("Erro ao modificar sessão: %s", e)
+            return False
+
+    def _apply_empresa_filial_safe(self, request, parts, pos_emp, pos_fil):
+        """Aplica empresa/filial com proteção contra sessão deletada."""
         try:
             emp = int(parts[pos_emp]) if len(parts) > pos_emp else None
             fil = int(parts[pos_fil]) if len(parts) > pos_fil else None
-        except Exception:
+        except (ValueError, IndexError):
             return
 
-        if emp and request.session.get("empresa_id") != emp:
-            request.session["empresa_id"] = emp
+        if emp:
+            self._session_set(request, "empresa_id", emp)
 
-        if fil and request.session.get("filial_id") != fil:
-            request.session["filial_id"] = fil
+        if fil:
+            self._session_set(request, "filial_id", fil)
 
-        request.session.modified = True
-
-    def _apply_empresa_filial_api(self, request):
+    def _apply_empresa_filial_api_safe(self, request):
+        """Aplica empresa/filial da API com proteção contra sessão deletada."""
         def _n(v):
             try:
                 return int(v)
@@ -146,31 +172,33 @@ class LicencaMiddleware:
         h_emp = _n(request.headers.get("X-Empresa"))
         h_fil = _n(request.headers.get("X-Filial"))
 
-        s_emp = request.session.get("empresa_id")
-        s_fil = request.session.get("filial_id")
+        s_emp = self._session_get(request, "empresa_id")
+        s_fil = self._session_get(request, "filial_id")
 
-        emp = h_emp or s_emp or 1
-        fil = h_fil or s_fil or 1
+        # Headers têm prioridade, depois sessão, depois default
+        emp = h_emp if h_emp is not None else (s_emp or 1)
+        fil = h_fil if h_fil is not None else (s_fil or 1)
 
-        change = False
+        # Só atualiza sessão se veio nos headers E é diferente
         if h_emp is not None and h_emp != s_emp:
-            request.session["empresa_id"] = h_emp
-            change = True
+            self._session_set(request, "empresa_id", h_emp)
 
         if h_fil is not None and h_fil != s_fil:
-            request.session["filial_id"] = h_fil
-            change = True
+            self._session_set(request, "filial_id", h_fil)
 
-        if change:
-            request.session.modified = True
-
+        # Sempre define no request (independente da sessão)
         request.empresa = emp
         request.filial = fil
 
     def _load_modulos(self, request):
-        slug = request.slug
-        emp = request.empresa
-        fil = request.filial
+        """Carrega módulos com tratamento de erro."""
+        slug = getattr(request, 'slug', None)
+        emp = getattr(request, 'empresa', 1)
+        fil = getattr(request, 'filial', 1)
+
+        if not slug:
+            request.modulos_disponiveis = []
+            return
 
         key = f"mod_{slug}_{emp}_{fil}"
         mods = cache.get(key)
@@ -201,22 +229,34 @@ class LicencaMiddleware:
                 mods = []
 
         request.modulos_disponiveis = mods
+        set_modulos_disponiveis(mods)
 
     def _slug_from_jwt(self, request):
+        """Extrai slug do JWT com fallback para sessão."""
         auth = request.headers.get("Authorization", "")
         if not auth.startswith("Bearer "):
-            return None
+            return self._session_get(request, "slug")
+        
         try:
             import jwt
 
             token = auth.split(" ")[1]
             dec = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-            return dec.get("lice_slug") or request.session.get("slug")
+            slug = dec.get("lice_slug")
+            
+            if slug:
+                return slug
+            
+            # Fallback para sessão
+            return self._session_get(request, "slug")
         except Exception as e:
             logger.error("Erro JWT: %s", e)
-            return None
+            return self._session_get(request, "slug")
 
     def _get_licenca(self, slug):
+        """Busca licença no mapa."""
+        if not slug:
+            return None
         return next((x for x in get_licencas_map() if x["slug"] == slug), None)
 
     # ======================================================
@@ -224,15 +264,16 @@ class LicencaMiddleware:
     # ======================================================
 
     def _safe(self, request):
+        """Executa response com tratamento de sessão deletada."""
         try:
             return self.get_response(request)
         except RuntimeError as e:
             msg = str(e)
-            if "session was deleted" in msg:
-                from django.http import JsonResponse
+            if "session was deleted" in msg or "session" in msg.lower():
+                logger.warning("Sessão deletada durante requisição: %s", msg)
                 return JsonResponse(
                     {
-                        "error": "Bad Request",
+                        "error": "Session expired",
                         "code": "SESSION_INVALID",
                         "next": "/web/selecionar-empresa/",
                     },
@@ -241,10 +282,24 @@ class LicencaMiddleware:
             raise
 
     def _bad(self, msg):
-        from django.http import JsonResponse
-
+        """Resposta de erro de autenticação."""
         logger.error("401 → %s", msg)
         return JsonResponse(
-            {"error": msg, "code": "SESSION_INVALID", "next": "/web/selecionar-empresa/"},
+            {
+                "error": msg,
+                "code": "SESSION_INVALID",
+                "next": "/web/selecionar-empresa/",
+            },
             status=401,
+        )
+
+    def _not_found(self, msg):
+        """Resposta de recurso não encontrado."""
+        logger.error("404 → %s", msg)
+        return JsonResponse(
+            {
+                "error": msg,
+                "code": "NOT_FOUND",
+            },
+            status=404,
         )

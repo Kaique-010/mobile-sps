@@ -19,7 +19,10 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
 
 USE_LOCAL_DB = config('USE_LOCAL_DB', default=True, cast=bool)
 
-# Configurações de banco de dados com otimizações
+# ============================================================================
+# CONFIGURAÇÕES DE BANCO DE DADOS - OTIMIZADAS
+# ============================================================================
+
 if USE_LOCAL_DB:
     DATABASES = {
         'default': {
@@ -31,11 +34,13 @@ if USE_LOCAL_DB:
             'PORT': config('LOCAL_DB_PORT'),
             'OPTIONS': {
                 'options': '-c timezone=America/Araguaina',
-                'connect_timeout': 10,
+                'connect_timeout': 30,  # Aumentado de 10 para 30
                 'application_name': 'mobile_sps',
             },
-            'CONN_MAX_AGE': 300,  # 5 minutos para local
-            'CONN_HEALTH_CHECKS': True,  # Verificar saúde das conexões
+            'CONN_MAX_AGE': 600,  # 10 minutos (era 300 - aumentado)
+            'CONN_HEALTH_CHECKS': True,
+            'ATOMIC_REQUESTS': False,
+            'AUTOCOMMIT': True,
         }
     }
 else:
@@ -49,19 +54,26 @@ else:
             'PORT': config('REMOTE_DB_PORT'),
             'OPTIONS': {
                 'options': '-c timezone=America/Araguaina',
-                'connect_timeout': 10,
+                'connect_timeout': 30,  # Aumentado de 10 para 30
                 'application_name': 'mobile_sps',
+                # Adicionar configurações de pool para estabilidade
+                'keepalives': 1,
+                'keepalives_idle': 30,
+                'keepalives_interval': 10,
+                'keepalives_count': 5,
             },
-            'CONN_MAX_AGE': 600,  # 10 minutos para produção
-            'CONN_HEALTH_CHECKS': True,  # Verificar saúde das conexões
+            'CONN_MAX_AGE': 600,  # 10 minutos
+            'CONN_HEALTH_CHECKS': True,
+            'ATOMIC_REQUESTS': False,
+            'AUTOCOMMIT': True,
         }
     }
 
 
 import logging
 logger = logging.getLogger("django")
-logger.warning("🧠 BASE USADA: %s", "LOCAL" if USE_LOCAL_DB else "REMOTA")  # ← SEMPRE APARECE
-logger.warning("🔗 CONFIGURAÇÃO DO BANCO: %s", DATABASES['default'])  # ← SEMPRE APARECE
+logger.warning("🧠 BASE USADA: %s", "LOCAL" if USE_LOCAL_DB else "REMOTA")
+logger.warning("🔗 CONFIGURAÇÃO DO BANCO: %s", DATABASES['default'])
 
 
 DATABASE_ROUTERS = ['core.db_router.LicencaDBRouter']
@@ -128,6 +140,7 @@ INSTALLED_APPS = [
     'osexterna',
     'licencas_web',
 ]
+
 # Middleware
 MIDDLEWARE = [
     'core.performance_middleware.PerformanceMiddleware',
@@ -137,9 +150,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    
     'core.middleware_restore_auth.RestoreUserMiddleware',
-
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'core.middleware.LicencaMiddleware',
@@ -269,7 +280,6 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
-   
     "AUTH_HEADER_TYPES": ("Bearer",),        
     "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION", 
 }
@@ -293,7 +303,6 @@ SPECTACULAR_SETTINGS = {
         'PatchedMobileSpsUserRequestTypeEnum': 'MobileSpsUserRequestTypeEnum',
         'ClientEnum': 'core.utils.ClientEnum',
     },
-    
 }
 
 APPEND_SLASH = True
@@ -306,25 +315,25 @@ LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'handlers': {
-    'console': {
-        'class': 'logging.StreamHandler',
-        'formatter': 'verbose',
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
     },
+    'formatters': {
+        'verbose': {
+            'format': '[{levelname}] {asctime} {name}: {message}',
+            'style': '{',
         },
-        'formatters': {
-            'verbose': {
-                'format': '[{levelname}] {asctime} {name}: {message}',
-                'style': '{',
-            },
-        },
+    },
     'loggers': {
         'django.server': {
             'handlers': ['console'],
-            'level': 'ERROR' if not DEBUG else 'WARNING',  # Reduce server logs
+            'level': 'ERROR' if not DEBUG else 'WARNING',
             'propagate': False,
         },
         'django.request': {
-            'handlers': ['console'],  # Removido 'file'
+            'handlers': ['console'],
             'level': 'ERROR',
             'propagate': False,
         },
@@ -401,9 +410,6 @@ LOGGING = {
             'propagate': False,
             'formatter': 'verbose',
         },
-
-
-
     },
 }
 
@@ -464,14 +470,20 @@ def starttls_patch(self, *args, **kwargs):
 smtplib.SMTP.starttls = starttls_patch
 
 
-# Cache Redis no container - configuração otimizada
+# ============================================================================
+# CONFIGURAÇÕES DE CACHE - CORRIGIDAS
+# ============================================================================
+
 if USE_LOCAL_DB:
     # Cache em memória para desenvolvimento local
     CACHES = {
         'default': {
             'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
             'LOCATION': 'mobile-sps-cache',
-            'TIMEOUT': 150, # 2 minutos
+            'TIMEOUT': 1800,  # 30 minutos (era 150 segundos - muito curto!)
+            'OPTIONS': {
+                'MAX_ENTRIES': 10000,  # Aumentar limite de entradas
+            }
         }
     }
 else:
@@ -489,14 +501,75 @@ else:
                     'socket_timeout': 15,
                     'health_check_interval': 30,
                 },
-                'IGNORE_EXCEPTIONS': True,
+                'IGNORE_EXCEPTIONS': True,  # Não quebrar se Redis cair
+                'SOCKET_CONNECT_TIMEOUT': 5,
+                'SOCKET_TIMEOUT': 5,
             },
             'KEY_PREFIX': 'mobile_sps',
-            'TIMEOUT': 3600,
+            'TIMEOUT': 3600,  # 1 hora
         }
     }
 
-# Celery no container
+# ============================================================================
+# CONFIGURAÇÕES DE SESSÃO - CORRIGIDAS E OTIMIZADAS
+# ============================================================================
+
+# Engine: cached_db é o mais robusto (usa cache + DB como fallback)
+SESSION_ENGINE = os.getenv(
+    'SESSION_ENGINE', 
+    'django.contrib.sessions.backends.cached_db'
+)
+
+# Alias do cache usado para sessões
+SESSION_CACHE_ALIAS = 'default'
+
+# ⚠️ CORREÇÃO CRÍTICA: Aumentar tempo de expiração da sessão
+SESSION_COOKIE_AGE = 86400  # 24 horas (era 3600 = 1 hora - MUITO CURTO!)
+
+# ⚠️ CORREÇÃO CRÍTICA: Salvar sessão a cada request
+# Isso evita perda de dados quando a sessão é modificada
+SESSION_SAVE_EVERY_REQUEST = True  # Mudado de False para True
+
+# Expirar sessão ao fechar o navegador (opcional - ajuste conforme necessidade)
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # True = expira ao fechar navegador
+
+# Nome do cookie de sessão (para evitar conflitos)
+SESSION_COOKIE_NAME = 'mobile_sps_sessionid'
+
+# Cookies de sessão: configurações de segurança
+SESSION_COOKIE_SAMESITE = 'Lax'  # Ou 'Strict' para mais segurança
+SESSION_COOKIE_HTTPONLY = True    # Proteger contra XSS
+SESSION_COOKIE_SECURE = not DEBUG  # HTTPS em produção
+
+# Domínio do cookie (para compartilhar entre subdomínios)
+SESSION_COOKIE_DOMAIN = os.getenv('SESSION_COOKIE_DOMAIN', None)
+
+# Path do cookie
+SESSION_COOKIE_PATH = '/'
+
+# Serializer de sessão (JSON é mais seguro que pickle)
+SESSION_SERIALIZER = 'django.contrib.sessions.serializers.JSONSerializer'
+
+# ============================================================================
+# CONFIGURAÇÕES DE CSRF - CORRIGIDAS
+# ============================================================================
+
+CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_HTTPONLY = True  # Adicionar proteção XSS
+CSRF_COOKIE_NAME = 'mobile_sps_csrftoken'
+CSRF_COOKIE_AGE = 31449600  # 1 ano (padrão Django)
+
+# ⚠️ IMPORTANTE: Trusted origins para CSRF em produção
+CSRF_TRUSTED_ORIGINS = config(
+    'CSRF_TRUSTED_ORIGINS',
+    default='http://localhost:3000,http://localhost:8000'
+).split(',')
+
+# ============================================================================
+# CELERY - CONFIGURAÇÕES
+# ============================================================================
+
 CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://redis:6379/0')
 CELERY_RESULT_BACKEND = os.getenv('CELERY_BROKER_URL', 'redis://redis:6379/0')
 CELERY_TASK_ALWAYS_EAGER = False
@@ -505,43 +578,9 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'America/Sao_Paulo'
 
-# Sessão: preferir banco com cache (evita indisponibilidade do Redis)
-import os as _os
-SESSION_ENGINE = _os.getenv('SESSION_ENGINE', 'django.contrib.sessions.backends.cached_db')
-SESSION_CACHE_ALIAS = 'default'
-SESSION_COOKIE_AGE = 3600  # 1 hora
-
-# Cookies de sessão/CSRF: garantir envio em navegação web e APIs same-site
-SESSION_COOKIE_SAMESITE = 'Lax'
-CSRF_COOKIE_SAMESITE = 'Lax'
-# Em produção, marcar como Secure (https). Em desenvolvimento, manter False.
-SESSION_COOKIE_SECURE = not DEBUG
-CSRF_COOKIE_SECURE = not DEBUG
-# Opcional: compartilhar cookies entre subdomínios quando necessário
-# Defina SESSION_COOKIE_DOMAIN via env (ex.: .suaempresa.com) quando API e Web estiverem em subdomínios distintos
-SESSION_COOKIE_DOMAIN = _os.getenv('SESSION_COOKIE_DOMAIN', None)
-# Salvar sessão quando modificada; evitar perda em redireções rápidas
-SESSION_SAVE_EVERY_REQUEST = False
-
-
-SPECTACULAR_SETTINGS = {
-    'TITLE': 'Mobile SPS API',
-    'DESCRIPTION': 'Documentação da API do Mobile SPS',
-    'VERSION': '1.0.0',
-    'SERVE_INCLUDE_SCHEMA': False,
-    'SWAGGER_UI_SETTINGS': {
-        'deepLinking': True,
-        'displayRequestDuration': True,
-        'filter': True,
-        'showExtensions': True,
-        'showCommonExtensions': True,
-        'tryItOutEnabled': True,
-    },
-    'POSTPROCESSING_HOOKS': [],
-    'ENUM_NAME_OVERRIDES': { 
-        'ClientEnum': 'core.utils.ClientEnum',
-    },
-}
+# ============================================================================
+# CONFIGURAÇÕES DE UPLOAD
+# ============================================================================
 
 DATA_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024     # 100 MB
 FILE_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024     # 100 MB
