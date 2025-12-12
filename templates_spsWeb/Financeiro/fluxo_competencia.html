@@ -120,8 +120,7 @@
                             </td>
                             <td class="text-success">{{ m.receita|brl }}</td>
                             <td class="text-danger">{{ m.despesa|brl }}</td>
-                            <td class="{% if m.resultado >= 0 %}text-primary{% else %}text-danger{% endif %}">{{
-                                m.resultado|brl }}</td>
+                            <td class="{% if m.resultado >= 0 %}text-primary{% else %}text-danger{% endif %}">{{ m.resultado|brl }}</td>
                         </tr>
                         {% empty %}
                         <tr>
