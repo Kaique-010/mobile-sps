@@ -100,12 +100,17 @@
         <p class="text-body-secondary small">
             Versão 1.0.6
         </p>
+        <p class="text-body-secondary small">
+            Notas de versão:
+            <a href="#" data-bs-toggle="modal" data-bs-target="#modalAtualizacoes">Clique aqui</a>
+        </p>
     </div>
     <div id="mascot-container" class="mascot-container" onclick="toggleAssistant()">
         <img src="{% static 'assis.png' %}" class="mascot-img" style="border-radius: 65%;">
     </div>
 
 </footer>
+{% include 'parciais/modaldeataualizacoes.html' %}
 <script>
     (function () {
         try {
