@@ -152,6 +152,7 @@ class OsViewSet(BaseMultiDBModelViewSet):
             return Response({"detail": "Empresa e Filial são obrigatórios."}, status=400)
 
         data['os_os'] = self.get_next_ordem_numero(empre, fili)
+        data['os_prof_aber'] = request.user.pk if request.user else None
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         with transaction.atomic(using=banco):
@@ -787,6 +788,7 @@ class ServicosOsViewSet(BaseMultiDBModelViewSet):
 class OsHoraViewSet(BaseMultiDBModelViewSet):
     serializer_class = OsHoraSerializer
     parser_classes = [JSONParser]
+    lookup_field = 'os_hora_item'
 
     def get_queryset(self):
         banco = self.get_banco()
@@ -805,6 +807,11 @@ class OsHoraViewSet(BaseMultiDBModelViewSet):
             os_hora_os=os_hora_os
         ).order_by('os_hora_data', 'os_hora_item')
     
+    def retrieve(self, request, *args, **kwargs):
+        obj = self.get_object()
+        serializer = self.get_serializer(obj)
+        return Response(serializer.data)
+    
     def get_object(self):
         banco = self.get_banco()
         
@@ -812,6 +819,7 @@ class OsHoraViewSet(BaseMultiDBModelViewSet):
         os_hora_os = self.request.query_params.get('os_hora_os')
         os_hora_empr = self.request.query_params.get('os_hora_empr')
         os_hora_fili = self.request.query_params.get('os_hora_fili')
+        
         
         if not all([os_hora_item, os_hora_os, os_hora_empr, os_hora_fili]):
             raise ValidationError("Parâmetros obrigatórios faltando")

@@ -17,37 +17,79 @@ def carregar_licencas_dict():
 
     conf = getattr(settings, 'DATABASES', {}).get('default', {})
     alias = 'default'
-    logger.warning("[LICENCAS_LOADER] alias=%s db=%s@%s", alias, conf.get('NAME'), conf.get('HOST'))
 
+    logger.warning("[LICENCAS_LOADER] INICIO alias=%s db=%s@%s",
+                   alias, conf.get('NAME'), conf.get('HOST'))
+
+    # Garantir existência da tabela
     _bootstrap_licencas_web_if_missing()
 
-    data = []
+    resultado = []
+    total_rows = 0
+
     try:
         with connections[alias].cursor() as cur:
-            cur.execute("SELECT slug, cnpj, db_name, db_host, db_port, modulos, db_user, db_password FROM licencas_web ORDER BY slug")
+            cur.execute("""
+                SELECT slug, cnpj, db_name, db_host, db_port, modulos,
+                       db_user, db_password
+                FROM licencas_web
+                ORDER BY slug
+            """)
             rows = cur.fetchall()
+
             for row in rows:
+                total_rows += 1
+
                 slug, cnpj, db_name, db_host, db_port, modulos, db_user, db_password = row
-                norm_doc = _normalize_doc(cnpj or '')
+
+                logger.warning("[ITEM] slug=%s cnpj=%s host=%s", slug, cnpj, db_host)
+
+                # Normaliza CNPJ
+                norm_doc = _normalize_doc(cnpj or "")
                 if not (norm_doc.isdigit() and len(norm_doc) == 14):
+                    logger.error("[DESCARTADO] slug=%s motivo=CNPJ inválido=%s norm=%s",
+                                 slug, cnpj, norm_doc)
                     continue
+
+                # Valida credenciais
+                if not db_user or not db_password:
+                    logger.error("[DESCARTADO] slug=%s motivo=credenciais faltando user=%s pass=%s",
+                                 slug, db_user, db_password)
+                    continue
+
+                if not db_host:
+                    logger.error("[DESCARTADO] slug=%s motivo=db_host vazio", slug)
+                    continue
+
+                # Monta item final
                 item = {
-                    "slug": slug or '',
+                    "slug": (slug or "").strip().lower(),
                     "cnpj": norm_doc,
-                    "db_name": db_name or (slug or ''),
+                    "db_name": db_name or slug,
                     "db_host": db_host or default_host,
                     "db_port": db_port or default_port,
-                    "db_user": db_user or None,
-                    "db_password": db_password or None,
-                    "modulos": modulos or '[]',
+                    "db_user": db_user,
+                    "db_password": db_password,
+                    "modulos": modulos or "[]",
                 }
-                data.append(item)
-    except Exception as e:
-        logger.warning("[LICENCAS_LOADER] leitura falhou: %s", e)
-        data = []
 
-    logger.warning("[LICENCAS_LOADER] count=%s", len(data))
-    return data
+                resultado.append(item)
+
+                logger.warning("[OK] slug=%s cnpj=%s host=%s db=%s",
+                               item["slug"], item["cnpj"], item["db_host"], item["db_name"])
+
+    except Exception as e:
+        logger.error("[LICENCAS_LOADER] ERRO leitura tabela: %s", e)
+        return []
+
+    logger.warning("[LICENCAS_LOADER] FINAL count_total=%s carregadas=%s",
+                   total_rows, len(resultado))
+
+    logger.warning("[LICENCAS_LOADER] SLUGS: %s",
+                   [i["slug"] for i in resultado])
+
+    return resultado
+
 
 def _bootstrap_licencas_web_if_missing():
     try:

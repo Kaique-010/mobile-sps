@@ -30,217 +30,221 @@ class LicencaMiddleware:
     def __call__(self, request):
         start = time.time()
 
-        logger.debug(
-            "REQ IN   path=%s method=%s cookies=%s session_keys=%s",
-            request.path, request.method,
-            request.META.get('HTTP_COOKIE'),
-            list(request.session.keys())[:20],
+        path = request.path or ""
+        parts = path.strip("/").split("/")
+
+        logger.debug("REQ path=%s method=%s", path, request.method)
+
+        # ---------------------------
+        # 0. Rotas ignoradas
+        # ---------------------------
+        ignored = (
+            "/api/warm-cache/",
+            "/api/licencas/mapa/",
+            "/api/selecionar-empresa/",
+            "/api/entidades-login/",
+            "/web/",
+            "/admin/",
+            "/static/",
+            "/media/",
+            "/ws/",
+            "/api/schema/",
+            "/api/swagger",
+            "/api/schemas/",
         )
 
-        # -----------------------------------------------------------
-        # 1. IGNORAR ROTAS QUE NÃO USAM LICENÇA
-        # -----------------------------------------------------------
-        ignored = [
-            '/api/warm-cache/', '/api/licencas/mapa/',
-            '/api/selecionar-empresa/', '/api/entidades-login/',
-            '/web/', '/admin/', '/static/', '/media/', '/ws/',
-            '/api/schema/', '/api/swagger', '/api/schemas/',
-        ]
         for prefix in ignored:
-            if request.path.startswith(prefix):
-                logger.debug("IGNORED path=%s", request.path)
-                return self._safe_response(request)
+            if path.startswith(prefix):
+                return self._safe(request)
 
-        # -----------------------------------------------------------
-        # 2. TRATAMENTO WEB / SLUG / EMPRESA / FILIAL
-        # -----------------------------------------------------------
-        parts = request.path.strip("/").split("/")
 
+        # ---------------------------
+        # 1. WEB: /web/home/<slug>/...
+        # ---------------------------
         if len(parts) >= 2 and parts[0] == "web" and parts[1] == "home":
-            logger.debug("WEB FLOW parts=%s", parts)
 
-            # Tela de seleção de empresa NÃO deve carregar licenças
+            # Exceção: tela de seleção
             if len(parts) >= 3 and parts[2] == "selecionar-empresa":
-                logger.debug("Tela de seleção detectada, passando direto")
-                return self._safe_response(request)
+                return self._safe(request)
 
             slug = parts[2] if len(parts) >= 3 else None
+            if not slug:
+                logger.warning("WEB sem slug")
+                return self._safe(request)
 
-            if slug:
-                logger.debug("WEB SLUG=%s", slug)
-            else:
-                logger.warning("WEB sem slug, tentando recuperar do session.docu")
-                return self._safe_response(request)
-
-            lic = next((l for l in get_licencas_map() if l["slug"] == slug), None)
+            lic = self._get_licenca(slug)
             if not lic:
-                logger.error("Slug inexistente WEB slug=%s", slug)
-                from django.http import HttpResponseNotFound
-                return HttpResponseNotFound("Licença não encontrada.")
+                return self._not_found("Licença não encontrada.")
 
-            set_licenca_slug(slug)
             request.slug = slug
+            set_licenca_slug(slug)
             set_current_request(request)
 
-            # Empresa/filial no path
-            if len(parts) >= 5:
-                try:
-                    emp = int(parts[3])
-                    fil = int(parts[4])
+            # Empresa e filial: /web/home/<slug>/<emp>/<fil>/
+            self._apply_empresa_filial(request, parts, pos_emp=3, pos_fil=4)
 
-                    logger.info("WEB emp=%s fil=%s", emp, fil)
+            return self._safe(request)
 
-                    if request.session.get("empresa_id") != emp:
-                        request.session["empresa_id"] = emp
-                        request.session.modified = True
-
-                    if request.session.get("filial_id") != fil:
-                        request.session["filial_id"] = fil
-                        request.session.modified = True
-
-                except Exception as e:
-                    logger.error("Falha ao aplicar empresa/filial WEB: %s", e)
-
-            return self._safe_response(request)
-
-        # -----------------------------------------------------------
-        # 3. API — SLUG DEVE EXISTIR EM /api/<slug>/...
-        # -----------------------------------------------------------
+        # ---------------------------
+        # 2. API: /api/<slug>/...
+        # ---------------------------
         if not parts or parts[0] != "api":
-            return self._safe_response(request)
+            return self._safe(request)
 
         if len(parts) < 2:
-            logger.error("API sem slug no path=%s", request.path)
-            return self._bad_request("API malformatada. Faltando slug.")
+            return self._bad("Slug ausente.")
 
         slug = parts[1]
-        logger.debug("API SLUG=%s", slug)
 
-        # Slug null/undefined → extrai do JWT
-        if slug in ["null", "undefined"]:
-            logger.warning("Slug null/undefined, tentando JWT")
-            auth = request.headers.get("Authorization", "")
-            if not auth.startswith("Bearer "):
-                return self._bad_request("Token ausente ao tentar recuperar slug.")
+        # slug null/undefined → tenta JWT
+        if slug in ("null", "undefined"):
+            slug = self._slug_from_jwt(request)
 
-            try:
-                import jwt
-                token = auth.split(" ")[1]
-                dec = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-                slug = dec.get("lice_slug") or request.session.get("slug")
-                logger.info("Slug recuperado via JWT: slug=%s", slug)
-            except Exception as e:
-                return self._bad_request(f"Erro JWT: {e}")
-
-        lic = next((l for l in get_licencas_map() if l["slug"] == slug), None)
+        lic = self._get_licenca(slug)
         if not lic:
-            return self._bad_request(f"Licença slug {slug} não encontrada.")
+            return self._bad(f"Licença {slug} inexistente.")
 
-        set_licenca_slug(slug)
         request.slug = slug
+        set_licenca_slug(slug)
         set_current_request(request)
 
-        # -----------------------------------------------------------
-        # 4. EMPRESA/FILIAL — cabeçalho > sessão
-        # -----------------------------------------------------------
-        def _num(v): 
-            try: return int(v)
-            except: return None
+        self._apply_empresa_filial_api(request)
 
-        h_emp = _num(request.headers.get("X-Empresa"))
-        h_fil = _num(request.headers.get("X-Filial"))
+        self._load_modulos(request)
+
+        total = (time.time() - start) * 1000
+        logger.debug("REQ OUT path=%s time=%.2fms", path, total)
+
+        return self._safe(request)
+
+    # ======================================================
+    # Helpers
+    # ======================================================
+
+    def _apply_empresa_filial(self, request, parts, pos_emp, pos_fil):
+        try:
+            emp = int(parts[pos_emp]) if len(parts) > pos_emp else None
+            fil = int(parts[pos_fil]) if len(parts) > pos_fil else None
+        except Exception:
+            return
+
+        if emp and request.session.get("empresa_id") != emp:
+            request.session["empresa_id"] = emp
+
+        if fil and request.session.get("filial_id") != fil:
+            request.session["filial_id"] = fil
+
+        request.session.modified = True
+
+    def _apply_empresa_filial_api(self, request):
+        def _n(v):
+            try:
+                return int(v)
+            except:
+                return None
+
+        h_emp = _n(request.headers.get("X-Empresa"))
+        h_fil = _n(request.headers.get("X-Filial"))
 
         s_emp = request.session.get("empresa_id")
         s_fil = request.session.get("filial_id")
 
-        empresa = h_emp or s_emp or 1
-        filial = h_fil or s_fil or 1
+        emp = h_emp or s_emp or 1
+        fil = h_fil or s_fil or 1
 
-        logger.debug("Empresa/Filial — header=(%s,%s) session=(%s,%s) final=(%s,%s)",
-                    h_emp, h_fil, s_emp, s_fil, empresa, filial)
-        try:
-            logger.debug("[TRACE][MW] slug=%s empresa=%s filial=%s path=%s", slug, empresa, filial, request.path)
-        except Exception:
-            pass
-
-        if h_emp is not None and s_emp != h_emp:
+        change = False
+        if h_emp is not None and h_emp != s_emp:
             request.session["empresa_id"] = h_emp
-            request.session.modified = True
+            change = True
 
-        if h_fil is not None and s_fil != h_fil:
+        if h_fil is not None and h_fil != s_fil:
             request.session["filial_id"] = h_fil
+            change = True
+
+        if change:
             request.session.modified = True
 
-        # -----------------------------------------------------------
-        # 5. CACHE DE MÓDULOS
-        # -----------------------------------------------------------
-        key = f"mod_{slug}_{empresa}_{filial}"
+        request.empresa = emp
+        request.filial = fil
+
+    def _load_modulos(self, request):
+        slug = request.slug
+        emp = request.empresa
+        fil = request.filial
+
+        key = f"mod_{slug}_{emp}_{fil}"
         mods = cache.get(key)
 
-        if mods:
-            logger.debug("CACHE HIT key=%s count=%s", key, len(mods))
-        else:
-            logger.debug("CACHE MISS key=%s → consultando banco", key)
+        if mods is None:
             try:
                 from parametros_admin.models import PermissaoModulo
                 banco = get_licenca_db_config(request)
 
                 if banco:
-                    qs = PermissaoModulo.objects.using(banco).filter(
-                        perm_empr=empresa,
-                        perm_fili=filial,
-                        perm_ativ=True,
-                        perm_modu__modu_ativ=True,
-                    ).select_related("perm_modu")
-
+                    qs = (
+                        PermissaoModulo.objects.using(banco)
+                        .filter(
+                            perm_empr=emp,
+                            perm_fili=fil,
+                            perm_ativ=True,
+                            perm_modu__modu_ativ=True,
+                        )
+                        .select_related("perm_modu")
+                    )
                     mods = [x.perm_modu.modu_nome for x in qs]
-                    cache.set(key, mods, 1800)
-
                 else:
                     mods = []
 
+                cache.set(key, mods, 1800)
             except Exception as e:
-                logger.error("Erro ao consultar módulos: %s", e)
+                logger.error("Erro ao carregar módulos: %s", e)
                 mods = []
 
-        set_modulos_disponiveis(mods)
         request.modulos_disponiveis = mods
-        total = (time.time() - start) * 1000
-        logger.debug("REQ OUT path=%s time=%.2fms", request.path, total)
 
-        return self._safe_response(request)
+    def _slug_from_jwt(self, request):
+        auth = request.headers.get("Authorization", "")
+        if not auth.startswith("Bearer "):
+            return None
+        try:
+            import jwt
 
-    def _safe_response(self, request):
+            token = auth.split(" ")[1]
+            dec = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+            return dec.get("lice_slug") or request.session.get("slug")
+        except Exception as e:
+            logger.error("Erro JWT: %s", e)
+            return None
+
+    def _get_licenca(self, slug):
+        return next((x for x in get_licencas_map() if x["slug"] == slug), None)
+
+    # ======================================================
+    # Respostas seguras
+    # ======================================================
+
+    def _safe(self, request):
         try:
             return self.get_response(request)
         except RuntimeError as e:
             msg = str(e)
-            try:
-                accept = request.META.get("HTTP_ACCEPT", "")
-            except Exception:
-                accept = ""
-            try:
-                path = request.path or ""
-            except Exception:
-                path = ""
-            if "session was deleted" in msg or "session was deleted before the request completed" in msg:
-                if path.startswith("/api/") or "application/json" in accept:
-                    from django.http import JsonResponse
-                    return JsonResponse({
+            if "session was deleted" in msg:
+                from django.http import JsonResponse
+                return JsonResponse(
+                    {
                         "error": "Bad Request",
                         "code": "SESSION_INVALID",
-                        "next": "/web/selecionar-empresa/"
-                    }, status=401)
-                try:
-                    from django.shortcuts import redirect
-                    return redirect("web_login")
-                except Exception:
-                    from django.http import HttpResponseRedirect
-                    return HttpResponseRedirect("/web/login/")
+                        "next": "/web/selecionar-empresa/",
+                    },
+                    status=401,
+                )
             raise
 
-    def _bad_request(self, msg):
+    def _bad(self, msg):
         from django.http import JsonResponse
-        logger.error("401 ERROR → %s", msg)
-        next_url = "/web/selecionar-empresa/"
-        return JsonResponse({"error": msg, "code": "SESSION_INVALID", "next": next_url}, status=401)
+
+        logger.error("401 → %s", msg)
+        return JsonResponse(
+            {"error": msg, "code": "SESSION_INVALID", "next": "/web/selecionar-empresa/"},
+            status=401,
+        )

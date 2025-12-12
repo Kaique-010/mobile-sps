@@ -85,7 +85,25 @@ class OsHoraSerializer(BancoModelSerializer):
     
     class Meta:
         model = OsHora
-        fields = '__all__'
+        fields = [
+            'os_hora_empr',
+            'os_hora_fili',
+            'os_hora_os',
+            'os_hora_item',
+            'os_hora_data',
+            'os_hora_manh_ini',
+            'os_hora_manh_fim',
+            'os_hora_tard_ini',
+            'os_hora_tard_fim',
+            'os_hora_tota',
+            'os_hora_km_sai',
+            'os_hora_km_che',
+            'os_hora_oper',
+            'os_hora_equi',
+            'os_hora_obse',
+            'total_horas',
+            'operador_nome',
+        ]
     
     def get_total_horas(self, obj):
         """Calcula total de horas trabalhadas"""
