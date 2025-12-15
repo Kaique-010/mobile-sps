@@ -47,4 +47,5 @@ urlpatterns = [
     path("<slug:slug>/controle-de-visitas/", include("controledevisitas.Web.web_urls")),
     path("<slug:slug>/central-de-ajuda/", include("centraldeajuda.urls")),
     path("<slug:slug>/parametros-admin/", include("parametros_admin.web_urls")),
+    path("<slug:slug>/perfil/", include("perfilweb.urls")),
 ]

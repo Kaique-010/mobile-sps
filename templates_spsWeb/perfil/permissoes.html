@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+{% block title %}Permissões do Perfil{% endblock %}
+{% block content %}
+<div class="container">
+<h2>Permissões do Perfil: {{ perfil.perf_nome }}</h2>
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'perfil_list' slug=slug %}" style="text-decoration: none; color: #007bff;">Perfis</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Permissões</li>
+    </ol>
+</nav>
+<form method="post">
+    {% csrf_token %}
+    <div class="row">
+        <div class="col-lg-4 mb-4">
+            <div class="card" style="position: sticky; top: 1rem;">
+                <div class="card-body">
+                    <div class="mb-2">
+                        <input type="text" id="filter-model" class="form-control" placeholder="Filtrar por modelo">
+                    </div>
+                    <div class="mb-2">
+                        <input type="text" id="filter-acao" class="form-control" placeholder="Filtrar por ação">
+                    </div>
+                    <div class="d-flex gap-2 mb-3">
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="btn-select-visible">Selecionar visíveis</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-clear-visible">Limpar visíveis</button>
+                    </div>
+                    <small id="filter-count" class="text-muted"></small>
+                    <hr>
+                    <div class="mb-3">
+                        <label for="heranca" class="form-label">Herança de Perfis</label>
+                        <select multiple name="heranca" id="heranca" class="form-select">
+                            {% for p in todos_perfis %}
+                            <option value="{{ p.id }}" {% if p.id in pais_atuais %}selected{% endif %}>
+                                {{ p.perf_nome }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">Selecione um ou mais perfis para herdar permissões.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="usuarios" class="form-label">Usuários deste perfil</label>
+                        <select multiple name="usuarios" id="usuarios" class="form-select">
+                            {% for u in usuarios_all %}
+                            <option value="{{ u.usua_codi }}" {% if u.usua_codi in usuarios_atuais %}selected{% endif %}>
+                                {{ u.usua_nome }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">Selecione usuários para vincular a este perfil.</small>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary" type="submit">Salvar</button>
+                        <a class="btn btn-secondary" href="{% url 'perfil_aplicar_defaults_api' slug=slug perfil_id=perfil.id %}">
+                            Aplicar defaults
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-8">
+            <div class="row g-3" id="recursos-grid">
+                {% for recurso in recursos %}
+                <div class="col-xl-6 col-xxl-4 recurso-block" data-model="{{ recurso.model|lower }}" data-app="{{ recurso.app_label|lower }}">
+                    <div class="card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span>{{ recurso.app_label }} - {{ recurso.model }}</span>
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-outline-primary btn-select-model">Selecionar</button>
+                                <button type="button" class="btn btn-outline-secondary btn-clear-model">Limpar</button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                {% for acao in recurso.acoes %}
+                                <div class="col-6 col-md-4 acao-item" data-acao="{{ acao|lower }}">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="perm_{{ recurso.id }}_{{ acao }}" id="perm_{{ recurso.id }}_{{ acao }}"
+                                            {% if recurso.id|stringformat:"s"|add:":"|add:acao in permissoes_atuais_keys %}checked{% endif %}>
+                                        <label class="form-check-label" for="perm_{{ recurso.id }}_{{ acao }}">{{ acao }}</label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</form>
+</div>
+<script>
+const fm = document.getElementById('filter-model');
+const fa = document.getElementById('filter-acao');
+const blocks = Array.from(document.querySelectorAll('.recurso-block'));
+const countEl = document.getElementById('filter-count');
+function applyFilters() {
+  const m = (fm.value || '').toLowerCase().trim();
+  const a = (fa.value || '').toLowerCase().trim();
+  let shownBlocks = 0;
+  blocks.forEach(b => {
+    const matchModel = !m || b.dataset.model.includes(m);
+    let actionShown = 0;
+    const items = Array.from(b.querySelectorAll('.acao-item'));
+    items.forEach(i => {
+      const matchAction = !a || i.dataset.acao.includes(a);
+      const visible = matchModel && matchAction;
+      i.style.display = visible ? '' : 'none';
+      if (visible) actionShown++;
+    });
+    const showBlock = actionShown > 0;
+    b.style.display = showBlock ? '' : 'none';
+    if (showBlock) shownBlocks++;
+  });
+  countEl.textContent = shownBlocks + ' modelos visíveis';
+}
+fm.addEventListener('input', applyFilters);
+fa.addEventListener('input', applyFilters);
+applyFilters();
+document.querySelectorAll('.btn-select-model').forEach(btn => {
+  btn.addEventListener('click', e => {
+    const card = e.target.closest('.recurso-block');
+    card.querySelectorAll('.acao-item input[type="checkbox"]').forEach(cb => { if (cb.offsetParent !== null) cb.checked = true; });
+  });
+});
+document.querySelectorAll('.btn-clear-model').forEach(btn => {
+  btn.addEventListener('click', e => {
+    const card = e.target.closest('.recurso-block');
+    card.querySelectorAll('.acao-item input[type="checkbox"]').forEach(cb => { if (cb.offsetParent !== null) cb.checked = false; });
+  });
+});
+document.getElementById('btn-select-visible').addEventListener('click', () => {
+  blocks.forEach(b => {
+    if (b.style.display === 'none') return;
+    b.querySelectorAll('.acao-item input[type="checkbox"]').forEach(cb => { if (cb.offsetParent !== null) cb.checked = true; });
+  });
+});
+document.getElementById('btn-clear-visible').addEventListener('click', () => {
+  blocks.forEach(b => {
+    if (b.style.display === 'none') return;
+    b.querySelectorAll('.acao-item input[type="checkbox"]').forEach(cb => { if (cb.offsetParent !== null) cb.checked = false; });
+  });
+});
+</script>
+{% endblock %}

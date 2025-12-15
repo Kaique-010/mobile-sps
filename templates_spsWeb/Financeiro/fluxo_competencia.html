@@ -3,103 +3,400 @@
 {% load finance_tags %}
 {% block content %}
 <style>
-    .modal-table-wrapper {
-        max-height: 320px;
-        overflow-y: auto;
-        border: 1px solid #eee;
-        border-radius: 4px;
+    :root {
+        --success-color: #10b981;
+        --danger-color: #ef4444;
+        --primary-color: #3b82f6;
+        --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+        --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
     }
 
-    .modal h6 {
+    .page-title {
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        text-align: center;
+        gap: 0.75rem;
+    }
+
+    .page-title i {
+        font-size: 1.75rem;
+        color: var(--primary-color);
+    }
+
+    .stats-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: var(--card-shadow);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
+        position: relative;
+    }
+
+    .stats-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--card-color) 0%, var(--card-color-light) 100%);
+    }
+
+    .stats-card:hover {
+        box-shadow: var(--card-shadow-hover);
+        transform: translateY(-4px);
+    }
+
+    .stats-card.success {
+        --card-color: var(--success-color);
+        --card-color-light: #34d399;
+    }
+
+    .stats-card.danger {
+        --card-color: var(--danger-color);
+        --card-color-light: #f87171;
+    }
+
+    .stats-card.primary {
+        --card-color: var(--primary-color);
+        --card-color-light: #182d46;
+    }
+
+    .stats-card.info {
+        --card-color: #8b5cf6;
+        --card-color-light: #a78bfa;
+    }
+
+    .stats-card .card-body {
+        padding: 1.5rem;
+    }
+
+    .stats-card .card-title {
+        font-size: 0.875rem;
         font-weight: 600;
-        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
     }
 
-    .modal td {
+    .stats-card .card-title i {
+        font-size: 0.8rem;
+    }
+
+    .stats-card .value {
+        font-size: 1.5rem;
+        font-weight: 700;
+
+    }
+
+    .card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: var(--card-shadow);
+    }
+
+    .card-header {
+        background: linear-gradient(135deg, #1d2650 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 12px 12px 0 0 !important;
+        padding: 1rem 1.5rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .card-header i {
+        font-size: 1.00rem;
+    }
+
+    .table-responsive {
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .table {
+        margin-bottom: 0;
+    }
+
+    .table thead th {
+        background: #f9fafb;
+        border-bottom: 2px solid #e5e7eb;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        color: #6b7280;
+        padding: 1rem;
+    }
+
+    .table tbody tr {
+        transition: background-color 0.2s;
+    }
+
+    .table tbody tr:hover {
+        background-color: #f9fafb;
+    }
+
+    .table tbody td {
+        padding: 1rem;
         vertical-align: middle;
     }
 
-    .modal .section-title-icon {
-        font-size: 1rem;
-        margin-right: 4px;
-        opacity: .7;
+    .detail-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        color: var(--primary-color);
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+
+    .detail-link:hover {
+        color: #2563eb;
+        gap: 0.5rem;
+    }
+
+    .detail-link i {
+        font-size: 1.125rem;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 8px;
+        padding: 0.625rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .form-control,
+    .form-select {
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        padding: 0.625rem 1rem;
+        transition: all 0.2s;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .modal-content {
+        border: none;
+        border-radius: 16px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    }
+
+    .modal-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 16px 16px 0 0;
+        padding: 1.5rem;
+    }
+
+    .modal-title {
+        font-weight: 700;
+    }
+
+    .modal-body {
+        padding: 2rem;
+    }
+
+    .modal-table-wrapper {
+        max-height: 320px;
+        overflow-y: auto;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #fafafa;
+    }
+
+    .modal-table-wrapper::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .modal-table-wrapper::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 8px;
+    }
+
+    .modal-table-wrapper::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 8px;
+    }
+
+    .modal-table-wrapper::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+
+    .modal h6 {
+        font-weight: 700;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .section-title-icon {
+        font-size: 1.25rem;
+    }
+
+    #competenciaTitulo {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-size: 1.5rem;
+    }
+
+    #chart-competencia {
+        border-radius: 16px;
+        padding: 0.75rem;
+        overflow: hidden;
+    }
+
+    @media (max-width: 768px) {
+        .stats-card .value {
+            font-size: 1.5rem;
+        }
+
+        .page-title {
+            font-size: 1.5rem;
+        }
     }
 </style>
 
 <link rel="stylesheet" href="{% static 'css/list.css' %}">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
 <div class="container my-4">
     <div class="container align-items-center">
-        <h2 class="page-title"><i class="bi bi-bar-chart-line"></i> Fluxo do caixa (Competência)</h2>
+        <h2 class="page-title text-center">
+            <i class="bi bi-graph-up"></i>
+            Fluxo do Caixa (Competência)
+        </h2>
     </div>
 
     <div class="row g-3 mb-4">
-        <div class="col-12 col-md-3">
-            <div class="card h-100">
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="stats-card card h-100 success">
                 <div class="card-body">
-                    <h6 class="card-title text-success"><i class="bi bi-arrow-down-circle"></i> Receita Total</h6>
-                    <div class="fs-5">{{ total_receita|brl }}</div>
+                    <h6 class="card-title text-success">
+                        <i class="bi bi-arrow-down-circle"></i>
+                        Receita Total
+                    </h6>
+                    <div class="value">{{ total_receita|brl }}</div>
                 </div>
             </div>
         </div>
-        <div class="col-12 col-md-3">
-            <div class="card h-100">
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="stats-card card h-100 danger">
                 <div class="card-body">
-                    <h6 class="card-title text-danger"><i class="bi bi-arrow-up-circle"></i> Despesa Total</h6>
-                    <div class="fs-5">{{ total_despesa|brl }}</div>
+                    <h6 class="card-title text-danger">
+                        <i class="bi bi-arrow-up-circle"></i>
+                        Despesa Total
+                    </h6>
+                    <div class="value">{{ total_despesa|brl }}</div>
                 </div>
             </div>
         </div>
-        <div class="col-12 col-md-3">
-            <div class="card h-100">
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="stats-card card h-100 info">
                 <div class="card-body">
-                    <h6 class="card-title"><i class="bi bi-wallet2"></i> Saldo Inicial</h6>
-                    <div class="fs-5">{{ saldo_inicial|brl }}</div>
+                    <h6 class="card-title text-muted">
+                        <i class="bi bi-wallet2"></i>
+                        Saldo Inicial
+                    </h6>
+                    <div class="value">{{ saldo_inicial|brl }}</div>
                 </div>
             </div>
         </div>
-        <div class="col-12 col-md-3">
-            <div class="card h-100">
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="stats-card card h-100 primary">
                 <div class="card-body">
-                    <h6 class="card-title"><i class="bi bi-graph-up-arrow"></i> Saldo Final</h6>
-                    <div class="fs-5">{{ saldo_final|brl }}</div>
+                    <h6 class="card-title text-primary">
+                        <i class="bi bi-graph-up-arrow"></i>
+                        Saldo Final
+                    </h6>
+                    <div class="value">{{ saldo_final|brl }}</div>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="card mb-4">
-        <div class="card-header"><i class="bi bi-funnel"></i> Filtros de Competência</div>
+        <div class="card-header">
+            <i class="bi bi-funnel"></i>
+            Filtros de Competência
+        </div>
         <div class="card-body">
             <form method="get" class="row g-3">
                 <input type="hidden" name="empresa_id" value="{{ empresa_id }}">
                 <input type="hidden" name="filial_id" value="{{ filial_id }}">
-                <div class="col-12 col-md-4">
+                <div class="col-12 col-md-6 col-lg-3">
                     <label class="form-label">Data Início (Competência)</label>
                     <input type="date" name="data_ini" class="form-control" value="{{ filters.data_ini }}">
                 </div>
-                <div class="col-12 col-md-4">
+                <div class="col-12 col-md-6 col-lg-3">
                     <label class="form-label">Data Fim (Competência)</label>
                     <input type="date" name="data_fim" class="form-control" value="{{ filters.data_fim }}">
                 </div>
-                <div class="col-12 col-md-4">
+                <div class="col-12 col-md-6 col-lg-3">
                     <label class="form-label">Saldo Inicial</label>
                     <input type="number" step="0.01" name="saldo_inicial" class="form-control"
                         value="{{ filters.saldo_inicial }}">
                 </div>
-                <div class="col-12 col-md-4 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search"></i>
-                        Aplicar</button>
+                <div class="col-12 col-md-6 col-lg-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i>
+                        Aplicar Filtros
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 
+    <div class="card mb-4 graph-card">
+        <div class="card-header">
+            <i class="bi bi-bar-chart"></i>
+            Gráfico de Desempenho
+        </div>
+        <div class="card-body">
+            <div id="chart-competencia" style="height:220px;"></div>
+        </div>
+    </div>
+
     <div class="card">
-        <div class="card-header"><i class="bi bi-calendar3"></i> Resultado Mensal por Competência</div>
+        <div class="card-header">
+            <i class="bi bi-calendar3"></i>
+            Resultado Mensal por Competência
+        </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-striped table-sm">
+                <table class="table table-hover">
                     <thead>
                         <tr>
                             <th>Mês de Competência</th>
@@ -112,19 +409,25 @@
                         {% for m in movimentos_mensais %}
                         <tr>
                             <td>
-                                {{ m.mes|date:'m/Y' }}
-                                <a href="#" class="ms-2" data-role="show-details-competencia"
+                                <strong>{{ m.mes|date:'m/Y' }}</strong>
+                                <a href="#" class="detail-link ms-2" data-role="show-details-competencia"
                                     data-year="{{ m.mes|date:'Y' }}" data-month="{{ m.mes|date:'m' }}">
-                                    <i class="bi bi-plus-circle"></i>
+                                    <i class="bi bi-eye"></i>
+                                    <span class="d-none d-md-inline">Ver detalhes</span>
                                 </a>
                             </td>
-                            <td class="text-success">{{ m.receita|brl }}</td>
-                            <td class="text-danger">{{ m.despesa|brl }}</td>
-                            <td class="{% if m.resultado >= 0 %}text-primary{% else %}text-danger{% endif %}">{{ m.resultado|brl }}</td>
+                            <td class="text-success fw-semibold">{{ m.receita|brl }}</td>
+                            <td class="text-danger fw-semibold">{{ m.despesa|brl }}</td>
+                            <td class="{% if m.resultado >= 0 %}text-primary{% else %}text-danger{% endif %} fw-bold">
+                                {{ m.resultado|brl }}
+                            </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="4" class="text-center">Nenhum movimento de competência no período.</td>
+                            <td colspan="4" class="text-center py-4">
+                                <i class="bi bi-inbox" style="font-size: 2rem; opacity: 0.3;"></i>
+                                <p class="mt-2 mb-0 text-muted">Nenhum movimento de competência no período.</p>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -135,31 +438,37 @@
 </div>
 
 <div class="modal fade" id="modalDetalhesCompetencia" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Títulos do mês</h5>
+                <h5 class="modal-title">
+                    <i class="bi bi-file-earmark-text me-2"></i>
+                    Detalhes dos Títulos
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="row mb-3">
+                <div class="row mb-4">
                     <div class="col text-center">
-                        <h5 id="competenciaTitulo" class="fw-bold text-primary mb-0"></h5>
+                        <h5 id="competenciaTitulo" class="fw-bold mb-0"></h5>
                     </div>
                 </div>
 
                 <div class="row g-4">
-                    <div class="col-12 col-md-6">
-                        <h6><i class="bi bi-arrow-down-circle text-success section-title-icon"></i>Receitas</h6>
+                    <div class="col-12 col-lg-6">
+                        <h6>
+                            <i class="bi bi-arrow-down-circle text-success section-title-icon"></i>
+                            Receitas
+                        </h6>
                         <div class="modal-table-wrapper">
-                            <table class="table table-sm table-hover">
-                                <thead class="table-light">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead class="table-light sticky-top">
                                     <tr>
                                         <th>Título</th>
-                                        <th>Parc</th>
+                                        <th>Parc.</th>
                                         <th>Emissão</th>
-                                        <th>Venc</th>
-                                        <th>Valor</th>
+                                        <th>Vencimento</th>
+                                        <th class="text-end">Valor</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tbl-receitas-competencia"></tbody>
@@ -167,17 +476,20 @@
                         </div>
                     </div>
 
-                    <div class="col-12 col-md-6">
-                        <h6><i class="bi bi-arrow-up-circle text-danger section-title-icon"></i>Despesas</h6>
+                    <div class="col-12 col-lg-6">
+                        <h6>
+                            <i class="bi bi-arrow-up-circle text-danger section-title-icon"></i>
+                            Despesas
+                        </h6>
                         <div class="modal-table-wrapper">
-                            <table class="table table-sm table-hover">
-                                <thead class="table-light">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead class="table-light sticky-top">
                                     <tr>
                                         <th>Título</th>
-                                        <th>Parc</th>
+                                        <th>Parc.</th>
                                         <th>Emissão</th>
-                                        <th>Venc</th>
-                                        <th>Valor</th>
+                                        <th>Vencimento</th>
+                                        <th class="text-end">Valor</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tbl-despesas-competencia"></tbody>
@@ -186,45 +498,172 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
 
+<script>
+    function formatDateBR(dateStr) {
+        if (!dateStr) return "-";
+        const parts = dateStr.split("T")[0].split("-");
+        const [y, m, d] = parts;
+        return `${d}/${m}/${y}`;
+    }
 
-            <script>
-                function formatDateBR(dateStr) {
-                    if (!dateStr) return "";
-                    const parts = dateStr.split("T")[0].split("-");
-                    const [y, m, d] = parts;
-                    return `${d}/${m}/${y}`;
+    (function () {
+        const modalEl = document.getElementById('modalDetalhesCompetencia');
+        document.addEventListener('click', async function (e) {
+            const link = e.target.closest('[data-role="show-details-competencia"]');
+            if (!link) return;
+            e.preventDefault();
+
+            const year = link.getAttribute('data-year');
+            const month = link.getAttribute('data-month');
+            const url = `/web/${encodeURIComponent('{{ slug }}')}/fluxo-de-caixa/detalhes/competencia/${year}/${month}/`;
+
+            try {
+                const res = await fetch(url, { credentials: 'same-origin' });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+
+                document.getElementById('competenciaTitulo').textContent = `${month}/${year}`;
+
+                const recTbody = document.getElementById('tbl-receitas-competencia');
+                const desTbody = document.getElementById('tbl-despesas-competencia');
+
+                recTbody.innerHTML = (data.receitas || []).map(i => `
+                    <tr>
+                        <td>${i.titulo}</td>
+                        <td>${i.parcela}</td>
+                        <td>${formatDateBR(i.emissao || '')}</td>
+                        <td>${formatDateBR(i.vencimento || '')}</td>
+                        <td class="text-end fw-semibold">${Number(i.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                    </tr>
+                `).join('') || '<tr><td colspan="5" class="text-center text-muted py-3">Nenhuma receita encontrada</td></tr>';
+
+                desTbody.innerHTML = (data.despesas || []).map(i => `
+                    <tr>
+                        <td>${i.titulo}</td>
+                        <td>${i.parcela}</td>
+                        <td>${formatDateBR(i.emissao || '')}</td>
+                        <td>${formatDateBR(i.vencimento || '')}</td>
+                        <td class="text-end fw-semibold">${Number(i.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                    </tr>
+                `).join('') || '<tr><td colspan="5" class="text-center text-muted py-3">Nenhuma despesa encontrada</td></tr>';
+
+                let inst = null;
+                if (window.bootstrap && bootstrap.Modal) {
+                    inst = typeof bootstrap.Modal.getOrCreateInstance === 'function'
+                        ? bootstrap.Modal.getOrCreateInstance(modalEl)
+                        : new bootstrap.Modal(modalEl);
                 }
-                (function () {
-                    const modalEl = document.getElementById('modalDetalhesCompetencia');
-                    document.addEventListener('click', async function (e) {
-                        const link = e.target.closest('[data-role="show-details-competencia"]');
-                        if (!link) return;
-                        e.preventDefault();
-                        const year = link.getAttribute('data-year');
-                        const month = link.getAttribute('data-month');
-                        const url = `/web/${encodeURIComponent('{{ slug }}')}/fluxo-de-caixa/detalhes/competencia/${year}/${month}/`;
-                        try {
-                            const res = await fetch(url, { credentials: 'same-origin' });
-                            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                            const data = await res.json();
-                            const recTbody = document.getElementById('tbl-receitas-competencia');
-                            const desTbody = document.getElementById('tbl-despesas-competencia');
-                            recTbody.innerHTML = (data.receitas || []).map(i => `<tr><td>${i.titulo}</td><td>${i.parcela}</td><td>${formatDateBR(i.emissao || '')}</td><td>${formatDateBR(i.vencimento || '')}</td><td>${Number(i.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td></tr>`).join('');
-                            desTbody.innerHTML = (data.despesas || []).map(i => `<tr><td>${i.titulo}</td><td>${i.parcela}</td><td>${formatDateBR(i.emissao || '')}</td><td>${formatDateBR(i.vencimento || '')}</td><td>${Number(i.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td></tr>`).join('');
-                            let inst = null;
-                            if (window.bootstrap && bootstrap.Modal) {
-                                inst = typeof bootstrap.Modal.getOrCreateInstance === 'function'
-                                    ? bootstrap.Modal.getOrCreateInstance(modalEl)
-                                    : new bootstrap.Modal(modalEl);
-                            }
-                            if (inst) inst.show();
-                        } catch (err) {
-                            console.error('Falha ao carregar detalhes de competência:', err, url);
-                            if (window.showToast) window.showToast('Não foi possível carregar detalhes do mês', { variant: 'danger', delay: 2500 });
-                        }
-                    });
-                })();
-            </script>
+                if (inst) inst.show();
+            } catch (err) {
+                console.error('Falha ao carregar detalhes de competência:', err, url);
+                if (window.showToast) {
+                    window.showToast('Não foi possível carregar detalhes do mês', { variant: 'danger', delay: 2500 });
+                }
+            }
+        });
+    })();
+</script>
 
-            {% endblock %}
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script>
+    (function () {
+        const labels = [{% for m in movimentos_mensais %}'{{ m.mes|date:"m/Y" }}'{% if not forloop.last %}, {% endif %} {% endfor %}];
+    const receitas = [{% for m in movimentos_mensais %}{ { m.receita | default_if_none: 0 } } {% if not forloop.last %}, {% endif %} {% endfor %}].map(Number);
+    const despesas = [{% for m in movimentos_mensais %}{ { m.despesa | default_if_none: 0 } } {% if not forloop.last %}, {% endif %} {% endfor %}].map(Number);
+    const resultados = [{% for m in movimentos_mensais %}{ { m.resultado | default_if_none: 0 } } {% if not forloop.last %}, {% endif %} {% endfor %}].map(Number);
+    console.debug('chart-competencia data', { labels, receitas, despesas, resultados });
+
+    const data = [
+        {
+            x: labels,
+            y: receitas,
+            type: 'bar',
+            name: 'Receita',
+            marker: {
+                color: '#10b981',
+                opacity: 0.8,
+                line: { color: '#059669', width: 1.5 }
+            },
+            hovertemplate: '<b>%{x}</b><br>Receita: R$ %{y:,.2f}<extra></extra>'
+        },
+        {
+            x: labels,
+            y: despesas,
+            type: 'bar',
+            name: 'Despesa',
+            marker: {
+                color: '#ef4444',
+                opacity: 0.8,
+                line: { color: '#dc2626', width: 1.5 }
+            },
+            hovertemplate: '<b>%{x}</b><br>Despesa: R$ %{y:,.2f}<extra></extra>'
+        },
+        {
+            x: labels,
+            y: resultados,
+            type: 'scatter',
+            mode: 'lines+markers',
+            name: 'Resultado',
+            line: { color: '#3b82f6', width: 2, shape: 'spline' },
+            marker: { color: '#3b82f6', size: 6, line: { color: '#1e40af', width: 2 } },
+            hovertemplate: '<b>%{x}</b><br>Resultado: R$ %{y:,.2f}<extra></extra>'
+        }
+    ];
+
+    const layout = {
+        barmode: 'group',
+        margin: { t: 20, r: 12, b: 30, l: 40 },
+        paper_bgcolor: 'transparent',
+        plot_bgcolor: 'transparent',
+        font: {
+            family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            size: 11,
+            color: '#e5e7eb'
+        },
+        xaxis: {
+            title: { text: 'Período', font: { size: 12, color: '#94a3b8' } },
+            gridcolor: '#334155',
+            showgrid: false
+        },
+        yaxis: {
+            title: { text: 'Valor (R$)', font: { size: 12, color: '#94a3b8' } },
+            gridcolor: '#334155',
+            zeroline: true,
+            zerolinecolor: '#475569',
+            zerolinewidth: 2
+        },
+        legend: {
+            orientation: 'h',
+            yanchor: 'bottom',
+            y: 1.02,
+            xanchor: 'right',
+            x: 1,
+            bgcolor: 'rgba(30, 41, 59, 0.4)',
+            bordercolor: '#334155',
+            borderwidth: 1
+        },
+        hovermode: 'x unified',
+        bargap: 0.3
+    };
+
+    const config = {
+        responsive: true,
+        displayModeBar: true,
+        displaylogo: false,
+        modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d']
+    };
+
+    const el = document.getElementById('chart-competencia');
+    if (el) {
+        Plotly.newPlot(el, data, layout, config);
+    } else {
+        console.warn('chart-competencia element not found');
+    }
+    }) ();
+</script>
+
+{% endblock %}

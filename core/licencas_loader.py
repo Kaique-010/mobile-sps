@@ -40,25 +40,19 @@ def carregar_licencas_dict():
             for row in rows:
                 total_rows += 1
 
-                slug, cnpj, db_name, db_host, db_port, modulos, db_user, db_password = row
-
-                logger.warning("[ITEM] slug=%s cnpj=%s host=%s", slug, cnpj, db_host)
-
-                # Normaliza CNPJ
+                slug, cnpj, db_name, db_host, db_port, modulos, db_user, db_password = row                # Normaliza CNPJ
                 norm_doc = _normalize_doc(cnpj or "")
                 if not (norm_doc.isdigit() and len(norm_doc) == 14):
-                    logger.error("[DESCARTADO] slug=%s motivo=CNPJ inválido=%s norm=%s",
-                                 slug, cnpj, norm_doc)
+            
                     continue
 
                 # Valida credenciais
                 if not db_user or not db_password:
-                    logger.error("[DESCARTADO] slug=%s motivo=credenciais faltando user=%s pass=%s",
-                                 slug, db_user, db_password)
+                
                     continue
 
                 if not db_host:
-                    logger.error("[DESCARTADO] slug=%s motivo=db_host vazio", slug)
+                  
                     continue
 
                 # Monta item final
@@ -75,19 +69,11 @@ def carregar_licencas_dict():
 
                 resultado.append(item)
 
-                logger.warning("[OK] slug=%s cnpj=%s host=%s db=%s",
-                               item["slug"], item["cnpj"], item["db_host"], item["db_name"])
+             
 
     except Exception as e:
-        logger.error("[LICENCAS_LOADER] ERRO leitura tabela: %s", e)
+       
         return []
-
-    logger.warning("[LICENCAS_LOADER] FINAL count_total=%s carregadas=%s",
-                   total_rows, len(resultado))
-
-    logger.warning("[LICENCAS_LOADER] SLUGS: %s",
-                   [i["slug"] for i in resultado])
-
     return resultado
 
 
@@ -152,6 +138,6 @@ def _bootstrap_licencas_web_if_missing():
                         )
                     )
         conn.commit()
-        logger.warning("[LICENCAS_LOADER] bootstrap licencas_web criado e populado")
+        
     except Exception as e:
         logger.warning("[LICENCAS_LOADER] bootstrap falhou: %s", e)

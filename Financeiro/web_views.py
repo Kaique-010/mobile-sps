@@ -4,14 +4,20 @@ from django.http import JsonResponse
 from datetime import date
 from calendar import monthrange
 from django.utils import timezone
-from django.db.models import Sum
+from django.db.models import (
+    Sum, Q, OuterRef, Subquery, Value, Func, F, DecimalField
+)
 from django.db.models.functions import TruncMonth
 from django.utils.http import urlencode
 from django.utils import timezone
 from core.utils import get_licenca_db_config
 from contas_a_receber.models import Baretitulos, Titulosreceber
 from contas_a_pagar.models import Bapatitulos, Titulospagar
+from Financeiro.models import Situacoes
+from logging import getLogger
 
+
+LOGGER = getLogger(__name__)
 
 
 class DBAndSlugMixin:
@@ -129,19 +135,17 @@ class FluxoCaixaView(DBAndSlugMixin, TemplateView):
         return context
 
 
-
 class FluxoCompetenciaView(DBAndSlugMixin, TemplateView):
-    template_name = 'Financeiro/fluxo_competencia.html' 
+    template_name = 'Financeiro/fluxo_competencia.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # --- 1. Parâmetros e Filtros ---
+        # --- 1. Parâmetros ---
         data_ini = self.request.GET.get('data_ini')
         data_fim = self.request.GET.get('data_fim')
         saldo_inicial = self.request.GET.get('saldo_inicial')
 
-        # Defaults para o mês corrente
         today = timezone.now().date()
         default_ini = today.replace(day=1)
         default_fim = today
@@ -151,57 +155,96 @@ class FluxoCompetenciaView(DBAndSlugMixin, TemplateView):
             'data_fim': data_fim or default_fim.isoformat(),
             'saldo_inicial': saldo_inicial or '0.00',
         }
+
         preserved_qs = {k: v for k, v in preserved.items() if v}
 
-        # --- 2. Queries por Competência ---
-        # Usamos os MODELS de Títulos ABERTO/GERADO, não os de Baixa (Baretitulos/Bapatitulos)
-        
-        rec_qs = Titulosreceber.objects.using(self.db_alias)
-        pag_qs = Titulospagar.objects.using(self.db_alias)
+        # --- 2. Query base ---
+        rec_qs = Titulosreceber.objects.using(self.db_alias).filter(
+            titu_aber__in=['A', 'P']
+        )
+
+        pag_qs = Titulospagar.objects.using(self.db_alias).filter(
+            titu_aber__in=['A', 'P']
+        )
 
         if self.empresa_id:
             rec_qs = rec_qs.filter(titu_empr=self.empresa_id)
             pag_qs = pag_qs.filter(titu_empr=self.empresa_id)
+
         if self.filial_id:
             rec_qs = rec_qs.filter(titu_fili=self.filial_id)
             pag_qs = pag_qs.filter(titu_fili=self.filial_id)
 
-        # Filtro CRÍTICO: Usamos a data de EMISSÃO/COMPETÊNCIA
-        rec_qs = rec_qs.filter(titu_emis__range=(preserved['data_ini'], preserved['data_fim']))
-        pag_qs = pag_qs.filter(titu_emis__range=(preserved['data_ini'], preserved['data_fim']))
+        # --- 3. Filtro por vencimento ---
+        rec_qs = rec_qs.filter(titu_venc__range=(preserved['data_ini'], preserved['data_fim']))
+        pag_qs = pag_qs.filter(titu_venc__range=(preserved['data_ini'], preserved['data_fim']))
 
-        # --- 3. Totais do Período ---
-        # Usamos o campo de valor principal
-        total_receita = rec_qs.aggregate(
-            total=Sum('titu_valo')
-        )['total'] or 0
+        # --- 4. naolistarpagar ---
+        situ_nao_listar_sq = Situacoes.objects.using(self.db_alias).filter(
+            situ_codi=OuterRef('titu_situ')
+        ).values('situ_nao_list_cp')[:1]
 
-        total_despesa = pag_qs.aggregate(
-            total=Sum('titu_valo')
-        )['total'] or 0
+        pag_qs = pag_qs.annotate(
+            nao_listar=Subquery(situ_nao_listar_sq)
+        ).filter(
+            Q(nao_listar=False) | Q(nao_listar__isnull=True)
+        )
 
-        # O Resultado de Competência não usa Saldo Inicial
+        # --- 5. Saldo vigente ---
+        data_saldo = preserved['data_fim']
+
+        pag_qs = pag_qs.annotate(
+            saldo_a_pagar=Func(
+                F('titu_empr'),
+                F('titu_fili'),
+                F('titu_forn'),
+                F('titu_titu'),
+                F('titu_seri'),
+                F('titu_parc'),
+                Value(data_saldo),
+                function='fnc_saldo_pagar',
+                output_field=DecimalField(max_digits=15, decimal_places=2),
+            )
+        )
+
+        # --- 6. Agregação mensal (fonte única para cards e tabela) ---
+        rec_mensal = rec_qs.annotate(
+            mes=TruncMonth('titu_venc')
+        ).values('mes').annotate(
+            valor=Sum('titu_valo')
+        )
+
+        pag_mensal = pag_qs.annotate(
+            mes=TruncMonth('titu_venc')
+        ).values('mes').annotate(
+            valor=Sum('saldo_a_pagar')
+        )
+
+        # Totais com base nas mesmas agregações exibidas na tabela
+        total_receita = float(sum(float(r['valor'] or 0) for r in rec_mensal))
+        total_despesa = float(sum(float(p['valor'] or 0) for p in pag_mensal))
         resultado_liquido = float(total_receita) - float(total_despesa)
 
         try:
             saldo_inicial_val = float(preserved['saldo_inicial'])
         except Exception:
             saldo_inicial_val = 0.0
+        saldo_final = saldo_inicial_val + resultado_liquido
 
-        saldo_final = (saldo_inicial_val or 0) + float(resultado_liquido)
-        
-        # --- 4. Agregações Mensais (Visualização do Resultado) ---
-        
-        # Agrega pelo Mês de Emissão/Competência
-        rec_mensal = rec_qs.annotate(mes=TruncMonth('titu_emis')).values('mes').annotate(valor=Sum('titu_valo'))
-        pag_mensal = pag_qs.annotate(mes=TruncMonth('titu_emis')).values('mes').annotate(valor=Sum('titu_valo'))
-
-        # Lógica de mesclagem (similar ao seu código)
         mensal_map = {}
+
         for r in rec_mensal:
-            mensal_map[r['mes']] = {'mes': r['mes'], 'receita': float(r['valor'] or 0), 'despesa': 0.0}
+            mensal_map[r['mes']] = {
+                'mes': r['mes'],
+                'receita': float(r['valor'] or 0),
+                'despesa': 0.0,
+            }
+
         for p in pag_mensal:
-            entry = mensal_map.get(p['mes'], {'mes': p['mes'], 'receita': 0.0, 'despesa': 0.0})
+            entry = mensal_map.get(
+                p['mes'],
+                {'mes': p['mes'], 'receita': 0.0, 'despesa': 0.0}
+            )
             entry['despesa'] = float(p['valor'] or 0)
             mensal_map[p['mes']] = entry
 
@@ -210,7 +253,7 @@ class FluxoCompetenciaView(DBAndSlugMixin, TemplateView):
             m['resultado'] = m['receita'] - m['despesa']
             movimentos_mensais.append(m)
 
-        # --- 5. Contexto ---
+        # --- 8. Contexto ---
         context.update({
             'slug': self.slug,
             'empresa_id': self.empresa_id,
@@ -223,10 +266,9 @@ class FluxoCompetenciaView(DBAndSlugMixin, TemplateView):
             'saldo_inicial': saldo_inicial_val,
             'saldo_final': saldo_final,
             'movimentos_mensais': movimentos_mensais,
-            # ... suas variáveis de slug/empresa/filial
         })
-        return context
 
+        return context
 
 class DetalhesCompetenciaView(DBAndSlugMixin, View):
     def get(self, request, year, month, *args, **kwargs):
@@ -241,12 +283,43 @@ class DetalhesCompetenciaView(DBAndSlugMixin, View):
         if self.empresa_id:
             rec_qs = rec_qs.filter(titu_empr=self.empresa_id)
             pag_qs = pag_qs.filter(titu_empr=self.empresa_id)
+
         if self.filial_id:
             rec_qs = rec_qs.filter(titu_fili=self.filial_id)
             pag_qs = pag_qs.filter(titu_fili=self.filial_id)
 
-        rec_qs = rec_qs.filter(titu_emis__range=(start, end)).only('titu_titu','titu_parc','titu_seri','titu_emis','titu_venc','titu_valo')
-        pag_qs = pag_qs.filter(titu_emis__range=(start, end)).only('titu_titu','titu_parc','titu_seri','titu_emis','titu_venc','titu_valo')
+        rec_qs = rec_qs.filter(
+            titu_venc__range=(start, end)
+        ).only(
+            'titu_titu','titu_parc','titu_seri','titu_emis','titu_venc','titu_valo'
+        )
+
+        pag_qs = pag_qs.filter(
+            titu_venc__range=(start, end)
+        )
+        # Aplicar mesmo filtro de "nao listar pagar" usado em FluxoCompetenciaView
+        situ_nao_listar_sq = Situacoes.objects.using(self.db_alias).filter(
+            situ_codi=OuterRef('titu_situ')
+        ).values('situ_nao_list_cp')[:1]
+        pag_qs = pag_qs.annotate(
+            nao_listar=Subquery(situ_nao_listar_sq)
+        ).filter(
+            Q(nao_listar=False) | Q(nao_listar__isnull=True)
+        ).annotate(
+            saldo_a_pagar=Func(
+                F('titu_empr'),
+                F('titu_fili'),
+                F('titu_forn'),
+                F('titu_titu'),
+                F('titu_seri'),
+                F('titu_parc'),
+                Value(end),
+                function='fnc_saldo_pagar',
+                output_field=DecimalField(max_digits=15, decimal_places=2),
+            )
+        ).only(
+            'titu_titu','titu_parc','titu_seri','titu_emis','titu_venc'
+        )
 
         receitas = [
             {
@@ -259,6 +332,7 @@ class DetalhesCompetenciaView(DBAndSlugMixin, View):
             }
             for r in rec_qs[:500]
         ]
+
         despesas = [
             {
                 'titulo': p.titu_titu,
@@ -266,13 +340,13 @@ class DetalhesCompetenciaView(DBAndSlugMixin, View):
                 'serie': p.titu_seri,
                 'emissao': p.titu_emis,
                 'vencimento': p.titu_venc,
-                'valor': float(p.titu_valo or 0),
+                'valor': float(p.saldo_a_pagar or 0),
             }
             for p in pag_qs[:500]
         ]
 
-        total_receita = sum(item['valor'] for item in receitas)
-        total_despesa = sum(item['valor'] for item in despesas)
+        total_receita = sum(r['valor'] for r in receitas)
+        total_despesa = sum(d['valor'] for d in despesas)
 
         return JsonResponse({
             'receitas': receitas,

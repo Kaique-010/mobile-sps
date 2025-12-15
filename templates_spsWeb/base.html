@@ -95,7 +95,15 @@
         document.addEventListener('DOMContentLoaded', function(){
             try {
                 {% for message in messages %}
-                window.showToast("{{ message|escapejs }}", { variant: "{{ message.tags|default:'info' }}", delay: 3500 });
+                (function(){
+                    var tag = "{{ message.tags|default:'info' }}";
+                    if (tag.indexOf('error') >= 0) tag = 'danger';
+                    else if (tag.indexOf('warning') >= 0) tag = 'warning';
+                    else if (tag.indexOf('success') >= 0) tag = 'success';
+                    else if (tag.indexOf('info') >= 0) tag = 'info';
+                    else if (tag.indexOf('debug') >= 0) tag = 'secondary';
+                    window.showToast("{{ message|escapejs }}", { variant: tag, delay: 3500 });
+                })();
                 {% endfor %}
             } catch (e) {}
         });

@@ -139,6 +139,7 @@ INSTALLED_APPS = [
     'centraldeajuda',
     'osexterna',
     'licencas_web',
+    'perfilweb',
 ]
 
 # Middleware
@@ -155,6 +156,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'core.middleware.LicencaMiddleware',
     'auditoria.middleware.AuditoriaMiddleware',
+    'perfilweb.middleware.PerfilPermissionMiddleware',
 ]
 
 
@@ -362,12 +364,6 @@ LOGGING = {
             'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': False,
         },
-        'Licencas': {
-            'handlers': ['console'],
-            'level': 'DEBUG' if DEBUG else 'WARNING',
-            'propagate': False,
-            'formatter': 'verbose',
-        },
         'listacasamento.views': {
             'handlers': ['console'],
             'level': 'DEBUG' if DEBUG else 'INFO',
@@ -404,12 +400,12 @@ LOGGING = {
             'propagate': False,
             'formatter': 'verbose',
         },
-        'core': {
+        'perfilweb.middleware': {
             'handlers': ['console'],
-            'level': 'WARNING',
+            'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': False,
             'formatter': 'verbose',
-        },
+        }
     },
 }
 

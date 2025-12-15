@@ -19,16 +19,15 @@ logger = logging.getLogger(__name__)
 def get_licencas_map():
     try:
         from core.licencas_loader import carregar_licencas_dict
-        logger.warning("[LICENCAS_CONTEXT] tentando carregar da tabela licencas_web")
         data = carregar_licencas_dict()
         if data:
-            logger.warning("[LICENCAS_CONTEXT] carregado da tabela count=%s", len(data))
+            
             return data
     except Exception:
         logger.warning("[LICENCAS_CONTEXT] erro ao carregar da tabela, usando fallback JSON")
     with open(json_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
-        logger.warning("[LICENCAS_CONTEXT] carregado do JSON count=%s", len(data))
+        
         return data
 
 LICENCAS_MAP = []
