@@ -17,6 +17,7 @@ from .Views.deleteView import handle_delete
 from .Views.retrieveView import handle_retrieve
 from decimal import Decimal
 from datetime import date
+from django.utils.timezone import now
 from Lancamentos_Bancarios.utils import criar_lancamento_bancario_baixa
 
 logger = logging.getLogger(__name__)
@@ -45,31 +46,42 @@ class TitulosreceberViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
     
     def get_queryset(self):
         banco = get_licenca_db_config(self.request)
+
         queryset = Titulosreceber.objects.using(banco).only(
             'titu_empr','titu_fili','titu_titu','titu_seri','titu_parc',
             'titu_clie','titu_valo','titu_emis','titu_venc','titu_situ',
             'titu_form_reci','titu_aber'
         )
+
+        hoje = now().date()
+        inicio_mes = hoje.replace(day=1)
+
+        if inicio_mes.month == 12:
+            fim_mes = inicio_mes.replace(year=inicio_mes.year + 1, month=1, day=1)
+        else:
+            fim_mes = inicio_mes.replace(month=inicio_mes.month + 1, day=1)
+
+
         queryset = queryset.filter(
-            (models.Q(titu_emis__isnull=True) | models.Q(titu_emis__gte=date(2020,1,1))),
-            (models.Q(titu_venc__isnull=True) | models.Q(titu_venc__gte=date(1900,1,1))),
+            titu_venc__gte=inicio_mes,
+            titu_venc__lt=fim_mes
         )
 
         cliente_nome = self.request.query_params.get('cliente_nome')
         empresa_id = self.request.query_params.get('titu_empr')
 
         if cliente_nome:
-            ent_qs = Entidades.objects.using(banco).filter(enti_nome__icontains=cliente_nome)
+            ent_qs = Entidades.objects.using(banco).filter(
+                enti_nome__icontains=cliente_nome
+            )
             if empresa_id:
                 ent_qs = ent_qs.filter(enti_empr=empresa_id)
-            
+
             clientes_ids = list(ent_qs.values_list('enti_clie', flat=True))
-            
-            if clientes_ids:
-                queryset = queryset.filter(titu_clie__in=clientes_ids)
-            else:
-                queryset = queryset.none()
-        
+            queryset = queryset.filter(
+                titu_clie__in=clientes_ids
+            ) if clientes_ids else queryset.none()
+
         return queryset 
 
 

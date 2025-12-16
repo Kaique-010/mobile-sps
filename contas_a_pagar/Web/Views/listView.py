@@ -21,7 +21,7 @@ class TitulosPagarListView(DBAndSlugMixin, ListView):
 
     def get_queryset(self):
         qs = Titulospagar.objects.using(self.db_alias).all()
-        data_min = '2023-01-01'
+        data_min = '2025-01-01'
         data_max = '2100-12-31'
         qs = qs.filter(
             Q(titu_emis__isnull=True) | Q(titu_emis__range=(data_min, data_max)),
