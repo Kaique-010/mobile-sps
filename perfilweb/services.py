@@ -134,6 +134,33 @@ def _buscar_contenttype(banco, app_label, model_name):
         model_norm = 'ordemservico'
         logger.info(f"[perfil_services] _buscar_contenttype: Remapeando 'ordens' -> {app_norm}.{model_norm}")
     
+    # EXCEÇÃO: Mapear 'fasesetor' para 'OrdemdeServico.ordemservicofasesetor'
+    if model_norm == 'fasesetor':
+        app_norm = 'ordemdeservico'
+        model_norm = 'ordemservicofasesetor'
+        logger.info(f"[perfil_services] _buscar_contenttype: Remapeando 'fasesetor' -> {app_norm}.{model_norm}")
+    
+    if model_form == 'pecas':
+        model_norm = 'ordemservicopecas'
+        app_norm = 'ordemdeservico'
+    
+    if model_form == 'servicos':
+        model_norm = 'ordemservicoservicos'
+        app_norm = 'ordemdeservico'
+    
+    if model_form == 'imgantes':
+        model_norm = 'ordemservicoimgantes'
+        app_norm = 'ordemdeservico'
+    
+    if model_form == 'imgdurante':
+        model_norm = 'ordemservicoimgdurante'
+        app_norm = 'ordemdeservico'
+    
+    if model_form == 'imgdepois':
+        model_norm = 'ordemservicoimgdepois'
+        app_norm = 'ordemdeservico'
+
+    
     logger.info(f"[perfil_services] _buscar_contenttype: app_original={app_label} model_original={model_name} app_norm={app_norm} model_norm={model_norm}")
     
     # Estratégia 1: Busca direta exata
