@@ -128,6 +128,12 @@ def _buscar_contenttype(banco, app_label, model_name):
     app_norm = _normalizar_app_label(app_label)
     model_norm = _normalizar_model_name(model_name)
     
+    # EXCEÇÃO: Mapear 'ordens' para 'OrdemdeServico.ordemservico'
+    if app_norm == 'ordens' or model_norm == 'ordens':
+        app_norm = 'ordemdeservico'
+        model_norm = 'ordemservico'
+        logger.info(f"[perfil_services] _buscar_contenttype: Remapeando 'ordens' -> {app_norm}.{model_norm}")
+    
     logger.info(f"[perfil_services] _buscar_contenttype: app_original={app_label} model_original={model_name} app_norm={app_norm} model_norm={model_norm}")
     
     # Estratégia 1: Busca direta exata

@@ -1,5 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.apps import apps
+from django.db import IntegrityError, connections
 from .constants import ACOES_PADRAO, PERFIS_PADRAO, DEFAULT_PERMISSOES_POR_PERFIL
 from .models import Perfil, PermissaoPerfil, PerfilHeranca, UsuarioPerfil
 from Licencas.models import Usuarios
@@ -14,9 +15,32 @@ def get_content_types_validos(banco=None):
     for app_config in apps.get_app_configs():
         if app_config.name.startswith('django.'):
             continue
-        modelos.extend(app_config.get_models())
-    cts = ContentType.objects.db_manager(banco).get_for_models(*modelos).values()
-    return list(cts)
+        
+        # Filtra apenas modelos gerenciados pelo Django (managed=True)
+        # Modelos managed=False (views, tabelas legadas) geralmente não precisam de ContentType
+        # e podem causar erros se a tabela subjacente não estiver compatível
+        app_models = []
+        for model in app_config.get_models():
+            if getattr(model._meta, 'managed', True):
+                app_models.append(model)
+        
+        modelos.extend(app_models)
+    
+    try:
+        cts = ContentType.objects.db_manager(banco).get_for_models(*modelos).values()
+        return list(cts)
+    except IntegrityError as e:
+        # Corrige erro de coluna name NOT NULL em bancos antigos
+        if 'null value in column "name"' in str(e):
+            try:
+                with connections[banco].cursor() as cursor:
+                    cursor.execute('ALTER TABLE django_content_type ALTER COLUMN name DROP NOT NULL;')
+                # Tenta novamente após correção
+                cts = ContentType.objects.db_manager(banco).get_for_models(*modelos).values()
+                return list(cts)
+            except Exception:
+                pass
+        raise e
 
 
 def listar_recursos():
