@@ -17,6 +17,7 @@
         margin-bottom: 1.5rem;
         display: flex;
         align-items: center;
+        justify-content: center;
         text-align: center;
         gap: 0.75rem;
     }
@@ -385,7 +386,7 @@
             Gráfico de Desempenho
         </div>
         <div class="card-body">
-            <div id="chart-competencia" style="height:220px;"></div>
+            <canvas id="chart-competencia" style="height:220px;"></canvas>
         </div>
     </div>
 
@@ -568,102 +569,88 @@
     })();
 </script>
 
-<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     (function () {
-        const labels = [{% for m in movimentos_mensais %}'{{ m.mes|date:"m/Y" }}'{% if not forloop.last %}, {% endif %} {% endfor %}];
-    const receitas = [{% for m in movimentos_mensais %}{ { m.receita | default_if_none: 0 } } {% if not forloop.last %}, {% endif %} {% endfor %}].map(Number);
-    const despesas = [{% for m in movimentos_mensais %}{ { m.despesa | default_if_none: 0 } } {% if not forloop.last %}, {% endif %} {% endfor %}].map(Number);
-    const resultados = [{% for m in movimentos_mensais %}{ { m.resultado | default_if_none: 0 } } {% if not forloop.last %}, {% endif %} {% endfor %}].map(Number);
-    console.debug('chart-competencia data', { labels, receitas, despesas, resultados });
-
-    const data = [
-        {
-            x: labels,
-            y: receitas,
-            type: 'bar',
-            name: 'Receita',
-            marker: {
-                color: '#10b981',
-                opacity: 0.8,
-                line: { color: '#059669', width: 1.5 }
-            },
-            hovertemplate: '<b>%{x}</b><br>Receita: R$ %{y:,.2f}<extra></extra>'
-        },
-        {
-            x: labels,
-            y: despesas,
-            type: 'bar',
-            name: 'Despesa',
-            marker: {
-                color: '#ef4444',
-                opacity: 0.8,
-                line: { color: '#dc2626', width: 1.5 }
-            },
-            hovertemplate: '<b>%{x}</b><br>Despesa: R$ %{y:,.2f}<extra></extra>'
-        },
-        {
-            x: labels,
-            y: resultados,
-            type: 'scatter',
-            mode: 'lines+markers',
-            name: 'Resultado',
-            line: { color: '#3b82f6', width: 2, shape: 'spline' },
-            marker: { color: '#3b82f6', size: 6, line: { color: '#1e40af', width: 2 } },
-            hovertemplate: '<b>%{x}</b><br>Resultado: R$ %{y:,.2f}<extra></extra>'
+        const labels = [{% for m in movimentos_mensais %}'{{ m.mes|date:"m/Y" }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
+        const receitas = [{% for m in movimentos_mensais %}{{ m.receita|default_if_none:"0" }}{% if not forloop.last %}, {% endif %}{% endfor %}].map(Number);
+        const despesas = [{% for m in movimentos_mensais %}{{ m.despesa|default_if_none:"0" }}{% if not forloop.last %}, {% endif %}{% endfor %}].map(Number);
+        const resultados = [{% for m in movimentos_mensais %}{{ m.resultado|default_if_none:"0" }}{% if not forloop.last %}, {% endif %}{% endfor %}].map(Number);
+        
+        const ctx = document.getElementById('chart-competencia');
+        if (ctx && window.Chart) {
+            const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            type: 'bar',
+                            label: 'Receita',
+                            data: receitas,
+                            backgroundColor: 'rgba(16, 185, 129, 0.6)',
+                            borderColor: '#059669',
+                            borderWidth: 1.5
+                        },
+                        {
+                            type: 'bar',
+                            label: 'Despesa',
+                            data: despesas,
+                            backgroundColor: 'rgba(239, 68, 68, 0.6)',
+                            borderColor: '#dc2626',
+                            borderWidth: 1.5
+                        },
+                        {
+                            type: 'line',
+                            label: 'Resultado',
+                            data: resultados,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                            tension: 0.4,
+                            pointBackgroundColor: '#3b82f6',
+                            pointBorderColor: '#1e40af',
+                            pointBorderWidth: 2,
+                            pointRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function (context) {
+                                    const label = context.dataset.label || '';
+                                    const value = fmt.format(context.parsed.y || 0);
+                                    return `${label}: ${value}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: { text: 'Período', display: true }
+                        },
+                        y: {
+                            title: { text: 'Valor (R$)', display: true },
+                            ticks: {
+                                callback: (v) => fmt.format(v)
+                            }
+                        }
+                    }
+                }
+            });
+        } else if (!ctx) {
+            console.warn('chart-competencia element not found');
+        } else {
+            console.error('Chart.js não carregado. Verifique o CDN ou bloqueios do navegador.');
         }
-    ];
-
-    const layout = {
-        barmode: 'group',
-        margin: { t: 20, r: 12, b: 30, l: 40 },
-        paper_bgcolor: 'transparent',
-        plot_bgcolor: 'transparent',
-        font: {
-            family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-            size: 11,
-            color: '#e5e7eb'
-        },
-        xaxis: {
-            title: { text: 'Período', font: { size: 12, color: '#94a3b8' } },
-            gridcolor: '#334155',
-            showgrid: false
-        },
-        yaxis: {
-            title: { text: 'Valor (R$)', font: { size: 12, color: '#94a3b8' } },
-            gridcolor: '#334155',
-            zeroline: true,
-            zerolinecolor: '#475569',
-            zerolinewidth: 2
-        },
-        legend: {
-            orientation: 'h',
-            yanchor: 'bottom',
-            y: 1.02,
-            xanchor: 'right',
-            x: 1,
-            bgcolor: 'rgba(30, 41, 59, 0.4)',
-            bordercolor: '#334155',
-            borderwidth: 1
-        },
-        hovermode: 'x unified',
-        bargap: 0.3
-    };
-
-    const config = {
-        responsive: true,
-        displayModeBar: true,
-        displaylogo: false,
-        modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d']
-    };
-
-    const el = document.getElementById('chart-competencia');
-    if (el) {
-        Plotly.newPlot(el, data, layout, config);
-    } else {
-        console.warn('chart-competencia element not found');
-    }
-    }) ();
+    })();
 </script>
 
 {% endblock %}
