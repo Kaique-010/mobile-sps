@@ -17,9 +17,13 @@ json_path = Path(__file__).resolve().parent / 'licencas.json'
 def limpar_cnpj(cnpj):
     return re.sub(r'\D', '', cnpj)
 
-def get_licenca_db_config(request):
-    path_parts = request.path.strip('/').split('/')
-    slug = path_parts[1] if len(path_parts) > 1 else None  # /api/<slug>/...
+def get_licenca_db_config(request_or_slug):
+    if hasattr(request_or_slug, 'path'):
+        path_parts = request_or_slug.path.strip('/').split('/')
+        slug = path_parts[1] if len(path_parts) > 1 else None  # /api/<slug>/...
+    else:
+        # Assume que é o slug passado diretamente como string
+        slug = str(request_or_slug)
 
     if not slug:
         return "default"  # Ou lança erro, se quiser

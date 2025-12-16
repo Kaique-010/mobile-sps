@@ -128,39 +128,6 @@ def _buscar_contenttype(banco, app_label, model_name):
     app_norm = _normalizar_app_label(app_label)
     model_norm = _normalizar_model_name(model_name)
     
-    # EXCEÇÃO: Mapear 'ordens' para 'OrdemdeServico.ordemservico'
-    if app_norm == 'ordens' or model_norm == 'ordens':
-        app_norm = 'ordemdeservico'
-        model_norm = 'ordemservico'
-        logger.info(f"[perfil_services] _buscar_contenttype: Remapeando 'ordens' -> {app_norm}.{model_norm}")
-    
-    # EXCEÇÃO: Mapear 'fasesetor' para 'OrdemdeServico.ordemservicofasesetor'
-    if model_norm == 'fasesetor':
-        app_norm = 'ordemdeservico'
-        model_norm = 'ordemservicofasesetor'
-        logger.info(f"[perfil_services] _buscar_contenttype: Remapeando 'fasesetor' -> {app_norm}.{model_norm}")
-    
-    if model_form == 'pecas':
-        model_norm = 'ordemservicopecas'
-        app_norm = 'ordemdeservico'
-    
-    if model_form == 'servicos':
-        model_norm = 'ordemservicoservicos'
-        app_norm = 'ordemdeservico'
-    
-    if model_form == 'imgantes':
-        model_norm = 'ordemservicoimgantes'
-        app_norm = 'ordemdeservico'
-    
-    if model_form == 'imgdurante':
-        model_norm = 'ordemservicoimgdurante'
-        app_norm = 'ordemdeservico'
-    
-    if model_form == 'imgdepois':
-        model_norm = 'ordemservicoimgdepois'
-        app_norm = 'ordemdeservico'
-
-    
     logger.info(f"[perfil_services] _buscar_contenttype: app_original={app_label} model_original={model_name} app_norm={app_norm} model_norm={model_norm}")
     
     # Estratégia 1: Busca direta exata
@@ -228,6 +195,12 @@ def tem_permissao(perfil, app_label, model, acao):
     """
     Verifica se o perfil tem permissão para executar a ação no modelo
     """
+    # EXCEÇÃO TOTAL: Se for OrdemdeServico ou O_S, IGNORAR perfilweb e permitir tudo (delegar para app)
+    app_norm = _normalizar_app_label(app_label)
+    if app_norm in ['ordemdeservico', 'o_s', 'ordens', 'os']:
+        logger.info(f"[perfil_services] tem_permissao: app={app_label} EXCLUIDO DO CONTROLE DE PERFIL (permitido)")
+        return True
+
     if not perfil:
         logger.warning(f"[perfil_services] tem_permissao: perfil None para app={app_label} model={model} acao={acao}")
         return False
@@ -237,7 +210,6 @@ def tem_permissao(perfil, app_label, model, acao):
     banco = get_db_from_slug(get_licenca_slug())
     
     # Normalizar antes de criar a chave de cache
-    app_norm = _normalizar_app_label(app_label)
     model_norm = _normalizar_model_name(model)
     
     key = f'perm_{banco}_{perfil.id}_v{ver}_{",".join(map(str,cadeia))}_{app_norm}_{model_norm}_{acao}'
@@ -280,11 +252,16 @@ def tem_permissao(perfil, app_label, model, acao):
 
 def acoes_permitidas(perfil, app_label, model):
     """Retorna conjunto de ações permitidas para o modelo"""
+    # EXCEÇÃO TOTAL: Se for OrdemdeServico ou O_S, retornar todas as ações (delegar para app)
+    app_norm = _normalizar_app_label(app_label)
+    if app_norm in ['ordemdeservico', 'o_s', 'ordens', 'os']:
+        logger.info(f"[perfil_services] acoes_permitidas: app={app_label} EXCLUIDO DO CONTROLE DE PERFIL (todas permitidas)")
+        return {'criar', 'editar', 'excluir', 'visualizar', 'listar', 'imprimir', 'exportar'}
+
     if not perfil:
         return set()
     
     banco = get_db_from_slug(get_licenca_slug())
-    app_norm = _normalizar_app_label(app_label)
     model_norm = _normalizar_model_name(model)
     
     ct, estrategia = _buscar_contenttype(banco, app_label, model)
@@ -339,6 +316,13 @@ def verificar_por_url(usuario, url_name):
         return True
     
     app_label, model, acao = regra
+    
+    # EXCEÇÃO TOTAL na verificação por URL também, para garantir
+    app_norm = _normalizar_app_label(app_label)
+    if app_norm in ['ordemdeservico', 'o_s', 'ordens', 'os']:
+        logger.info(f"[perfil_services] verificar_por_url: app={app_label} EXCLUIDO DO CONTROLE DE PERFIL (permitido)")
+        return True
+
     resultado = tem_permissao(perfil, app_label, model, acao)
     
     logger.info(f"[perfil_services] verificar_por_url: url_name={url_name} regra=({app_label}, {model}, {acao}) resultado={resultado}")
