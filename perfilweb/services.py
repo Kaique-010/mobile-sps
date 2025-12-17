@@ -11,6 +11,9 @@ from django.apps import apps
 CACHE_TIMEOUT = 60  # Reduzir para 1 minuto durante debug
 logger = logging.getLogger('perfilweb.services')
 
+# Bancos/Licenças que não utilizam o sistema de perfis (permissão total/hardcoded)
+EXCLUDED_DBS = ['savexml1', 'savexml206', 'spartacus', 'savexml144']
+
 
 def get_perfil_ativo(usuario):
     """Retorna o perfil ativo do usuário"""
@@ -19,6 +22,11 @@ def get_perfil_ativo(usuario):
         return None
         
     banco = get_db_from_slug(get_licenca_slug())
+    
+    # EXCEÇÃO: Bancos específicos ignorados (sem perfil)
+    if banco in EXCLUDED_DBS:
+        return None
+
     usuario_id = getattr(usuario, 'usua_codi', None) or getattr(usuario, 'pk', None)
     
     if not usuario_id:
@@ -190,15 +198,21 @@ def _buscar_contenttype(banco, app_label, model_name):
     logger.error(f"[perfil_services] FALHA TOTAL: ContentType não encontrado para app={app_label} model={model_name}")
     return None, "not_found"
 
-
+#Função que detecta as permissões de um perfil em um determinado app e modelo e conexão
 def tem_permissao(perfil, app_label, model, acao):
     """
     Verifica se o perfil tem permissão para executar a ação no modelo
     """
-    # EXCEÇÃO TOTAL: Se for OrdemdeServico ou O_S, IGNORAR perfilweb e permitir tudo (delegar para app)
+    # EXCEÇÃO 1: Apps específicos (OrdemdeServico, O_S) ignorados
     app_norm = _normalizar_app_label(app_label)
     if app_norm in ['ordemdeservico', 'o_s', 'ordens', 'os']:
         logger.info(f"[perfil_services] tem_permissao: app={app_label} EXCLUIDO DO CONTROLE DE PERFIL (permitido)")
+        return True
+
+    # EXCEÇÃO 2: Bancos específicos (savexml1, savexml206, spartacus) ignorados
+    banco = get_db_from_slug(get_licenca_slug())
+    if banco in EXCLUDED_DBS:
+        logger.info(f"[perfil_services] tem_permissao: banco={banco} EXCLUIDO DO CONTROLE DE PERFIL (permitido)")
         return True
 
     if not perfil:
@@ -207,7 +221,7 @@ def tem_permissao(perfil, app_label, model, acao):
 
     cadeia = _cadeia_perfis(perfil)
     ver = _perfil_version(perfil.id)
-    banco = get_db_from_slug(get_licenca_slug())
+    # banco já foi obtido acima
     
     # Normalizar antes de criar a chave de cache
     model_norm = _normalizar_model_name(model)
@@ -252,16 +266,21 @@ def tem_permissao(perfil, app_label, model, acao):
 
 def acoes_permitidas(perfil, app_label, model):
     """Retorna conjunto de ações permitidas para o modelo"""
-    # EXCEÇÃO TOTAL: Se for OrdemdeServico ou O_S, retornar todas as ações (delegar para app)
+    # EXCEÇÃO 1: Apps específicos
     app_norm = _normalizar_app_label(app_label)
     if app_norm in ['ordemdeservico', 'o_s', 'ordens', 'os']:
         logger.info(f"[perfil_services] acoes_permitidas: app={app_label} EXCLUIDO DO CONTROLE DE PERFIL (todas permitidas)")
         return {'criar', 'editar', 'excluir', 'visualizar', 'listar', 'imprimir', 'exportar'}
 
+    # EXCEÇÃO 2: Bancos específicos
+    banco = get_db_from_slug(get_licenca_slug())
+    if banco in EXCLUDED_DBS:
+        logger.info(f"[perfil_services] acoes_permitidas: banco={banco} EXCLUIDO DO CONTROLE DE PERFIL (todas permitidas)")
+        return {'criar', 'editar', 'excluir', 'visualizar', 'listar', 'imprimir', 'exportar'}
+
     if not perfil:
         return set()
     
-    banco = get_db_from_slug(get_licenca_slug())
     model_norm = _normalizar_model_name(model)
     
     ct, estrategia = _buscar_contenttype(banco, app_label, model)
@@ -308,6 +327,12 @@ def listar_permissoes(perfil):
 
 def verificar_por_url(usuario, url_name):
     """Verifica permissão baseada no nome da URL"""
+    # EXCEÇÃO PRELIMINAR: Banco específico
+    banco = get_db_from_slug(get_licenca_slug())
+    if banco in ['savexml1', 'savexml206']:
+         logger.info(f"[perfil_services] verificar_por_url: banco={banco} EXCLUIDO DO CONTROLE DE PERFIL (permitido)")
+         return True
+
     perfil = get_perfil_ativo(usuario)
     regra = PERMISSION_MAP.get(url_name)
     
@@ -332,6 +357,8 @@ def verificar_por_url(usuario, url_name):
 def auditar_permissoes_usuarios():
     """Audita permissões de todos os usuários (para debug)"""
     banco = get_db_from_slug(get_licenca_slug())
+    if banco in EXCLUDED_DBS:
+        return
     
     try:
         todos = list(Usuarios.objects.using(banco).all())
