@@ -32,6 +32,7 @@ class Os(models.Model):
     os_fili = models.IntegerField()
     os_os = models.IntegerField(primary_key=True)
     os_tota = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    os_orig = models.CharField(max_length=100, blank=True, null=True)
     os_data_aber = models.DateField()
     os_hora_aber = models.TimeField(blank=True, null=True)
     os_clie = models.IntegerField(blank=True, null=True)

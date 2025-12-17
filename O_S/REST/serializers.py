@@ -138,27 +138,6 @@ class OsHoraSerializer(BancoModelSerializer):
         except:
             return None
     
-    def validate(self, data):
-        """Validações customizadas"""
-        # Valida horários da manhã
-        if data.get('os_hora_manh_ini') and data.get('os_hora_manh_fim'):
-            if data['os_hora_manh_ini'] >= data['os_hora_manh_fim']:
-                raise ValidationError("Horário de início deve ser menor que fim (manhã)")
-        
-        # Valida horários da tarde
-        if data.get('os_hora_tard_ini') and data.get('os_hora_tard_fim'):
-            if data['os_hora_tard_ini'] >= data['os_hora_tard_fim']:
-                raise ValidationError("Horário de início deve ser menor que fim (tarde)")
-        
-        # Valida KM
-        if data.get('os_hora_km_sai') and data.get('os_hora_km_che'):
-            if data['os_hora_km_sai'] > data['os_hora_km_che']:
-                raise ValidationError("KM de saída não pode ser maior que chegada")
-        
-        return data
-
-
-
 class ItemOsBaseSerializer(BancoModelSerializer):
     codigo_field = None       # peca_prod / serv_prod
     prefix = None             # peca / serv
@@ -247,6 +226,7 @@ class OsSerializer(BancoModelSerializer):
     # CORRIGIR NOMES DOS CAMPOS DE ASSINATURA
     os_assi_clie = Base64BinaryField(required=False)
     os_assi_oper = Base64BinaryField(required=False)
+    os_orig = serializers.CharField(max_length=100)
 
     class Meta:
         model = Os

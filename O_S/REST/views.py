@@ -75,7 +75,7 @@ class OsViewSet(BaseMultiDBModelViewSet):
     serializer_class = OsSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
     filterset_fields = ['os_stat_os', 'os_clie', 'os_empr', 'os_fili']
-    ordering_fields = ['os_data_aber', 'os_data_fech', 'os_os']
+    ordering_fields = ['os_os']
     search_fields = ['os_prob_rela', 'os_obse']
    
     def get_serializer_context(self):
@@ -85,9 +85,11 @@ class OsViewSet(BaseMultiDBModelViewSet):
 
     def get_queryset(self):
         banco = self.get_banco()
-        qs = Os.objects.using(banco).all()
+        empresa = self.request.query_params.get('os_empr') or self.request.query_params.get('empresa_id') 
+        filial = self.request.query_params.get('os_fili') or self.request.query_params.get('filial_id')
+        qs = Os.objects.using(banco).filter(os_empr=empresa, os_fili=filial)
 
-        return qs.order_by('-os_data_aber')
+        return qs.order_by('-os_os')
     
     def get_object(self):
         banco = self.get_banco()
@@ -837,13 +839,33 @@ class OsHoraViewSet(BaseMultiDBModelViewSet):
     def get_object(self):
         banco = self.get_banco()
         
-        os_hora_item = self.kwargs.get('pk')
-        os_hora_os = self.request.query_params.get('os_hora_os')
-        os_hora_empr = self.request.query_params.get('os_hora_empr')
-        os_hora_fili = self.request.query_params.get('os_hora_fili')
+        os_hora_item = self.kwargs.get('pk') or self.kwargs.get('os_hora_item')
         
+        # Tenta pegar da query string, se não tiver, tenta do body (request.data)
+        os_hora_os = self.request.query_params.get('os_hora_os') or self.request.data.get('os_hora_os')
+        os_hora_empr = self.request.query_params.get('os_hora_empr') or self.request.data.get('os_hora_empr')
+        os_hora_fili = self.request.query_params.get('os_hora_fili') or self.request.data.get('os_hora_fili')
         
+        if os_hora_item:
+            # Se temos o ID do item, tentamos buscar por ele
+            # Se vierem outros parâmetros, usamos para garantir integridade (filtro adicional)
+            filter_kwargs = {'os_hora_item': os_hora_item}
+            if os_hora_os:
+                filter_kwargs['os_hora_os'] = os_hora_os
+            if os_hora_empr:
+                filter_kwargs['os_hora_empr'] = os_hora_empr
+            if os_hora_fili:
+                filter_kwargs['os_hora_fili'] = os_hora_fili
+            
+            try:
+                return OsHora.objects.using(banco).get(**filter_kwargs)
+            except OsHora.DoesNotExist:
+                raise NotFound("Registro de horas não encontrado")
+            except OsHora.MultipleObjectsReturned:
+                raise ValidationError("Múltiplos registros encontrados. Forneça os_hora_os, os_hora_empr e os_hora_fili para identificar unicamente.")
+
         if not all([os_hora_item, os_hora_os, os_hora_empr, os_hora_fili]):
+            logger.error(f"Parâmetros faltando OsHoraViewSet.get_object: kwargs={self.kwargs}, query={self.request.query_params}")
             raise ValidationError("Parâmetros obrigatórios faltando")
         
         try:
@@ -922,7 +944,6 @@ class OsHoraViewSet(BaseMultiDBModelViewSet):
             os_hora_fili=os_hora_fili
         )
         
-        # Calcula total usando o método do serializer
         total = 0.0
         for registro in registros:
             serializer = OsHoraSerializer(registro, context={'banco': banco})
