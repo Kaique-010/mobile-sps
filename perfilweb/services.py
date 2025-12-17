@@ -205,7 +205,7 @@ def tem_permissao(perfil, app_label, model, acao):
     """
     # EXCEÇÃO 1: Apps específicos (OrdemdeServico, O_S) ignorados
     app_norm = _normalizar_app_label(app_label)
-    if app_norm in ['ordemdeservico', 'o_s', 'ordens', 'os']:
+    if app_norm in ['ordemdeservico', 'o_s', 'ordens', 'os', 'Produtos', 'produtos']:
         logger.info(f"[perfil_services] tem_permissao: app={app_label} EXCLUIDO DO CONTROLE DE PERFIL (permitido)")
         return True
 
@@ -268,7 +268,7 @@ def acoes_permitidas(perfil, app_label, model):
     """Retorna conjunto de ações permitidas para o modelo"""
     # EXCEÇÃO 1: Apps específicos
     app_norm = _normalizar_app_label(app_label)
-    if app_norm in ['ordemdeservico', 'o_s', 'ordens', 'os']:
+    if app_norm in ['ordemdeservico', 'o_s', 'ordens', 'os', 'Produtos', 'produtos']:
         logger.info(f"[perfil_services] acoes_permitidas: app={app_label} EXCLUIDO DO CONTROLE DE PERFIL (todas permitidas)")
         return {'criar', 'editar', 'excluir', 'visualizar', 'listar', 'imprimir', 'exportar'}
 
@@ -329,7 +329,7 @@ def verificar_por_url(usuario, url_name):
     """Verifica permissão baseada no nome da URL"""
     # EXCEÇÃO PRELIMINAR: Banco específico
     banco = get_db_from_slug(get_licenca_slug())
-    if banco in ['savexml1', 'savexml206']:
+    if banco in ['savexml1', 'savexml206', 'savexml144']:
          logger.info(f"[perfil_services] verificar_por_url: banco={banco} EXCLUIDO DO CONTROLE DE PERFIL (permitido)")
          return True
 
@@ -344,7 +344,7 @@ def verificar_por_url(usuario, url_name):
     
     # EXCEÇÃO TOTAL na verificação por URL também, para garantir
     app_norm = _normalizar_app_label(app_label)
-    if app_norm in ['ordemdeservico', 'o_s', 'ordens', 'os']:
+    if app_norm in ['ordemdeservico', 'o_s', 'ordens', 'os', 'Produtos', 'produtos']:
         logger.info(f"[perfil_services] verificar_por_url: app={app_label} EXCLUIDO DO CONTROLE DE PERFIL (permitido)")
         return True
 

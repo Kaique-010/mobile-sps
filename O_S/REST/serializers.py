@@ -226,11 +226,14 @@ class OsSerializer(BancoModelSerializer):
     # CORRIGIR NOMES DOS CAMPOS DE ASSINATURA
     os_assi_clie = Base64BinaryField(required=False)
     os_assi_oper = Base64BinaryField(required=False)
-    os_orig = serializers.CharField(max_length=100)
+    os_orig = serializers.CharField(max_length=100, required=False, allow_blank=True)
 
     class Meta:
         model = Os
         fields = '__all__'
+        extra_kwargs = {
+            'os_os': {'validators': []},
+        }
 
     def get_cliente_nome(self, obj):
         banco = self.context.get("banco")
