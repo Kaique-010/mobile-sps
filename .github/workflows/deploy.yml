@@ -86,7 +86,7 @@ jobs:
               exit 1
             fi
             
-          echo "✅ Token KAIQUE válido (${#TOKEN_KAIQUE} caracteres)"
+          echo "Token KAIQUE válido (${#TOKEN_KAIQUE} caracteres)"
           MIRROR_TOKEN="$TOKEN_KAIQUE"
           TARGET_REPO="Kaique-010/mobile-sps"
           fi
