@@ -86,14 +86,19 @@ jobs:
               exit 1
             fi
             
-            echo "✅ Token KAIQUE válido (${#TOKEN_KAIQUE} caracteres)"
-            MIRROR_TOKEN="$TOKEN_KAIQUE"
-            TARGET_REPO="Kaique-010/mobile-sps"
+          echo "✅ Token KAIQUE válido (${#TOKEN_KAIQUE} caracteres)"
+          MIRROR_TOKEN="$TOKEN_KAIQUE"
+          TARGET_REPO="Kaique-010/mobile-sps"
           fi
+
+          # 🚫 NÃO ESPELHAR WORKFLOWS
+          echo "🧹 Removendo .github/workflows do espelhamento..."
+          rm -rf .github/workflows
 
           # Testar 3 formatos diferentes de URL
           echo ""
           echo "🔗 Tentando 3 formatos de autenticação..."
+
 
           # Formato 1: x-access-token
           echo "📌 Formato 1: x-access-token"
