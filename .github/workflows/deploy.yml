@@ -13,7 +13,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Espelhar Repo
+      - name: Espelhar para o outro repositório
+        continue-on-error: true
         env:
           REPO: ${{ github.repository }}
           TOKEN_SPARTACUS: ${{ secrets.MIRROR_TOKEN_SPARTACUS }}
