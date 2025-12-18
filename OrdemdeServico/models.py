@@ -121,7 +121,7 @@ class Ordemservico(models.Model):
     orde_patr = models.CharField(max_length=100, blank=True, null=True, verbose_name="TAG")
     orde_cond = models.IntegerField(blank=True, null=True, verbose_name="Condição de recebimento")
     orde_polo = models.CharField(max_length=100, blank=True, null=True, verbose_name="Polos")
-    orde_foco = models.CharField(max_length=100, blank=True, null=True, verbose_name="Forma Construtiva")
+    orde_foco = models.CharField(max_length=20, blank=True, null=True, verbose_name="Forma Construtiva")
     orde_esta_chap = models.CharField(max_length=50, blank=True, null=True, verbose_name="Chapas")
     orde_esta_comp = models.CharField(max_length=50, blank=True, null=True, verbose_name="Componentes")
     orde_esta_cabo = models.CharField(max_length=50, blank=True, null=True, verbose_name="Cabos")

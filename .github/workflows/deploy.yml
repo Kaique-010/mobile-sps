@@ -5,7 +5,31 @@ on:
     branches: ['main']
 
 jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout completo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Espelhar para o outro repositório
+        env:
+          REPO: ${{ github.repository }}
+          TOKEN_SPARTACUS: ${{ secrets.MIRROR_TOKEN_SPARTACUS }}
+          TOKEN_KAIQUE: ${{ secrets.MIRROR_TOKEN_KAIQUE }}
+        run: |
+          if [ "$REPO" = "Kaique-010/mobile-sps" ]; then
+            TARGET="https://x-access-token:$TOKEN_SPARTACUS@github.com/spartacusWeb25/mobile-sps.git"
+          else
+            TARGET="https://x-access-token:$TOKEN_KAIQUE@github.com/Kaique-010/mobile-sps.git"
+          fi
+
+          git remote add mirror "$TARGET" || true
+          git push mirror main
+
   deploy:
+    needs: mirror
     runs-on: ubuntu-latest
     environment: Mobile-Sps
 
@@ -32,146 +56,54 @@ jobs:
           script: |
             BASE=/home/ubuntu/mobile-sps
             REPO=$BASE/repo
+            REPO_URL=https://github.com/${{ github.repository }}.git
 
-            echo ">> Atualizando repositório local..."
             if [ ! -d "$REPO/.git" ]; then
               rm -rf $REPO
               mkdir -p $REPO
-              git clone https://github.com/Kaique-010/mobile-sps.git $REPO
+              git clone $REPO_URL $REPO
             else
               cd $REPO
-              git fetch --all
+              git fetch origin
               git reset --hard origin/main
             fi
 
-            echo ">> Descobrindo ambiente atual..."
             if [ -L "$BASE/current" ]; then
               CURRENT=$(readlink -f $BASE/current)
             else
               CURRENT="$BASE/blue"
             fi
 
-            if [[ "$CURRENT" == *"blue"* ]]; then
-              TARGET="$BASE/green"
-            else
-              TARGET="$BASE/blue"
-            fi
+            [[ "$CURRENT" == *"blue"* ]] && TARGET="$BASE/green" || TARGET="$BASE/blue"
 
-            echo ">> Atual: $CURRENT"
-            echo ">> Target: $TARGET"
+            rsync -av --delete --exclude ".git" --exclude "__pycache__" $REPO/ $TARGET/
 
-            echo ">> Sincronizando código..."
-            rsync -av --delete \
-              --exclude ".git" \
-              --exclude "__pycache__" \
-              $REPO/ $TARGET/
+            [ -f "$BASE/.env" ] && cp $BASE/.env $TARGET/.env
 
-            echo ">> Copiando .env real para o TARGET..."
-            if [ -f "$BASE/.env" ]; then
-              cp $BASE/.env $TARGET/.env
-              echo ">> .env copiado."
-            else
-              echo "!! .env não encontrado no servidor!"
-            fi
-
-            echo ">> Ativando venv..."
             source $BASE/venv/bin/activate
 
-            echo ">> Checando hash de requirements..."
             REQ_HASH=$(sha256sum $TARGET/requirements.txt | awk '{print $1}')
-            if [ -f "$BASE/.req_hash" ] && [ "$REQ_HASH" = "$(cat $BASE/.req_hash)" ]; then
-              echo ">> requirements.txt inalterado — pulando pip install"
-            else
-              echo ">> Instalando dependências..."
+            if [ ! -f "$BASE/.req_hash" ] || [ "$REQ_HASH" != "$(cat $BASE/.req_hash)" ]; then
               pip install -r $TARGET/requirements.txt
               echo "$REQ_HASH" > $BASE/.req_hash
             fi
 
-            # Sem collectstatic e sem migrate/check neste fluxo
-
-            echo ">> Subindo Gunicorn temporário para teste..."
             lsof -t -i:9000 | xargs -r kill -9 || true
             sleep 2
 
-            # Criar arquivos de log antes
-            touch $TARGET/guni_error.log $TARGET/guni_access.log
-
-            echo ">> Verificando se gunicorn está disponível..."
-            which gunicorn || { echo "!! Gunicorn não encontrado no PATH"; exit 1; }
-
-            echo ">> Iniciando Gunicorn em $TARGET..."
             cd $TARGET
-            gunicorn core.wsgi:application \
-              --bind 127.0.0.1:9000 \
-              --daemon \
-              --pid $TARGET/guni_test.pid \
-              --timeout 30 \
-              --workers 2 \
-              --error-logfile $TARGET/guni_error.log \
-              --access-logfile $TARGET/guni_access.log \
-              --log-level debug 2>&1 | tee -a $TARGET/guni_error.log || { \
-                echo "!! Falha ao iniciar Gunicorn"; \
-                echo ">> Conteúdo do erro:"; \
-                cat $TARGET/guni_error.log 2>/dev/null || echo "(arquivo vazio)"; \
-                exit 1; \
-              }
-
-            echo ">> Aguardando Gunicorn inicializar (10s)..."
+            gunicorn core.wsgi:application --bind 127.0.0.1:9000 --daemon --pid guni_test.pid
             sleep 10
 
-            if [ ! -f "$TARGET/guni_test.pid" ]; then
-              echo "!! Gunicorn não iniciou. Verificando logs..."
-              echo ">> Log de erro:"
-              cat $TARGET/guni_error.log 2>/dev/null || echo "(arquivo vazio)"
-              echo ""
-              echo ">> Log de acesso:"
-              cat $TARGET/guni_access.log 2>/dev/null || echo "(arquivo vazio)"
-              echo ""
-              echo ">> Processos Gunicorn:"
-              ps aux | grep gunicorn || echo "(nenhum processo)"
-              exit 1
-            fi
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:9000/health/ || echo "000")
+            [ "$STATUS" != "200" ] && kill $(cat guni_test.pid) && exit 1
 
-            echo ">> Health-check no TARGET..."
-            MAX_ATTEMPTS=10
-            ATTEMPT=0
-            STATUS=""
+            kill $(cat guni_test.pid)
+            rm -f guni_test.pid
 
-            while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
-              ATTEMPT=$((ATTEMPT + 1))
-              echo ">> Tentativa $ATTEMPT/$MAX_ATTEMPTS..."
-              STATUS=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 http://127.0.0.1:9000/health/ || echo "000")
-              
-              if [ "$STATUS" = "200" ]; then
-                echo ">> Health-check OK!"
-                break
-              fi
-              
-              if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
-                echo ">> Status: $STATUS - aguardando 3s..."
-                sleep 3
-              fi
-            done
-
-            if [ "$STATUS" != "200" ]; then
-              echo "!! Health-check falhou ($STATUS). Abortando e limpando Gunicorn temporário."
-              kill $(cat $TARGET/guni_test.pid) || true
-              rm -f $TARGET/guni_test.pid
-              exit 1
-            fi
-
-            echo ">> Health-check OK — limpando Gunicorn temporário..."
-            kill $(cat $TARGET/guni_test.pid) || true
-            rm -f $TARGET/guni_test.pid
-
-            echo ">> Alternando versão..."
             ln -sfn $TARGET $BASE/current
-
-            echo ">> Restart Gunicorn + Daphne..."
             sudo systemctl restart gunicorn
             sudo systemctl restart daphne
-
-            echo ">> Deploy Blue/Green finalizado com sucesso!"
 
       - name: Email — Sucesso
         if: success()
@@ -181,14 +113,13 @@ jobs:
           server_address: smtp.gmail.com
           server_port: 465
           secure: true
-          username: leokaique7@gmail.com
-          password: eyicdldkhmjscwfw
-          subject: 'Deploy SPS — Sucesso (${{ github.run_number }})'
-          to: leokaique7@gmail.com
-          from: leokaique7@gmail.com
+          username: ${{ secrets.SMTP_USER }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: 'Deploy SPS — Sucesso (#${{ github.run_number }})'
+          to: ${{ secrets.SMTP_USER }}
+          from: ${{ secrets.SMTP_USER }}
           body: |
             Deploy concluído com sucesso.
-            Ambiente alternado via Blue/Green.
             Repo: ${{ github.repository }}
             SHA: ${{ github.sha }}
 
@@ -200,13 +131,12 @@ jobs:
           server_address: smtp.gmail.com
           server_port: 465
           secure: true
-          username: leokaique7@gmail.com
-          password: eyicdldkhmjscwfw
-          subject: 'Deploy SPS — Falha (${{ github.run_number }})'
-          to: leokaique7@gmail.com
-          from: leokaique7@gmail.com
+          username: ${{ secrets.SMTP_USER }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: 'Deploy SPS — Falha (#${{ github.run_number }})'
+          to: ${{ secrets.SMTP_USER }}
+          from: ${{ secrets.SMTP_USER }}
           body: |
             Deploy falhou.
-            Última versão mantida.
             Repo: ${{ github.repository }}
             SHA: ${{ github.sha }}
