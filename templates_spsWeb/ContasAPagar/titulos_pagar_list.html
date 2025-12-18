@@ -130,15 +130,13 @@
               <button type="button" class="btn btn-outline-success btn-sm btn-baixar" title="Pagar título" data-tipo="pagar"
                 data-empr="{{ t.titu_empr }}" data-fili="{{ t.titu_fili }}" data-forn="{{ t.titu_forn }}"
                 data-titu="{{ t.titu_titu }}" data-seri="{{ t.titu_seri }}" data-parc="{{ t.titu_parc }}"
-                data-emis="{{ t.titu_emis|date:'Y-m-d' }}" data-venc="{{ t.titu_venc|date:'Y-m-d' }}">💵
-                Pagar</button>
+                data-emis="{{ t.titu_emis|date:'Y-m-d' }}" data-venc="{{ t.titu_venc|date:'Y-m-d' }}">💵 Pagar</button>
               {% endif %}
               {% if t.titu_aber == 'T' or t.titu_aber == 'P' %}
-              <button type="button" class="btn btn-outline-warning btn-sm btn-reabrir" title="Reabrir/Liquidar"
+              <button type="button" class="btn btn-outline-warning btn-sm btn-reabrir" title="Reab./Liqu."
                 data-empr="{{ t.titu_empr }}" data-fili="{{ t.titu_fili }}" data-forn="{{ t.titu_forn }}"
                 data-titu="{{ t.titu_titu }}" data-seri="{{ t.titu_seri }}" data-parc="{{ t.titu_parc }}"
-                data-emis="{{ t.titu_emis|date:'Y-m-d' }}" data-venc="{{ t.titu_venc|date:'Y-m-d' }}">🔄
-                Reabrir/Liquidar</button>
+                data-emis="{{ t.titu_emis|date:'Y-m-d' }}" data-venc="{{ t.titu_venc|date:'Y-m-d' }}">🔄 Reab./Liqu.</button>
               {% endif %}
               <a href="{% url 'contas_a_pagar_web:editar' slug=slug titu_titu=t.titu_titu titu_parc=t.titu_parc %}" class="btn btn-outline-primary btn-sm" title="Editar">✏️ Editar</a>
               <a href="{% url 'contas_a_pagar_web:excluir' slug=slug titu_titu=t.titu_titu %}" class="btn btn-outline-danger btn-sm" title="Excluir">🗑️ Excluir</a>

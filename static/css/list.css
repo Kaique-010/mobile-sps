@@ -31,8 +31,8 @@ a.btn.btn-outline-primary {
   color: #1f6fb2;
   border-color: #1f6fb2;
   margin-bottom: 20px;
-  padding: 12px 20px;
-  font-size: 16px;
+  padding: 6px 12px;
+  font-size: 14px;
   font-weight: 600;
   border-radius: 4px;
 }
@@ -45,8 +45,8 @@ a.btn.btn-outline-secondary {
   color: #b9b9b9;
   border-color: #979ca0;
   margin-bottom: 20px;
-  padding: 12px 20px;
-  font-size: 16px;
+  padding: 6px 12px;
+  font-size: 14px;
   font-weight: 600;
   border-radius: 4px;
 }
@@ -59,8 +59,8 @@ a.btn.btn-outline-danger {
   color: #e95136;
   border-color: #ff1d1d;
   margin-bottom: 20px;
-  padding: 12px 20px;
-  font-size: 16px;
+  padding: 6px 12px;
+  font-size: 14px;
   font-weight: 600;
   border-radius: 4px;
 }
@@ -73,14 +73,28 @@ button.btn.btn-outline-success {
   color: #439472;
   border-color: #a4fcff;
   margin-bottom: 20px;
-  padding: 12px 20px;
-  font-size: 16px;
+  padding: 6px 12px;
+  font-size: 14px;
   font-weight: 600;
   border-radius: 4px;
 }
 button.btn.btn-outline-success:hover {
   background-color: #439472;
   color: #fff;
+}
+
+button.btn.btn-outline-warning {
+  color: #ffc107;
+  border-color: #ffc107;
+  margin-bottom: 20px;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 4px;
+}
+button.btn.btn-outline-warning:hover {
+  background-color: #ffc107;
+  color: #000;
 }
 
 /*Botões para a página de notas destinadas*/

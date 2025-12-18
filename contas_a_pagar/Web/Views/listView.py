@@ -22,24 +22,27 @@ class TitulosPagarListView(DBAndSlugMixin, ListView):
 
     def get_queryset(self):
         qs = Titulospagar.objects.using(self.db_alias).all()
-        
-        hoje = now().date()
-        inicio_mes = date(hoje.year, hoje.month, 1)
-        
-        data_min = '2025-01-01'
-        data_max = '2100-12-31'
-        qs = qs.filter(
-            Q(titu_emis__isnull=True) | Q(titu_emis__range=(data_min, data_max)),
-            Q(titu_venc__isnull=True) | Q(titu_venc__range=(inicio_mes, hoje)),
-        ).only('titu_empr','titu_fili','titu_forn','titu_titu','titu_seri','titu_parc','titu_valo','titu_venc','titu_emis','titu_aber')
 
-        # Filtros padrão
+        # Captura os parâmetros de filtro da URL
         fornecedor_id = self.request.GET.get('titu_forn')
         fornecedor_nome = self.request.GET.get('fornecedor_nome')
         status_aber = self.request.GET.get('titu_aber')
         venc_ini = self.request.GET.get('venc_ini')
         venc_fim = self.request.GET.get('venc_fim')
         serie = self.request.GET.get('titu_seri')
+
+        # Se NÃO houver filtro de data explícito, aplica o padrão (mês atual até hoje)
+        if not venc_ini and not venc_fim:
+            hoje = now().date()
+            inicio_mes = date(hoje.year, hoje.month, 1)
+            qs = qs.filter(
+                Q(titu_venc__isnull=True) | Q(titu_venc__range=(inicio_mes, hoje))
+            )
+
+        # Seleciona apenas os campos necessários
+        qs = qs.only('titu_empr','titu_fili','titu_forn','titu_titu','titu_seri','titu_parc','titu_valo','titu_venc','titu_emis','titu_aber')
+
+        # Aplica os filtros recebidos
 
         if self.empresa_id:
             qs = qs.filter(titu_empr=self.empresa_id)
