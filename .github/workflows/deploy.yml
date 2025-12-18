@@ -45,21 +45,21 @@ jobs:
           echo "============================================"
         env:
           TOKEN_SPARTACUS: ${{ secrets.MIRROR_TOKEN_SPARTACUS }}
-          TOKEN_KAIQUE: ${{ secrets.MIRROR_TOKEN_KAIQUE010 }}
+          TOKEN_KAIQUE010: ${{ secrets.MIRROR_TOKEN_KAIQUE010 }}
 
       - name: Espelhar para o outro repositório
         continue-on-error: true
         env:
           REPO: ${{ github.repository }}
-          TOKEN_SPARTACUS: ${{ secrets.MIRROR_TOKEN_SPARTACUS }}
-          TOKEN_KAIQUE: ${{ secrets.MIRROR_TOKEN_KAIQUE010 }}
+          TOKEN_SPARTACUS010: ${{ secrets.MIRROR_TOKEN_SPARTACUS }}
+          TOKEN_KAIQUE010: ${{ secrets.MIRROR_TOKEN_KAIQUE010 }}
         run: |
           echo "🚀 Iniciando espelhamento..."
           echo "Repositório origem: $REPO"
 
           if [ "$REPO" = "Kaique-010/mobile-sps" ]; then
             echo "📍 Rota: Kaique-010 → spartacusWeb25"
-            if [ -z "$TOKEN_SPARTACUS" ]; then
+            if [ -z "$TOKEN_SPARTACUS010" ]; then
               echo "❌ ERRO: TOKEN_SPARTACUS está vazio!"
               exit 1
             fi
@@ -67,12 +67,12 @@ jobs:
             TARGET="https://x-access-token:$TOKEN_SPARTACUS@github.com/spartacusWeb25/mobile-sps.git"
           else
             echo "📍 Rota: spartacusWeb25 → Kaique-010"
-            if [ -z "$TOKEN_KAIQUE" ]; then
-              echo "❌ ERRO: TOKEN_KAIQUE está vazio!"
+            if [ -z "$TOKEN_KAIQUE010" ]; then
+              echo "❌ ERRO: TOKEN_KAIQUE010 está vazio!"
               exit 1
             fi
-            echo "✅ Token encontrado (tamanho: ${#TOKEN_KAIQUE} caracteres)"
-            TARGET="https://x-access-token:$TOKEN_KAIQUE@github.com/Kaique-010/mobile-sps.git"
+            echo "✅ Token encontrado (tamanho: ${#TOKEN_KAIQUE010} caracteres)"
+            TARGET="https://x-access-token:$TOKEN_KAIQUE010@github.com/Kaique-010/mobile-sps.git"
           fi
 
           echo "🔗 Configurando remote..."
