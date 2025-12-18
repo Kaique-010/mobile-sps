@@ -1,4 +1,4 @@
-name: Deploy Mobile e Web -SPS (Blue/Green)
+name: Deploy Mobile e Web-SPS (Blue/Green)
 
 on:
   push:
