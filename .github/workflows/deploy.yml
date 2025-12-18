@@ -13,6 +13,40 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: 🔍 Debug - Verificar Secrets e Variáveis
+        run: |
+          echo "============================================"
+          echo "🔍 DEBUG - INFORMAÇÕES DO REPOSITÓRIO"
+          echo "============================================"
+          echo "Repositório atual: ${{ github.repository }}"
+          echo "Branch: ${{ github.ref }}"
+          echo "SHA: ${{ github.sha }}"
+          echo ""
+          echo "============================================"
+          echo "🔑 DEBUG - VERIFICAÇÃO DOS SECRETS"
+          echo "============================================"
+          echo "TOKEN_SPARTACUS existe: ${{ secrets.MIRROR_TOKEN_SPARTACUS != '' }}"
+          echo "TOKEN_KAIQUE existe: ${{ secrets.MIRROR_TOKEN_KAIQUE010 != '' }}"
+          echo "Tamanho TOKEN_SPARTACUS: ${#TOKEN_SPARTACUS}"
+          echo "Tamanho TOKEN_KAIQUE: ${#TOKEN_KAIQUE}"
+          echo ""
+          echo "============================================"
+          echo "🎯 DEBUG - LÓGICA DO ESPELHAMENTO"
+          echo "============================================"
+          if [ "${{ github.repository }}" = "Kaique-010/mobile-sps" ]; then
+            echo "✅ Detectado: Repositório Kaique-010/mobile-sps"
+            echo "🎯 Destino: spartacusWeb25/mobile-sps"
+            echo "🔑 Token usado: MIRROR_TOKEN_SPARTACUS"
+          else
+            echo "✅ Detectado: Repositório spartacusWeb25/mobile-sps"
+            echo "🎯 Destino: Kaique-010/mobile-sps"
+            echo "🔑 Token usado: MIRROR_TOKEN_KAIQUE010"
+          fi
+          echo "============================================"
+        env:
+          TOKEN_SPARTACUS: ${{ secrets.MIRROR_TOKEN_SPARTACUS }}
+          TOKEN_KAIQUE: ${{ secrets.MIRROR_TOKEN_KAIQUE010 }}
+
       - name: Espelhar para o outro repositório
         continue-on-error: true
         env:
@@ -20,14 +54,39 @@ jobs:
           TOKEN_SPARTACUS: ${{ secrets.MIRROR_TOKEN_SPARTACUS }}
           TOKEN_KAIQUE: ${{ secrets.MIRROR_TOKEN_KAIQUE010 }}
         run: |
+          echo "🚀 Iniciando espelhamento..."
+          echo "Repositório origem: $REPO"
+
           if [ "$REPO" = "Kaique-010/mobile-sps" ]; then
+            echo "📍 Rota: Kaique-010 → spartacusWeb25"
+            if [ -z "$TOKEN_SPARTACUS" ]; then
+              echo "❌ ERRO: TOKEN_SPARTACUS está vazio!"
+              exit 1
+            fi
+            echo "✅ Token encontrado (tamanho: ${#TOKEN_SPARTACUS} caracteres)"
             TARGET="https://x-access-token:$TOKEN_SPARTACUS@github.com/spartacusWeb25/mobile-sps.git"
           else
+            echo "📍 Rota: spartacusWeb25 → Kaique-010"
+            if [ -z "$TOKEN_KAIQUE" ]; then
+              echo "❌ ERRO: TOKEN_KAIQUE está vazio!"
+              exit 1
+            fi
+            echo "✅ Token encontrado (tamanho: ${#TOKEN_KAIQUE} caracteres)"
             TARGET="https://x-access-token:$TOKEN_KAIQUE@github.com/Kaique-010/mobile-sps.git"
           fi
 
-          git remote add mirror "$TARGET" || true
-          git push mirror main
+          echo "🔗 Configurando remote..."
+          git remote add mirror "$TARGET" 2>/dev/null || git remote set-url mirror "$TARGET"
+
+          echo "📤 Fazendo push..."
+          git push mirror main --verbose
+
+          if [ $? -eq 0 ]; then
+            echo "✅ Espelhamento concluído com sucesso!"
+          else
+            echo "❌ Falha no espelhamento!"
+            exit 1
+          fi
 
   deploy:
     needs: mirror
