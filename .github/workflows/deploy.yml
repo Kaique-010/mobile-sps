@@ -1,4 +1,4 @@
-name: Deploy Mobile-SPS (Blue/Green)
+name: Deploy Mobile e Web -SPS (Blue/Green)
 
 on:
   push:
@@ -121,6 +121,7 @@ jobs:
           from: ${{ secrets.SMTP_USER }}
           body: |
             Deploy concluído com sucesso.
+            Código atualizado web e mobile.
             Repo: ${{ github.repository }}
             SHA: ${{ github.sha }}
 
