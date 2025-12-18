@@ -283,7 +283,7 @@ def acoes_permitidas(perfil, app_label, model):
     
     model_norm = _normalizar_model_name(model)
     
-    ct, estrategia = _buscar_contenttype(banco, app_label, model)
+    ct, estrategia = buscar_contenttype(banco, app_label, model)
     
     if not ct:
         logger.error(f"[perfil_services] acoes_permitidas: ContentType não encontrado app={app_label} model={model}")

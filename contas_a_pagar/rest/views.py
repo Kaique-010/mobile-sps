@@ -2,7 +2,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db import transaction, models
-from django.http import Http404  # ✅ Adicionar
+from django.http import Http404
 from django_filters.rest_framework import DjangoFilterBackend
 from ..models import Titulospagar, Bapatitulos
 from Entidades.models import Entidades 

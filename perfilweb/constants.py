@@ -25,11 +25,15 @@ DEFAULT_PERMISSOES_POR_PERFIL = {
         ('perfilweb', 'perfil'): ACOES_PADRAO,
         ('Pedidos', 'pedidovenda'): ACOES_PADRAO,
         ('Produtos', 'produtos'): ACOES_PADRAO,
+        ('contas_a_pagar', 'titulospagar'): ACOES_PADRAO,
+        ('contas_a_receber', 'titulosreceber'): ACOES_PADRAO,
     },
     'admin': {
         ('perfilweb', 'perfil'): ['listar', 'visualizar', 'editar'],
         ('Pedidos', 'pedidovenda'): ['listar', 'visualizar', 'criar', 'editar', 'imprimir', 'exportar'],
         ('Produtos', 'produtos'): ['listar', 'visualizar', 'exportar'],
+        ('contas_a_pagar', 'titulospagar'): ACOES_PADRAO,
+        ('contas_a_receber', 'titulosreceber'): ACOES_PADRAO,
     },
     'gerente': {
         ('Pedidos', 'pedidovenda'): ['listar', 'visualizar', 'criar', 'editar', 'imprimir'],

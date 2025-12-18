@@ -10,7 +10,8 @@ from django.utils import timezone
 from core.utils import get_licenca_db_config
 from ...models import Titulospagar, Bapatitulos
 from Entidades.models import Entidades
-
+from datetime import date
+from django.utils.timezone import now
 
 
 class TitulosPagarListView(DBAndSlugMixin, ListView):
@@ -21,11 +22,15 @@ class TitulosPagarListView(DBAndSlugMixin, ListView):
 
     def get_queryset(self):
         qs = Titulospagar.objects.using(self.db_alias).all()
+        
+        hoje = now().date()
+        inicio_mes = date(hoje.year, hoje.month, 1)
+        
         data_min = '2025-01-01'
         data_max = '2100-12-31'
         qs = qs.filter(
             Q(titu_emis__isnull=True) | Q(titu_emis__range=(data_min, data_max)),
-            Q(titu_venc__isnull=True) | Q(titu_venc__range=(data_min, data_max)),
+            Q(titu_venc__isnull=True) | Q(titu_venc__range=(inicio_mes, hoje)),
         ).only('titu_empr','titu_fili','titu_forn','titu_titu','titu_seri','titu_parc','titu_valo','titu_venc','titu_emis','titu_aber')
 
         # Filtros padrão

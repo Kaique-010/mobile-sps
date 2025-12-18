@@ -4,7 +4,7 @@ from django.db import IntegrityError, connections
 from .constants import ACOES_PADRAO, PERFIS_PADRAO, DEFAULT_PERMISSOES_POR_PERFIL
 from .models import Perfil, PermissaoPerfil, PerfilHeranca, UsuarioPerfil
 from Licencas.models import Usuarios
-from .services import limpar_cache_perfil
+from .services import limpar_cache_perfil, _buscar_contenttype
 from core.middleware import get_licenca_slug
 from core.utils import get_db_from_slug
 
@@ -16,15 +16,12 @@ def get_content_types_validos(banco=None):
         if app_config.name.startswith('django.'):
             continue
         
-        # Filtra apenas modelos gerenciados pelo Django (managed=True)
-        # Modelos managed=False (views, tabelas legadas) geralmente não precisam de ContentType
-        # e podem causar erros se a tabela subjacente não estiver compatível
-        app_models = []
-        for model in app_config.get_models():
-            if getattr(model._meta, 'managed', True):
-                app_models.append(model)
+        # Obtém todos os modelos, incluindo managed=False (legados/views),
+        # pois eles também precisam de controle de permissão.
+        app_models = list(app_config.get_models())
         
         modelos.extend(app_models)
+        print(f"Modelos do app {app_config.label}: {[m.__name__ for m in app_models]}") 
     
     try:
         cts = ContentType.objects.db_manager(banco).get_for_models(*modelos).values()
@@ -94,10 +91,10 @@ def aplicar_permissoes_padrao_por_perfil(perfil):
     if not regras:
         return 0
     criados = 0
+    from .services import _buscar_contenttype
     for (app_label, model), acoes in regras.items():
-        try:
-            ct = ContentType.objects.using(banco).get(app_label=app_label, model=model)
-        except ContentType.DoesNotExist:
+        ct, _ = _buscar_contenttype(banco, app_label, model)
+        if not ct:
             continue
         for acao in acoes:
             _, created = PermissaoPerfil.objects.using(banco).get_or_create(
