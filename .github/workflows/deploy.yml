@@ -13,11 +13,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Espelhar para o outro repositório
+      - name: Espelhar Repo
         env:
           REPO: ${{ github.repository }}
           TOKEN_SPARTACUS: ${{ secrets.MIRROR_TOKEN_SPARTACUS }}
-          TOKEN_KAIQUE: ${{ secrets.MIRROR_TOKEN_KAIQUE }}
+          TOKEN_KAIQUE: ${{ secrets.MIRROR_TOKEN_KAIQUE010 }}
         run: |
           if [ "$REPO" = "Kaique-010/mobile-sps" ]; then
             TARGET="https://x-access-token:$TOKEN_SPARTACUS@github.com/spartacusWeb25/mobile-sps.git"
