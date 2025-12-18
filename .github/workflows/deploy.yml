@@ -29,6 +29,8 @@ jobs:
           echo "TOKEN_KAIQUE existe: ${{ secrets.MIRROR_TOKEN_KAIQUE010 != '' }}"
           echo "Tamanho TOKEN_SPARTACUS: ${#TOKEN_SPARTACUS}"
           echo "Tamanho TOKEN_KAIQUE: ${#TOKEN_KAIQUE}"
+          echo "Primeiros 4 chars TOKEN_SPARTACUS: ${TOKEN_SPARTACUS:0:4}..."
+          echo "Últimos 4 chars TOKEN_SPARTACUS: ...${TOKEN_SPARTACUS: -4}"
           echo ""
           echo "============================================"
           echo "🎯 DEBUG - LÓGICA DO ESPELHAMENTO"
@@ -45,48 +47,103 @@ jobs:
           echo "============================================"
         env:
           TOKEN_SPARTACUS: ${{ secrets.MIRROR_TOKEN_SPARTACUS }}
-          TOKEN_KAIQUE010: ${{ secrets.MIRROR_TOKEN_KAIQUE010 }}
+          TOKEN_KAIQUE: ${{ secrets.MIRROR_TOKEN_KAIQUE010 }}
 
       - name: Espelhar para o outro repositório
-        continue-on-error: true
+        continue-on-error: false
         env:
           REPO: ${{ github.repository }}
-          TOKEN_SPARTACUS010: ${{ secrets.MIRROR_TOKEN_SPARTACUS }}
-          TOKEN_KAIQUE010: ${{ secrets.MIRROR_TOKEN_KAIQUE010 }}
+          TOKEN_SPARTACUS: ${{ secrets.MIRROR_TOKEN_SPARTACUS }}
+          TOKEN_KAIQUE: ${{ secrets.MIRROR_TOKEN_KAIQUE010 }}
         run: |
           echo "🚀 Iniciando espelhamento..."
           echo "Repositório origem: $REPO"
 
+          # Debug: verificar tokens recebidos
+          echo "Debug - TOKEN_SPARTACUS length: ${#TOKEN_SPARTACUS}"
+          echo "Debug - TOKEN_KAIQUE length: ${#TOKEN_KAIQUE}"
+
           if [ "$REPO" = "Kaique-010/mobile-sps" ]; then
             echo "📍 Rota: Kaique-010 → spartacusWeb25"
-            if [ -z "$TOKEN_SPARTACUS010" ]; then
-              echo "❌ ERRO: TOKEN_SPARTACUS está vazio!"
+            
+            if [ -z "$TOKEN_SPARTACUS" ] || [ "${#TOKEN_SPARTACUS}" -lt 10 ]; then
+              echo "❌ ERRO: TOKEN_SPARTACUS está vazio ou inválido!"
+              echo "Tamanho: ${#TOKEN_SPARTACUS}"
               exit 1
             fi
-            echo "✅ Token encontrado (tamanho: ${#TOKEN_SPARTACUS} caracteres)"
-            TARGET="https://x-access-token:$TOKEN_SPARTACUS@github.com/spartacusWeb25/mobile-sps.git"
+            
+            echo "✅ Token SPARTACUS válido (${#TOKEN_SPARTACUS} caracteres)"
+            MIRROR_TOKEN="$TOKEN_SPARTACUS"
+            TARGET_REPO="spartacusWeb25/mobile-sps"
+            
           else
             echo "📍 Rota: spartacusWeb25 → Kaique-010"
-            if [ -z "$TOKEN_KAIQUE010" ]; then
-              echo "❌ ERRO: TOKEN_KAIQUE010 está vazio!"
+            
+            if [ -z "$TOKEN_KAIQUE" ] || [ "${#TOKEN_KAIQUE}" -lt 10 ]; then
+              echo "❌ ERRO: TOKEN_KAIQUE está vazio ou inválido!"
+              echo "Tamanho: ${#TOKEN_KAIQUE}"
               exit 1
             fi
-            echo "✅ Token encontrado (tamanho: ${#TOKEN_KAIQUE010} caracteres)"
-            TARGET="https://x-access-token:$TOKEN_KAIQUE010@github.com/Kaique-010/mobile-sps.git"
+            
+            echo "✅ Token KAIQUE válido (${#TOKEN_KAIQUE} caracteres)"
+            MIRROR_TOKEN="$TOKEN_KAIQUE"
+            TARGET_REPO="Kaique-010/mobile-sps"
           fi
 
-          echo "🔗 Configurando remote..."
-          git remote add mirror "$TARGET" 2>/dev/null || git remote set-url mirror "$TARGET"
+          # Testar 3 formatos diferentes de URL
+          echo ""
+          echo "🔗 Tentando 3 formatos de autenticação..."
 
-          echo "📤 Fazendo push..."
-          git push mirror main --verbose
+          # Formato 1: x-access-token
+          echo "📌 Formato 1: x-access-token"
+          TARGET_URL="https://x-access-token:${MIRROR_TOKEN}@github.com/${TARGET_REPO}.git"
+          git remote remove mirror 2>/dev/null || true
+          git remote add mirror "$TARGET_URL"
 
-          if [ $? -eq 0 ]; then
-            echo "✅ Espelhamento concluído com sucesso!"
-          else
-            echo "❌ Falha no espelhamento!"
-            exit 1
+          if git push mirror main --verbose 2>&1; then
+            echo "✅ Sucesso com formato x-access-token!"
+            exit 0
           fi
+
+          echo "⚠️ Formato 1 falhou, tentando formato 2..."
+
+          # Formato 2: token direto
+          echo "📌 Formato 2: token direto"
+          TARGET_URL="https://${MIRROR_TOKEN}@github.com/${TARGET_REPO}.git"
+          git remote set-url mirror "$TARGET_URL"
+
+          if git push mirror main --verbose 2>&1; then
+            echo "✅ Sucesso com token direto!"
+            exit 0
+          fi
+
+          echo "⚠️ Formato 2 falhou, tentando formato 3..."
+
+          # Formato 3: oauth2
+          echo "📌 Formato 3: oauth2"
+          TARGET_URL="https://oauth2:${MIRROR_TOKEN}@github.com/${TARGET_REPO}.git"
+          git remote set-url mirror "$TARGET_URL"
+
+          if git push mirror main --verbose 2>&1; then
+            echo "✅ Sucesso com oauth2!"
+            exit 0
+          fi
+
+          echo ""
+          echo "❌ Todos os formatos falharam!"
+          echo "Possíveis causas:"
+          echo "  1. Token sem permissão 'repo' completa"
+          echo "  2. Token expirado"
+          echo "  3. Repositório ${TARGET_REPO} não existe"
+          echo "  4. Token não pertence ao usuário dono do repo"
+          echo "  5. Token tem espaços ou caracteres invisíveis"
+          echo ""
+          echo "🔧 Sugestões:"
+          echo "  - Gere um NOVO token"
+          echo "  - Certifique-se de copiar TODO o token (sem espaços)"
+          echo "  - Marque APENAS a permissão 'repo'"
+          echo "  - Use o token do usuário DONO do repositório"
+          exit 1
 
   deploy:
     needs: mirror
