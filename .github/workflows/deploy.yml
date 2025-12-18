@@ -113,7 +113,7 @@ jobs:
           git remote set-url mirror "$TARGET_URL"
 
           if git push mirror main --verbose 2>&1; then
-            echo "✅ Sucesso com token!"
+            echo "✅ Sucesso com token direto!"
             exit 0
           fi
 
