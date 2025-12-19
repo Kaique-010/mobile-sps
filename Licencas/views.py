@@ -205,7 +205,7 @@ class EmpresaUsuarioView(APIView):
 
         # Garantir que estamos consultando no mesmo banco da licença selecionada
         banco = get_licenca_db_config(request)
-        empresas = Empresas.objects.using(banco).all()
+        empresas = Empresas.objects.using(banco).all().order_by('empr_codi')
         if empresas.exists():
             serializer = EmpresaSerializer(empresas, many=True)
             return Response(serializer.data)
@@ -236,7 +236,7 @@ class FiliaisPorEmpresaView(APIView):
         except (TypeError, ValueError):
             return Response({'error': 'empresa_id inválido.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        filiais_qs = Filiais.objects.using(banco).filter(empr_empr=empresa_id_int)
+        filiais_qs = Filiais.objects.using(banco).filter(empr_empr=empresa_id_int).order_by('empr_codi')
         serializer = FilialSerializer(filiais_qs, many=True)
         return Response(serializer.data)
 

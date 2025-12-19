@@ -163,7 +163,92 @@ def _buscar_contenttype(banco, app_label, model_name):
                 return ct, "busca_direta_alias"
             except ContentType.DoesNotExist:
                 pass
+        
+        # Fallback: se for 'pedidos', tenta 'pedidovenda'
+        if app_norm == 'pedidos' and model_norm == 'pedidos':
+            try:
+                ct = ContentType.objects.using(banco).get(
+                    app_label__iexact='Pedidos',
+                    model__iexact='pedidovenda'
+                )
+                logger.info(f"[perfil_services] ContentType ENCONTRADO (alias pedidos->pedidovenda): id={ct.id} app={ct.app_label}")
+                return ct, "busca_direta_alias_pedidos"
+            except ContentType.DoesNotExist:
+                pass
 
+        if app_norm == 'contas_a_pagar':
+            # Alias para titulospagar
+            if model_norm in ['titulospagar', 'titulos_pagar', 'titulos-pagar']:
+                try:
+                    ct = ContentType.objects.using(banco).get(
+                        app_label__iexact='contas_a_pagar',
+                        model__iexact='titulospagar'
+                    )
+                    logger.info(f"[perfil_services] ContentType ENCONTRADO (alias contas_a_pagar->titulospagar): id={ct.id} app={ct.app_label}")
+                    return ct, "alias_titulospagar"
+                except ContentType.DoesNotExist:
+                    pass
+            # Alias para bapatitulos
+            if model_norm in ['bapatitulos', 'bapa_titulos', 'bapa-titulos']:
+                try:
+                    ct = ContentType.objects.using(banco).get(
+                        app_label__iexact='contas_a_pagar',
+                        model__iexact='bapatitulos'
+                    )
+                    logger.info(f"[perfil_services] ContentType ENCONTRADO (alias contas_a_pagar->bapatitulos): id={ct.id} app={ct.app_label}")
+                    return ct, "alias_bapatitulos"
+                except ContentType.DoesNotExist:
+                    pass
+
+        if app_norm == 'contas_a_receber':
+            # Alias para titulosreceber
+            if model_norm in ['titulosreceber', 'titulos_receber', 'titulos-receber']:
+                try:
+                    ct = ContentType.objects.using(banco).get(
+                        app_label__iexact='contas_a_receber',
+                        model__iexact='titulosreceber'
+                    )
+                    logger.info(f"[perfil_services] ContentType ENCONTRADO (alias contas_a_receber->titulosreceber): id={ct.id} app={ct.app_label}")
+                    return ct, "alias_titulosreceber"
+                except ContentType.DoesNotExist:
+                    pass
+            # Alias para baretitulos
+            if model_norm in ['baretitulos', 'bare_titulos', 'bare-titulos']:
+                try:
+                    ct = ContentType.objects.using(banco).get(
+                        app_label__iexact='contas_a_receber',
+                        model__iexact='baretitulos'
+                    )
+                    logger.info(f"[perfil_services] ContentType ENCONTRADO (alias contas_a_receber->baretitulos): id={ct.id} app={ct.app_label}")
+                    return ct, "alias_baretitulos"
+                except ContentType.DoesNotExist:
+                    pass
+
+        if app_norm == 'listacasamento':
+            # Alias para listacasamento
+            if model_norm in ['listascasamento', 'lista_casamento', 'listas_casamento']:
+                try:
+                    ct = ContentType.objects.using(banco).get(
+                        app_label__iexact='listacasamento',
+                        model__iexact='listacasamento'
+                    )
+                    logger.info(f"[perfil_services] ContentType ENCONTRADO (alias listacasamento->listacasamento): id={ct.id} app={ct.app_label}")
+                    return ct, "alias_listacasamento"
+                except ContentType.DoesNotExist:
+                    pass
+            # Alias para itenslistacasamento
+            if model_norm in ['itenslistascasamento', 'itens_lista_casamento', 'itens_listas_casamento']:
+                try:
+                    ct = ContentType.objects.using(banco).get(
+                        app_label__iexact='listacasamento',
+                        model__iexact='itenslistacasamento'
+                    )
+                    logger.info(f"[perfil_services] ContentType ENCONTRADO (alias listacasamento->itenslistacasamento): id={ct.id} app={ct.app_label}")
+                    return ct, "alias_itenslistacasamento"
+                except ContentType.DoesNotExist:
+                    pass
+        
+        
         logger.info(f"[perfil_services] ContentType não encontrado busca direta: app={app_norm} model={model_norm}")
     except Exception as e:
         logger.error(f"[perfil_services] Erro busca direta ContentType: {e}")
