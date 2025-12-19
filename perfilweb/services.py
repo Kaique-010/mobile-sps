@@ -354,9 +354,14 @@ def verificar_por_url(usuario, url_name):
     return resultado
 
 
-def auditar_permissoes_usuarios():
+def auditar_permissoes_usuarios(banco=None):
     """Audita permissões de todos os usuários (para debug)"""
-    banco = get_db_from_slug(get_licenca_slug())
+    if not banco:
+        banco = get_db_from_slug(get_licenca_slug())
+    
+    if banco == 'default':
+        return
+
     if banco in EXCLUDED_DBS:
         return
     

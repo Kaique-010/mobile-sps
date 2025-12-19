@@ -78,6 +78,7 @@ class OsService:
                 peca_unit=peca_unit,
                 peca_tota=total_item,
                 peca_desc=peca_desc,
+                peca_data=item_data.get('peca_data') or ordem.os_data_aber,
             )
             OsService.logger.debug(
                 "[OsService.create] Peça %d: prod=%s quan=%s unit=%s desc=%s subtotal=%s total=%s",
@@ -183,6 +184,7 @@ class OsService:
                 peca_unit=peca_unit,
                 peca_tota=total_item,
                 peca_desc=peca_desc,
+                peca_data=item_data.get('peca_data') or ordem.os_data_aber,
             )
 
         for item_data in servicos_data:

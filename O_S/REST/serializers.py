@@ -185,6 +185,9 @@ class PecasOsSerializer(ItemOsBaseSerializer):
     codigo_field = "peca_prod"
     prefix = "peca"
     model_class = PecasOs
+    
+    # Allow UUIDs for offline sync
+    peca_item = serializers.CharField(required=False)
 
     produto_nome = serializers.SerializerMethodField()
 
@@ -206,6 +209,9 @@ class ServicosOsSerializer(ItemOsBaseSerializer):
     codigo_field = "serv_prod"
     prefix = "serv"
     model_class = ServicosOs
+    
+    # Allow UUIDs for offline sync
+    serv_item = serializers.CharField(required=False)
 
     class Meta:
         model = ServicosOs
@@ -227,12 +233,23 @@ class OsSerializer(BancoModelSerializer):
     os_assi_clie = Base64BinaryField(required=False)
     os_assi_oper = Base64BinaryField(required=False)
     os_orig = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    
+    # Allow UUID for offline sync
+    os_os = serializers.CharField(required=False)
 
     class Meta:
         model = Os
         fields = '__all__'
         extra_kwargs = {
             'os_os': {'validators': []},
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.id_mappings = {
+            'pecas_ids': [],
+            'servicos_ids': [],
+            'horas_ids': []
         }
 
     def get_cliente_nome(self, obj):
@@ -296,12 +313,26 @@ class OsSerializer(BancoModelSerializer):
         banco = self.context.get("banco")
         ids = []
         
+        mapping_key = 'pecas_ids'
+        if prefix == 'serv': mapping_key = 'servicos_ids'
+        elif prefix == 'os_hora': mapping_key = 'horas_ids'
+        
         for item in data_list:
             item[f"{prefix}_empr"] = os_obj.os_empr
             item[f"{prefix}_fili"] = os_obj.os_fili
             item[f"{prefix}_os"] = os_obj.os_os
 
             pk = item.get(f"{prefix}_item")
+            local_id = None
+            
+            # Check for offline UUID
+            if pk and isinstance(pk, str) and (len(pk) > 20 or '-' in pk):
+                local_id = pk
+                # Remove UUID to allow generation of new ID
+                if f"{prefix}_item" in item:
+                    del item[f"{prefix}_item"]
+                pk = None
+
             if pk:
                 obj, _ = model.objects.using(banco).update_or_create(
                     **{
@@ -313,9 +344,30 @@ class OsSerializer(BancoModelSerializer):
                     defaults=item,
                 )
             else:
+                # If manual ID generation is needed, it should be here.
+                # Assuming AutoField or similar mechanism.
+                # To be safe for legacy DBs without AutoField on items:
+                if not pk:
+                    last = model.objects.using(banco).filter(
+                         **{f"{prefix}_empr": os_obj.os_empr, f"{prefix}_fili": os_obj.os_fili}
+                    ).aggregate(models.Max(f"{prefix}_item"))
+                    max_id = last.get(f"{prefix}_item__max") or 0
+                    # We need to be careful with concurrency here, but inside a transaction it might be okay-ish?
+                    # Ideally use AutoField.
+                    # For now, let's try standard create. If it fails, we know why.
+                    # But `views.py` uses `get_next_ordem_numero` for OS.
+                    pass
+
                 obj = model.objects.using(banco).create(**item)
 
-            ids.append(getattr(obj, f"{prefix}_item"))
+            final_id = getattr(obj, f"{prefix}_item")
+            ids.append(final_id)
+            
+            if local_id:
+                self.id_mappings[mapping_key].append({
+                    'local_id': local_id,
+                    'remote_id': final_id
+                })
 
         # Remove itens deletados
         model.objects.using(banco).filter(

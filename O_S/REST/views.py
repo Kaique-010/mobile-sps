@@ -144,6 +144,16 @@ class OsViewSet(BaseMultiDBModelViewSet):
         banco = self.get_banco()
         base_data = request.data.copy()
 
+        # Garante setor padrão = 1 se não informado (evita erro not-null)
+        if not base_data.get('os_seto'):
+            base_data['os_seto'] = 1
+
+        # Check for offline UUID
+        local_os_id = None
+        raw_os_id = request.data.get('os_os')
+        if raw_os_id and isinstance(raw_os_id, str) and (len(raw_os_id) > 20 or '-' in raw_os_id):
+            local_os_id = raw_os_id
+
         base_data['os_stat_os'] = 0
         if request.user and request.user.pk:
             base_data['os_usua_aber'] = request.user.pk
@@ -168,16 +178,27 @@ class OsViewSet(BaseMultiDBModelViewSet):
                 logger.info(
                     f"O.S. {instance.os_os} aberta por user {request.user.pk if request.user else 'anon'}"
                 )
+                
+                response_data = serializer.data
+                if local_os_id:
+                    response_data['local_os_id'] = local_os_id
+                    response_data['remote_os_id'] = instance.os_os
+                    # Add item mappings from serializer instance
+                    if hasattr(serializer, 'id_mappings'):
+                        response_data.update(serializer.id_mappings)
+                
                 headers = self.get_success_headers(serializer.data)
                 return Response(
-                    serializer.data,
+                    response_data,
                     status=status.HTTP_201_CREATED,
                     headers=headers,
                 )
-            except IntegrityError:
-                logger.warning(
-                    f"Colisão de número de OS detectada (tentativa {tentativa+1}/{max_tentativas}). Recalculando..."
-                )
+            except IntegrityError as e:
+                logger.warning(f"Tentativa {tentativa + 1} de gerar OS falhou: {e}")
+                if tentativa == max_tentativas - 1:
+                    raise ValidationError(f"Não foi possível gerar um número de O.S único após {max_tentativas} tentativas. Motivo: {e}")
+                import time
+                time.sleep(0.2)
                 continue
 
         return Response(
@@ -1036,7 +1057,7 @@ class OsHoraViewSet(BaseMultiDBModelViewSet):
 class MegaProdutosView(ModuloRequeridoMixin, APIView):
 
     def get(self, request, *args, **kwargs):
-        banco = get_licenca_db_config('savexml960')
+        banco = get_licenca_db_config('savexml960' or '839' or 'casaa')
         if not banco:
             return Response({"detail": "Banco não encontrado."}, status=400)
 
@@ -1098,7 +1119,7 @@ class MegaEntidadesApiView(ModuloRequeridoMixin, APIView):
 
 
     def get(self, request, *args, **kwargs):
-        banco = get_licenca_db_config('savexml960')
+        banco = get_licenca_db_config('savexml960' or 'savexml839')
         if not banco:
             return Response({"detail": "Banco não encontrado."}, status=400)
 

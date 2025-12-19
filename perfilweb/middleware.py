@@ -154,7 +154,7 @@ class PerfilPermissionMiddleware:
                         cache.set(tk, 1, 30)
                         try:
                             from .services import auditar_permissoes_usuarios
-                            auditar_permissoes_usuarios()
+                            auditar_permissoes_usuarios(banco)
                         except Exception:
                             pass
             except Exception:
