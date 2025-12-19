@@ -188,6 +188,7 @@ def _buscar_contenttype(banco, app_label, model_name):
                     return ct, "alias_titulospagar"
                 except ContentType.DoesNotExist:
                     pass
+
             # Alias para bapatitulos
             if model_norm in ['bapatitulos', 'bapa_titulos', 'bapa-titulos']:
                 try:
@@ -212,6 +213,7 @@ def _buscar_contenttype(banco, app_label, model_name):
                     return ct, "alias_titulosreceber"
                 except ContentType.DoesNotExist:
                     pass
+
             # Alias para baretitulos
             if model_norm in ['baretitulos', 'bare_titulos', 'bare-titulos']:
                 try:
@@ -228,25 +230,38 @@ def _buscar_contenttype(banco, app_label, model_name):
             # Alias para listacasamento
             if model_norm in ['listascasamento', 'lista_casamento', 'listas_casamento']:
                 try:
-                    ct = ContentType.objects.using(banco).get(
-                        app_label__iexact='listacasamento',
-                        model__iexact='listacasamento'
-                    )
-                    logger.info(f"[perfil_services] ContentType ENCONTRADO (alias listacasamento->listacasamento): id={ct.id} app={ct.app_label}")
+                    model_cls = apps.get_model('listacasamento', 'listacasamento')
+                    ct = ContentType.objects.db_manager(banco).get_for_model(model_cls, for_concrete_model=False)
+                    logger.info(f"[perfil_services] ContentType ENCONTRADO (alias/get_model listacasamento->listacasamento): id={ct.id} app={ct.app_label}")
                     return ct, "alias_listacasamento"
-                except ContentType.DoesNotExist:
-                    pass
+                except (LookupError, Exception):
+                    try:
+                        ct = ContentType.objects.using(banco).get(
+                            app_label__iexact='listacasamento',
+                            model__iexact='listacasamento'
+                        )
+                        logger.info(f"[perfil_services] ContentType ENCONTRADO (alias listacasamento->listacasamento): id={ct.id} app={ct.app_label}")
+                        return ct, "alias_listacasamento"
+                    except ContentType.DoesNotExist:
+                        pass
+
             # Alias para itenslistacasamento
             if model_norm in ['itenslistascasamento', 'itens_lista_casamento', 'itens_listas_casamento']:
                 try:
-                    ct = ContentType.objects.using(banco).get(
-                        app_label__iexact='listacasamento',
-                        model__iexact='itenslistacasamento'
-                    )
-                    logger.info(f"[perfil_services] ContentType ENCONTRADO (alias listacasamento->itenslistacasamento): id={ct.id} app={ct.app_label}")
+                    model_cls = apps.get_model('listacasamento', 'itenslistacasamento')
+                    ct = ContentType.objects.db_manager(banco).get_for_model(model_cls, for_concrete_model=False)
+                    logger.info(f"[perfil_services] ContentType ENCONTRADO (alias/get_model listacasamento->itenslistacasamento): id={ct.id} app={ct.app_label}")
                     return ct, "alias_itenslistacasamento"
-                except ContentType.DoesNotExist:
-                    pass
+                except (LookupError, Exception):
+                    try:
+                        ct = ContentType.objects.using(banco).get(
+                            app_label__iexact='listacasamento',
+                            model__iexact='itenslistacasamento'
+                        )
+                        logger.info(f"[perfil_services] ContentType ENCONTRADO (alias listacasamento->itenslistacasamento): id={ct.id} app={ct.app_label}")
+                        return ct, "alias_itenslistacasamento"
+                    except ContentType.DoesNotExist:
+                        pass
         
         
         logger.info(f"[perfil_services] ContentType não encontrado busca direta: app={app_norm} model={model_norm}")
