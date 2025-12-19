@@ -12,7 +12,7 @@ CACHE_TIMEOUT = 60  # Reduzir para 1 minuto durante debug
 logger = logging.getLogger('perfilweb.services')
 
 # Bancos/Licenças que não utilizam o sistema de perfis (permissão total/hardcoded)
-EXCLUDED_DBS = ['savexml1', 'savexml206', 'spartacus', 'savexml144']
+EXCLUDED_DBS = ['savexml1', 'savexml206', 'spartacus', 'savexml144', 'savexml1014']
 
 
 def get_perfil_ativo(usuario):
