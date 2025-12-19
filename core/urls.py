@@ -18,6 +18,7 @@ urlpatterns = [
     path("health/", views.health_check, name="health"),
     path("api/warm-cache/", views.warm_cache_endpoint, name="warm_cache"),
 
+
     # Rotas principais
     path("", views.index, name="index"),
     path("api/", include(api_router)),

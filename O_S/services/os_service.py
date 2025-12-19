@@ -1,4 +1,4 @@
-from django.db import transaction
+from django.db import transaction, IntegrityError, InternalError
 import logging
 from decimal import Decimal, InvalidOperation
 from ..models import Os, PecasOs, ServicosOs
@@ -68,18 +68,23 @@ class OsService:
             if peca_desc and peca_desc > 0:
                 any_item_discount = True
 
-            item = PecasOs.objects.using(banco).create(
-                peca_empr=ordem.os_empr,
-                peca_fili=ordem.os_fili,
-                peca_os=ordem.os_os,
-                peca_item=idx,
-                peca_prod=str(item_data.get('peca_prod') or ''),
-                peca_quan=peca_quan,
-                peca_unit=peca_unit,
-                peca_tota=total_item,
-                peca_desc=peca_desc,
-                peca_data=item_data.get('peca_data') or ordem.os_data_aber,
-            )
+            try:
+                item = PecasOs.objects.using(banco).create(
+                    peca_empr=ordem.os_empr,
+                    peca_fili=ordem.os_fili,
+                    peca_os=ordem.os_os,
+                    peca_item=idx,
+                    peca_prod=str(item_data.get('peca_prod') or ''),
+                    peca_quan=peca_quan,
+                    peca_unit=peca_unit,
+                    peca_tota=total_item,
+                    peca_desc=peca_desc,
+                    peca_data=item_data.get('peca_data') or ordem.os_data_aber,
+                )
+            except (IntegrityError, InternalError) as e:
+                if 'Não é permitido estoque negativo' in str(e):
+                    raise ValueError(f"Não é permitido estoque negativo para o produto {item_data.get('peca_prod')}.")
+                raise e
             OsService.logger.debug(
                 "[OsService.create] Peça %d: prod=%s quan=%s unit=%s desc=%s subtotal=%s total=%s",
                 idx, item.peca_prod, peca_quan, peca_unit, peca_desc, subtotal_bruto, total_item
@@ -174,18 +179,23 @@ class OsService:
             if peca_desc and peca_desc > 0:
                 any_item_discount = True
 
-            PecasOs.objects.using(banco).create(
-                peca_empr=ordem.os_empr,
-                peca_fili=ordem.os_fili,
-                peca_os=ordem.os_os,
-                peca_item=idx,
-                peca_prod=str(item_data.get('peca_prod') or ''),
-                peca_quan=peca_quan,
-                peca_unit=peca_unit,
-                peca_tota=total_item,
-                peca_desc=peca_desc,
-                peca_data=item_data.get('peca_data') or ordem.os_data_aber,
-            )
+            try:
+                PecasOs.objects.using(banco).create(
+                    peca_empr=ordem.os_empr,
+                    peca_fili=ordem.os_fili,
+                    peca_os=ordem.os_os,
+                    peca_item=idx,
+                    peca_prod=str(item_data.get('peca_prod') or ''),
+                    peca_quan=peca_quan,
+                    peca_unit=peca_unit,
+                    peca_tota=total_item,
+                    peca_desc=peca_desc,
+                    peca_data=item_data.get('peca_data') or ordem.os_data_aber,
+                )
+            except (IntegrityError, InternalError) as e:
+                if 'Não é permitido estoque negativo' in str(e):
+                    raise ValueError(f"Não é permitido estoque negativo para o produto {item_data.get('peca_prod')}.")
+                raise e
 
         for item_data in servicos_data:
             serv_quan = OsService._to_decimal(item_data.get('serv_quan', 0))

@@ -27,6 +27,7 @@ DEFAULT_PERMISSOES_POR_PERFIL = {
         ('Produtos', 'produtos'): ACOES_PADRAO,
         ('contas_a_pagar', 'titulospagar'): ACOES_PADRAO,
         ('contas_a_receber', 'titulosreceber'): ACOES_PADRAO,
+        
     },
     'admin': {
         ('perfilweb', 'perfil'): ['listar', 'visualizar', 'editar'],

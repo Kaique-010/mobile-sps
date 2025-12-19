@@ -118,9 +118,14 @@ def _cadeia_perfis(perfil):
     return ids
 
 
-def _normalizar_app_label(app_label):
+def normalizar_app_label(app_label):
     """Normaliza app_label para lowercase e remove caracteres especiais"""
-    return app_label.lower().replace('-', '_')
+    norm = app_label.lower().replace('-', '_')
+    if norm == 'dashboards':
+        return 'dash'
+    if norm == 'Entidades':
+        return 'entidades'
+    return norm
 
 
 def _normalizar_model_name(model_name):
@@ -133,7 +138,7 @@ def _buscar_contenttype(banco, app_label, model_name):
     Busca ContentType com múltiplas estratégias de fallback
     Retorna: (ContentType ou None, mensagem de debug)
     """
-    app_norm = _normalizar_app_label(app_label)
+    app_norm = normalizar_app_label(app_label)
     model_norm = _normalizar_model_name(model_name)
     
     logger.info(f"[perfil_services] _buscar_contenttype: app_original={app_label} model_original={model_name} app_norm={app_norm} model_norm={model_norm}")
@@ -147,6 +152,18 @@ def _buscar_contenttype(banco, app_label, model_name):
         logger.info(f"[perfil_services] ContentType ENCONTRADO (direto): id={ct.id} app={ct.app_label} model={ct.model}")
         return ct, "busca_direta"
     except ContentType.DoesNotExist:
+        # Fallback: se for 'dash', tenta 'dashboards' (caso o banco tenha o nome antigo/novo)
+        if app_norm == 'dash':
+            try:
+                ct = ContentType.objects.using(banco).get(
+                    app_label__iexact='dashboards',
+                    model__iexact=model_norm
+                )
+                logger.info(f"[perfil_services] ContentType ENCONTRADO (alias dash->dashboards): id={ct.id} app={ct.app_label}")
+                return ct, "busca_direta_alias"
+            except ContentType.DoesNotExist:
+                pass
+
         logger.info(f"[perfil_services] ContentType não encontrado busca direta: app={app_norm} model={model_norm}")
     except Exception as e:
         logger.error(f"[perfil_services] Erro busca direta ContentType: {e}")
@@ -204,7 +221,7 @@ def tem_permissao(perfil, app_label, model, acao):
     Verifica se o perfil tem permissão para executar a ação no modelo
     """
     # EXCEÇÃO 1: Apps específicos (OrdemdeServico, O_S) ignorados
-    app_norm = _normalizar_app_label(app_label)
+    app_norm = normalizar_app_label(app_label)
     if app_norm in ['ordemdeservico', 'o_s', 'ordens', 'os', 'Produtos', 'produtos']:
         logger.info(f"[perfil_services] tem_permissao: app={app_label} EXCLUIDO DO CONTROLE DE PERFIL (permitido)")
         return True
@@ -235,29 +252,50 @@ def tem_permissao(perfil, app_label, model, acao):
 
     logger.info(f"[perfil_services] tem_permissao VERIFICANDO: perfil={perfil.perf_nome} app={app_label}→{app_norm} model={model}→{model_norm} acao={acao} cadeia={cadeia}")
     
-    ct, estrategia = _buscar_contenttype(banco, app_label, model)
+    ct_ids = []
+    ct1, estrategia = _buscar_contenttype(banco, app_label, model)
+    if ct1:
+        ct_ids.append(ct1.id)
+
+    # Lógica DASH/DASHBOARDS: Tenta buscar o outro ContentType se existir, para unificar permissões
+    if app_norm == 'dash':
+        other_label = 'dashboards'
+        # Se o encontrado foi dashboards, busca dash. Se foi dash, busca dashboards.
+        if ct1 and ct1.app_label.lower() == 'dashboards':
+            other_label = 'dash'
+        
+        try:
+            ct2 = ContentType.objects.using(banco).get(
+                app_label__iexact=other_label,
+                model__iexact=model_norm
+            )
+            if ct2 and ct2.id not in ct_ids:
+                ct_ids.append(ct2.id)
+                logger.info(f"[perfil_services] ContentType SECUNDÁRIO ENCONTRADO: id={ct2.id} app={ct2.app_label}")
+        except ContentType.DoesNotExist:
+            pass
     
-    if not ct:
+    if not ct_ids:
         # NÃO fazer cache de False aqui! Pode ser problema temporário
         logger.error(f"[perfil_services] tem_permissao NEGADO (ContentType não encontrado): perfil={perfil.perf_nome} app={app_label} model={model}")
         return False
 
-    # Verificar se existe a permissão
+    # Verificar se existe a permissão em QUALQUER UM dos ContentTypes encontrados
     permitido = PermissaoPerfil.objects.using(banco).filter(
         perf_perf_id__in=cadeia,
-        perf_ctype=ct,
+        perf_ctype_id__in=ct_ids,
         perf_acao=acao
     ).exists()
 
     cache.set(key, permitido, CACHE_TIMEOUT)
     
-    logger.info(f"[perfil_services] tem_permissao RESULTADO: perfil={perfil.perf_nome} app={app_norm} model={model_norm} ct_id={ct.id} acao={acao} permitido={permitido} estrategia={estrategia}")
+    logger.info(f"[perfil_services] tem_permissao RESULTADO: perfil={perfil.perf_nome} app={app_norm} model={model_norm} ct_ids={ct_ids} acao={acao} permitido={permitido} estrategia={estrategia}")
     
-    # Se negado, listar o que o perfil TEM para este ContentType
+    # Se negado, listar o que o perfil TEM para estes ContentTypes
     if not permitido:
         acoes_disponiveis = list(PermissaoPerfil.objects.using(banco).filter(
             perf_perf_id__in=cadeia,
-            perf_ctype=ct
+            perf_ctype_id__in=ct_ids
         ).values_list('perf_acao', flat=True))
         logger.warning(f"[perfil_services] ACESSO NEGADO: perfil={perfil.perf_nome} solicitou acao={acao} mas tem apenas: {acoes_disponiveis}")
     
@@ -267,7 +305,7 @@ def tem_permissao(perfil, app_label, model, acao):
 def acoes_permitidas(perfil, app_label, model):
     """Retorna conjunto de ações permitidas para o modelo"""
     # EXCEÇÃO 1: Apps específicos
-    app_norm = _normalizar_app_label(app_label)
+    app_norm = normalizar_app_label(app_label)
     if app_norm in ['ordemdeservico', 'o_s', 'ordens', 'os', 'Produtos', 'produtos']:
         logger.info(f"[perfil_services] acoes_permitidas: app={app_label} EXCLUIDO DO CONTROLE DE PERFIL (todas permitidas)")
         return {'criar', 'editar', 'excluir', 'visualizar', 'listar', 'imprimir', 'exportar'}
@@ -283,16 +321,30 @@ def acoes_permitidas(perfil, app_label, model):
     
     model_norm = _normalizar_model_name(model)
     
-    ct, estrategia = buscar_contenttype(banco, app_label, model)
-    
-    if not ct:
+    ct_ids = []
+    ct1, estrategia = _buscar_contenttype(banco, app_label, model)
+    if ct1:
+        ct_ids.append(ct1.id)
+        
+    if app_norm == 'dash':
+        other_label = 'dashboards'
+        if ct1 and ct1.app_label.lower() == 'dashboards':
+            other_label = 'dash'
+        try:
+            ct2 = ContentType.objects.using(banco).get(app_label__iexact=other_label, model__iexact=model_norm)
+            if ct2 and ct2.id not in ct_ids:
+                ct_ids.append(ct2.id)
+        except:
+            pass
+
+    if not ct_ids:
         logger.error(f"[perfil_services] acoes_permitidas: ContentType não encontrado app={app_label} model={model}")
         return set()
     
     cadeia = _cadeia_perfis(perfil)
     acoes = set(PermissaoPerfil.objects.using(banco).filter(
         perf_perf_id__in=cadeia,
-        perf_ctype=ct
+        perf_ctype_id__in=ct_ids
     ).values_list('perf_acao', flat=True))
     
     logger.info(f"[perfil_services] acoes_permitidas: perfil={perfil.perf_nome} app={app_norm} model={model_norm} acoes={sorted(acoes)}")
@@ -343,7 +395,7 @@ def verificar_por_url(usuario, url_name):
     app_label, model, acao = regra
     
     # EXCEÇÃO TOTAL na verificação por URL também, para garantir
-    app_norm = _normalizar_app_label(app_label)
+    app_norm = normalizar_app_label(app_label)
     if app_norm in ['ordemdeservico', 'o_s', 'ordens', 'os', 'Produtos', 'produtos']:
         logger.info(f"[perfil_services] verificar_por_url: app={app_label} EXCLUIDO DO CONTROLE DE PERFIL (permitido)")
         return True

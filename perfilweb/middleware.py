@@ -2,7 +2,7 @@ from django.http import HttpResponseForbidden
 from django.urls import resolve
 from .services import verificar_por_url
 from .permission_map import PERMISSION_MAP
-from .services import tem_permissao, get_perfil_ativo, acoes_permitidas, listar_permissoes
+from .services import tem_permissao, get_perfil_ativo, acoes_permitidas, listar_permissoes, normalizar_app_label
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
 import logging
 from core.middleware import get_licenca_slug
@@ -179,6 +179,7 @@ class PerfilPermissionMiddleware:
                 app_label = getattr(model._meta, 'app_label', None)
                 model_name = getattr(model._meta, 'model_name', None)
                 if app_label and model_name:
+                    app_label = normalizar_app_label(app_label) 
                     if issubclass(view_class, CreateView):
                         acao = 'criar'
                     elif issubclass(view_class, UpdateView):
@@ -222,6 +223,8 @@ class PerfilPermissionMiddleware:
                 model_token = parts[3] if len(parts) > 3 else None
                 obj_id = parts[4] if len(parts) > 4 else None
                 if app_label and model_token:
+                    # Normaliza app_label imediatamente para garantir consistência
+                    app_label = normalizar_app_label(app_label)
                     model_name = model_token.replace('-', '').replace('_', '')
                     method = request.method.upper()
                     if method == 'GET':
@@ -279,6 +282,7 @@ class PerfilPermissionMiddleware:
                     }
                     app_label, default_model = app_map.get(app_slug, (None, None))
                     if app_label and default_model:
+                        app_label = normalizar_app_label(app_label)
                         method = request.method.upper()
                         if oper.startswith('novo'):
                             acao = 'criar'

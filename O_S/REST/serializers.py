@@ -1,6 +1,6 @@
 import base64
 import logging
-from django.db import models
+from django.db import models, IntegrityError, InternalError
 from datetime import datetime, timedelta
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -148,23 +148,36 @@ class ItemOsBaseSerializer(BancoModelSerializer):
 
     # Valida base
     def validate(self, data):
-        obrig = [
-            f"{self.prefix}_empr",
-            f"{self.prefix}_fili",
-            f"{self.prefix}_os",
-            self.codigo_field,
-        ]
+        # Validação de campos obrigatórios apenas na criação
+        if not self.instance:
+            obrig = [
+                f"{self.prefix}_empr",
+                f"{self.prefix}_fili",
+                f"{self.prefix}_os",
+                self.codigo_field,
+            ]
 
-        for campo in obrig:
-            if not data.get(campo):
-                raise ValidationError(f"O campo {campo} é obrigatório.")
+            for campo in obrig:
+                if not data.get(campo):
+                    raise ValidationError(f"O campo {campo} é obrigatório.")
 
-        # total calculado
-        q = data.get(f"{self.prefix}_quan", 0)
-        u = data.get(f"{self.prefix}_unit", 0)
+        # Recupera valores para cálculo do total (usa instance se parcial)
+        def get_val(field_name, default=0):
+            val = data.get(field_name)
+            if val is not None:
+                return val
+            if self.instance:
+                return getattr(self.instance, field_name, default)
+            return default
+
+        q = get_val(f"{self.prefix}_quan")
+        u = get_val(f"{self.prefix}_unit")
+
         if q < 0 or u < 0:
             raise ValidationError("Quantidade/Valor não podem ser negativos.")
 
+        # Recalcula total apenas se houver mudança ou criação
+        # Mas como q e u já consideram o valor atual, sempre recalculamos para garantir consistência
         data[f"{self.prefix}_tota"] = q * u
         return data
 
@@ -203,6 +216,25 @@ class PecasOsSerializer(ItemOsBaseSerializer):
         except:
             return ""
 
+    def create(self, validated_data):
+        if not validated_data.get('peca_data'):
+            banco = self.context.get("banco")
+            try:
+                os_obj = Os.objects.using(banco).get(
+                    os_empr=validated_data.get('peca_empr'),
+                    os_fili=validated_data.get('peca_fili'),
+                    os_os=validated_data.get('peca_os')
+                )
+                validated_data['peca_data'] = os_obj.os_data_aber
+            except:
+                pass
+        try:
+            return super().create(validated_data)
+        except (IntegrityError, InternalError) as e:
+            if 'Não é permitido estoque negativo' in str(e):
+                raise ValidationError(f"Não é permitido estoque negativo para o produto {validated_data.get('peca_prod')}.")
+            raise e
+
 
 
 class ServicosOsSerializer(ItemOsBaseSerializer):
@@ -226,6 +258,8 @@ class OsSerializer(BancoModelSerializer):
     horas = OsHoraSerializer(many=True, required=False)
     
     cliente_nome = serializers.SerializerMethodField()
+    cliente_telefone = serializers.SerializerMethodField()
+    cliente_celular = serializers.SerializerMethodField()
     total_pecas = serializers.SerializerMethodField()
     total_servicos = serializers.SerializerMethodField()
     
@@ -261,6 +295,26 @@ class OsSerializer(BancoModelSerializer):
             enti_empr=obj.os_empr,
         ).first()
         return cli.enti_nome if cli else None
+
+    def get_cliente_telefone(self, obj):
+        banco = self.context.get("banco")
+        if not banco:
+            return None
+        cli = Entidades.objects.using(banco).filter(
+            enti_clie=obj.os_clie,
+            enti_empr=obj.os_empr,
+        ).first()
+        return cli.enti_fone if cli else None
+
+    def get_cliente_celular(self, obj):
+        banco = self.context.get("banco")
+        if not banco:
+            return None
+        cli = Entidades.objects.using(banco).filter(
+            enti_clie=obj.os_clie,
+            enti_empr=obj.os_empr,
+        ).first()
+        return cli.enti_celu if cli else None
     
     def get_total_pecas(self, obj):
         """Calcula total de peças"""
@@ -323,6 +377,11 @@ class OsSerializer(BancoModelSerializer):
             item[f"{prefix}_os"] = os_obj.os_os
 
             pk = item.get(f"{prefix}_item")
+            
+            # Ensure peca_data is populated for PecasOs to satisfy database trigger
+            if prefix == "peca" and not item.get("peca_data"):
+                item["peca_data"] = os_obj.os_data_aber
+
             local_id = None
             
             # Check for offline UUID
@@ -334,15 +393,20 @@ class OsSerializer(BancoModelSerializer):
                 pk = None
 
             if pk:
-                obj, _ = model.objects.using(banco).update_or_create(
-                    **{
-                        f"{prefix}_item": pk,
-                        f"{prefix}_empr": os_obj.os_empr,
-                        f"{prefix}_fili": os_obj.os_fili,
-                        f"{prefix}_os": os_obj.os_os,
-                    },
-                    defaults=item,
-                )
+                try:
+                    obj, _ = model.objects.using(banco).update_or_create(
+                        **{
+                            f"{prefix}_item": pk,
+                            f"{prefix}_empr": os_obj.os_empr,
+                            f"{prefix}_fili": os_obj.os_fili,
+                            f"{prefix}_os": os_obj.os_os,
+                        },
+                        defaults=item,
+                    )
+                except (IntegrityError, InternalError) as e:
+                    if 'Não é permitido estoque negativo' in str(e):
+                        raise ValidationError(f"Não é permitido estoque negativo para o produto {item.get(f'{prefix}_prod')}.")
+                    raise e
             else:
                 # If manual ID generation is needed, it should be here.
                 # Assuming AutoField or similar mechanism.
@@ -358,7 +422,12 @@ class OsSerializer(BancoModelSerializer):
                     # But `views.py` uses `get_next_ordem_numero` for OS.
                     pass
 
-                obj = model.objects.using(banco).create(**item)
+                try:
+                    obj = model.objects.using(banco).create(**item)
+                except (IntegrityError, InternalError) as e:
+                    if 'Não é permitido estoque negativo' in str(e):
+                        raise ValidationError(f"Não é permitido estoque negativo para o produto {item.get(f'{prefix}_prod')}.")
+                    raise e
 
             final_id = getattr(obj, f"{prefix}_item")
             ids.append(final_id)

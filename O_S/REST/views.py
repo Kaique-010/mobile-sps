@@ -764,15 +764,35 @@ class ServicosOsViewSet(BaseMultiDBModelViewSet):
 
         resposta = {'adicionados': [], 'editados': [], 'removidos': []}
 
+        def normalize_item(item, prefix):
+            if not isinstance(item, dict):
+                return
+            # Normaliza chaves comuns
+            if not item.get(f'{prefix}_empr'):
+                item[f'{prefix}_empr'] = item.get('empr') or item.get('os_empr')
+            if not item.get(f'{prefix}_fili'):
+                item[f'{prefix}_fili'] = item.get('fili') or item.get('os_fili')
+            if not item.get(f'{prefix}_os'):
+                item[f'{prefix}_os'] = item.get('os') or item.get('os_os')
+            if not item.get(f'{prefix}_prod'):
+                item[f'{prefix}_prod'] = item.get('prod') or item.get('codigo')
+            if not item.get(f'{prefix}_stat'):
+                item[f'{prefix}_stat'] = item.get('status') or item.get('stat')
+
         try:
             with transaction.atomic(using=banco):
 
                 # ADICIONAR
                 for item in adicionar:
+                    if not isinstance(item, dict):
+                        logger.warning(f"Item inválido em adicionar: {item}")
+                        continue
+
+                    normalize_item(item, 'serv')
                     obrig = ['serv_os', 'serv_empr', 'serv_fili', 'serv_prod']
                     faltando = [c for c in obrig if not item.get(c)]
                     if faltando:
-                        raise ValidationError(f"Faltam campos: {', '.join(faltando)}")
+                        raise ValidationError(f"Faltam campos para adicionar: {', '.join(faltando)}")
 
                     item['serv_item'] = get_next_global_serv_item_id(banco)
 
@@ -786,9 +806,15 @@ class ServicosOsViewSet(BaseMultiDBModelViewSet):
 
                 # EDITAR
                 for item in editar:
+                    if not isinstance(item, dict):
+                        logger.warning(f"Item inválido em editar: {item}")
+                        continue
+
+                    normalize_item(item, 'serv')
                     obrig = ['serv_item', 'serv_os', 'serv_empr', 'serv_fili']
-                    if not all(k in item for k in obrig):
-                        raise ValidationError("Campos obrigatórios para edição faltando.")
+                    faltando = [c for c in obrig if not item.get(c)]
+                    if faltando:
+                        raise ValidationError(f"Campos obrigatórios para edição faltando: {', '.join(faltando)}")
 
                     try:
                         obj = ServicosOs.objects.using(banco).get(
@@ -807,9 +833,24 @@ class ServicosOsViewSet(BaseMultiDBModelViewSet):
 
                 # REMOVER
                 for item in remover:
+                    # Suporte para remoção apenas pelo ID (int ou str)
+                    if isinstance(item, (int, str)):
+                        try:
+                            ServicosOs.objects.using(banco).filter(serv_item=item).delete()
+                            resposta['removidos'].append(item)
+                        except Exception as e:
+                            logger.error(f"Erro ao remover item {item}: {e}")
+                        continue
+
+                    if not isinstance(item, dict):
+                        logger.warning(f"Item inválido em remover: {item}")
+                        continue
+
+                    normalize_item(item, 'serv')
                     obrig = ['serv_item', 'serv_os', 'serv_empr', 'serv_fili']
-                    if not all(k in item for k in obrig):
-                        raise ValidationError("Campos obrigatórios para remover faltando.")
+                    faltando = [c for c in obrig if not item.get(c)]
+                    if faltando:
+                        raise ValidationError(f"Campos obrigatórios para remover faltando: {', '.join(faltando)}")
 
                     ServicosOs.objects.using(banco).filter(
                         serv_item=item['serv_item'],

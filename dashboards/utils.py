@@ -30,6 +30,10 @@ def formatar_mensagem(dados):
     return "\n".join(linhas)
 
 
-def enviar_whatsapp(numero, dados):
-    print(f"Enviando WhatsApp para {numero} com dados: {dados}")
+def enviar_whatsapp(numero,celular, dados):
+    from Entidades.models import Entidades
+    
+    numero = Entidades.objects.get(enti_fone = numero)
+    celular = Entidades.objects.get(enti_celu = celular)    
+    print(f"Enviando WhatsApp para {numero}{celular} e com dados: {dados}")
     return True
