@@ -156,7 +156,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'core.middleware.LicencaMiddleware',
     'auditoria.middleware.AuditoriaMiddleware',
-    'perfilweb.middleware.PerfilPermissionMiddleware',
+    #'perfilweb.middleware.PerfilPermissionMiddleware',
 ]
 
 
