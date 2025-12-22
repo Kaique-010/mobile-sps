@@ -86,6 +86,7 @@ jobs:
             fi
 
             cd $REPO
+            sudo chown -R $(whoami):$(whoami) $REPO
             git config --global --add safe.directory $REPO
             git fetch origin
             git reset --hard origin/main
