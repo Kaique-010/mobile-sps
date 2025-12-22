@@ -14,22 +14,6 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: 🔍 Debug - Verificar Secrets e Variáveis
-        run: |
-          echo "============================================"
-          echo "🔍 DEBUG - INFORMAÇÕES DO REPOSITÓRIO"
-          echo "============================================"
-          echo "Repositório atual: ${{ github.repository }}"
-          echo "Branch: ${{ github.ref }}"
-          echo "SHA: ${{ github.sha }}"
-          echo ""
-          echo "============================================"
-          echo "🔑 DEBUG - VERIFICAÇÃO DOS SECRETS"
-          echo "============================================"
-          echo "TOKEN_SPARTACUS existe: ${{ secrets.MIRROR_TOKEN_SPARTACUS != '' }}"
-          echo "TOKEN_KAIQUE existe: ${{ secrets.MIRROR_TOKEN_KAIQUE010 != '' }}"
-          echo "============================================"
-
       - name: Espelhar para o outro repositório
         env:
           REPO: ${{ github.repository }}
@@ -58,10 +42,9 @@ jobs:
     environment: Mobile-Sps
 
     steps:
-      - name: Checkout do código
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      - name: Deploy via SSH
+      - name: Deploy via SSH (Blindado)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.ORACLE_HOST }}
@@ -77,25 +60,20 @@ jobs:
             REPO_URL=https://github.com/${{ github.repository }}.git
             EXPECTED_SHA=${{ github.sha }}
 
-            echo "EXPECTED SHA: $EXPECTED_SHA"
+            mkdir -p $BASE
 
             if [ ! -d "$REPO/.git" ]; then
               rm -rf $REPO
-              mkdir -p $REPO
               git clone $REPO_URL $REPO
             fi
 
             cd $REPO
-            sudo chown -R $(whoami):$(whoami) $REPO
-            git config --global --add safe.directory $REPO
             git fetch origin
             git reset --hard origin/main
 
             CURRENT_SHA=$(git rev-parse HEAD)
-            git log -1 --oneline
-
             if [ "$CURRENT_SHA" != "$EXPECTED_SHA" ]; then
-              echo "SHA mismatch. Abortando deploy."
+              echo "SHA mismatch. Abortando."
               exit 1
             fi
 
@@ -105,12 +83,11 @@ jobs:
               CURRENT="$BASE/blue"
             fi
 
-            [[ "$CURRENT" == *"blue"* ]] && TARGET="$BASE/green" || TARGET="$BASE/blue"
-            echo "Deploy target: $TARGET"
+            [[ "$CURRENT" == *blue ]] && TARGET="$BASE/green" || TARGET="$BASE/blue"
 
             rsync -av --delete \
-              --no-times --no-owner --no-group \
-              --exclude ".git" --exclude "__pycache__" \
+              --exclude ".git" \
+              --exclude "__pycache__" \
               $REPO/ $TARGET/
 
             [ -f "$BASE/.env" ] && cp $BASE/.env $TARGET/.env
@@ -123,28 +100,20 @@ jobs:
               echo "$REQ_HASH" > $BASE/.req_hash
             fi
 
-            lsof -t -i:9000 | xargs -r kill -9 || true
-            sleep 2
-
-            cd $TARGET
-            gunicorn core.wsgi:application \
-              --bind 127.0.0.1:9000 \
-              --pid guni_test.pid &
-
-            sleep 3
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:9000/health/ || echo "000")
-
-            if [ "$STATUS" != "200" ]; then
-              kill $(cat guni_test.pid)
-              exit 1
-            fi
-
-            kill $(cat guni_test.pid)
-            rm -f guni_test.pid
-
             ln -sfn $TARGET $BASE/current
+
+            sudo systemctl daemon-reload
             sudo systemctl restart gunicorn
             sudo systemctl restart daphne
+
+            sleep 5
+
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:9000/health/ || echo "000")
+            if [ "$STATUS" != "200" ]; then
+              echo "Health check falhou"
+              sudo systemctl status gunicorn --no-pager
+              exit 1
+            fi
 
       - name: Email — Sucesso
         if: success()
