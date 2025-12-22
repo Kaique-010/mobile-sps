@@ -495,3 +495,13 @@ CHARACTER_MAXIMUM_LENGTH
 FROM INFORMATION_SCHEMA.COLUMNS
 WHERE TABLE_NAME = 'ordemservico'
 ORDER BY ORDINAL_POSITION;
+
+Domínio: decide o que pode.
+
+Service: executa o fluxo.
+
+Repository: fala com o banco.
+
+View: entrega HTTP.
+
+Handler: traduz erro.

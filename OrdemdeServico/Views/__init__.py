@@ -1,0 +1,5 @@
+from .ordem_viewset import OrdemViewSet as OrdemServicoViewSet
+from .itens_viewset import OrdemServicoPecasViewSet, OrdemServicoServicosViewSet
+from .imagens_viewset import ImagemAntesViewSet, ImagemDuranteViewSet, ImagemDepoisViewSet, FotosViewSet
+from .auxiliares_viewset import OrdemServicoFaseSetorViewSet, OrdemServicoVoltagemViewSet, WorkflowSetorViewSet
+from .historico_viewset import HistoricoWorkflowViewSet

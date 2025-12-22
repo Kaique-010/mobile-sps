@@ -1,9 +1,10 @@
 from rest_framework import routers
 from django.urls import path
-from .views import (
+from .Views import (
     OrdemServicoViewSet, OrdemServicoPecasViewSet, OrdemServicoServicosViewSet,
     ImagemAntesViewSet, ImagemDuranteViewSet, ImagemDepoisViewSet, 
-    WorkflowSetorViewSet, OrdemServicoFaseSetorViewSet, OrdemServicoVoltagemViewSet
+    WorkflowSetorViewSet, OrdemServicoFaseSetorViewSet, OrdemServicoVoltagemViewSet,
+    HistoricoWorkflowViewSet
 )
 from .views_financeiro import (
     GerarTitulosOSView, 
@@ -11,8 +12,6 @@ from .views_financeiro import (
     ConsultarTitulosOSView,
     RelatorioFinanceiroOSView
 )
-
-from .view_historico import HistoricoWorkflowViewSet
 
 from .view_dash import OrdensEletroViewSet
 
@@ -45,4 +44,3 @@ urlpatterns += [
     path('ordens/<int:id>/proximos-setores/', OrdemServicoViewSet.as_view({'get': 'proximos_setores'}), name='proximos_setores'),
     path('ordens/<int:id>/historico-workflow/', OrdemServicoViewSet.as_view({'get': 'historico_workflow'}), name='historico_workflow'),
 ]
-

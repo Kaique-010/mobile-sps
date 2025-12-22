@@ -1,6 +1,11 @@
 # filters/os.py
 from django_filters import rest_framework as filters
-from ..models import OrdensEletro
+from ..models import OrdensEletro, Ordemservico
+from Entidades.models import Entidades
+from core.registry import get_licenca_db_config
+import logging
+
+logger = logging.getLogger(__name__)
 
 class OrdensEletroFilter(filters.FilterSet):
     data_inicial = filters.DateFilter(field_name='data_abertura', lookup_expr='gte')
@@ -33,3 +38,37 @@ class OrdensEletroFilter(filters.FilterSet):
             'status_ordem', 'ordem_de_servico',
             'empresa', 'filial', 'potencia'
         ]
+
+class OrdemServicoFilter(filters.FilterSet):
+    cliente_nome = filters.CharFilter(method='filter_cliente_nome')
+    
+    class Meta:
+        model = Ordemservico
+        fields = ['orde_stat_orde', 'orde_prio', 'orde_tipo', 'orde_enti']
+    
+    def filter_cliente_nome(self, queryset, name, value):
+        if not value:
+            return queryset
+        
+        # Obter o banco de dados do contexto
+        # Tenta pegar da view ou do request
+        banco = 'default'
+        view = getattr(self, 'view', None)
+        request = getattr(self, 'request', None) or (view.request if view else None)
+        
+        if request:
+             banco = get_licenca_db_config(request) or 'default'
+
+        # Buscar entidades que contenham o nome do cliente (busca parcial)
+        try:
+            entidades_ids = list(Entidades.objects.using(banco).filter(
+                enti_nome__icontains=value
+            ).values_list('enti_clie', flat=True))
+            
+            if entidades_ids:
+                return queryset.filter(orde_enti__in=entidades_ids)
+            else:
+                return queryset.none()
+        except Exception as e:
+            logger.error(f"Erro ao filtrar cliente: {e}")
+            return queryset

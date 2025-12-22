@@ -171,10 +171,12 @@ class Ordemservico(models.Model):
     
 
 
-    def calcular_total(self):
+    def calcular_total(self, banco=None):
+        using_db = banco if banco else (self._state.db or 'default')
+        
         total_pecas = sum(
             peca.peca_tota or 0 
-            for peca in Ordemservicopecas.objects.filter(
+            for peca in Ordemservicopecas.objects.using(using_db).filter(
                 peca_empr=self.orde_empr,
                 peca_fili=self.orde_fili,
                 peca_orde=self.orde_nume
@@ -183,7 +185,7 @@ class Ordemservico(models.Model):
         
         total_servicos = sum(
             servico.serv_tota or 0
-            for servico in Ordemservicoservicos.objects.filter(
+            for servico in Ordemservicoservicos.objects.using(using_db).filter(
                 serv_empr=self.orde_empr,
                 serv_fili=self.orde_fili,
                 serv_orde=self.orde_nume
