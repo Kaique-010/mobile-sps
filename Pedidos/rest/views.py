@@ -19,6 +19,7 @@ from rest_framework.permissions import IsAuthenticated
 from parametros_admin.decorators import parametros_pedidos_completo
 from parametros_admin.utils_pedidos import obter_parametros_pedidos, atualizar_parametros_pedidos
 from ParametrosSps.services.pedidos_service import PedidosService
+from .handlers.dominio_handler import tratar_erro
 
 logger = logging.getLogger('Pedidos')
 
@@ -177,11 +178,7 @@ class PedidoVendaViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
             return Response(serializer.data)
 
         except Exception as e:
-            logger.error(f"Erro no método list: {e}")
-            return Response(
-                {'erro': 'Erro interno do servidor'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return tratar_erro(e)
 
     @parametros_pedidos_completo
     def create(self, request, *args, **kwargs):
@@ -199,12 +196,8 @@ class PedidoVendaViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
                 status=status.HTTP_201_CREATED,
                 headers=headers
             )
-        except ValidationError as e:
-            logger.warning(f"❌ Erro de validação: {e.detail}")
-            return Response({'errors': e.detail}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            logger.error(f"💥 Erro inesperado: {e}")
-            return Response({'error': 'Erro interno do servidor'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return tratar_erro(e)
 
     def retrieve(self, request, *args, **kwargs):
         try:
@@ -212,40 +205,36 @@ class PedidoVendaViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
             serializer = self.get_serializer(instance)
             return Response(serializer.data)
         except Exception as e:
-            logger.error(f"Erro ao recuperar pedido: {e}")
-            return Response(
-                {'erro': 'Erro interno do servidor'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return tratar_erro(e)
 
     def update(self, request, *args, **kwargs):
         logger.info(f"[UPDATE] Iniciando atualização de pedido com controle de estoque diferencial")
-        partial = kwargs.pop('partial', False)
-        instance = self.get_object()
-        banco = get_licenca_db_config(request)
-
-        itens_antes = {
-            (i.iped_prod): i.iped_quan
-            for i in instance.itens.all().using(banco)
-        }
-
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        pedido = serializer.save()
-
-        itens_depois = {
-            (i.iped_prod): i.iped_quan
-            for i in pedido.itens.all().using(banco)
-        }
-
-        novos = set(itens_depois.keys()) - set(itens_antes.keys())
-        removidos = set(itens_antes.keys()) - set(itens_depois.keys())
-        alterados = {
-            k for k in itens_depois.keys() & itens_antes.keys()
-            if itens_depois[k] != itens_antes[k]
-        }
-
         try:
+            partial = kwargs.pop('partial', False)
+            instance = self.get_object()
+            banco = get_licenca_db_config(request)
+
+            itens_antes = {
+                (i.iped_prod): i.iped_quan
+                for i in instance.itens.all().using(banco)
+            }
+
+            serializer = self.get_serializer(instance, data=request.data, partial=partial)
+            serializer.is_valid(raise_exception=True)
+            pedido = serializer.save()
+
+            itens_depois = {
+                (i.iped_prod): i.iped_quan
+                for i in pedido.itens.all().using(banco)
+            }
+
+            novos = set(itens_depois.keys()) - set(itens_antes.keys())
+            removidos = set(itens_antes.keys()) - set(itens_depois.keys())
+            alterados = {
+                k for k in itens_depois.keys() & itens_antes.keys()
+                if itens_depois[k] != itens_antes[k]
+            }
+
             for prod_id in novos:
                 item = pedido.itens.using(banco).filter(iped_prod=prod_id).first()
                 PedidosService._baixar_item(pedido, item, banco)
@@ -268,8 +257,7 @@ class PedidoVendaViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         except Exception as e:
-            logger.error(f"[UPDATE] Erro ao ajustar estoque: {e}")
-            return Response({'error': 'Erro ao ajustar estoque'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return tratar_erro(e)
 
     def destroy(self, request, *args, **kwargs):
         try:
@@ -301,8 +289,7 @@ class PedidoVendaViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
 
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Exception as e:
-            logger.error(f"[PedidoVendaViewSet.destroy] Erro inesperado: {e}")
-            return Response({'error': 'Erro interno do servidor'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return tratar_erro(e)
 
     @action(detail=True, methods=['post'])
     def cancelar_pedido(self, request, empresa=None, filial=None, numero=None, **kwargs):
@@ -336,5 +323,4 @@ class PedidoVendaViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
                     'estoque': resultado_estoque
                 }, status=status.HTTP_200_OK)
         except Exception as e:
-            logger.error(f"Erro ao cancelar pedido: {e}")
-            return Response({'erro': 'Erro interno ao cancelar pedido'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return tratar_erro(e)

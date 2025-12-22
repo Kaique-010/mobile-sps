@@ -11,6 +11,7 @@ from .base import BaseMultiDBModelViewSet
 from ..models import Ordemservico, Ordemservicopecas, Ordemservicoservicos
 from ..serializers import OrdemServicoPecasSerializer, OrdemServicoServicosSerializer
 from ..utils import get_next_item_number_sequence, get_next_service_id
+from ..handlers.dominio_handler import tratar_erro
 from core.registry import get_licenca_db_config
 
 import logging
@@ -102,7 +103,7 @@ class OrdemServicoPecasViewSet(BaseMultiDBModelViewSet, ModelViewSet):
                 self.atualizar_total_ordem(empr, fili, orde)
             return response
         except Exception as e:
-            return Response({"detail": str(e)}, status=400)
+            return tratar_erro(e)
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
@@ -129,12 +130,8 @@ class OrdemServicoPecasViewSet(BaseMultiDBModelViewSet, ModelViewSet):
                 )
             return response
 
-        except ValidationError as e:
-            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
-        except IntegrityError:
-            return Response({'detail': 'Erro de integridade.'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return tratar_erro(e)
 
     def update(self, request, *args, **kwargs):
         response = super().update(request, *args, **kwargs)
@@ -297,12 +294,9 @@ class OrdemServicoPecasViewSet(BaseMultiDBModelViewSet, ModelViewSet):
 
             return Response(resposta)
 
-        except ValidationError as e:
-            logger.error(f"Erro de validação ao processar update_lista: {str(e)} | payload={data}")
-            return Response(e.detail, status=400)
         except Exception as e:
             logger.error(f"Erro ao processar update_lista: {str(e)} | payload={data}")
-            return Response({"error": str(e)}, status=400)
+            return tratar_erro(e)
 
 
 class OrdemServicoServicosViewSet(BaseMultiDBModelViewSet):
@@ -471,39 +465,45 @@ class OrdemServicoServicosViewSet(BaseMultiDBModelViewSet):
 
             return Response(resposta)
 
-        except ValidationError as e:
-            logger.error(f"Erro de validação ao processar update_lista: {str(e)}")
-            return Response(e.detail, status=400)
         except Exception as e:
             logger.error(f"Erro ao processar update_lista: {str(e)}")
-            return Response({"error": str(e)}, status=400)
+            return tratar_erro(e)
 
     def create(self, request, *args, **kwargs):
-        response = super().create(request, *args, **kwargs)
-        if response.status_code == 201:
-            data = request.data
-            self.atualizar_total_ordem(
-                data.get('serv_empr'),
-                data.get('serv_fili'),
-                data.get('serv_orde')
-            )
-        return response
+        try:
+            response = super().create(request, *args, **kwargs)
+            if response.status_code == 201:
+                data = request.data
+                self.atualizar_total_ordem(
+                    data.get('serv_empr'),
+                    data.get('serv_fili'),
+                    data.get('serv_orde')
+                )
+            return response
+        except Exception as e:
+            return tratar_erro(e)
 
     def update(self, request, *args, **kwargs):
-        response = super().update(request, *args, **kwargs)
-        if response.status_code == 200:
-            instance = self.get_object()
-            self.atualizar_total_ordem(
-                instance.serv_empr,
-                instance.serv_fili,
-                instance.serv_orde
-            )
-        return response
+        try:
+            response = super().update(request, *args, **kwargs)
+            if response.status_code == 200:
+                instance = self.get_object()
+                self.atualizar_total_ordem(
+                    instance.serv_empr,
+                    instance.serv_fili,
+                    instance.serv_orde
+                )
+            return response
+        except Exception as e:
+            return tratar_erro(e)
 
     def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        empr, fili, orde = instance.serv_empr, instance.serv_fili, instance.serv_orde
-        response = super().destroy(request, *args, **kwargs)
-        if response.status_code == 204:
-            self.atualizar_total_ordem(empr, fili, orde)
-        return response
+        try:
+            instance = self.get_object()
+            empr, fili, orde = instance.serv_empr, instance.serv_fili, instance.serv_orde
+            response = super().destroy(request, *args, **kwargs)
+            if response.status_code == 204:
+                self.atualizar_total_ordem(empr, fili, orde)
+            return response
+        except Exception as e:
+            return tratar_erro(e)

@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.decorators import action
 from django.db import transaction
 from django.http import HttpResponse
-
+from ..handlers.dominio_handler import tratar_erro
 from .base import BaseMultiDBModelViewSet
 from ..models import Ordemservicoimgantes, Ordemservicoimgdurante, Ordemservicoimgdepois
 from ..serializers import ImagemAntesSerializer, ImagemDuranteSerializer, ImagemDepoisSerializer
@@ -16,20 +16,23 @@ class FotosViewSet(BaseMultiDBModelViewSet):
     
     @action(detail=True, methods=["get"], url_path="imagens/(?P<etapa>antes|durante|depois)/(?P<image_id>\\d+)")
     def imagem_bin(self, request, etapa=None, image_id=None, slug=None):
-        banco = self.get_banco()
-        modelo = {
-            "antes": Ordemservicoimgantes,
-            "durante": Ordemservicoimgdurante,
-            "depois": Ordemservicoimgdepois,
-        }.get(etapa)
-        campo = {
-            "antes": "iman_imag",
-            "durante": "imdu_imag",
-            "depois": "imde_imag",
-        }[etapa]
-        obj = modelo.objects.using(banco).get(pk=image_id)
-        img = getattr(obj, campo)
-        return HttpResponse(img, content_type="image/jpeg")
+        try:
+            banco = self.get_banco()
+            modelo = {
+                "antes": Ordemservicoimgantes,
+                "durante": Ordemservicoimgdurante,
+                "depois": Ordemservicoimgdepois,
+            }.get(etapa)
+            campo = {
+                "antes": "iman_imag",
+                "durante": "imdu_imag",
+                "depois": "imde_imag",
+            }[etapa]
+            obj = modelo.objects.using(banco).get(pk=image_id)
+            img = getattr(obj, campo)
+            return HttpResponse(img, content_type="image/jpeg")
+        except Exception as e:
+            return tratar_erro(e)
 
 class ImagemAntesViewSet(BaseMultiDBModelViewSet):
     modulo_necessario = 'OrdemdeServico'
@@ -54,49 +57,53 @@ class ImagemAntesViewSet(BaseMultiDBModelViewSet):
         return queryset.order_by('iman_id')
     
     def create(self, request, *args, **kwargs):
-        banco = self.get_banco()
-        data = request.data.copy()
-        
-        required_fields = ['iman_orde', 'iman_empr', 'iman_fili', 'imagem_upload']
-        for field in required_fields:
-            if not data.get(field):
+        try:
+            banco = self.get_banco()
+            data = request.data.copy()
+            
+            required_fields = ['iman_orde', 'iman_empr', 'iman_fili', 'imagem_upload']
+            for field in required_fields:
+                if not data.get(field):
+                    return Response(
+                        
+                        {"error": f"Campo obrigatório '{field}' não fornecido"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            
+
+            if not data.get('imagem_upload') or not data.get('imagem_upload').strip():
                 return Response(
-                    {"error": f"Campo obrigatório '{field}' não fornecido"},
+                    {"error": "Imagem é obrigatória"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-        
-
-        if not data.get('imagem_upload') or not data.get('imagem_upload').strip():
-            return Response(
-                {"error": "Imagem é obrigatória"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Gerar próximo ID se não fornecido
-        if not data.get('iman_id'):
-            data['iman_id'] = get_next_image_id(
-                banco,
-                data.get('iman_orde'),
-                data.get('iman_empr'),
-                data.get('iman_fili'),
-                'antes'
-            )
-        
-        # Gerar próximo código se não fornecido
-        if not data.get('iman_codi'):
-            data['iman_codi'] = get_next_image_id(
-                banco,
-                data.get('iman_orde'),
-                data.get('iman_empr'),
-                data.get('iman_fili'),
-                'antes'
-            )
-        
-        serializer = self.get_serializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        with transaction.atomic(using=banco):
-            serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+            
+            # Gerar próximo ID se não fornecido
+            if not data.get('iman_id'):
+                data['iman_id'] = get_next_image_id(
+                    banco,
+                    data.get('iman_orde'),
+                    data.get('iman_empr'),
+                    data.get('iman_fili'),
+                    'antes'
+                )
+            
+            # Gerar próximo código se não fornecido
+            if not data.get('iman_codi'):
+                data['iman_codi'] = get_next_image_id(
+                    banco,
+                    data.get('iman_orde'),
+                    data.get('iman_empr'),
+                    data.get('iman_fili'),
+                    'antes'
+                )
+            
+            serializer = self.get_serializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            with transaction.atomic(using=banco):
+                serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return tratar_erro(e)
 
     @action(detail=True, methods=['get'], url_path='bin', permission_classes=[AllowAny])
     def bin(self, request, *args, **kwargs):
@@ -158,50 +165,54 @@ class ImagemDuranteViewSet(BaseMultiDBModelViewSet):
         return queryset.order_by('imdu_id')
     
     def create(self, request, *args, **kwargs):
-        banco = self.get_banco()
-        data = request.data.copy()
-        
-        # Validar apenas campos obrigatórios essenciais
-        required_fields = ['imdu_orde', 'imdu_empr', 'imdu_fili']
-        for field in required_fields:
-            if not data.get(field):
+        try:
+            banco = self.get_banco()
+            data = request.data.copy()
+            
+            # Validar apenas campos obrigatórios essenciais
+            required_fields = ['imdu_orde', 'imdu_empr', 'imdu_fili']
+            for field in required_fields:
+                if not data.get(field):
+                    return Response(
+                        {"error": f"Campo obrigatório '{field}' não fornecido"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            
+            # Validar se imagem_upload não está vazia
+            if not data.get('imagem_upload'):
                 return Response(
-                    {"error": f"Campo obrigatório '{field}' não fornecido"},
+                    {"error": "Campo 'imagem_upload' é obrigatório e não pode estar vazio"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-        
-        # Validar se imagem_upload não está vazia
-        if not data.get('imagem_upload'):
-            return Response(
-                {"error": "Campo 'imagem_upload' é obrigatório e não pode estar vazio"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Gerar próximo ID se não fornecido
-        if not data.get('imdu_id'):
-            data['imdu_id'] = get_next_image_id(
-                banco,
-                data.get('imdu_orde'),
-                data.get('imdu_empr'),
-                data.get('imdu_fili'),
-                'durante'
-            )
-        
-        # Gerar próximo código se não fornecido
-        if not data.get('imdu_codi'):
-            data['imdu_codi'] = get_next_image_id(
-                banco,
-                data.get('imdu_orde'),
-                data.get('imdu_empr'),
-                data.get('imdu_fili'),
-                'durante'
-            )
-        
-        serializer = self.get_serializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        with transaction.atomic(using=banco):
-            serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+                
+            
+            # Gerar próximo ID se não fornecido
+            if not data.get('imdu_id'):
+                data['imdu_id'] = get_next_image_id(
+                    banco,
+                    data.get('imdu_orde'),
+                    data.get('imdu_empr'),
+                    data.get('imdu_fili'),
+                    'durante'
+                )
+            
+            # Gerar próximo código se não fornecido
+            if not data.get('imdu_codi'):
+                data['imdu_codi'] = get_next_image_id(
+                    banco,
+                    data.get('imdu_orde'),
+                    data.get('imdu_empr'),
+                    data.get('imdu_fili'),
+                    'durante'
+                )
+            
+            serializer = self.get_serializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            with transaction.atomic(using=banco):
+                serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return tratar_erro(e)
 
     @action(detail=True, methods=['get'], url_path='bin', permission_classes=[AllowAny])
     def bin(self, request, *args, **kwargs):
@@ -263,50 +274,53 @@ class ImagemDepoisViewSet(BaseMultiDBModelViewSet):
         return queryset.order_by('imde_id')
     
     def create(self, request, *args, **kwargs):
-        banco = self.get_banco()
-        data = request.data.copy()
-        
-        # Validar apenas campos obrigatórios essenciais
-        required_fields = ['imde_orde', 'imde_empr', 'imde_fili']
-        for field in required_fields:
-            if not data.get(field):
+        try:
+            banco = self.get_banco()
+            data = request.data.copy()
+            
+            # Validar apenas campos obrigatórios essenciais
+            required_fields = ['imde_orde', 'imde_empr', 'imde_fili']
+            for field in required_fields:
+                if not data.get(field):
+                    return Response(
+                        {"error": f"Campo obrigatório '{field}' não fornecido"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            
+            # Validar se imagem_upload não está vazia
+            if not data.get('imagem_upload'):
                 return Response(
-                    {"error": f"Campo obrigatório '{field}' não fornecido"},
+                    {"error": "Campo 'imagem_upload' é obrigatório e não pode estar vazio"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-        
-        # Validar se imagem_upload não está vazia
-        if not data.get('imagem_upload'):
-            return Response(
-                {"error": "Campo 'imagem_upload' é obrigatório e não pode estar vazio"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Gerar próximo ID se não fornecido
-        if not data.get('imde_id'):
-            data['imde_id'] = get_next_image_id(
-                banco,
-                data.get('imde_orde'),
-                data.get('imde_empr'),
-                data.get('imde_fili'),
-                'depois'
-            )
-        
-        # Gerar próximo código se não fornecido
-        if not data.get('imde_codi'):
-            data['imde_codi'] = get_next_image_id(
-                banco,
-                data.get('imde_orde'),
-                data.get('imde_empr'),
-                data.get('imde_fili'),
-                'depois'
-            )
-        
-        serializer = self.get_serializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        with transaction.atomic(using=banco):
-            serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+            
+            # Gerar próximo ID se não fornecido
+            if not data.get('imde_id'):
+                data['imde_id'] = get_next_image_id(
+                    banco,
+                    data.get('imde_orde'),
+                    data.get('imde_empr'),
+                    data.get('imde_fili'),
+                    'depois'
+                )
+            
+            # Gerar próximo código se não fornecido
+            if not data.get('imde_codi'):
+                data['imde_codi'] = get_next_image_id(
+                    banco,
+                    data.get('imde_orde'),
+                    data.get('imde_empr'),
+                    data.get('imde_fili'),
+                    'depois'
+                )
+            
+            serializer = self.get_serializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            with transaction.atomic(using=banco):
+                serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return tratar_erro(e)
 
     @action(detail=True, methods=['get'], url_path='bin', permission_classes=[AllowAny])
     def bin(self, request, *args, **kwargs):

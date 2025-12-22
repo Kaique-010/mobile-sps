@@ -290,3 +290,44 @@ class OrdemViewSet(BaseMultiDBModelViewSet):
             return Response(serializer.data)
         except Exception as e:
             return tratar_erro(e)
+
+    @action(
+        detail=True,
+        methods=["patch"],
+        permission_classes=[IsAuthenticated, PodeVerOrdemDoSetor, WorkflowPermission],
+        url_path="atualizar-prioridade"
+    )
+    def atualizar_prioridade(self, request, *args, **kwargs):
+        """
+        Atualiza apenas o campo de prioridade (orde_prio) da ordem.
+        Exemplo JSON:
+        {
+            "orde_prio": 2
+        }
+        """
+        try:
+            banco = self.get_banco()
+            ordem = self.get_object()
+
+            nova_prioridade = request.data.get("orde_prio")
+            if nova_prioridade is None:
+                return Response(
+                    {"erro": "O campo 'orde_prio' é obrigatório."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            with transaction.atomic(using=banco):
+                ordem.orde_prio = int(nova_prioridade)
+                ordem.save(using=banco, update_fields=["orde_prio"])
+            serializer = self.get_serializer(ordem)
+            return Response(
+                {
+                    "mensagem": "Prioridade atualizada com sucesso.",
+                    "nova_prioridade": ordem.orde_prio,
+                    "ordem": serializer.data,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        except Exception as e:
+            return tratar_erro(e)

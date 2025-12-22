@@ -7,8 +7,10 @@ from core.impressoes.documentos.os import OrdemServicoPrinter
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
+from ..filters.os import OsFilter, OrdemServicoGeralFilter
 from django.db import transaction, IntegrityError
-from django.db.models import Max
+from django.db.models import Max, OuterRef, Subquery, DecimalField, Value as V
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser
@@ -24,6 +26,8 @@ from django.db.models import Prefetch
 from core.middleware import get_licenca_slug
 from core.registry import get_licenca_db_config
 from core.decorator import modulo_necessario, ModuloRequeridoMixin
+from core.dominio_handler import tratar_erro, tratar_sucesso
+from core.excecoes import ErroDominio
 
 import logging
 logger = logging.getLogger(__name__)
@@ -36,7 +40,7 @@ class BaseMultiDBModelViewSet(ModuloRequeridoMixin, ModelViewSet):
         banco = get_licenca_db_config(self.request)
         if not banco:
             logger.error(f"Banco de dados não encontrado para {self.__class__.__name__}")
-            raise NotFound("Banco de dados não encontrado.")
+            raise ErroDominio("Banco de dados não encontrado.", codigo="banco_nao_encontrado")
         return banco
 
     def get_queryset(self):
@@ -49,32 +53,38 @@ class BaseMultiDBModelViewSet(ModuloRequeridoMixin, ModelViewSet):
 
     @transaction.atomic(using='default')
     def create(self, request, *args, **kwargs):
-        banco = self.get_banco()
-        data = request.data
-        is_many = isinstance(data, list)
-        serializer = self.get_serializer(data=data, many=is_many)
-        serializer.is_valid(raise_exception=True)
-        with transaction.atomic(using=banco):
-            serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        try:
+            banco = self.get_banco()
+            data = request.data
+            is_many = isinstance(data, list)
+            serializer = self.get_serializer(data=data, many=is_many)
+            serializer.is_valid(raise_exception=True)
+            with transaction.atomic(using=banco):
+                serializer.save()
+            return tratar_sucesso(serializer.data, status_code=status.HTTP_201_CREATED)
+        except Exception as e:
+            return tratar_erro(e)
 
     def update(self, request, *args, **kwargs):
-        banco = self.get_banco()
-        partial = kwargs.pop('partial', False)
-        instance = self.get_object()        
-        
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        with transaction.atomic(using=banco):
-            serializer.save()
-        return Response(serializer.data)
+        try:
+            banco = self.get_banco()
+            partial = kwargs.pop('partial', False)
+            instance = self.get_object()        
+            
+            serializer = self.get_serializer(instance, data=request.data, partial=partial)
+            serializer.is_valid(raise_exception=True)
+            with transaction.atomic(using=banco):
+                serializer.save()
+            return tratar_sucesso(serializer.data)
+        except Exception as e:
+            return tratar_erro(e)
 
 
 class OsViewSet(BaseMultiDBModelViewSet):
     permission_classes = [PodeVerOrdemDoSetor]
     serializer_class = OsSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
-    filterset_fields = ['os_stat_os', 'os_clie', 'os_empr', 'os_fili']
+    filterset_class = OsFilter
     ordering_fields = ['os_os']
     search_fields = ['os_prob_rela', 'os_obse']
    
@@ -97,41 +107,38 @@ class OsViewSet(BaseMultiDBModelViewSet):
             logger.info(f"Buscando OS com pk={self.kwargs['pk']} no banco {banco}")
             return Os.objects.using(banco).get(pk=self.kwargs['pk'])
         except Os.DoesNotExist:
-            raise NotFound("Ordem de Serviço não encontrada.")
+            raise ErroDominio("Ordem de Serviço não encontrada.", codigo="os_nao_encontrada")
         
     @action(detail=True, methods=['post'])
     def finalizar_os(self, request, pk=None):
         """Endpoint para finalizar uma OS com validações"""
-        os_instance = self.get_object()
-        
-        # Validações de negócio
-        if os_instance.os_stat_os == 2:
-            return Response(
-                {'error': 'OS já finalizada'}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Verificar se tem peças ou serviços
-        banco = self.get_banco()
-        tem_pecas = PecasOs.objects.using(banco).filter(
-            peca_os=os_instance.os_os
-        ).exists()
-        tem_servicos = ServicosOs.objects.using(banco).filter(
-            serv_os=os_instance.os_os
-        ).exists()
-        
-        if not tem_pecas and not tem_servicos:
-            return Response(
-                {'error': 'OS deve ter pelo menos uma peça ou serviço'}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        with transaction.atomic(using=banco):
-            os_instance.os_stat_os = 2
-            os_instance.os_data_fech = timezone.now().date()
-            os_instance.save(using=banco)
-        
-        return Response({'message': 'OS finalizada com sucesso'})
+        try:
+            os_instance = self.get_object()
+            
+            # Validações de negócio
+            if os_instance.os_stat_os == 2:
+                raise ErroDominio('OS já finalizada', codigo="os_ja_finalizada")
+            
+            # Verificar se tem peças ou serviços
+            banco = self.get_banco()
+            tem_pecas = PecasOs.objects.using(banco).filter(
+                peca_os=os_instance.os_os
+            ).exists()
+            tem_servicos = ServicosOs.objects.using(banco).filter(
+                serv_os=os_instance.os_os
+            ).exists()
+            
+            if not tem_pecas and not tem_servicos:
+                raise ErroDominio('OS deve ter pelo menos uma peça ou serviço', codigo="os_vazia")
+            
+            with transaction.atomic(using=banco):
+                os_instance.os_stat_os = 2
+                os_instance.os_data_fech = timezone.now().date()
+                os_instance.save(using=banco)
+            
+            return tratar_sucesso(mensagem='OS finalizada com sucesso')
+        except Exception as e:
+            return tratar_erro(e)
 
     def get_next_ordem_numero(self, empre, fili):
         banco = self.get_banco()
@@ -141,70 +148,67 @@ class OsViewSet(BaseMultiDBModelViewSet):
     
 
     def create(self, request, *args, **kwargs):
-        banco = self.get_banco()
-        base_data = request.data.copy()
+        try:
+            banco = self.get_banco()
+            base_data = request.data.copy()
 
-        # Garante setor padrão = 1 se não informado (evita erro not-null)
-        if not base_data.get('os_seto'):
-            base_data['os_seto'] = 1
+            # Garante setor padrão = 1 se não informado (evita erro not-null)
+            if not base_data.get('os_seto'):
+                base_data['os_seto'] = 1
 
-        # Check for offline UUID
-        local_os_id = None
-        raw_os_id = request.data.get('os_os')
-        if raw_os_id and isinstance(raw_os_id, str) and (len(raw_os_id) > 20 or '-' in raw_os_id):
-            local_os_id = raw_os_id
+            # Check for offline UUID
+            local_os_id = None
+            raw_os_id = request.data.get('os_os')
+            if raw_os_id and isinstance(raw_os_id, str) and (len(raw_os_id) > 20 or '-' in raw_os_id):
+                local_os_id = raw_os_id
 
-        base_data['os_stat_os'] = 0
-        if request.user and request.user.pk:
-            base_data['os_usua_aber'] = request.user.pk
+            base_data['os_stat_os'] = 0
+            if request.user and request.user.pk:
+                base_data['os_usua_aber'] = request.user.pk
 
-        empre = base_data.get('os_empr') or base_data.get('empr')
-        fili = base_data.get('os_fili') or base_data.get('fili')
-        if not empre or not fili:
-            return Response({"detail": "Empresa e Filial são obrigatórios."}, status=400)
+            empre = base_data.get('os_empr') or base_data.get('empr')
+            fili = base_data.get('os_fili') or base_data.get('fili')
+            if not empre or not fili:
+                raise ErroDominio("Empresa e Filial são obrigatórios.", codigo="dados_obrigatorios")
 
-        base_data['os_prof_aber'] = request.user.pk if request.user else None
+            base_data['os_prof_aber'] = request.user.pk if request.user else None
 
-        # Tentativas para lidar com concorrência e colisões de número
-        max_tentativas = 5
-        for tentativa in range(max_tentativas):
-            data = base_data.copy()
-            data['os_os'] = self.get_next_ordem_numero(empre, fili)
-            serializer = self.get_serializer(data=data)
-            serializer.is_valid(raise_exception=True)
-            try:
-                with transaction.atomic(using=banco):
-                    instance = serializer.save()
-                logger.info(
-                    f"O.S. {instance.os_os} aberta por user {request.user.pk if request.user else 'anon'}"
-                )
-                
-                response_data = serializer.data
-                if local_os_id:
-                    response_data['local_os_id'] = local_os_id
-                    response_data['remote_os_id'] = instance.os_os
-                    # Add item mappings from serializer instance
-                    if hasattr(serializer, 'id_mappings'):
-                        response_data.update(serializer.id_mappings)
-                
-                headers = self.get_success_headers(serializer.data)
-                return Response(
-                    response_data,
-                    status=status.HTTP_201_CREATED,
-                    headers=headers,
-                )
-            except IntegrityError as e:
-                logger.warning(f"Tentativa {tentativa + 1} de gerar OS falhou: {e}")
-                if tentativa == max_tentativas - 1:
-                    raise ValidationError(f"Não foi possível gerar um número de O.S único após {max_tentativas} tentativas. Motivo: {e}")
-                import time
-                time.sleep(0.2)
-                continue
+            # Tentativas para lidar com concorrência e colisões de número
+            max_tentativas = 5
+            for tentativa in range(max_tentativas):
+                data = base_data.copy()
+                data['os_os'] = self.get_next_ordem_numero(empre, fili)
+                serializer = self.get_serializer(data=data)
+                serializer.is_valid(raise_exception=True)
+                try:
+                    with transaction.atomic(using=banco):
+                        instance = serializer.save()
+                    logger.info(
+                        f"O.S. {instance.os_os} aberta por user {request.user.pk if request.user else 'anon'}"
+                    )
+                    
+                    response_data = serializer.data
+                    if local_os_id:
+                        response_data['local_os_id'] = local_os_id
+                        response_data['remote_os_id'] = instance.os_os
+                        # Add item mappings from serializer instance
+                        if hasattr(serializer, 'id_mappings'):
+                            response_data.update(serializer.id_mappings)
+                    
+                    # headers = self.get_success_headers(serializer.data) # Standard method in ModelViewSet but we are using tratar_sucesso
+                    return tratar_sucesso(response_data, status_code=status.HTTP_201_CREATED)
+                except IntegrityError as e:
+                    logger.warning(f"Tentativa {tentativa + 1} de gerar OS falhou: {e}")
+                    if tentativa == max_tentativas - 1:
+                        raise ErroDominio(f"Não foi possível gerar um número de O.S único após {max_tentativas} tentativas. Motivo: {e}", codigo="conflito_numero_os")
+                    import time
+                    time.sleep(0.2)
+                    continue
 
-        return Response(
-            {"detail": "Falha ao gerar número da O.S. Tente novamente."},
-            status=status.HTTP_409_CONFLICT,
-        )
+            return tratar_erro(ErroDominio("Falha ao gerar número da O.S. Tente novamente.", codigo="falha_geracao_os"))
+        
+        except Exception as e:
+            return tratar_erro(e)
 
     @action(
         detail=True, 
@@ -224,202 +228,197 @@ class OsViewSet(BaseMultiDBModelViewSet):
                 ordem.save(using=banco)
             
             serializer = self.get_serializer(ordem)
-            return Response(serializer.data)
+            return tratar_sucesso(serializer.data)
             
         except Exception as e:
             logger.error(f"Erro ao atualizar total da ordem {pk}: {str(e)}")
-            return Response(
-                {"error": "Erro ao atualizar total da ordem de serviço"}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return tratar_erro(e)
     
     @action(detail=False, methods=['patch'], url_path='patch')
     def patch_ordem(self, request, slug=None):
-        banco = self.get_banco()
-        os_pk = request.data.get('os_os') or request.data.get('pk')
-        if not os_pk:
-            return Response({'detail': 'os_os obrigatório'}, status=400)
         try:
-            instance = Os.objects.using(banco).get(pk=os_pk)
-        except Os.DoesNotExist:
-            raise NotFound('Ordem de Serviço não encontrada.')
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        with transaction.atomic(using=banco):
-            serializer.save()
-        return Response(serializer.data)
+            banco = self.get_banco()
+            os_pk = request.data.get('os_os') or request.data.get('pk')
+            if not os_pk:
+                raise ErroDominio('os_os obrigatório', codigo="dados_obrigatorios")
+            try:
+                instance = Os.objects.using(banco).get(pk=os_pk)
+            except Os.DoesNotExist:
+                raise ErroDominio('Ordem de Serviço não encontrada.', codigo="os_nao_encontrada")
+            
+            serializer = self.get_serializer(instance, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            with transaction.atomic(using=banco):
+                serializer.save()
+            return tratar_sucesso(serializer.data)
+        except Exception as e:
+            return tratar_erro(e)
     
     
     @action(detail=True, methods=['get'])
     def imprimir(self, request, pk=None, slug=None):
         """
         Endpoint para imprimir uma Ordem de Serviço em PDF.
-        
-        URL: /api/ordem-servico/{id}/imprimir/
-        Método: GET
-        
-        Returns:
-            HttpResponse com PDF inline (visualização no navegador)
         """
-        # ===============================================================
-        # 1. BUSCA DADOS DO BANCO
-        # ===============================================================
-        
-        # Importa models necessários
-        from Entidades.models import Entidades
-        from Licencas.models import Filiais
-        from ..models import PecasOs, ServicosOs, OsHora
-        
-        # Obtém nome do banco (multi-tenant)
-        banco = self.get_banco()
-        
-        # Obtém a Ordem de Serviço específica
-        os = self.get_object()
+        # Mantendo estrutura original pois retorna PDF, não JSON padronizado
+        # Se ocorrer erro, o DRF/Django padrão irá lidar ou podemos envolver em try/except
+        # mas retornando JSON de erro para um request que espera PDF pode ser confuso.
+        # Assumindo que o frontend lida com status code de erro.
+        try:
+            # ===============================================================
+            # 1. BUSCA DADOS DO BANCO
+            # ===============================================================
+            
+            # Importa models necessários
+            from Entidades.models import Entidades
+            from Licencas.models import Filiais
+            from ..models import PecasOs, ServicosOs, OsHora
+            
+            # Obtém nome do banco (multi-tenant)
+            banco = self.get_banco()
+            
+            # Obtém a Ordem de Serviço específica
+            os = self.get_object()
 
-        # ---------------------------------------------------------------
-        # Busca entidades relacionadas
-        # ---------------------------------------------------------------
-        
-        # Cliente da OS
-        cliente = Entidades.objects.using(banco).filter(
-            enti_clie=os.os_clie
-        ).first()
-        
-        # Filial/Empresa que está executando
-        filial = Filiais.objects.using(banco).filter(
-            empr_empr=os.os_empr,
-            empr_codi=os.os_fili
-        ).first()
-        
-        # Solicitante (quem pediu o serviço)
-        solicitante = Entidades.objects.using(banco).filter(
-            enti_clie=os.os_clie
-        ).first()
-        
-        # Responsável em campo (quem executou)
-        responsavel_campo = None
-        if getattr(os, 'os_resp', None):
-            responsavel_campo = Entidades.objects.using(banco).filter(
-                enti_clie=os.os_resp
+            # ---------------------------------------------------------------
+            # Busca entidades relacionadas
+            # ---------------------------------------------------------------
+            
+            # Cliente da OS
+            cliente = Entidades.objects.using(banco).filter(
+                enti_clie=os.os_clie
             ).first()
-
-        # ---------------------------------------------------------------
-        # Busca itens relacionados
-        # ---------------------------------------------------------------
-        
-        # Peças utilizadas
-        pecas = PecasOs.objects.using(banco).filter(
-            peca_empr=os.os_empr,
-            peca_fili=os.os_fili,
-            peca_os=os.os_os
-        )
-        
-        # Serviços executados
-        servicos = ServicosOs.objects.using(banco).filter(
-            serv_empr=os.os_empr,
-            serv_fili=os.os_fili,
-            serv_os=os.os_os
-        )
-        
-        # Horas trabalhadas (ordenadas por item)
-        horas = OsHora.objects.using(banco).filter(
-            os_hora_empr=os.os_empr,
-            os_hora_fili=os.os_fili,
-            os_hora_os=os.os_os
-        ).order_by('os_hora_item')
-
-        # ===============================================================
-        # 2. PROCESSA ASSINATURAS
-        # ===============================================================
-        
-        def process_signature(signature_data):
-            """
-            Processa assinatura em diferentes formatos.
             
-            Banco de dados pode retornar:
-            - memoryview (PostgreSQL bytea)
-            - bytes (SQLite blob)
-            - None (sem assinatura)
+            # Filial/Empresa que está executando
+            filial = Filiais.objects.using(banco).filter(
+                empr_empr=os.os_empr,
+                empr_codi=os.os_fili
+            ).first()
             
-            Returns:
-                String base64 ou None
-            """
-            if not signature_data:
+            # Solicitante (quem pediu o serviço)
+            solicitante = Entidades.objects.using(banco).filter(
+                enti_clie=os.os_clie
+            ).first()
+            
+            # Responsável em campo (quem executou)
+            responsavel_campo = None
+            if getattr(os, 'os_resp', None):
+                responsavel_campo = Entidades.objects.using(banco).filter(
+                    enti_clie=os.os_resp
+                ).first()
+
+            # ---------------------------------------------------------------
+            # Busca itens relacionados
+            # ---------------------------------------------------------------
+            
+            # Peças utilizadas
+            pecas = PecasOs.objects.using(banco).filter(
+                peca_empr=os.os_empr,
+                peca_fili=os.os_fili,
+                peca_os=os.os_os
+            )
+            
+            # Serviços executados
+            servicos = ServicosOs.objects.using(banco).filter(
+                serv_empr=os.os_empr,
+                serv_fili=os.os_fili,
+                serv_os=os.os_os
+            )
+            
+            # Horas trabalhadas (ordenadas por item)
+            horas = OsHora.objects.using(banco).filter(
+                os_hora_empr=os.os_empr,
+                os_hora_fili=os.os_fili,
+                os_hora_os=os.os_os
+            ).order_by('os_hora_item')
+
+            # ===============================================================
+            # 2. PROCESSA ASSINATURAS
+            # ===============================================================
+            
+            def process_signature(signature_data):
+                """
+                Processa assinatura em diferentes formatos.
+                """
+                if not signature_data:
+                    return None
+                
+                try:
+                    # Se for memoryview, converte para bytes
+                    if isinstance(signature_data, memoryview):
+                        return base64.b64encode(signature_data.tobytes()).decode('utf-8')
+                    
+                    # Se for bytes direto
+                    if isinstance(signature_data, bytes):
+                        return base64.b64encode(signature_data).decode('utf-8')
+                    
+                    # Se já for string, retorna como está
+                    if isinstance(signature_data, str):
+                        return signature_data
+                except Exception:
+                    return None
+                
                 return None
             
-            try:
-                # Se for memoryview, converte para bytes
-                if isinstance(signature_data, memoryview):
-                    return base64.b64encode(signature_data.tobytes()).decode('utf-8')
-                
-                # Se for bytes direto
-                if isinstance(signature_data, bytes):
-                    return base64.b64encode(signature_data).decode('utf-8')
-                
-                # Se já for string, retorna como está
-                if isinstance(signature_data, str):
-                    return signature_data
-            except Exception:
-                return None
+            # Monta dicionário de assinaturas
+            assinaturas = {}
             
-            return None
-        
-        # Monta dicionário de assinaturas
-        assinaturas = {}
-        
-        # Assinatura do cliente (se existir)
-        assin_cliente = process_signature(getattr(os, 'os_assi_clie', None))
-        if assin_cliente:
-            assinaturas['Assinatura do Cliente'] = assin_cliente
-        
-        # Assinatura do operador (se existir)
-        assin_operador = process_signature(getattr(os, 'os_assi_oper', None))
-        if assin_operador:
-            assinaturas['Assinatura do Operador'] = assin_operador
-        
-        # Permite assinaturas adicionais via request (opcional)
-        if request.data.get('assinaturas'):
-            assinaturas.update(request.data.get('assinaturas', {}))
+            # Assinatura do cliente (se existir)
+            assin_cliente = process_signature(getattr(os, 'os_assi_clie', None))
+            if assin_cliente:
+                assinaturas['Assinatura do Cliente'] = assin_cliente
+            
+            # Assinatura do operador (se existir)
+            assin_operador = process_signature(getattr(os, 'os_assi_oper', None))
+            if assin_operador:
+                assinaturas['Assinatura do Operador'] = assin_operador
+            
+            # Permite assinaturas adicionais via request (opcional)
+            if request.data.get('assinaturas'):
+                assinaturas.update(request.data.get('assinaturas', {}))
 
-        # ===============================================================
-        # 3. CRIA INSTÂNCIA DO PRINTER
-        # ===============================================================
-        
-        printer = OrdemServicoPrinter(
-            filial=filial or os.os_fili,  # Fallback para código se não achar objeto
-            documento=os.os_os,            # Número da OS
-            cliente=cliente,               # Objeto cliente
-            solicitante=solicitante,       # Quem solicitou
-            responsavel_campo=responsavel_campo,  # Quem executou
-            modelo=os,                     # Objeto principal da OS
-            itens=pecas,                   # QuerySet de peças
-            servicos=servicos,             # QuerySet de serviços
-            horas=horas,                   # QuerySet de horas
-            assinaturas=assinaturas,       # Dict de assinaturas processadas
-        )
+            # ===============================================================
+            # 3. CRIA INSTÂNCIA DO PRINTER
+            # ===============================================================
+            
+            printer = OrdemServicoPrinter(
+                filial=filial or os.os_fili,  # Fallback para código se não achar objeto
+                documento=os.os_os,            # Número da OS
+                cliente=cliente,               # Objeto cliente
+                solicitante=solicitante,       # Quem solicitou
+                responsavel_campo=responsavel_campo,  # Quem executou
+                modelo=os,                     # Objeto principal da OS
+                itens=pecas,                   # QuerySet de peças
+                servicos=servicos,             # QuerySet de serviços
+                horas=horas,                   # QuerySet de horas
+                assinaturas=assinaturas,       # Dict de assinaturas processadas
+            )
 
-        # ===============================================================
-        # 4. GERA O PDF
-        # ===============================================================
-        
-        # Chama render() que executa toda a lógica de geração
-        pdf_buffer = printer.render()
+            # ===============================================================
+            # 4. GERA O PDF
+            # ===============================================================
+            
+            # Chama render() que executa toda a lógica de geração
+            pdf_buffer = printer.render()
 
-        # ===============================================================
-        # 5. RETORNA RESPOSTA HTTP
-        # ===============================================================
-        
-        # Cria resposta HTTP com o PDF
-        response = HttpResponse(
-            pdf_buffer.getvalue(),  # Obtém bytes do buffer
-            content_type='application/pdf'
-        )
-        
-        # Define visualização inline no navegador (não download)
-        # Para forçar download, use 'attachment' ao invés de 'inline'
-        response['Content-Disposition'] = f'inline; filename="os_{os.os_os}.pdf"'
-        
-        return response
+            # ===============================================================
+            # 5. RETORNA RESPOSTA HTTP
+            # ===============================================================
+            
+            # Cria resposta HTTP com o PDF
+            response = HttpResponse(
+                pdf_buffer.getvalue(),  # Obtém bytes do buffer
+                content_type='application/pdf'
+            )
+            
+            # Define visualização inline no navegador (não download)
+            # Para forçar download, use 'attachment' ao invés de 'inline'
+            response['Content-Disposition'] = f'inline; filename="os_{os.os_os}.pdf"'
+            
+            return response
+        except Exception as e:
+            # Em caso de erro na geração do PDF, retornamos JSON com erro
+            return tratar_erro(e)
     
     
 class PecasOsViewSet(BaseMultiDBModelViewSet):
@@ -467,7 +466,7 @@ class PecasOsViewSet(BaseMultiDBModelViewSet):
         peca_fili = self.request.query_params.get("peca_fili")
 
         if not all([peca_os, peca_empr, peca_fili, peca_item]):
-            raise ValidationError("Faltam parâmetros: peca_item, peca_os, peca_empr, peca_fili.")
+            raise ErroDominio("Faltam parâmetros: peca_item, peca_os, peca_empr, peca_fili.", codigo="parametros_invalidos")
 
         try:
             return PecasOs.objects.using(banco).get(
@@ -477,9 +476,9 @@ class PecasOsViewSet(BaseMultiDBModelViewSet):
                 peca_fili=peca_fili
             )
         except PecasOs.DoesNotExist:
-            raise NotFound("Peça não encontrada.")
+            raise ErroDominio("Peça não encontrada.", codigo="peca_nao_encontrada")
         except PecasOs.MultipleObjectsReturned:
-            raise ValidationError("Chave composta retornou múltiplos registros.")
+            raise ErroDominio("Chave composta retornou múltiplos registros.", codigo="multiplos_registros")
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
@@ -513,34 +512,37 @@ class PecasOsViewSet(BaseMultiDBModelViewSet):
                 exemplo.get('peca_os')
             )
 
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return tratar_sucesso(serializer.data, status_code=status.HTTP_201_CREATED)
 
-        except ValidationError as e:
-            return Response(e.detail, status=400)
-        except IntegrityError:
-            return Response({'detail': 'Erro de integridade.'}, status=400)
         except Exception as e:
-            logger.error(str(e))
-            return Response({'detail': str(e)}, status=500)
+            return tratar_erro(e)
 
     def update(self, request, *args, **kwargs):
-        response = super().update(request, *args, **kwargs)
-        if response.status_code == 200:
-            instance = self.get_object()
-            self.atualizar_total_ordem(
-                instance.peca_empr, instance.peca_fili, instance.peca_os
-            )
-        return response
+        try:
+            response = super().update(request, *args, **kwargs)
+            # Como super().update agora chama tratar_sucesso, response.data pode ter mudado estrutura
+            # Mas response.status_code deve ser 200
+            if response.status_code == 200:
+                instance = self.get_object()
+                self.atualizar_total_ordem(
+                    instance.peca_empr, instance.peca_fili, instance.peca_os
+                )
+            return response
+        except Exception as e:
+            return tratar_erro(e)
 
     def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        empr, fili, orde = instance.peca_empr, instance.peca_fili, instance.peca_os
-        response = super().destroy(request, *args, **kwargs)
+        try:
+            instance = self.get_object()
+            empr, fili, orde = instance.peca_empr, instance.peca_fili, instance.peca_os
+            response = super().destroy(request, *args, **kwargs)
 
-        if response.status_code == 204:
-            self.atualizar_total_ordem(empr, fili, orde)
+            if response.status_code == 204:
+                self.atualizar_total_ordem(empr, fili, orde)
 
-        return response
+            return response
+        except Exception as e:
+            return tratar_erro(e)
 
     # atualização em lote padronizada
     @action(detail=False, methods=['post'], url_path='update-lista')
@@ -611,13 +613,10 @@ class PecasOsViewSet(BaseMultiDBModelViewSet):
 
                     resposta['removidos'].append(item['peca_item'])
 
-            return Response(resposta)
+            return tratar_sucesso(resposta)
 
-        except ValidationError as e:
-            return Response(e.detail, status=400)
         except Exception as e:
-            logger.error(str(e))
-            return Response({"error": str(e)}, status=400)
+            return tratar_erro(e)
 
 
 
@@ -669,7 +668,7 @@ class ServicosOsViewSet(BaseMultiDBModelViewSet):
         serv_fili = self.request.query_params.get("serv_fili")
 
         if not all([serv_item, serv_os, serv_empr, serv_fili]):
-            raise ValidationError("Campos serv_os, serv_empr, serv_fili e pk (serv_item) são obrigatórios.")
+            raise ErroDominio("Campos serv_os, serv_empr, serv_fili e pk (serv_item) são obrigatórios.", codigo="dados_obrigatorios")
 
         try:
             return self.get_queryset().get(
@@ -679,9 +678,9 @@ class ServicosOsViewSet(BaseMultiDBModelViewSet):
                 serv_fili=serv_fili
             )
         except ServicosOs.DoesNotExist:
-            raise NotFound("Serviço não encontrado na lista especificada.")
+            raise ErroDominio("Serviço não encontrado na lista especificada.", codigo="servico_nao_encontrado")
         except ServicosOs.MultipleObjectsReturned:
-            raise ValidationError("Mais de um serviço encontrado com essa chave composta.")
+            raise ErroDominio("Mais de um serviço encontrado com essa chave composta.", codigo="multiplos_registros")
 
     # ---- CONTEXT ----
     def get_serializer_context(self):
@@ -719,38 +718,39 @@ class ServicosOsViewSet(BaseMultiDBModelViewSet):
                 exemplo.get('serv_os')
             )
 
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return tratar_sucesso(serializer.data, status_code=status.HTTP_201_CREATED)
 
-        except ValidationError as e:
-            return Response(e.detail, status=400)
-        except IntegrityError:
-            return Response({'detail': 'Erro de integridade.'}, status=400)
         except Exception as e:
-            logger.error(str(e))
-            return Response({'detail': str(e)}, status=500)
+            return tratar_erro(e)
 
     # ---- UPDATE ----
     def update(self, request, *args, **kwargs):
-        response = super().update(request, *args, **kwargs)
-        if response.status_code == 200:
-            instance = self.get_object()
-            self.atualizar_total_ordem(
-                instance.serv_empr,
-                instance.serv_fili,
-                instance.serv_os
-            )
-        return response
+        try:
+            response = super().update(request, *args, **kwargs)
+            if response.status_code == 200:
+                instance = self.get_object()
+                self.atualizar_total_ordem(
+                    instance.serv_empr,
+                    instance.serv_fili,
+                    instance.serv_os
+                )
+            return response
+        except Exception as e:
+            return tratar_erro(e)
 
     # ---- DELETE ----
     def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        empr, fili, orde = instance.serv_empr, instance.serv_fili, instance.serv_os
-        response = super().destroy(request, *args, **kwargs)
+        try:
+            instance = self.get_object()
+            empr, fili, orde = instance.serv_empr, instance.serv_fili, instance.serv_os
+            response = super().destroy(request, *args, **kwargs)
 
-        if response.status_code == 204:
-            self.atualizar_total_ordem(empr, fili, orde)
+            if response.status_code == 204:
+                self.atualizar_total_ordem(empr, fili, orde)
 
-        return response
+            return response
+        except Exception as e:
+            return tratar_erro(e)
 
     # ---- UPDATE LISTA (LOTE) ----
     @action(detail=False, methods=['post'], url_path='update-lista')
@@ -861,13 +861,10 @@ class ServicosOsViewSet(BaseMultiDBModelViewSet):
 
                     resposta['removidos'].append(item['serv_item'])
 
-            return Response(resposta)
+            return tratar_sucesso(resposta)
 
-        except ValidationError as e:
-            return Response(e.detail, status=400)
         except Exception as e:
-            logger.error(str(e))
-            return Response({"error": str(e)}, status=400)
+            return tratar_erro(e)
 
 
 
@@ -894,9 +891,12 @@ class OsHoraViewSet(BaseMultiDBModelViewSet):
         ).order_by('os_hora_data', 'os_hora_item')
     
     def retrieve(self, request, *args, **kwargs):
-        obj = self.get_object()
-        serializer = self.get_serializer(obj)
-        return Response(serializer.data)
+        try:
+            obj = self.get_object()
+            serializer = self.get_serializer(obj)
+            return tratar_sucesso(serializer.data)
+        except Exception as e:
+            return tratar_erro(e)
     
     def get_object(self):
         banco = self.get_banco()
@@ -922,13 +922,13 @@ class OsHoraViewSet(BaseMultiDBModelViewSet):
             try:
                 return OsHora.objects.using(banco).get(**filter_kwargs)
             except OsHora.DoesNotExist:
-                raise NotFound("Registro de horas não encontrado")
+                raise ErroDominio("Registro de horas não encontrado", codigo="hora_nao_encontrada")
             except OsHora.MultipleObjectsReturned:
-                raise ValidationError("Múltiplos registros encontrados. Forneça os_hora_os, os_hora_empr e os_hora_fili para identificar unicamente.")
+                raise ErroDominio("Múltiplos registros encontrados. Forneça os_hora_os, os_hora_empr e os_hora_fili para identificar unicamente.", codigo="multiplos_registros")
 
         if not all([os_hora_item, os_hora_os, os_hora_empr, os_hora_fili]):
             logger.error(f"Parâmetros faltando OsHoraViewSet.get_object: kwargs={self.kwargs}, query={self.request.query_params}")
-            raise ValidationError("Parâmetros obrigatórios faltando")
+            raise ErroDominio("Parâmetros obrigatórios faltando", codigo="dados_obrigatorios")
         
         try:
             return OsHora.objects.using(banco).get(
@@ -938,7 +938,7 @@ class OsHoraViewSet(BaseMultiDBModelViewSet):
                 os_hora_fili=os_hora_fili
             )
         except OsHora.DoesNotExist:
-            raise NotFound("Registro de horas não encontrado")
+            raise ErroDominio("Registro de horas não encontrado", codigo="hora_nao_encontrada")
     
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -968,13 +968,10 @@ class OsHoraViewSet(BaseMultiDBModelViewSet):
             with transaction.atomic(using=banco):
                 serializer.save()
             
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return tratar_sucesso(serializer.data, status_code=status.HTTP_201_CREATED)
         
-        except ValidationError as e:
-            return Response(e.detail, status=400)
         except Exception as e:
-            logger.error(f"Erro ao criar registro de horas: {str(e)}")
-            return Response({'detail': str(e)}, status=500)
+            return tratar_erro(e)
     
     def _get_next_item_number(self, banco, os_os, os_empr, os_fili):
         """Gera próximo número de item"""
@@ -988,33 +985,33 @@ class OsHoraViewSet(BaseMultiDBModelViewSet):
     @action(detail=False, methods=['get'], url_path='total-horas')
     def total_horas(self, request, slug=None):
         """Retorna total de horas trabalhadas na OS"""
-        banco = self.get_banco()
-        
-        os_hora_os = request.query_params.get('os_hora_os')
-        os_hora_empr = request.query_params.get('os_hora_empr')
-        os_hora_fili = request.query_params.get('os_hora_fili')
-        
-        if not all([os_hora_os, os_hora_empr, os_hora_fili]):
-            return Response(
-                {'error': 'Parâmetros obrigatórios faltando'},
-                status=400
+        try:
+            banco = self.get_banco()
+            
+            os_hora_os = request.query_params.get('os_hora_os')
+            os_hora_empr = request.query_params.get('os_hora_empr')
+            os_hora_fili = request.query_params.get('os_hora_fili')
+            
+            if not all([os_hora_os, os_hora_empr, os_hora_fili]):
+                raise ErroDominio('Parâmetros obrigatórios faltando', codigo="dados_obrigatorios")
+            
+            registros = OsHora.objects.using(banco).filter(
+                os_hora_os=os_hora_os,
+                os_hora_empr=os_hora_empr,
+                os_hora_fili=os_hora_fili
             )
-        
-        registros = OsHora.objects.using(banco).filter(
-            os_hora_os=os_hora_os,
-            os_hora_empr=os_hora_empr,
-            os_hora_fili=os_hora_fili
-        )
-        
-        total = 0.0
-        for registro in registros:
-            serializer = OsHoraSerializer(registro, context={'banco': banco})
-            total += serializer.data.get('total_horas', 0)
-        
-        return Response({
-            'total_horas': round(total, 2),
-            'total_registros': registros.count()
-        })
+            
+            total = 0.0
+            for registro in registros:
+                serializer = OsHoraSerializer(registro, context={'banco': banco})
+                total += serializer.data.get('total_horas', 0)
+            
+            return tratar_sucesso({
+                'total_horas': round(total, 2),
+                'total_registros': registros.count()
+            })
+        except Exception as e:
+            return tratar_erro(e)
     
     @action(detail=False, methods=['post'], url_path='update-lista')
     def update_lista(self, request, slug=None):
@@ -1085,13 +1082,10 @@ class OsHoraViewSet(BaseMultiDBModelViewSet):
 
                     resposta['removidos'].append(item['os_hora_item'])
 
-            return Response(resposta)
+            return tratar_sucesso(resposta)
 
-        except ValidationError as e:
-            return Response(e.detail, status=400)
         except Exception as e:
-            logger.error(str(e))
-            return Response({"error": str(e)}, status=400)
+            return tratar_erro(e)
 
 
 
@@ -1100,7 +1094,7 @@ class MegaProdutosView(ModuloRequeridoMixin, APIView):
     def get(self, request, *args, **kwargs):
         banco = get_licenca_db_config('savexml960' or '839' or 'casaa')
         if not banco:
-            return Response({"detail": "Banco não encontrado."}, status=400)
+            return tratar_erro(ErroDominio("Banco não encontrado.", codigo="banco_nao_encontrado"))
 
         try:
             empresa_id = request.headers.get('X-Empresa') or request.query_params.get('empr') or request.query_params.get('prod_empr') or 1
@@ -1151,9 +1145,9 @@ class MegaProdutosView(ModuloRequeridoMixin, APIView):
                 for p in qs
             ]
 
-            return Response(data)
+            return tratar_sucesso(data)
         except Exception as e:
-            return Response({'detail': f'Erro interno: {str(e)}'}, status=500)
+            return tratar_erro(e)
 
 
 class MegaEntidadesApiView(ModuloRequeridoMixin, APIView):
@@ -1162,7 +1156,7 @@ class MegaEntidadesApiView(ModuloRequeridoMixin, APIView):
     def get(self, request, *args, **kwargs):
         banco = get_licenca_db_config('savexml960' or 'savexml839')
         if not banco:
-            return Response({"detail": "Banco não encontrado."}, status=400)
+            return tratar_erro(ErroDominio("Banco não encontrado.", codigo="banco_nao_encontrado"))
 
         try:
             empresa_id = request.headers.get('X-Empresa') or request.query_params.get('enti_empr')
@@ -1186,6 +1180,6 @@ class MegaEntidadesApiView(ModuloRequeridoMixin, APIView):
                 for e in qs
             ]
 
-            return Response(data)
+            return tratar_sucesso(data)
         except Exception as e:
-            return Response({'detail': f'Erro interno: {str(e)}'}, status=500)
+            return tratar_erro(e)

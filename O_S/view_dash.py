@@ -9,6 +9,7 @@ from .REST.serializers import OrdemServicoGeralSerializer
 from .filters.os import OrdemServicoGeralFilter
 from core.registry import get_licenca_db_config
 from core.decorator import ModuloRequeridoMixin
+from core.dominio_handler import tratar_erro
 
 class OrdemServicoGeralViewSet(ModuloRequeridoMixin, viewsets.ReadOnlyModelViewSet):
     modulo_necessario = 'O_S'
@@ -21,3 +22,15 @@ class OrdemServicoGeralViewSet(ModuloRequeridoMixin, viewsets.ReadOnlyModelViewS
     def get_queryset(self):
         banco = get_licenca_db_config(self.request) or 'default'
         return OrdemServicoGeral.objects.using(banco).all().order_by('-data_abertura', '-ordem_de_servico')
+
+    def list(self, request, *args, **kwargs):
+        try:
+            return super().list(request, *args, **kwargs)
+        except Exception as e:
+            return tratar_erro(e)
+
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            return super().retrieve(request, *args, **kwargs)
+        except Exception as e:
+            return tratar_erro(e)
