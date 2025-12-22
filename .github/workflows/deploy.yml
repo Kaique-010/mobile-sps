@@ -108,7 +108,8 @@ jobs:
 
             sleep 5
 
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:9000/health/ || echo "000")
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/health/ || echo "000")
+
             if [ "$STATUS" != "200" ]; then
               echo "Health check falhou"
               sudo systemctl status gunicorn --no-pager
