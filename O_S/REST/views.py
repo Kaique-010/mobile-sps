@@ -221,7 +221,9 @@ class OsViewSet(BaseMultiDBModelViewSet):
         try:
             with transaction.atomic(using=banco):
                 # Cancela OS
-                ordem.os_stat_os = 22
+                ordem.os_stat_os = 3
+                if ordem.os_stat_os == 3:
+                    ordem.os_moti_canc = "Ordem Cancelada mobile"
                 ordem.save(using=banco)
 
                 # Devolve peças

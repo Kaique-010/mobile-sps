@@ -20,12 +20,11 @@ ORDEM_STATUS_CHOICES = (
     (0, "Aberta"),
     (1, "Orçamento gerado"),
     (2, "Aguardando Liberação"),
-    (3, "Liberada"),
+    (3, "Cancelada"),
     (4, "Finalizada"),
     (5, "Reprovada"),
     (20, "Faturada_parcial"),
     (21, "Em atraso"),
-    (22, 'Cancelada')
 )
 
 class Os(models.Model):
