@@ -128,6 +128,23 @@ class PecasOs(models.Model):
         managed = False
         db_table = 'pecasos'
         unique_together = (('peca_empr', 'peca_fili', 'peca_os', 'peca_item'),)
+
+    def update_estoque(self, quantidade):
+        try:
+            from Produtos.models import SaldoProduto
+            # Busca o saldo do produto na empresa/filial da OS
+            # Usando filter().first() para evitar erros se não existir
+            saldo = SaldoProduto.objects.using(self._state.db).filter(
+                produto_codigo=self.peca_prod,
+                empresa=self.peca_empr,
+                filial=self.peca_fili
+            ).first()
+            
+            if saldo:
+                saldo.saldo_estoque += quantidade
+                saldo.save(using=self._state.db)
+        except Exception:
+            pass
     
 
 
@@ -157,6 +174,21 @@ class ServicosOs(models.Model):
         managed = False
         db_table = 'servicosos'
         unique_together = (('serv_empr', 'serv_fili', 'serv_os', 'serv_item'),)
+
+    def update_estoque(self, quantidade):
+        try:
+            from Produtos.models import SaldoProduto
+            saldo = SaldoProduto.objects.using(self._state.db).filter(
+                produto_codigo=self.serv_prod,
+                empresa=self.serv_empr,
+                filial=self.serv_fili
+            ).first()
+            
+            if saldo:
+                saldo.saldo_estoque += quantidade
+                saldo.save(using=self._state.db)
+        except Exception:
+            pass
         
 
 class OsHora(models.Model):

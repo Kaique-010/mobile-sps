@@ -220,10 +220,13 @@ class OsViewSet(BaseMultiDBModelViewSet):
 
         try:
             with transaction.atomic(using=banco):
+                # Verifica se já está cancelada para evitar duplicação de estorno
+                if ordem.os_stat_os == 3:
+                    return tratar_sucesso(mensagem='OS já estava cancelada.')
+
                 # Cancela OS
                 ordem.os_stat_os = 3
-                if ordem.os_stat_os == 3:
-                    ordem.os_moti_canc = "Ordem Cancelada mobile"
+                ordem.os_moti_canc = "Ordem Cancelada mobile"
                 ordem.save(using=banco)
 
                 # Devolve peças
@@ -234,7 +237,8 @@ class OsViewSet(BaseMultiDBModelViewSet):
                 )
 
                 for peca in pecas:
-                    peca.update_estoque(peca_quan=-peca.peca_quan)
+                    # Devolve ao estoque (adiciona a quantidade)
+                    peca.update_estoque(quantidade=peca.peca_quan)
 
                 # Devolve serviços
                 servicos = ServicosOs.objects.using(banco).select_for_update().filter(
@@ -244,7 +248,8 @@ class OsViewSet(BaseMultiDBModelViewSet):
                 )
 
                 for servico in servicos:
-                    servico.update_estoque(serv_quan=-servico.serv_quan)
+                    # Devolve ao estoque (adiciona a quantidade) se houver controle
+                    servico.update_estoque(quantidade=servico.serv_quan)
 
             return tratar_sucesso(
                 mensagem='OS cancelada e itens retornaram ao estoque.'
