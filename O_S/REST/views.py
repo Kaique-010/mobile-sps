@@ -166,9 +166,15 @@ class OsViewSet(BaseMultiDBModelViewSet):
                 raise ErroDominio('OS deve ter pelo menos uma peça ou serviço', codigo="os_vazia")
             
             with transaction.atomic(using=banco):
-                os_instance.os_stat_os = 2
-                os_instance.os_data_fech = timezone.now().date()
-                os_instance.save(using=banco)
+                # Usando update direto para evitar erro de PK composta
+                Os.objects.using(banco).filter(
+                    os_empr=os_instance.os_empr,
+                    os_fili=os_instance.os_fili,
+                    os_os=os_instance.os_os
+                ).update(
+                    os_stat_os=2,
+                    os_data_fech=timezone.now().date()
+                )
             
             return tratar_sucesso(mensagem='OS finalizada com sucesso')
         except Exception as e:
@@ -258,10 +264,20 @@ class OsViewSet(BaseMultiDBModelViewSet):
                 if ordem.os_stat_os == 3:
                     return tratar_sucesso(mensagem='OS já estava cancelada.')
 
-                # Cancela OS
+                # Cancela OS - Usando update direto para evitar erro de PK composta no Django
+                # (Django tentaria atualizar todas as OS com mesmo ID ou causar colisão de chave)
+                Os.objects.using(banco).filter(
+                    os_empr=ordem.os_empr,
+                    os_fili=ordem.os_fili,
+                    os_os=ordem.os_os
+                ).update(
+                    os_stat_os=3,
+                    os_moti_canc="Ordem Cancelada mobile"
+                )
+                
+                # Atualiza instância local caso seja usada depois
                 ordem.os_stat_os = 3
                 ordem.os_moti_canc = "Ordem Cancelada mobile"
-                ordem.save(using=banco)
 
                 # Devolve peças
                 pecas = PecasOs.objects.using(banco).select_for_update().filter(
