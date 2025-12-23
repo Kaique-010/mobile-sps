@@ -210,6 +210,50 @@ class OsViewSet(BaseMultiDBModelViewSet):
         except Exception as e:
             return tratar_erro(e)
 
+    """
+    Endpoint para cancelar uma Ordem de Serviço, cancelando e alterando o Status e voltando os 
+    itens para o estoque.
+    """
+    def destroy(self, request, *args, **kwargs):
+        banco = self.get_banco()
+        ordem = self.get_object()
+
+        try:
+            with transaction.atomic(using=banco):
+                # Cancela OS
+                ordem.os_stat_os = 22
+                ordem.save(using=banco)
+
+                # Devolve peças
+                pecas = PecasOs.objects.using(banco).select_for_update().filter(
+                    peca_empr=ordem.os_empr,
+                    peca_fili=ordem.os_fili,
+                    peca_os=ordem.os_os
+                )
+
+                for peca in pecas:
+                    peca.update_estoque(peca_quan=-peca.peca_quan)
+
+                # Devolve serviços
+                servicos = ServicosOs.objects.using(banco).select_for_update().filter(
+                    serv_empr=ordem.os_empr,
+                    serv_fili=ordem.os_fili,
+                    serv_os=ordem.os_os
+                )
+
+                for servico in servicos:
+                    servico.update_estoque(serv_quan=-servico.serv_quan)
+
+            return tratar_sucesso(
+                mensagem='OS cancelada e itens retornaram ao estoque.'
+            )
+
+        except Exception as e:
+            return tratar_erro(e)
+
+        
+        
+    
     @action(
         detail=True, 
         methods=['post'],
@@ -260,15 +304,8 @@ class OsViewSet(BaseMultiDBModelViewSet):
         """
         Endpoint para imprimir uma Ordem de Serviço em PDF.
         """
-        # Mantendo estrutura original pois retorna PDF, não JSON padronizado
-        # Se ocorrer erro, o DRF/Django padrão irá lidar ou podemos envolver em try/except
-        # mas retornando JSON de erro para um request que espera PDF pode ser confuso.
-        # Assumindo que o frontend lida com status code de erro.
         try:
-            # ===============================================================
-            # 1. BUSCA DADOS DO BANCO
-            # ===============================================================
-            
+           
             # Importa models necessários
             from Entidades.models import Entidades
             from Licencas.models import Filiais

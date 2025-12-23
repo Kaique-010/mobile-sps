@@ -25,6 +25,7 @@ ORDEM_STATUS_CHOICES = (
     (5, "Reprovada"),
     (20, "Faturada_parcial"),
     (21, "Em atraso"),
+    (22, 'Cancelada')
 )
 
 class Os(models.Model):
