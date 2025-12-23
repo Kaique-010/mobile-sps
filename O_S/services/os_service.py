@@ -1,6 +1,7 @@
 from django.db import transaction, IntegrityError, InternalError
 import logging
 from decimal import Decimal, InvalidOperation
+from django.utils import timezone
 from ..models import Os, PecasOs, ServicosOs
 from ..utils import get_next_service_id
 from core.utils import (
@@ -245,3 +246,58 @@ class OsService:
             getattr(ordem, 'os_os', None), os_topr, ordem.os_desc, ordem.os_tota
         )
         return ordem
+
+    @staticmethod
+    def cancelar_os(banco: str, ordem: Os):
+        """
+        Cancela a OS e devolve os itens para o estoque.
+        """
+        # Update using filter/update to avoid composite PK issues in Django
+        Os.objects.using(banco).filter(
+            os_empr=ordem.os_empr,
+            os_fili=ordem.os_fili,
+            os_os=ordem.os_os
+        ).update(
+            os_stat_os=3,
+            os_moti_canc="Ordem Cancelada mobile"
+        )
+        
+        # Update local instance
+        ordem.os_stat_os = 3
+        ordem.os_moti_canc = "Ordem Cancelada mobile"
+
+        # Return parts to stock
+        pecas = PecasOs.objects.using(banco).filter(
+            peca_empr=ordem.os_empr,
+            peca_fili=ordem.os_fili,
+            peca_os=ordem.os_os
+        )
+        for peca in pecas:
+            peca.update_estoque(quantidade=peca.peca_quan)
+
+        # Return services to stock
+        servicos = ServicosOs.objects.using(banco).filter(
+            serv_empr=ordem.os_empr,
+            serv_fili=ordem.os_fili,
+            serv_os=ordem.os_os
+        )
+        for servico in servicos:
+            servico.update_estoque(quantidade=servico.serv_quan)
+
+    @staticmethod
+    def finalizar_os(banco: str, ordem: Os):
+        """
+        Finaliza a OS atualizando status e data de fechamento.
+        """
+        Os.objects.using(banco).filter(
+            os_empr=ordem.os_empr,
+            os_fili=ordem.os_fili,
+            os_os=ordem.os_os
+        ).update(
+            os_stat_os=2,
+            os_data_fech=timezone.now().date()
+        )
+        
+        # Update local instance
+        ordem.os_stat_os = 2
+        ordem.os_data_fech = timezone.now().date()

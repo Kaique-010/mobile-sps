@@ -166,15 +166,8 @@ class OsViewSet(BaseMultiDBModelViewSet):
                 raise ErroDominio('OS deve ter pelo menos uma peça ou serviço', codigo="os_vazia")
             
             with transaction.atomic(using=banco):
-                # Usando update direto para evitar erro de PK composta
-                Os.objects.using(banco).filter(
-                    os_empr=os_instance.os_empr,
-                    os_fili=os_instance.os_fili,
-                    os_os=os_instance.os_os
-                ).update(
-                    os_stat_os=2,
-                    os_data_fech=timezone.now().date()
-                )
+                from O_S.services.os_service import OsService
+                OsService.finalizar_os(banco, os_instance)
             
             return tratar_sucesso(mensagem='OS finalizada com sucesso')
         except Exception as e:
@@ -264,42 +257,8 @@ class OsViewSet(BaseMultiDBModelViewSet):
                 if ordem.os_stat_os == 3:
                     return tratar_sucesso(mensagem='OS já estava cancelada.')
 
-                # Cancela OS - Usando update direto para evitar erro de PK composta no Django
-                # (Django tentaria atualizar todas as OS com mesmo ID ou causar colisão de chave)
-                Os.objects.using(banco).filter(
-                    os_empr=ordem.os_empr,
-                    os_fili=ordem.os_fili,
-                    os_os=ordem.os_os
-                ).update(
-                    os_stat_os=3,
-                    os_moti_canc="Ordem Cancelada mobile"
-                )
-                
-                # Atualiza instância local caso seja usada depois
-                ordem.os_stat_os = 3
-                ordem.os_moti_canc = "Ordem Cancelada mobile"
-
-                # Devolve peças
-                pecas = PecasOs.objects.using(banco).select_for_update().filter(
-                    peca_empr=ordem.os_empr,
-                    peca_fili=ordem.os_fili,
-                    peca_os=ordem.os_os
-                )
-
-                for peca in pecas:
-                    # Devolve ao estoque (adiciona a quantidade)
-                    peca.update_estoque(quantidade=peca.peca_quan)
-
-                # Devolve serviços
-                servicos = ServicosOs.objects.using(banco).select_for_update().filter(
-                    serv_empr=ordem.os_empr,
-                    serv_fili=ordem.os_fili,
-                    serv_os=ordem.os_os
-                )
-
-                for servico in servicos:
-                    # Devolve ao estoque (adiciona a quantidade) se houver controle
-                    servico.update_estoque(quantidade=servico.serv_quan)
+                from O_S.services.os_service import OsService
+                OsService.cancelar_os(banco, ordem)
 
             return tratar_sucesso(
                 mensagem='OS cancelada e itens retornaram ao estoque.'
