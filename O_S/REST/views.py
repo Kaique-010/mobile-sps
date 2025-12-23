@@ -95,19 +95,53 @@ class OsViewSet(BaseMultiDBModelViewSet):
 
     def get_queryset(self):
         banco = self.get_banco()
-        empresa = self.request.query_params.get('os_empr') or self.request.query_params.get('empresa_id') 
-        filial = self.request.query_params.get('os_fili') or self.request.query_params.get('filial_id')
+        empresa = (
+            self.request.query_params.get('os_empr') or 
+            self.request.query_params.get('empresa_id') or 
+            self.request.query_params.get('empr')
+        )
+        filial = (
+            self.request.query_params.get('os_fili') or 
+            self.request.query_params.get('filial_id') or 
+            self.request.query_params.get('fili')
+        )
         qs = Os.objects.using(banco).filter(os_empr=empresa, os_fili=filial)
 
         return qs.order_by('-os_os')
     
     def get_object(self):
         banco = self.get_banco()
+        empresa = (
+            self.request.query_params.get('os_empr') or 
+            self.request.query_params.get('empresa_id') or 
+            self.request.query_params.get('empr')
+        )
+        filial = (
+            self.request.query_params.get('os_fili') or 
+            self.request.query_params.get('filial_id') or 
+            self.request.query_params.get('fili')
+        )
+        
         try:
-            logger.info(f"Buscando OS com pk={self.kwargs['pk']} no banco {banco}")
-            return Os.objects.using(banco).get(pk=self.kwargs['pk'])
+            logger.info(f"Buscando OS com pk={self.kwargs['pk']} e empresa={empresa} filial={filial} no banco {banco}")
+            
+            # Se não passar empresa/filial, tenta buscar só por PK (comportamento antigo), 
+            # mas corre risco de MultipleObjectsReturned
+            if not empresa or not filial:
+                return Os.objects.using(banco).get(pk=self.kwargs['pk'])
+                
+            return Os.objects.using(banco).get(
+                pk=self.kwargs['pk'],
+                os_empr=empresa, 
+                os_fili=filial
+            )
         except Os.DoesNotExist:
             raise ErroDominio("Ordem de Serviço não encontrada.", codigo="os_nao_encontrada")
+        except Os.MultipleObjectsReturned:
+            raise ErroDominio(
+                "Múltiplas Ordens de Serviço encontradas com o mesmo código. Informe a empresa e filial.", 
+                codigo="os_multiplas_encontradas"
+            )
         
     @action(detail=True, methods=['post'])
     def finalizar_os(self, request, pk=None):

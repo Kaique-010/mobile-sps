@@ -2,6 +2,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.exceptions import APIException
 from core.excecoes import ErroDominio
+from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 import logging
 import traceback
 
@@ -29,6 +30,26 @@ def tratar_erro(exc):
                 "detalhes": exc.get_full_details()
             },
             status=exc.status_code
+        )
+        
+    if isinstance(exc, ObjectDoesNotExist):
+        return Response(
+            {
+                "erro": "recurso_nao_encontrado",
+                "mensagem": "Recurso não encontrado.",
+                "detalhes": str(exc)
+            },
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    if isinstance(exc, MultipleObjectsReturned):
+        return Response(
+            {
+                "erro": "multiplos_registros",
+                "mensagem": "Foram encontrados múltiplos registros para esta solicitação.",
+                "detalhes": str(exc)
+            },
+            status=status.HTTP_400_BAD_REQUEST
         )
 
     # Log o erro completo para debug
