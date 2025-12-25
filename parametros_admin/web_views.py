@@ -1,5 +1,6 @@
 from django.views.generic import TemplateView, View
 from django.shortcuts import redirect
+from django.http import JsonResponse
 from django.urls import reverse
 from django.contrib import messages
 from django.core.cache import cache
@@ -103,6 +104,8 @@ class ModuloToggleView(ModuloRequeridoMixin, View):
                 logger.info(f"Permissão atualizada para módulo {modulo.modu_nome} no banco {banco}: {atualizados} linha(s), estado={novo_estado}")
             except Exception:
                 pass
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': True, 'permitido': novo_estado})
 
         # limpar cache de módulos para refletir imediatamente
         cache_key = f"modulos_licenca_{slug}_{empresa_id}_{filial_id}"

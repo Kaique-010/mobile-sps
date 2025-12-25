@@ -131,8 +131,7 @@
       <div class="header">
         <div class="title">Módulos da Licença</div>
         <div style="display:flex; align-items:center; gap:8px">
-          <div style="color:#94a3b8; font-size:0.9rem">Empresa {{ empresa_id }} · Filial {{ filial_id }} · Slug {{ slug
-            }}</div>
+          <div style="color:#94a3b8; font-size:0.9rem">Empresa {{ empresa_id }} · Filial {{ filial_id }}</div>
           <form method="post" action="{% url 'parametros_admin_sync' slug=slug %}">
             {% csrf_token %}
             <input type="hidden" name="empresa_id" value="{{ empresa_id }}" />
@@ -191,6 +190,7 @@
       var grid = document.querySelector('.grid');
       if (!grid) return;
       var items = grid.querySelectorAll('.item');
+
       function filtrar() {
         var q = (input.value || '').trim().toLowerCase();
         items.forEach(function (el) {
@@ -198,7 +198,49 @@
           el.style.display = !q || nome.indexOf(q) !== -1 ? '' : 'none';
         });
       }
+
       input.addEventListener('input', filtrar);
+
+      // Interceptar todos os formulários de toggle
+      var forms = document.querySelectorAll('form[action*="toggle"]');
+      forms.forEach(function (form) {
+        form.addEventListener('submit', function (e) {
+          e.preventDefault(); // Previne o reload da página
+
+          var formData = new FormData(form);
+          var url = form.action;
+
+          fetch(url, {
+            method: 'POST',
+            body: formData,
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          })
+            .then(response => response.json())
+            .then(data => {
+              if (data.success) {
+                // Atualizar a UI sem recarregar
+                var item = form.closest('.item');
+                var badge = item.querySelector('.badge:first-child');
+                var button = form.querySelector('button');
+
+                if (data.permitido) {
+                  badge.textContent = 'Liberado';
+                  badge.classList.add('ok');
+                  badge.classList.remove('off');
+                  button.textContent = 'Desativar';
+                } else {
+                  badge.textContent = 'Bloqueado';
+                  badge.classList.add('off');
+                  badge.classList.remove('ok');
+                  button.textContent = 'Ativar';
+                }
+              }
+            })
+            .catch(error => console.error('Erro:', error));
+        });
+      });
     })();
   </script>
 </body>
