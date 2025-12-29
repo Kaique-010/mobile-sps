@@ -122,19 +122,42 @@ class OsViewSet(BaseMultiDBModelViewSet):
             self.request.query_params.get('fili')
         )
         
+        pk = self.kwargs['pk']
+        
+        # Verifica se o PK é um UUID/ID Offline (string longa ou com hifens)
+        # Isso permite buscar a OS pelo ID gerado offline caso o app ainda não tenha o ID oficial
+        is_uuid = str(pk) and (len(str(pk)) > 20 or '-' in str(pk))
+        
+        if is_uuid:
+            logger.info(f"Buscando OS por UUID/Auto={pk} no banco {banco}")
+            qs = Os.objects.using(banco).filter(os_auto=pk)
+            if empresa and filial:
+                qs = qs.filter(os_empr=empresa, os_fili=filial)
+            
+            obj = qs.first()
+            if obj:
+                self.check_object_permissions(self.request, obj)
+                return obj
+            # Se parece UUID mas não achou, retorna erro específico ou deixa cair no 404
+            raise ErroDominio("Ordem de Serviço não encontrada pelo ID offline fornecido.", codigo="os_nao_encontrada_uuid")
+
         try:
-            logger.info(f"Buscando OS com pk={self.kwargs['pk']} e empresa={empresa} filial={filial} no banco {banco}")
+            logger.info(f"Buscando OS com pk={pk} e empresa={empresa} filial={filial} no banco {banco}")
             
             # Se não passar empresa/filial, tenta buscar só por PK (comportamento antigo), 
             # mas corre risco de MultipleObjectsReturned
             if not empresa or not filial:
-                return Os.objects.using(banco).get(pk=self.kwargs['pk'])
-                
-            return Os.objects.using(banco).get(
-                pk=self.kwargs['pk'],
-                os_empr=empresa, 
-                os_fili=filial
-            )
+                obj = Os.objects.using(banco).get(pk=pk)
+            else:
+                obj = Os.objects.using(banco).get(
+                    pk=pk,
+                    os_empr=empresa, 
+                    os_fili=filial
+                )
+            
+            self.check_object_permissions(self.request, obj)
+            return obj
+            
         except Os.DoesNotExist:
             raise ErroDominio("Ordem de Serviço não encontrada.", codigo="os_nao_encontrada")
         except Os.MultipleObjectsReturned:
@@ -142,6 +165,8 @@ class OsViewSet(BaseMultiDBModelViewSet):
                 "Múltiplas Ordens de Serviço encontradas com o mesmo código. Informe a empresa e filial.", 
                 codigo="os_multiplas_encontradas"
             )
+        except ValueError:
+             raise ErroDominio("ID da ordem inválido.", codigo="id_invalido")
         
     @action(detail=True, methods=['post'])
     def finalizar_os(self, request, pk=None):
@@ -200,6 +225,13 @@ class OsViewSet(BaseMultiDBModelViewSet):
             raw_os_id = request.data.get('os_os')
             if raw_os_id and isinstance(raw_os_id, str) and (len(raw_os_id) > 20 or '-' in raw_os_id):
                 local_os_id = raw_os_id
+                # Persist UUID in os_auto for reference
+                base_data['os_auto'] = local_os_id
+                # Set dummy ID to pass validation (will be overwritten)
+                base_data['os_os'] = "0"
+            elif not raw_os_id:
+                 # If missing, set dummy to pass "required" check
+                 base_data['os_os'] = "0"
 
             base_data['os_stat_os'] = 0
             if request.user and request.user.pk:

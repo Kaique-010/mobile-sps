@@ -158,7 +158,6 @@ class OsService:
             )
             raise ValueError("Não é possível aplicar desconto por item e desconto no total simultaneamente.")
 
-        os_topr = subtotal_sum
         if any_item_discount:
             ordem.os_desc = subtotal_sum - total_items_sum
             ordem.os_tota = total_items_sum
@@ -174,12 +173,12 @@ class OsService:
         ).update(
             os_desc=ordem.os_desc,
             os_tota=ordem.os_tota,
-            os_topr=os_topr
+
         )
         
         OsService.logger.debug(
             "[OsService.create] Fim: os_os=%s subtotal=%s desc=%s total=%s",
-            getattr(ordem, 'os_os', None), os_topr, ordem.os_desc, ordem.os_tota
+            getattr(ordem, 'os_os', None), ordem.os_desc, ordem.os_tota
         )
         return ordem
 
@@ -310,7 +309,7 @@ class OsService:
             )
             raise ValueError("Não é possível aplicar desconto por item e desconto no total simultaneamente.")
 
-        os_topr = subtotal_sum
+        
         if any_item_discount:
             ordem.os_desc = subtotal_sum - total_items_sum
             ordem.os_tota = total_items_sum
@@ -326,12 +325,12 @@ class OsService:
         ).update(
             os_desc=ordem.os_desc,
             os_tota=ordem.os_tota,
-            os_topr=os_topr
+
         )
 
         OsService.logger.debug(
             "[OsService.update] Fim: os_os=%s subtotal=%s desc=%s total=%s",
-            getattr(ordem, 'os_os', None), os_topr, ordem.os_desc, ordem.os_tota
+            getattr(ordem, 'os_os', None), ordem.os_desc, ordem.os_tota
         )
         return ordem
 
