@@ -340,65 +340,55 @@ class OsViewSet(BaseMultiDBModelViewSet):
 
             base_data['os_prof_aber'] = request.user.pk if request.user else None
             serializer = self.get_serializer(data=base_data)
-            serializer.is_valid(raise_exception=True)
+            if not serializer.is_valid():
+                logger.error(f"Erro de validação ao criar OS: {serializer.errors}")
+                serializer.is_valid(raise_exception=True)
+            
             validated_data = serializer.validated_data
             pecas_data = validated_data.pop('pecas', [])
             servicos_data = validated_data.pop('servicos', [])
             horas_data = validated_data.pop('horas', []) 
             os_data = validated_data
-            max_tentativas = 5
-            for tentativa in range(max_tentativas):
-                try:
-                    # Deixar o Service calcular o ID dentro da transação para garantir atomicidade
-                    # e evitar race conditions na verificação de idempotência
-                    if 'os_os' in os_data:
-                        del os_data['os_os']
-                    
-                    # Garantir que os_auto esteja presente para verificação de idempotência no Service
-                    if local_os_id and 'os_auto' not in os_data:
-                         os_data['os_auto'] = local_os_id
+            # Deixar o Service calcular o ID dentro da transação para garantir atomicidade
+            # e evitar race conditions na verificação de idempotência
+            if 'os_os' in os_data:
+                del os_data['os_os']
+            
+            # Garantir que os_auto esteja presente para verificação de idempotência no Service
+            if local_os_id and 'os_auto' not in os_data:
+                    os_data['os_auto'] = local_os_id
 
-                    from O_S.services.os_service import OsService
-                    instance = OsService.create_os(banco, os_data, pecas_data, servicos_data, horas_data)
-                        
-                    logger.info(
-                        f"O.S. {instance.os_os} aberta por user {request.user.pk if request.user else 'anon'}"
-                    )
-                    
-                    # Re-serialize instance for response
-                    try:
-                        response_serializer = self.get_serializer(instance)
-                        response_data = response_serializer.data
-                        
-                        if hasattr(instance, 'id_mappings'):
-                            response_data.update(instance.id_mappings)
+            from O_S.services.os_service import OsService
+            instance = OsService.create_os(banco, os_data, pecas_data, servicos_data, horas_data)
+                
+            logger.info(
+                f"O.S. {instance.os_os} aberta por user {request.user.pk if request.user else 'anon'}"
+            )
+            
+            # Re-serialize instance for response
+            try:
+                response_serializer = self.get_serializer(instance)
+                response_data = response_serializer.data
+                
+                if hasattr(instance, 'id_mappings'):
+                    response_data.update(instance.id_mappings)
 
-                        if local_os_id:
-                            response_data['local_os_id'] = local_os_id
-                            response_data['remote_os_id'] = instance.os_os
-                    except Exception as e:
-                        logger.error(f"Erro ao serializar resposta da OS {instance.os_os}: {e}")
-                        # Fallback response para evitar retries do cliente se a OS já foi criada
-                        response_data = {
-                            "os_os": instance.os_os,
-                            "os_empr": instance.os_empr,
-                            "os_fili": instance.os_fili,
-                            "local_os_id": local_os_id if local_os_id else None,
-                            "remote_os_id": instance.os_os,
-                            "warning": "Erro na serialização completa dos dados. OS criada com sucesso."
-                        }
-                    
-                    return tratar_sucesso(response_data, status_code=status.HTTP_201_CREATED)
-
-                except IntegrityError as e:
-                    logger.warning(f"Tentativa {tentativa + 1} de gerar OS falhou: {e}")
-                    if tentativa == max_tentativas - 1:
-                        raise ErroDominio(f"Não foi possível gerar um número de O.S único após {max_tentativas} tentativas. Motivo: {e}", codigo="conflito_numero_os")
-                    import time
-                    time.sleep(0.2)
-                    continue
-
-            return tratar_erro(ErroDominio("Falha ao gerar número da O.S. Tente novamente.", codigo="falha_geracao_os"))
+                if local_os_id:
+                    response_data['local_os_id'] = local_os_id
+                    response_data['remote_os_id'] = instance.os_os
+            except Exception as e:
+                logger.error(f"Erro ao serializar resposta da OS {instance.os_os}: {e}")
+                # Fallback response para evitar retries do cliente se a OS já foi criada
+                response_data = {
+                    "os_os": instance.os_os,
+                    "os_empr": instance.os_empr,
+                    "os_fili": instance.os_fili,
+                    "local_os_id": local_os_id if local_os_id else None,
+                    "remote_os_id": instance.os_os,
+                    "warning": "Erro na serialização completa dos dados. OS criada com sucesso."
+                }
+            
+            return tratar_sucesso(response_data, status_code=status.HTTP_201_CREATED)
         except Exception as e:
             return tratar_erro(e)
 

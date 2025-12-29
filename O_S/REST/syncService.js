@@ -297,8 +297,9 @@ export async function enqueueNewOs(
   }))
   const horasComLocalId = horas.map((h) => ({ ...h, os_hora_item: uuid.v4() }))
   const payloadCompleto = {
-    os_os: osIdLocal,
     ...dadosOs,
+    os_os: osIdLocal,
+    os_auto: osIdLocal,
     pecas: pecasComLocalId,
     servicos: servicosComLocalId,
     horas: horasComLocalId,
