@@ -1,8 +1,9 @@
 from django.db import transaction, IntegrityError, InternalError
+from django.db.models import Sum
 import logging
 from decimal import Decimal, InvalidOperation
 from django.utils import timezone
-from ..models import Os, PecasOs, ServicosOs
+from ..models import Os, PecasOs, ServicosOs, OsHora
 from ..utils import get_next_service_id
 from core.utils import (
     calcular_subtotal_item_bruto,
@@ -42,7 +43,10 @@ class OsService:
 
     @transaction.atomic
     @staticmethod
-    def create_os(banco: str, os_data: dict, pecas_data: list, servicos_data: list):
+    def create_os(banco: str, os_data: dict, pecas_data: list, servicos_data: list, horas_data: list = None):
+        if horas_data is None:
+            horas_data = []
+
         os_empr = int(os_data.get('os_empr'))
         os_fili = int(os_data.get('os_fili'))
 
@@ -122,6 +126,30 @@ class OsService:
                 item.serv_item, item.serv_prod, serv_quan, serv_unit, serv_desc, subtotal_bruto, total_item
             )
 
+        # Horas
+        for idx, item_data in enumerate(horas_data, start=1):
+            try:
+                OsHora.objects.using(banco).create(
+                    os_hora_empr=ordem.os_empr,
+                    os_hora_fili=ordem.os_fili,
+                    os_hora_os=ordem.os_os,
+                    os_hora_item=idx,
+                    os_hora_data=item_data.get('os_hora_data') or ordem.os_data_aber,
+                    os_hora_manh_ini=item_data.get('os_hora_manh_ini'),
+                    os_hora_manh_fim=item_data.get('os_hora_manh_fim'),
+                    os_hora_tard_ini=item_data.get('os_hora_tard_ini'),
+                    os_hora_tard_fim=item_data.get('os_hora_tard_fim'),
+                    os_hora_tota=OsService._to_decimal(item_data.get('os_hora_tota', 0)),
+                    os_hora_km_sai=item_data.get('os_hora_km_sai'),
+                    os_hora_km_che=item_data.get('os_hora_km_che'),
+                    os_hora_oper=item_data.get('os_hora_oper'),
+                    os_hora_equi=item_data.get('os_hora_equi'),
+                    os_hora_obse=item_data.get('os_hora_obse'),
+                )
+            except Exception as e:
+                OsService.logger.error(f"[OsService.create] Erro ao criar hora item {idx}: {e}")
+                raise e
+
         os_desc_val = OsService._to_decimal(os_data.get('os_desc', 0))
         if os_desc_val > 0 and any_item_discount:
             OsService.logger.error(
@@ -138,7 +166,17 @@ class OsService:
             ordem.os_desc = os_desc_val
             ordem.os_tota = subtotal_sum - os_desc_val
 
-        ordem.save(using=banco)
+        # Update using filter/update to avoid composite PK issues
+        Os.objects.using(banco).filter(
+            os_empr=ordem.os_empr,
+            os_fili=ordem.os_fili,
+            os_os=ordem.os_os
+        ).update(
+            os_desc=ordem.os_desc,
+            os_tota=ordem.os_tota,
+            os_topr=os_topr
+        )
+        
         OsService.logger.debug(
             "[OsService.create] Fim: os_os=%s subtotal=%s desc=%s total=%s",
             getattr(ordem, 'os_os', None), os_topr, ordem.os_desc, ordem.os_tota
@@ -147,10 +185,21 @@ class OsService:
 
     @transaction.atomic
     @staticmethod
-    def update_os(banco: str, ordem: Os, os_updates: dict, pecas_data: list, servicos_data: list):
-        for attr, value in os_updates.items():
-            setattr(ordem, attr, value)
-        ordem.save(using=banco)
+    def update_os(banco: str, ordem: Os, os_updates: dict, pecas_data: list, servicos_data: list, horas_data: list = None):
+        if horas_data is None:
+            horas_data = []
+
+        # Update basic fields using filter/update
+        if os_updates:
+            Os.objects.using(banco).filter(
+                os_empr=ordem.os_empr,
+                os_fili=ordem.os_fili,
+                os_os=ordem.os_os
+            ).update(**os_updates)
+            
+            # Update local instance
+            for attr, value in os_updates.items():
+                setattr(ordem, attr, value)
 
         PecasOs.objects.using(banco).filter(
             peca_empr=ordem.os_empr,
@@ -161,6 +210,11 @@ class OsService:
             serv_empr=ordem.os_empr,
             serv_fili=ordem.os_fili,
             serv_os=ordem.os_os,
+        ).delete()
+        OsHora.objects.using(banco).filter(
+            os_hora_empr=ordem.os_empr,
+            os_hora_fili=ordem.os_fili,
+            os_hora_os=ordem.os_os,
         ).delete()
 
         subtotal_sum = Decimal('0.00')
@@ -224,6 +278,30 @@ class OsService:
                 serv_desc=serv_desc,
             )
 
+        # Horas
+        for idx, item_data in enumerate(horas_data, start=1):
+            try:
+                OsHora.objects.using(banco).create(
+                    os_hora_empr=ordem.os_empr,
+                    os_hora_fili=ordem.os_fili,
+                    os_hora_os=ordem.os_os,
+                    os_hora_item=idx,
+                    os_hora_data=item_data.get('os_hora_data') or ordem.os_data_aber,
+                    os_hora_manh_ini=item_data.get('os_hora_manh_ini'),
+                    os_hora_manh_fim=item_data.get('os_hora_manh_fim'),
+                    os_hora_tard_ini=item_data.get('os_hora_tard_ini'),
+                    os_hora_tard_fim=item_data.get('os_hora_tard_fim'),
+                    os_hora_tota=OsService._to_decimal(item_data.get('os_hora_tota', 0)),
+                    os_hora_km_sai=item_data.get('os_hora_km_sai'),
+                    os_hora_km_che=item_data.get('os_hora_km_che'),
+                    os_hora_oper=item_data.get('os_hora_oper'),
+                    os_hora_equi=item_data.get('os_hora_equi'),
+                    os_hora_obse=item_data.get('os_hora_obse'),
+                )
+            except Exception as e:
+                OsService.logger.error(f"[OsService.update] Erro ao criar hora item {idx}: {e}")
+                raise e
+
         os_desc_val = OsService._to_decimal(os_updates.get('os_desc', 0))
         if os_desc_val > 0 and any_item_discount:
             OsService.logger.error(
@@ -240,7 +318,17 @@ class OsService:
             ordem.os_desc = os_desc_val
             ordem.os_tota = subtotal_sum - os_desc_val
 
-        ordem.save(using=banco)
+        # Update using filter/update to avoid composite PK issues
+        Os.objects.using(banco).filter(
+            os_empr=ordem.os_empr,
+            os_fili=ordem.os_fili,
+            os_os=ordem.os_os
+        ).update(
+            os_desc=ordem.os_desc,
+            os_tota=ordem.os_tota,
+            os_topr=os_topr
+        )
+
         OsService.logger.debug(
             "[OsService.update] Fim: os_os=%s subtotal=%s desc=%s total=%s",
             getattr(ordem, 'os_os', None), os_topr, ordem.os_desc, ordem.os_tota
@@ -301,3 +389,35 @@ class OsService:
         # Update local instance
         ordem.os_stat_os = 2
         ordem.os_data_fech = timezone.now().date()
+
+    @staticmethod
+    def calcular_total(banco: str, ordem: Os):
+        """
+        Calcula o total da OS somando peças e serviços e atualiza no banco.
+        """
+        total_pecas = PecasOs.objects.using(banco).filter(
+            peca_empr=ordem.os_empr,
+            peca_fili=ordem.os_fili,
+            peca_os=ordem.os_os
+        ).aggregate(total=Sum('peca_tota'))['total'] or Decimal('0.00')
+        
+        total_servicos = ServicosOs.objects.using(banco).filter(
+            serv_empr=ordem.os_empr,
+            serv_fili=ordem.os_fili,
+            serv_os=ordem.os_os
+        ).aggregate(total=Sum('serv_tota'))['total'] or Decimal('0.00')
+        
+        novo_total = total_pecas + total_servicos
+        
+        # Update using filter/update to avoid composite PK issues
+        Os.objects.using(banco).filter(
+            os_empr=ordem.os_empr,
+            os_fili=ordem.os_fili,
+            os_os=ordem.os_os
+        ).update(
+            os_tota=novo_total
+        )
+        
+        # Update local instance
+        ordem.os_tota = novo_total
+        return novo_total
