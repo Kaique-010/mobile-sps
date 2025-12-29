@@ -215,79 +215,178 @@ class OsViewSet(BaseMultiDBModelViewSet):
         try:
             banco = self.get_banco()
             base_data = request.data.copy()
-
-            # Garante setor padrão = 1 se não informado (evita erro not-null)
+            #Se não for fornecido, definir como 1
             if not base_data.get('os_seto'):
                 base_data['os_seto'] = 1
 
-            # Check for offline UUID
-            local_os_id = None
-            raw_os_id = request.data.get('os_os')
-            if raw_os_id and isinstance(raw_os_id, str) and (len(raw_os_id) > 20 or '-' in raw_os_id):
-                local_os_id = raw_os_id
-                # Persist UUID in os_auto for reference
-                base_data['os_auto'] = local_os_id
-                # Set dummy ID to pass validation (will be overwritten)
-                base_data['os_os'] = "0"
-            elif not raw_os_id:
-                 # If missing, set dummy to pass "required" check
-                 base_data['os_os'] = "0"
+            # Checar offline o uuid enviado pelo front e persistir no os_auto
+            local_os_id = base_data.get('os_auto')
+            os_id = request.data.get('os_os')
+            
+            logger.info(f"Recebendo requisição de criação de OS. os_auto={local_os_id}, os_os={os_id}, user={request.user.pk if request.user else 'anon'}")
 
+            if os_id and isinstance(os_id, str) and (len(os_id) > 20 or '-' in os_id):
+                local_os_id = os_id
+                base_data['os_auto'] = local_os_id
+                base_data['os_os'] = "0"
+            elif not os_id:
+                 base_data['os_os'] = "0"
             base_data['os_stat_os'] = 0
+            
+            #Usuário responsável pela OS
             if request.user and request.user.pk:
                 base_data['os_usua_aber'] = request.user.pk
 
-            empre = base_data.get('os_empr') or base_data.get('empr')
-            fili = base_data.get('os_fili') or base_data.get('fili')
-            if not empre or not fili:
+            empresa = base_data.get('os_empr') or base_data.get('empr')
+            filial = base_data.get('os_fili') or base_data.get('fili')
+            if not empresa or not filial:
                 raise ErroDominio("Empresa e Filial são obrigatórios.", codigo="dados_obrigatorios")
+            
+            # IDEMPOTENCY CHECK: Se já existe uma OS com esse UUID, retorna ela sem criar nova
+            if local_os_id:
+                existing = Os.objects.using(banco).filter(
+                    os_empr=empresa, 
+                    os_fili=filial, 
+                    os_auto=local_os_id
+                ).first()
+                if existing:
+                    logger.info(f"OS {existing.os_os} já existe (UUID={local_os_id}). Retornando existente para evitar duplicação.")
+                    try:
+                        response_serializer = self.get_serializer(existing)
+                        response_data = response_serializer.data
+                        response_data['local_os_id'] = local_os_id
+                        response_data['remote_os_id'] = existing.os_os
+                        
+                        # Tentar reconstruir os mapeamentos de IDs
+                        try:
+                            # Serializa os dados de entrada para ter acesso às listas de itens
+                            # Re-validamos apenas para obter os dados limpos, sem salvar
+                            serializer_check = self.get_serializer(data=base_data)
+                            if serializer_check.is_valid():
+                                val_data = serializer_check.validated_data
+                                pecas_data = val_data.get('pecas', [])
+                                servicos_data = val_data.get('servicos', [])
+                                horas_data = val_data.get('horas', [])
+                                
+                                id_mappings = {
+                                    'pecas_ids': [],
+                                    'servicos_ids': [],
+                                    'horas_ids': []
+                                }
+                                
+                                # Reconstruir mapeamento de Peças
+                                existing_pecas = PecasOs.objects.using(banco).filter(
+                                    peca_empr=existing.os_empr,
+                                    peca_fili=existing.os_fili,
+                                    peca_os=existing.os_os
+                                ).order_by('peca_item')
+                                
+                                for idx, item_data in enumerate(pecas_data):
+                                    if idx < len(existing_pecas):
+                                        local_id = item_data.get('peca_item')
+                                        if local_id:
+                                            id_mappings['pecas_ids'].append({
+                                                'local_id': local_id, 
+                                                'remote_id': existing_pecas[idx].peca_item
+                                            })
+                                            
+                                # Reconstruir mapeamento de Serviços
+                                existing_servicos = ServicosOs.objects.using(banco).filter(
+                                    serv_empr=existing.os_empr,
+                                    serv_fili=existing.os_fili,
+                                    serv_os=existing.os_os
+                                ).order_by('serv_item')
+                                
+                                for idx, item_data in enumerate(servicos_data):
+                                    if idx < len(existing_servicos):
+                                        local_id = item_data.get('serv_item')
+                                        if local_id:
+                                            id_mappings['servicos_ids'].append({
+                                                'local_id': local_id, 
+                                                'remote_id': existing_servicos[idx].serv_item
+                                            })
+                                            
+                                # Reconstruir mapeamento de Horas
+                                existing_horas = OsHora.objects.using(banco).filter(
+                                    os_hora_empr=existing.os_empr,
+                                    os_hora_fili=existing.os_fili,
+                                    os_hora_os=existing.os_os
+                                ).order_by('os_hora_item')
+                                
+                                for idx, item_data in enumerate(horas_data):
+                                    if idx < len(existing_horas):
+                                        local_id = item_data.get('os_hora_item')
+                                        if local_id:
+                                            id_mappings['horas_ids'].append({
+                                                'local_id': local_id, 
+                                                'remote_id': existing_horas[idx].os_hora_item
+                                            })
+                                
+                                response_data.update(id_mappings)
+                        except Exception as map_err:
+                            logger.error(f"Erro ao reconstruir mapeamentos para OS {existing.os_os}: {map_err}")
+
+                    except Exception as e:
+                        logger.error(f"Erro ao serializar OS existente {existing.os_os}: {e}")
+                        response_data = {
+                            "os_os": existing.os_os,
+                            "os_empr": existing.os_empr,
+                            "os_fili": existing.os_fili,
+                            "local_os_id": local_os_id,
+                            "remote_os_id": existing.os_os,
+                            "warning": "Erro na serialização da OS existente."
+                        }
+                    return tratar_sucesso(response_data, status_code=status.HTTP_200_OK)
 
             base_data['os_prof_aber'] = request.user.pk if request.user else None
-
-            # Validate data using serializer
             serializer = self.get_serializer(data=base_data)
             serializer.is_valid(raise_exception=True)
-            
-            # Prepare data for service
             validated_data = serializer.validated_data
             pecas_data = validated_data.pop('pecas', [])
             servicos_data = validated_data.pop('servicos', [])
-            horas_data = validated_data.pop('horas', []) # Service currently doesn't handle hours explicitly in create_os args but we should check
-            
-            # Note: OsService.create_os signature: (banco, os_data, pecas_data, servicos_data)
-            # It seems OsService.create_os does not handle 'horas' yet. 
-            # If we need to save hours, we might need to add it to Service or handle it separately.
-            # However, looking at OsService.create_os, it only iterates pecas and servicos.
-            
+            horas_data = validated_data.pop('horas', []) 
             os_data = validated_data
-
-            # Tentativas para lidar com concorrência e colisões de número
             max_tentativas = 5
             for tentativa in range(max_tentativas):
                 try:
-                    # Generate ID
-                    next_os_os = self.get_next_ordem_numero(empre, fili)
-                    os_data['os_os'] = next_os_os
+                    # Deixar o Service calcular o ID dentro da transação para garantir atomicidade
+                    # e evitar race conditions na verificação de idempotência
+                    if 'os_os' in os_data:
+                        del os_data['os_os']
                     
-                    with transaction.atomic(using=banco):
-                        from O_S.services.os_service import OsService
-                        instance = OsService.create_os(banco, os_data, pecas_data, servicos_data, horas_data)
+                    # Garantir que os_auto esteja presente para verificação de idempotência no Service
+                    if local_os_id and 'os_auto' not in os_data:
+                         os_data['os_auto'] = local_os_id
+
+                    from O_S.services.os_service import OsService
+                    instance = OsService.create_os(banco, os_data, pecas_data, servicos_data, horas_data)
                         
                     logger.info(
                         f"O.S. {instance.os_os} aberta por user {request.user.pk if request.user else 'anon'}"
                     )
                     
                     # Re-serialize instance for response
-                    response_serializer = self.get_serializer(instance)
-                    response_data = response_serializer.data
-                    
-                    if local_os_id:
-                        response_data['local_os_id'] = local_os_id
-                        response_data['remote_os_id'] = instance.os_os
-                        # We might miss id_mappings from serializer if we don't use serializer.save()
-                        # But we can reconstruct them or ignore if not critical for now.
-                        # The previous code used serializer.id_mappings.
-                        # If offline sync relies on this, we might need to replicate that logic.
+                    try:
+                        response_serializer = self.get_serializer(instance)
+                        response_data = response_serializer.data
+                        
+                        if hasattr(instance, 'id_mappings'):
+                            response_data.update(instance.id_mappings)
+
+                        if local_os_id:
+                            response_data['local_os_id'] = local_os_id
+                            response_data['remote_os_id'] = instance.os_os
+                    except Exception as e:
+                        logger.error(f"Erro ao serializar resposta da OS {instance.os_os}: {e}")
+                        # Fallback response para evitar retries do cliente se a OS já foi criada
+                        response_data = {
+                            "os_os": instance.os_os,
+                            "os_empr": instance.os_empr,
+                            "os_fili": instance.os_fili,
+                            "local_os_id": local_os_id if local_os_id else None,
+                            "remote_os_id": instance.os_os,
+                            "warning": "Erro na serialização completa dos dados. OS criada com sucesso."
+                        }
                     
                     return tratar_sucesso(response_data, status_code=status.HTTP_201_CREATED)
 
@@ -300,7 +399,6 @@ class OsViewSet(BaseMultiDBModelViewSet):
                     continue
 
             return tratar_erro(ErroDominio("Falha ao gerar número da O.S. Tente novamente.", codigo="falha_geracao_os"))
-        
         except Exception as e:
             return tratar_erro(e)
 
@@ -318,10 +416,9 @@ class OsViewSet(BaseMultiDBModelViewSet):
             horas_data = validated_data.pop('horas', [])
             # os_updates = remaining validated_data
             
-            with transaction.atomic(using=banco):
-                from O_S.services.os_service import OsService
-                # Note: update_os expects (banco, ordem, os_updates, pecas_data, servicos_data, horas_data)
-                instance = OsService.update_os(banco, instance, validated_data, pecas_data, servicos_data, horas_data)
+            from O_S.services.os_service import OsService
+            # Note: update_os expects (banco, ordem, os_updates, pecas_data, servicos_data, horas_data)
+            instance = OsService.update_os(banco, instance, validated_data, pecas_data, servicos_data, horas_data)
             
             response_serializer = self.get_serializer(instance)
             return tratar_sucesso(response_serializer.data)
@@ -351,10 +448,8 @@ class OsViewSet(BaseMultiDBModelViewSet):
 
         except Exception as e:
             return tratar_erro(e)
-
         
-        
-    
+            
     @action(
         detail=True, 
         methods=['post'],

@@ -270,6 +270,7 @@ class OsSerializer(BancoModelSerializer):
     
     # Allow UUID for offline sync
     os_os = serializers.CharField(required=False)
+    os_auto = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
     class Meta:
         model = Os
@@ -337,117 +338,10 @@ class OsSerializer(BancoModelSerializer):
         return float(total)
 
     def create(self, validated_data):
-        pecas = validated_data.pop("pecas", [])
-        servs = validated_data.pop("servicos", [])
-        horas = validated_data.pop("horas", [])
-        
-        os_obj = super().create(validated_data)
-        
-        self._sync_items(os_obj, PecasOs, "peca", pecas)
-        self._sync_items(os_obj, ServicosOs, "serv", servs)
-        self._sync_items(os_obj, OsHora, "os_hora", horas)
-        
-        return os_obj
+        return super().create(validated_data)
 
     def update(self, instance, validated_data):
-        pecas = validated_data.pop("pecas", [])
-        servs = validated_data.pop("servicos", [])
-        horas = validated_data.pop("horas", [])
-        
-        instance = super().update(instance, validated_data)
-        
-        self._sync_items(instance, PecasOs, "peca", pecas)
-        self._sync_items(instance, ServicosOs, "serv", servs)
-        self._sync_items(instance, OsHora, "os_hora", horas)
-        
-        return instance
-
-    def _sync_items(self, os_obj, model, prefix, data_list):
-        """Sincroniza itens relacionados"""
-        banco = self.context.get("banco")
-        ids = []
-        
-        mapping_key = 'pecas_ids'
-        if prefix == 'serv': mapping_key = 'servicos_ids'
-        elif prefix == 'os_hora': mapping_key = 'horas_ids'
-        
-        for item in data_list:
-            item[f"{prefix}_empr"] = os_obj.os_empr
-            item[f"{prefix}_fili"] = os_obj.os_fili
-            item[f"{prefix}_os"] = os_obj.os_os
-
-            pk = item.get(f"{prefix}_item")
-            
-            # Ensure peca_data is populated for PecasOs to satisfy database trigger
-            if prefix == "peca" and not item.get("peca_data"):
-                item["peca_data"] = os_obj.os_data_aber
-
-            local_id = None
-            
-            # Check for offline UUID
-            if pk and isinstance(pk, str) and (len(pk) > 20 or '-' in pk):
-                local_id = pk
-                # Remove UUID to allow generation of new ID
-                if f"{prefix}_item" in item:
-                    del item[f"{prefix}_item"]
-                pk = None
-
-            if pk:
-                try:
-                    obj, _ = model.objects.using(banco).update_or_create(
-                        **{
-                            f"{prefix}_item": pk,
-                            f"{prefix}_empr": os_obj.os_empr,
-                            f"{prefix}_fili": os_obj.os_fili,
-                            f"{prefix}_os": os_obj.os_os,
-                        },
-                        defaults=item,
-                    )
-                except (IntegrityError, InternalError) as e:
-                    if 'Não é permitido estoque negativo' in str(e):
-                        raise ValidationError(f"Não é permitido estoque negativo para o produto {item.get(f'{prefix}_prod')}.")
-                    raise e
-            else:
-                # If manual ID generation is needed, it should be here.
-                # Assuming AutoField or similar mechanism.
-                # To be safe for legacy DBs without AutoField on items:
-                if not pk:
-                    last = model.objects.using(banco).filter(
-                         **{f"{prefix}_empr": os_obj.os_empr, f"{prefix}_fili": os_obj.os_fili}
-                    ).aggregate(models.Max(f"{prefix}_item"))
-                    max_id = last.get(f"{prefix}_item__max") or 0
-                    # We need to be careful with concurrency here, but inside a transaction it might be okay-ish?
-                    # Ideally use AutoField.
-                    # For now, let's try standard create. If it fails, we know why.
-                    # But `views.py` uses `get_next_ordem_numero` for OS.
-                    pass
-
-                try:
-                    obj = model.objects.using(banco).create(**item)
-                except (IntegrityError, InternalError) as e:
-                    if 'Não é permitido estoque negativo' in str(e):
-                        raise ValidationError(f"Não é permitido estoque negativo para o produto {item.get(f'{prefix}_prod')}.")
-                    raise e
-
-            final_id = getattr(obj, f"{prefix}_item")
-            ids.append(final_id)
-            
-            if local_id:
-                self.id_mappings[mapping_key].append({
-                    'local_id': local_id,
-                    'remote_id': final_id
-                })
-
-        # Remove itens deletados
-        model.objects.using(banco).filter(
-            **{f"{prefix}_os": os_obj.os_os}
-        ).exclude(
-            **{f"{prefix}_item__in": ids}
-        ).delete()
-
-
-
-
+        return super().update(instance, validated_data)
 class TituloReceberSerializer(BancoModelSerializer):
     class Meta:
         model = Titulosreceber
