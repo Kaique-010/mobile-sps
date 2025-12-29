@@ -290,12 +290,21 @@ export async function enqueueNewOs(
   horas = []
 ) {
   const osIdLocal = uuid.v4()
-  const pecasComLocalId = pecas.map((p) => ({ ...p, peca_item: uuid.v4() }))
+  const pecasComLocalId = pecas.map((p) => ({
+    ...p,
+    peca_item: uuid.v4(),
+    peca_os: 0,
+  }))
   const servicosComLocalId = servicos.map((s) => ({
     ...s,
     serv_item: uuid.v4(),
+    serv_os: 0,
   }))
-  const horasComLocalId = horas.map((h) => ({ ...h, os_hora_item: uuid.v4() }))
+  const horasComLocalId = horas.map((h) => ({
+    ...h,
+    os_hora_item: uuid.v4(),
+    os_hora_os: 0,
+  }))
   const payloadCompleto = {
     ...dadosOs,
     os_os: osIdLocal,

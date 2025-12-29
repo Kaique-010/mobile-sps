@@ -215,6 +215,31 @@ class OsViewSet(BaseMultiDBModelViewSet):
         try:
             banco = self.get_banco()
             base_data = request.data.copy()
+
+            # Sanitizar itens aninhados para evitar erro de validação de campo obrigatório ou tipo
+            # O serializer exige peca_os/serv_os, mas na criação offline/novo isso pode não vir ou vir como UUID
+            # Se a OS principal está sendo criada, os itens devem apontar para "0" temporariamente
+            if 'pecas' in base_data and isinstance(base_data['pecas'], list):
+                for p in base_data['pecas']:
+                    if 'peca_os' not in p or not isinstance(p['peca_os'], int):
+                        p['peca_os'] = 0
+            
+            if 'servicos' in base_data and isinstance(base_data['servicos'], list):
+                for s in base_data['servicos']:
+                    if 'serv_os' not in s or not isinstance(s['serv_os'], int):
+                        s['serv_os'] = 0
+                        
+            if 'horas' in base_data and isinstance(base_data['horas'], list):
+                for h in base_data['horas']:
+                    if 'os_hora_os' not in h or not isinstance(h['os_hora_os'], int):
+                        h['os_hora_os'] = 0
+
+            # Sanitizar campos inteiros opcionais que podem vir como string vazia do front
+            # DRF IntegerField(null=True) não aceita string vazia "", precisa ser None
+            for int_field in ['os_resp', 'os_clie', 'os_prof_aber', 'os_fabr', 'os_marc', 'os_mode', 'os_situ']:
+                if int_field in base_data and base_data[int_field] == "":
+                    base_data[int_field] = None
+
             #Se não for fornecido, definir como 1
             if not base_data.get('os_seto'):
                 base_data['os_seto'] = 1
@@ -341,7 +366,8 @@ class OsViewSet(BaseMultiDBModelViewSet):
             base_data['os_prof_aber'] = request.user.pk if request.user else None
             serializer = self.get_serializer(data=base_data)
             if not serializer.is_valid():
-                logger.error(f"Erro de validação ao criar OS: {serializer.errors}")
+                logger.error(f"Erro de validação ao criar OS. Dados recebidos: {base_data}")
+                logger.error(f"Erros do serializer: {serializer.errors}")
                 serializer.is_valid(raise_exception=True)
             
             validated_data = serializer.validated_data
