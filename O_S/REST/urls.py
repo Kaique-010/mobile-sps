@@ -21,7 +21,7 @@ router.register(r'os-hora', OsHoraViewSet, basename='os-hora')
 urlpatterns = []
 
 urlpatterns += [
-    path('ordens/patch/', OsViewSet.as_view({'patch': 'patch_ordem'}), name='ordens-patch'),
+    path('ordens/patch/', OsViewSet.as_view({'patch': 'patch_ordem', 'post': 'patch_ordem'}), name='ordens-patch'),
     path('ordens/enviaremail/', EnviarEmail.as_view(), name='enviar_email_ordens'),
     path('ordens/enviarwhatsapp/', EnviarWhatsapp.as_view(), name='enviar_whatsapp_ordens'),    
     path('produtos/mega/', MegaProdutosView.as_view(), name='produtos-mega'),

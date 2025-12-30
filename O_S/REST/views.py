@@ -160,14 +160,18 @@ class OsViewSet(BaseMultiDBModelViewSet):
             return obj
             
         except Os.DoesNotExist:
+            tratar_erro(e)
             raise ErroDominio("Ordem de Serviço não encontrada.", codigo="os_nao_encontrada")
+            
         except Os.MultipleObjectsReturned:
             raise ErroDominio(
                 "Múltiplas Ordens de Serviço encontradas com o mesmo código. Informe a empresa e filial.", 
                 codigo="os_multiplas_encontradas"
             )
         except ValueError:
+             tratar_erro(e)
              raise ErroDominio("ID da ordem inválido.", codigo="id_invalido")
+                
         
     @action(detail=True, methods=['post'])
     def finalizar_os(self, request, pk=None):
@@ -492,7 +496,7 @@ class OsViewSet(BaseMultiDBModelViewSet):
             logger.error(f"Erro ao atualizar total da ordem {pk}: {str(e)}")
             return tratar_erro(e)
     
-    @action(detail=False, methods=['patch'], url_path='patch')
+    @action(detail=False, methods=['patch', 'post'], url_path='patch')
     def patch_ordem(self, request, slug=None):
         try:
             banco = self.get_banco()
@@ -502,9 +506,11 @@ class OsViewSet(BaseMultiDBModelViewSet):
             try:
                 instance = Os.objects.using(banco).get(pk=os_pk)
             except Os.DoesNotExist:
+                tratar_erro(e)
                 raise ErroDominio('Ordem de Serviço não encontrada.', codigo="os_nao_encontrada")
             
             serializer = self.get_serializer(instance, data=request.data, partial=True)
+            
             serializer.is_valid(raise_exception=True)
             with transaction.atomic(using=banco):
                 serializer.save()

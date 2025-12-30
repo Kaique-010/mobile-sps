@@ -23,10 +23,25 @@ def tratar_erro(exc):
         )
     
     if isinstance(exc, APIException):
+        mensagem = str(exc.detail)
+        # Tenta formatar melhor a mensagem se for um erro de validação
+        try:
+            if isinstance(exc.detail, dict):
+                # Pega a primeira chave e o primeiro erro
+                chave = next(iter(exc.detail))
+                erro = exc.detail[chave]
+                if isinstance(erro, list):
+                    erro = erro[0]
+                mensagem = f"{erro}"
+            elif isinstance(exc.detail, list):
+                mensagem = str(exc.detail[0])
+        except Exception:
+            pass
+
         return Response(
             {
                 "erro": exc.default_code,
-                "mensagem": str(exc.detail),
+                "mensagem": mensagem,
                 "detalhes": exc.get_full_details()
             },
             status=exc.status_code

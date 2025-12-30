@@ -266,8 +266,8 @@ class OsSerializer(BancoModelSerializer):
     os_tota = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
     
     # CORRIGIR NOMES DOS CAMPOS DE ASSINATURA
-    os_assi_clie = Base64BinaryField(required=False)
-    os_assi_oper = Base64BinaryField(required=False)
+    os_assi_clie = Base64BinaryField(required=False, allow_null=True)
+    os_assi_oper = Base64BinaryField(required=False, allow_null=True)
     os_orig = serializers.CharField(max_length=100, required=False, allow_blank=True)
     
     # Allow UUID for offline sync
