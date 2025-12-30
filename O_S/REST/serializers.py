@@ -262,6 +262,8 @@ class OsSerializer(BancoModelSerializer):
     cliente_celular = serializers.SerializerMethodField()
     total_pecas = serializers.SerializerMethodField()
     total_servicos = serializers.SerializerMethodField()
+    total_geral = serializers.SerializerMethodField()
+    os_tota = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
     
     # CORRIGIR NOMES DOS CAMPOS DE ASSINATURA
     os_assi_clie = Base64BinaryField(required=False)
@@ -336,6 +338,11 @@ class OsSerializer(BancoModelSerializer):
             serv_os=obj.os_os
         ).aggregate(total=models.Sum('serv_tota'))['total'] or 0
         return float(total)
+    
+    def get_total_geral(self, obj):
+        """Calcula total geral (pecas + servicos)"""
+        return self.get_total_pecas(obj) + self.get_total_servicos(obj)
+    
 
     def create(self, validated_data):
         return super().create(validated_data)

@@ -80,29 +80,35 @@ class Os(models.Model):
         managed = False
         db_table = 'os'
         unique_together = (('os_empr', 'os_fili', 'os_os'),)
+        
     
     def calcular_total(self):
-            total_pecas = sum(
-                peca.peca_tota or 0 
-                for peca in PecasOs.objects.filter(
-                    peca_empr=self.os_empr,
-                    peca_fili=self.os_fili,
-                    peca_os=self.os_os
-                )
+        """Calcula total considerando peças, serviços e desconto global"""
+        from decimal import Decimal
+        
+        total_pecas = sum(
+            peca.peca_tota or Decimal('0.00')
+            for peca in PecasOs.objects.filter(
+                peca_empr=self.os_empr,
+                peca_fili=self.os_fili,
+                peca_os=self.os_os
             )
-            
-            total_servicos = sum(
-                servico.serv_tota or 0
-                for servico in ServicosOs.objects.filter(
-                    serv_empr=self.os_empr,
-                    serv_fili=self.os_fili,
-                    serv_os=self.os_os
-                )
+        )
+        
+        total_servicos = sum(
+            servico.serv_tota or Decimal('0.00')
+            for servico in ServicosOs.objects.filter(
+                serv_empr=self.os_empr,
+                serv_fili=self.os_fili,
+                serv_os=self.os_os
             )
-            
-            self.os_tota = total_pecas + total_servicos
-            return self.os_tota
-
+        )
+        
+        # ✅ CORRIGIDO: Subtrai o desconto global
+        desconto_global = self.os_desc or Decimal('0.00')
+        self.os_tota = (total_pecas + total_servicos) - desconto_global
+        return self.os_tota
+    
 
 class PecasOs(models.Model):
     peca_empr = models.IntegerField()

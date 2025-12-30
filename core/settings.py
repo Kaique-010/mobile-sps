@@ -349,6 +349,12 @@ LOGGING = {
             'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': False,
         },
+        'O_S': {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+            'formatter': 'verbose',
+        },
         'Entidades': {
             'handlers': ['console'],
             'level': 'DEBUG' if DEBUG else 'INFO',  

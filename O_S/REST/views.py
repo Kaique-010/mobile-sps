@@ -3,6 +3,7 @@ from rest_framework.views import APIView
 from rest_framework import status, filters
 from rest_framework.response import Response
 from django.http import HttpResponse
+from O_S.services.os_service import OsService
 from core.impressoes.documentos.os import OrdemServicoPrinter
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import IsAuthenticated
@@ -237,7 +238,8 @@ class OsViewSet(BaseMultiDBModelViewSet):
             # Sanitizar campos inteiros opcionais que podem vir como string vazia do front
             # DRF IntegerField(null=True) não aceita string vazia "", precisa ser None
             for int_field in ['os_resp', 'os_clie', 'os_prof_aber', 'os_fabr', 'os_marc', 'os_mode', 'os_situ']:
-                if int_field in base_data and base_data[int_field] == "":
+                val = base_data.get(int_field)
+                if val == "" or val == "null" or val is False:
                     base_data[int_field] = None
 
             #Se não for fornecido, definir como 1
@@ -511,7 +513,7 @@ class OsViewSet(BaseMultiDBModelViewSet):
             return tratar_erro(e)
     
     
-    @action(detail=True, methods=['get'])
+    @action(detail=True, methods=['get'], permission_classes=[])
     def imprimir(self, request, pk=None, slug=None):
         """
         Endpoint para imprimir uma Ordem de Serviço em PDF.
@@ -682,10 +684,12 @@ class PecasOsViewSet(BaseMultiDBModelViewSet):
                 os_fili=peca_fili,
                 os_os=peca_os
             )
-            ordem.calcular_total()
+            OsService.calcular_total(banco, ordem)
             ordem.save(using=banco)
+            tratar_sucesso(mensagem="Total da ordem de serviço atualizado com sucesso.")
         except Os.DoesNotExist:
             logger.error(f"Ordem não encontrada para recalcular: {peca_os}")
+            tratar_erro(ErroDominio(f"Ordem não encontrada para recalcular: {peca_os}", codigo="os_nao_encontrada"))
 
     def get_queryset(self):
         banco = self.get_banco()
@@ -804,6 +808,7 @@ class PecasOsViewSet(BaseMultiDBModelViewSet):
         remover = data.get('remover', [])
 
         resposta = {'adicionados': [], 'editados': [], 'removidos': []}
+        os_afetadas = set() #Acessamos a variavel através do set para passar os totais de OS afetadas em todas as ações
 
         try:
             with transaction.atomic(using=banco):
@@ -841,17 +846,24 @@ class PecasOsViewSet(BaseMultiDBModelViewSet):
                         )
                     except PecasOs.DoesNotExist:
                         continue
-
+                    
                     s = PecasOsSerializer(obj, data=item, partial=True, context={'banco': banco})
                     s.is_valid(raise_exception=True)
                     s.save()
                     resposta['editados'].append(s.data)
+                    
+                    # E aqui adicionamos a OS afetada ao set de OS afetadas para a PK do item editado
+                    os_afetadas.add((item['peca_empr'], item['peca_fili'], item['peca_os']))
 
                 # REMOVER
                 for item in remover:
                     required = ['peca_item', 'peca_os', 'peca_empr', 'peca_fili']
                     if not all(k in item for k in required):
                         raise ValidationError("Campos obrigatórios para remover faltando.")
+
+                    # E aqui adicionamos a OS afetada ao set de OS afetadas para a PK do item removido
+                    
+                    os_afetadas.add((item['peca_empr'], item['peca_fili'], item['peca_os']))
 
                     PecasOs.objects.using(banco).filter(
                         peca_item=item['peca_item'],
@@ -861,6 +873,14 @@ class PecasOsViewSet(BaseMultiDBModelViewSet):
                     ).delete()
 
                     resposta['removidos'].append(item['peca_item'])
+
+            # Recalcular totais das OS afetadas
+            for empr, fili, os_id in os_afetadas:
+                try:
+                    ordem = Os.objects.using(banco).get(os_empr=empr, os_fili=fili, os_os=os_id)
+                    OsService.calcular_total(banco, ordem)
+                except Os.DoesNotExist:
+                    logger.error(f"OS {os_id} não encontrada para recálculo após update_lista.")
 
             return tratar_sucesso(resposta)
 
@@ -882,10 +902,12 @@ class ServicosOsViewSet(BaseMultiDBModelViewSet):
                 os_fili=serv_fili,
                 os_os=serv_os
             )
-            ordem.calcular_total()
+            OsService.calcular_total(banco, ordem)
             ordem.save(using=banco)
+            tratar_sucesso(mensagem="Total da ordem de serviço atualizado com sucesso.")
         except Os.DoesNotExist:
             logger.error(f"Ordem de serviço não encontrada para recalcular: {serv_os}")
+            tratar_erro(ErroDominio(f"Ordem de serviço não encontrada para recalcular: {serv_os}", codigo="os_nao_encontrada"))
 
     # ---- QUERYSET ----
     def get_queryset(self):
@@ -1012,6 +1034,8 @@ class ServicosOsViewSet(BaseMultiDBModelViewSet):
         remover = data.get('remover', [])
 
         resposta = {'adicionados': [], 'editados': [], 'removidos': []}
+        # Acessamos a variavel através do set para passar os totais de OS afetadas em todas as ações
+        os_afetadas = set()
 
         def normalize_item(item, prefix):
             if not isinstance(item, dict):
@@ -1052,6 +1076,8 @@ class ServicosOsViewSet(BaseMultiDBModelViewSet):
                     resposta['adicionados'].append(
                         ServicosOsSerializer(obj, context={'banco': banco}).data
                     )
+                    # E aqui adicionamos a OS afetada ao set de OS afetadas para a PK do item adicionado
+                    os_afetadas.add((item['serv_empr'], item['serv_fili'], item['serv_os']))
 
                 # EDITAR
                 for item in editar:
@@ -1079,14 +1105,19 @@ class ServicosOsViewSet(BaseMultiDBModelViewSet):
                     s.is_valid(raise_exception=True)
                     s.save()
                     resposta['editados'].append(s.data)
+                    # E aqui adicionamos a OS afetada ao set de OS afetadas para a PK do item editado
+                    os_afetadas.add((item['serv_empr'], item['serv_fili'], item['serv_os']))
 
                 # REMOVER
                 for item in remover:
                     # Suporte para remoção apenas pelo ID (int ou str)
                     if isinstance(item, (int, str)):
                         try:
-                            ServicosOs.objects.using(banco).filter(serv_item=item).delete()
-                            resposta['removidos'].append(item)
+                            s_obj = ServicosOs.objects.using(banco).filter(serv_item=item).first()
+                            if s_obj:
+                                os_afetadas.add((s_obj.serv_empr, s_obj.serv_fili, s_obj.serv_os))
+                                s_obj.delete()
+                                resposta['removidos'].append(item)
                         except Exception as e:
                             logger.error(f"Erro ao remover item {item}: {e}")
                         continue
@@ -1109,6 +1140,16 @@ class ServicosOsViewSet(BaseMultiDBModelViewSet):
                     ).delete()
 
                     resposta['removidos'].append(item['serv_item'])
+                    # E aqui adicionamos a OS afetada ao set de OS afetadas para a PK do item removido
+                    os_afetadas.add((item['serv_empr'], item['serv_fili'], item['serv_os']))
+
+            # Recalcular totais das OS afetadas
+            for empr, fili, os_id in os_afetadas:
+                try:
+                    ordem = Os.objects.using(banco).get(os_empr=empr, os_fili=fili, os_os=os_id)
+                    OsService.calcular_total(banco, ordem)
+                except Os.DoesNotExist:
+                    logger.error(f"OS {os_id} não encontrada para recálculo após update_lista serviços.")
 
             return tratar_sucesso(resposta)
 
