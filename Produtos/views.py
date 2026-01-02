@@ -24,6 +24,8 @@ from .serializers import ProdutoSerializer, TabelaPrecoSerializer, UnidadeMedida
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 from django.core.cache import cache
+from core.excecoes import ErroDominio
+from core.dominio_handler import tratar_erro, tratar_sucesso
 
 
 
@@ -133,7 +135,12 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             raise Http404("Empresa e código do produto são obrigatórios")
         
         try:
-            queryset = self.get_queryset().filter(
+            if self.action == 'cadastro_servico':
+                queryset = Produtos.objects.using(banco)
+            else:
+                queryset = self.get_queryset()
+
+            queryset = queryset.filter(
                 prod_empr=empresa,
                 prod_codi=codigo
             )
@@ -147,6 +154,7 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             
         except Exception as e:
             raise Http404(f"Erro ao buscar produto: {str(e)}")
+        
     def get_queryset(self):
         banco = get_licenca_db_config(self.request)
 
@@ -207,6 +215,22 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             queryset = queryset.filter(prod_empr=empresa_id)
             
         return queryset.order_by('prod_empr', 'prod_codi_int', 'prod_codi')
+    
+    
+    @action(detail=True, methods=["patch"], url_path='cadastrar_servico')
+    def cadastro_servico(self, request, slug=None):
+        produto = self.get_object()
+        from .serializers import ProdutoServicoSerializer
+        
+        serializer = ProdutoServicoSerializer(produto, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            tratar_sucesso(serializer.data)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+            
+        tratar_erro(serializer)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
 
     @action(detail=False, methods=["get"])
     def busca(self, request, slug=None):
@@ -315,6 +339,7 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
 
         instance = self.get_object()
         precos_data = request.data.pop('precos', None)
+    
         
         # Atualizar produto primeiro
         serializer = self.get_serializer(

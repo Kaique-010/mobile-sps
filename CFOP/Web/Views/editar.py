@@ -30,7 +30,7 @@ class CFOPUpdateView(UpdateView):
 
     def get_object(self, queryset=None):
         empr = int(self.kwargs.get('empr'))
-        codi = int(self.kwargs.get('codi'))
+        codi = str(self.kwargs.get('codi'))
         return CFOP.objects.using(self.db_alias).filter(
             cfop_empr=empr, cfop_codi=codi
         ).first()
@@ -58,28 +58,7 @@ class CFOPUpdateView(UpdateView):
 
         # ORGANIZAÇÃO DOS GRUPOS
         form = ctx.get('form')
-        icms_extra = {
-            'cfop_trib_cst_icms', 'cfop_trib_icms', 'cfop_trib_redu',
-            'cfop_trib_moda_base', 'cfop_trib_moda_bast', 'cfop_trib_mva',
-            'cfop_trib_redu_st', 'cfop_redu_icms_para',
-            'cfop_conf_vend_st', 'cfop_perc_dife_aliq',
-            'cfop_nao_soma_mva', 'cfop_nao_trib_icms'
-        }
-        ipi_extra = {
-            'cfop_trib_ipi_trib', 'cfop_trib_ipi_nao_trib',
-            'cfop_trib_aliq_ipi', 'cfop_nao_trib_ipi'
-        }
-        piscof_extra = {
-            'cfop_trib_cst_pis', 'cfop_trib_perc_pis', 'cfop_trib_valo_pis',
-            'cfop_trib_cst_cofins', 'cfop_trib_perc_cofins',
-            'cfop_trib_valo_cofins', 'cfop_apur_pis', 'cfop_apur_cofi',
-            'cfop_nao_trib_pis'
-        }
-        ret_extra = {
-            'cfop_iss_ret', 'cfop_pis_ret', 'cfop_cof_ret', 'cfop_csl_ret',
-            'cfop_irr_ret', 'cfop_ins_ret', 'cfop_bas_ins', 'cfop_bas_irr'
-        }
-
+        
         grouped = {
             'basicos': [],
             'icms': [],
@@ -91,20 +70,34 @@ class CFOPUpdateView(UpdateView):
         }
 
         if form:
-            for n in list(form.fields.keys()):
+            for n, bf in form.fields.items():
                 if n == 'cfop_empr':
                     continue
-                bf = form[n]
-                if n.startswith('cfop_icms') or n in icms_extra:
+                
+                # Campos básicos (código, descrição, e flags manuais se quiser manter separados ou não)
+                # Aqui vamos agrupar conforme padrão de nome
+                
+                # ICMS / ST / DIFAL
+                if any(x in n for x in ['icms', 'mva', 'redu', 'difal', 'st']):
                     grouped['icms'].append(bf)
-                elif n.startswith('cfop_ipi') or n in ipi_extra:
+                
+                # IPI
+                elif 'ipi' in n:
                     grouped['ipi'].append(bf)
-                elif n.startswith('cfop_pis') or n.startswith('cfop_cof') or n in piscof_extra:
+                
+                # PIS / COFINS
+                elif any(x in n for x in ['pis', 'cofins', 'cofi', 'apur']):
                     grouped['pis_cofins'].append(bf)
-                elif 'reti' in n or n in ret_extra or 'debi_' in n or 'cred_' in n:
+                
+                # RETENCOES / DEBITO / CREDITO
+                elif any(x in n for x in ['ret', 'debi', 'cred', 'iss', 'irr', 'ins']):
                     grouped['retencoes'].append(bf)
-                elif n.startswith('cfop_ibs') or n.startswith('cfop_cbs') or n.startswith('cfop_ibscbs'):
+                
+                # IBS / CBS
+                elif 'ibs' in n or 'cbs' in n:
                     grouped['ibs_cbs'].append(bf)
+                
+                # RESTO
                 else:
                     grouped['outros'].append(bf)
 

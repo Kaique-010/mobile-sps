@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %} Criar CFOP {% endblock %}
+{% block title %} Cadastrar CFOP {% endblock %}
 {% block content %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
 <link rel="stylesheet" href="{% static 'css/form.css' %}">
 <div class="container py-4">
-  <h3 class="card-title mb-4 fs-4 text-center">Criar CFOP</h3>
+  <h3 class="card-title mb-4 fs-4 text-center"> {% if form.instance.pk %}Editar{% else %}Cadastrar{% endif %} CFOP</h3>
   <div class="card shadow-sm border-primary">
     <div class="card-body">
       <form method="post" enctype="multipart/form-data">
@@ -73,6 +73,14 @@
             <div class="form-check">
               {{ form.cfop_exig_ibs }}
               <label class="form-check-label" for="{{ form.cfop_exig_ibs.auto_id }}">Exige IBS</label>
+            </div>
+            <div class="form-check">
+              {{ form.cfop_gera_st }}
+              <label class="form-check-label" for="{{ form.cfop_gera_st.auto_id }}">Gera ST</label>
+            </div>
+            <div class="form-check">
+              {{ form.cfop_gera_difal }}
+              <label class="form-check-label" for="{{ form.cfop_gera_difal.auto_id }}">Gera DIFAL</label>
             </div>
           </div>
         </div>
@@ -198,12 +206,6 @@
             atualizarExigencias(val);
             suggestBox.innerHTML = "";
           });
-
-          // se já vier preenchido (edição), pode disparar uma vez:
-          if (inputCFOP.value.trim().length >= 2) {
-            atualizarSugestoes(inputCFOP.value);
-            atualizarExigencias(inputCFOP.value);
-          }
         })();
       </script>
       {% endblock %}

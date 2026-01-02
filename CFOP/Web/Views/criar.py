@@ -61,8 +61,6 @@ class CFOPCreateView(CreateView):
         obj = form.instance
         # garante empresa
         obj.cfop_empr = self.get_empresa()
-        regime = self.get_regime()
-        obj.aplicar_defaults(regime=regime)
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):

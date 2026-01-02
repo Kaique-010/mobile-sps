@@ -4,12 +4,12 @@
 {% block content %}
 <link rel="stylesheet" href="{% static 'css/list.css' %}">
 <div class="container">
+   <h3 class="mb-5 text-center">Listagem de CFOP´s</h3>
   <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3 class="mb-5 text-center">CFOPs</h3>
+   
     <div class="btn-group">
-      <a class="btn btn-primary" href="/web/{{ slug }}/cfop/new/">Novo CFOP</a>
+      <a class="btn btn-outline-primary" href="/web/{{ slug }}/cfop/new/">Novo CFOP</a>
 
-      <a class="btn btn-outline-secondary" href="/web/{{ slug }}/cfop/import/">Importar</a>
       <a class="btn btn-outline-secondary" href="/web/{{ slug }}/cfop/export/">Exportar</a>
       {% if slug %}
       <a class="btn btn-outline-primary" href="{% url 'onboarding_complete_slug' slug=slug step='cfop' %}">Concluir etapa</a>
@@ -19,15 +19,10 @@
     </div>
   </div>
   <form method="get" class="row g-2 mb-3">
-    <div class="col-md-3"><input name="q" id="busca" type="text" class="form-control" placeholder="Descrição"
+    <div class="col-md-2"><input name="q" id="busca" type="text" class="form-control" placeholder="Descrição"
         value="{{ busca }}"></div>
     <div class="col-md-2"><input name="cfop" type="text" class="form-control" placeholder="CFOP" value="{{ cfop }}">
     </div>
-    <div class="col-md-2"><input name="tipo" id="tipo" type="text" class="form-control" placeholder="Tipo"
-        value="{{ tipo }}"></div>
-    <div class="col-md-2"><input name="ini" type="date" class="form-control" value="{{ ini }}"></div>
-    <div class="col-md-2"><input name="fim" type="date" class="form-control" value="{{ fim }}"></div>
-    <div class="col-12"></div>
     <div class="col-md-2"><input name="cst_icms" type="text" class="form-control" placeholder="CST ICMS"
         value="{{ cst_icms }}"></div>
     <div class="col-md-2"><input name="cst_ipi" type="text" class="form-control" placeholder="CST IPI"
@@ -55,14 +50,14 @@
             </tr>
           </thead>
           <tbody>
-            {% for o in object_list %}
+            {% for cfop in object_list %}
             <tr>
-              <td>{{ o.cfop_id }}</td>
-              <td>{{ o.cfop_codi }}</td>
-              <td>{{ o.cfop_desc }}</td>
+              <td>{{ cfop.cfop_id }}</td>
+              <td>{{ cfop.cfop_codi }}</td>
+              <td>{{ cfop.cfop_desc }}</td>
               <td class="text-end">
                 <a class="btn btn-sm btn-outline-primary"
-                  href="/web/{{ slug }}/cfop/{{ o.cfop_empr }}/{{ o.cfop_codi }}/edit/">Editar</a>
+                  href="/web/{{ slug }}/cfop/{{ cfop.cfop_empr }}/{{ cfop.cfop_codi }}/edit/">Editar</a>
               </td>
             </tr>
             {% empty %}

@@ -51,7 +51,7 @@ class CFOPListView(ListView):
             qs = qs.filter(cfop_inic_vali__gte=di)
         if df:
             qs = qs.filter(cfop_fim_vali__lte=df)
-        return qs.order_by('cfop_codi')
+        return qs.order_by('-cfop_codi')
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)

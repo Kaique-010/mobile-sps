@@ -17,7 +17,6 @@ class MarcaSerializer(BancoContextMixin, serializers.ModelSerializer):
     
 
 
-
 class TabelaPrecoSerializer(BancoContextMixin, serializers.ModelSerializer):
     percentual_avis = serializers.FloatField(write_only=True, required=False)
     percentual_apra = serializers.FloatField(write_only=True, required=False)
@@ -233,6 +232,16 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
                 attrs[field] = None
                 
         return attrs
+    
+    def validate_campos_servico(self, attrs):
+        if attrs.get("prod_e_serv"):
+            if attrs.get("prod_exig_iss") not in [1, 2, 3, 4]:
+                raise serializers.ValidationError("Quando é serviço, prod_exig_iss deve ser 1, 2, 3 ou 4.")
+            if attrs.get("prod_cnae") is None:
+                raise serializers.ValidationError("Quando é serviço, cnae é obrigatório.")
+            if attrs.get("prod_codi_serv") is None:
+                raise serializers.ValidationError("Quando é serviço, código do serviço é obrigatório.")
+        return attrs
 
 
     def get_imagem_base64(self, obj):
@@ -357,6 +366,11 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
     def update(self, instance, validated_data):
         banco = self.get_banco()
         
+        # Remover campos da chave primária composta do validated_data para evitar erro de duplicidade
+        # em bancos que validam update mesmo com o mesmo valor (ou se o usuário tentar mudar)
+        validated_data.pop('prod_empr', None)
+        validated_data.pop('prod_codi', None)
+        
         # Garantir que prod_orig_merc seja sempre '0'
         validated_data['prod_orig_merc'] = '0'
         
@@ -423,6 +437,53 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
             return base64.b64decode(value)
         except Exception as e:
             raise serializers.ValidationError(f"Erro ao decodificar imagem: {str(e)}")
+
+
+class ProdutoServicoSerializer(serializers.ModelSerializer):
+    """
+    Serializer específico para atualizar campos de serviço de um produto.
+    """
+    class Meta:
+        model = Produtos
+        fields = [
+            'prod_e_serv', 
+            'prod_exig_iss', 
+            'prod_iss', 
+            'prod_codi_serv', 
+            'prod_desc_serv', 
+            'prod_cnae', 
+            'prod_list_tabe_prec',
+            'prod_ncm'
+        ]
+
+    def validate(self, attrs):
+        instance = getattr(self, 'instance', None)
+        
+        # Helper to get value from attrs or instance
+        def get_val(key):
+            if key in attrs:
+                return attrs[key]
+            if instance:
+                return getattr(instance, key)
+            return None
+
+        is_service = get_val("prod_e_serv")
+        
+        if is_service:
+            exig_iss = get_val("prod_exig_iss")
+            if exig_iss not in [1, 2, 3, 4]:
+                raise serializers.ValidationError({"prod_exig_iss": "Quando é serviço, prod_exig_iss deve ser 1, 2, 3 ou 4."})
+            
+            # Se prod_cnae estiver em branco no attrs ou não enviado mas nulo no banco
+            cnae = get_val("prod_cnae")
+            if not cnae:
+                raise serializers.ValidationError({"prod_cnae": "Quando é serviço, cnae é obrigatório."})
+            
+            codi_serv = get_val("prod_codi_serv")
+            if not codi_serv:
+                raise serializers.ValidationError({"prod_codi_serv": "Quando é serviço, código do serviço é obrigatório."})
+        
+        return attrs
 
 
 class UnidadeMedidaSerializer(serializers.ModelSerializer):

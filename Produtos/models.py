@@ -278,7 +278,7 @@ class Produtos(models.Model):
     prod_sugr = models.ForeignKey(SubgrupoProduto, on_delete=models.DO_NOTHING, db_column='prod_sugr', related_name='produtos', blank= True, null= True) 
     prod_fami= models.ForeignKey(FamiliaProduto, on_delete=models.DO_NOTHING, db_column='prod_fami', related_name='produtos', blank= True, null= True) 
     prod_loca = models.CharField(max_length=255, db_column='prod_loca', blank= True, null= True) 
-    prod_ncm = models.CharField(max_length=10, db_column='prod_ncm') 
+    prod_ncm = models.CharField(max_length=10, db_column='prod_ncm', blank= True, null= True) 
     prod_gtin = models.CharField(max_length=14, db_column='prod_gtin', blank= True, null= True, default='SEM GTIN')
     prod_marc = models.ForeignKey(Marca, on_delete=models.DO_NOTHING, db_column='prod_marc', related_name='produtos', blank= True, null= True) 
     prod_coba = models.CharField(max_length=50, db_column='prod_coba', blank= True, null= True)
@@ -289,6 +289,19 @@ class Produtos(models.Model):
     #prod_lote = models.CharField(max_length=50, blank=True, null=True, help_text="Lote de produção")
     #prod_lote_venc = models.DateField(blank=True, null=True, help_text="Data de vencimento do lote")
     prod_orig_merc = models.CharField(max_length=1, db_column='prod_orig_merc', blank=True, null=True, default='0')
+    
+    #campos de Serviço
+    prod_e_serv = models.BooleanField(db_column='prod_e_serv', blank=True, null=True, default=False)
+    prod_exig_iss = models.IntegerField(db_column='prod_exig_iss', choices=[(1, 'Exigivel'),
+                                                                            (2, 'Não Exigivel'),
+                                                                            (3, 'Isenção'),
+                                                                            (4, 'Exportação')], blank=True, null=True, default=1)
+    prod_iss = models.DecimalField(max_digits=15, decimal_places=2, db_column='prod_iss', blank=True, null=True)
+    prod_codi_serv = models.CharField(max_length=50, db_column='prod_codi_serv', blank=True, null=True)
+    prod_desc_serv = models.CharField(max_length=255, db_column='prod_desc_serv', blank=True, null=True)
+    prod_cnae = models.CharField(max_length=50, db_column='prod_cnae', blank=True, null=True)
+    prod_list_tabe_prec = models.BooleanField(db_column='prod_list_tabe_prec', blank=True, null=True, default=False)
+    
 
 
     class Meta:

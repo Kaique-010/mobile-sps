@@ -53,18 +53,6 @@ class CFOP(models.Model):
 
  
     def save(self, *args, **kwargs):
-        criando = self.pk is None
-
-        if criando:
-            regime = None
-            try:
-                from Licencas.models import Filiais
-                filial = Filiais.objects.filter(empr_empr=self.cfop_empr).first()
-                regime = getattr(filial, "empr_regi_trib", None)
-            except Exception:
-                regime = None
-            self.aplicar_defaults(regime=regime)
-
         super().save(*args, **kwargs)
 
 
