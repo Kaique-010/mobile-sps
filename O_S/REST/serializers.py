@@ -244,12 +244,19 @@ class ServicosOsSerializer(ItemOsBaseSerializer):
     
     # Allow UUIDs for offline sync
     serv_item = serializers.CharField(required=False)
+    servico_nome = serializers.SerializerMethodField()
 
     class Meta:
         model = ServicosOs
         fields = "__all__"
 
-
+    def get_servico_nome(self, obj):
+        banco = self.context.get("banco")
+        try:
+            serv = Produtos.objects.using(banco).get(prod_codi=obj.serv_prod)
+            return serv.prod_nome
+        except:
+            return ""
 
 
 class OsSerializer(BancoModelSerializer):
