@@ -509,7 +509,7 @@ class ProdutoDetalhadoSerializer(serializers.ModelSerializer):
         decimal_fields = [
             'prod_cera_m2cx', 'prod_cera_pccx','prod_cera_kgcx',
             'preco_vista', 'preco_prazo', 'custo', 'saldo',
-            'peso_bruto', 'peso_liquido'
+            'peso_bruto', 'peso_liquido','ncm'
         ]
         
         for field in decimal_fields:

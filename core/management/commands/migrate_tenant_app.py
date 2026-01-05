@@ -10,7 +10,7 @@ DEPENDENCY_APPS = [
   
 ]
 
-def criar_usuarios_if_not_exists(alias: str):
+def produtosDetalhados(alias: str):
     with connections[alias].cursor() as cursor:
         cursor.execute(
             """
@@ -91,9 +91,8 @@ class Command(BaseCommand):
             except ProgrammingError:
                 pass
 
-            # 1.5 Criar tabela usuarios se não existir (para evitar erro no perfilweb)
             try:
-                criar_usuarios_if_not_exists(alias)
+                produtosDetalhados(alias)
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f"[{alias}] Erro ao criar usuarios: {e}"))
 

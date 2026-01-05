@@ -453,6 +453,7 @@ CREATE OR REPLACE VIEW public.produtos_detalhados
     prod.prod_grup AS grupo_id,
     grup.grup_desc AS grupo_nome,
     prod.prod_marc AS marca_id,
+    prod.prod_ncm AS ncm,
     marc.marc_nome AS marca_nome,
     tabe.tabe_cuge AS custo,
     tabe.tabe_avis AS preco_vista,

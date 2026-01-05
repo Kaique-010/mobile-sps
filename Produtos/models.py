@@ -407,6 +407,7 @@ class ProdutosDetalhados(models.Model):
     valor_total_estoque = models.DecimalField(max_digits=14, decimal_places=2, null=True)
     valor_total_venda_vista = models.DecimalField(max_digits=14, decimal_places=2, null=True)
     valor_total_venda_prazo = models.DecimalField(max_digits=14, decimal_places=2, null=True)
+    ncm = models.CharField(max_length=10, null=True)
 
     class Meta:
         managed = False
