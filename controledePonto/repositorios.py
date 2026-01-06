@@ -1,4 +1,5 @@
 from typing import Optional, List
+from datetime import date
 from controledePonto.Rest.dominio.entidades.registro_ponto import RegistroPonto as RegistroPontoEntidade
 from controledePonto.Rest.dominio.portas.repositorio_ponto import RepositorioPonto
 from .models import RegistroPonto as RegistroPontoModelo
@@ -53,3 +54,34 @@ class RepositorioPontoModelo(RepositorioPonto):
 
     def remover(self, id: int) -> None:
         RegistroPontoModelo.objects.using(self.banco).filter(id=id).delete()
+
+    def buscar_ultimo(self, colaborador_id: int) -> Optional[RegistroPontoEntidade]:
+        qs = RegistroPontoModelo.objects.using(self.banco).filter(colaborador_id=colaborador_id).order_by('-data_hora')
+        if not qs.exists():
+            return None
+        col = qs.first()
+        return RegistroPontoEntidade(
+            id=col.id,
+            colaborador_id=col.colaborador_id,
+            documento=col.documento,
+            data_hora=col.data_hora,
+            tipo=col.tipo
+        )
+    
+    def listar_por_dia(self, colaborador_id: int, data: date) -> Optional[List[RegistroPontoEntidade]]:
+        qs = RegistroPontoModelo.objects.using(self.banco).filter(
+            colaborador_id=colaborador_id,
+            data_hora__date=data
+        )
+        if not qs.exists():
+            return None
+        return [
+            RegistroPontoEntidade(
+                id=col.id,
+                colaborador_id=col.colaborador_id,
+                documento=col.documento,
+                data_hora=col.data_hora,
+                tipo=col.tipo
+            )
+            for col in qs
+        ]
