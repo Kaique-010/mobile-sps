@@ -229,6 +229,7 @@ Ela já faz o roteamento inteligente para a tool correta.""")
             audio_base64 = self._gerar_audio_otimizado(client, resposta_texto)
         
         thread_tts = threading.Thread(target=gerar_audio_background)
+        thread_tts.daemon = True
         thread_tts.start()
         
         # Retorna resposta imediatamente, áudio vem depois
@@ -363,7 +364,15 @@ Ela já faz o roteamento inteligente para a tool correta.""")
                         yield loop.run_until_complete(async_gen.__anext__())
                     except StopAsyncIteration:
                         break
+                    except KeyboardInterrupt:
+                        break
+                    except GeneratorExit:
+                        break
             finally:
+                try:
+                    loop.stop()
+                except Exception:
+                    pass
                 loop.close()
         
         return StreamingHttpResponse(

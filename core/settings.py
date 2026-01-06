@@ -140,6 +140,7 @@ INSTALLED_APPS = [
     'osexterna',
     'licencas_web',
     'perfilweb',
+    'controledePonto',
 ]
 
 # Middleware

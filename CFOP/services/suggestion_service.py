@@ -63,6 +63,6 @@ def suggest_tax(cfop_code, state, entity_type):
         return data
 
 def refresh_all_periodic():
-    def _run():
-        threading.Timer(86400, refresh_all_periodic).start()
-    _run()
+    # Evitar criar threads zumbis que impedem o shutdown
+    # Se for necessário lógica periódica, use Celery ou cron.
+    pass
