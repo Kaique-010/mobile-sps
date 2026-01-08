@@ -216,10 +216,47 @@ class ServicososexternaViewSet(BaseMultiDBModelViewSet):
     filterset_fields = ['serv_empr', 'serv_fili', 'serv_os', 'serv_sequ']
     search_fields = ['serv_desc']
 
+    def dispatch(self, request, *args, **kwargs):
+        logger.info(f"ServicososexternaViewSet.dispatch: method={request.method}, path={request.path}, GET={request.GET}")
+        return super().dispatch(request, *args, **kwargs)
+
+    def filter_queryset(self, queryset):
+        qs = super().filter_queryset(queryset)
+        logger.info(f"ServicososexternaViewSet.filter_queryset: original_count={queryset.count()}, filtered_count={qs.count()}")
+        return qs
+
+    def get_queryset(self):
+        banco = self.get_banco()
+        qs = Servicososexterna.objects.using(banco).all()
+        logger.info(f"ServicososexternaViewSet.get_queryset: banco={banco}, count={qs.count()}")
+        return qs
+
     def _next_global_sequ(self):
         banco = self.get_banco()
         ultimo = Servicososexterna.objects.using(banco).aggregate(Max('serv_sequ'))['serv_sequ__max']
         return (ultimo or 0) + 1
+    
+    def get_object(self):
+        banco = self.get_banco()
+        # Se for update-lista ou create, não tem pk na URL geralmente, mas get_object é pra detail
+        # Tenta pegar pk da URL
+        pk = self.kwargs.get('pk')
+        if pk:
+            logger.info(f"Buscando Servico com serv_sequ={pk} no banco {banco}")
+            try:
+                obj = Servicososexterna.objects.using(banco).get(serv_sequ=pk)
+                self.check_object_permissions(self.request, obj)
+                return obj
+            except Servicososexterna.DoesNotExist:
+                raise NotFound("Serviço não encontrado.")
+        
+        # Fallback antigo (mas perigoso pois pega o primeiro)
+        queryset = self.filter_queryset(self.get_queryset())
+        obj = queryset.first()
+        if not obj:
+            raise NotFound("Objeto não encontrado")
+        self.check_object_permissions(self.request, obj)
+        return obj
 
     def create(self, request, *args, **kwargs):
         banco = self.get_banco()
@@ -282,6 +319,10 @@ class ServicososexternaViewSet(BaseMultiDBModelViewSet):
             pass
         return Response({'itens': atualizados})
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['banco'] = self.get_banco()
+        return context
     
 @staticmethod
 def _apply_entidade_service_after_update(viewset, serializer):

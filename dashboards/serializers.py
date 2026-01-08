@@ -13,13 +13,14 @@ class PedidoVendaSerializer(serializers.Serializer):
     total = serializers.DecimalField(max_digits=15, decimal_places=2)
 
 class DashboardSerializer(serializers.Serializer):
-    saldos_produto = SaldoProdutoSerializer(many=True)
-    pedidos_por_cliente = PedidoVendaSerializer(many=True)
+    saldos_produto = SaldoProdutoSerializer(many=True, required=False)
+    pedidos_por_cliente = PedidoVendaSerializer(many=True, required=False)
+    ordens_eletro = serializers.ListField(child=serializers.DictField(), required=False)
+    ordens_por_setor = serializers.ListField(child=serializers.DictField(), required=False)
+    produto_sem_estoque = serializers.DecimalField(max_digits=15, decimal_places=2, required=False)
+    produto_sem_marca = serializers.DecimalField(max_digits=15, decimal_places=2, required=False)
+    total_valor_estoque = serializers.DecimalField(max_digits=15, decimal_places=2, required=False)
     
-    
-
-
-
 
 class OrcamentoAnaliticoSerializer(serializers.ModelSerializer):
     class Meta:

@@ -1,12 +1,15 @@
 from decimal import Decimal
 from datetime import datetime, time
+from re import S
 from typing import Annotated
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from Entidades.models import Entidades
 from Entradas_Estoque.models import EntradaEstoque
-from Produtos.models import Produtos, SaldoProduto
+from Licencas.models import Usuarios
+from Produtos.models import Produtos, ProdutosDetalhados, SaldoProduto
 from Pedidos.models import Itenspedidovenda, PedidoVenda
+from OrdemdeServico.models import OrdensEletro
 from rest_framework import status
 from Saidas_Estoque.models import SaidasEstoque
 from core.decorator import modulo_necessario, ModuloRequeridoMixin
@@ -18,58 +21,171 @@ from django.db.models import BigIntegerField
 from decimal import Decimal
 from datetime import datetime
 from .utils import enviar_email, enviar_whatsapp
+from core.mixins.ususario_com_setor import UsuarioComSetorMixin
 
 import logging
 
 logger = logging.getLogger(__name__)
 
-class DashboardAPIView(ModuloRequeridoMixin, APIView):
-    modulo_necessario = 'dashboard'
+
+def resolve_dashboard_mode(ctx):
+    if not ctx['is_banco_144']:
+        return 'default'
+    if ctx['tem_setor']:
+        return 'os_por_setor'
+    return 'home_eletro'
+
+
+class DashboardAPIView(UsuarioComSetorMixin, APIView):
     def get(self, request, slug=None):
         slug = get_licenca_slug()
-
         if not slug:
             return Response({"error": "Licença não encontrada."}, status=status.HTTP_404_NOT_FOUND)
-
         
-        saldos = (
-            SaldoProduto.objects.all()  
-            .values(nome=F('produto_codigo__prod_nome'))
-            .annotate(total=Sum('saldo_estoque'))
-            .order_by('-total')[:10]
-        )
-
-        cliente_nome = Entidades.objects.filter(
-            enti_clie=Cast(OuterRef('pedi_forn'), BigIntegerField())
-        ).values('enti_nome')[:1]
-
-        pedidos = (
-            PedidoVenda.objects.annotate(
-                cliente_nome=Subquery(cliente_nome)
+        data = {}
+        empresa = request.query_params.get('empresa_id') or request.query_params.get('empresa')
+        filial = request.query_params.get('filial_id') or request.query_params.get('filial')
+        
+        if not empresa:
+             empresa = (request.headers.get('Empresa') or 
+                        request.headers.get('empresaId') or 
+                        request.headers.get('empresa_id') or 
+                        request.headers.get('X-Empresa')) 
+                        
+        if not filial:
+             filial = (request.headers.get('Filial') or 
+                       request.headers.get('filialId') or 
+                       request.headers.get('filial_id') or 
+                       request.headers.get('X-Filial'))
+        
+        ctx = request.licenca_ctx
+        dashboard_mode = resolve_dashboard_mode(ctx)
+        
+        # Monta filtros base
+        filtros_base = {}
+        if empresa:
+            filtros_base['empresa'] = empresa
+        if filial:
+            filtros_base['filial'] = filial
+        
+        # Monta dados com base no dashboard_mode
+        if dashboard_mode == 'default':          
+            saldos = (
+                SaldoProduto.objects.filter(**filtros_base)
+                .values(nome=F('produto_codigo__prod_nome'))
+                .annotate(total=Sum('saldo_estoque'))
+                .order_by('-total')[:10]
             )
-            .values('cliente_nome')  # agrupa por cliente
-            .annotate(
-                total=Sum('pedi_tota'),
-                data=Max('pedi_data')  # opcional: data do último pedido
+
+            cliente_nome = Entidades.objects.filter(
+                enti_clie=Cast(OuterRef('pedi_forn'), BigIntegerField())
+            ).values('enti_nome')[:1]
+
+            pedidos_query = PedidoVenda.objects.filter(**filtros_base)
+            
+            pedidos = (
+                pedidos_query.annotate(
+                    cliente_nome=Subquery(cliente_nome)
+                )
+                .values('cliente_nome')
+                .annotate(
+                    total=Sum('pedi_tota'),
+                    data=Max('pedi_data')
+                )
+                .order_by('-total')[:10] 
+                .values(
+                    cliente=F('cliente_nome'),
+                    total=F('total'),
+                    data=F('data')
+                )
             )
-            .order_by('-total')[:10]  # top 10 clientes
-            .values(
-                cliente=F('cliente_nome'),
-                total=F('total'),
-                data=F('data')
+
+            for item in saldos:
+                item['total'] = Decimal(item['total']) if not isinstance(item['total'], Decimal) else item['total']
+            for item in pedidos:
+                item['total'] = Decimal(item['total']) if not isinstance(item['total'], Decimal) else item['total']
+
+            data['saldos_produto'] = saldos
+            data['pedidos_por_cliente'] = pedidos
+
+            
+        elif dashboard_mode == 'home_eletro':
+            agrupado = (
+                ProdutosDetalhados.objects.using(slug)
+                .filter(**filtros_base)
+                .filter(saldo__gt=0)
+                .values('marca_nome')
+                .annotate(
+                    total_custo=Sum('valor_total_estoque'),
+                    total_estoque=Sum('valor_total_estoque')
+                )
+                .order_by('-marca_nome')
             )
-        )
 
-        for item in saldos:
-            item['total'] = Decimal(item['total']) if not isinstance(item['total'], Decimal) else item['total']
-        for item in pedidos:
-            item['total'] = Decimal(item['total']) if not isinstance(item['total'], Decimal) else item['total']
+            # Processamento em memória
+            dados_agrupados = list(agrupado)
+            
+            total_valor_estoque = Decimal(0)
+            produto_sem_marca = Decimal(0)
+            produto_sem_estoque = Decimal(0)
+            lista_marcas_validas = []
 
-        data = {
-            'saldos_produto': saldos,
-            'pedidos_por_cliente': pedidos
-        }
+            for item in dados_agrupados:
+                estoque = item['total_estoque'] or Decimal(0)
+                custo = item['total_custo'] or Decimal(0)
+                
+                total_valor_estoque += estoque
+                
+                if item['marca_nome'] is None:
+                    produto_sem_marca += estoque
+                elif estoque == 0:
+                    produto_sem_estoque += custo
+                else:
+                    lista_marcas_validas.append({
+                        'marca_nome': item['marca_nome'],
+                        'total': custo
+                    })
+            
+            top10_marcas = lista_marcas_validas[:10]
 
+            if produto_sem_marca > 0:
+                top10_marcas.append({
+                    'marca_nome': 'Sem Marca',
+                    'total': produto_sem_marca
+                })
+
+            data['produto_sem_marca'] = produto_sem_marca
+            data['produto_sem_estoque'] = produto_sem_estoque
+            data['ordens_eletro'] = top10_marcas
+            data['total_valor_estoque'] = total_valor_estoque
+            
+           
+        elif dashboard_mode == 'os_por_setor':
+            status_permitidos = [
+                "Aberta", 
+                "Em Orçamento gerado", 
+                "Aguardando Liberação", 
+                "Liberada", 
+                "Reprovada",
+                "Atrasada"
+            ]
+            
+            ordens_query = OrdensEletro.objects.using(slug).filter(**filtros_base)
+            
+            data['ordens_por_setor'] = (
+                ordens_query
+                .filter(setor=int(ctx['setor_id']))
+                .filter(status_orde__in=status_permitidos)
+                .values(
+                    'nome_cliente',
+                    ordem=F('ordem_de_servico'),
+                    setor_nome_view=F('setor_nome'),
+                    status=F('status_orde'),
+                    data=F('data_abertura')
+                )
+                .order_by('-data')[:100]
+            )
+            
         serializer = DashboardSerializer(data)
         return Response(serializer.data)
 

@@ -85,7 +85,6 @@ class OsService:
             if not os_data.get('os_os'):
                 os_data['os_os'] = OsService._proxima_ordem_numero(banco, os_empr, os_fili)
 
-            # ✅ GARANTIR que os_tota e os_desc sejam Decimal ou None
             if 'os_tota' not in os_data or os_data['os_tota'] is None:
                 os_data['os_tota'] = Decimal('0.00')
             else:
@@ -211,7 +210,7 @@ class OsService:
                 f"Desc={os_desc_global} | Total Calculado={os_tota_final}"
             )
 
-            # ✅ USAR raw SQL para garantir que update funcione
+            #  raw SQL para garantir que update funcione
             with connections[banco].cursor() as cursor:
                 cursor.execute(
                     f"UPDATE {Os._meta.db_table} "

@@ -225,7 +225,7 @@ class AuditoriaMiddleware:
                     return self.get_response(request)
 
                 # Endpoints de licenças (empresas/filiais e afins) não devem ser bloqueados
-                if parts[2] == 'licencas':
+                if parts[2] in ['licencas', 'dashboards']:
                     return self.get_response(request)
 
                 app_candidate = parts[2]

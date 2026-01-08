@@ -128,6 +128,18 @@ class OsexternaSerializer(BancoModelSerializer):
         model = Osexterna
         fields = "__all__"
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        banco = self.context.get('banco')
+        if banco:
+            qs = Servicososexterna.objects.using(banco).filter(
+                serv_empr=instance.osex_empr,
+                serv_fili=instance.osex_fili,
+                serv_os=instance.osex_codi
+            ).order_by('serv_sequ')
+            data['servicos'] = ServicososexternaSerializer(qs, many=True, context=self.context).data
+        return data
+
     def get_cliente_nome(self, obj):
         banco = self.context.get('banco')
         if not obj.osex_clie:

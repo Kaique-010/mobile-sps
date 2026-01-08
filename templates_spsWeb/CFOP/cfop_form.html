@@ -82,13 +82,31 @@
               {{ form.cfop_gera_difal }}
               <label class="form-check-label" for="{{ form.cfop_gera_difal.auto_id }}">Gera DIFAL</label>
             </div>
-          </div>
-        </div>
+            <div class="form-check">
+              {{ form.cfop_icms_base_inclui_ipi }}
+              <label class="form-check-label" for="{{ form.cfop_icms_base_inclui_ipi.auto_id }}">ICMS Base Inclui
+                IPI</label>
+            </div>
+            <div class="form-check">
+              {{ form.cfop_st_base_inclui_ipi }}
+              <label class="form-check-label" for="{{ form.cfop_st_base_inclui_ipi.auto_id }}">ST Base Inclui
+                IPI</label>
+            </div>
+            <div class="form-check">
+              {{ form.cfop_ipi_tota_nf }}
+              <label class="form-check-label" for="{{ form.cfop_ipi_tota_nf.auto_id }}">IPI Totaliza NF</label>
+            </div>
+            <div class="form-check">
+              {{ form.cfop_st_tota_nf }}
+              <label class="form-check-label" for="{{ form.cfop_st_tota_nf.auto_id }}">ST Totaliza NF</label>
 
-        <div class="mt-3 d-flex gap-2">
-          <button type="submit" class="btn btn-primary">Salvar</button>
-          <a href="/web/{{ slug }}/cfop/" class="btn btn-secondary">Voltar</a>
-        </div>
+            </div>
+          </div>
+
+          <div class="mt-3 d-flex gap-2">
+            <button type="submit" class="btn btn-primary">Salvar</button>
+            <a href="/web/{{ slug }}/cfop/" class="btn btn-secondary">Voltar</a>
+          </div>
       </form>
       <script>
         (function () {
@@ -121,6 +139,10 @@
                 document.getElementById('{{ form.cfop_exig_ibs.auto_id }}').checked = data.ibs;
                 document.getElementById('{{ form.cfop_gera_st.auto_id }}').checked = data.st;
                 document.getElementById('{{ form.cfop_gera_difal.auto_id }}').checked = data.difal;
+                document.getElementById('{{ form.cfop_icms_base_inclui_ipi.auto_id }}').checked = data.icms_base_inclui_ipi;
+                document.getElementById('{{ form.cfop_st_base_inclui_ipi.auto_id }}').checked = data.st_base_inclui_ipi;
+                document.getElementById('{{ form.cfop_ipi_tota_nf.auto_id }}').checked = data.ipi_tota_nf;
+                document.getElementById('{{ form.cfop_st_tota_nf.auto_id }}').checked = data.st_tota_nf;
 
                 // badges
                 containerBadges.innerHTML = "";
@@ -132,6 +154,10 @@
                   ibs: "IBS",
                   st: "ICMS-ST",
                   difal: "DIFAL",
+                  icms_base_inclui_ipi: "ICMS Base Inclui IPI",
+                  st_base_inclui_ipi: "ST Base Inclui IPI",
+                  ipi_tota_nf: "IPI Totaliza NF",
+                  st_tota_nf: "ST Totaliza NF",
                 };
 
                 Object.entries(data).forEach(([campo, ativo]) => {

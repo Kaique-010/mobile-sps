@@ -54,6 +54,7 @@ class RepositorioPontoModelo(RepositorioPonto):
 
     def remover(self, id: int) -> None:
         RegistroPontoModelo.objects.using(self.banco).filter(id=id).delete()
+        
 
     def buscar_ultimo(self, colaborador_id: int) -> Optional[RegistroPontoEntidade]:
         qs = RegistroPontoModelo.objects.using(self.banco).filter(colaborador_id=colaborador_id).order_by('-data_hora')
@@ -67,6 +68,7 @@ class RepositorioPontoModelo(RepositorioPonto):
             data_hora=col.data_hora,
             tipo=col.tipo
         )
+    
     
     def listar_por_dia(self, colaborador_id: int, data: date) -> Optional[List[RegistroPontoEntidade]]:
         qs = RegistroPontoModelo.objects.using(self.banco).filter(

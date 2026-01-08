@@ -42,9 +42,10 @@ class OrdensEletroFilter(filters.FilterSet):
 class OrdemServicoFilter(filters.FilterSet):
     cliente_nome = filters.CharFilter(method='filter_cliente_nome')
     
+    
     class Meta:
         model = Ordemservico
-        fields = ['orde_stat_orde', 'orde_prio', 'orde_tipo', 'orde_enti']
+        fields = ['orde_stat_orde', 'orde_prio', 'orde_tipo', 'orde_enti', 'orde_nume']
     
     def filter_cliente_nome(self, queryset, name, value):
         if not value:

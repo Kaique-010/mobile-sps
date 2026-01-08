@@ -15,9 +15,10 @@ class OrdensEletroViewSet(ModuloRequeridoMixin, viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_class = OrdensEletroFilter
-    search_fields = ['nome_cliente', 'setor_nome', 'nome_responsavel']
+    search_fields = ['nome_cliente', 'setor_nome', 'nome_responsavel', 'ordem_de_servico', 'pedido_compra', 'nf_entrada']
     serializer_class = OrdensEletroSerializer
 
     def get_queryset(self):
         banco = get_licenca_db_config(self.request) or 'default'
-        return OrdensEletro.objects.using(banco).all().order_by('-data_abertura', '-ordem_de_servico')  
+        return OrdensEletro.objects.using(banco).all().order_by('-data_abertura', '-ordem_de_servico')
+        

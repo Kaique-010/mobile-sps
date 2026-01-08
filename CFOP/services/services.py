@@ -1,15 +1,7 @@
 from decimal import Decimal, ROUND_HALF_UP
 import logging
-
-from ..models import (
-    CFOP,
-    MapaCFOP,
-    TabelaICMS,
-    NCM_CFOP_DIF,
-)
-from Produtos.models import Produtos
-from Produtos.models import Ncm
-from Produtos.models import NcmAliquota
+from ..models import CFOP, MapaCFOP, TabelaICMS, NCM_CFOP_DIF
+from Produtos.models import Produtos, Ncm, NcmAliquota
 from Licencas.models import Filiais
 
 def get_empresa_uf_origem(empresa_id: int, filial_id: int | None = None, banco: str | None = None) -> str:
@@ -24,6 +16,7 @@ def get_empresa_uf_origem(empresa_id: int, filial_id: int | None = None, banco: 
         return (getattr(f, 'empr_esta', '') or '') if f else ''
     except Exception:
         return ''
+
 
 
 class MotorFiscal:
@@ -53,6 +46,11 @@ class MotorFiscal:
             valor = Decimal(str(valor))
         q = Decimal(10) ** -casas
         return valor.quantize(q, rounding=ROUND_HALF_UP)
+    
+    def calcular_valor(self, base: Decimal, aliquota):
+        if base is None or aliquota is None:
+            return None
+        return self._to_decimal(base * (aliquota / Decimal("100")), 2)
 
     # -----------------------------
     # RESOLVER CFOP AUTOMÁTICO
@@ -199,113 +197,97 @@ class MotorFiscal:
 
         return aliquotas, icms_data
 
+       # -----------------------------
+    # Bases
     # -----------------------------
-    # CÁLCULO TRIBUTOS
-    # -----------------------------
-    def calcular_bases(self, item) -> Decimal:
-        """
-        Determina a base de cálculo (valor total do item).
-        item: Itenspedidovenda
-        """
-        # prioridade: total informado > (quantidade * unitário)
+    def calcular_base_raiz(self, item):
         if item.iped_tota is not None:
-            return self._to_decimal(item.iped_tota, 2)
-
-        quant = self._to_decimal(item.iped_quan or 0, 5)
-        unit = self._to_decimal(item.iped_unit or 0, 5)
-        total = quant * unit
-        return self._to_decimal(total, 2)
-
-    def calcular_valor(self, base: Decimal, aliquota):
-        if base is None or aliquota is None:
-            return None
-        return self._to_decimal(base * (aliquota / Decimal("100")), 2)
-
-    # -----------------------------
-    # MÉTODO PRINCIPAL: CALCULAR ITEM
-    # -----------------------------
-    def calcular_item(
-        self,
-        pedido,
-        item,
-        produto: Produtos,
-        uf_destino: str,
-        pedi_tipo_oper: str,
-    ):
-        """
-        Calcula o pacote fiscal completo de um item.
-        - pedido: PedidoVenda (usa pedido.tipo_oper)
-        - item: Itenspedidovenda
-        - produto: Produtos
-        - uf_destino: UF do cliente
-        Retorna um dict com:
-            - cfop
-            - bases
-            - alíquotas
-            - valores de cada tributo
-        """
-
-        logging.getLogger(__name__).debug(
-            "[MotorFiscal.calcular_item] uf_origem=%s uf_destino=%s tipo=%s produto=%s",
-            self.uf_origem, uf_destino, pedi_tipo_oper, getattr(produto, 'prod_codi', None)
+            return self._to_decimal(item.iped_tota)
+        return self._to_decimal(
+            self._to_decimal(item.iped_quan, 5) * self._to_decimal(item.iped_unit, 5)
         )
-        # 1) Resolve CFOP automático
-        cfop = self.resolver_cfop(pedi_tipo_oper=pedi_tipo_oper, uf_destino=uf_destino)
 
-        # 2) Resolve NCM e alíquotas base
-        ncm = self.obter_ncm(produto)
-        aliquotas = self.obter_aliquotas_base(ncm)
+    def calcular_bases_icms_st(self, base_raiz, valor_ipi, cfop):
+        base_icms = base_raiz
+        if cfop.cfop_icms_base_inclui_ipi and valor_ipi:
+            base_icms += valor_ipi
 
-        # 3) ICMS / ST
-        icms_data = self.obter_aliquotas_icms(uf_destino=uf_destino)
-
-        # 4) Overrides NCM + CFOP
-        aliquotas, icms_data = self.aplicar_overrides_ncm_cfop(ncm, cfop, aliquotas, icms_data)
-
-        # 5) Base de cálculo
-        base = self.calcular_bases(item)
-
-        # 6) Calcula tributos
-        valor_ipi = self.calcular_valor(base, aliquotas["ipi"]) if cfop.cfop_exig_ipi else None
-        valor_icms = self.calcular_valor(base, icms_data.get("icms")) if cfop.cfop_exig_icms else None
-        valor_pis = self.calcular_valor(base, aliquotas["pis"]) if cfop.cfop_exig_pis_cofins else None
-        valor_cofins = self.calcular_valor(base, aliquotas["cofins"]) if cfop.cfop_exig_pis_cofins else None
-
-        # ST – se cfop_gera_st estiver marcado e tiver aliquota ST definida
-        st_aliq = icms_data.get("st_aliq") or None
-        valor_st = None
-        if cfop.cfop_gera_st and st_aliq is not None:
-            valor_st = self.calcular_valor(base, st_aliq)
-
-        # Aqui dá pra incluir CBS/IBS se quiser já com valores
-        valor_cbs = self.calcular_valor(base, aliquotas.get("cbs")) if getattr(cfop, 'cfop_exig_cbs', False) else None
-        valor_ibs = self.calcular_valor(base, aliquotas.get("ibs")) if getattr(cfop, 'cfop_exig_ibs', False) else None
+        base_st = base_icms
+        if cfop.cfop_st_base_inclui_ipi and valor_ipi:
+            base_st += valor_ipi
 
         return {
-            "cfop_codigo": cfop.cfop_codi,
-            "cfop_obj": cfop,
+            "base_icms": self._to_decimal(base_icms),
+            "base_st": self._to_decimal(base_st),
+        }
 
-            "base_calculo": base,
+    # -----------------------------
+    # ST
+    # -----------------------------
+    def calcular_st(self, base_st, icms_proprio, mva, aliq_icms):
+        if not base_st or not mva or not aliq_icms:
+            return None
 
-            "aliquotas": {
-                "ipi": aliquotas["ipi"],
-                "icms": icms_data.get("icms"),
-                "st_aliq": st_aliq,
-                "pis": aliquotas["pis"],
-                "cofins": aliquotas["cofins"],
-                "cbs": aliquotas["cbs"],
-                "ibs": aliquotas["ibs"],
+        base_mva = base_st * (1 + mva / Decimal("100"))
+        icms_total = self.calcular_valor(base_mva, aliq_icms)
+        return self._to_decimal(icms_total - (icms_proprio or Decimal("0")))
+
+    # -----------------------------
+    # MÉTODO PRINCIPAL
+    # -----------------------------
+    def calcular_item(self, item, produto, uf_destino, pedi_tipo_oper):
+
+        cfop = self.resolver_cfop(pedi_tipo_oper, uf_destino)
+        ncm = self.obter_ncm(produto)
+
+        aliquotas = self.obter_aliquotas_base(ncm)
+        icms_data = self.obter_aliquotas_icms(uf_destino)
+        aliquotas, icms_data = self.aplicar_overrides_ncm_cfop(ncm, cfop, aliquotas, icms_data)
+
+        base_raiz = self.calcular_base_raiz(item)
+
+        # IPI sempre primeiro
+        valor_ipi = (
+            self.calcular_valor(base_raiz, aliquotas["ipi"])
+            if cfop.cfop_exig_ipi else None
+        )
+
+        bases = self.calcular_bases_icms_st(base_raiz, valor_ipi, cfop)
+
+        valor_icms = (
+            self.calcular_valor(bases["base_icms"], icms_data["icms"])
+            if cfop.cfop_exig_icms else None
+        )
+
+        valor_st = (
+            self.calcular_st(
+                bases["base_st"],
+                valor_icms,
+                icms_data["mva_st"],
+                icms_data["icms"],
+            )
+            if cfop.cfop_gera_st else None
+        )
+
+        return {
+            "cfop": cfop,
+            "bases": {
+                "raiz": base_raiz,
+                "icms": bases["base_icms"],
+                "st": bases["base_st"],
+                "pis": base_raiz,
+                "cofins": base_raiz,
             },
-
             "valores": {
                 "ipi": valor_ipi,
                 "icms": valor_icms,
                 "st": valor_st,
-                "pis": valor_pis,
-                "cofins": valor_cofins,
-                "cbs": valor_cbs,
-                "ibs": valor_ibs,
+                "pis": self.calcular_valor(base_raiz, aliquotas["pis"]),
+                "cofins": self.calcular_valor(base_raiz, aliquotas["cofins"]),
+                "cbs": self.calcular_valor(base_raiz, aliquotas["cbs"]),
+                "ibs": self.calcular_valor(base_raiz, aliquotas["ibs"]),
             },
+            "aliquotas": aliquotas | icms_data,
         }
 
     def aplicar_no_item(self, item, pacote):
@@ -315,7 +297,7 @@ class MotorFiscal:
         """
 
         # Base
-        item.iped_base_icms = pacote["base_calculo"]
+        item.iped_base_icms = bases["base_icms"]
 
         # Alíquotas
         item.iped_pipi = pacote["aliquotas"]["ipi"]
@@ -332,8 +314,8 @@ class MotorFiscal:
         item.iped_valo_cofi = pacote["valores"]["cofins"]
 
         # Bases PIS/COFINS
-        item.iped_base_pis = pacote["base_calculo"]
-        item.iped_base_cofi = pacote["base_calculo"]
+        item.iped_base_pis = bases["base_pis"]
+        item.iped_base_cofi = bases["base_cofins"]
 
         # Já deixa CST genérico (pode evoluir depois)
         if pacote["aliquotas"]["icms"]:

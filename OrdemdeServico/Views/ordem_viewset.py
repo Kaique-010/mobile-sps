@@ -23,7 +23,7 @@ class OrdemViewSet(BaseMultiDBModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
     filterset_class = OrdemServicoFilter
     ordering_fields = ['orde_data_aber', 'orde_data_fech', 'orde_prio']
-    search_fields = ['orde_prob', 'orde_defe_desc', 'orde_obse']
+    search_fields = ['orde_prob', 'orde_defe_desc', 'orde_obse', 'orde_nume']
     permission_classes = [IsAuthenticated, OrdemServicoPermission, PodeVerOrdemDoSetor]
     pagination_class = OrdemServicoPagination
     lookup_field = "orde_nume"
@@ -43,8 +43,11 @@ class OrdemViewSet(BaseMultiDBModelViewSet):
         # Filtro por setor do usuário (só se houver)
         if user_setor and getattr(user_setor, "osfs_codi", None):
             qs = qs.filter(orde_seto=user_setor.osfs_codi)
-
-        # Filtro opcional por cliente
+            
+        orde_nume = self.request.query_params.get('orde_nume')
+        if orde_nume:
+            qs = qs.filter(orde_nume=orde_nume)
+    
         cliente_nome = self.request.query_params.get('cliente_nome')
         if cliente_nome:
             entidades_ids = list(
@@ -54,7 +57,9 @@ class OrdemViewSet(BaseMultiDBModelViewSet):
             )
             if entidades_ids:
                 qs = qs.filter(orde_enti__in=entidades_ids)
+                print(f"Filtro por cliente '{cliente_nome}' aplicado. IDs: {entidades_ids}")
 
+        
         qs = qs.order_by('-orde_data_aber', '-orde_nume')
         return qs
 

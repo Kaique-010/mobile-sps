@@ -14,21 +14,31 @@ class CFOPFiscal(models.Model):
     def __str__(self):
         return f"{self.cfop_codi} - {self.cfop_desc}"
     
+    
 class CFOP(models.Model):
     cfop_id = models.AutoField(primary_key=True)
     cfop_empr = models.IntegerField()
     cfop_codi = models.CharField(max_length=10, unique=True)
     cfop_desc = models.CharField(max_length=255)
 
-    # FLAGS
+    # FLAGS DE EXIGÊNCIA
     cfop_exig_ipi = models.BooleanField(default=False)
     cfop_exig_icms = models.BooleanField(default=False)
     cfop_exig_pis_cofins = models.BooleanField(default=False)
     cfop_exig_cbs = models.BooleanField(default=False)
     cfop_exig_ibs = models.BooleanField(default=False)
 
+    # FLAGS DE GERAÇÃO
     cfop_gera_st = models.BooleanField(default=False)
     cfop_gera_difal = models.BooleanField(default=False)
+    
+    #bases de cálculo
+    cfop_icms_base_inclui_ipi = models.BooleanField(default=False)
+    cfop_st_base_inclui_ipi = models.BooleanField(default=False)
+    
+    #totaliza nas notas fiscais
+    cfop_ipi_tota_nf = models.BooleanField(default=False)
+    cfop_st_tota_nf = models.BooleanField(default=False)
 
     class Meta:
         db_table = "cfopweb"
@@ -50,7 +60,10 @@ class CFOP(models.Model):
         self.cfop_exig_ibs        = defaults.get("ibs", False)
         self.cfop_gera_st         = defaults.get("st", False)
         self.cfop_gera_difal      = defaults.get("difal", False)
-
+        self.cfop_icms_base_inclui_ipi = defaults.get("icms_base_inclui_ipi", False)
+        self.cfop_st_base_inclui_ipi = defaults.get("st_base_inclui_ipi", False)
+        self.cfop_ipi_tota_nf = defaults.get("ipi_tota_nf", False)
+        self.cfop_st_tota_nf = defaults.get("st_tota_nf", False)
  
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -107,7 +120,6 @@ class MapaCFOP(models.Model):
 
     def __str__(self):
         return f"{self.tipo_oper}: {self.uf_origem}->{self.uf_destino} → {self.cfop.cfop_codi}"
-
 
 class TabelaICMS(models.Model):
     uf_origem = models.CharField(max_length=2, db_column='tabe_uf_orig')

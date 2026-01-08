@@ -8,6 +8,8 @@ class CFOPForm(forms.ModelForm):
             "cfop_exig_icms", "cfop_exig_ipi", "cfop_exig_pis_cofins",
             "cfop_exig_cbs", "cfop_exig_ibs",
             "cfop_gera_st", "cfop_gera_difal",
+            "cfop_icms_base_inclui_ipi", "cfop_st_base_inclui_ipi",
+            "cfop_ipi_tota_nf", "cfop_st_tota_nf",
         ]
 
         widgets = {
@@ -23,6 +25,10 @@ class CFOPForm(forms.ModelForm):
 
             "cfop_gera_st": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "cfop_gera_difal": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "cfop_icms_base_inclui_ipi": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "cfop_st_base_inclui_ipi": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "cfop_ipi_tota_nf": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "cfop_st_tota_nf": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
 
     def __init__(self, *args, regime=None, **kwargs):
