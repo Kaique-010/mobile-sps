@@ -7,12 +7,15 @@ from controledePonto.repositorios import RepositorioPontoModelo
 from controledePonto.Rest.aplicacoes.casos_uso.pontos_uso import CasosDeUsoPonto
 from controledePonto.Rest.serializers import RegistroPontoInputSerializer, RegistroPontoOutputSerializer
 from controledePonto.Rest.permissoes import NaoEAdminNemMobile
+
+from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from core.registry import get_licenca_db_config
 from core.excecoes import ErroDominio
 from core.dominio_handler import tratar_erro, tratar_sucesso
 
 
-class RegistroPontoViewSet(viewsets.ModelViewSet):
+class RegistroPontoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
+    modulo_necessario = 'controledePonto'
     permission_classes = [NaoEAdminNemMobile]
     queryset = RegistroPonto.objects.none()
     def get_serializer_class(self):

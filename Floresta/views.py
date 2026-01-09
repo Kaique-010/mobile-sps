@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class PropriedadesViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
     serializer_class = PropriedadesSerializer
-    modulo_necessario = 'Pedidos'
+    modulo_necessario = 'floresta'
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ['prop_empr', 'prop_fili', 'prop_inat']
