@@ -992,8 +992,8 @@ def main():
         print(f"⚠️ Migração inicial com call_command falhou, continuando com subprocess: {e}")
         rodar_comando("python manage.py migrate contenttypes 0001 --fake --noinput --verbosity 0", ignore_errors=True)
         rodar_comando("python manage.py migrate contenttypes 0002 --fake --noinput --verbosity 0", ignore_errors=True)
-        rodar_comando("python manage.py migrate Licencas --fake-initial --noinput --verbosity 0")
-        rodar_comando("python manage.py migrate --fake-initial --noinput --verbosity 0")
+        rodar_comando("python manage.py migrate Licencas --fake-initial --noinput --verbosity 0", ignore_errors=True)
+        rodar_comando("python manage.py migrate --fake-initial --noinput --verbosity 0", ignore_errors=True)
     # Migração consolidada sem varrer app a app (mais leve)
     try:
         call_command('migrate', fake_initial=True, interactive=False, verbosity=0)

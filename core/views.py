@@ -59,7 +59,7 @@ def identificar_tipo_cliente(request):
     s = _get_slug(request)
     if not s:
         return 'default'
-    pisos_keys = ['indusparquet', 'indus', 'uliana', 'pgpisos', 'pisos', 'JULIANO DE SOUZA MONTEIRO E CIA LTDA']
+    pisos_keys = ['indusparquet', 'indus', 'uliana', 'pgpisos', 'pisos', 'JULIANO DE SOUZA MONTEIRO E CIA LTDA', 'laceramich']
     logger.info(f"[identificar_tipo_cliente] slug: {s}")
     os_keys = ['eletrocometa', 'eletro', 'cometa']
     if any(k in s for k in pisos_keys):
@@ -96,6 +96,8 @@ def health_check(request):
 
 def index(request):
     return render(request, 'index.html')
+
+
 def home(request, slug=None, empresa=None, filial=None):
     try:
         if slug:

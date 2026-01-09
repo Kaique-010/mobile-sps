@@ -1,13 +1,5 @@
 [
   {
-    "slug": "demonstracao",
-    "cnpj": "31108104000148",
-    "db_name": "savexml839",
-    "db_host": "base.rtalmeida.com.br",
-    "db_port": "5432",
-    "modulos": []
-  },
-  {
     "slug": "savexml1",
     "cnpj": "13446907000120",
     "db_name": "savexml1",
@@ -41,49 +33,6 @@
   },
 
   {
-    "slug": "casaa",
-    "cnpj": "43131832000155",
-    "db_name": "casaa",
-    "db_host": "localhost",
-    "db_port": "5432"
-  },
-  {
-    "slug": "casaas",
-    "cnpj": "43131832000151",
-    "db_name": "casaas",
-    "db_host": "localhost",
-    "db_port": "5432"
-  },
-  {
-    "slug": "indusparquet",
-    "cnpj": "82223207000270",
-    "db_name": "savexml963",
-    "db_host": "base.rtalmeida.com.br",
-    "db_port": "5432"
-  },
-
-  {
-    "slug": "g2",
-    "cnpj": "86887486000147",
-    "db_name": "savexml69",
-    "db_host": "base.rtalmeida.com.br",
-    "db_port": "5432"
-  },
-  {
-    "slug": "ipa",
-    "cnpj": "37413384000184",
-    "db_name": "ipa",
-    "db_host": "localhost",
-    "db_port": "5432"
-  },
-  {
-    "slug": "savexml1023",
-    "cnpj": "11472996000154",
-    "db_name": "savexml1023",
-    "db_host": "base.rtalmeida.com.br",
-    "db_port": "5432"
-  },
-  {
     "slug": "eletro",
     "cnpj": "78776366000144",
     "db_name": "savexml144",
@@ -94,13 +43,6 @@
     "slug": "agromusa",
     "cnpj": "54777413000106",
     "db_name": "savexml1024",
-    "db_host": "base.rtalmeida.com.br",
-    "db_port": "5432"
-  },
-  {
-    "slug": "florestabrasil",
-    "cnpj": "11472996000154",
-    "db_name": "savexml1023",
     "db_host": "base.rtalmeida.com.br",
     "db_port": "5432"
   },
