@@ -69,7 +69,13 @@ class DashboardAPIView(UsuarioComSetorMixin, APIView):
             filtros_base['filial'] = filial
         
         # Monta dados com base no dashboard_mode
-        if dashboard_mode == 'default':          
+        if dashboard_mode == 'default':
+            filtros_pedidos = {}
+            if empresa:
+                filtros_pedidos['pedi_empr'] = empresa
+            if filial:
+                filtros_pedidos['pedi_fili'] = filial
+
             saldos = (
                 SaldoProduto.objects.filter(**filtros_base)
                 .values(nome=F('produto_codigo__prod_nome'))
@@ -81,7 +87,7 @@ class DashboardAPIView(UsuarioComSetorMixin, APIView):
                 enti_clie=Cast(OuterRef('pedi_forn'), BigIntegerField())
             ).values('enti_nome')[:1]
 
-            pedidos_query = PedidoVenda.objects.filter(**filtros_base)
+            pedidos_query = PedidoVenda.objects.filter(**filtros_pedidos)
             
             pedidos = (
                 pedidos_query.annotate(
