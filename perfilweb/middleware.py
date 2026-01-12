@@ -69,6 +69,12 @@ class PerfilPermissionMiddleware:
 
         if p.startswith('/api/licencas/mapa/') or '/api/selecionar-empresa/' in p or '/api/entidades-login/' in p:
             return self.get_response(request)
+        
+        # Ignorar rota de login de entidades com slug
+        parts = p.strip('/').split('/')
+        if len(parts) >= 4 and parts[2] == 'entidades' and parts[3] == 'login':
+            return self.get_response(request)
+
         if '/parametros-admin/' in p or '/notificacoes/' in p:
             return self.get_response(request)
         if p.startswith('/api/schema/') or p.startswith('/api/schemas/') or p.startswith('/api/swagger'):

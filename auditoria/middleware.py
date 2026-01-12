@@ -215,6 +215,7 @@ class AuditoriaMiddleware:
             if len(parts) >= 3 and parts[0] == 'api':
                 # Endpoints públicos/essenciais (login, refresh, mapa)
                 if (len(parts) >= 4 and parts[2] == 'licencas' and parts[3] == 'login') \
+                   or (len(parts) >= 4 and parts[2] == 'entidades' and parts[3] == 'login') \
                    or (len(parts) >= 3 and parts[2] == 'auth'):
                     return self.get_response(request)
 
