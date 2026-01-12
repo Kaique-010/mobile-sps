@@ -355,7 +355,7 @@ class OrdemServicoPrinter(BasePrinter):
                 self._format_date(data_ref),
                 self._format_time(manh_ini),
                 self._format_time(manh_fim),
-                self._format_time(manh_fim, manh_ini) if manh_inte else "",
+                "Intervalo Almoço" if manh_inte else "",
                 self._format_time(tard_ini),
                 self._format_time(tard_fim),
                 f"{row_total:.2f}",
