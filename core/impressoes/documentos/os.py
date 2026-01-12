@@ -328,6 +328,7 @@ class OrdemServicoPrinter(BasePrinter):
             # Extrai horários
             manh_ini = getattr(h, "os_hora_manh_ini", None)
             manh_fim = getattr(h, "os_hora_manh_fim", None)
+            manh_inte = self._safe_getattr(h, "os_hora_manh_inte", False)
             tard_ini = getattr(h, "os_hora_tard_ini", None)
             tard_fim = getattr(h, "os_hora_tard_fim", None)
             data_ref = getattr(h, "os_hora_data", None) or datetime.today().date()
