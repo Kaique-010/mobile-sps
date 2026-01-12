@@ -9,7 +9,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from Entidades.models import Entidades 
 from django.db.models import Q
 from core.registry import get_licenca_db_config
-from core.licenca_context import get_licencas_map
+from core.licenca_context import get_licencas_login_clientes
 from django.conf import settings
 from django.db import connections
 from decouple import config
@@ -33,13 +33,17 @@ class EntidadesLoginViewSet(viewsets.ViewSet):
                 "erro": "Documento, usuário e senha são obrigatórios"
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # Buscar em todas as licenças disponíveis
-        licencas = get_licencas_map()
-        logger.warning(f"[LOGIN ENTIDADES] inicio documento={documento} licencas_count={len(licencas)}")
+        # Buscar apenas nas licenças permitidas para login de clientes
+        licencas = get_licencas_login_clientes()
+        logger.warning(f"[LOGIN ENTIDADES] inicio documento={documento} licencas_count={len(licencas)} licencas={licencas}")
         for licenca in licencas:
             try:
                 banco_slug = licenca['slug']
                 
+                # Ignorar bancos locais em produção
+                if not settings.DEBUG and licenca.get('db_host') in ['localhost', '127.0.0.1']:
+                    continue
+
                 # Configurar banco se necessário
                 if banco_slug not in settings.DATABASES:
                     self._configurar_banco(licenca)

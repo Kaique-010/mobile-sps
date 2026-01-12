@@ -30,4 +30,27 @@ def get_licencas_map():
         
         return data
 
+def get_licencas_login_clientes():
+    """
+    Retorna lista de licenças filtrada para login de clientes.
+    Usa lista manual de slugs ou db_names permitidos.
+    """
+    # Lista de slugs ou nomes de banco permitidos
+    # 'eletro' corresponde ao banco savexml144
+    PERMITIDOS = ['eletro', 'savexml144', 'savexml839']
+    
+    todas = get_licencas_map()
+    
+    # Filtra verificando se o slug OU o db_name está na lista de permitidos
+    filtradas = [
+        l for l in todas 
+        if l.get('slug') in PERMITIDOS or l.get('db_name') in PERMITIDOS
+    ]
+    
+    if not filtradas:
+        logger.warning(f"[LOGIN] Nenhum alvo permitido {PERMITIDOS} foi encontrado nas licenças carregadas.")
+        return []
+        
+    return filtradas
+
 LICENCAS_MAP = []

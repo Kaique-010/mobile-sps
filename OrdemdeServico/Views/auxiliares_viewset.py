@@ -62,4 +62,3 @@ class motoresEmEstoqueViewSet(BaseMultiDBModelViewSet):
         context = super().get_serializer_context()
         context['banco'] = get_licenca_db_config(self.request)
         return context
-        return context
