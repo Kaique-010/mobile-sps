@@ -267,6 +267,10 @@ class OsViewSet(BaseMultiDBModelViewSet):
             #Usuário responsável pela OS
             if request.user and request.user.pk:
                 base_data['os_usua_aber'] = request.user.pk
+            
+            os_resp = base_data.get('os_usua_aber')
+            if os_resp:
+                base_data['os_resp'] = os_resp
 
             empresa = base_data.get('os_empr') or base_data.get('empr')
             filial = base_data.get('os_fili') or base_data.get('fili')

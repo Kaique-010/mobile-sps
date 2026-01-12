@@ -308,7 +308,7 @@ class OrdemServicoPrinter(BasePrinter):
             tuple: (total_horas, km_saida, km_chegada)
         """
         # Cabeçalho da tabela
-        header = ["Data", "Início", "Fim", "Início", "Fim", "Total"]
+        header = ["Data", "Início", "Fim", "Intervalo", "Início", "Fim", "Total"]
         data = [header]
         
         total_horas = 0.0
@@ -335,9 +335,16 @@ class OrdemServicoPrinter(BasePrinter):
             # Calcula total de horas (usa valor salvo ou calcula)
             row_total = float(self._safe_getattr(h, "os_hora_tota", 0))
             if not row_total:
+                # Calculate interval hours if enabled
+                if self._safe_getattr(h, "os_hora_manh_inte", False):
+                    interval_hours = self._calculate_hours_diff(data_ref, manh_fim, tard_ini)
+                else:
+                    interval_hours = 0.0
+                
                 row_total = (
                     self._calculate_hours_diff(data_ref, manh_ini, manh_fim) +
-                    self._calculate_hours_diff(data_ref, tard_ini, tard_fim)
+                    self._calculate_hours_diff(data_ref, tard_ini, tard_fim) +
+                    interval_hours
                 )
             
             total_horas += row_total
@@ -347,6 +354,7 @@ class OrdemServicoPrinter(BasePrinter):
                 self._format_date(data_ref),
                 self._format_time(manh_ini),
                 self._format_time(manh_fim),
+                self._format_time(manh_fim, manh_ini) if manh_inte else "",
                 self._format_time(tard_ini),
                 self._format_time(tard_fim),
                 f"{row_total:.2f}",

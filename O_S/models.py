@@ -208,6 +208,7 @@ class OsHora(models.Model):
     # Manhã
     os_hora_manh_ini = models.TimeField(null=True, blank=True)
     os_hora_manh_fim = models.TimeField(null=True, blank=True)
+    os_hora_manh_inte = models.BooleanField(null=True, blank=True)
 
     # Tarde
     os_hora_tard_ini = models.TimeField(null=True, blank=True)

@@ -93,6 +93,7 @@ class OsHoraSerializer(BancoModelSerializer):
             'os_hora_data',
             'os_hora_manh_ini',
             'os_hora_manh_fim',
+            'os_hora_manh_inte',
             'os_hora_tard_ini',
             'os_hora_tard_fim',
             'os_hora_tota',
@@ -265,6 +266,7 @@ class OsSerializer(BancoModelSerializer):
     horas = OsHoraSerializer(many=True, required=False)
     
     cliente_nome = serializers.SerializerMethodField()
+    operador_nome = serializers.SerializerMethodField()
     cliente_telefone = serializers.SerializerMethodField()
     cliente_celular = serializers.SerializerMethodField()
     total_pecas = serializers.SerializerMethodField()
@@ -305,6 +307,19 @@ class OsSerializer(BancoModelSerializer):
             enti_empr=obj.os_empr,
         ).first()
         return cli.enti_nome if cli else None
+
+    def get_operador_nome(self, obj):
+        banco = self.context.get("banco")
+        if not banco or not obj.os_resp:
+            return None
+        try:
+            oper = Entidades.objects.using(banco).filter(
+                enti_func=obj.os_resp,
+                enti_empr=obj.os_empr
+            ).first()
+            return oper.enti_nome if oper else None
+        except:
+            return None
 
     def get_cliente_telefone(self, obj):
         banco = self.context.get("banco")
