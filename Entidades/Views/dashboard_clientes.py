@@ -1,4 +1,5 @@
 from rest_framework import viewsets
+from rest_framework.response import Response
 from rest_framework.permissions import BasePermission
 from .base_cliente import IsCliente
 from Pedidos.models import PedidoVenda, Itenspedidovenda
@@ -7,6 +8,7 @@ from O_S.models import OrdemServicoGeral, Os
 from OrdemdeServico.models import Ordemservico
 from django.db.models import Sum, Q
 from rest_framework.permissions import IsAuthenticated
+from core.middleware import get_licenca_slug
 
 
 
@@ -16,8 +18,36 @@ class ClienteDashboardViewSet(viewsets.ViewSet):
     def list(self, request):
         cliente_id = request.cliente_id
         banco = request.banco
+        slug = get_licenca_slug()
         
+        # Condicional para cliente 'eletro' (ou banco savexml144)
+        if slug in ['eletro', 'savexml144']:
+            # Apenas informações de Ordens de Serviço
+            total_ordens_servico = Ordemservico.objects.using(banco).filter(orde_enti=cliente_id).count()
+            total_os = Os.objects.using(banco).filter(os_clie=cliente_id).count()
+            total_valor_ordens_servico = Ordemservico.objects.using(banco).filter(orde_enti=cliente_id).aggregate(Sum('orde_valor'))['orde_valor__sum'] or 0
+            total_valor_os = Os.objects.using(banco).filter(os_clie=cliente_id).aggregate(Sum('os_valor'))['os_valor__sum'] or 0
+            
+            total_valor_total = total_valor_ordens_servico + total_valor_os
+            total_valor_total = round(total_valor_total, 2)
+
+            dashboard_data = {
+                'total_pedidos': 0,
+                'total_orcamentos': 0, 
+                'total_ordens_servico': total_ordens_servico,
+                'total_os': total_os,
+                'total_itens_pedidos': 0,
+                'total_itens_orcamentos': 0,
+                'total_valor_pedidos': 0,
+                'total_valor_orcamentos': 0,
+                'total_valor_ordens_servico': total_valor_ordens_servico,
+                'total_valor_os': total_valor_os,
+                'total_valor_total': total_valor_total, 
+            }
+            return Response(dashboard_data)
+
         
+        # Fluxo padrão para outros clientes
         total_pedidos = PedidoVenda.objects.using(banco).filter(pedi_forn=cliente_id).count()
         total_orcamentos = Orcamentos.objects.using(banco).filter(pedi_forn=cliente_id).count()
         total_ordens_servico = Ordemservico.objects.using(banco).filter(orde_enti=cliente_id).count()
