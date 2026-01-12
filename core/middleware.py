@@ -57,6 +57,11 @@ class LicencaMiddleware:
         for prefix in ignored:
             if path.startswith(prefix):
                 return self._safe(request)
+        
+        # Ignorar rota específica de login de entidades com slug
+        # /api/<slug>/entidades/login/
+        if len(parts) >= 4 and parts[2] == "entidades" and parts[3] == "login":
+             return self._safe(request)
 
         # ---------------------------
         # 1. WEB: /web/home/<slug>/...
