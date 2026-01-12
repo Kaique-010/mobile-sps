@@ -336,16 +336,9 @@ class OrdemServicoPrinter(BasePrinter):
             # Calcula total de horas (usa valor salvo ou calcula)
             row_total = float(self._safe_getattr(h, "os_hora_tota", 0))
             if not row_total:
-                # Calculate interval hours if enabled
-                if self._safe_getattr(h, "os_hora_manh_inte", False):
-                    interval_hours = self._calculate_hours_diff(data_ref, manh_fim, tard_ini)
-                else:
-                    interval_hours = 0.0
-                
                 row_total = (
                     self._calculate_hours_diff(data_ref, manh_ini, manh_fim) +
-                    self._calculate_hours_diff(data_ref, tard_ini, tard_fim) +
-                    interval_hours
+                    self._calculate_hours_diff(data_ref, tard_ini, tard_fim)
                 )
             
             total_horas += row_total
