@@ -35,7 +35,7 @@ class OrdemViewSet(BaseMultiDBModelViewSet):
 
         # Filtrar por campos válidos
         qs = qs.filter(orde_seto__isnull=False).exclude(orde_seto=0)
-        qs = qs.filter(orde_stat_orde__in=[0, 1, 2, 3, 5, 21])
+        qs = qs.filter(orde_stat_orde__in=[0, 1, 2, 3, 5, 21, 22])
 
         # Garantir que datas inválidas não quebrem
         qs = qs.filter(orde_data_aber__year__gte=1900, orde_data_aber__year__lte=2100)
@@ -329,6 +329,40 @@ class OrdemViewSet(BaseMultiDBModelViewSet):
                 {
                     "mensagem": "Prioridade atualizada com sucesso.",
                     "nova_prioridade": ordem.orde_prio,
+                    "ordem": serializer.data,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        except Exception as e:
+            return tratar_erro(e)
+
+    
+    
+    @action(
+        detail=True,
+        methods=["patch"],
+        permission_classes=[IsAuthenticated, PodeVerOrdemDoSetor, WorkflowPermission],
+        url_path="motor-em-estoque"
+    )
+    def atualizar_motor_estoque(self, request, *args, **kwargs):
+        """
+        Atualiza o status da ordem de serviço para 22 (Motor em Estoque).
+        """
+        try:
+            banco = self.get_banco()
+            ordem = self.get_object()
+            
+            with transaction.atomic(using=banco):
+                ordem.orde_stat_orde = 22
+                ordem.save(using=banco, update_fields=["orde_stat_orde"])
+            
+            serializer = self.get_serializer(ordem)
+            return Response(
+                {
+                    "mensagem": "Status do motor atualizado com sucesso.",
+                    "motor_em_estoque": True,
+                    "novo_status": ordem.orde_stat_orde,
                     "ordem": serializer.data,
                 },
                 status=status.HTTP_200_OK,

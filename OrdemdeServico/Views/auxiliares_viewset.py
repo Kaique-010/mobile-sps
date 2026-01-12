@@ -1,8 +1,8 @@
 from rest_framework import filters
 from django_filters.rest_framework import DjangoFilterBackend
 from .base import BaseMultiDBModelViewSet
-from ..models import WorkflowSetor, OrdemServicoFaseSetor, OrdemServicoVoltagem
-from ..serializers import WorkflowSetorSerializer, OrdemServicoFaseSetorSerializer, OrdemServicoVoltagemSerializer
+from ..models import WorkflowSetor, OrdemServicoFaseSetor, OrdemServicoVoltagem, Ordemservico
+from ..serializers import WorkflowSetorSerializer, OrdemServicoFaseSetorSerializer, OrdemServicoVoltagemSerializer, OrdemServicoSerializer
 from core.registry import get_licenca_db_config
 
 class OrdemServicoFaseSetorViewSet(BaseMultiDBModelViewSet):
@@ -45,4 +45,21 @@ class WorkflowSetorViewSet(BaseMultiDBModelViewSet):
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context['banco'] = get_licenca_db_config(self.request)
+        return context
+
+class motoresEmEstoqueViewSet(BaseMultiDBModelViewSet):
+    """ViewSet para gerenciar ordens de serviço com motor em estoque"""
+    modulo_necessario = 'OrdemdeServico'
+    queryset = Ordemservico.objects.filter(orde_stat_orde=22)
+    serializer_class = OrdemServicoSerializer
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
+    filterset_fields = ['orde_nume', 'orde_seto', 'orde_enti', 'orde_data_aber']
+    ordering_fields = ['orde_nume', 'orde_seto', 'orde_enti', 'orde_data_aber']
+    search_fields = ['orde_nume']
+    http_method_names = ['get']
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['banco'] = get_licenca_db_config(self.request)
+        return context
         return context

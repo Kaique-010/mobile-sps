@@ -12,6 +12,9 @@ from .views_financeiro import (
     ConsultarTitulosOSView,
     RelatorioFinanceiroOSView
 )
+from .Views.auxiliares_viewset import motoresEmEstoqueViewSet
+
+
 
 from .view_dash import OrdensEletroViewSet
 
@@ -27,6 +30,7 @@ router.register(r'workflow-setor', WorkflowSetorViewSet, basename='workflow-seto
 router.register(r'historico-workflow', HistoricoWorkflowViewSet, basename='historico-workflow')
 router.register(r'ordens-eletro', OrdensEletroViewSet, basename='ordens-eletro')
 router.register(r'voltagens', OrdemServicoVoltagemViewSet, basename='voltagens')
+router.register(r'motores-estoque', motoresEmEstoqueViewSet, basename='motores-estoque')
 
 
 

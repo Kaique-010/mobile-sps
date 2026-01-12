@@ -190,6 +190,8 @@ CORS_ALLOW_HEADERS = [
     'x-Filial',
     'x-FilialID',
     'x-Entidade',
+    'x-session-id',
+    
 ]
 
 CORS_ALLOW_CREDENTIALS = True

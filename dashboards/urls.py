@@ -4,12 +4,14 @@ from .views import DashboardAPIView, DashboardEstoqueView, DashboardVendasView, 
 from .views_financeiro import DashboardFinanceiroView, OrcamentoAnaliticoViewSet
 from .view_extratocaixa import ExtratoCaixaViewSet
 from .view_balancete_cc import BalanceteCCViewSet
+from Entidades.Views.dashboard_clientes import ClienteDashboardViewSet
 from rest_framework import routers
 
 router = routers.DefaultRouter()
 router.register(r'orcamento-analitico', OrcamentoAnaliticoViewSet, basename='orcamento-analitico')
 router.register(r'extrato-caixa', ExtratoCaixaViewSet, basename='extrato-caixa')
 router.register(r'balancete-cc', BalanceteCCViewSet, basename='balancete-cc')
+router.register(r'cliente-dashboard', ClienteDashboardViewSet, basename='cliente-dashboard-geral')
 
 
 urlpatterns = [

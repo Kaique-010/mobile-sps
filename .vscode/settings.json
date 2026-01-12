@@ -242,6 +242,17 @@
       "database": "savexml960",
       "username": "savexml960",
       "password": "MOOOQQQQSSSS"
+    },
+    {
+      "ssh": "Disabled",
+      "previewLimit": 50,
+      "server": "base.rtalmeida.com.br",
+      "port": 5432,
+      "driver": "PostgreSQL",
+      "name": "laceramich",
+      "database": "savexml969",
+      "username": "savexml969",
+      "password": "WWYYYYYYaaaa"
     }
   ],
   "liveServer.settings.port": 5501
