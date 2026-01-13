@@ -1,237 +1,359 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %} Cadastrar CFOP {% endblock %}
+{% block title %} {% if form.instance.pk %}Editar{% else %}Cadastrar{% endif %} CFOP {% endblock %}
+
 {% block content %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
 <link rel="stylesheet" href="{% static 'css/form.css' %}">
+
 <div class="container py-4">
-  <h3 class="card-title mb-4 fs-4 text-center"> {% if form.instance.pk %}Editar{% else %}Cadastrar{% endif %} CFOP</h3>
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="page-title mb-0">
+      <i class="bi bi-file-earmark-text"></i>
+      {% if form.instance.pk %}Editar{% else %}Novo{% endif %} CFOP
+    </h3>
+    <a href="/web/{{ slug }}/cfop/" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+  </div>
+
   <div class="card shadow-sm border-primary">
     <div class="card-body">
-      <form method="post" enctype="multipart/form-data">
+      <form method="post" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
         {{ form.cfop_empr }}
 
         {% if messages %}
-        {% for message in messages %}
-        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-        {% endfor %}
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endfor %}
         {% endif %}
 
-        <div class="row">
-          <div class="col-md-4 mb-3">
-            <label class="form-label" for="{{ form.cfop_codi.auto_id }}">Código CFOP</label>
+        {% if form.errors %}
+          <div class="alert alert-danger">
+            <p>Por favor, corrija os erros abaixo:</p>
+            <ul>
+              {% for field in form %}
+                {% for error in field.errors %}
+                  <li>{{ field.label }}: {{ error }}</li>
+                {% endfor %}
+              {% endfor %}
+              {% for error in form.non_field_errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+
+        {# --- Seção Básica (Fixo no topo) --- #}
+        <div class="row mb-4">
+          <div class="col-md-3">
+            <label class="form-label fw-bold" for="{{ form.cfop_codi.auto_id }}">Código CFOP</label>
             {{ form.cfop_codi }}
-            <div id="cfop-suggest" class="list-group mt-1" style="max-height:200px; overflow:auto;"></div>
-
-            <!-- Datalist vazio – será preenchido via JS -->
+            <div id="cfop-suggest" class="list-group mt-1 position-absolute" style="z-index: 1000; max-height:200px; overflow:auto; width: 90%;"></div>
             <datalist id="cfop-codes"></datalist>
-
             {% if form.cfop_codi.errors %}
-            <div class="text-danger">{{ form.cfop_codi.errors }}</div>
+              <div class="text-danger small">{{ form.cfop_codi.errors }}</div>
             {% endif %}
+            <div class="form-text text-muted">Ex: 5102, 5405</div>
           </div>
 
-          <div class="col-md-8 mb-3">
-            <label class="form-label" for="{{ form.cfop_desc.auto_id }}">Descrição</label>
+          <div class="col-md-9">
+            <label class="form-label fw-bold" for="{{ form.cfop_desc.auto_id }}">Descrição da Operação</label>
             {{ form.cfop_desc }}
             {% if form.cfop_desc.errors %}
-            <div class="text-danger">{{ form.cfop_desc.errors }}</div>
+              <div class="text-danger small">{{ form.cfop_desc.errors }}</div>
             {% endif %}
           </div>
         </div>
-        <div id="exigencias-auto" class="mb-3" style="display:none;">
-          <strong>Exigências detectadas automaticamente:</strong>
-          <div id="exigencias-badges" class="mt-1 d-flex flex-wrap gap-2"></div>
+
+        {# --- Badges de Exigências Automáticas --- #}
+        <div id="exigencias-auto" class="mb-4 p-3 bg-light rounded" style="display:none;">
+          <div class="d-flex align-items-center mb-2">
+            <i class="bi bi-magic me-2 text-primary"></i>
+            <strong class="text-primary">Configuração Sugerida (Baseada no Código):</strong>
+          </div>
+          <div id="exigencias-badges" class="d-flex flex-wrap gap-2"></div>
         </div>
 
-        <div class="row">
-          <div class="col-md-12 mb-2"><span class="form-label">Exigências</span></div>
+        {# --- Abas de Tributação --- #}
+        <ul class="nav nav-tabs mb-3" id="cfopTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="icms-tab" data-bs-toggle="tab" data-bs-target="#icms" type="button" role="tab" aria-controls="icms" aria-selected="true">ICMS / ST</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="ipi-tab" data-bs-toggle="tab" data-bs-target="#ipi" type="button" role="tab" aria-controls="ipi" aria-selected="false">IPI</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="pis-tab" data-bs-toggle="tab" data-bs-target="#pis" type="button" role="tab" aria-controls="pis" aria-selected="false">PIS / COFINS</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="ibs-tab" data-bs-toggle="tab" data-bs-target="#ibs" type="button" role="tab" aria-controls="ibs" aria-selected="false">IBS / CBS (Reforma)</button>
+          </li>
+          {% if grouped_fields.retencoes %}
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="ret-tab" data-bs-toggle="tab" data-bs-target="#ret" type="button" role="tab" aria-controls="ret" aria-selected="false">Retenções</button>
+          </li>
+          {% endif %}
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="outros-tab" data-bs-toggle="tab" data-bs-target="#outros" type="button" role="tab" aria-controls="outros" aria-selected="false">Outros</button>
+          </li>
+        </ul>
 
-          <div class="col-md-12 d-flex flex-wrap gap-4">
-
-            <div class="form-check">
-              {{ form.cfop_exig_ipi }}
-              <label class="form-check-label" for="{{ form.cfop_exig_ipi.auto_id }}">Exige IPI</label>
-            </div>
-
-            <div class="form-check">
-              {{ form.cfop_exig_icms }}
-              <label class="form-check-label" for="{{ form.cfop_exig_icms.auto_id }}">Exige ICMS</label>
-            </div>
-
-            <div class="form-check">
-              {{ form.cfop_exig_pis_cofins }}
-              <label class="form-check-label" for="{{ form.cfop_exig_pis_cofins.auto_id }}">Exige PIS/COFINS</label>
-            </div>
-
-            <div class="form-check">
-              {{ form.cfop_exig_cbs }}
-              <label class="form-check-label" for="{{ form.cfop_exig_cbs.auto_id }}">Exige CBS</label>
-            </div>
-
-            <div class="form-check">
-              {{ form.cfop_exig_ibs }}
-              <label class="form-check-label" for="{{ form.cfop_exig_ibs.auto_id }}">Exige IBS</label>
-            </div>
-            <div class="form-check">
-              {{ form.cfop_gera_st }}
-              <label class="form-check-label" for="{{ form.cfop_gera_st.auto_id }}">Gera ST</label>
-            </div>
-            <div class="form-check">
-              {{ form.cfop_gera_difal }}
-              <label class="form-check-label" for="{{ form.cfop_gera_difal.auto_id }}">Gera DIFAL</label>
-            </div>
-            <div class="form-check">
-              {{ form.cfop_icms_base_inclui_ipi }}
-              <label class="form-check-label" for="{{ form.cfop_icms_base_inclui_ipi.auto_id }}">ICMS Base Inclui
-                IPI</label>
-            </div>
-            <div class="form-check">
-              {{ form.cfop_st_base_inclui_ipi }}
-              <label class="form-check-label" for="{{ form.cfop_st_base_inclui_ipi.auto_id }}">ST Base Inclui
-                IPI</label>
-            </div>
-            <div class="form-check">
-              {{ form.cfop_ipi_tota_nf }}
-              <label class="form-check-label" for="{{ form.cfop_ipi_tota_nf.auto_id }}">IPI Totaliza NF</label>
-            </div>
-            <div class="form-check">
-              {{ form.cfop_st_tota_nf }}
-              <label class="form-check-label" for="{{ form.cfop_st_tota_nf.auto_id }}">ST Totaliza NF</label>
-
+        <div class="tab-content p-3 border border-top-0 rounded-bottom" id="cfopTabsContent">
+          
+          {# --- Aba ICMS --- #}
+          <div class="tab-pane fade show active" id="icms" role="tabpanel" aria-labelledby="icms-tab">
+            <h6 class="text-muted mb-3">Configurações de ICMS e Substituição Tributária</h6>
+            <div class="row g-3">
+              {% for field in grouped_fields.icms %}
+              <div class="col-md-6 col-lg-4">
+                <div class="form-check form-switch p-3 border rounded bg-white h-100">
+                  {{ field }}
+                  <label class="form-check-label stretched-link fw-medium" for="{{ field.auto_id }}">
+                    {{ field.label }}
+                  </label>
+                  {% if field.help_text %}
+                    <div class="form-text small mt-1">{{ field.help_text }}</div>
+                  {% endif %}
+                </div>
+              </div>
+              {% empty %}
+                <p class="text-muted">Nenhum campo de ICMS configurado.</p>
+              {% endfor %}
             </div>
           </div>
 
-          <div class="mt-3 d-flex gap-2">
-            <button type="submit" class="btn btn-primary">Salvar</button>
-            <a href="/web/{{ slug }}/cfop/" class="btn btn-secondary">Voltar</a>
+          {# --- Aba IPI --- #}
+          <div class="tab-pane fade" id="ipi" role="tabpanel" aria-labelledby="ipi-tab">
+             <h6 class="text-muted mb-3">Configurações de IPI</h6>
+             <div class="row g-3">
+              {% for field in grouped_fields.ipi %}
+              <div class="col-md-6 col-lg-4">
+                <div class="form-check form-switch p-3 border rounded bg-white h-100">
+                  {{ field }}
+                  <label class="form-check-label stretched-link fw-medium" for="{{ field.auto_id }}">
+                    {{ field.label }}
+                  </label>
+                </div>
+              </div>
+              {% empty %}
+                <p class="text-muted">Nenhum campo de IPI configurado.</p>
+              {% endfor %}
+            </div>
           </div>
+
+          {# --- Aba PIS/COFINS --- #}
+          <div class="tab-pane fade" id="pis" role="tabpanel" aria-labelledby="pis-tab">
+             <h6 class="text-muted mb-3">Configurações de PIS e COFINS</h6>
+             <div class="row g-3">
+              {% for field in grouped_fields.pis_cofins %}
+              <div class="col-md-6 col-lg-4">
+                <div class="form-check form-switch p-3 border rounded bg-white h-100">
+                  {{ field }}
+                  <label class="form-check-label stretched-link fw-medium" for="{{ field.auto_id }}">
+                    {{ field.label }}
+                  </label>
+                </div>
+              </div>
+              {% empty %}
+                <p class="text-muted">Nenhum campo de PIS/COFINS configurado.</p>
+              {% endfor %}
+            </div>
+          </div>
+
+          {# --- Aba IBS/CBS --- #}
+          <div class="tab-pane fade" id="ibs" role="tabpanel" aria-labelledby="ibs-tab">
+             <h6 class="text-muted mb-3">Configurações da Reforma Tributária (IBS/CBS)</h6>
+             <div class="alert alert-info">
+               <i class="bi bi-info-circle"></i> Estes campos são aplicáveis conforme as novas regras da Reforma Tributária.
+             </div>
+             <div class="row g-3">
+              {% for field in grouped_fields.ibs_cbs %}
+              <div class="col-md-6 col-lg-4">
+                <div class="form-check form-switch p-3 border rounded bg-white h-100">
+                  {{ field }}
+                  <label class="form-check-label stretched-link fw-medium" for="{{ field.auto_id }}">
+                    {{ field.label }}
+                  </label>
+                </div>
+              </div>
+              {% empty %}
+                <p class="text-muted">Nenhum campo de IBS/CBS configurado.</p>
+              {% endfor %}
+            </div>
+          </div>
+
+          {# --- Aba Retenções --- #}
+          {% if grouped_fields.retencoes %}
+          <div class="tab-pane fade" id="ret" role="tabpanel" aria-labelledby="ret-tab">
+             <h6 class="text-muted mb-3">Configurações de Retenções</h6>
+             <div class="row g-3">
+              {% for field in grouped_fields.retencoes %}
+              <div class="col-md-6 col-lg-4">
+                <div class="form-check form-switch p-3 border rounded bg-white h-100">
+                  {{ field }}
+                  <label class="form-check-label stretched-link fw-medium" for="{{ field.auto_id }}">
+                    {{ field.label }}
+                  </label>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
+          {# --- Aba Outros --- #}
+          <div class="tab-pane fade" id="outros" role="tabpanel" aria-labelledby="outros-tab">
+             <h6 class="text-muted mb-3">Outras Configurações</h6>
+             <div class="row g-3">
+              {% for field in grouped_fields.outros %}
+                {# Ignora campos já exibidos no topo #}
+                {% if field.name != 'cfop_codi' and field.name != 'cfop_desc' and field.name != 'cfop_empr' %}
+                  <div class="col-md-6 col-lg-4">
+                    <div class="form-check form-switch p-3 border rounded bg-white h-100">
+                      {{ field }}
+                      <label class="form-check-label stretched-link fw-medium" for="{{ field.auto_id }}">
+                        {{ field.label }}
+                      </label>
+                    </div>
+                  </div>
+                {% endif %}
+              {% empty %}
+                <p class="text-muted">Sem outras configurações.</p>
+              {% endfor %}
+            </div>
+          </div>
+
+        </div>
+
+        <div class="mt-4 d-flex gap-2 justify-content-end">
+           <a href="/web/{{ slug }}/cfop/" class="btn btn-secondary">Cancelar</a>
+           <button type="submit" class="btn btn-success px-4"><i class="bi bi-check-lg"></i> Salvar CFOP</button>
+        </div>
       </form>
-      <script>
-        (function () {
-          var inputCFOP = document.getElementById('{{ form.cfop_codi.auto_id }}');
-          var desc = document.getElementById('{{ form.cfop_desc.auto_id }}');
+    </div>
+  </div>
+</div>
 
-          var boxExig = document.getElementById("exigencias-auto");
-          var containerBadges = document.getElementById("exigencias-badges");
-          var suggestBox = document.getElementById("cfop-suggest");
-          var datalist = document.getElementById("cfop-codes");
+<script>
+  (function () {
+    var inputCFOP = document.getElementById('{{ form.cfop_codi.auto_id }}');
+    var boxExig = document.getElementById("exigencias-auto");
+    var containerBadges = document.getElementById("exigencias-badges");
+    var suggestBox = document.getElementById("cfop-suggest");
+    var datalist = document.getElementById("cfop-codes");
+    
+    // Função para atualizar checkboxes baseado na resposta do servidor
+    function setChecked(fieldId, value) {
+        var el = document.getElementById(fieldId);
+        if(el) el.checked = value;
+    }
 
-          function atualizarExigencias(cfop) {
-            cfop = (cfop || "").trim();
-            if (cfop.length < 2) {
-              boxExig.style.display = "none";
-              containerBadges.innerHTML = "";
-              return;
+    function atualizarExigencias(cfop) {
+      cfop = (cfop || "").trim();
+      if (cfop.length < 2) {
+        boxExig.style.display = "none";
+        containerBadges.innerHTML = "";
+        return;
+      }
+
+      fetch(`/web/{{ slug }}/cfop/exigencias/?cfop=${encodeURIComponent(cfop)}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.error) return;
+
+          // Atualiza checkboxes se existirem
+          setChecked('{{ form.cfop_exig_icms.auto_id }}', data.icms);
+          setChecked('{{ form.cfop_exig_ipi.auto_id }}', data.ipi);
+          setChecked('{{ form.cfop_exig_pis_cofins.auto_id }}', data.pis_cofins);
+          setChecked('{{ form.cfop_exig_cbs.auto_id }}', data.cbs);
+          setChecked('{{ form.cfop_exig_ibs.auto_id }}', data.ibs);
+          setChecked('{{ form.cfop_gera_st.auto_id }}', data.st);
+          setChecked('{{ form.cfop_gera_difal.auto_id }}', data.difal);
+          setChecked('{{ form.cfop_icms_base_inclui_ipi.auto_id }}', data.icms_base_inclui_ipi);
+          setChecked('{{ form.cfop_st_base_inclui_ipi.auto_id }}', data.st_base_inclui_ipi);
+          setChecked('{{ form.cfop_ipi_tota_nf.auto_id }}', data.ipi_tota_nf);
+          setChecked('{{ form.cfop_st_tota_nf.auto_id }}', data.st_tota_nf);
+
+          // Badges visuais
+          containerBadges.innerHTML = "";
+          const labels = {
+            icms: "ICMS",
+            ipi: "IPI",
+            pis_cofins: "PIS/COFINS",
+            cbs: "CBS",
+            ibs: "IBS",
+            st: "ICMS-ST",
+            difal: "DIFAL",
+            icms_base_inclui_ipi: "ICMS Base + IPI",
+            st_base_inclui_ipi: "ST Base + IPI",
+            ipi_tota_nf: "IPI Totaliza",
+            st_tota_nf: "ST Totaliza",
+          };
+
+          let hasBadges = false;
+          Object.entries(data).forEach(([campo, ativo]) => {
+            if (ativo && labels[campo]) {
+              var badge = document.createElement("span");
+              badge.className = "badge bg-info text-dark border border-info";
+              badge.textContent = labels[campo];
+              containerBadges.appendChild(badge);
+              hasBadges = true;
             }
-
-            fetch(`/web/{{ slug }}/cfop/exigencias/?cfop=${encodeURIComponent(cfop)}`)
-              .then(r => r.json())
-              .then(data => {
-                if (data.error) return;
-
-                // checkboxes
-                document.getElementById('{{ form.cfop_exig_icms.auto_id }}').checked = data.icms;
-                document.getElementById('{{ form.cfop_exig_ipi.auto_id }}').checked = data.ipi;
-                document.getElementById('{{ form.cfop_exig_pis_cofins.auto_id }}').checked = data.pis_cofins;
-                document.getElementById('{{ form.cfop_exig_cbs.auto_id }}').checked = data.cbs;
-                document.getElementById('{{ form.cfop_exig_ibs.auto_id }}').checked = data.ibs;
-                document.getElementById('{{ form.cfop_gera_st.auto_id }}').checked = data.st;
-                document.getElementById('{{ form.cfop_gera_difal.auto_id }}').checked = data.difal;
-                document.getElementById('{{ form.cfop_icms_base_inclui_ipi.auto_id }}').checked = data.icms_base_inclui_ipi;
-                document.getElementById('{{ form.cfop_st_base_inclui_ipi.auto_id }}').checked = data.st_base_inclui_ipi;
-                document.getElementById('{{ form.cfop_ipi_tota_nf.auto_id }}').checked = data.ipi_tota_nf;
-                document.getElementById('{{ form.cfop_st_tota_nf.auto_id }}').checked = data.st_tota_nf;
-
-                // badges
-                containerBadges.innerHTML = "";
-                const labels = {
-                  icms: "ICMS",
-                  ipi: "IPI",
-                  pis_cofins: "PIS/COFINS",
-                  cbs: "CBS",
-                  ibs: "IBS",
-                  st: "ICMS-ST",
-                  difal: "DIFAL",
-                  icms_base_inclui_ipi: "ICMS Base Inclui IPI",
-                  st_base_inclui_ipi: "ST Base Inclui IPI",
-                  ipi_tota_nf: "IPI Totaliza NF",
-                  st_tota_nf: "ST Totaliza NF",
-                };
-
-                Object.entries(data).forEach(([campo, ativo]) => {
-                  if (ativo && labels[campo]) {
-                    var badge = document.createElement("span");
-                    badge.className = "badge bg-primary me-1";
-                    badge.textContent = labels[campo];
-                    containerBadges.appendChild(badge);
-                  }
-                });
-
-                boxExig.style.display = containerBadges.children.length ? "block" : "none";
-              })
-              .catch(err => console.error(err));
-          }
-
-          function atualizarSugestoes(term) {
-            term = (term || "").trim();
-            if (term.length < 1) {
-              suggestBox.innerHTML = "";
-              datalist.innerHTML = "";
-              return;
-            }
-            fetch(`/web/{{ slug }}/cfop/autocomplete/?q=${encodeURIComponent(term)}`)
-              .then(r => r.json())
-              .then(data => {
-                var results = Array.isArray(data.results) ? data.results : [];
-                suggestBox.innerHTML = "";
-                datalist.innerHTML = "";
-                inputCFOP.setAttribute('list', 'cfop-codes');
-                results.forEach(function (item) {
-                  var a = document.createElement('a');
-                  a.className = 'list-group-item list-group-item-action';
-                  a.setAttribute('href', '#');
-                  a.setAttribute('data-value', item.value);
-                  a.setAttribute('data-label', item.label);
-                  a.textContent = item.label;
-                  suggestBox.appendChild(a);
-                  var opt = document.createElement('option');
-                  opt.value = item.value;
-                  opt.textContent = item.label;
-                  datalist.appendChild(opt);
-                });
-              })
-              .catch(function () {
-                suggestBox.innerHTML = "";
-                datalist.innerHTML = "";
-              });
-          }
-
-          var debounce;
-          inputCFOP.addEventListener("input", function () {
-            var val = this.value;
-            clearTimeout(debounce);
-            debounce = setTimeout(function () {
-              atualizarSugestoes(val);
-              atualizarExigencias(val);
-            }, 200);
           });
 
-          suggestBox.addEventListener('click', function (e) {
-            var el = e.target.closest('a');
-            if (!el) return;
-            e.preventDefault();
-            var val = el.getAttribute('data-value') || '';
-            var label = el.getAttribute('data-label') || '';
-            inputCFOP.value = val;
-            var parts = label.split(' - ');
-            if (parts.length > 1) {
-              desc.value = parts.slice(1).join(' - ');
-            }
-            atualizarExigencias(val);
+          boxExig.style.display = hasBadges ? "block" : "none";
+        })
+        .catch(err => console.error(err));
+    }
+
+    // Autocomplete
+    inputCFOP.addEventListener('input', function() {
+        var val = this.value;
+        if(val.length >= 2) {
+             atualizarExigencias(val);
+        }
+        
+        // Sugestões
+        if(val.length < 1) {
             suggestBox.innerHTML = "";
-          });
-        })();
-      </script>
-      {% endblock %}
+            return;
+        }
+        
+        fetch(`/web/{{ slug }}/cfop/autocomplete/?q=${encodeURIComponent(val)}`)
+            .then(r => r.json())
+            .then(data => {
+                suggestBox.innerHTML = "";
+                if(data.results && data.results.length > 0) {
+                    data.results.forEach(item => {
+                        var div = document.createElement('a');
+                        div.className = "list-group-item list-group-item-action py-2";
+                        div.style.cursor = "pointer";
+                        div.innerHTML = `<span class="fw-bold">${item.value}</span> - <small>${item.label}</small>`;
+                        div.onclick = function(e) {
+                            e.preventDefault();
+                            inputCFOP.value = item.value;
+                            suggestBox.innerHTML = "";
+                            atualizarExigencias(item.value);
+                        };
+                        suggestBox.appendChild(div);
+                    });
+                }
+            })
+            .catch(e => console.error(e));
+    });
+
+    // Fecha sugestões ao clicar fora
+    document.addEventListener('click', function(e) {
+        if (e.target !== inputCFOP && !suggestBox.contains(e.target)) {
+            suggestBox.innerHTML = "";
+        }
+    });
+
+  })();
+</script>
+{% endblock %}

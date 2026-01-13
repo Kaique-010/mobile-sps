@@ -28,10 +28,11 @@ from ...models import (
     Ncm,
     UnidadeMedida,
 )
-from CFOP.models import CFOP as CFOPModel, NCM_CFOP_DIF
+from CFOP.models import CFOP as CFOPModel, NCM_CFOP_DIF, ProdutoFiscalPadrao
 from django.utils import timezone
 from ..prod_forms import (
     ProdutosForm,
+    ProdutoFiscalPadraoForm,
     TabelaprecosFormSet,
     TabelaprecosPlainFormSet,
     TabelaprecosFormSetUpdate,
@@ -41,6 +42,14 @@ from ..prod_forms import (
     MarcaForm,
     UnidadeMedidaForm,
 )
+from CFOP.services.services import MotorFiscal
+from CFOP.services.bases import FiscalContexto
+import json
+from decimal import Decimal
+from Licencas.models import Filiais
+from CFOP.cst_utils import get_csts_por_regime
+
+
 
 
 class DBAndSlugMixin:
@@ -81,6 +90,96 @@ class DBAndSlugMixin:
         name = mapping.get(mdl, 'produtos_web')
         return reverse_lazy(name, kwargs={'slug': self.slug or get_licenca_slug()})
 
+class SimularImpostosView(DBAndSlugMixin, View):
+    def post(self, request, *args, **kwargs):
+        try:
+            data = json.loads(request.body)
+
+            preco = Decimal(str(data.get('preco', '0')))
+            ncm_codigo = data.get('ncm')
+            
+            # Construir objeto fiscal padrão mockado
+            fiscal_mock = ProdutoFiscalPadrao()
+            
+            # Helper para converter string vazia ou None para None, e strings numéricas para Decimal
+            def to_dec(val):
+                if not val: return None
+                return Decimal(str(val))
+            
+            fiscal_mock.cst_icms = data.get('cst_icms') or None
+            fiscal_mock.aliq_icms = to_dec(data.get('aliq_icms'))
+            
+            fiscal_mock.cst_ipi = data.get('cst_ipi') or None
+            fiscal_mock.aliq_ipi = to_dec(data.get('aliq_ipi'))
+            
+            fiscal_mock.cst_pis = data.get('cst_pis') or None
+            fiscal_mock.aliq_pis = to_dec(data.get('aliq_pis'))
+            
+            fiscal_mock.cst_cofins = data.get('cst_cofins') or None
+            fiscal_mock.aliq_cofins = to_dec(data.get('aliq_cofins'))
+            
+            fiscal_mock.cst_cbs = data.get('cst_cbs') or None
+            fiscal_mock.aliq_cbs = to_dec(data.get('aliq_cbs'))
+            
+            fiscal_mock.cst_ibs = data.get('cst_ibs') or None
+            fiscal_mock.aliq_ibs = to_dec(data.get('aliq_ibs'))
+            
+            # Construir contexto
+            motor = MotorFiscal(banco=self.db_alias)
+            
+            # Resolver NCM
+            ncm_obj = None
+            if ncm_codigo:
+                ncm_obj = Ncm.objects.using(self.db_alias).filter(ncm_codi=ncm_codigo).first()
+            
+            # Mock produto
+            mock_produto = Produtos()
+            mock_produto.fiscal = fiscal_mock # Attach fiscal override
+            
+            # Defaults para simulação
+            # Tenta pegar da request ou usa defaults
+            uf_origem = data.get('uf_origem') or 'SP' 
+            uf_destino = data.get('uf_destino') or 'SP'
+            tipo_oper = data.get('tipo_oper') or "VENDA" 
+            
+            empresa_id = int(self.empresa_id or 1)
+            filial_id = int(self.filial_id or 1)
+            
+            try:
+                filial = Filiais.objects.using(self.db_alias).filter(
+                    empr_empr=empresa_id, 
+                    empr_codi=filial_id
+                ).first()
+                regime = filial.empr_regi_trib if filial else '1'
+            except Exception:
+                regime = '1'
+            
+            ctx = FiscalContexto(
+                empresa_id=empresa_id,
+                filial_id=filial_id,
+                banco=self.db_alias,
+                regime=regime,
+                uf_origem=uf_origem,
+                uf_destino=uf_destino,
+                produto=mock_produto,
+                ncm=ncm_obj
+            )
+            
+            resultado = motor.calcular_item(ctx, item=None, tipo_oper=tipo_oper, base_manual=preco)
+            
+            # Serialize Decimal
+            def default_serializer(obj):
+                if isinstance(obj, Decimal):
+                    return str(obj)
+                if hasattr(obj, 'cfop_codi'): # CFOP object
+                     return obj.cfop_codi
+                return str(obj)
+
+            return JsonResponse(resultado, json_dumps_params={'default': default_serializer})
+            
+        except Exception as e:
+            logger.error(f"Erro na simulação de impostos: {e}", exc_info=True)
+            return JsonResponse({'error': str(e)}, status=400)
 
 class ProdutoListView(DBAndSlugMixin, ListView):
     model = Produtos
@@ -168,12 +267,30 @@ class ProdutoCreateView(DBAndSlugMixin, CreateView):
     form_class = ProdutosForm
     template_name = 'Produtos/produtos_form.html'
 
+    def _get_cst_choices(self):
+        try:
+            empresa_id = int(self.empresa_id or 1)
+            filial_id = int(self.filial_id or 1)
+            filial = Filiais.objects.using(self.db_alias).filter(
+                empr_empr=empresa_id, 
+                empr_codi=filial_id
+            ).first()
+            regime = filial.empr_regi_trib if filial else '1'
+        except Exception:
+            regime = '1'
+        return get_csts_por_regime(regime)
+
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['slug'] = self.slug
         # Formset vazio por enquanto; será inicializado após salvar o produto
         from Produtos.models import Tabelaprecos
         ctx['formset'] = TabelaprecosFormSet(queryset=Tabelaprecos.objects.none(), prefix='precos')
+        cst_choices = self._get_cst_choices()
+        if self.request.POST:
+            ctx['fiscal_form'] = ProdutoFiscalPadraoForm(self.request.POST, prefix='fiscal', cst_choices=cst_choices)
+        else:
+            ctx['fiscal_form'] = ProdutoFiscalPadraoForm(prefix='fiscal', cst_choices=cst_choices)
         return ctx
 
     def form_valid(self, form):
@@ -228,6 +345,9 @@ class ProdutoCreateView(DBAndSlugMixin, CreateView):
 
         # Salvar preços (se enviados)
         formset = TabelaprecosPlainFormSet(self.request.POST, prefix='precos')
+        cst_choices = self._get_cst_choices()
+        fiscal_form = ProdutoFiscalPadraoForm(self.request.POST, prefix='fiscal', cst_choices=cst_choices)
+
         if not formset.is_valid():
             for fs_form in formset.forms:
                 for field, errs in fs_form.errors.items():
@@ -236,11 +356,38 @@ class ProdutoCreateView(DBAndSlugMixin, CreateView):
             ctx = self.get_context_data()
             ctx['form'] = form
             ctx['formset'] = formset
+            ctx['fiscal_form'] = fiscal_form
             return self.render_to_response(ctx)
+            
+        if not fiscal_form.is_valid():
+             for field, errs in fiscal_form.errors.items():
+                for err in errs:
+                    messages.error(self.request, f'Fiscal - erro em {field}: {err}')
+             ctx = self.get_context_data()
+             ctx['form'] = form
+             ctx['formset'] = formset
+             ctx['fiscal_form'] = fiscal_form
+             return self.render_to_response(ctx)
+
         logger.info(f"Preços POST: TOTAL_FORMS={formset.total_form_count()} INITIAL_FORMS={formset.initial_form_count()}")
         processed = 0
         try:
             with transaction.atomic(using=self.db_alias):
+                # Salvar Fiscal Padrão
+                fiscal_obj = fiscal_form.save(commit=False)
+                # Verifica se algum campo foi preenchido
+                has_fiscal_data = any(
+                    getattr(fiscal_obj, field) is not None and getattr(fiscal_obj, field) != ''
+                    for field in fiscal_form.fields
+                )
+                
+                if has_fiscal_data:
+                    fiscal_obj.produto = instance
+                    try:
+                         fiscal_obj.save(using=self.db_alias)
+                    except Exception:
+                         fiscal_obj.save()
+
                 for f in formset.forms:
                     if not f.has_changed():
                         continue
@@ -419,6 +566,19 @@ class ProdutoUpdateView(DBAndSlugMixin, UpdateView):
     pk_url_kwarg = 'prod_codi'
     slug_url_kwarg = 'slug'
 
+    def _get_cst_choices(self):
+        try:
+            empresa_id = int(self.empresa_id or 1)
+            filial_id = int(self.filial_id or 1)
+            filial = Filiais.objects.using(self.db_alias).filter(
+                empr_empr=empresa_id, 
+                empr_codi=filial_id
+            ).first()
+            regime = filial.empr_regi_trib if filial else '1'
+        except Exception:
+            regime = '1'
+        return get_csts_por_regime(regime)
+
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
@@ -477,6 +637,19 @@ class ProdutoUpdateView(DBAndSlugMixin, UpdateView):
                 'tabe_perc_st': getattr(preco, 'tabe_perc_st', None),
             })
         ctx['formset'] = TabelaprecosPlainFormSet(initial=initial_list, prefix='precos')
+
+        # Load Fiscal Data
+        try:
+            fiscal_obj = ProdutoFiscalPadrao.objects.using(self.db_alias).filter(produto=produto).first()
+        except Exception:
+            fiscal_obj = None
+        
+        cst_choices = self._get_cst_choices()
+        if self.request.POST:
+             ctx['fiscal_form'] = ProdutoFiscalPadraoForm(self.request.POST, prefix='fiscal', instance=fiscal_obj, cst_choices=cst_choices)
+        else:
+             ctx['fiscal_form'] = ProdutoFiscalPadraoForm(prefix='fiscal', instance=fiscal_obj, cst_choices=cst_choices)
+
         logger.info(f'Preços carregados para produto {produto.prod_codi}: {initial_list}')
         return ctx
 
@@ -514,6 +687,15 @@ class ProdutoUpdateView(DBAndSlugMixin, UpdateView):
         except Exception:
             emp_int = self.empresa_id or form.instance.prod_empr
         formset = TabelaprecosPlainFormSet(self.request.POST, prefix='precos')
+
+        # Load Fiscal Data for saving
+        try:
+             fiscal_obj = ProdutoFiscalPadrao.objects.using(self.db_alias).filter(produto=instance).first()
+        except Exception:
+             fiscal_obj = None
+        cst_choices = self._get_cst_choices()
+        fiscal_form = ProdutoFiscalPadraoForm(self.request.POST, prefix='fiscal', instance=fiscal_obj, cst_choices=cst_choices)
+
         if not formset.is_valid():
             for fs_form in formset.forms:
                 for field, errs in fs_form.errors.items():
@@ -522,7 +704,39 @@ class ProdutoUpdateView(DBAndSlugMixin, UpdateView):
             ctx = self.get_context_data()
             ctx['form'] = form
             ctx['formset'] = formset
+            ctx['fiscal_form'] = fiscal_form
             return self.render_to_response(ctx)
+            
+        if not fiscal_form.is_valid():
+            for field, errs in fiscal_form.errors.items():
+                for err in errs:
+                    messages.error(self.request, f'Fiscal - erro em {field}: {err}')
+            ctx = self.get_context_data()
+            ctx['form'] = form
+            ctx['formset'] = formset
+            ctx['fiscal_form'] = fiscal_form
+            return self.render_to_response(ctx)
+
+        # Save Fiscal Data
+        fiscal_obj_save = fiscal_form.save(commit=False)
+        has_fiscal_data = any(
+             getattr(fiscal_obj_save, field) is not None and getattr(fiscal_obj_save, field) != ''
+             for field in fiscal_form.fields
+        )
+        if has_fiscal_data:
+             fiscal_obj_save.produto = instance
+             try:
+                  fiscal_obj_save.save(using=self.db_alias)
+             except Exception:
+                  fiscal_obj_save.save()
+        elif fiscal_obj:
+             # If it existed but now is empty (unlikely with required=False but possible if fields cleared), maybe delete? 
+             # For now, we just save what we have. If all empty, it just updates to empty.
+             try:
+                  fiscal_obj_save.save(using=self.db_alias)
+             except Exception:
+                  fiscal_obj_save.save()
+
         processed = 0
         for f in formset.forms:
             if not f.has_changed():

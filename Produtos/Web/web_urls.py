@@ -32,11 +32,13 @@ from .Views.web_views import (
     UnidadeMedidaCreateView,
     UnidadeMedidaUpdateView,
     UnidadeMedidaDeleteView,
+    SimularImpostosView
 )
 from .Views.autocompletes import autocomplete_unidades, autocomplete_grupos, autocomplete_marcas, autocomplete_subgrupos, autocomplete_familias, autocomplete_ncms, ncm_aliquotas
 
 
 urlpatterns = [
+    path("simular-impostos/", SimularImpostosView.as_view(), name="simular_impostos_web"),
     path("ncm-aliquotas/", NcmAliquotaListView.as_view(), name="ncmaliquota_list"),
     path("ncm-aliquotas/novo/", NcmAliquotaCreateView.as_view(), name="ncmaliquota_create"),
     path("ncm-aliquotas/<int:pk>/editar/", NcmAliquotaUpdateView.as_view(), name="ncmaliquota_update"),

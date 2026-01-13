@@ -16,10 +16,11 @@ class ItensHandler:
             if float(item.get("quantidade", 0)) <= 0:
                 raise ValidationError(f"Item {i+1}: quantidade inválida.")
 
-            if float(item.get("unitario", 0)) <= 0:
+            val = float(item.get("unitario") or item.get("valor_unit") or 0)
+            if val <= 0:
                 raise ValidationError(f"Item {i+1}: valor unitário inválido.")
 
-            if "produto" not in item:
+            if "produto" not in item and "codigo" not in item:
                 raise ValidationError(f"Item {i+1}: produto obrigatório.")
 
         return True
@@ -31,6 +32,12 @@ class ItensHandler:
         Padroniza o item.
         """
         item = item.copy()
+
+        # Aliases
+        if "valor_unit" in item and "unitario" not in item:
+            item["unitario"] = item.pop("valor_unit")
+        if "codigo" in item and "produto" not in item:
+            item["produto"] = item.pop("codigo")
 
         # Converte tudo para número correto
         for campo in ["quantidade", "unitario", "desconto"]:

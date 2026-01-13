@@ -31,7 +31,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'pedidosvenda',
-                'managed': 'false',
+                'managed': False,
             },
         ),
         migrations.CreateModel(
@@ -58,7 +58,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'itenspedidovenda',
-                'managed': 'false',
+                'managed': False,
                 'unique_together': {('iped_empr', 'iped_fili', 'iped_pedi', 'iped_item')},
             },
         ),

@@ -3,6 +3,74 @@ from django.forms.models import inlineformset_factory
 from django.forms import formset_factory
 from Produtos.models import Produtos, GrupoProduto, SubgrupoProduto, FamiliaProduto, Marca, Tabelaprecos, UnidadeMedida
 
+from CFOP.models import ProdutoFiscalPadrao
+
+class ProdutoFiscalPadraoForm(forms.ModelForm):
+    class Meta:
+        model = ProdutoFiscalPadrao
+        fields = [
+            'cst_icms', 'aliq_icms',
+            'cst_ipi', 'aliq_ipi',
+            'cst_pis', 'aliq_pis',
+            'cst_cofins', 'aliq_cofins',
+            'cst_cbs', 'aliq_cbs',
+            'cst_ibs', 'aliq_ibs',
+        ]
+        widgets = {
+            'cst_icms': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'CST ICMS'}),
+            'aliq_icms': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Aliq ICMS'}),
+            'cst_ipi': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'CST IPI'}),
+            'aliq_ipi': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Aliq IPI'}),
+            'cst_pis': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'CST PIS'}),
+            'aliq_pis': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Aliq PIS'}),
+            'cst_cofins': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'CST COFINS'}),
+            'aliq_cofins': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Aliq COFINS'}),
+            'cst_cbs': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'CST CBS'}),
+            'aliq_cbs': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Aliq CBS'}),
+            'cst_ibs': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'CST IBS'}),
+            'aliq_ibs': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Aliq IBS'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        cst_choices = kwargs.pop('cst_choices', None)
+        super().__init__(*args, **kwargs)
+        
+        if cst_choices:
+            if 'icms' in cst_choices:
+                self.fields['cst_icms'].widget = forms.Select(
+                    choices=[('', '--- Selecione ---')] + cst_choices['icms'], 
+                    attrs={'class': 'form-select'}
+                )
+            if 'ipi' in cst_choices:
+                self.fields['cst_ipi'].widget = forms.Select(
+                    choices=[('', '--- Selecione ---')] + cst_choices['ipi'], 
+                    attrs={'class': 'form-select'}
+                )
+            if 'pis' in cst_choices:
+                self.fields['cst_pis'].widget = forms.Select(
+                    choices=[('', '--- Selecione ---')] + cst_choices['pis'], 
+                    attrs={'class': 'form-select'}
+                )
+            if 'cofins' in cst_choices:
+                self.fields['cst_cofins'].widget = forms.Select(
+                    choices=[('', '--- Selecione ---')] + cst_choices['cofins'], 
+                    attrs={'class': 'form-select'}
+                )
+            if 'ibs' in cst_choices:
+                self.fields['cst_ibs'].widget = forms.Select(
+                    choices=[('', '--- Selecione ---')] + cst_choices['ibs'], 
+                    attrs={'class': 'form-select'}
+                )
+            if 'cbs' in cst_choices:
+                self.fields['cst_cbs'].widget = forms.Select(
+                    choices=[('', '--- Selecione ---')] + cst_choices['cbs'], 
+                    attrs={'class': 'form-select'}
+                )
+
+        # Make all fields optional as they are overrides
+        for field in self.fields:
+            self.fields[field].required = False
+
 class ProdutosForm(forms.ModelForm):
     # Campo de upload de foto desacoplado do BinaryField do modelo
     prod_foto = forms.FileField(required=False, widget=forms.ClearableFileInput(attrs={'class': 'form-control-file'}))

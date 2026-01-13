@@ -1,11 +1,14 @@
 from django.db import transaction
 import logging
+from django.core.exceptions import ValidationError
+from Entidades.models import Entidades
 
 from Notas_Fiscais.services.nota_service import NotaService
 from Notas_Fiscais.dominio.builder import NotaBuilder
 from Notas_Fiscais.services.calculo_impostos_service import CalculoImpostosService
 
 from .emissao_service_core import EmissaoServiceCore
+from .validators import validar_dados_iniciais, validar_dados_calculados
 
 logger = logging.getLogger(__name__)
 
@@ -16,16 +19,42 @@ class EmissaoNotaService:
     def emitir_nota(dto_dict, empresa, filial, usuario=None, database="default"):
         """
         Fluxo:
-        1. Cria a nota (rascunho)
-        2. Aplica impostos
-        3. Monta DTO a partir da Nota
-        4. Gera XML + envia pra SEFAZ
-        5. Atualiza status / grava evento
+        1. Validação inicial dos dados
+        2. Cria a nota (rascunho)
+        3. Aplica impostos
+        4. Validação fiscal (CSTs, totais, etc)
+        5. Monta DTO a partir da Nota
+        6. Gera XML + envia pra SEFAZ
+        7. Atualiza status / grava evento
         """
+
+        # 0) Validação Inicial
+        validar_dados_iniciais(dto_dict)
 
         # 1) Criar rascunho
         dto_sanitized = dict(dto_dict)
         dto_sanitized.pop("tpag", None)
+
+        # Resolve destinatário se for dict
+        dest = dto_sanitized.get("destinatario")
+        if isinstance(dest, dict):
+            doc = dest.get("documento")
+            if not doc:
+                 raise ValidationError("Documento do destinatário não informado.")
+            
+            # Remove caracteres não numéricos
+            doc_limpo = "".join(filter(str.isdigit, str(doc)))
+            
+            try:
+                qs = Entidades.objects.using(database).filter(enti_empr=empresa)
+                if len(doc_limpo) == 14:
+                    entidade = qs.get(enti_cnpj=doc_limpo)
+                else:
+                    entidade = qs.get(enti_cpf=doc_limpo)
+                
+                dto_sanitized["destinatario"] = entidade.enti_clie
+            except Entidades.DoesNotExist:
+                 raise ValidationError(f"Destinatário com documento {doc} não encontrado.")
 
         nota = NotaService.criar(
             data=dto_sanitized,
@@ -50,6 +79,9 @@ class EmissaoNotaService:
 
         # 3) aplicar impostos
         CalculoImpostosService(database).aplicar_impostos(nota)
+
+        # 3.1) Validação Fiscal pós-cálculo
+        validar_dados_calculados(nota)
 
         # 4) montar DTO a partir da Nota
         dto_obj = NotaBuilder(nota, database=database).build()

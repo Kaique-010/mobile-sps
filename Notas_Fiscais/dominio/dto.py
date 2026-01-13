@@ -49,10 +49,36 @@ class ItemDTO(BaseModel):
     base_icms: Optional[Decimal] = None
     valor_icms: Optional[Decimal] = None
     aliq_icms: Optional[Decimal] = None
+    
+    base_icms_st: Optional[Decimal] = None
+    valor_icms_st: Optional[Decimal] = None
+    aliq_icms_st: Optional[Decimal] = None
+    mva_st: Optional[Decimal] = None
 
+    base_ipi: Optional[Decimal] = None
+    aliq_ipi: Optional[Decimal] = None
     valor_ipi: Optional[Decimal] = None
+    
+    valor_frete: Optional[Decimal] = None
+    valor_seguro: Optional[Decimal] = None
+    valor_outras_despesas: Optional[Decimal] = None
+
+    base_pis: Optional[Decimal] = None
+    aliq_pis: Optional[Decimal] = None
     valor_pis: Optional[Decimal] = None
+
+    base_cofins: Optional[Decimal] = None
+    aliq_cofins: Optional[Decimal] = None
     valor_cofins: Optional[Decimal] = None
+    
+    base_ibs: Optional[Decimal] = None
+    aliq_ibs: Optional[Decimal] = None
+    valor_ibs: Optional[Decimal] = None
+
+    base_cbs: Optional[Decimal] = None
+    aliq_cbs: Optional[Decimal] = None
+    valor_cbs: Optional[Decimal] = None
+
     valor_fcp: Optional[Decimal] = None
 
 

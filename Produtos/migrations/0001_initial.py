@@ -19,8 +19,9 @@ class Migration(migrations.Migration):
                 ('descricao', models.CharField(db_column='grup_desc', max_length=255, verbose_name='Descrição')),
             ],
             options={
+                'verbose_name': 'FamiliaProduto',
                 'db_table': 'familiaprodutos',
-                'managed': 'false',
+                'managed': False,
             },
         ),
         migrations.CreateModel(
@@ -33,7 +34,7 @@ class Migration(migrations.Migration):
                 'verbose_name': 'Grupo de Produto',
                 'verbose_name_plural': 'Grupos de Produtos',
                 'db_table': 'gruposprodutos',
-                'managed': 'false',
+                'managed': False,
             },
         ),
         migrations.CreateModel(
@@ -44,7 +45,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'marca',
-                'managed': 'false',
+                'managed': False,
             },
         ),
         migrations.CreateModel(
@@ -55,7 +56,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'subgruposprodutos',
-                'managed': 'false',
+                'managed': False,
             },
         ),
         migrations.CreateModel(
@@ -77,7 +78,7 @@ class Migration(migrations.Migration):
                 'verbose_name': 'Produto',
                 'verbose_name_plural': 'Produtos',
                 'db_table': 'produtos',
-                'managed': 'false',
+                'managed': False,
             },
         ),
         migrations.CreateModel(
@@ -91,7 +92,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'saldosprodutos',
-                'managed': 'false',
+                'managed': False,
             },
         ),
         migrations.CreateModel(
@@ -125,7 +126,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'tabelaprecos',
-                'managed': 'false',
+                'managed': False,
                 'unique_together': {('tabe_empr', 'tabe_fili', 'tabe_prod')},
             },
         ),

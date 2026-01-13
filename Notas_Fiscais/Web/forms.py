@@ -55,6 +55,7 @@ class NotaItemForm(forms.ModelForm):
             "quantidade", "unitario", "desconto",
             "cfop", "ncm", "cest",
             "cst_icms", "cst_pis", "cst_cofins",
+            "cst_ibs", "cst_cbs",
             "total",
         ]
         widgets = {
@@ -68,6 +69,8 @@ class NotaItemForm(forms.ModelForm):
             "cst_icms": forms.TextInput(attrs={"class": "form-control"}),
             "cst_pis": forms.TextInput(attrs={"class": "form-control"}),
             "cst_cofins": forms.TextInput(attrs={"class": "form-control"}),
+            "cst_ibs": forms.TextInput(attrs={"class": "form-control"}),
+            "cst_cbs": forms.TextInput(attrs={"class": "form-control"}),
         }
 
 

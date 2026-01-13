@@ -89,7 +89,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'unidadesmedidas',
-                'managed': 'false',
+                'managed': False,
             },
         ),
         migrations.AlterModelOptions(

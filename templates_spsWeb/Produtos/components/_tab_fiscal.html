@@ -1,0 +1,172 @@
+<div class="tab-pane fade" id="fiscal">
+  <h5 class="form-section-title text-center mb-5">Tributação (Fiscal)</h5>
+
+  <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
+    <i class="bi bi-info-circle-fill fs-4 me-3"></i>
+    <div>
+      <strong>Hierarquia de Impostos:</strong>
+      <div class="small">
+        1. <strong>Produto (Override):</strong> Preencha os campos abaixo para forçar uma regra específica
+        para este produto.<br>
+        2. <strong>NCM (Padrão):</strong> Se deixar em branco, o sistema usará a regra do NCM (<span
+          id="ncm-display-code" class="fw-bold">não selecionado</span>).<br>
+        3. <strong>CFOP/Regime:</strong> Regras gerais da operação e regime tributário.
+      </div>
+      <div id="ncm-defaults-preview" class="mt-2 pt-2 border-top" style="display:none;">
+        <strong>Padrões do NCM selecionado:</strong> <span id="ncm-defaults-list" class="fst-italic"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-6">
+      <h6 class="text-primary border-bottom pb-2">ICMS</h6>
+      <div class="row mb-3">
+        <div class="col-md-8">
+          <label for="{{ fiscal_form.cst_icms.id_for_label }}">{{ fiscal_form.cst_icms.label }}</label>
+          {{ fiscal_form.cst_icms }}
+        </div>
+        <div class="col-md-4">
+          <label for="{{ fiscal_form.aliq_icms.id_for_label }}">{{ fiscal_form.aliq_icms.label }}</label>
+          {{ fiscal_form.aliq_icms }}
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <h6 class="text-primary border-bottom pb-2">IPI</h6>
+      <div class="row mb-3">
+        <div class="col-md-8">
+          <label for="{{ fiscal_form.cst_ipi.id_for_label }}">{{ fiscal_form.cst_ipi.label }}</label>
+          {{ fiscal_form.cst_ipi }}
+        </div>
+        <div class="col-md-4">
+          <label for="{{ fiscal_form.aliq_ipi.id_for_label }}">{{ fiscal_form.aliq_ipi.label }}</label>
+          {{ fiscal_form.aliq_ipi }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mt-4">
+    <div class="col-md-6">
+      <h6 class="text-primary border-bottom pb-2">PIS / COFINS</h6>
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <label for="{{ fiscal_form.cst_pis.id_for_label }}">CST PIS</label>
+          {{ fiscal_form.cst_pis }}
+          <div class="mt-1">{{ fiscal_form.aliq_pis }}</div>
+        </div>
+        <div class="col-md-6">
+          <label for="{{ fiscal_form.cst_cofins.id_for_label }}">CST COFINS</label>
+          {{ fiscal_form.cst_cofins }}
+          <div class="mt-1">{{ fiscal_form.aliq_cofins }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <h6 class="text-primary border-bottom pb-2">Reforma (IBS / CBS)</h6>
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <label for="{{ fiscal_form.cst_ibs.id_for_label }}">CST IBS</label>
+          {{ fiscal_form.cst_ibs }}
+          <div class="mt-1">{{ fiscal_form.aliq_ibs }}</div>
+        </div>
+        <div class="col-md-6">
+          <label for="{{ fiscal_form.cst_cbs.id_for_label }}">CST CBS</label>
+          {{ fiscal_form.cst_cbs }}
+          <div class="mt-1">{{ fiscal_form.aliq_cbs }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Simulação -->
+  <div class="card mt-5 ">
+    <div class="card-body">
+      <h5><i class="bi bi-calculator"></i> Simulação de Impostos</h5>
+      <p class="text-muted small">Selecione um NCM (na aba Dados do Produto) e preencha os campos acima para
+        simular.</p>
+      <div class="row mb-3">
+        <div class="col-md-4">
+          <label class="form-label">Operação</label>
+          <select id="sim-tipo-oper" class="form-select">
+            <option value="VENDA" selected>Venda</option>
+            <option value="REVENDA">Revenda</option>
+            <option value="INDUSTRIALIZACAO">Industrialização</option>
+            <option value="CONSUMO">Consumo Final</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">UF Origem</label>
+          <select id="sim-uf-origem" class="form-select">
+            <option value="SP" selected>SP</option>
+            <option value="RJ">RJ</option>
+            <option value="MG">MG</option>
+            <option value="PR">PR</option>
+            <option value="SC">SC</option>
+            <option value="RS">RS</option>
+            <option value="EX">Exterior</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">UF Destino</label>
+          <select id="sim-uf-destino" class="form-select">
+            <option value="SP" selected>SP</option>
+            <option value="RJ">RJ</option>
+            <option value="MG">MG</option>
+            <option value="PR">PR</option>
+            <option value="SC">SC</option>
+            <option value="RS">RS</option>
+            <option value="EX">Exterior</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-4">
+          <label>Preço Base (R$)</label>
+          <input type="number" id="simulacao-preco" class="form-control" value="100.00" step="0.01">
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+          <button type="button" class="btn btn-info text-white w-100" id="btn-simular-impostos">
+            <i class="bi bi-play-fill"></i> Calcular Impostos
+          </button>
+        </div>
+      </div>
+
+      <div id="simulacao-error" class="alert alert-danger mt-3" style="display:none;"></div>
+
+      <div id="simulacao-resultado" class="mt-4" style="display:none;">
+        <h6 class="border-bottom pb-2">Resultado da Simulação</h6>
+        <div class="row text-center">
+          <div class="col-md-2">
+            <small class="d-block text-muted">ICMS</small>
+            <strong id="res-icms" class="text-primary">R$ 0,00</strong>
+          </div>
+          <div class="col-md-2">
+            <small class="d-block text-muted">IPI</small>
+            <strong id="res-ipi" class="text-primary">R$ 0,00</strong>
+          </div>
+          <div class="col-md-2">
+            <small class="d-block text-muted">PIS</small>
+            <strong id="res-pis" class="text-secondary">R$ 0,00</strong>
+          </div>
+          <div class="col-md-2">
+            <small class="d-block text-muted">COFINS</small>
+            <strong id="res-cofins" class="text-secondary">R$ 0,00</strong>
+          </div>
+          <div class="col-md-2">
+            <small class="d-block text-muted">IBS</small>
+            <strong id="res-ibs" class="text-success">R$ 0,00</strong>
+          </div>
+          <div class="col-md-2">
+            <small class="d-block text-muted">CBS</small>
+            <strong id="res-cbs" class="text-success">R$ 0,00</strong>
+          </div>
+        </div>
+        <div class="alert alert-warning mt-3 mb-0 py-2">
+          <strong>Total Tributos:</strong> <span id="res-total-tributos">R$ 0,00</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

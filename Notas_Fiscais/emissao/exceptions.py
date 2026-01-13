@@ -14,3 +14,10 @@ class AmbienteMismatchError(ErroEmissao):
     - URL usada (homologação vs produção)
     """
     pass
+
+
+class ErroValidacao(ErroEmissao):
+    """
+    Erro de validação de dados da nota fiscal (campos obrigatórios, regras de negócio).
+    """
+    pass

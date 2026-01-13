@@ -89,9 +89,35 @@ class NotaBuilder:
                 valor_icms=imp.icms_valor if imp else None,
                 aliq_icms=imp.icms_aliquota if imp else None,
 
+                base_icms_st=imp.icms_st_base if imp else None,
+                valor_icms_st=imp.icms_st_valor if imp else None,
+                aliq_icms_st=imp.icms_st_aliquota if imp else None,
+                mva_st=imp.icms_mva_st if imp else None,
+                
+                valor_frete=it.valor_frete,
+                valor_seguro=it.valor_seguro,
+                valor_outras_despesas=it.valor_outras_despesas,
+
+                base_ipi=imp.ipi_base if imp else None,
+                aliq_ipi=imp.ipi_aliquota if imp else None,
                 valor_ipi=imp.ipi_valor if imp else None,
+
+                base_pis=imp.pis_base if imp else None,
+                aliq_pis=imp.pis_aliquota if imp else None,
                 valor_pis=imp.pis_valor if imp else None,
+
+                base_cofins=imp.cofins_base if imp else None,
+                aliq_cofins=imp.cofins_aliquota if imp else None,
                 valor_cofins=imp.cofins_valor if imp else None,
+
+                base_ibs=imp.ibs_base if imp else None,
+                aliq_ibs=imp.ibs_aliquota if imp else None,
+                valor_ibs=imp.ibs_valor if imp else None,
+
+                base_cbs=imp.cbs_base if imp else None,
+                aliq_cbs=imp.cbs_aliquota if imp else None,
+                valor_cbs=imp.cbs_valor if imp else None,
+
                 valor_fcp=imp.fcp_valor if imp else None,
             ))
 

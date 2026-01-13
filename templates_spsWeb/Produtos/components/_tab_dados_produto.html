@@ -1,0 +1,169 @@
+<div class="tab-pane fade show active" id="produto">
+    <h5 class="form-section-title text-center mb-5 mt-4">Dados Cadastrais</h5>
+
+    {# Empresa é atribuída via headers/sessão; campo ocultado na UI #}
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="form-group">
+                <label for="{{ form.prod_codi.id_for_label }}">Código Produto</label>
+                {{ form.prod_codi }}
+                {% if form.prod_codi.errors %}
+                <div class="alert alert-danger mt-1">{{ form.prod_codi.errors|striptags }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="form-group">
+                <label for="{{ form.prod_nome.id_for_label }}">Nome do Produto</label>
+                {{ form.prod_nome }}
+                {% if form.prod_nome.errors %}
+                <div class="alert alert-danger mt-1">{{ form.prod_nome.errors|striptags }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="form-group">
+                <label for="{{ form.prod_unme.id_for_label }}">Unidade de Medida</label>
+                {{ form.prod_unme }}
+                {% if form.prod_unme.errors %}
+                <div class="alert alert-danger mt-1">{{ form.prod_unme.errors|striptags }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="form-group">
+                <label for="{{ form.prod_grup.id_for_label }}">Grupo</label>
+                <input type="text" class="form-control" id="autocomplete-grupo" placeholder="Buscar grupo"
+                    value="{{ form.prod_grup.value }}">
+                <div class="d-none">{{ form.prod_grup }}</div>
+                {% if form.prod_grup.errors %}
+                <div class="alert alert-danger mt-1">{{ form.prod_grup.errors|striptags }}</div>
+                {% endif %}
+                <small>
+                    <a href="#" class="btn btn-plus" title="Adicionar Novo Grupo">
+                        <i class="bi bi-plus-circle"></i>
+                    </a>
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="form-group">
+                <label for="{{ form.prod_sugr.id_for_label }}">Subgrupo</label>
+                <input type="text" class="form-control" id="autocomplete-subgrupo" placeholder="Buscar subgrupo"
+                    value="{{ form.prod_sugr.value }}">
+                <div class="d-none">{{ form.prod_sugr }}</div>
+                {% if form.prod_sugr.errors %}
+                <div class="alert alert-danger mt-1">{{ form.prod_sugr.errors|striptags }}</div>
+                {% endif %}
+                <small>
+                    <a href="#" class="btn btn-plus" title="Adicionar Novo SubGrupo">
+                        <i class="bi bi-plus-circle"></i>
+                    </a>
+                </small>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="form-group">
+                <label for="{{ form.prod_fami.id_for_label }}">Família</label>
+                <input type="text" class="form-control" id="autocomplete-familia" placeholder="Buscar família"
+                    value="{{ form.prod_fami.value }}">
+                <div class="d-none">{{ form.prod_fami }}</div>
+                {% if form.prod_fami.errors %}
+                <div class="alert alert-danger mt-1">{{ form.prod_fami.errors|striptags }}</div>
+                {% endif %}
+                <small>
+                    <a href="#" class="btn btn-plus" title="Adicionar Nova Família">
+                        <i class="bi bi-plus-circle"></i>
+                    </a>
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <h5 class="form-section-title text-center mb-5">Informações Adicionais</h5>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="form-group">
+                <label for="{{ form.prod_loca.id_for_label }}">Local</label>
+                {{ form.prod_loca }}
+                {% if form.prod_loca.errors %}
+                <div class="alert alert-danger mt-1">{{ form.prod_loca.errors|striptags }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="form-group position-relative">
+                <label for="{{ form.prod_ncm.id_for_label }}">NCM</label>
+                <input type="text" class="form-control" id="autocomplete-ncm" name="{{ form.prod_ncm.name }}"
+                    value="{{ form.prod_ncm.value|default_if_none:'' }}"
+                    placeholder="Digite o código ou descrição do NCM" autocomplete="off">
+                {% if form.prod_ncm.errors %}
+                <div class="alert alert-danger mt-1">{{ form.prod_ncm.errors|striptags }}</div>
+                {% endif %}
+                <div id="ncm-loading"
+                    class="spinner-border spinner-border-sm text-primary position-absolute end-0 top-50 me-2 mt-1"
+                    role="status" style="display:none;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="form-group">
+                <label for="{{ form.prod_marc.id_for_label }}">Marca</label>
+                <input type="text" class="form-control" id="autocomplete-marca" placeholder="Buscar marca"
+                    value="{{ form.prod_marc.value }}">
+                <div class="d-none">{{ form.prod_marc }}</div>
+                {% if form.prod_marc.errors %}
+                <div class="alert alert-danger mt-1">{{ form.prod_marc.errors|striptags }}</div>
+                {% endif %}
+                <small>
+                    <a href="#" class="btn btn-plus" title="Adicionar Nova Marca">
+                        <i class="bi bi-plus-circle"></i>
+                    </a>
+                </small>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="form-group">
+                <label for="{{ form.prod_codi_fabr_field.id_for_label }}">Código do Fabricante</label>
+                {{ form.prod_codi_fabr_field }}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="form-group">
+                <label for="{{ form.prod_foto.id_for_label }}">Foto</label>
+                {{ form.prod_foto }}
+                {% if form.prod_foto.errors %}
+                <div class="alert alert-danger mt-1">{{ form.prod_foto.errors|striptags }}</div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="form-group">
+                <label for="{{ form.prod_gtin.id_for_label }}">GTIN</label>
+                {{ form.prod_gtin }}
+                {% if form.prod_gtin.errors %}
+                <div class="alert alert-danger mt-1">{{ form.prod_gtin.errors|striptags }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>

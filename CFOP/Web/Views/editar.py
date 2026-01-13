@@ -4,6 +4,7 @@ from django.shortcuts import redirect
 from core.utils import get_licenca_db_config
 from ...models import CFOP
 from ..forms import CFOPForm
+from core.excecoes import ErroDominio
 
 class CFOPUpdateView(UpdateView):
     model = CFOP
@@ -41,6 +42,21 @@ class CFOPUpdateView(UpdateView):
         # kwargs['regime'] = ...
         return kwargs
 
+    def form_valid(self, form):
+        obj = form.save(commit=False)
+        try:
+            # Mantém o alias do banco de onde veio ou usa o da view
+            db_alias = getattr(obj, '_state', None) and getattr(obj._state, 'db', None) or self.db_alias
+            obj.save(using=db_alias)
+            messages.success(self.request, "CFOP atualizado com sucesso!")
+            return redirect(self.get_success_url())
+        except ErroDominio as e:
+            messages.error(self.request, f"Erro: {e.mensagem}")
+            return self.form_invalid(form)
+        except Exception as e:
+            messages.error(self.request, f"Erro ao atualizar CFOP: {str(e)}")
+            return self.form_invalid(form)
+
     def get_success_url(self):
         return f"/web/{self.slug}/cfop/"
 
@@ -70,9 +86,11 @@ class CFOPUpdateView(UpdateView):
         }
 
         if form:
-            for n, bf in form.fields.items():
+            for n in form.fields:
                 if n == 'cfop_empr':
                     continue
+                
+                bf = form[n]
                 
                 # Campos básicos (código, descrição, e flags manuais se quiser manter separados ou não)
                 # Aqui vamos agrupar conforme padrão de nome

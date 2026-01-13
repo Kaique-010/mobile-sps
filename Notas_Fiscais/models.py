@@ -105,10 +105,17 @@ class NotaItem(models.Model):
     cest = models.CharField(max_length=7, blank=True, null=True)
 
     cst_icms = models.CharField(max_length=3)
+    cst_ipi = models.CharField(max_length=3, blank=True, null=True)
     cst_pis = models.CharField(max_length=2)
     cst_cofins = models.CharField(max_length=2)
+    cst_ibs = models.CharField(max_length=3, blank=True, null=True)
+    cst_cbs = models.CharField(max_length=3, blank=True, null=True)
 
     total = models.DecimalField(max_digits=15, decimal_places=2)
+
+    valor_frete = models.DecimalField(max_digits=15, decimal_places=2, default=0, null=True)
+    valor_seguro = models.DecimalField(max_digits=15, decimal_places=2, default=0, null=True)
+    valor_outras_despesas = models.DecimalField(max_digits=15, decimal_places=2, default=0, null=True)
 
     class Meta:
         db_table = "nf_nota_item"
@@ -133,11 +140,24 @@ class NotaItemImposto(models.Model):
     icms_valor = models.DecimalField(max_digits=15, decimal_places=2, null=True)
     icms_aliquota = models.DecimalField(max_digits=5, decimal_places=2, null=True)
 
-    # — IPI / PIS / COFINS
-    ipi_valor = models.DecimalField(max_digits=15, decimal_places=2, null=True)
-    pis_valor = models.DecimalField(max_digits=15, decimal_places=2, null=True)
-    cofins_valor = models.DecimalField(max_digits=15, decimal_places=2, null=True)
+    icms_st_base = models.DecimalField(max_digits=15, decimal_places=2, null=True)
+    icms_st_valor = models.DecimalField(max_digits=15, decimal_places=2, null=True)
+    icms_st_aliquota = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+    icms_mva_st = models.DecimalField(max_digits=5, decimal_places=2, null=True)
 
+    # — IPI / PIS / COFINS
+    ipi_base = models.DecimalField(max_digits=15, decimal_places=2, null=True)
+    ipi_aliquota = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+    ipi_valor = models.DecimalField(max_digits=15, decimal_places=2, null=True)
+
+    pis_base = models.DecimalField(max_digits=15, decimal_places=2, null=True)
+    pis_aliquota = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+    pis_valor = models.DecimalField(max_digits=15, decimal_places=2, null=True)
+
+    cofins_base = models.DecimalField(max_digits=15, decimal_places=2, null=True)
+    cofins_aliquota = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+    cofins_valor = models.DecimalField(max_digits=15, decimal_places=2, null=True)
+    
     # — FCP
     fcp_valor = models.DecimalField(max_digits=15, decimal_places=2, null=True)
 

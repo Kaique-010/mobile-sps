@@ -308,7 +308,7 @@ class Produtos(models.Model):
         db_table = 'produtos'
         verbose_name = 'Produto'
         verbose_name_plural = 'Produtos'
-        managed = 'false'
+        managed = False
 
     def __str__(self):
         return self.prod_codi

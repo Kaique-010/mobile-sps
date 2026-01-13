@@ -56,7 +56,8 @@
       │ 7. SISTEMA APLICA AS REGRAS FISCAIS COMBINADAS:                 │
       │      - CFOP (define quais tributos entram)                      │
       │      - NCM (define alíquotas padrão oficial IBPT)               │
-      │      - MapaUF (define ICMS, ICMS-ST, interestadual etc.)       │
+      │      - MapaUF (define ICMS, ICMS-ST, interestadual etc.) 
+       o service que criamos e o motor e seus acialiares      │
       └──────────────────────────────┬──────────────────────────────────┘
                                      │
                                      ▼

@@ -50,7 +50,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='TabelaICMS',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, db_column='tabe_id', primary_key=True, serialize=False, verbose_name='ID')),
                 ('uf_origem', models.CharField(db_column='tabe_uf_orig', max_length=2)),
                 ('uf_destino', models.CharField(db_column='tabe_uf_dest', max_length=2)),
                 ('empresa', models.IntegerField(db_column='tabe_empr')),
@@ -76,7 +76,7 @@ class Migration(migrations.Migration):
                 ('ncm_icms_aliq_dif', models.DecimalField(blank=True, decimal_places=2, max_digits=6, null=True)),
                 ('ncm_st_aliq_dif', models.DecimalField(blank=True, decimal_places=2, max_digits=6, null=True)),
                 ('cfop', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='CFOP.CFOP')),
-                ('ncm', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='Produtos.Ncm')),
+                ('ncm', models.ForeignKey(db_constraint=False, on_delete=django.db.models.deletion.CASCADE, to='Produtos.Ncm')),
             ],
             options={
                 'db_table': 'ncm_cfop_dif',

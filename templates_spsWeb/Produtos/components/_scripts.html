@@ -1,0 +1,369 @@
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    // =================================================================
+    // 1. Tabela de Preços (Cálculo Automático)
+    // =================================================================
+    const container = document.querySelector("#precos-formset");
+    if (container) {
+      const toNumber = (v) => {
+        if (!v) return 0;
+        return parseFloat(v.replace(",", ".")) || 0;
+      };
+
+      const calcItem = (item) => {
+        const prco = item.querySelector("[name$='tabe_prco']");
+        const fret = item.querySelector("[name$='tabe_fret']");
+        const desp = item.querySelector("[name$='tabe_desp']");
+        const cuge = item.querySelector("[name$='tabe_cuge']");
+        const marg = item.querySelector("[name$='tabe_marg']");
+        const avis = item.querySelector("[name$='tabe_avis']");
+        const apra = item.querySelector("[name$='tabe_apra']");
+        const praz = item.querySelector("[name$='tabe_praz']");
+
+        if (!prco || !fret || !cuge || !marg || !avis || !apra || !praz) return;
+
+        const precoCompra = toNumber(prco.value);
+        const percFrete = toNumber(fret.value);
+        const percMargem = toNumber(marg.value);
+        const percPrazo = toNumber(praz.value);
+
+        const custoFrete = precoCompra * (percFrete / 100);
+        const valorDespesas = desp ? toNumber(desp.value) : 0;
+        const custoGerencial = precoCompra + custoFrete + valorDespesas;
+        if (cuge) cuge.value = custoGerencial.toFixed(2);
+        const precoVista = precoCompra * (1 + percMargem / 100);
+        const precoPrazo = precoVista * (1 + percPrazo / 100);
+        avis.value = precoVista.toFixed(2);
+        apra.value = precoPrazo.toFixed(2);
+      };
+
+      container.addEventListener("input", (e) => {
+        const item = e.target.closest(".preco-item");
+        if (item) calcItem(item);
+      });
+
+      container.querySelectorAll(".preco-item").forEach(calcItem);
+    }
+
+    // =================================================================
+    // 2. Autocomplete Helpers
+    // =================================================================
+    function createDropdown(container) {
+      let dd = container.querySelector('.autocomplete-dropdown');
+      if (!dd) {
+        dd = document.createElement('div');
+        dd.className = 'autocomplete-dropdown list-group position-absolute w-100';
+        dd.style.zIndex = '1000';
+        container.appendChild(dd);
+      }
+      return dd;
+    }
+
+    async function fetchResults(url, term) {
+      const resp = await fetch(`${url}?term=${encodeURIComponent(term)}`);
+      const json = await resp.json();
+      return (json.results || []).map(r => ({ value: r.value ?? r.id, label: r.label ?? r.text }));
+    }
+
+    function ensureOption(selectEl, value, label) {
+      if (!selectEl || !value) return;
+      const found = Array.from(selectEl.options).find(o => String(o.value) === String(value));
+      if (!found) {
+        const opt = document.createElement('option');
+        opt.value = value;
+        opt.textContent = label || value;
+        selectEl.appendChild(opt);
+      }
+    }
+
+    window.setupTextAutocomplete = function({ inputEl, url, onPick }) {
+      if (!inputEl) return;
+      const container = inputEl.parentElement;
+      const dropdown = createDropdown(container);
+      let debounce;
+      
+      // Spinner element (optional if exists in HTML)
+      const loadingEl = container.querySelector('.spinner-border');
+
+      inputEl.addEventListener('input', e => {
+        const term = e.target.value.trim();
+        clearTimeout(debounce);
+        dropdown.innerHTML = '';
+        if (term.length < 2) return;
+
+        if (loadingEl) loadingEl.style.display = 'block';
+
+        debounce = setTimeout(async () => {
+          try {
+            const items = await fetchResults(url, term);
+            dropdown.innerHTML = '';
+            items.forEach(item => {
+              const a = document.createElement('a');
+              a.href = '#';
+              a.className = 'list-group-item list-group-item-action';
+              a.textContent = item.label;
+              a.addEventListener('click', ev => {
+                ev.preventDefault();
+                inputEl.value = item.value;
+                dropdown.innerHTML = '';
+                if (typeof onPick === 'function') onPick(item);
+              });
+              dropdown.appendChild(a);
+            });
+            
+            if (items.length === 0) {
+               const div = document.createElement('div');
+               div.className = 'list-group-item text-muted';
+               div.textContent = 'Nenhum resultado encontrado';
+               dropdown.appendChild(div);
+            }
+          } catch (e) { 
+            dropdown.innerHTML = ''; 
+          } finally {
+            if (loadingEl) loadingEl.style.display = 'none';
+          }
+        }, 250);
+      });
+      document.addEventListener('click', e => { if (!container.contains(e.target)) dropdown.innerHTML = ''; });
+    };
+
+    window.setupSelectAutocomplete = function({ inputEl, selectEl, url }) {
+      if (!inputEl || !selectEl) return;
+      const container = inputEl.parentElement;
+      const dropdown = createDropdown(container);
+      let debounce;
+      const loadingEl = container.querySelector('.spinner-border');
+
+      // Hide original select
+      selectEl.style.display = 'none';
+
+      inputEl.addEventListener('input', e => {
+        const term = e.target.value.trim();
+        clearTimeout(debounce);
+        dropdown.innerHTML = '';
+        if (term.length < 2) return;
+
+        if (loadingEl) loadingEl.style.display = 'block';
+
+        debounce = setTimeout(async () => {
+          try {
+            const items = await fetchResults(url, term);
+            dropdown.innerHTML = '';
+            items.forEach(item => {
+              const a = document.createElement('a');
+              a.href = '#';
+              a.className = 'list-group-item list-group-item-action';
+              a.textContent = item.label;
+              a.addEventListener('click', ev => {
+                ev.preventDefault();
+                ensureOption(selectEl, item.value, item.label);
+                selectEl.value = item.value;
+                inputEl.value = item.label;
+                dropdown.innerHTML = '';
+              });
+              dropdown.appendChild(a);
+            });
+             if (items.length === 0) {
+               const div = document.createElement('div');
+               div.className = 'list-group-item text-muted';
+               div.textContent = 'Nenhum resultado encontrado';
+               dropdown.appendChild(div);
+            }
+          } catch (e) { 
+             dropdown.innerHTML = ''; 
+          } finally {
+             if (loadingEl) loadingEl.style.display = 'none';
+          }
+        }, 250);
+      });
+      document.addEventListener('click', e => { if (!container.contains(e.target)) dropdown.innerHTML = ''; });
+    };
+
+    // =================================================================
+    // 3. NCM Helper Logic
+    // =================================================================
+    window.fetchNcmDefaults = async function(ncmCode) {
+      const displayCode = document.getElementById('ncm-display-code');
+      const defaultsList = document.getElementById('ncm-defaults-list');
+      const preview = document.getElementById('ncm-defaults-preview');
+
+      if (displayCode) displayCode.textContent = ncmCode;
+
+      if (!ncmCode) {
+        if (preview) preview.style.display = 'none';
+        return;
+      }
+
+      try {
+        const response = await fetch(`{% url 'ncm_aliquotas' slug=slug %}?ncm=${encodeURIComponent(ncmCode)}`);
+        const data = await response.json();
+
+        if (data.aliquotas && defaultsList && preview) {
+          const parts = [];
+          if (data.aliquotas.ipi) parts.push(`IPI: ${data.aliquotas.ipi}%`);
+          if (data.aliquotas.pis) parts.push(`PIS: ${data.aliquotas.pis}%`);
+          if (data.aliquotas.cofins) parts.push(`COFINS: ${data.aliquotas.cofins}%`);
+          if (data.aliquotas.ibs) parts.push(`IBS: ${data.aliquotas.ibs}%`);
+          if (data.aliquotas.cbs) parts.push(`CBS: ${data.aliquotas.cbs}%`);
+
+          defaultsList.textContent = parts.length ? parts.join(' | ') : 'Sem alíquotas específicas cadastradas';
+          preview.style.display = 'block';
+        }
+      } catch (e) {
+        console.error("Erro ao buscar defaults NCM:", e);
+      }
+    };
+
+    // =================================================================
+    // 4. Inicialização dos Autocompletes
+    // =================================================================
+    const urls = {
+      unidades: "{% url 'autocomplete_unidades' slug=slug %}",
+      grupos: "{% url 'autocomplete_grupos' slug=slug %}",
+      subgrupos: "{% url 'autocomplete_subgrupos' slug=slug %}",
+      familias: "{% url 'autocomplete_familias' slug=slug %}",
+      marcas: "{% url 'autocomplete_marcas' slug=slug %}",
+      ncms: "{% url 'autocomplete_ncms' slug=slug %}",
+    };
+
+    setupTextAutocomplete({ inputEl: document.getElementById('id_prod_unme'), url: urls.unidades });
+    
+    // NCM com onPick para buscar defaults
+    setupTextAutocomplete({
+      inputEl: document.getElementById('id_prod_ncm'),
+      url: urls.ncms,
+      onPick: (item) => fetchNcmDefaults(item.value)
+    });
+
+    setupSelectAutocomplete({ inputEl: document.getElementById('autocomplete-grupo'), selectEl: document.getElementById('id_prod_grup'), url: urls.grupos });
+    setupSelectAutocomplete({ inputEl: document.getElementById('autocomplete-subgrupo'), selectEl: document.getElementById('id_prod_sugr'), url: urls.subgrupos });
+    setupSelectAutocomplete({ inputEl: document.getElementById('autocomplete-familia'), selectEl: document.getElementById('id_prod_fami'), url: urls.familias });
+    setupSelectAutocomplete({ inputEl: document.getElementById('autocomplete-marca'), selectEl: document.getElementById('id_prod_marc'), url: urls.marcas });
+
+    // Inicializar defaults se já houver valor (Edição ou Reload)
+    const existingNcm = document.getElementById('autocomplete-ncm') || document.getElementById('id_prod_ncm');
+    if (existingNcm && existingNcm.value) {
+      fetchNcmDefaults(existingNcm.value);
+    }
+
+    // Validação Visual de NCM (8 dígitos)
+    const ncmInput = document.getElementById('id_prod_ncm');
+    if (ncmInput) {
+      ncmInput.addEventListener('blur', function () {
+        const val = this.value.replace(/\D/g, '');
+        const existingWarning = this.parentElement.querySelector('.ncm-warning');
+        if (existingWarning) existingWarning.remove();
+
+        if (val.length > 0 && val.length !== 8) {
+          const warning = document.createElement('div');
+          warning.className = 'text-danger small mt-1 ncm-warning';
+          warning.innerHTML = '<i class="bi bi-exclamation-triangle"></i> NCM deve ter 8 dígitos numéricos.';
+          this.parentElement.appendChild(warning);
+        }
+      });
+    }
+
+    // =================================================================
+    // 5. Simulação de Impostos
+    // =================================================================
+    const btnSimular = document.getElementById('btn-simular-impostos');
+    if (btnSimular) {
+      btnSimular.addEventListener('click', async () => {
+        const errContainer = document.getElementById('simulacao-error'); // Check if exists
+        const resContainer = document.getElementById('simulacao-resultado');
+
+        if (errContainer) errContainer.style.display = 'none';
+        if (resContainer) resContainer.style.display = 'none';
+        
+        const showError = (msg) => {
+            if (errContainer) {
+                errContainer.textContent = msg;
+                errContainer.style.display = 'block';
+            } else {
+                alert(msg);
+            }
+        };
+
+        const preco = document.getElementById('simulacao-preco').value;
+        const ncmEl = document.querySelector('[name="prod_ncm"]');
+        const ncm = ncmEl ? ncmEl.value : '';
+
+        if (!ncm) {
+          showError('Por favor, informe o NCM do produto para simular.');
+          return;
+        }
+
+        // Coletar overrides fiscais
+        const payload = {
+          preco: preco,
+          ncm: ncm,
+          tipo_oper: document.getElementById('sim-tipo-oper')?.value || 'VENDA',
+          uf_origem: document.getElementById('sim-uf-origem')?.value || 'SP',
+          uf_destino: document.getElementById('sim-uf-destino')?.value || 'SP',
+          cst_icms: document.querySelector('[name="fiscal-cst_icms"]')?.value,
+          aliq_icms: document.querySelector('[name="fiscal-aliq_icms"]')?.value,
+          cst_ipi: document.querySelector('[name="fiscal-cst_ipi"]')?.value,
+          aliq_ipi: document.querySelector('[name="fiscal-aliq_ipi"]')?.value,
+          cst_pis: document.querySelector('[name="fiscal-cst_pis"]')?.value,
+          aliq_pis: document.querySelector('[name="fiscal-aliq_pis"]')?.value,
+          cst_cofins: document.querySelector('[name="fiscal-cst_cofins"]')?.value,
+          aliq_cofins: document.querySelector('[name="fiscal-aliq_cofins"]')?.value,
+          cst_cbs: document.querySelector('[name="fiscal-cst_cbs"]')?.value,
+          aliq_cbs: document.querySelector('[name="fiscal-aliq_cbs"]')?.value,
+          cst_ibs: document.querySelector('[name="fiscal-cst_ibs"]')?.value,
+          aliq_ibs: document.querySelector('[name="fiscal-aliq_ibs"]')?.value,
+        };
+
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        try {
+          btnSimular.disabled = true;
+          btnSimular.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Calculando...';
+
+          const resp = await fetch('{% url "simular_impostos_web" slug=slug %}', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify(payload)
+          });
+
+          if (!resp.ok) {
+            const err = await resp.json();
+            throw new Error(err.error || 'Erro na simulação');
+          }
+
+          const data = await resp.json();
+
+          // Atualizar UI
+          const fmt = (v) => {
+            if (v === null || v === undefined) return 'R$ 0,00';
+            return parseFloat(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+          };
+
+          document.getElementById('res-icms').textContent = fmt(data.valores.icms);
+          document.getElementById('res-ipi').textContent = fmt(data.valores.ipi);
+          document.getElementById('res-pis').textContent = fmt(data.valores.pis);
+          document.getElementById('res-cofins').textContent = fmt(data.valores.cofins);
+          document.getElementById('res-ibs').textContent = fmt(data.valores.ibs);
+          document.getElementById('res-cbs').textContent = fmt(data.valores.cbs);
+
+          let total = (parseFloat(data.valores.icms || 0) + parseFloat(data.valores.ipi || 0) +
+            parseFloat(data.valores.pis || 0) + parseFloat(data.valores.cofins || 0) +
+            parseFloat(data.valores.ibs || 0) + parseFloat(data.valores.cbs || 0));
+
+          document.getElementById('res-total-tributos').textContent = fmt(total);
+
+          if(resContainer) resContainer.style.display = 'block';
+
+        } catch (e) {
+          showError('Erro ao calcular impostos: ' + e.message);
+        } finally {
+          btnSimular.disabled = false;
+          btnSimular.innerHTML = '<i class="bi bi-play-fill"></i> Calcular Impostos';
+        }
+      });
+    }
+  });
+</script>

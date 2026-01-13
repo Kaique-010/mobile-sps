@@ -1,0 +1,60 @@
+<div class="tab-pane fade" id="precos">
+  <h5 class="form-section-title text-center mb-5">Tabela de Preços</h5>
+  {{ formset.management_form }}
+
+  <div id="precos-formset">
+    {% for form in formset %}
+    <div class="preco-item border p-3 mb-2">
+      <div class="row">
+        <div class="col-md-4">
+          <label for="{{ form.tabe_prco.id_for_label }}">Preço de Compra (R$)</label>
+          {{ form.tabe_prco }}
+        </div>
+        <div class="col-md-4">
+          <label for="{{ form.tabe_fret.id_for_label }}">% Frete</label>
+          {{ form.tabe_fret }}
+        </div>
+        <div class="col-md-4">
+          <label for="{{ form.tabe_cuge.id_for_label }}">Custo Gerencial (R$)</label>
+          {{ form.tabe_cuge }}
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-4">
+          <label for="{{ form.tabe_desp.id_for_label }}">Despesas (R$)</label>
+          {{ form.tabe_desp }}
+        </div>
+        <div class="col-md-8" style="display:none;">
+          {{ form.tabe_fili }}
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-6">
+          <label for="{{ form.tabe_marg.id_for_label }}">% à Vista</label>
+          {{ form.tabe_marg }}
+        </div>
+        <div class="col-md-6">
+          <label for="{{ form.tabe_avis.id_for_label }}">Preço à Vista (R$)</label>
+          {{ form.tabe_avis }}
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-6">
+          <label for="{{ form.tabe_praz.id_for_label }}">% a Prazo</label>
+          {{ form.tabe_praz }}
+        </div>
+        <div class="col-md-6">
+          <label for="{{ form.tabe_apra.id_for_label }}">Preço a Prazo (R$)</label>
+          {{ form.tabe_apra }}
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-12">
+          <label for="{{ form.tabe_hist.id_for_label }}">Histórico</label>
+          {{ form.tabe_hist }}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>

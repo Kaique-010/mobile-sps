@@ -25,7 +25,12 @@ class ItensService:
             if prod_val and not isinstance(prod_val, Produtos):
                 produto_obj = Produtos.objects.using(nota._state.db).get(pk=str(prod_val))
                 item_data["produto"] = produto_obj
-            item_obj = NotaItem.objects.create(nota=nota, **item_data)
+            
+            # Filtra campos para manter apenas os que existem no modelo NotaItem
+            model_fields = {f.name for f in NotaItem._meta.get_fields()}
+            clean_data = {k: v for k, v in item_data.items() if k in model_fields}
+            
+            item_obj = NotaItem.objects.create(nota=nota, **clean_data)
 
             # impostos
             if impostos_map and index in impostos_map:

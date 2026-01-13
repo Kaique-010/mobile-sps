@@ -122,6 +122,11 @@ class GeradorXML:
         etree.SubElement(end, "UF").text = dest["uf"]
         etree.SubElement(end, "CEP").text = dest["cep"]
 
+    def _f(self, val):
+        if val is None:
+            return 0.0
+        return float(val)
+
     # ----------------------------------------------------------------------
     # itens
     # ----------------------------------------------------------------------
@@ -130,34 +135,191 @@ class GeradorXML:
             det = etree.SubElement(root, "det", nItem=str(i))
             prod = etree.SubElement(det, "prod")
 
-            quantidade = float(item["quantidade"])
-            unit = float(item["valor_unit"])
-            desconto = float(item.get("desconto", 0))
+            quantidade = self._f(item["quantidade"])
+            unit = self._f(item["valor_unit"])
+            desconto = self._f(item.get("desconto", 0))
             vprod = quantidade * unit
 
             etree.SubElement(prod, "cProd").text = item["codigo"]
             etree.SubElement(prod, "xProd").text = item["descricao"]
             etree.SubElement(prod, "NCM").text = item["ncm"]
+            
+            if item.get("cest"):
+                etree.SubElement(prod, "CEST").text = item["cest"]
+
             etree.SubElement(prod, "CFOP").text = item["cfop"]
             etree.SubElement(prod, "uCom").text = item["unidade"]
             etree.SubElement(prod, "qCom").text = f"{quantidade:.4f}"
             etree.SubElement(prod, "vUnCom").text = f"{unit:.10f}"
             etree.SubElement(prod, "vProd").text = f"{vprod:.2f}"
+            
+            # Frete, Seguro e Outras Despesas no Item
+            vfrete = self._f(item.get("valor_frete"))
+            if vfrete > 0:
+                etree.SubElement(prod, "vFrete").text = f"{vfrete:.2f}"
+                
+            vseg = self._f(item.get("valor_seguro"))
+            if vseg > 0:
+                etree.SubElement(prod, "vSeg").text = f"{vseg:.2f}"
+                
+            voutro = self._f(item.get("valor_outras_despesas"))
+            if voutro > 0:
+                etree.SubElement(prod, "vOutro").text = f"{voutro:.2f}"
 
             if desconto > 0:
                 etree.SubElement(prod, "vDesc").text = f"{desconto:.2f}"
 
-            # imposto mínimo (ICMS CST padrão)
             imposto = etree.SubElement(det, "imposto")
-            icms_group = etree.SubElement(imposto, "ICMS")
+            
+            # Chama os geradores de cada imposto
+            self._icms(imposto, item)
+            self._ipi(imposto, item)
+            self._pis(imposto, item)
+            self._cofins(imposto, item)
+            self._ibs(imposto, item)
+            self._cbs(imposto, item)
 
-            cst = item["cst_icms"]
-            icms_tag = f"ICMS{cst}"
+    def _icms(self, parent, item):
+        icms = etree.SubElement(parent, "ICMS")
+        cst = item["cst_icms"]
+        orig = "0"  # Idealmente viria do item/produto
 
-            ic = etree.SubElement(icms_group, icms_tag)
-            etree.SubElement(ic, "orig").text = "0"
-            etree.SubElement(ic, "CST").text = cst
+        def f2(v): return f"{self._f(v):.2f}"
 
+        if len(cst) == 3:  # Simples Nacional (CSOSN)
+            tag = f"ICMSSN{cst}"
+            group = etree.SubElement(icms, tag)
+            etree.SubElement(group, "orig").text = orig
+            etree.SubElement(group, "CSOSN").text = cst
+            
+            if cst == "101":
+                # pCredSN e vCredICMSSN
+                pass # Implementar se tiver dados
+            elif cst in ("201", "202", "203", "900"):
+                if cst == "201":
+                   # 201 também tem crédito
+                   pass 
+                
+                # Campos ST para SN
+                etree.SubElement(group, "modBCST").text = "4" # Margem Valor Agregado
+                
+                vbc_st = self._f(item.get("base_icms_st"))
+                if vbc_st > 0:
+                    etree.SubElement(group, "pMVAST").text = f2(item.get("mva_st"))
+                    etree.SubElement(group, "vBCST").text = f2(vbc_st)
+                    etree.SubElement(group, "pICMSST").text = f2(item.get("aliq_icms_st"))
+                    etree.SubElement(group, "vICMSST").text = f2(item.get("valor_icms_st"))
+
+                if cst == "900":
+                    # 900 tem campos de ICMS próprio também
+                    etree.SubElement(group, "modBC").text = "3"
+                    etree.SubElement(group, "vBC").text = f2(item.get("base_icms"))
+                    etree.SubElement(group, "pICMS").text = f2(item.get("aliq_icms"))
+                    etree.SubElement(group, "vICMS").text = f2(item.get("valor_icms"))
+
+        else:
+            tag = f"ICMS{cst}"
+            if cst == "41" or cst == "50": # Repasse, Não Tributado
+                 tag = "ICMS40"
+            
+            group = etree.SubElement(icms, tag)
+            etree.SubElement(group, "orig").text = orig
+            etree.SubElement(group, "CST").text = cst
+
+            if cst in ("00", "10", "20", "51", "70", "90"):
+                etree.SubElement(group, "modBC").text = "3" # Valor Operação
+                etree.SubElement(group, "vBC").text = f2(item.get("base_icms"))
+                etree.SubElement(group, "pICMS").text = f2(item.get("aliq_icms"))
+                etree.SubElement(group, "vICMS").text = f2(item.get("valor_icms"))
+
+            if cst in ("10", "30", "70", "90"):
+                 etree.SubElement(group, "modBCST").text = "4"
+                 vbc_st = self._f(item.get("base_icms_st"))
+                 if vbc_st > 0 or cst in ("10", "70"): # 10 e 70 exigem ST, 30 e 90 podem ser isentos
+                    etree.SubElement(group, "pMVAST").text = f2(item.get("mva_st"))
+                    etree.SubElement(group, "vBCST").text = f2(vbc_st)
+                    etree.SubElement(group, "pICMSST").text = f2(item.get("aliq_icms_st"))
+                    etree.SubElement(group, "vICMSST").text = f2(item.get("valor_icms_st"))
+
+    def _ipi(self, parent, item):
+        cst = item.get("cst_ipi")
+        if not cst: return
+
+        ipi = etree.SubElement(parent, "IPI")
+        etree.SubElement(ipi, "cEnq").text = "999" # Genérico
+
+        if cst in ("00", "49", "50", "99"):
+            ipitrib = etree.SubElement(ipi, f"IPITrib")
+            etree.SubElement(ipitrib, "CST").text = cst
+            etree.SubElement(ipitrib, "vBC").text = f"{self._f(item.get('base_ipi')):.2f}"
+            etree.SubElement(ipitrib, "pIPI").text = f"{self._f(item.get('aliq_ipi')):.2f}"
+            etree.SubElement(ipitrib, "vIPI").text = f"{self._f(item.get('valor_ipi')):.2f}"
+        else:
+            ipint = etree.SubElement(ipi, "IPINT")
+            etree.SubElement(ipint, "CST").text = cst
+
+    def _pis(self, parent, item):
+        cst = item["cst_pis"]
+        pis = etree.SubElement(parent, "PIS")
+        
+        if cst in ("01", "02"):
+            group = etree.SubElement(pis, "PISAliq")
+            etree.SubElement(group, "CST").text = cst
+            etree.SubElement(group, "vBC").text = f"{self._f(item.get('base_pis')):.2f}"
+            etree.SubElement(group, "pPIS").text = f"{self._f(item.get('aliq_pis')):.2f}"
+            etree.SubElement(group, "vPIS").text = f"{self._f(item.get('valor_pis')):.2f}"
+        elif cst == "99":
+            group = etree.SubElement(pis, "PISOutr")
+            etree.SubElement(group, "CST").text = cst
+            etree.SubElement(group, "vBC").text = f"{self._f(item.get('base_pis')):.2f}"
+            etree.SubElement(group, "pPIS").text = f"{self._f(item.get('aliq_pis')):.2f}"
+            etree.SubElement(group, "vPIS").text = f"{self._f(item.get('valor_pis')):.2f}"
+        else:
+            group = etree.SubElement(pis, "PISNT")
+            etree.SubElement(group, "CST").text = cst
+
+    def _cofins(self, parent, item):
+        cst = item["cst_cofins"]
+        cofins = etree.SubElement(parent, "COFINS")
+        
+        if cst in ("01", "02"):
+            group = etree.SubElement(cofins, "COFINSAliq")
+            etree.SubElement(group, "CST").text = cst
+            etree.SubElement(group, "vBC").text = f"{self._f(item.get('base_cofins')):.2f}"
+            etree.SubElement(group, "pCOFINS").text = f"{self._f(item.get('aliq_cofins')):.2f}"
+            etree.SubElement(group, "vCOFINS").text = f"{self._f(item.get('valor_cofins')):.2f}"
+        elif cst == "99":
+            group = etree.SubElement(cofins, "COFINSOutr")
+            etree.SubElement(group, "CST").text = cst
+            etree.SubElement(group, "vBC").text = f"{self._f(item.get('base_cofins')):.2f}"
+            etree.SubElement(group, "pCOFINS").text = f"{self._f(item.get('aliq_cofins')):.2f}"
+            etree.SubElement(group, "vCOFINS").text = f"{self._f(item.get('valor_cofins')):.2f}"
+        else:
+            group = etree.SubElement(cofins, "COFINSNT")
+            etree.SubElement(group, "CST").text = cst
+
+    def _ibs(self, parent, item):
+        # NT 2023.004
+        val = self._f(item.get("valor_ibs"))
+        if val <= 0: return
+
+        ibs = etree.SubElement(parent, "IBS")
+        # Por enquanto simplificado, pois o schema final pode variar
+        # Usando tags genéricas baseadas na proposta
+        etree.SubElement(ibs, "vBCIBS").text = f"{self._f(item.get('base_ibs')):.2f}"
+        etree.SubElement(ibs, "pIBS").text = f"{self._f(item.get('aliq_ibs')):.2f}"
+        etree.SubElement(ibs, "vIBS").text = f"{val:.2f}"
+
+    def _cbs(self, parent, item):
+        # NT 2023.004
+        val = self._f(item.get("valor_cbs"))
+        if val <= 0: return
+
+        cbs = etree.SubElement(parent, "CBS")
+        etree.SubElement(cbs, "vBCCBS").text = f"{self._f(item.get('base_cbs')):.2f}"
+        etree.SubElement(cbs, "pCBS").text = f"{self._f(item.get('aliq_cbs')):.2f}"
+        etree.SubElement(cbs, "vCBS").text = f"{val:.2f}"
+    
     # ----------------------------------------------------------------------
     # total
     # ----------------------------------------------------------------------
@@ -165,34 +327,59 @@ class GeradorXML:
         total = etree.SubElement(root, "total")
         icms = etree.SubElement(total, "ICMSTot")
 
-        vprod = sum(float(i["quantidade"]) * float(i["valor_unit"]) for i in dto["itens"])
-        vdesc = sum(float(i.get("desconto", 0)) for i in dto["itens"])
-        vnf = vprod - vdesc
+        vprod = sum(self._f(i["quantidade"]) * self._f(i["valor_unit"]) for i in dto["itens"])
+        vdesc = sum(self._f(i.get("desconto", 0)) for i in dto["itens"])
+        
+        # Sumariza Impostos
+        vbc_icms = sum(self._f(i.get("base_icms")) for i in dto["itens"])
+        vicms = sum(self._f(i.get("valor_icms")) for i in dto["itens"])
+        
+        vbc_st = sum(self._f(i.get("base_icms_st")) for i in dto["itens"])
+        vst = sum(self._f(i.get("valor_icms_st")) for i in dto["itens"])
+        
+        vipi = sum(self._f(i.get("valor_ipi")) for i in dto["itens"])
+        vpis = sum(self._f(i.get("valor_pis")) for i in dto["itens"])
+        vcofins = sum(self._f(i.get("valor_cofins")) for i in dto["itens"])
+        vfcp = sum(self._f(i.get("valor_fcp")) for i in dto["itens"])
+        
+        vibs = sum(self._f(i.get("valor_ibs")) for i in dto["itens"])
+        vcbs = sum(self._f(i.get("valor_cbs")) for i in dto["itens"])
+
+        vfrete = sum(self._f(i.get("valor_frete")) for i in dto["itens"])
+        vseg = sum(self._f(i.get("valor_seguro")) for i in dto["itens"])
+        voutro = sum(self._f(i.get("valor_outras_despesas")) for i in dto["itens"])
+
+        # Total da Nota = Prod - Desc + IPI + ST + Frete + Seg + Outro + II - ICMSDeson
+        # vNF = vProd - vDesc - vICMSDeson + vST + vFrete + vSeg + vOutro + vII + vIPI + vIPIDevol + vFCPST
+        # + IBS + CBS (Reforma Tributária - assumindo taxa por fora)
+        
+        vnf = vprod - vdesc + vipi + vst + vfrete + vseg + voutro + vibs + vcbs
 
         def zero(): return "0.00"
+        def f2(v): return f"{v:.2f}"
 
-        etree.SubElement(icms, "vBC").text = zero()
-        etree.SubElement(icms, "vICMS").text = zero()
+        etree.SubElement(icms, "vBC").text = f2(vbc_icms)
+        etree.SubElement(icms, "vICMS").text = f2(vicms)
         etree.SubElement(icms, "vICMSDeson").text = zero()
         etree.SubElement(icms, "vFCPUFDest").text = zero()
         etree.SubElement(icms, "vICMSUFDest").text = zero()
         etree.SubElement(icms, "vICMSUFRemet").text = zero()
-        etree.SubElement(icms, "vFCP").text = zero()
-        etree.SubElement(icms, "vBCST").text = zero()
-        etree.SubElement(icms, "vST").text = zero()
+        etree.SubElement(icms, "vFCP").text = f2(vfcp)
+        etree.SubElement(icms, "vBCST").text = f2(vbc_st)
+        etree.SubElement(icms, "vST").text = f2(vst)
         etree.SubElement(icms, "vFCPST").text = zero()
         etree.SubElement(icms, "vFCPSTRet").text = zero()
-        etree.SubElement(icms, "vProd").text = f"{vprod:.2f}"
-        etree.SubElement(icms, "vFrete").text = zero()
-        etree.SubElement(icms, "vSeg").text = zero()
-        etree.SubElement(icms, "vDesc").text = f"{vdesc:.2f}"
+        etree.SubElement(icms, "vProd").text = f2(vprod)
+        etree.SubElement(icms, "vFrete").text = f2(vfrete)
+        etree.SubElement(icms, "vSeg").text = f2(vseg)
+        etree.SubElement(icms, "vDesc").text = f2(vdesc)
         etree.SubElement(icms, "vII").text = zero()
-        etree.SubElement(icms, "vIPI").text = zero()
+        etree.SubElement(icms, "vIPI").text = f2(vipi)
         etree.SubElement(icms, "vIPIDevol").text = zero()
-        etree.SubElement(icms, "vPIS").text = zero()
-        etree.SubElement(icms, "vCOFINS").text = zero()
-        etree.SubElement(icms, "vOutro").text = zero()
-        etree.SubElement(icms, "vNF").text = f"{vnf:.2f}"
+        etree.SubElement(icms, "vPIS").text = f2(vpis)
+        etree.SubElement(icms, "vCOFINS").text = f2(vcofins)
+        etree.SubElement(icms, "vOutro").text = f2(voutro)
+        etree.SubElement(icms, "vNF").text = f2(vnf)
         etree.SubElement(icms, "vTotTrib").text = zero()
 
     # ----------------------------------------------------------------------
@@ -205,9 +392,23 @@ class GeradorXML:
         tpag = dto.get("tpag") or "01"
         etree.SubElement(det, "tPag").text = tpag
 
-        vprod = sum(float(i["quantidade"]) * float(i["valor_unit"]) for i in dto["itens"])
-        vdesc = sum(float(i.get("desconto", 0)) for i in dto["itens"])
-        etree.SubElement(det, "vPag").text = f"{(vprod - vdesc):.2f}"
+        # Recalcula vNF para pagamento (mesma lógica do _total)
+        vprod = sum(self._f(i["quantidade"]) * self._f(i["valor_unit"]) for i in dto["itens"])
+        vdesc = sum(self._f(i.get("desconto", 0)) for i in dto["itens"])
+        
+        vst = sum(self._f(i.get("valor_icms_st")) for i in dto["itens"])
+        vipi = sum(self._f(i.get("valor_ipi")) for i in dto["itens"])
+        vfrete = sum(self._f(i.get("valor_frete")) for i in dto["itens"])
+        vseg = sum(self._f(i.get("valor_seguro")) for i in dto["itens"])
+        voutro = sum(self._f(i.get("valor_outras_despesas")) for i in dto["itens"])
+        
+        vibs = sum(self._f(i.get("valor_ibs")) for i in dto["itens"])
+        vcbs = sum(self._f(i.get("valor_cbs")) for i in dto["itens"])
+        
+        # vNF = vProd - vDesc - vICMSDeson + vST + vFrete + vSeg + vOutro + vII + vIPI + vIPIDevol + vFCPST
+        vnf = vprod - vdesc + vipi + vst + vfrete + vseg + voutro + vibs + vcbs
+        
+        etree.SubElement(det, "vPag").text = f"{vnf:.2f}"
 
     # ----------------------------------------------------------------------
     # responsável técnico
