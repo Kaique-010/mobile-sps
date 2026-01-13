@@ -50,9 +50,12 @@ class EntidadesLoginViewSet(viewsets.ViewSet):
                     self._configurar_banco(licenca)
                 
                 # Buscar entidade
-                entidade = Entidades.objects.using(banco_slug).get(
+                entidade = Entidades.objects.using(banco_slug).filter(
                     Q(enti_cpf=documento) | Q(enti_cnpj=documento)
-                )
+                ).first()
+
+                if not entidade:
+                    continue
                 
                 # Verificar credenciais
                 if entidade.enti_mobi_usua == usuario and entidade.enti_mobi_senh == senha:
