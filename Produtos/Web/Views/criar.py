@@ -3,9 +3,12 @@ from django.urls import reverse_lazy
 from django.contrib import messages
 
 from Produtos.models import Ncm
-from Produtos.models import NcmAliquota
-from ..forms import NcmForm, NcmAliquotaForm
+from ..forms import NcmForm
+from CFOP.models import NcmFiscalPadrao
+from CFOP.Web.forms import NCMFiscalPadraoForm
 from .web_views import DBAndSlugMixin
+from Licencas.models import Filiais
+from CFOP.cst_utils import get_csts_por_regime
 
 
 class NcmCreateView(DBAndSlugMixin, CreateView):
@@ -21,7 +24,6 @@ class NcmCreateView(DBAndSlugMixin, CreateView):
         try:
             self.object.save(using=self.db_alias)
         except Exception:
-            # fallback default
             self.object.save()
         resp = super().form_valid(form)
         messages.success(self.request, "NCM cadastrado com sucesso.")
@@ -40,25 +42,35 @@ class NcmCreateView(DBAndSlugMixin, CreateView):
         return ctx
 
 
-class NcmAliquotaCreateView(DBAndSlugMixin, CreateView):
-    model = NcmAliquota
-    form_class = NcmAliquotaForm
-    template_name = "Produtos/ncmaliquota_form.html"
+class NcmFiscalPadraoCreateView(DBAndSlugMixin, CreateView):
+    model = NcmFiscalPadrao
+    form_class = NCMFiscalPadraoForm    
+    template_name = "Produtos/ncmfiscalpadrao_form.html"
+
+    def _get_cst_choices(self):
+        try:
+            empresa_id = int(self.empresa_id or 1)
+            filial_id = int(self.filial_id or 1)
+            filial = Filiais.objects.using(self.db_alias).filter(
+                empr_empr=empresa_id, 
+                empr_codi=filial_id
+            ).first()
+            regime = filial.empr_regi_trib if filial else '1'
+        except Exception:
+            regime = '1'
+        return get_csts_por_regime(regime)
+
     def get_success_url(self):
         from django.urls import reverse
-        return reverse("ncmaliquota_list", kwargs={"slug": self.slug})
+        return reverse("ncmfiscalpadrao_list", kwargs={"slug": self.slug})
 
     def form_valid(self, form):
         self.object = form.save(commit=False)
         try:
-            self.object.nali_empr = int(self.empresa_id) if self.empresa_id is not None else 1
-        except Exception:
-            self.object.nali_empr = 1
-        try:
             self.object.save(using=self.db_alias)
         except Exception:
             self.object.save()
-        messages.success(self.request, "Alíquotas IBPT cadastradas com sucesso.")
+        messages.success(self.request, "Alíquotas Fiscal Padrão cadastradas com sucesso.")
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
@@ -68,6 +80,7 @@ class NcmAliquotaCreateView(DBAndSlugMixin, CreateView):
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
+        kwargs['cst_choices'] = self._get_cst_choices()
         kwargs['database'] = self.db_alias
         return kwargs
 

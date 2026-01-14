@@ -46,17 +46,17 @@ class NotaForm(forms.ModelForm):
             )
 
 
-
 class NotaItemForm(forms.ModelForm):
     class Meta:
         model = NotaItem
         fields = [
             "produto",
-            "quantidade", "unitario", "desconto",
+            "quantidade", "unitario", "desconto",   
+            "total_item",
             "cfop", "ncm", "cest",
             "cst_icms", "cst_pis", "cst_cofins",
             "cst_ibs", "cst_cbs",
-            "total",
+            
         ]
         widgets = {
             "produto": forms.TextInput(attrs={"class": "form-control item-prod-ac"}),

@@ -39,11 +39,15 @@ def get_db_from_slug(slug):
         'PORT': licenca["db_port"],
         'OPTIONS': {
             'options': '-c timezone=America/Araguaina',
-            'connect_timeout': 30,  # Aumentado de 10 para 30
+            'connect_timeout': 30,
             'application_name': 'mobile_sps',
         },
         'CONN_MAX_AGE': 600,
         'CONN_HEALTH_CHECKS': True,
+        'TEST': {
+            'MIRROR': 'default',
+            'DEPENDENCIES': [],
+        },
     }
 
     connections.ensure_defaults(slug)

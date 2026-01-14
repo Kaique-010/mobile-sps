@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Alíquotas Padrão{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
+<div class="container page-container">
+  <div class="page-header-custom">
+    <h2 class="page-title w-100 text-center"><i class="bi bi-percent"></i> Alíquotas Padrão NCM</h2>
+    <div class="page-actions">
+      <a href="{% url 'ncmfiscalpadrao_list' slug=slug %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Voltar à Lista
+      </a>
+    </div>
+  </div>
+
+  {% if messages %}
+  {% for message in messages %}
+  <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <div class="card">
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <label for="{{ form.ncm.id_for_label }}">NCM</label>
+            {{ form.ncm }}
+            <datalist id="ncm-codes"></datalist>
+            <div id="ncm-suggest" class="list-group mt-1" style="max-height:200px; overflow:auto;"></div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6">
+            <h6 class="text-primary border-bottom pb-2">ICMS</h6>
+            <div class="row mb-3">
+              <div class="col-md-8">
+                <label for="{{ form.cst_icms.id_for_label }}">CST ICMS</label>
+                {{ form.cst_icms }}
+              </div>
+              <div class="col-md-4">
+                <label for="{{ form.aliq_icms.id_for_label }}">Alíquota ICMS (%)</label>
+                {{ form.aliq_icms }}
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <h6 class="text-primary border-bottom pb-2">IPI</h6>
+            <div class="row mb-3">
+              <div class="col-md-8">
+                <label for="{{ form.cst_ipi.id_for_label }}">CST IPI</label>
+                {{ form.cst_ipi }}
+              </div>
+              <div class="col-md-4">
+                <label for="{{ form.aliq_ipi.id_for_label }}">Alíquota IPI (%)</label>
+                {{ form.aliq_ipi }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row mt-4">
+          <div class="col-md-6">
+            <h6 class="text-primary border-bottom pb-2">PIS / COFINS</h6>
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label for="{{ form.cst_pis.id_for_label }}">CST PIS</label>
+                {{ form.cst_pis }}
+                <div class="mt-1">{{ form.aliq_pis }}</div>
+              </div>
+              <div class="col-md-6">
+                <label for="{{ form.cst_cofins.id_for_label }}">CST COFINS</label>
+                {{ form.cst_cofins }}
+                <div class="mt-1">{{ form.aliq_cofins }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <h6 class="text-primary border-bottom pb-2">Reforma (IBS / CBS)</h6>
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label for="{{ form.cst_ibs.id_for_label }}">CST IBS</label>
+                {{ form.cst_ibs }}
+                <div class="mt-1">{{ form.aliq_ibs }}</div>
+              </div>
+              <div class="col-md-6">
+                <label for="{{ form.cst_cbs.id_for_label }}">CST CBS</label>
+                {{ form.cst_cbs }}
+                <div class="mt-1">{{ form.aliq_cbs }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-3">
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check2"></i> Salvar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<script>
+  (function () {
+    var input = document.getElementById('{{ form.ncm.id_for_label }}');
+    var list = document.getElementById('ncm-codes');
+    var suggest = document.getElementById('ncm-suggest');
+    var slug = '{{ slug }}';
+    var cacheKey = 'ncm_auto_' + slug;
+
+    function renderDatalist(items) {
+      if (!list) return;
+      list.innerHTML = '';
+      items.forEach(function (it) {
+        var opt = document.createElement('option');
+        opt.value = it.value;
+        opt.textContent = it.label;
+        list.appendChild(opt);
+      });
+    }
+
+    function renderSuggest(items) {
+      if (!suggest) return;
+      suggest.innerHTML = '';
+      items.slice(0, 10).forEach(function (it) {
+        var a = document.createElement('a');
+        a.href = '#';
+        a.className = 'list-group-item list-group-item-action';
+        a.textContent = it.label;
+        a.addEventListener('click', function (e) {
+          e.preventDefault();
+          input.value = it.value;
+          suggest.innerHTML = '';
+        });
+        suggest.appendChild(a);
+      });
+    }
+
+    function fetchSuggest(q) {
+      var url = '/web/' + slug + '/produtos/autocomplete/ncms/?q=' + encodeURIComponent(q);
+      fetch(url)
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          var items = (data && data.results) || [];
+          try { localStorage.setItem(cacheKey, JSON.stringify(items)); } catch (e) { }
+          renderDatalist(items);
+          renderSuggest(items);
+        })
+        .catch(function () {
+          var cached = localStorage.getItem(cacheKey);
+          if (cached) {
+            try {
+              var items = JSON.parse(cached) || [];
+              renderDatalist(items);
+              renderSuggest(items);
+            } catch (e) { }
+          }
+        });
+    }
+
+    if (input) {
+      input.addEventListener('input', function () {
+        var q = input.value.trim();
+        if (q.length >= 2) {
+          fetchSuggest(q);
+        } else {
+          suggest.innerHTML = '';
+        }
+      });
+
+      var cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        try {
+          var items = JSON.parse(cached) || [];
+          renderDatalist(items);
+        } catch (e) { }
+      }
+    }
+  })();
+</script>
+{% endblock %}

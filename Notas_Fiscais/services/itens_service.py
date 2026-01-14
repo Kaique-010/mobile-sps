@@ -23,7 +23,20 @@ class ItensService:
         for index, item_data in enumerate(itens_norm):
             prod_val = item_data.get("produto")
             if prod_val and not isinstance(prod_val, Produtos):
-                produto_obj = Produtos.objects.using(nota._state.db).get(pk=str(prod_val))
+                empresa = getattr(nota, "empresa", None)
+                qs = Produtos.objects.using(nota._state.db).filter(prod_codi=str(prod_val))
+                if empresa is not None:
+                    qs = qs.filter(prod_empr=str(empresa))
+                try:
+                    produto_obj = qs.get()
+                except Produtos.MultipleObjectsReturned:
+                    raise ValidationError(
+                        f"Produto {prod_val} possui múltiplos cadastros para a empresa {empresa}."
+                    )
+                except Produtos.DoesNotExist:
+                    raise ValidationError(
+                        f"Produto {prod_val} não encontrado para a empresa {empresa}."
+                    )
                 item_data["produto"] = produto_obj
             
             # Filtra campos para manter apenas os que existem no modelo NotaItem

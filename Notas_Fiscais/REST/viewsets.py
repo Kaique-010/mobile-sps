@@ -178,11 +178,14 @@ class NotaViewSet(viewsets.ModelViewSet):
             database=banco,
         )
 
-        CalculoImpostosService(banco).aplicar_impostos(nota)
+        debug_data = CalculoImpostosService(banco).aplicar_impostos(nota, return_debug=True)
         NotaService.gravar(nota, descricao="Rascunho criado via API")
 
         out = NotaDetailSerializer(nota, context=self.get_serializer_context())
-        return Response(out.data, status=status.HTTP_201_CREATED)
+        data_out = dict(out.data)
+        if debug_data:
+            data_out["debug_calculo"] = debug_data
+        return Response(data_out, status=status.HTTP_201_CREATED)
 
     # --------- UPDATE ---------
     def update(self, request, *args, **kwargs):
@@ -209,9 +212,11 @@ class NotaViewSet(viewsets.ModelViewSet):
             database=banco,
         )
 
-        CalculoImpostosService(banco).aplicar_impostos(nota)
+        debug_data = CalculoImpostosService(banco).aplicar_impostos(nota, return_debug=True)
         out = NotaDetailSerializer(nota, context=self.get_serializer_context())
         data_out = dict(out.data)
+        if debug_data:
+            data_out["debug_calculo"] = debug_data
         itens_qs = (
             NotaItem.objects.using(banco)
             .select_related("impostos")
@@ -399,11 +404,14 @@ class NotaViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Nota já cancelada"}, status=status.HTTP_400_BAD_REQUEST)
         
 
-        CalculoImpostosService(banco).aplicar_impostos(nota)
+        debug_data = CalculoImpostosService(banco).aplicar_impostos(nota, return_debug=True)
         descricao = request.data.get("descricao", "Rascunho criado/atualizado via API")        
         NotaService.gravar(nota, descricao=descricao)
         out = NotaDetailSerializer(nota, context=self.get_serializer_context())
-        return Response(out.data, status=status.HTTP_200_OK)
+        data_out = dict(out.data)
+        if debug_data:
+            data_out["debug_calculo"] = debug_data
+        return Response(data_out, status=status.HTTP_200_OK)
 
 
 class NotaEventoViewSet(viewsets.ReadOnlyModelViewSet):

@@ -221,6 +221,15 @@ class NcmFiscalPadrao(FiscalPadraoBase):
         verbose_name_plural = "Fiscais Padrão NCM"
 
 
+class CFOPFiscalPadrao(FiscalPadraoBase):
+    cfop = models.OneToOneField(CFOP, on_delete=models.CASCADE, related_name="fiscal", db_constraint=False)
+
+    class Meta:
+        db_table = "cfop_fiscal_padrao"
+        verbose_name = "Fiscal Padrão CFOP"
+        verbose_name_plural = "Fiscais Padrão CFOP"
+
+
 class ProdutoFiscalPadrao(FiscalPadraoBase):
     produto = models.OneToOneField(Produtos, on_delete=models.CASCADE, related_name="fiscal", db_constraint=False)
 

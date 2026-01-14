@@ -1,0 +1,49 @@
+{
+  "name": "Trae AI Django Debug Session",
+  "projectRoot": "d:\\mobile-sps",
+  "entrypoint": "manage.py",
+  "entryArgs": [
+    "runserver",
+    "0.0.0.0:8000"
+  ],
+  "pythonEnv": {
+    "venvPath": ".venv",
+    "pythonPath": ".venv\\Scripts\\python.exe"
+  },
+  "breakpoints": [
+    {
+      "file": "Notas_Fiscais\\services\\calculo_impostos_service.py",
+      "line": 62,
+      "label": "inicio_aplicar_impostos"
+    },
+    {
+      "file": "CFOP\\services\\services.py",
+      "line": 395,
+      "label": "motor_fiscal_calcular_item"
+    },
+    {
+      "file": "Notas_Fiscais\\REST\\viewsets.py",
+      "line": 155,
+      "label": "nota_create_viewset"
+    }
+  ],
+  "watch": [
+    "nota.id",
+    "nota.modelo",
+    "nota.serie",
+    "item.id",
+    "item.cfop",
+    "item.produto.prod_ncm",
+    "pacote.fonte_tributacao",
+    "pacote.bases.icms",
+    "pacote.valores.icms",
+    "pacote.valores.pis",
+    "pacote.valores.cofins"
+  ],
+  "logging": {
+    "enabled": true,
+    "level": "DEBUG",
+    "file": "debug-runtime.log"
+  }
+}
+

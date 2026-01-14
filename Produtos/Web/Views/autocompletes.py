@@ -76,7 +76,7 @@ def autocomplete_ncms(request, slug=None):
     return JsonResponse({'results': data})
 
 
-def ncm_aliquotas(request, slug=None):
+def ncm_fiscal_padrao(request, slug=None):
     banco = get_licenca_db_config(request) or 'default'
     empresa_id = request.session.get('empresa_id') or request.headers.get('X-Empresa') or request.GET.get('empresa')
     ncm_code = (request.GET.get('ncm') or '').strip()
@@ -86,21 +86,21 @@ def ncm_aliquotas(request, slug=None):
         return JsonResponse(resp)
     ncm = Ncm.objects.using(banco).filter(ncm_codi=ncm_code).first()
     if ncm:
-        from Produtos.models import NcmAliquota as NcmAliqModel
-        qs = NcmAliqModel.objects.using(banco).filter(nali_ncm=ncm)
+        from Produtos.models import NcmFiscalPadrao as NcmFiscalPadraoModel
+        qs = NcmFiscalPadraoModel.objects.using(banco).filter(nfiscalpadrao_ncm=ncm)
         if empresa_id:
             try:
-                qs = qs.filter(nali_empr=int(empresa_id))
+                qs = qs.filter(nfiscalpadrao_empr=int(empresa_id))
             except Exception:
-                qs = qs.filter(nali_empr=empresa_id)
+                qs = qs.filter(nfiscalpadrao_empr=empresa_id)
         aliq = qs.first()
         if aliq:
             resp['aliquotas'] = {
-                'ipi': aliq.nali_aliq_ipi,
-                'pis': aliq.nali_aliq_pis,
-                'cofins': aliq.nali_aliq_cofins,
-                'cbs': aliq.nali_aliq_cbs,
-                'ibs': aliq.nali_aliq_ibs,
+                'ipi': aliq.nfiscalpadrao_aliq_ipi,
+                'pis': aliq.nfiscalpadrao_aliq_pis,
+                'cofins': aliq.nfiscalpadrao_aliq_cofins,
+                'cbs': aliq.nfiscalpadrao_aliq_cbs,
+                'ibs': aliq.nfiscalpadrao_aliq_ibs,
             }
     if ncm and cfop_code:
         cfop = CFOPModel.objects.using(banco).filter(cfop_codi=cfop_code).first()

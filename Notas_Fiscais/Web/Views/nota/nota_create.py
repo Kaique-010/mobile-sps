@@ -1,10 +1,12 @@
 # notas_fiscais/views/nota/nota_create.py
 
 from django.views.generic import FormView
+from datetime import date
 from core.utils import get_licenca_db_config
 from ....models import Nota
 from ...forms import NotaForm, NotaItemFormSet, TransporteForm
 from ....services.nota_service import NotaService
+from ....services.calculo_impostos_service import CalculoImpostosService
 from ..base import SPSViewMixin
 
 
@@ -13,6 +15,13 @@ class NotaCreateView(SPSViewMixin, FormView):
     form_class = NotaForm
     success_url_name = "nota_list"
     success_message = "Nota criada com sucesso."
+
+    def get_initial(self):
+        initial = super().get_initial()
+        hoje = date.today()
+        initial.setdefault("data_emissao", hoje)
+        initial.setdefault("data_saida", hoje)
+        return initial
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -51,7 +60,7 @@ class NotaCreateView(SPSViewMixin, FormView):
         empresa = self.request.session.get("empresa_id")
         filial = self.request.session.get("filial_id")
 
-        NotaService.criar(
+        nota = NotaService.criar(
             data=nota_data,
             itens=itens,
             impostos_map=None,
@@ -60,21 +69,8 @@ class NotaCreateView(SPSViewMixin, FormView):
             filial=filial,
             database=banco,
         )
-        # Marca como rascunho
-        # Recupera última nota criada com a combinação chave
-        from ....models import Nota
-        nota = (
-            Nota.objects.using(banco)
-            .filter(
-                empresa=empresa,
-                filial=filial,
-                modelo=nota_data.get("modelo"),
-                serie=nota_data.get("serie"),
-                numero=nota_data.get("numero"),
-            )
-            .order_by("-id")
-            .first()
-        )
+
+        CalculoImpostosService(banco).aplicar_impostos(nota)
         if nota:
             NotaService.gravar(nota, descricao="Rascunho criado via WEB")
 

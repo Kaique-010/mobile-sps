@@ -4,7 +4,8 @@ import math
 from datetime import datetime
 from decimal import Decimal
 from Produtos.models import Ncm
-from ...models import NcmAliquota
+from CFOP.models import NcmFiscalPadrao
+
 from core.utils import get_licenca_db_config
 
 def _get_decimal(row, *keys):

@@ -195,7 +195,7 @@
       }
 
       try {
-        const response = await fetch(`{% url 'ncm_aliquotas' slug=slug %}?ncm=${encodeURIComponent(ncmCode)}`);
+        const response = await fetch(`{% url 'ncmfiscalpadrao_list' slug=slug %}?ncm=${encodeURIComponent(ncmCode)}`);
         const data = await response.json();
 
         if (data.aliquotas && defaultsList && preview) {

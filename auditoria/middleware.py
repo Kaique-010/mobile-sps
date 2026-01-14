@@ -78,7 +78,9 @@ class AuditoriaMiddleware:
                 'produtos': 'Produtos',
                 'pedidos': 'Pedidos',
                 'pisos': 'Pisos',  
-                'saidas_estoque': 'Saidas_Estoque',      
+                'saidas_estoque': 'Saidas_Estoque',
+                'notasfiscais': 'Notas_Fiscais',
+                'notas_fiscais': 'Notas_Fiscais',
                 'series': 'Series',     
 
             }
@@ -97,7 +99,8 @@ class AuditoriaMiddleware:
                 'parametros_admin': 'parametros_admin',
                 'permissoes_modulos': 'permissoes_modulos',
                 'pisos': 'Pisos',
-                'Assistente_Spart': 'Assistente_Spart',               
+                'Assistente_Spart': 'Assistente_Spart',
+                'notas-fiscais': 'Nota',
 
             }
             
@@ -213,40 +216,37 @@ class AuditoriaMiddleware:
         try:
             parts = request.path.strip('/').split('/')
             if len(parts) >= 3 and parts[0] == 'api':
-                # Endpoints públicos/essenciais (login, refresh, mapa)
+                # Endpoints públicos/essenciais (login, refresh, auth)
                 if (len(parts) >= 4 and parts[2] == 'licencas' and parts[3] == 'login') \
                    or (len(parts) >= 4 and parts[2] == 'entidades' and parts[3] == 'login') \
                    or (len(parts) >= 3 and parts[2] == 'auth'):
-                    return self.get_response(request)
+                    pass
+                else:
+                    app_candidate = parts[2]
+                    modulos = getattr(request, 'modulos_disponiveis', []) or get_modulos_disponiveis()
+                    modulos_lower = {str(m).lower() for m in modulos}
+                    app_slug = str(app_candidate).lower()
 
-                # Documentação da API não deve ter associação a módulos
-                if request.path.startswith('/api/schema/') \
-                   or request.path.startswith('/api/schemas/') \
-                   or request.path.startswith('/api/swagger'):
-                    return self.get_response(request)
+                    aliases = {
+                        'os': ['o_s', 'ordemdeservico'],
+                        'o_s': ['os', 'ordemdeservico'],
+                        'ordemdeservico': ['o_s', 'os'],
+                        # Normalizações para notas fiscais
+                        'notasfiscais': ['notas_fiscais', 'notas-fiscais', 'notas fiscais'],
+                        'notas_fiscais': ['notasfiscais', 'notas-fiscais', 'notas fiscais'],
+                        'notas-fiscais': ['notasfiscais', 'notas_fiscais', 'notas fiscais'],
+                    }
+                    candidates = {app_slug}
+                    for alt in aliases.get(app_slug, []):
+                        candidates.add(alt)
 
-                # Endpoints de licenças (empresas/filiais e afins) não devem ser bloqueados
-                if parts[2] in ['licencas', 'dashboards']:
-                    return self.get_response(request)
-
-                app_candidate = parts[2]
-                modulos = getattr(request, 'modulos_disponiveis', []) or get_modulos_disponiveis()
-                modulos_lower = {m.lower() for m in modulos}
-                app_slug = app_candidate.lower()
-
-                aliases = {
-                    'os': ['o_s', 'ordemdeservico'],
-                    'o_s': ['os', 'ordemdeservico'],
-                    'ordemdeservico': ['o_s', 'os'],
-                }
-                candidates = {app_slug}
-                for alt in aliases.get(app_slug, []):
-                    candidates.add(alt)
-
-                allowed = any(c in modulos_lower for c in candidates)
-                if not allowed and not request.path.startswith('/api/auditoria/'):
-                    from django.http import JsonResponse
-                    return JsonResponse({'erro': 'Módulo não liberado para a empresa/filial atual.'}, status=403)
+                    allowed = any(c in modulos_lower for c in candidates)
+                    if not allowed and not request.path.startswith('/api/auditoria/'):
+                        from django.http import JsonResponse
+                        return JsonResponse(
+                            {'erro': 'Módulo não liberado para a empresa/filial atual.'},
+                            status=403,
+                        )
         except Exception:
             pass
 

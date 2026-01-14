@@ -103,6 +103,10 @@ class NotaService:
         # Itens
         ItensService.atualizar_itens(nota, itens, impostos_map)
 
+        # Calcular Impostos
+        if not impostos_map:
+            CalculoImpostosService(database).aplicar_impostos(nota)
+
         # Transporte
         if transporte:
             TransporteService.definir(nota, transporte)

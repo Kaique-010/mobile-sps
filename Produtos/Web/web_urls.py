@@ -1,7 +1,7 @@
 from django.urls import path
-from .Views.listar import NcmAliquotaListView, NcmListView
-from .Views.criar import NcmAliquotaCreateView, NcmCreateView
-from .Views.update import NcmAliquotaUpdateView, NcmUpdateView
+from .Views.listar import NcmFiscalPadraoListView, NcmListView
+from .Views.criar import NcmFiscalPadraoCreateView, NcmCreateView
+from .Views.update import NcmFiscalPadraoUpdateView, NcmUpdateView
 from .Views.jobViews import job_importar_ibpt
 from .Views.web_views import (
     ProdutoListView,
@@ -34,19 +34,18 @@ from .Views.web_views import (
     UnidadeMedidaDeleteView,
     SimularImpostosView
 )
-from .Views.autocompletes import autocomplete_unidades, autocomplete_grupos, autocomplete_marcas, autocomplete_subgrupos, autocomplete_familias, autocomplete_ncms, ncm_aliquotas
+from .Views.autocompletes import autocomplete_unidades, autocomplete_grupos, autocomplete_marcas, autocomplete_subgrupos, autocomplete_familias, autocomplete_ncms
 
 
 urlpatterns = [
     path("simular-impostos/", SimularImpostosView.as_view(), name="simular_impostos_web"),
-    path("ncm-aliquotas/", NcmAliquotaListView.as_view(), name="ncmaliquota_list"),
-    path("ncm-aliquotas/novo/", NcmAliquotaCreateView.as_view(), name="ncmaliquota_create"),
-    path("ncm-aliquotas/<int:pk>/editar/", NcmAliquotaUpdateView.as_view(), name="ncmaliquota_update"),
+    path("ncm-fiscal-padrao/", NcmFiscalPadraoListView.as_view(), name="ncmfiscalpadrao_list"),
+    path("ncm-fiscal-padrao/novo/", NcmFiscalPadraoCreateView.as_view(), name="ncmfiscalpadrao_create"),
+    path("ncm-fiscal-padrao/<int:pk>/editar/", NcmFiscalPadraoUpdateView.as_view(), name="ncmfiscalpadrao_update"),
     path("ncm/", NcmListView.as_view(), name="ncm_list"),
     path("ncm/novo/", NcmCreateView.as_view(), name="ncm_create"),
     path("ncm/<int:pk>/editar/", NcmUpdateView.as_view(), name="ncm_update"),
     path("autocomplete/ncms/", autocomplete_ncms, name="autocomplete_ncms"),
-    path("ncm/aliquotas/", ncm_aliquotas, name="ncm_aliquotas"),
     path('', ProdutoListView.as_view(), name='produtos_web'),
     path('new/', ProdutoCreateView.as_view(), name='produto_create_web'),
     path('<str:prod_codi>/edit/', ProdutoUpdateView.as_view(), name='produto_edit_web'),

@@ -1,0 +1,20 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Django Debug",
+      "type": "debugpy",
+      "request": "launch",
+      "python": "${workspaceFolder}\\\\.venv\\\\Scripts\\\\python.exe",
+      "program": "${workspaceFolder}\\\\manage.py",
+      "args": ["runserver", "0.0.0.0:8000"],
+      "django": true,
+      "autoStartBrowser": false,
+      "justMyCode": true,
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}\\\\.env",
+      "cwd": "${workspaceFolder}",
+      "logToFile": true
+    }
+  ]
+}

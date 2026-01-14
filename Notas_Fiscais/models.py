@@ -111,7 +111,9 @@ class NotaItem(models.Model):
     cst_ibs = models.CharField(max_length=3, blank=True, null=True)
     cst_cbs = models.CharField(max_length=3, blank=True, null=True)
 
-    total = models.DecimalField(max_digits=15, decimal_places=2)
+    fonte_tributacao = models.CharField(max_length=20, null=True, blank=True)
+
+    total_item = models.DecimalField(max_digits=15, decimal_places=2)
 
     valor_frete = models.DecimalField(max_digits=15, decimal_places=2, default=0, null=True)
     valor_seguro = models.DecimalField(max_digits=15, decimal_places=2, default=0, null=True)

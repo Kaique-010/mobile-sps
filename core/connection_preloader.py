@@ -43,8 +43,12 @@ def preload_database_connections():
                     'connect_timeout': 10,
                     'application_name': 'mobile_sps_preload',
                 },
-                'CONN_MAX_AGE': 600,  # 10 minutos
+                'CONN_MAX_AGE': 600,
                 'CONN_HEALTH_CHECKS': True,
+                'TEST': {
+                    'MIRROR': 'default',
+                    'DEPENDENCIES': [],
+                },
             }
             
             # Preparar conexão

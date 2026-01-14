@@ -5,12 +5,8 @@
 {% block content %}
 <div class="container page-container">
   <div class="page-header-custom">
-    <h2 class="page-title"><i class="bi bi-upc-scan"></i> NCMs</h2>
-    <div class="page-actions">
-      <a href="{% url 'ncm_create' slug=slug %}" class="btn btn-primary btn-sm">
-        <i class="bi bi-plus"></i> Novo NCM
-      </a>
-    </div>
+    <h2 class="page-title w-100 text-center"><i class="bi bi-upc-scan"></i> Listagem de NCM's</h2>
+
   </div>
 
   <form method="get" class="mb-3">
@@ -36,7 +32,7 @@
           <tr>
             <th>Código</th>
             <th>Descrição</th>
-            <th class="text-end">Ações</th>
+        
           </tr>
         </thead>
         <tbody>
@@ -44,11 +40,7 @@
           <tr>
             <td>{{ ncm.ncm_codi }}</td>
             <td>{{ ncm.ncm_desc }}</td>
-            <td class="text-end">
-              <a href="{% url 'ncm_update' slug=slug pk=ncm.pk %}" class="btn btn-outline-primary btn-sm">
-                <i class="bi bi-pencil"></i> Editar
-              </a>
-            </td>
+          
           </tr>
         {% empty %}
           <tr><td colspan="3" class="text-center">Nenhum NCM encontrado.</td></tr>

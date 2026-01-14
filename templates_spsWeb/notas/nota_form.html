@@ -57,6 +57,7 @@
             <th>CST IBS</th>
             <th>CST CBS</th>
             <th>Total</th>
+            <th>Fonte</th>
             <th></th>
           </tr>
         </thead>
@@ -82,6 +83,7 @@
             <td>{{ i.cst_ibs }}</td>
             <td>{{ i.cst_cbs }}</td>
             <td>{{ i.total }}</td>
+            <td>{{ i.instance.fonte_tributacao|default:"-" }}</td>
             <td>
               <div class="d-none">{{ i.DELETE }}</div>
               <button type="button" class="btn btn-sm btn-outline-danger btn-remove-item"><i
@@ -109,6 +111,7 @@
             <td>{{ ef.cst_ibs }}</td>
             <td>{{ ef.cst_cbs }}</td>
             <td>{{ ef.total }}</td>
+            <td>-</td>
             <td>
               <div class="d-none">{{ ef.DELETE }}</div>
               <button type="button" class="btn btn-sm btn-outline-danger btn-remove-item"><i

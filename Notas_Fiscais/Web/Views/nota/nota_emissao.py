@@ -1,4 +1,5 @@
 from django.views.generic import TemplateView
+from datetime import date
 
 
 class NotaEmissaoView(TemplateView):
@@ -7,5 +8,7 @@ class NotaEmissaoView(TemplateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["slug"] = self.kwargs.get("slug")
-        # Valores padrão de data podem ser setados aqui se necessário
+        hoje = date.today().isoformat()
+        ctx["data_emissao_default"] = hoje
+        ctx["data_saida_default"] = hoje
         return ctx

@@ -48,6 +48,10 @@ def get_licenca_db_config(request_or_slug):
         'PASSWORD': db_password,
         'HOST': licenca["db_host"],
         'PORT': licenca["db_port"],
+        'TEST': {
+            'MIRROR': 'default',
+            'DEPENDENCIES': [],
+        },
     }
 
     connections.ensure_defaults(slug)

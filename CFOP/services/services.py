@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from decimal import Decimal, ROUND_HALF_UP
 import logging
+from django.core.exceptions import ObjectDoesNotExist
 from dataclasses import replace
 from typing import Optional, Dict, Any
 from .bases import BasesFiscal, FiscalContexto
@@ -299,7 +300,16 @@ class MotorFiscal:
         if not produto.prod_ncm: return None
         qs = Ncm.objects
         if self.banco: qs = qs.using(self.banco)
-        return qs.filter(ncm_codi=produto.prod_ncm).first()
+        
+        cod = str(produto.prod_ncm).strip()
+        ncm = qs.filter(ncm_codi=cod).first()
+        
+        # Fallback: Tenta remover pontuação se não encontrou
+        if not ncm and ('.' in cod):
+             cod_clean = cod.replace('.', '')
+             ncm = qs.filter(ncm_codi=cod_clean).first()
+             
+        return ncm
 
     def obter_icms_data(self, uf_origem, uf_destino):
         qs = TabelaICMS.objects
@@ -322,11 +332,37 @@ class MotorFiscal:
         )
 
     def resolver_fiscal_padrao(self, produto, ncm, cfop):
-        # Prioridade: Produto > NCM > CFOP
-        if hasattr(produto, "fiscal") and produto.fiscal: return produto.fiscal
-        if hasattr(ncm, "fiscal") and ncm.fiscal: return ncm.fiscal
-        if hasattr(cfop, "fiscal") and cfop.fiscal: return cfop.fiscal
-        return None
+        """
+        Resolve o Fiscal Padrão com prioridade explícita:
+        1. Produto
+        2. CFOP
+        3. NCM
+
+        Retorna tupla (fiscal_padrao, fonte_tributacao) onde fonte_tributacao
+        é uma string indicando a origem: "PRODUTO", "CFOP", "NCM" ou None.
+        """
+        if produto is not None:
+            try:
+                if produto.fiscal:
+                    return produto.fiscal, "PRODUTO"
+            except ObjectDoesNotExist:
+                pass
+
+        if cfop is not None:
+            try:
+                if cfop.fiscal:
+                    return cfop.fiscal, "CFOP"
+            except ObjectDoesNotExist:
+                pass
+
+        if ncm is not None:
+            try:
+                if ncm.fiscal:
+                    return ncm.fiscal, "NCM"
+            except ObjectDoesNotExist:
+                pass
+
+        return None, None
 
     def aplicar_overrides_dif(self, ncm, cfop, aliquotas, icms_data):
         """Aplica NCM_CFOP_DIF se existir"""
@@ -372,7 +408,7 @@ class MotorFiscal:
             ncm, cfop, aliquotas, icms_data
         )
 
-        fiscal_padrao = self.resolver_fiscal_padrao(ctx.produto, ncm, cfop)
+        fiscal_padrao, fonte_fiscal = self.resolver_fiscal_padrao(ctx.produto, ncm, cfop)
 
         ctx_item = replace(
             ctx,
@@ -423,7 +459,9 @@ class MotorFiscal:
 
 
         return {
-            "cfop": ctx_item.cfop,  
+            "cfop": ctx_item.cfop,
+            "ncm": ctx_item.ncm,
+            "fonte_tributacao": fonte_fiscal,
             "bases": {
                 "raiz": base_raiz,
                 "icms": bases.icms,
