@@ -531,9 +531,9 @@ SESSION_CACHE_ALIAS = 'default'
 # ⚠️ CORREÇÃO CRÍTICA: Aumentar tempo de expiração da sessão
 SESSION_COOKIE_AGE = 86400  # 24 horas (era 3600 = 1 hora - MUITO CURTO!)
 
-# ⚠️ CORREÇÃO CRÍTICA: Salvar sessão a cada request
-# Isso evita perda de dados quando a sessão é modificada
-SESSION_SAVE_EVERY_REQUEST = True  # Mudado de False para True
+# ⚠️ CORREÇÃO CRÍTICA: Salvar sessão apenas quando modificada
+# Isso evita conflitos em requisições concorrentes e erro de "session deleted"
+SESSION_SAVE_EVERY_REQUEST = False
 
 # Expirar sessão ao fechar o navegador (opcional - ajuste conforme necessidade)
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # True = expira ao fechar navegador

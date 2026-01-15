@@ -1,11 +1,16 @@
-# notas_fiscais/views/nota/nota_update.py
+import logging
 
 from django.views.generic import UpdateView
+from django.urls import reverse
 from core.utils import get_licenca_db_config
 from ....models import Nota
 from ...forms import NotaForm, NotaItemFormSet, TransporteForm
 from ....services.nota_service import NotaService
+from ....dominio.builder import NotaBuilder
 from ..base import SPSViewMixin
+
+
+logger = logging.getLogger(__name__)
 
 
 class NotaUpdateView(SPSViewMixin, UpdateView):
@@ -13,8 +18,9 @@ class NotaUpdateView(SPSViewMixin, UpdateView):
     template_name = "notas/nota_form.html"
     form_class = NotaForm
     context_object_name = "nota"
-    success_url_name = "nota_list"
-    success_message = "Nota atualizada com sucesso."
+    def get_success_url(self):
+        slug = self.kwargs.get("slug")
+        return reverse("NotasFiscaisWeb:nota_list", kwargs={"slug": slug})
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -50,7 +56,7 @@ class NotaUpdateView(SPSViewMixin, UpdateView):
 
         banco = get_licenca_db_config(self.request) or "default"
 
-        NotaService.atualizar(
+        nota = NotaService.atualizar(
             nota=self.object,
             data=nota_data,
             itens=itens,
@@ -58,6 +64,21 @@ class NotaUpdateView(SPSViewMixin, UpdateView):
             transporte=transp,
             database=banco,
         )
+
+        try:
+            empresa = self.request.session.get("empresa_id")
+            filial = self.request.session.get("filial_id")
+            dto = NotaBuilder(nota, database=banco).build()
+            dto_payload = dto.dict()
+            logger.debug(
+                "NotaUpdateView.form_valid: DTO base para geração de XML da nota %s (empresa=%s, filial=%s): %s",
+                nota.pk,
+                empresa,
+                filial,
+                dto_payload,
+            )
+        except Exception as e:
+            logger.warning("NotaUpdateView.form_valid: falha ao montar DTO para nota %s: %s", self.object.pk, e)
 
         return self.form_success()
 

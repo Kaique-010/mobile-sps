@@ -1,4 +1,4 @@
-# notas_fiscais/views/nota/nota_create.py
+import logging
 
 from django.views.generic import FormView
 from datetime import date
@@ -7,7 +7,11 @@ from ....models import Nota
 from ...forms import NotaForm, NotaItemFormSet, TransporteForm
 from ....services.nota_service import NotaService
 from ....services.calculo_impostos_service import CalculoImpostosService
+from ....dominio.builder import NotaBuilder
 from ..base import SPSViewMixin
+
+
+logger = logging.getLogger(__name__)
 
 
 class NotaCreateView(SPSViewMixin, FormView):
@@ -73,5 +77,18 @@ class NotaCreateView(SPSViewMixin, FormView):
         CalculoImpostosService(banco).aplicar_impostos(nota)
         if nota:
             NotaService.gravar(nota, descricao="Rascunho criado via WEB")
+
+            try:
+                dto = NotaBuilder(nota, database=banco).build()
+                dto_payload = dto.dict()
+                logger.debug(
+                    "NotaCreateView.form_valid: DTO base para geração de XML da nota %s (empresa=%s, filial=%s): %s",
+                    nota.pk,
+                    empresa,
+                    filial,
+                    dto_payload,
+                )
+            except Exception as e:
+                logger.warning("NotaCreateView.form_valid: falha ao montar DTO para nota %s: %s", nota.pk, e)
 
         return self.form_success()

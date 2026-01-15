@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from ..models import NotaItem, NotaItemImposto
 from ..handlers.itens_handler import ItensHandler
 from Produtos.models import Produtos
+from core.utils import calcular_total_item_com_desconto
 
 
 class ItensService:
@@ -39,10 +40,17 @@ class ItensService:
                     )
                 item_data["produto"] = produto_obj
             
-            # Filtra campos para manter apenas os que existem no modelo NotaItem
             model_fields = {f.name for f in NotaItem._meta.get_fields()}
             clean_data = {k: v for k, v in item_data.items() if k in model_fields}
-            
+
+            quantidade = clean_data.get("quantidade") or 0
+            unitario = clean_data.get("unitario") or 0
+            desconto = clean_data.get("desconto") or 0
+            if "total_item" in model_fields and "total_item" not in clean_data:
+                clean_data["total_item"] = calcular_total_item_com_desconto(
+                    quantidade, unitario, desconto
+                )
+
             item_obj = NotaItem.objects.create(nota=nota, **clean_data)
 
             # impostos

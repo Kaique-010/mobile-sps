@@ -22,12 +22,12 @@ class ResolverCST:
     # Defaults
     CST_ICMS_DEFAULT = "00" 
     CSOSN_DEFAULT = "101"
-    CST_IPI_DEFAULT = "50" # Saída Tributada
-    CST_PIS_COFINS_DEFAULT = "01" # Operação Tributável
+    CST_IPI_DEFAULT = "50"
+    CST_PIS_COFINS_DEFAULT = "01"
     
     @classmethod
     def resolver_icms(cls, ctx: FiscalContexto) -> str:
-        # 1. Override explícito do cadastro (Produto/Fiscal)
+        # 1. Override explícito do cadastro
         if ctx.fiscal_padrao and getattr(ctx.fiscal_padrao, "cst_icms", None):
             return ctx.fiscal_padrao.cst_icms
             
@@ -35,50 +35,52 @@ class ResolverCST:
         is_simples = str(ctx.regime) in ResolverAliquotaPorRegime.REGIME_SIMPLES
         
         if is_simples:
-            # TODO: Implementar lógica de CSOSN baseada em CFOP (ex: 5405 -> 500)
+            # Regras CSOSN baseadas no CFOP
+            if ctx.cfop:
+                cfop_cod = str(ctx.cfop.cfop_codi)
+                # Devolução → 900
+                if cfop_cod.startswith("1202") or cfop_cod.startswith("5202"):
+                    return "900"
+                # ST → 500
+                if ctx.cfop.cfop_gera_st:
+                    return "500"
             return cls.CSOSN_DEFAULT
         else:
+            # Regime Normal: se tem ST → 10, senão → 00
+            if ctx.cfop and ctx.cfop.cfop_gera_st:
+                return "10"
             return cls.CST_ICMS_DEFAULT
 
     @classmethod
     def resolver_ipi(cls, ctx: FiscalContexto) -> str:
         if ctx.fiscal_padrao and getattr(ctx.fiscal_padrao, "cst_ipi", None):
             return ctx.fiscal_padrao.cst_ipi
+        
+        # Simples: 99 (Outras Saídas)
+        is_simples = str(ctx.regime) in ResolverAliquotaPorRegime.REGIME_SIMPLES
+        if is_simples:
+            return "99"
             
-        # IPI no Simples geralmente não destaca, mas se destacar usa 99 ou 49?
-        # Mantendo 50 se tiver alíquota, senão o calculador retorna None
         return cls.CST_IPI_DEFAULT
 
     @classmethod
     def resolver_pis_cofins(cls, ctx: FiscalContexto) -> str:
         if ctx.fiscal_padrao:
-             # Assume que PIS e COFINS usam mesmo CST se um estiver setado
-             cst = getattr(ctx.fiscal_padrao, "cst_pis", None) or getattr(ctx.fiscal_padrao, "cst_cofins", None)
-             if cst: return cst
+            cst = getattr(ctx.fiscal_padrao, "cst_pis", None) or getattr(ctx.fiscal_padrao, "cst_cofins", None)
+            if cst: return cst
         
         is_simples = str(ctx.regime) in ResolverAliquotaPorRegime.REGIME_SIMPLES
         if is_simples:
-            return "49" # Outras Operações de Saída
+            return "49"
             
         return cls.CST_PIS_COFINS_DEFAULT
 
 
 class CalculadoraImpostos(ABC):
-    """
-    Interface para calculadoras de impostos individuais.
-    Garante que cada imposto tenha sua própria lógica isolada.
-    """
+    """Interface para calculadoras de impostos individuais."""
+    
     @abstractmethod
     def calcular_impostos(self, ctx: FiscalContexto, base: Decimal) -> Dict[str, Any]:
-        """
-        Retorna dicionário com valores calculados:
-        {
-            "base": Decimal,
-            "aliquota": Decimal,
-            "valor": Decimal,
-            "cst": str (opcional)
-        }
-        """
         pass
     
     def _d(self, v, casas=2) -> Decimal | None:
@@ -88,25 +90,34 @@ class CalculadoraImpostos(ABC):
             v = Decimal(str(v))
         return v.quantize(Decimal(10) ** -casas, ROUND_HALF_UP)
 
+
 class ResolverBases:
+    """
+    Resolve as bases de cálculo conforme regras fiscais:
+    - Base ICMS pode incluir IPI (Art. 13, §1º, II, "a" da LC 87/96)
+    - Base ST pode incluir IPI + MVA
+    """
     def resolver(self, ctx: FiscalContexto, base_raiz: Decimal, valor_ipi: Decimal):
         base_icms = base_raiz
-        if ctx.cfop and ctx.cfop.cfop_icms_base_inclui_ipi:
-
+        
+        # ICMS inclui IPI se configurado no CFOP
+        if ctx.cfop and ctx.cfop.cfop_icms_base_inclui_ipi and valor_ipi:
             base_icms += valor_ipi
 
+        # Base ST = Base ICMS (que já pode ter IPI incluído)
         base_st = base_icms
-        if ctx.cfop and ctx.cfop.cfop_st_base_inclui_ipi:
-            base_st += valor_ipi
+        
+        # Se não gera ST, não há base ST
+        if not (ctx.cfop and ctx.cfop.cfop_gera_st):
+            base_st = None
 
         return BasesFiscal(
             raiz=base_raiz,
             icms=base_icms,
-            st=base_st if ctx.cfop and ctx.cfop.cfop_gera_st else None,
+            st=base_st,
             pis_cofins=base_raiz,
-            cbs=base_raiz,  # poderá incluir ICMS futuramente
-            ibs=base_raiz,  # poderá variar por UF destino
-
+            cbs=base_raiz,
+            ibs=base_raiz,
         )
 
 
@@ -114,12 +125,16 @@ class IPICalculador(CalculadoraImpostos):
     def calcular_impostos(self, ctx: FiscalContexto, base: Decimal) -> Dict[str, Any]:
         if not ctx.cfop or not ctx.cfop.cfop_exig_ipi:
             return {"base": None, "aliquota": None, "valor": None, "cst": None}
-        aliq = ctx.aliquotas_base.get("ipi")        
+        
+        aliq = ctx.aliquotas_base.get("ipi")
+        
         # Override do Fiscal Padrão
         if ctx.fiscal_padrao and getattr(ctx.fiscal_padrao, "aliq_ipi", None) is not None:
             aliq = ctx.fiscal_padrao.aliq_ipi
-        if aliq is None:
-            return {"base": None, "aliquota": None, "valor": None, "cst": None}
+        
+        if aliq is None or aliq == 0:
+            cst = ResolverCST.resolver_ipi(ctx)
+            return {"base": base, "aliquota": Decimal("0"), "valor": Decimal("0"), "cst": cst}
 
         valor = self._d(base * (aliq / Decimal("100")))
         cst = ResolverCST.resolver_ipi(ctx)
@@ -131,12 +146,12 @@ class IPICalculador(CalculadoraImpostos):
             "cst": cst
         }
 
+
 class ICMSCalculador(CalculadoraImpostos):
     def calcular_impostos(self, ctx: FiscalContexto, base: Decimal) -> Dict[str, Any]:
         if not ctx.cfop or not ctx.cfop.cfop_exig_icms:
-            return {"base": None, "aliquota": None, "valor": None, "cst": None, "st": None}
+            return {"base": None, "aliquota": None, "valor": None, "cst": None}
 
-        # Dados base do ICMS (origem x destino)
         aliq_icms = ctx.icms_data.get("icms")
         
         # Override do Fiscal Padrão
@@ -144,10 +159,9 @@ class ICMSCalculador(CalculadoraImpostos):
             aliq_icms = ctx.fiscal_padrao.aliq_icms
 
         if aliq_icms is None:
-             return {"base": None, "aliquota": None, "valor": None, "cst": None, "st": None}
+            return {"base": None, "aliquota": None, "valor": None, "cst": None}
 
         valor_icms = self._d(base * (aliq_icms / Decimal("100")))
-        # CST Logic
         cst = ResolverCST.resolver_icms(ctx)
 
         return {
@@ -157,29 +171,48 @@ class ICMSCalculador(CalculadoraImpostos):
             "cst": cst,
         }
 
-class IcmsStCalculador:
-    def calcular(self, ctx, bases: BasesFiscal, icms_res: Dict) -> Dict:
-        if base_st is None:
+
+class IcmsStCalculador(CalculadoraImpostos):
+    """
+    Calcula ICMS ST conforme:
+    - Base ST = Base ICMS × (1 + MVA)
+    - ICMS ST = (Base ST × Alíq ST) - ICMS Próprio
+    """
+    def calcular_impostos(self, ctx: FiscalContexto, base: Decimal, valor_icms_proprio: Decimal = None) -> Dict[str, Any]:
+        # ✅ CORREÇÃO: usar bases.st corretamente
+        if base is None:
             return {"base": None, "aliquota": None, "valor": None, "cst": None}
 
         mva = ctx.icms_data.get("mva_st")
-        aliq = ctx.icms_data.get("st_aliq")
+        aliq_st = ctx.icms_data.get("st_aliq")
+        
+        # Se não tem alíquota ST, busca a interestadual da tabela
+        if not aliq_st:
+            aliq_st = ctx.icms_data.get("icms")
 
-        if not mva or not aliq:
+        if not mva or not aliq_st:
             return {"base": None, "aliquota": None, "valor": None, "cst": None}
 
-        base_mva = base_st * (1 + mva / Decimal("100"))
-        valor_total = base_mva * (aliq / Decimal("100"))
-        valor_st = valor_total - valor_icms
+        # Base ST = Base ICMS × (1 + MVA/100)
+        base_st_calc = base * (Decimal("1") + mva / Decimal("100"))
+        
+        # ICMS ST total = Base ST × Alíquota ST
+        icms_st_total = base_st_calc * (aliq_st / Decimal("100"))
+        
+        # ICMS ST devido = ICMS ST total - ICMS Próprio
+        valor_icms_prop = valor_icms_proprio or Decimal("0")
+        icms_st_devido = icms_st_total - valor_icms_prop
 
+        # CST para ST
+        is_simples = str(ctx.regime) in ResolverAliquotaPorRegime.REGIME_SIMPLES
+        cst = "500" if is_simples else "10"
 
         return {
-            "base": base_mva,
-            "aliquota": aliq,
-            "valor": self._d(valor_st),
-            "cst": "10"
+            "base": self._d(base_st_calc),
+            "aliquota": aliq_st,
+            "valor": self._d(icms_st_devido),
+            "cst": cst
         }
-
 
 
 class PISCOFINSCalculador(CalculadoraImpostos):
@@ -200,49 +233,47 @@ class PISCOFINSCalculador(CalculadoraImpostos):
             if getattr(ctx.fiscal_padrao, "aliq_cofins", None) is not None:
                 aliq_cofins = ctx.fiscal_padrao.aliq_cofins
 
-        # CSTs
         cst_pis = ResolverCST.resolver_pis_cofins(ctx)
-        cst_cofins = cst_pis # Assume simetria por enquanto
+        cst_cofins = cst_pis
 
-        val_pis = self._d(base * (aliq_pis / Decimal("100"))) if aliq_pis else None
-        val_cofins = self._d(base * (aliq_cofins / Decimal("100"))) if aliq_cofins else None
+        val_pis = self._d(base * (aliq_pis / Decimal("100"))) if aliq_pis else Decimal("0")
+        val_cofins = self._d(base * (aliq_cofins / Decimal("100"))) if aliq_cofins else Decimal("0")
 
         return {
-            "pis": {"base": base, "aliquota": aliq_pis, "valor": val_pis, "cst": cst_pis},
-            "cofins": {"base": base, "aliquota": aliq_cofins, "valor": val_cofins, "cst": cst_cofins}
+            "pis": {"base": base, "aliquota": aliq_pis or Decimal("0"), "valor": val_pis, "cst": cst_pis},
+            "cofins": {"base": base, "aliquota": aliq_cofins or Decimal("0"), "valor": val_cofins, "cst": cst_cofins}
         }
+
 
 class IBSCBSCalculador(CalculadoraImpostos):
     def calcular_impostos(self, ctx: FiscalContexto, base: Decimal) -> Dict[str, Any]:
         # CBS
         cbs_data = {"base": None, "aliquota": None, "valor": None, "cst": None}
         
-        # Calcula se CFOP exige OU se houver override explícito (simulação)
         has_override_cbs = ctx.fiscal_padrao and getattr(ctx.fiscal_padrao, "aliq_cbs", None) is not None
         exige_cbs = ctx.cfop and ctx.cfop.cfop_exig_cbs
 
         if exige_cbs or has_override_cbs:
-            aliq = ctx.aliquotas_base.get("cbs")
+            aliq = ctx.aliquotas_base.get("cbs") or Decimal("0")
             if has_override_cbs:
                 aliq = ctx.fiscal_padrao.aliq_cbs
             
-            val = self._d(base * (aliq / Decimal("100"))) if aliq is not None else None
+            val = self._d(base * (aliq / Decimal("100"))) if aliq else Decimal("0")
             cst = getattr(ctx.fiscal_padrao, "cst_cbs", None) or "01"
             cbs_data = {"base": base, "aliquota": aliq, "valor": val, "cst": cst}
 
         # IBS
         ibs_data = {"base": None, "aliquota": None, "valor": None, "cst": None}
         
-        # Calcula se CFOP exige OU se houver override explícito (simulação)
         has_override_ibs = ctx.fiscal_padrao and getattr(ctx.fiscal_padrao, "aliq_ibs", None) is not None
         exige_ibs = ctx.cfop and ctx.cfop.cfop_exig_ibs
 
         if exige_ibs or has_override_ibs:
-            aliq = ctx.aliquotas_base.get("ibs")
+            aliq = ctx.aliquotas_base.get("ibs") or Decimal("0")
             if has_override_ibs:
                 aliq = ctx.fiscal_padrao.aliq_ibs
             
-            val = self._d(base * (aliq / Decimal("100"))) if aliq is not None else None
+            val = self._d(base * (aliq / Decimal("100"))) if aliq else Decimal("0")
             cst = getattr(ctx.fiscal_padrao, "cst_ibs", None) or "01"
             ibs_data = {"base": base, "aliquota": aliq, "valor": val, "cst": cst}
 
@@ -250,13 +281,7 @@ class IBSCBSCalculador(CalculadoraImpostos):
 
 
 class MotorFiscal:
-    """
-    Orquestrador Fiscal Determinístico.
-    Segregação de responsabilidades:
-    1. Resolução de Regras (Contexto)
-    2. Definição de Bases
-    3. Cálculo de Tributos (Calculators)
-    """
+    """Orquestrador Fiscal Determinístico."""
 
     def __init__(self, banco=None):
         self.banco = banco
@@ -271,9 +296,6 @@ class MotorFiscal:
         if not isinstance(v, Decimal): v = Decimal(str(v))
         return v.quantize(Decimal(10) ** -casas, ROUND_HALF_UP)
     
-    # -----------------------------
-    # DATA FETCHING HELPERS
-    # -----------------------------
     def resolver_cfop(self, tipo_oper, uf_origem, uf_destino):
         qs = MapaCFOP.objects
         if self.banco: qs = qs.using(self.banco)
@@ -285,7 +307,6 @@ class MotorFiscal:
             )
             return mapa.cfop
         except MapaCFOP.DoesNotExist:
-            # Fallback for VENDA operations if specific mapping not found
             if tipo_oper == "VENDA":
                 qs_cfop = CFOP.objects
                 if self.banco: qs_cfop = qs_cfop.using(self.banco)
@@ -304,10 +325,9 @@ class MotorFiscal:
         cod = str(produto.prod_ncm).strip()
         ncm = qs.filter(ncm_codi=cod).first()
         
-        # Fallback: Tenta remover pontuação se não encontrou
         if not ncm and ('.' in cod):
-             cod_clean = cod.replace('.', '')
-             ncm = qs.filter(ncm_codi=cod_clean).first()
+            cod_clean = cod.replace('.', '')
+            ncm = qs.filter(ncm_codi=cod_clean).first()
              
         return ncm
 
@@ -322,7 +342,7 @@ class MotorFiscal:
         return {
             "icms": self._d(tab.aliq_interna if mesma else tab.aliq_inter),
             "mva_st": self._d(tab.mva_st),
-            "st_aliq": None 
+            "st_aliq": self._d(tab.aliq_interna) if mesma else self._d(tab.aliq_inter)
         }
         
     def obter_aliquotas_base(self, ncm, regime=None):
@@ -332,15 +352,6 @@ class MotorFiscal:
         )
 
     def resolver_fiscal_padrao(self, produto, ncm, cfop):
-        """
-        Resolve o Fiscal Padrão com prioridade explícita:
-        1. Produto
-        2. CFOP
-        3. NCM
-
-        Retorna tupla (fiscal_padrao, fonte_tributacao) onde fonte_tributacao
-        é uma string indicando a origem: "PRODUTO", "CFOP", "NCM" ou None.
-        """
         if produto is not None:
             try:
                 if produto.fiscal:
@@ -365,7 +376,6 @@ class MotorFiscal:
         return None, None
 
     def aplicar_overrides_dif(self, ncm, cfop, aliquotas, icms_data):
-        """Aplica NCM_CFOP_DIF se existir"""
         if not ncm or not cfop: return aliquotas, icms_data
         
         qs = NCM_CFOP_DIF.objects
@@ -373,7 +383,6 @@ class MotorFiscal:
         try:
             dif = qs.get(ncm=ncm, cfop=cfop)
             
-            # Atualiza aliquotas (copia para não mutar o original se for ref)
             new_aliq = aliquotas.copy()
             if dif.ncm_ipi_dif is not None: new_aliq["ipi"] = self._d(dif.ncm_ipi_dif)
             if dif.ncm_pis_dif is not None: new_aliq["pis"] = self._d(dif.ncm_pis_dif)
@@ -389,14 +398,7 @@ class MotorFiscal:
         except NCM_CFOP_DIF.DoesNotExist:
             return aliquotas, icms_data
 
-    # -----------------------------
-    # MAIN CALCULATION
-    # -----------------------------
     def calcular_item(self, ctx: FiscalContexto, item, tipo_oper, base_manual: Decimal = None) -> Dict[str, Any]:
-        """
-        Calcula impostos para um item.
-        Popula o contexto se necessário.
-        """
         # 1. Resolver Entidades Fiscais
         cfop = ctx.cfop or self.resolver_cfop(tipo_oper, ctx.uf_origem, ctx.uf_destino)
         ncm = ctx.ncm or self.obter_ncm(ctx.produto)
@@ -419,44 +421,42 @@ class MotorFiscal:
             icms_data=icms_data,
         )
 
-
-        # 5. Calcular Bases
+        # 2. Base de Cálculo
         if base_manual is not None:
             base_raiz = self._d(base_manual)
-        elif hasattr(item, "iped_quan"):
-            base_raiz = self._d(item.iped_quan * item.iped_unit) # Assumindo campos do item
+        elif hasattr(item, "quantidade"):
+            base_raiz = self._d(item.quantidade * item.unitario - (item.desconto or Decimal("0")))
         else:
             base_raiz = Decimal("0")
         
-        # IPI (Calculado antes pois pode compor base ICMS)
+        # 3. IPI (pode compor base ICMS)
         ipi_res = self.ipi_calc.calcular_impostos(ctx_item, base_raiz)
         valor_ipi = ipi_res["valor"] or Decimal("0")
 
+        # 4. Resolver Bases
         bases = ResolverBases().resolver(
             ctx=ctx_item,
             base_raiz=base_raiz,
             valor_ipi=valor_ipi
         )
 
-        
-        # ICMS + ST
+        # 5. ICMS
         icms_res = self.icms_calc.calcular_impostos(ctx_item, bases.icms)
         
-        # Se houver ST e base ST incluir IPI
-        st_res = None
-        if ctx_item.cfop and ctx_item.cfop.cfop_gera_st:
+        # 6. ICMS ST (✅ CORREÇÃO: passar valor do ICMS próprio)
+        st_res = {"base": None, "aliquota": None, "valor": None, "cst": None}
+        if ctx_item.cfop and ctx_item.cfop.cfop_gera_st and bases.st:
             st_res = self.icms_st_calc.calcular_impostos(
                 ctx_item,
                 bases.st,
-                valor_icms_anterior=icms_res["valor"] or Decimal("0")
+                valor_icms_proprio=icms_res["valor"] or Decimal("0")
             )
 
-        # PIS/COFINS
+        # 7. PIS/COFINS
         piscofins_res = self.piscofins_calc.calcular_impostos(ctx_item, bases.pis_cofins)   
         
-        # IBS/CBS
+        # 8. IBS/CBS
         ibscbs_res = self.ibscbs_calc.calcular_impostos(ctx_item, bases.cbs)
-
 
         return {
             "cfop": ctx_item.cfop,
@@ -470,7 +470,7 @@ class MotorFiscal:
             "valores": {
                 "ipi": ipi_res["valor"],
                 "icms": icms_res["valor"],
-                "st": st_res["valor"] if st_res else None,
+                "st": st_res["valor"],
                 "pis": piscofins_res["pis"]["valor"],
                 "cofins": piscofins_res["cofins"]["valor"],
                 "cbs": ibscbs_res["cbs"]["valor"],
@@ -479,7 +479,7 @@ class MotorFiscal:
             "aliquotas": {
                 "ipi": ipi_res["aliquota"],
                 "icms": icms_res["aliquota"],
-                "st": st_res["aliquota"] if st_res else None,
+                "st": st_res["aliquota"],
                 "pis": piscofins_res["pis"]["aliquota"],
                 "cofins": piscofins_res["cofins"]["aliquota"],
                 "cbs": ibscbs_res["cbs"]["aliquota"],
@@ -488,6 +488,7 @@ class MotorFiscal:
             "csts": {
                 "ipi": ipi_res["cst"],
                 "icms": icms_res["cst"],
+                "st": st_res.get("cst"),
                 "pis": piscofins_res["pis"]["cst"],
                 "cofins": piscofins_res["cofins"]["cst"],
                 "cbs": ibscbs_res["cbs"]["cst"],

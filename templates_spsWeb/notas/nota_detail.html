@@ -28,7 +28,8 @@
           <div><strong>Nome:</strong> {{ emitente.empr_nome }}</div>
           <div><strong>CNPJ:</strong> {{ emitente.empr_docu }}</div>
           <div><strong>Município/UF:</strong> {{ emitente.empr_cida }}/{{ emitente.empr_esta }}</div>
-          <div><strong>Endereço:</strong> {{ emitente.empr_ende }} {{ emitente.empr_nume }} {{ emitente.empr_comp }}</div>
+          <div><strong>Endereço:</strong> {{ emitente.empr_ende }} {{ emitente.empr_nume }} {{ emitente.empr_comp }}
+          </div>
         </div>
       </div>
     </div>
@@ -39,7 +40,8 @@
           <div><strong>Nome:</strong> {{ destinatario.enti_nome }}</div>
           <div><strong>Documento:</strong> {{ destinatario.enti_cnpj }} {{ destinatario.enti_cpf }}</div>
           <div><strong>Município/UF:</strong> {{ destinatario.enti_cida }}/{{ destinatario.enti_esta }}</div>
-          <div><strong>Endereço:</strong> {{ destinatario.enti_ende }} {{ destinatario.enti_nume }} {{ destinatario.enti_comp }}</div>
+          <div><strong>Endereço:</strong> {{ destinatario.enti_ende }} {{ destinatario.enti_nume }} {{
+            destinatario.enti_comp }}</div>
         </div>
       </div>
     </div>
@@ -55,7 +57,8 @@
             <span class="badge bg-secondary">{{ nota.get_status_display }}</span>
             <span class="badge bg-info text-dark">{{ nota.get_ambiente_display }}</span>
           </div>
-          <div><strong>Chave:</strong> {{ nota.chave_acesso|default:"—" }} | <strong>Protocolo:</strong> {{ nota.protocolo_autorizacao|default:"—" }}</div>
+          <div><strong>Chave:</strong> {{ nota.chave_acesso|default:"—" }} | <strong>Protocolo:</strong> {{
+            nota.protocolo_autorizacao|default:"—" }}</div>
         </div>
       </div>
     </div>
@@ -81,7 +84,7 @@
             <tbody>
               {% for it in nota.itens.all %}
               <tr>
-                <td>{{ it.produto }}</td>
+                <td>{{ it.produto_display }}</td>
                 <td>{{ it.quantidade }}</td>
                 <td>{{ it.unitario }}</td>
                 <td>{{ it.desconto }}</td>
@@ -94,7 +97,8 @@
               <tr class="table-light">
                 <td colspan="8" class="text-break">
                   <strong>Impostos:</strong>
-                  ICMS Base {{ it.impostos.icms_base|default:"0.00" }} Aliq {{ it.impostos.icms_aliquota|default:"0.00"}} Valor {{ it.impostos.icms_valor|default:"0.00" }} |
+                  ICMS Base {{ it.impostos.icms_base|default:"0.00" }} Aliq {{
+                  it.impostos.icms_aliquota|default:"0.00"}} Valor {{ it.impostos.icms_valor|default:"0.00" }} |
                   IPI {{ it.impostos.ipi_valor|default:"0.00" }} | PIS {{ it.impostos.pis_valor|default:"0.00" }} |
                   COFINS {{ it.impostos.cofins_valor|default:"0.00" }}
                   | FCP {{ it.impostos.fcp_valor|default:"0.00" }}
@@ -115,7 +119,8 @@
       {% if nota.transporte %}
       <div><strong>Modalidade:</strong> {{ nota.transporte.get_modalidade_frete_display }}</div>
       <div><strong>Transportadora:</strong> {{ nota.transporte.transportadora.enti_nome|default:"—" }}</div>
-      <div><strong>Veículo:</strong> {{ nota.transporte.placa_veiculo|default:"" }} / {{ nota.transporte.uf_veiculo|default:"" }}</div>
+      <div><strong>Veículo:</strong> {{ nota.transporte.placa_veiculo|default:"" }} / {{
+        nota.transporte.uf_veiculo|default:"" }}</div>
       {% else %}
       <em>Sem informações de transporte.</em>
       {% endif %}
@@ -135,7 +140,8 @@
         return fetch(url, { ...options, headers: { ...headers, ...(options.headers || {}) } });
       };
 
-      const nid = {{ nota.id }};
+      const nid = {{ nota.id }
+    };
     };
     const btnEmit = document.getElementById('btn-emitir');
     const btnCanc = document.getElementById('btn-cancelar');
@@ -144,9 +150,23 @@
         const sp = btnEmit.querySelector('.spinner-border');
         btnEmit.disabled = true; if (sp) sp.classList.remove('d-none');
         try {
-          const resp = await authFetch(`/api/${slug}/notasfiscais/notas-fiscais/emitir/${slug}/${nid}/`, { method: 'GET' });
+          const resp = await authFetch(`/api/emitir/${slug}/${nid}/`, { method: 'GET' });
           const data = await resp.json();
-          if (resp.ok) { showToast('Emitida com sucesso.', { variant: 'success' }); location.reload(); } else { showToast('Falha: ' + (data?.detail || 'Erro'), { variant: 'danger', delay: 4000 }); }
+          if (resp.ok) {
+            showToast('Emitida com sucesso.', { variant: 'success' });
+            location.reload();
+          } else {
+            const rawError =
+              data?.detail ||
+              data?.detalhes ||
+              data?.mensagem ||
+              data?.motivo ||
+              data?.erro ||
+              data?.error ||
+              (typeof data === 'string' ? data : '') ||
+              (data ? JSON.stringify(data) : '');
+            showToast('Falha: ' + (rawError || 'Erro'), { variant: 'danger', delay: 4000 });
+          }
         } catch (e) { showToast('Erro: ' + e, { variant: 'danger', delay: 4000 }); }
         finally { btnEmit.disabled = false; if (sp) sp.classList.add('d-none'); }
       });

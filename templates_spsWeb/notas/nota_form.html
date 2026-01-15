@@ -251,13 +251,29 @@
       try {
         const sp = btnGravar.querySelector('.spinner-border');
         btnGravar.disabled = true; if (sp) sp.classList.remove('d-none');
-        const resp = await authFetch(`/api/${slug}/notasfiscais/notas-fiscais/notas/${notaId}/gravar/`, { method: 'POST', body: JSON.stringify({ descricao: 'Rascunho atualizado via WEB' }) });
+        const payload = { descricao: 'Rascunho atualizado via WEB' };
+        console.log("Payload Gravar (AJAX):", payload);
+        const resp = await authFetch(`/api/${slug}/notasfiscais/notas-fiscais/notas/${notaId}/gravar/`, { method: 'POST', body: JSON.stringify(payload) });
         const data = await resp.json();
-        if (resp.ok) { showToast('Rascunho gravado.', { variant: 'success' }); } else { showToast('Falha: ' + (data?.detail || 'Erro'), { variant: 'danger', delay: 4000 }); }
+        if (resp.ok) {
+          showToast('Rascunho gravado.', { variant: 'success' });
+          window.location.href = `/web/${slug}/notas-fiscais/`;
+          return;
+        } else { showToast('Falha: ' + (data?.detail || 'Erro'), { variant: 'danger', delay: 4000 }); }
         await montarTotais();
       } catch (e) { showToast('Erro: ' + e, { variant: 'danger', delay: 4000 }); }
       finally { btnGravar.disabled = false; const sp = btnGravar.querySelector('.spinner-border'); if (sp) sp.classList.add('d-none'); }
     });
+
+    const formMain = document.querySelector('form.card.p-3');
+    if (formMain) {
+      formMain.addEventListener('submit', () => {
+        const fd = new FormData(formMain);
+        const obj = {};
+        fd.forEach((value, key) => obj[key] = value);
+        console.log("Payload Salvar (Submit):", obj);
+      });
+    }
 
     const mountAutocomplete = (input, source, onPick, listEl) => {
       let timer = null;
@@ -289,6 +305,7 @@
     const destField = document.querySelector('[name="destinatario"]');
     const destList = document.getElementById('destinatario-ac-list');
     if (destText && destField) {
+      destField.removeAttribute('required');
       mountAutocomplete(destText, (q) => `/web/${slug}/notas-fiscais/entidades-autocomplete/?q=${encodeURIComponent(q)}`, (it) => { destText.value = it.label; destField.value = it.value; }, destList);
     }
 
@@ -297,6 +314,7 @@
       const prodField = row.querySelector('[name$="-produto"]');
       const listEl = row.querySelector('.item-prod-list');
       if (prodText && prodField) {
+        prodField.removeAttribute('required');
         mountAutocomplete(prodText, (q) => `/web/${slug}/notas-fiscais/produtos-autocomplete/?q=${encodeURIComponent(q)}`, async (item) => {
           prodText.value = item.label; prodField.value = item.value;
           try {
@@ -365,6 +383,7 @@
     const transpField = document.querySelector('[name="transportadora"]');
     const transpList = document.getElementById('transportadora-ac-list');
     if (transpText && transpField) {
+      transpField.removeAttribute('required');
       mountAutocomplete(transpText, (q) => `/web/${slug}/notas-fiscais/transportadoras-autocomplete/?q=${encodeURIComponent(q)}`, (it) => { transpText.value = it.label; transpField.value = it.value; }, transpList);
     }
     const totalsContainer = document.createElement('div');

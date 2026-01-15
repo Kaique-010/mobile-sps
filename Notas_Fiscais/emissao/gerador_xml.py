@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 from lxml import etree
 from datetime import datetime
+import logging
 
 NFE_NS = "http://www.portalfiscal.inf.br/nfe"
 NSMAP = {None: NFE_NS}
+logger = logging.getLogger(__name__)
 
 
 class GeradorXML:
@@ -20,6 +22,8 @@ class GeradorXML:
             raise ValueError("DTO sem chave (campo 'chave').")
 
         nfe_id = f"NFe{chave}"
+
+        logger.debug("GeradorXML.gerar: DTO recebido para chave %s: %s", chave, dto)
 
         root = etree.Element("NFe", nsmap=NSMAP)
         inf = etree.SubElement(root, "infNFe", Id=nfe_id, versao="4.00")
@@ -38,6 +42,8 @@ class GeradorXML:
             pretty_print=False,
             xml_declaration=False,
         ).decode("utf-8")
+
+        logger.debug("GeradorXML.gerar: XML gerado para chave %s: %s", chave, xml)
 
         return xml
 

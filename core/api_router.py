@@ -10,6 +10,8 @@ urlpatterns = [
     # Auth
     path("<slug>/auth/token/refresh/", TokenRefreshCustomView.as_view(), name="token_refresh"),
 
+    path("", include("Notas_Fiscais.api.urls")),
+
     # Rotas principais (privadas)
     path("<slug>/licencas/", include("Licencas.urls")),
     path("<slug>/produtos/", include("Produtos.urls")),

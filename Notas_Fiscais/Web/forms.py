@@ -47,16 +47,15 @@ class NotaForm(forms.ModelForm):
 
 
 class NotaItemForm(forms.ModelForm):
+    produto = forms.CharField(widget=forms.TextInput(attrs={"class": "form-control item-prod-ac"}))
     class Meta:
         model = NotaItem
         fields = [
             "produto",
             "quantidade", "unitario", "desconto",   
-            "total_item",
             "cfop", "ncm", "cest",
             "cst_icms", "cst_pis", "cst_cofins",
             "cst_ibs", "cst_cbs",
-            
         ]
         widgets = {
             "produto": forms.TextInput(attrs={"class": "form-control item-prod-ac"}),
@@ -72,6 +71,14 @@ class NotaItemForm(forms.ModelForm):
             "cst_ibs": forms.TextInput(attrs={"class": "form-control"}),
             "cst_cbs": forms.TextInput(attrs={"class": "form-control"}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            # Evita acessar self.instance.produto (FK) que dispara query sem filtro de empresa
+            # e causa MultipleObjectsReturned se houver produtos com mesmo código em empresas diferentes.
+            # Usamos o produto_id (raw value) diretamente.
+            self.fields['produto'].initial = self.instance.produto_id
 
 
 # Formset de itens

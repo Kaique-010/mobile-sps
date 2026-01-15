@@ -105,7 +105,7 @@
 
         <div class="col-md-6">
             <div class="form-group position-relative">
-                <label for="{{ form.prod_ncm.id_for_label }}">NCM</label>
+                <label for="autocomplete-ncm">NCM</label>
                 <input type="text" class="form-control" id="autocomplete-ncm" name="{{ form.prod_ncm.name }}"
                     value="{{ form.prod_ncm.value|default_if_none:'' }}"
                     placeholder="Digite o código ou descrição do NCM" autocomplete="off">

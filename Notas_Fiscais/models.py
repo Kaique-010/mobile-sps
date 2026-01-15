@@ -129,9 +129,37 @@ class NotaItem(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.produto} – {self.quantidade} x {self.unitario}"
+        # Usamos self.produto_id para evitar query automática no ForeignKey
+        # que pode falhar se o produto não for único (MultipleObjectsReturned)
+        return f"{self.produto_id} – {self.quantidade} x {self.unitario}"
 
+    @property
+    def produto_display(self):
+        """Retorna nome do produto filtrando por empresa para evitar erro de múltiplos objetos"""
+        try:
+            from Produtos.models import Produtos
+            # Tenta pegar empresa da nota (se já carregada) ou via query simples
+            if hasattr(self, 'nota') and self.nota:
+                empresa = self.nota.empresa
+            else:
+                # Fallback improvável, mas seguro
+                return self.produto_id
+            
+            p = Produtos.objects.filter(prod_codi=self.produto_id, prod_empr=empresa).first()
+            if p:
+                return f"{p.prod_nome}"
+            return self.produto_id
+        except Exception:
+            return self.produto_id
 
+    @property
+    def total(self):
+        if self.total_item is not None:
+            return self.total_item
+        quantidade = self.quantidade or 0
+        unitario = self.unitario or 0
+        desconto = self.desconto or 0
+        return quantidade * unitario - desconto
 # ------------------------------------------------------------
 
 class NotaItemImposto(models.Model):

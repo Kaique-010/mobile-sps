@@ -45,8 +45,13 @@ class NotaItemSerializer(serializers.ModelSerializer):
 
     def get_produto_nome(self, obj):
         try:
-            prod = obj.produto
-            return getattr(prod, "prod_nome", None)
+            # Acessar obj.produto dispara query sem filtro de empresa (causa erro MultipleObjectsReturned)
+            # Precisamos filtrar pela empresa da nota
+            from Produtos.models import Produtos
+            prod_id = obj.produto_id
+            empresa = obj.nota.empresa
+            p = Produtos.objects.filter(prod_codi=prod_id, prod_empr=empresa).first()
+            return p.prod_nome if p else None
         except Exception:
             return None
 

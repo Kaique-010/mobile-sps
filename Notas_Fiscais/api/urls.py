@@ -3,4 +3,5 @@ from . import emitir_view
 
 urlpatterns = [
     path("emitir/<slug:slug>/<int:nota_id>/", emitir_view.emitir_nota),
+    path("imprimir/<slug:slug>/<int:nota_id>/", emitir_view.imprimir_danfe),
 ]

@@ -299,11 +299,11 @@ class CalculoImpostosService:
     def _calcular_base_nota_item(self, motor: MotorFiscal, item: NotaItem) -> Decimal:
         """
         Base de cálculo para NF:
-        - se NotaItem.total preenchido, usa ele
+        - se NotaItem.total_item preenchido, usa ele
         - senão: (quantidade * unitario) - desconto
         """
-        if item.total is not None:
-            return motor._d(item.total, 2)
+        if item.total_item is not None:
+            return motor._d(item.total_item, 2)
 
         quant = motor._d(item.quantidade or 0, 5)
         unit = motor._d(item.unitario or 0, 5)

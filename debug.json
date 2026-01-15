@@ -1,0 +1,36 @@
+{
+  "debug_id": "78769856-48f0-420a-a89d-898e7f7055be",
+  "timestamp_inicio": "2026-01-15T19:24:05.804322Z",
+  "ambiente": {
+    "debug": true,
+    "database_alias": "demonstracao"
+  },
+  "tabelas_tributacao": {
+    "versao": "desconhecida"
+  },
+  "nota": {
+    "id": 10,
+    "modelo": "55",
+    "serie": "1",
+    "numero": "10",
+    "empresa": "5",
+    "filial": "1",
+    "destinatario_id": "1000019",
+    "uf_origem": "PR",
+    "uf_destino": "PR",
+    "regime": "1"
+  },
+  "itens": [],
+  "logs": [
+    {
+      "id": "2ae84a37-2009-401c-b660-e93c7e18e71d",
+      "timestamp": "2026-01-15T19:24:05.931876Z",
+      "tipo": "contexto_nota",
+      "mensagem": "Contexto fiscal inicial da nota.",
+      "dados": {
+        "tipo_operacao": "VENDA"
+      }
+    }
+  ],
+  "timestamp_fim": "2026-01-15T19:24:05.967301Z"
+}

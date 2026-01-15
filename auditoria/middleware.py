@@ -212,7 +212,6 @@ class AuditoriaMiddleware:
         if request.path.startswith('/api/licencas/mapa/'):
             return self.get_response(request)
 
-        # Verificação de permissão por módulo
         try:
             parts = request.path.strip('/').split('/')
             if len(parts) >= 3 and parts[0] == 'api':
@@ -223,6 +222,10 @@ class AuditoriaMiddleware:
                     pass
                 else:
                     app_candidate = parts[2]
+                    # Rotas especiais cujo app real é notas_fiscais
+                    # /api/emitir/<slug>/<id>/ e /api/imprimir/<slug>/<id>/
+                    if parts[1] in ('emitir', 'imprimir') and len(parts) >= 3:
+                        app_candidate = 'notas_fiscais'
                     modulos = getattr(request, 'modulos_disponiveis', []) or get_modulos_disponiveis()
                     modulos_lower = {str(m).lower() for m in modulos}
                     app_slug = str(app_candidate).lower()

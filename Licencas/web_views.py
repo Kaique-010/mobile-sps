@@ -48,6 +48,7 @@ class FilialCertificadoUploadView(FormView):
             return self.form_invalid(form)
 
         conteudo = arquivo.read()
+        logger.info(f"Certificado lido com {len(conteudo)} bytes")
 
         try:
             load_key_and_certificates(conteudo, senha.encode("utf-8"))
@@ -63,7 +64,7 @@ class FilialCertificadoUploadView(FormView):
             empr_senh_cert=encrypt_str(senha),
             empr_cert_digi=encrypt_bytes(conteudo)
         )
-        logger.info(f"Certificado salvo para empresa {empresa_id}, filial {filial_id}")
+        logger.info(f"Certificado salvo para empresa {empresa_id}, filial {filial_id}, tem {len(conteudo)} bytes, com a senha cifrada {encrypt_str(senha)}")
 
         messages.success(self.request, "Certificado salvo com sucesso!")
         return super().form_valid(form)

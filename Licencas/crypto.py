@@ -18,7 +18,11 @@ def encrypt_bytes(data: bytes) -> bytes:
     f = get_fernet()
     return f.encrypt(data)
 
-def decrypt_bytes(token: bytes) -> bytes:
+def decrypt_bytes(token) -> bytes:
+    if isinstance(token, memoryview):
+        token = token.tobytes()
+    if isinstance(token, str):
+        token = token.encode("utf-8")
     f = get_fernet()
     return f.decrypt(token)
 
@@ -27,5 +31,5 @@ def encrypt_str(text: str) -> str:
     return token.decode("utf-8")
 
 def decrypt_str(token: str) -> str:
-    data = decrypt_bytes(token.encode("utf-8"))
+    data = decrypt_bytes(token)
     return data.decode("utf-8")

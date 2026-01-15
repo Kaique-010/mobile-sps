@@ -28,10 +28,10 @@ class EmissaoNotaService:
         7. Atualiza status / grava evento
         """
 
-        # 0) Validação Inicial
+        logger.debug("EmissaoNotaService.emitir_nota: payload de entrada: %s", dto_dict)
+
         validar_dados_iniciais(dto_dict)
 
-        # 1) Criar rascunho
         dto_sanitized = dict(dto_dict)
         dto_sanitized.pop("tpag", None)
 

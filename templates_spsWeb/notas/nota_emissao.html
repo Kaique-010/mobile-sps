@@ -748,43 +748,46 @@
       return { ok: resp.ok, data };
     };
 
-    const montarPayload = (fd) => ({
-      modelo: String(Number(fd.get('modelo') || 55)),
-      serie: String(Number(fd.get('serie') || 1)),
-      numero: Number(fd.get('numero') || 0),
-      data_emissao: fd.get('data_emissao') || null,
-      data_saida: fd.get('data_saida') || fd.get('data_emissao') || null,
-      tipo_operacao: 1,
-      finalidade: 1,
-      ambiente: 2,
-      destinatario: Number(document.getElementById('destinatario-id').value || 0),
-      itens: items.map(it => ({
-        produto: Number(it.codigo || 0),
-        quantidade: Number(it.quantidade || 0),
-        unitario: Number(it.unitario || 0),
-        desconto: Number(it.desconto || 0),
-        cfop: it.cfop || '5102',
-        ncm: it.ncm || '00000000',
-        cest: '',
-        cst_icms: document.getElementById('cst-icms').value || '102',
-        cst_pis: document.getElementById('cst-pis').value || '49',
-        cst_cofins: document.getElementById('cst-cofins').value || '49',
-        cst_ibs: document.getElementById('cst-ibs').value || '',
-        cst_cbs: document.getElementById('cst-cbs').value || '',
-
-      })),
-      impostos: items.map(() => ({
-        icms_aliquota: Number(document.getElementById('aliq-icms').value || 0),
-        ibs_aliquota: Number(document.getElementById('aliq-ibs').value || 0),
-        cbs_aliquota: Number(document.getElementById('aliq-cbs').value || 0),
-      })),
-      transporte: {
-        modalidade_frete: Number(document.getElementById('transporte-modalidade').value || 0),
-        transportadora: Number(document.getElementById('transportadora-id').value || 0) || null,
-        placa_veiculo: '',
-        uf_veiculo: '',
-      },
-    });
+    const montarPayload = (fd) => {
+      const payload = {
+        modelo: String(Number(fd.get('modelo') || 55)),
+        serie: String(Number(fd.get('serie') || 1)),
+        numero: Number(fd.get('numero') || 0),
+        data_emissao: fd.get('data_emissao') || null,
+        data_saida: fd.get('data_saida') || fd.get('data_emissao') || null,
+        tipo_operacao: 1,
+        finalidade: 1,
+        ambiente: 2,
+        destinatario: Number(document.getElementById('destinatario-id').value || 0),
+        itens: items.map(it => ({
+          produto: Number(it.codigo || 0),
+          quantidade: Number(it.quantidade || 0),
+          unitario: Number(it.unitario || 0),
+          desconto: Number(it.desconto || 0),
+          cfop: it.cfop || '5102',
+          ncm: it.ncm || '00000000',
+          cest: '',
+          cst_icms: document.getElementById('cst-icms').value || '102',
+          cst_pis: document.getElementById('cst-pis').value || '49',
+          cst_cofins: document.getElementById('cst-cofins').value || '49',
+          cst_ibs: document.getElementById('cst-ibs').value || '',
+          cst_cbs: document.getElementById('cst-cbs').value || '',
+        })),
+        impostos: items.map(() => ({
+          icms_aliquota: Number(document.getElementById('aliq-icms').value || 0),
+          ibs_aliquota: Number(document.getElementById('aliq-ibs').value || 0),
+          cbs_aliquota: Number(document.getElementById('aliq-cbs').value || 0),
+        })),
+        transporte: {
+          modalidade_frete: Number(document.getElementById('transporte-modalidade').value || 0),
+          transportadora: Number(document.getElementById('transportadora-id').value || 0) || null,
+          placa_veiculo: '',
+          uf_veiculo: '',
+        },
+      };
+      console.log("mostrar payload:", payload);
+      return payload;
+    };
 
     const btnSalvar = document.getElementById('btn-salvar');
     btnSalvar.addEventListener('click', async () => {
@@ -804,7 +807,7 @@
       } catch (e) { }
       const grav = await gravarNota(notaId);
       if (!grav.ok) { showToast('Falha ao gravar rascunho: ' + (grav.data?.detail || 'Erro'), { variant: 'danger', delay: 4000 }); btnSalvar.disabled = false; if (sp) sp.classList.add('d-none'); return; }
-      window.location.href = `/web/${slug}/notas-fiscais/${notaId}/editar/`;
+      window.location.href = `/web/${slug}/notas-fiscais/`;
       btnSalvar.disabled = false; if (sp) sp.classList.add('d-none');
     });
 
@@ -856,13 +859,22 @@
           renderItems();
         } catch (e) { }
         await gravarNota(notaId);
-        const respEmit = await authFetch(`/api/${slug}/notasfiscais/notas-fiscais/emitir/${slug}/${notaId}/`, { method: 'GET' });
+        const respEmit = await authFetch(`/api/emitir/${slug}/${notaId}/`, { method: 'GET' });
         const dataEmit = await respEmit.json();
         if (respEmit.ok) {
           showToast('Emitida com sucesso. Chave: ' + (dataEmit?.chave || dataEmit?.chave_acesso || ''), { variant: 'success' });
           window.location.href = `/web/${slug}/notas-fiscais/`;
         } else {
-          showToast('Falha na emissão: ' + (dataEmit?.detail || dataEmit?.motivo || dataEmit?.erro || 'Erro'), { variant: 'danger', delay: 4000 });
+          const rawError =
+            dataEmit?.detail ||
+            dataEmit?.detalhes ||
+            dataEmit?.mensagem ||
+            dataEmit?.motivo ||
+            dataEmit?.erro ||
+            dataEmit?.error ||
+            (typeof dataEmit === 'string' ? dataEmit : '') ||
+            (dataEmit ? JSON.stringify(dataEmit) : '');
+          showToast('Falha na emissão: ' + (rawError || 'Erro'), { variant: 'danger', delay: 4000 });
         }
       } catch (e) {
         showToast('Erro: ' + e, { variant: 'danger', delay: 4000 });

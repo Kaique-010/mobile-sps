@@ -130,6 +130,28 @@ class NotaService:
         nota.status = 101
         nota.save(update_fields=["status"])
         return nota
+    
+    @staticmethod
+    def atualizar_totais(nota: Nota):
+        """Recalcula totais da nota após cálculo de impostos"""
+        itens = NotaItem.objects.filter(nota=nota).select_related('imposto')
+        
+        total_produtos = sum(
+            (item.quantidade * item.unitario - (item.desconto or 0))
+            for item in itens
+        )
+        
+        total_tributos = sum(
+            (item.imposto.icms_valor or 0) +
+            (item.imposto.ipi_valor or 0) +
+            (item.imposto.pis_valor or 0) +
+            (item.imposto.cofins_valor or 0)
+            for item in itens if hasattr(item, 'imposto')
+        )
+        
+        nota.total = total_produtos + total_tributos
+        nota.save()
+        return nota
 
     @staticmethod
     @transaction.atomic

@@ -1,6 +1,7 @@
 from .dto import NotaFiscalDTO, EmitenteDTO, DestinatarioDTO, ItemDTO
 from ..models import Nota
 from Licencas.models import Filiais
+from Produtos.models import Produtos
 
 
 class NotaBuilder:
@@ -38,20 +39,23 @@ class NotaBuilder:
         d = self.dest
 
         doc = d.enti_cnpj or d.enti_cpf
-        if d.enti_cnpj:
-            ind_ie = "1" if d.enti_insc_esta else "2"
+        raw_ie = (d.enti_insc_esta or "").strip()
+        if d.enti_cnpj and raw_ie and raw_ie.isdigit():
+            ind_ie = "1"
+            ie_val = raw_ie[:14]
         else:
             ind_ie = "9"
+            ie_val = None
 
         return DestinatarioDTO(
             documento=doc,
             nome=d.enti_nome or "",
-            ie=d.enti_insc_esta or "",
+            ie=ie_val,
             ind_ie=ind_ie,
 
             logradouro=d.enti_ende or "",
             numero=d.enti_nume or "",
-            bairro="",
+            bairro=(d.enti_bair or "").strip() or "CENTRO",
             municipio=d.enti_cida or "",
             cod_municipio=str(getattr(d, "enti_codi_cida", "") or ""),
             uf=d.enti_esta or "",
@@ -65,7 +69,16 @@ class NotaBuilder:
         itens = []
 
         for it in self.nota.itens.all():
-            p = it.produto
+            prod_qs = Produtos.objects.using(self.database).filter(prod_codi=it.produto_id)
+            empresa = getattr(self.nota, "empresa", None)
+            if empresa is not None:
+                prod_qs = prod_qs.filter(prod_empr=str(empresa))
+            p = prod_qs.first()
+            if not p:
+                p = Produtos.objects.using(self.database).filter(prod_codi=it.produto_id).first()
+            if not p:
+                raise Exception(f"Produto {it.produto_id} não encontrado para empresa {empresa}.")
+
             imp = it.impostos if hasattr(it, "impostos") else None
 
             itens.append(ItemDTO(

@@ -76,12 +76,12 @@
       }
     }
 
-    window.setupTextAutocomplete = function({ inputEl, url, onPick }) {
+    window.setupTextAutocomplete = function ({ inputEl, url, onPick }) {
       if (!inputEl) return;
       const container = inputEl.parentElement;
       const dropdown = createDropdown(container);
       let debounce;
-      
+
       // Spinner element (optional if exists in HTML)
       const loadingEl = container.querySelector('.spinner-border');
 
@@ -110,15 +110,15 @@
               });
               dropdown.appendChild(a);
             });
-            
+
             if (items.length === 0) {
-               const div = document.createElement('div');
-               div.className = 'list-group-item text-muted';
-               div.textContent = 'Nenhum resultado encontrado';
-               dropdown.appendChild(div);
+              const div = document.createElement('div');
+              div.className = 'list-group-item text-muted';
+              div.textContent = 'Nenhum resultado encontrado';
+              dropdown.appendChild(div);
             }
-          } catch (e) { 
-            dropdown.innerHTML = ''; 
+          } catch (e) {
+            dropdown.innerHTML = '';
           } finally {
             if (loadingEl) loadingEl.style.display = 'none';
           }
@@ -127,7 +127,7 @@
       document.addEventListener('click', e => { if (!container.contains(e.target)) dropdown.innerHTML = ''; });
     };
 
-    window.setupSelectAutocomplete = function({ inputEl, selectEl, url }) {
+    window.setupSelectAutocomplete = function ({ inputEl, selectEl, url }) {
       if (!inputEl || !selectEl) return;
       const container = inputEl.parentElement;
       const dropdown = createDropdown(container);
@@ -163,16 +163,16 @@
               });
               dropdown.appendChild(a);
             });
-             if (items.length === 0) {
-               const div = document.createElement('div');
-               div.className = 'list-group-item text-muted';
-               div.textContent = 'Nenhum resultado encontrado';
-               dropdown.appendChild(div);
+            if (items.length === 0) {
+              const div = document.createElement('div');
+              div.className = 'list-group-item text-muted';
+              div.textContent = 'Nenhum resultado encontrado';
+              dropdown.appendChild(div);
             }
-          } catch (e) { 
-             dropdown.innerHTML = ''; 
+          } catch (e) {
+            dropdown.innerHTML = '';
           } finally {
-             if (loadingEl) loadingEl.style.display = 'none';
+            if (loadingEl) loadingEl.style.display = 'none';
           }
         }, 250);
       });
@@ -182,7 +182,7 @@
     // =================================================================
     // 3. NCM Helper Logic
     // =================================================================
-    window.fetchNcmDefaults = async function(ncmCode) {
+    window.fetchNcmDefaults = async function (ncmCode) {
       const displayCode = document.getElementById('ncm-display-code');
       const defaultsList = document.getElementById('ncm-defaults-list');
       const preview = document.getElementById('ncm-defaults-preview');
@@ -227,10 +227,9 @@
     };
 
     setupTextAutocomplete({ inputEl: document.getElementById('id_prod_unme'), url: urls.unidades });
-    
-    // NCM com onPick para buscar defaults
+
     setupTextAutocomplete({
-      inputEl: document.getElementById('id_prod_ncm'),
+      inputEl: document.getElementById('autocomplete-ncm') || document.getElementById('id_prod_ncm'),
       url: urls.ncms,
       onPick: (item) => fetchNcmDefaults(item.value)
     });
@@ -274,14 +273,14 @@
 
         if (errContainer) errContainer.style.display = 'none';
         if (resContainer) resContainer.style.display = 'none';
-        
+
         const showError = (msg) => {
-            if (errContainer) {
-                errContainer.textContent = msg;
-                errContainer.style.display = 'block';
-            } else {
-                alert(msg);
-            }
+          if (errContainer) {
+            errContainer.textContent = msg;
+            errContainer.style.display = 'block';
+          } else {
+            alert(msg);
+          }
         };
 
         const preco = document.getElementById('simulacao-preco').value;
@@ -355,7 +354,7 @@
 
           document.getElementById('res-total-tributos').textContent = fmt(total);
 
-          if(resContainer) resContainer.style.display = 'block';
+          if (resContainer) resContainer.style.display = 'block';
 
         } catch (e) {
           showError('Erro ao calcular impostos: ' + e.message);

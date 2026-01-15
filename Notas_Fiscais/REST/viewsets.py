@@ -1,4 +1,4 @@
-# notas_fiscais/api/viewsets.py
+import logging
 
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, status
@@ -17,7 +17,9 @@ from ..services.evento_service import EventoService
 from core.utils import get_licenca_db_config 
 from ..services.nota_service import NotaService
 from ..services.calculo_impostos_service import CalculoImpostosService
+from ..dominio.builder import NotaBuilder
 
+logger = logging.getLogger(__name__)
 
 class NotaViewSet(viewsets.ModelViewSet):
     """
@@ -405,6 +407,18 @@ class NotaViewSet(viewsets.ModelViewSet):
         
 
         debug_data = CalculoImpostosService(banco).aplicar_impostos(nota, return_debug=True)
+        try:
+            dto = NotaBuilder(nota, database=banco).build()
+            dto_payload = dto.dict()
+            logger.debug(
+                "NotaViewSet.gravar: DTO base para geração de XML da nota %s (empresa=%s, filial=%s): %s",
+                nota.pk,
+                empresa,
+                filial,
+                dto_payload,
+            )
+        except Exception as e:
+            logger.warning("NotaViewSet.gravar: falha ao montar DTO para nota %s: %s", nota.pk, e)
         descricao = request.data.get("descricao", "Rascunho criado/atualizado via API")        
         NotaService.gravar(nota, descricao=descricao)
         out = NotaDetailSerializer(nota, context=self.get_serializer_context())

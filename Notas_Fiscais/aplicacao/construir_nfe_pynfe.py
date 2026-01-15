@@ -34,6 +34,7 @@ def construir_nfe_pynfe(dto):
         email="",
         numero_documento=dto.destinatario.documento,
         indicador_ie=int(dto.destinatario.ind_ie or "9"),
+        inscricao_estadual=dto.destinatario.ie or "",
         endereco_logradouro=dto.destinatario.logradouro,
         endereco_numero=dto.destinatario.numero,
         endereco_complemento="",

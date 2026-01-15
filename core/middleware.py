@@ -101,11 +101,42 @@ class LicencaMiddleware:
 
         slug = parts[1]
 
-        # slug null/undefined → tenta JWT
+        # Rotas especiais de API que recebem o slug depois da ação,
+        # por exemplo: /api/emitir/<slug>/<id>/ ou /api/imprimir/<slug>/<id>/
+        if slug in ("emitir", "imprimir") and len(parts) >= 3:
+            slug = parts[2]
+
         if slug in ("null", "undefined"):
             slug = self._slug_from_jwt(request)
 
         lic = self._get_licenca(slug)
+
+        if not lic:
+            sessao_slug = None
+            try:
+                if hasattr(request, "session") and request.session is not None:
+                    sessao_slug = request.session.get("slug")
+            except Exception:
+                sessao_slug = None
+
+            if not sessao_slug:
+                try:
+                    sessao_slug = get_licenca_slug()
+                except Exception:
+                    sessao_slug = None
+
+            if (getattr(request, "user", None) and getattr(request.user, "is_authenticated", False)) and sessao_slug:
+                alt = self._get_licenca(sessao_slug)
+                if alt:
+                    logger.warning(
+                        "Slug %s não encontrado no mapa de licenças, reaproveitando slug de contexto %s para usuário autenticado %s",
+                        slug,
+                        sessao_slug,
+                        getattr(request.user, "username", None),
+                    )
+                    slug = sessao_slug
+                    lic = alt
+
         if not lic:
             return self._bad(f"Licença {slug} inexistente.")
 
@@ -272,7 +303,7 @@ class LicencaMiddleware:
         """Executa response com tratamento de sessão deletada."""
         try:
             return self.get_response(request)
-        except RuntimeError as e:
+        except (RuntimeError, SuspiciousOperation) as e:
             msg = str(e)
             if "session was deleted" in msg or "session" in msg.lower():
                 logger.warning("Sessão deletada durante requisição: %s", msg)

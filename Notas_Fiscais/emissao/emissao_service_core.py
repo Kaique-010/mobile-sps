@@ -69,6 +69,7 @@ class EmissaoServiceCore:
     def emitir(self):
 
         emit = self.dto["emitente"]
+        logger.debug("EmissaoServiceCore.emitir: DTO inicial recebido: %s", self.dto)
 
         # 1) Garantir cUF SEMPRE
         if "cUF" not in emit or not emit["cUF"]:
@@ -82,15 +83,14 @@ class EmissaoServiceCore:
         if "chave" not in self.dto:
             self.dto["chave"] = self._gerar_chave(self.dto)
 
-        # 4) Gerar XML base
         xml_gerado = GeradorXML().gerar(self.dto)
+        logger.debug("EmissaoServiceCore.emitir: XML base gerado: %s", xml_gerado)
 
         # 5) Assinar
         pfx_path, pfx_pass = self._load_certificado()
         assinador = AssinadorA1Service(pfx_path, pfx_pass)
         xml_assinado = assinador.assinar_xml(xml_gerado)
 
-        # 6) Montar enviNFe
         xml_enviado = montar_envi_nfe(
             xml_assinado=xml_assinado,
             id_lote=str(self.dto.get("numero") or 1),
@@ -102,7 +102,8 @@ class EmissaoServiceCore:
         # 8) TLS cert/key
         cert_pem, key_pem = assinador._extract_keys()
 
-        # 9) Enviar para SEFAZ
+        logger.debug("EmissaoServiceCore.emitir: XML enviNFe montado: %s", xml_enviado)
+
         resposta_xml = SefazClient(
             cert_pem=cert_pem,
             key_pem=key_pem,
