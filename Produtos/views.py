@@ -717,7 +717,7 @@ class ProdutosDetalhadosViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
     serializer_class = ProdutoDetalhadoSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter]
-    filterset_fields = ['codigo', 'nome', 'marca_nome']
+    filterset_fields = ['codigo', 'nome', 'marca_nome', 'empresa', 'filial']
     search_fields = ['codigo', 'nome', 'marca_nome']
 
     def get_serializer_context(self):
@@ -729,12 +729,24 @@ class ProdutosDetalhadosViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         slug = get_licenca_slug()
         qs = ProdutosDetalhados.objects.using(slug).all()
 
+        empresa = self.request.query_params.get('empresa') or \
+                  self.request.headers.get('X-Empresa') or \
+                  self.request.session.get('empresa_id')
+
+        filial = self.request.query_params.get('filial') or \
+                 self.request.headers.get('X-Filial') or \
+                 self.request.session.get('filial_id')
+
         if marca_nome := self.request.query_params.get('marca_nome'):
             if marca_nome == '__sem_marca__':
                 qs = qs.filter(Q(marca_nome__isnull=True) | Q(marca_nome=''))
             else:
                 qs = qs.filter(marca_nome=marca_nome)
 
+        if empresa:
+            qs = qs.filter(empresa=empresa)
+        if filial:
+            qs = qs.filter(filial=filial)
 
         # Filtros de estoque (ajustados para corresponder ao frontend)
         com_saldo = self.request.query_params.get('com_saldo')

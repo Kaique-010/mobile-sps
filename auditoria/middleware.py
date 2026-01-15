@@ -243,8 +243,29 @@ class AuditoriaMiddleware:
                     allowed = any(c in modulos_lower for c in candidates)
                     if not allowed and not request.path.startswith('/api/auditoria/'):
                         from django.http import JsonResponse
+
+                        licenca_slug = get_licenca_slug()
+                        empresa = getattr(request, 'empresa', None)
+                        filial = getattr(request, 'filial', None)
+
+                        logger.warning(
+                            "Módulo bloqueado para licença=%s empresa=%s filial=%s app=%s modulos_liberados=%s",
+                            licenca_slug,
+                            empresa,
+                            filial,
+                            app_slug,
+                            sorted(modulos_lower),
+                        )
+
                         return JsonResponse(
-                            {'erro': 'Módulo não liberado para a empresa/filial atual.'},
+                            {
+                                'erro': 'Módulo não liberado para a empresa/filial atual.',
+                                'modulo_bloqueado': app_slug,
+                                'modulos_liberados': sorted(modulos_lower),
+                                'licenca': licenca_slug,
+                                'empresa': empresa,
+                                'filial': filial,
+                            },
                             status=403,
                         )
         except Exception:
