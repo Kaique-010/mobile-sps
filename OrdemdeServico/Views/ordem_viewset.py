@@ -337,8 +337,6 @@ class OrdemViewSet(BaseMultiDBModelViewSet):
         except Exception as e:
             return tratar_erro(e)
 
-    
-    
     @action(
         detail=True,
         methods=["patch"],
@@ -352,11 +350,11 @@ class OrdemViewSet(BaseMultiDBModelViewSet):
         try:
             banco = self.get_banco()
             ordem = self.get_object()
-            
+
             with transaction.atomic(using=banco):
                 ordem.orde_stat_orde = 22
                 ordem.save(using=banco, update_fields=["orde_stat_orde"])
-            
+
             serializer = self.get_serializer(ordem)
             return Response(
                 {
@@ -367,6 +365,5 @@ class OrdemViewSet(BaseMultiDBModelViewSet):
                 },
                 status=status.HTTP_200_OK,
             )
-
         except Exception as e:
             return tratar_erro(e)
