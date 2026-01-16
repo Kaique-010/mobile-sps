@@ -40,8 +40,7 @@
           <div><strong>Nome:</strong> {{ destinatario.enti_nome }}</div>
           <div><strong>Documento:</strong> {{ destinatario.enti_cnpj }} {{ destinatario.enti_cpf }}</div>
           <div><strong>Município/UF:</strong> {{ destinatario.enti_cida }}/{{ destinatario.enti_esta }}</div>
-          <div><strong>Endereço:</strong> {{ destinatario.enti_ende }} {{ destinatario.enti_nume }} {{
-            destinatario.enti_comp }}</div>
+          <div><strong>Endereço:</strong> {{ destinatario.enti_ende }} {{ destinatario.enti_nume }} {{ destinatario.enti_comp }}</div>
         </div>
       </div>
     </div>
@@ -57,8 +56,7 @@
             <span class="badge bg-secondary">{{ nota.get_status_display }}</span>
             <span class="badge bg-info text-dark">{{ nota.get_ambiente_display }}</span>
           </div>
-          <div><strong>Chave:</strong> {{ nota.chave_acesso|default:"—" }} | <strong>Protocolo:</strong> {{
-            nota.protocolo_autorizacao|default:"—" }}</div>
+          <div><strong>Chave:</strong> {{ nota.chave_acesso|default:"—" }} | <strong>Protocolo:</strong> {{ nota.protocolo_autorizacao|default:"—" }}</div>
         </div>
       </div>
     </div>
@@ -97,8 +95,7 @@
               <tr class="table-light">
                 <td colspan="8" class="text-break">
                   <strong>Impostos:</strong>
-                  ICMS Base {{ it.impostos.icms_base|default:"0.00" }} Aliq {{
-                  it.impostos.icms_aliquota|default:"0.00"}} Valor {{ it.impostos.icms_valor|default:"0.00" }} |
+                  ICMS Base {{ it.impostos.icms_base|default:"0.00" }} Aliq {{it.impostos.icms_aliquota|default:"0.00"}} Valor {{ it.impostos.icms_valor|default:"0.00" }} |
                   IPI {{ it.impostos.ipi_valor|default:"0.00" }} | PIS {{ it.impostos.pis_valor|default:"0.00" }} |
                   COFINS {{ it.impostos.cofins_valor|default:"0.00" }}
                   | FCP {{ it.impostos.fcp_valor|default:"0.00" }}
@@ -119,8 +116,7 @@
       {% if nota.transporte %}
       <div><strong>Modalidade:</strong> {{ nota.transporte.get_modalidade_frete_display }}</div>
       <div><strong>Transportadora:</strong> {{ nota.transporte.transportadora.enti_nome|default:"—" }}</div>
-      <div><strong>Veículo:</strong> {{ nota.transporte.placa_veiculo|default:"" }} / {{
-        nota.transporte.uf_veiculo|default:"" }}</div>
+      <div><strong>Veículo:</strong> {{ nota.transporte.placa_veiculo|default:"" }} / {{ nota.transporte.uf_veiculo|default:"" }}</div>
       {% else %}
       <em>Sem informações de transporte.</em>
       {% endif %}

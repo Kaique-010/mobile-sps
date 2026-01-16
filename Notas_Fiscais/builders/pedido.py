@@ -55,17 +55,16 @@ class PedidoNFeBuilder:
         return {
             "cnpj": f.empr_docu,
             "razao": f.empr_nome,
-            "fantasia": f.empr_fant,
-            "ie": f.empr_insc_esta,
-            "cnae": f.empr_cnae,
-            "endereco": {
-                "logradouro": f.empr_ende,
-                "numero": f.empr_nume,
-                "bairro": f.empr_bair,
-                "cep": f.empr_cep,
-                "uf": f.empr_esta,
-                "cidade": f.empr_cida,
-            }
+            "fantasia": f.empr_fant or f.empr_nome,
+            "ie": f.empr_insc_esta or "",
+            "regime_trib": str(f.empr_regi_trib or "3"),
+            "logradouro": f.empr_ende,
+            "numero": f.empr_nume,
+            "bairro": f.empr_bair,
+            "municipio": f.empr_cida,
+            "cod_municipio": str(getattr(f, 'empr_codi_cida', '') or ''),
+            "uf": f.empr_esta,
+            "cep": f.empr_cep,
         }
 
     # -------------------------------------------------------------------
@@ -76,18 +75,24 @@ class PedidoNFeBuilder:
         if not c:
             raise Exception("Cliente não encontrado no pedido.")
 
+        doc = c.enti_cnpj if c.enti_cnpj else c.enti_cpf
+        ind_ie = "1"
+        ie = c.enti_insc_esta
+        if not ie or ie.upper() == "ISENTO":
+            ind_ie = "2" if ie and ie.upper() == "ISENTO" else "9"
+        
         return {
-            "cpf_cnpj": c.enti_clie,
-            "razao": c.enti_nome,
-            "ie": c.enti_insc_esta,
-            "endereco": {
-                "logradouro": c.enti_ende,
-                "numero": c.enti_nume,
-                "bairro": c.enti_bair,
-                "cep": c.enti_cep,
-                "uf": c.enti_esta,
-                "cidade": c.enti_cida,
-            }
+            "documento": doc or "",
+            "nome": c.enti_nome,
+            "ie": ie,
+            "ind_ie": ind_ie,
+            "logradouro": c.enti_ende,
+            "numero": c.enti_nume,
+            "bairro": c.enti_bair,
+            "municipio": c.enti_cida,
+            "cod_municipio": str(getattr(c, 'enti_codi_cida', '') or ''),
+            "uf": c.enti_esta,
+            "cep": c.enti_cep,
         }
 
     # -------------------------------------------------------------------
@@ -107,7 +112,7 @@ class PedidoNFeBuilder:
                 unidade = "UN"  # fallback
 
             itens_dto.append({
-                "codigo": p.prod_codi,
+                "codigo": str(p.prod_codi),
                 "descricao": p.prod_nome,
                 "ncm": p.prod_ncm,
                 "unidade": unidade,
@@ -116,6 +121,10 @@ class PedidoNFeBuilder:
                 "valor_unit": float(item.iped_unit or 0),
                 "valor_total": float(item.iped_tota or 0),
                 "desconto": float(item.iped_desc or 0),
+                "cest": None,
+                "cst_icms": "00",
+                "cst_pis": "01",
+                "cst_cofins": "01",
             })
 
         return itens_dto
@@ -154,7 +163,7 @@ class PedidoNFeBuilder:
         if tipo == "BONIFICACAO":
             return "5910"
         if tipo == "REMESSA":
-            return "5915"
+            return "5915" 
         if tipo == "TRANSFERENCIA":
             return "5152"
 

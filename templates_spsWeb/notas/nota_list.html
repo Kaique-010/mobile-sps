@@ -38,12 +38,14 @@
       <label class="form-label">Até</label>
       <input type="date" name="data_fim" class="form-control" value="{{ preservado.data_fim }}" />
     </div>
-    <div class="col-md-3 d-grid align-items-end">
-      <div class="btn-group">
-        <button class="btn btn-primary" type="submit"><i class="bi bi-funnel"></i> Filtrar</button>
-        <a class="btn btn-outline-secondary" href="?"><i class="bi bi-x-circle"></i> Limpar</a>
+    
+    <div class="col-md-3 d-flex align-items-end ">
+      <div class="btn-group w-100">
+        <button class="btn btn-outline-primary"  type="submit"><i class="bi bi-funnel"></i> Filtrar</button>
+      
       </div>
     </div>
+      <a class="btn btn-outline-secondary" href="?"><i class="bi bi-x-circle"></i> Limpar</a>
   </form>
 
   <div class="table-responsive d-none d-md-block px-4 pt-4 pb-4">

@@ -75,10 +75,10 @@ def preco_produto(request, slug=None):
         tp = qs.first()
         if not tp:
             return JsonResponse({'unit_price': None, 'found': False})
-        if tipo_financeiro == '1':
-            price = tp.tabe_avis or tp.tabe_prco or tp.tabe_praz
+        if tipo_financeiro == '0':
+            price = tp.tabe_avis or tp.tabe_apra
         else:
-            price = tp.tabe_praz or tp.tabe_prco or tp.tabe_avis
+            price = tp.tabe_apra or tp.tabe_avis
         try:
             unit_price = float(price or 0)
         except Exception:
