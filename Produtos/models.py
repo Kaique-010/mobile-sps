@@ -323,7 +323,10 @@ class Produtos(models.Model):
 
 
 class SaldoProduto(models.Model):
-    produto_codigo = models.ForeignKey(Produtos, on_delete=models.CASCADE, db_column='sapr_prod', primary_key=True)
+    # Alterado de ForeignKey para OneToOneField para resolver aviso fields.W342
+    # Nota: primary_key=True implica unique=True. Se houver múltiplos saldos por produto,
+    # isso deve ser revisto (necessário uma PK real ou composta).
+    produto_codigo = models.OneToOneField(Produtos, on_delete=models.CASCADE, db_column='sapr_prod', primary_key=True)
     empresa = models.CharField(max_length=50, db_column='sapr_empr')
     filial = models.CharField(max_length=50, db_column='sapr_fili')
     saldo_estoque = models.DecimalField(max_digits=10, decimal_places=2, db_column='sapr_sald')

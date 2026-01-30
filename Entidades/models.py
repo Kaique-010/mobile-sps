@@ -1,3 +1,4 @@
+from pyexpat import model
 from django.db import models, transaction
 from django.db.models import Max
 import logging
@@ -58,4 +59,6 @@ class Entidades(models.Model):
     class Meta:
         db_table = 'entidades'
         managed = 'false'
+
+
 

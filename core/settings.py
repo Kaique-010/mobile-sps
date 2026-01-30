@@ -73,7 +73,6 @@ else:
 import logging
 logger = logging.getLogger("django")
 logger.warning("🧠 BASE USADA: %s", "LOCAL" if USE_LOCAL_DB else "REMOTA")
-logger.warning("🔗 CONFIGURAÇÃO DO BANCO: %s", DATABASES['default'])
 
 
 DATABASE_ROUTERS = ['core.db_router.LicencaDBRouter']

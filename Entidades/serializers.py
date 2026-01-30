@@ -114,3 +114,4 @@ class EntidadesSerializer(serializers.ModelSerializer):
                     break
             raise e  # Relevanta o erro original depois de logar
 
+

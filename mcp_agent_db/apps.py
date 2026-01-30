@@ -7,4 +7,4 @@ class McpAgentDbConfig(AppConfig):
     
     def ready(self):
         """Inicialização do app quando Django carrega"""
-        print("🤖 MCP Agent DB carregado como app Django")
+        pass
