@@ -367,3 +367,35 @@ class OrdemViewSet(BaseMultiDBModelViewSet):
             )
         except Exception as e:
             return tratar_erro(e)
+
+    @action(detail=True, methods=["get"], url_path="historico-workflow", permission_classes=[IsAuthenticated, PodeVerOrdemDoSetor])
+    def historico_workflow(self, request, *args, **kwargs):
+        """
+        Retorna o histórico de workflow da ordem.
+        """
+        try:
+            banco = self.get_banco()
+            ordem = self.get_object()
+            
+            # Importação local para evitar importação circular
+            from ..models import Ordemservicoworkflowhistorico
+            from ..serializers import HistoricoWorkflowSerializer
+            
+            queryset = Ordemservicoworkflowhistorico.objects.using(banco).filter(
+                oswh_empr=ordem.orde_empr,
+                oswh_fili=ordem.orde_fili,
+                oswh_orde=ordem.orde_nume
+            ).order_by('-oswh_data')
+            
+            page = self.paginate_queryset(queryset)
+            if page is not None:
+                serializer = HistoricoWorkflowSerializer(page, many=True)
+                return self.get_paginated_response(serializer.data)
+                
+            serializer = HistoricoWorkflowSerializer(queryset, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            return tratar_erro(e)
+
+
+

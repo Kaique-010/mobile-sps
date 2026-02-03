@@ -4,20 +4,21 @@ from .views import EntidadesViewSet, EntidadesRelatorioAPI
 from .Views.entilogin_view import EntidadesLoginViewSet
 from .Views.relatorios import PedidosViewSet, OrcamentosViewSet, OrdemServicoViewSet, OsViewSet, PedidosGeralViewSet
 from .Views.dashboard_clientes import ClienteDashboardViewSet
-from .faces.Views.views import EntidadesFacesViewSet, ReconhecimentoFacesViewSet
+from .Views.views import EntidadesFacesViewSet, ReconhecimentoFacesViewSet
 
 
 
 router = DefaultRouter()
 router.register(r'entidades', EntidadesViewSet, basename='entidades')
+router.register(r'entidades-faces', EntidadesFacesViewSet, basename='entidades-faces')
+router.register(r'reconhecimento-faces', ReconhecimentoFacesViewSet, basename='reconhecimento-faces')   
 router.register(r'dashboards/cliente-dashboard', ClienteDashboardViewSet, basename='cliente-dashboard'),
 router.register(r'pedidos', PedidosViewSet, basename='pedidos'),
 router.register(r'pedidos-geral', PedidosGeralViewSet, basename='pedidos-geral'),
 router.register(r'orcamentos', OrcamentosViewSet, basename='orcamentos'),
 router.register(r'ordem-servico', OrdemServicoViewSet, basename='ordem-servico'),
 router.register(r'os', OsViewSet, basename='os')
-router.register(r'entidades-faces', EntidadesFacesViewSet, basename='entidades-faces')
-router.register(r'reconhecimento-faces', ReconhecimentoFacesViewSet, basename='reconhecimento-faces')
+
 
 
 

@@ -7,34 +7,42 @@ def produtosDetalhados(alias: str):
     with connections[alias].cursor() as cursor:
         cursor.execute(
             """
+            DROP VIEW IF EXISTS public.produtos_detalhados;
             -- View produtos_detalhados
-CREATE OR REPLACE VIEW public.produtos_detalhados
- AS
- SELECT prod.prod_codi AS codigo,
-    prod.prod_nome AS nome,
-    prod.prod_unme AS unidade,
-    prod.prod_grup AS grupo_id,
-    grup.grup_desc AS grupo_nome,
-    prod.prod_marc AS marca_id,
-    marc.marc_nome AS marca_nome,
-    tabe.tabe_cuge AS custo,
-    tabe.tabe_avis AS preco_vista,
-    tabe.tabe_apra AS preco_prazo,
-    sald.sapr_sald AS saldo,
-    prod.prod_foto AS foto,
-    prod.prod_peso_brut AS peso_bruto,
-    prod.prod_peso_liqu AS peso_liquido,
-    sald.sapr_empr AS empresa,
-    sald.sapr_fili AS filial,
-    COALESCE(tabe.tabe_cuge, 0::numeric) * COALESCE(sald.sapr_sald, 0::numeric) AS valor_total_estoque,
-    COALESCE(tabe.tabe_avis, 0::numeric) * COALESCE(sald.sapr_sald, 0::numeric) AS valor_total_venda_vista,
-    COALESCE(tabe.tabe_apra, 0::numeric) * COALESCE(sald.sapr_sald, 0::numeric) AS valor_total_venda_prazo,
-    prod.prod_ncm AS ncm
-   FROM produtos prod
-     LEFT JOIN gruposprodutos grup ON prod.prod_grup::text = grup.grup_codi::text
-     LEFT JOIN marca marc ON prod.prod_marc = marc.marc_codi
-     LEFT JOIN tabelaprecos tabe ON prod.prod_codi::text = tabe.tabe_prod::text AND prod.prod_empr = tabe.tabe_empr
-     LEFT JOIN saldosprodutos sald ON prod.prod_codi::text = sald.sapr_prod::text;  
+            CREATE OR REPLACE VIEW public.produtos_detalhados
+            AS
+            SELECT
+            prod.prod_codi AS codigo,
+            prod.prod_nome AS nome,
+            prod.prod_unme AS unidade,
+            prod.prod_grup AS grupo_id,
+            grup.grup_desc AS grupo_nome,
+            prod.prod_marc AS marca_id,
+            marc.marc_nome AS marca_nome,
+            tabe.tabe_cuge AS custo,
+            tabe.tabe_avis AS preco_vista,
+            tabe.tabe_apra AS preco_prazo,
+            sald.sapr_sald AS saldo,
+            prod.prod_foto AS foto,
+            prod.prod_peso_brut AS peso_bruto,
+            prod.prod_peso_liqu AS peso_liquido,
+            sald.sapr_empr AS empresa,
+            sald.sapr_fili AS filial,
+            COALESCE(tabe.tabe_cuge, 0) * COALESCE(sald.sapr_sald, 0) AS valor_total_estoque,
+            COALESCE(tabe.tabe_avis, 0) * COALESCE(sald.sapr_sald, 0) AS valor_total_venda_vista,
+            COALESCE(tabe.tabe_apra, 0) * COALESCE(sald.sapr_sald, 0) AS valor_total_venda_prazo,
+            prod.prod_ncm AS ncm
+            FROM produtos prod
+            LEFT JOIN gruposprodutos grup ON prod.prod_grup = grup.grup_codi
+            LEFT JOIN marca marc ON prod.prod_marc = marc.marc_codi
+            LEFT JOIN saldosprodutos sald
+            ON prod.prod_codi = sald.sapr_prod
+            AND prod.prod_empr = sald.sapr_empr
+
+            LEFT JOIN tabelaprecos tabe
+            ON prod.prod_codi = tabe.tabe_prod
+            AND sald.sapr_empr = tabe.tabe_empr
+            AND sald.sapr_fili = tabe.tabe_fili  
             """
         )
 

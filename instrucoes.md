@@ -3,7 +3,7 @@ Pra rodar o código é necessário:
 Abrir o prompt de comando nessa pasta, com ctrl + shift + "
 
 Ativar o ambiente virtual .venv com :
-
+ teste 
 .venv\Scripts\activate
 
 e depois rodar o código com

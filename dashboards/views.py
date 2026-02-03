@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from datetime import datetime, time
 from re import S
 from typing import Annotated
@@ -26,6 +26,18 @@ from core.mixins.ususario_com_setor import UsuarioComSetorMixin
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def safe_decimal(value):
+    if value is None:
+        return Decimal(0)
+    try:
+        d = Decimal(str(value))
+        if d.is_nan() or d.is_infinite():
+            return Decimal(0)
+        return d
+    except (TypeError, ValueError, InvalidOperation):
+        return Decimal(0)
 
 
 def resolve_dashboard_mode(ctx):
@@ -107,9 +119,10 @@ class DashboardAPIView(UsuarioComSetorMixin, APIView):
             )
 
             for item in saldos:
-                item['total'] = Decimal(item['total']) if not isinstance(item['total'], Decimal) else item['total']
+                item['total'] = safe_decimal(item['total'])
+
             for item in pedidos:
-                item['total'] = Decimal(item['total']) if not isinstance(item['total'], Decimal) else item['total']
+                item['total'] = safe_decimal(item['total'])
 
             data['saldos_produto'] = saldos
             data['pedidos_por_cliente'] = pedidos
@@ -137,8 +150,8 @@ class DashboardAPIView(UsuarioComSetorMixin, APIView):
             lista_marcas_validas = []
 
             for item in dados_agrupados:
-                estoque = item['total_estoque'] or Decimal(0)
-                custo = item['total_custo'] or Decimal(0)
+                estoque = safe_decimal(item['total_estoque'])
+                custo = safe_decimal(item['total_custo'])
                 
                 total_valor_estoque += estoque
                 
