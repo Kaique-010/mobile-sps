@@ -7,7 +7,7 @@ on:
 jobs:
   mirror:
     runs-on: ubuntu-latest
-    
+    continue-on-error: true
     steps:
       - name: Checkout completo
         uses: actions/checkout@v3
@@ -39,6 +39,8 @@ jobs:
 
   deploy:
     needs: mirror
+    continue-on-error: true
+    if: always()
     runs-on: ubuntu-latest
     environment: Mobile-Sps
 
