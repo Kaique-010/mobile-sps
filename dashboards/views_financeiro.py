@@ -73,7 +73,7 @@ class DashboardFinanceiroView(ModuloRequeridoMixin, APIView):
         total_pago = Decimal('0.00')
 
         for r in recebimentos_agrupados:
-            valor = r['valor'] or Decimal('0.00')
+            valor = safe_decimal(r['valor'])
             total_recebido += valor
             recebimentos.append({
                 "mes": r['mes'].strftime('%Y-%m'),
@@ -82,7 +82,7 @@ class DashboardFinanceiroView(ModuloRequeridoMixin, APIView):
             })
 
         for p in pagamentos_agrupados:
-            valor = p['valor'] or Decimal('0.00')
+            valor = safe_decimal(p['valor'])
             total_pago += valor
             pagamentos.append({
                 "mes": p['mes'].strftime('%Y-%m'),

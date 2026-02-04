@@ -7,6 +7,7 @@ on:
 jobs:
   mirror:
     runs-on: ubuntu-latest
+    
     steps:
       - name: Checkout completo
         uses: actions/checkout@v3

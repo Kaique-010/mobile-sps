@@ -1,4 +1,5 @@
 from xml.dom import ValidationErr
+import hashlib
 from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 import re
@@ -20,7 +21,7 @@ from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from core.middleware import get_licenca_slug
 from core.registry import get_licenca_db_config
 from .models import Produtos, SaldoProduto, Tabelaprecos, UnidadeMedida, Tabelaprecoshist, ProdutosDetalhados, Marca
-from .serializers import ProdutoSerializer, TabelaPrecoSerializer, UnidadeMedidaSerializer, ProdutoDetalhadoSerializer, MarcaSerializer
+from .serializers import ProdutoSerializer, TabelaPrecoSerializer, UnidadeMedidaSerializer, ProdutoDetalhadoSerializer, MarcaSerializer, ProdutoEtiquetasSerializer
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 from django.core.cache import cache
@@ -286,11 +287,19 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                 output_field=DecimalField()
             )
 
+            url_imagem = Subquery(
+                Produtos.objects.using(banco).filter(
+                    prod_codi=OuterRef('prod_codi')
+                ).values('prod_url')[:1],
+                output_field=CharField()
+            )
+            
             produtos = Produtos.objects.using(banco).annotate(
                 saldo_estoque=Coalesce(saldo_subquery, V(0), output_field=DecimalField()),
                 prod_preco_vista=Coalesce(preco_vista_subquery, V(0), output_field=DecimalField()),
                 prod_preco_normal=Coalesce(preco_normal_subquery, V(0), output_field=DecimalField()),
                 prod_coba_str=Coalesce(Cast('prod_coba', CharField()), V('')),
+                prod_url_img=Coalesce(url_imagem, V('')),                
                 prod_codi_int=Case(
                     When(prod_codi__regex=r'^\d+$', then=Cast('prod_codi', IntegerField())),
                     default=V(None),
@@ -314,6 +323,39 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             import traceback
             traceback.print_exc()
             return Response({'detail': f'Erro interno: {str(e)}'}, status=500)
+
+    @action(detail=False, methods=["post"])
+    def impressao_etiquetas(self, request, slug=None):
+        serializer = ProdutoEtiquetasSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        banco = get_licenca_db_config(request)
+        produtos_ids = serializer.validated_data["produtos"]
+
+        # Buscar produtos com fabricante (Marca) para otimizar
+        produtos = Produtos.objects.using(banco).filter(
+            prod_codi__in=produtos_ids
+        ).select_related('prod_marc')
+
+        if not produtos.exists():
+            return Response(
+                {"detail": "Produtos não encontrados"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        etiquetas = []
+        from .utils import formatar_dados_etiqueta
+
+        for produto in produtos:
+            etiquetas.append(formatar_dados_etiqueta(produto))
+
+        return Response(
+            {
+                "total": len(etiquetas),
+                "etiquetas": etiquetas
+            },
+            status=status.HTTP_200_OK
+        )
 
     def create(self, request, *args, **kwargs):
         banco = get_licenca_db_config(request)

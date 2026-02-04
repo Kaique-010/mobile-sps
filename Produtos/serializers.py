@@ -139,6 +139,7 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
     prod_preco_normal = serializers.SerializerMethodField()
     saldo_estoque = serializers.SerializerMethodField()
     prod_foto = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    prod_url = serializers.CharField(required=False, allow_blank=True, allow_null=True)    
     imagem_base64 = serializers.SerializerMethodField()
     preco_principal = serializers.SerializerMethodField()
     # Campos com representação segura (permitindo valores inválidos no banco sem quebrar a listagem)
@@ -517,3 +518,16 @@ class ProdutoDetalhadoSerializer(serializers.ModelSerializer):
                 data[field] = None
                 
         return super().to_internal_value(data)
+
+
+class ProdutoEtiquetasSerializer(serializers.Serializer):
+    produtos = serializers.ListField(
+        child=serializers.CharField(max_length=50),
+        allow_empty=False
+    )
+
+    def validate_produtos(self, value):
+        produtos = [p.strip() for p in value if p.strip()]
+        if not produtos:
+            raise serializers.ValidationError("Lista de produtos vazia.")
+        return list(set(produtos))

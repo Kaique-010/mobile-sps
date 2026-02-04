@@ -35,6 +35,7 @@ from .Views.web_views import (
     SimularImpostosView
 )
 from .Views.autocompletes import autocomplete_unidades, autocomplete_grupos, autocomplete_marcas, autocomplete_subgrupos, autocomplete_familias, autocomplete_ncms
+from .Views.etiquetas import EtiquetasView
 
 
 urlpatterns = [
@@ -92,4 +93,7 @@ urlpatterns = [
     path('autocomplete/marcas/', autocomplete_marcas, name='autocomplete_marcas'),
     path('autocomplete/subgrupos/', autocomplete_subgrupos, name='autocomplete_subgrupos'),
     path('autocomplete/familias/', autocomplete_familias, name='autocomplete_familias'),
+    
+    # Etiquetas
+    path('etiquetas/', EtiquetasView.as_view(), name='etiquetas_web'),
 ]
