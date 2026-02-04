@@ -7,7 +7,6 @@ on:
 jobs:
   mirror:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - name: Checkout completo
         uses: actions/checkout@v3
@@ -15,39 +14,27 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Espelhar para o outro repositório
+      - name: Espelhar para o repositório mirror
         env:
-          REPO: ${{ github.repository }}
           TOKEN_SPARTACUS: ${{ secrets.MIRROR_TOKEN_SPARTACUS }}
-          TOKEN_KAIQUE: ${{ secrets.MIRROR_TOKEN_KAIQUE010 }}
         run: |
-          set -e
+          set -euo pipefail
 
-          if [ "$REPO" = "Kaique-010/mobile-sps" ]; then
-            MIRROR_TOKEN="$TOKEN_SPARTACUS"
-            TARGET_REPO="spartacusWeb25/mobile-sps"
-          else
-            MIRROR_TOKEN="$TOKEN_KAIQUE"
-            TARGET_REPO="Kaique-010/mobile-sps"
-          fi
+          TARGET_REPO="spartacusWeb25/mobile-sps"
 
           rm -rf .github/workflows
 
           git remote remove mirror 2>/dev/null || true
-          git remote add mirror "https://x-access-token:${MIRROR_TOKEN}@github.com/${TARGET_REPO}.git"
+          git remote add mirror "https://x-access-token:${TOKEN_SPARTACUS}@github.com/${TARGET_REPO}.git"
           git push mirror main --force
 
   deploy:
     needs: mirror
-    continue-on-error: true
-    if: always()
     runs-on: ubuntu-latest
     environment: Mobile-Sps
 
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Deploy via SSH (Blindado)
+      - name: Deploy via SSH (Mirror-based, Blue/Green)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.ORACLE_HOST }}
@@ -60,28 +47,21 @@ jobs:
 
             BASE=/home/ubuntu/mobile-sps
             REPO=$BASE/repo
-            REPO_URL=https://github.com/${{ github.repository }}.git
-            EXPECTED_SHA=${{ github.sha }}
+            REPO_URL=https://github.com/spartacusWeb25/mobile-sps.git
 
-            mkdir -p $BASE
+            mkdir -p "$BASE"
 
             if [ ! -d "$REPO/.git" ]; then
-              rm -rf $REPO
-              git clone $REPO_URL $REPO
+              rm -rf "$REPO"
+              git clone "$REPO_URL" "$REPO"
             fi
 
-            cd $REPO
+            cd "$REPO"
             git fetch origin
             git reset --hard origin/main
 
-            CURRENT_SHA=$(git rev-parse HEAD)
-            if [ "$CURRENT_SHA" != "$EXPECTED_SHA" ]; then
-              echo "SHA mismatch. Abortando."
-              exit 1
-            fi
-
             if [ -L "$BASE/current" ]; then
-              CURRENT=$(readlink -f $BASE/current)
+              CURRENT=$(readlink -f "$BASE/current")
             else
               CURRENT="$BASE/blue"
             fi
@@ -91,19 +71,19 @@ jobs:
             rsync -av --delete \
               --exclude ".git" \
               --exclude "__pycache__" \
-              $REPO/ $TARGET/
+              "$REPO/" "$TARGET/"
 
-            [ -f "$BASE/.env" ] && cp $BASE/.env $TARGET/.env
+            [ -f "$BASE/.env" ] && cp "$BASE/.env" "$TARGET/.env"
 
-            source $BASE/venv/bin/activate
+            source "$BASE/venv/bin/activate"
 
-            REQ_HASH=$(sha256sum $TARGET/requirements.txt | awk '{print $1}')
-            if [ ! -f "$BASE/.req_hash" ] || [ "$REQ_HASH" != "$(cat $BASE/.req_hash)" ]; then
-              pip install -r $TARGET/requirements.txt
-              echo "$REQ_HASH" > $BASE/.req_hash
+            REQ_HASH=$(sha256sum "$TARGET/requirements.txt" | awk '{print $1}')
+            if [ ! -f "$BASE/.req_hash" ] || [ "$REQ_HASH" != "$(cat "$BASE/.req_hash")" ]; then
+              pip install -r "$TARGET/requirements.txt"
+              echo "$REQ_HASH" > "$BASE/.req_hash"
             fi
 
-            ln -sfn $TARGET $BASE/current
+            ln -sfn "$TARGET" "$BASE/current"
 
             sudo systemctl daemon-reload
             sudo systemctl restart gunicorn
@@ -134,8 +114,7 @@ jobs:
           from: ${{ secrets.SMTP_USER }}
           body: |
             Deploy concluído com sucesso.
-            Repo: ${{ github.repository }}
-            SHA: ${{ github.sha }}
+            Mirror: spartacusWeb25/mobile-sps
 
       - name: Email — Falha
         if: failure()
@@ -152,5 +131,4 @@ jobs:
           from: ${{ secrets.SMTP_USER }}
           body: |
             Deploy falhou.
-            Repo: ${{ github.repository }}
-            SHA: ${{ github.sha }}
+            Mirror: spartacusWeb25/mobile-sps
