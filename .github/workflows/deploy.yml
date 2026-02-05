@@ -22,7 +22,7 @@ jobs:
         with:
           app-id: ${{ secrets.GH_APP_ID }}
           private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
-          owner: kaique-010
+          owner: spartacusWeb25
           repositories: mobile-sps
 
       - name: Espelhar para o repositório mirror
