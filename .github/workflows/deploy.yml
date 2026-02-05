@@ -1,4 +1,4 @@
-name: Deploy Mobile e Web-SPS (Blue/Green) - DEBUG
+name: Deploy Mobile e Web-SPS (Blue/Green)
 
 on:
   push:
@@ -25,35 +25,7 @@ jobs:
           owner: spartacusWeb25
           repositories: mobile-sps
 
-      # ==== NOVO: DEBUG STEP ====
-      - name: Debug - Verificar autenticação e permissões
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: |
-          echo "=== 1. Verificando qual usuário/app está autenticado ==="
-          curl -sS -H "Authorization: Bearer ${GH_TOKEN}" \
-               -H "Accept: application/vnd.github+json" \
-               https://api.github.com/user || echo "Falha ao verificar usuário"
-
-          echo ""
-          echo "=== 2. Verificando se o repo destino existe ==="
-          curl -sS -H "Authorization: Bearer ${GH_TOKEN}" \
-               -H "Accept: application/vnd.github+json" \
-               https://api.github.com/repos/spartacusWeb25/mobile-sps || echo "Repo não encontrado ou sem acesso"
-
-          echo ""
-          echo "=== 3. Verificando permissões no repo ==="
-          curl -sS -H "Authorization: Bearer ${GH_TOKEN}" \
-               -H "Accept: application/vnd.github+json" \
-               https://api.github.com/repos/spartacusWeb25/mobile-sps/collaborators/sps-mirror-app%5Bbot%5D/permission || echo "Falha ao verificar permissão"
-
-          echo ""
-          echo "=== 4. Listando instalações do app ==="
-          curl -sS -H "Authorization: Bearer ${GH_TOKEN}" \
-               -H "Accept: application/vnd.github+json" \
-               https://api.github.com/app/installations || echo "Falha ao listar instalações"
-
-      - name: Espelhar para o repositório mirror
+      - name: Espelhar para o repositório mirror (sem workflows)
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
@@ -61,8 +33,14 @@ jobs:
 
           TARGET_REPO="spartacusWeb25/mobile-sps"
 
-          # evita loop de CI
+          # Remove workflows ANTES de adicionar ao commit
           rm -rf .github/workflows
+
+          # Adiciona as mudanças ao git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Remove workflows for mirror" || true
 
           git remote remove mirror 2>/dev/null || true
           git remote add mirror "https://x-access-token:${GH_TOKEN}@github.com/${TARGET_REPO}.git"
@@ -70,13 +48,13 @@ jobs:
           git push mirror main --force
 
   deploy:
-    name: Deploy Blue/Green (via Mirror.)
+    name: Deploy Blue/Green (via Mirror)
     needs: mirror
     runs-on: ubuntu-latest
     environment: Mobile-Sps
 
     steps:
-      - name: Deploy via SSH (Blue/Green Blindado)
+      - name: Deploy via SSH (Blue/Green + Python 3.11)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.ORACLE_HOST }}
@@ -93,6 +71,14 @@ jobs:
 
             mkdir -p "$BASE"
 
+            # Garantir que Python 3.11 está instalado
+            if ! command -v python3.11 &> /dev/null; then
+              echo "Instalando Python 3.11..."
+              sudo apt update
+              sudo apt install -y python3.11 python3.11-venv python3.11-dev
+            fi
+
+            # Clonar ou atualizar repositório
             if [ ! -d "$REPO/.git" ]; then
               rm -rf "$REPO"
               git clone "$REPO_URL" "$REPO"
@@ -102,6 +88,7 @@ jobs:
             git fetch origin
             git reset --hard origin/main
 
+            # Determinar ambiente atual e target
             if [ -L "$BASE/current" ]; then
               CURRENT=$(readlink -f "$BASE/current")
             else
@@ -110,6 +97,7 @@ jobs:
 
             [[ "$CURRENT" == *blue ]] && TARGET="$BASE/green" || TARGET="$BASE/blue"
 
+            # Rsync código para target
             rsync -av --delete \
               --exclude ".git" \
               --exclude "__pycache__" \
@@ -117,28 +105,50 @@ jobs:
 
             [ -f "$BASE/.env" ] && cp "$BASE/.env" "$TARGET/.env"
 
-            source "$BASE/venv/bin/activate"
+            # Verificar se venv existe e é Python 3.11
+            VENV_PYTHON_VERSION=""
+            if [ -f "$BASE/venv/bin/python" ]; then
+              VENV_PYTHON_VERSION=$("$BASE/venv/bin/python" --version 2>&1 | awk '{print $2}' | cut -d. -f1,2)
+            fi
 
+            # Recriar venv se não existir ou não for Python 3.11
+            if [ ! -d "$BASE/venv" ] || [ "$VENV_PYTHON_VERSION" != "3.11" ]; then
+              echo "Criando venv com Python 3.11..."
+              rm -rf "$BASE/venv"
+              python3.11 -m venv "$BASE/venv"
+              source "$BASE/venv/bin/activate"
+              pip install --upgrade pip setuptools wheel
+            else
+              source "$BASE/venv/bin/activate"
+            fi
+
+            # Instalar/atualizar dependências se necessário
             REQ_HASH=$(sha256sum "$TARGET/requirements.txt" | awk '{print $1}')
             if [ ! -f "$BASE/.req_hash" ] || [ "$REQ_HASH" != "$(cat "$BASE/.req_hash")" ]; then
+              echo "Instalando dependências..."
               pip install -r "$TARGET/requirements.txt"
               echo "$REQ_HASH" > "$BASE/.req_hash"
             fi
 
+            # Atualizar symlink
             ln -sfn "$TARGET" "$BASE/current"
 
+            # Reiniciar serviços
             sudo systemctl daemon-reload
             sudo systemctl restart gunicorn
             sudo systemctl restart daphne
 
             sleep 5
 
+            # Health check
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/health/ || echo "000")
             if [ "$STATUS" != "200" ]; then
-              echo "Health check falhou"
+              echo "Health check falhou (Status: $STATUS)"
               sudo systemctl status gunicorn --no-pager
               exit 1
             fi
+
+            echo "Deploy concluído com sucesso!"
 
       - name: Email — Sucesso
         if: success()
@@ -156,6 +166,8 @@ jobs:
           body: |
             Deploy concluído com sucesso.
             Mirror: spartacusWeb25/mobile-sps
+            Ambiente: ${{ github.ref }}
+            Commit: ${{ github.sha }}
 
       - name: Email — Falha
         if: failure()
@@ -173,3 +185,5 @@ jobs:
           body: |
             Deploy falhou.
             Mirror: spartacusWeb25/mobile-sps
+            Erro no workflow: ${{ github.run_number }}
+            Verifique os logs em: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
