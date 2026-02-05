@@ -6,35 +6,48 @@ on:
 
 jobs:
   mirror:
+    name: Mirror via GitHub App
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout completo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Gerar Installation Token (GitHub App)
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          installation-id: ${{ secrets.GH_APP_INSTALLATION_ID }}
+
       - name: Espelhar para o repositório mirror
         env:
-          TOKEN_SPARTACUS: ${{ secrets.MIRROR_TOKEN_SPARTACUS }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
 
           TARGET_REPO="spartacusWeb25/mobile-sps"
 
+          # evita loop de CI
           rm -rf .github/workflows
 
           git remote remove mirror 2>/dev/null || true
-          git remote add mirror "https://x-access-token:${TOKEN_SPARTACUS}@github.com/${TARGET_REPO}.git"
+          git remote add mirror "https://x-access-token:${GH_TOKEN}@github.com/${TARGET_REPO}.git"
+
           git push mirror main --force
 
   deploy:
+    name: Deploy Blue/Green (via Mirror)
     needs: mirror
     runs-on: ubuntu-latest
     environment: Mobile-Sps
 
     steps:
-      - name: Deploy via SSH (Mirror-based, Blue/Green)
+      - name: Deploy via SSH (Blue/Green Blindado)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.ORACLE_HOST }}
@@ -92,7 +105,6 @@ jobs:
             sleep 5
 
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/health/ || echo "000")
-
             if [ "$STATUS" != "200" ]; then
               echo "Health check falhou"
               sudo systemctl status gunicorn --no-pager
