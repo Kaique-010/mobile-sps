@@ -54,7 +54,7 @@ jobs:
     environment: Mobile-Sps
 
     steps:
-      - name: Deploy via SSH (Blue/Green)
+      - name: Deploy via SSH (Blue/Green - Mirror)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.ORACLE_HOST }}
