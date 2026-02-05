@@ -34,19 +34,19 @@ jobs:
           curl -sS -H "Authorization: Bearer ${GH_TOKEN}" \
                -H "Accept: application/vnd.github+json" \
                https://api.github.com/user || echo "Falha ao verificar usuário"
-          
+
           echo ""
           echo "=== 2. Verificando se o repo destino existe ==="
           curl -sS -H "Authorization: Bearer ${GH_TOKEN}" \
                -H "Accept: application/vnd.github+json" \
                https://api.github.com/repos/spartacusWeb25/mobile-sps || echo "Repo não encontrado ou sem acesso"
-          
+
           echo ""
           echo "=== 3. Verificando permissões no repo ==="
           curl -sS -H "Authorization: Bearer ${GH_TOKEN}" \
                -H "Accept: application/vnd.github+json" \
                https://api.github.com/repos/spartacusWeb25/mobile-sps/collaborators/sps-mirror-app%5Bbot%5D/permission || echo "Falha ao verificar permissão"
-          
+
           echo ""
           echo "=== 4. Listando instalações do app ==="
           curl -sS -H "Authorization: Bearer ${GH_TOKEN}" \
@@ -70,7 +70,7 @@ jobs:
           git push mirror main --force
 
   deploy:
-    name: Deploy Blue/Green (via Mirror)
+    name: Deploy Blue/Green (via Mirror.)
     needs: mirror
     runs-on: ubuntu-latest
     environment: Mobile-Sps
