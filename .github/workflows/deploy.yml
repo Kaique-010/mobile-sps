@@ -25,7 +25,7 @@ jobs:
           owner: spartacusWeb25
           repositories: mobile-sps
 
-      - name: Espelhar para o repositório mirror
+      - name: Espelhar para o repositório mirror _.
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
