@@ -97,6 +97,9 @@ def health_check(request):
 def index(request):
     return render(request, 'index.html')
 
+def produto_redirect(request, hash):
+    return HttpResponse(f"<html><body style='text-align:center; font-family:sans-serif; margin-top:50px;'><h1>Mobile SPS</h1><p>Código do produto: {hash}</p><p>Use o aplicativo Mobile SPS para escanear este QR Code e ver os detalhes do produto.</p></body></html>")
+
 
 def home(request, slug=None, empresa=None, filial=None):
     try:

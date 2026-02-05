@@ -1,6 +1,9 @@
 from django.views.generic import TemplateView
 from django.shortcuts import render
+import logging
 from django.db.models import Q, Subquery, OuterRef, DecimalField, Value as V, CharField, IntegerField, Case, When
+
+logger = logging.getLogger(__name__)
 from django.db.models.functions import Coalesce, Cast
 from Produtos.models import Produtos, SaldoProduto, Tabelaprecos
 from Produtos.utils import formatar_dados_etiqueta
@@ -10,19 +13,18 @@ from core.decorator import ModuloRequeridoMixin
 class EtiquetasView(ModuloRequeridoMixin, TemplateView):
     template_name = "Produtos/etiquetas_print.html"
     modulo_necessario = 'Produtos'
+    
+
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         request = self.request
         banco = get_licenca_db_config(request)
-        
         if not banco:
             return context
-
         # 1. Lógica de Busca de Produtos (para seleção)
-        q = request.GET.get('q', '').strip()
-        if q:
-            # Subqueries otimizadas (reutilizando lógica da API)
+        busca = request.GET.get('q', '').strip()
+        if busca:
             saldo_subquery = Subquery(
                 SaldoProduto.objects.using(banco).filter(
                     produto_codigo=OuterRef('pk')
@@ -30,7 +32,6 @@ class EtiquetasView(ModuloRequeridoMixin, TemplateView):
                 output_field=DecimalField()
             )
 
-            # Preço à vista (opcional para visualização na tabela de seleção)
             preco_vista_subquery = Subquery(
                 Tabelaprecos.objects.using(banco).filter(
                     tabe_prod=OuterRef('prod_codi'),
@@ -53,28 +54,42 @@ class EtiquetasView(ModuloRequeridoMixin, TemplateView):
                     output_field=IntegerField()
                 )
             ).filter(
-                Q(prod_nome__icontains=q) |
-                Q(prod_coba_str__exact=q) |
-                Q(prod_codi__exact=q.lstrip("0"))
+                Q(prod_nome__icontains=busca) |
+                Q(prod_coba_str__exact=busca) |
+                Q(prod_codi__exact=busca.lstrip("0"))
             ).order_by('prod_empr', 'prod_codi_int')[:50]
-
             context['produtos_busca'] = produtos_busca
-            context['termo_busca'] = q
+            context['termo_busca'] = busca
 
-        # 2. Lógica de Impressão (Processar IDs selecionados)
-        # Tenta pegar IDs do GET (link direto) ou do contexto se vier de um POST anterior (embora POST renderize direto, manter consistência)
         ids = request.GET.get('ids')
         if ids:
             lista_ids = [i.strip() for i in ids.split(',') if i.strip()]
-            produtos_imprimir = Produtos.objects.using(banco).filter(
-                prod_codi__in=lista_ids
-            ).select_related('prod_marc')
+            empr_id = getattr(request.user, 'empresa_id', None)
+            if not empr_id:
+                empr_id = request.session.get('empresa_id')
+                
+            qs = Produtos.objects.using(banco).filter(prod_codi__in=lista_ids)
             
-            etiquetas = [formatar_dados_etiqueta(p) for p in produtos_imprimir]
+            if empr_id:
+                logger.info(f"Filtrando etiquetas por empresa (GET): {empr_id}")
+                qs = qs.filter(prod_empr=empr_id)
+            else:
+                logger.warning("Empresa não identificada na geração de etiquetas (GET). Risco de duplicidade.")
+
+            produtos_imprimir = qs.select_related('prod_marc')
+            
+            etiquetas = []
+            for p in produtos_imprimir:
+                dados = formatar_dados_etiqueta(p)
+                etiquetas.append(dados)
+                logger.info(f"Etiqueta Web (GET) - Produto: {p.prod_codi}, Hash: {dados.get('hash_id')}, URL: {dados.get('qr_code_url')}")
+            
             context['etiquetas'] = etiquetas
             
         return context
 
+    
+    
     def post(self, request, *args, **kwargs):
         # Quando o formulário de seleção é submetido
         context = self.get_context_data(**kwargs)
@@ -86,10 +101,18 @@ class EtiquetasView(ModuloRequeridoMixin, TemplateView):
              
         if produtos_ids:
             banco = get_licenca_db_config(request)
-            if banco:
-                produtos = Produtos.objects.using(banco).filter(
-                    prod_codi__in=produtos_ids
-                ).select_related('prod_marc')
+            if banco:               
+                qs = Produtos.objects.using(banco).filter(prod_codi__in=produtos_ids)
+                # Tenta obter empresa do contexto
+                empr_id = getattr(request.user, 'empresa_id', None)
+                if not empr_id:
+                     empr_id = request.session.get('empresa_id')
+
+                logger.info(f"Filtrando etiquetas por empresa: {empr_id}")
+                if empr_id:
+                     qs = qs.filter(prod_empr=empr_id)
+                
+                produtos = qs.select_related('prod_marc')
                 
                 etiquetas = []
                 for p in produtos:
@@ -100,16 +123,13 @@ class EtiquetasView(ModuloRequeridoMixin, TemplateView):
                         qtd = 1
                     
                     dados = formatar_dados_etiqueta(p)
+                    logger.info(f"Etiqueta Web (POST) - Produto: {p.prod_codi}, Hash: {dados.get('hash_id')}, URL: {dados.get('qr_code_url')}")
                     for _ in range(qtd):
                         etiquetas.append(dados)
 
                 context['etiquetas'] = etiquetas
         
-        # Se foi uma submissão de busca via POST (opcional, mas comum em forms)
-        if 'q' in request.POST:
-            # Redirecionar para GET ou processar aqui mesmo. 
-            # Para simplificar, vamos processar a busca no POST também se necessário, 
-            # mas idealmente busca é GET.
+        if 'busca' in request.POST: 
             pass
             
         return render(request, self.template_name, context)

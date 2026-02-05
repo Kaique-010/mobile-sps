@@ -1,6 +1,10 @@
 from xml.dom import ValidationErr
 import hashlib
+import logging
+from django.conf import settings
 from django.shortcuts import get_object_or_404
+
+logger = logging.getLogger(__name__)
 from rest_framework.views import APIView
 import re
 from rest_framework import status
@@ -24,6 +28,8 @@ from .models import Produtos, SaldoProduto, Tabelaprecos, UnidadeMedida, Tabelap
 from .serializers import ProdutoSerializer, TabelaPrecoSerializer, UnidadeMedidaSerializer, ProdutoDetalhadoSerializer, MarcaSerializer, ProdutoEtiquetasSerializer
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
+from .utils import gerar_hash_str, formatar_dados_etiqueta
+
 from django.core.cache import cache
 from core.excecoes import ErroDominio
 from core.dominio_handler import tratar_erro, tratar_sucesso
@@ -109,6 +115,8 @@ class ProdutoListView(ModuloRequeridoMixin, APIView):
         return context
         
         
+    from .utils import formatar_dados_etiqueta, gerar_hash_str
+
 class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
     modulo_necessario = 'Produtos'
     permission_classes = [IsAuthenticated]
@@ -248,6 +256,62 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             if not q:
                 return Response([], status=200)
 
+            # Tratamento para leitura de QR Code (URL completa)
+            if "/p/" in q:
+                logger.info(f"Detectado URL de QR Code na busca: {q}")
+                try:
+                    # Extrai o hash da URL (ex: https://mobile-sps.site/p/HASH)
+                    parts = q.split("/p/")
+                    if len(parts) > 1:
+                        # Remove barras finais, query params e fragmentos
+                        hash_busca = parts[1].strip().split("/")[0].split("?")[0].split("#")[0]
+                        logger.info(f"Hash extraído: {hash_busca}")
+                        
+                        # Tenta identificar a empresa pelo contexto
+                        empr_id = request.query_params.get("empr") or request.query_params.get("empresa_id")
+                        
+                        if not empr_id and hasattr(request.user, 'empresa_id'):
+                            empr_id = getattr(request.user, 'empresa_id', None)
+                        
+                        logger.info(f"Empresa ID para busca de hash: {empr_id}")
+
+                        if empr_id:
+                            # Busca otimizada: recupera apenas códigos para verificar hash em memória
+                            # Isso é necessário pois o hash é one-way e depende do código do produto
+                            candidatos = Produtos.objects.using(banco).filter(
+                                prod_empr=empr_id
+                            ).values('prod_empr', 'prod_codi')
+                            
+                            logger.info(f"Candidatos encontrados para verificação de hash: {candidatos.count()}")
+
+                            found_codi = None
+                            for cand in candidatos:
+                                # Verifica hash usando função centralizada
+                                gen_hash = gerar_hash_str(cand['prod_empr'], cand['prod_codi'])
+                                # Comparação limpa e insensível a espaços/case
+                                if str(gen_hash).strip().lower() == str(hash_busca).strip().lower():
+                                    found_codi = cand['prod_codi']
+                                    logger.info(f"MATCH ENCONTRADO! Produto: {found_codi}")
+                                    break
+                            
+                            if found_codi:
+                                # Se encontrou, substitui o termo de busca pelo código exato
+                                q = found_codi
+                                logger.info(f"Termo de busca substituído por código do produto: {q}")
+                            else:
+                                logger.warning(f"Nenhum produto corresponde ao hash {hash_busca} na empresa {empr_id}")
+                                # Busca Global para Diagnóstico
+                                logger.info("Iniciando busca global de hash para diagnóstico...")
+                                all_cands = Produtos.objects.using(banco).all().values('prod_empr', 'prod_codi')
+                                for cand in all_cands:
+                                    g_hash = gerar_hash_str(cand['prod_empr'], cand['prod_codi'])
+                                    if str(g_hash).strip().lower() == str(hash_busca).strip().lower():
+                                        logger.error(f"DIAGNÓSTICO CRÍTICO: O hash {hash_busca} pertence à Empresa {cand['prod_empr']} (Produto {cand['prod_codi']}). O usuário está na Empresa {empr_id}.")
+                except Exception as e:
+                    # Se falhar o processamento do QR, segue busca normal
+                    logger.error(f"Erro ao processar QR Code: {e}")
+                    pass
+
             # Cache para buscas frequentes
             cache_key = f"produto_busca_{banco}_{q}"
             cached_result = cache.get(cache_key)
@@ -308,6 +372,7 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             ).filter(
                 Q(prod_nome__icontains=q) |
                 Q(prod_coba_str__exact=q) |
+                Q(prod_codi=q) | # Match exato (importante para QR Code)
                 Q(prod_codi__exact=q.lstrip("0"))
             ).order_by('prod_empr', 'prod_codi_int')[:50]  # Limitar resultados
 
@@ -326,15 +391,32 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
 
     @action(detail=False, methods=["post"])
     def impressao_etiquetas(self, request, slug=None):
-        serializer = ProdutoEtiquetasSerializer(data=request.data)
+        serializer = ProdutoEtiquetasSerializer(data=request.data, context=self.get_serializer_context())
         serializer.is_valid(raise_exception=True)
 
         banco = get_licenca_db_config(request)
         produtos_ids = serializer.validated_data["produtos"]
+        
+        # Obter empresa da sessão/header para restringir a geração
+        empr_id = request.query_params.get('prod_empr') or request.META.get('HTTP_X_EMPRESA')
+        if not empr_id and hasattr(request.user, 'empresa_id'):
+             empr_id = request.user.empresa_id
+        
+        if not empr_id:
+             # Fallback seguro: tenta pegar da sessão se disponível (comum em views híbridas)
+             empr_id = request.session.get('empresa_id') if hasattr(request, 'session') else None
+
+        if not empr_id:
+             empr_id = 1 # Fallback final para manter compatibilidade com sistemas legados mono-empresa
+             logger.warning("Empresa não identificada na geração de etiquetas via API. Usando empresa 1.")
+
+        logger.info(f"Gerando etiquetas para empresa: {empr_id}")
 
         # Buscar produtos com fabricante (Marca) para otimizar
+        # FILTRO CRÍTICO: Restringir por empresa
         produtos = Produtos.objects.using(banco).filter(
-            prod_codi__in=produtos_ids
+            prod_codi__in=produtos_ids,
+            prod_empr=empr_id
         ).select_related('prod_marc')
 
         if not produtos.exists():
@@ -344,10 +426,11 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             )
 
         etiquetas = []
-        from .utils import formatar_dados_etiqueta
 
         for produto in produtos:
-            etiquetas.append(formatar_dados_etiqueta(produto))
+            dados = formatar_dados_etiqueta(produto)
+            etiquetas.append(dados)
+            logger.info(f"Etiqueta gerada - Produto: {produto.prod_codi}, Hash: {dados.get('hash_id')}, URL: {dados.get('qr_code_url')}")
 
         return Response(
             {

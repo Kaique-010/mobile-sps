@@ -20,6 +20,7 @@ urlpatterns = [
 
 
     # Rotas principais
+    path("p/<str:hash>/", views.produto_redirect, name="produto_redirect"),
     path("", views.index, name="index"),
     path("api/", include(api_router)),
     path("web/", include(web_router)),
