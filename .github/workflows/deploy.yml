@@ -54,7 +54,7 @@ jobs:
     environment: Mobile-Sps
 
     steps:
-      - name: Deploy via SSH (Blue/Green + Python 3.11)
+      - name: Deploy via SSH (Blue/Green)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.ORACLE_HOST }}
