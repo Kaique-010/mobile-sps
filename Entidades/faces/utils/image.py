@@ -1,12 +1,17 @@
 import base64
 import numpy as np
-import cv2
+try:
+    import cv2
+except ImportError:
+    cv2 = None
 
 def base64_to_img(base64_string):
     """
     Converte uma string base64 para uma imagem OpenCV (numpy array).
     Retorna None se falhar.
     """
+    if cv2 is None:
+        return None
     try:
         if "," in base64_string:
             base64_string = base64_string.split(",")[1]

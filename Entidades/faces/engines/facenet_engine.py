@@ -1,16 +1,23 @@
-import cv2
-import numpy as np
-from deepface import DeepFace
-
+try:
+    import cv2
+    import numpy as np
+    from deepface import DeepFace
+except ImportError:
+    cv2 = None
+    np = None
+    DeepFace = None
 
 class FacesEngine:
     model_name = 'Facenet'
     
     def gerar_faces(self, img_rgb) -> list[float]:
         "Recebe a Imagem em BGR e RGB e retorna embedding Facenet 128"
+        if cv2 is None or DeepFace is None:
+            print("Bibliotecas de reconhecimento facial não disponíveis (cv2 ou deepface).")
+            return None
         
-        imagem_rgb = cv2.cvtColor(img_rgb, cv2.COLOR_BGR2RGB)
         try:
+            imagem_rgb = cv2.cvtColor(img_rgb, cv2.COLOR_BGR2RGB)
             result = DeepFace.represent(imagem_rgb, model_name=self.model_name, enforce_detection=False, detector_backend='opencv')
             return result[0]['embedding']
         except Exception as e:
@@ -23,7 +30,7 @@ class FacesEngine:
         Face1 e Face2 são listas ou arrays numpy de floats (embeddings).
         Threshold para Facenet (Euclidean L2) é geralmente ao redor de 10.
         """
-        if face1 is None or face2 is None:
+        if face1 is None or face2 is None or np is None:
             return False
         
         # Converte para numpy array se necessário
