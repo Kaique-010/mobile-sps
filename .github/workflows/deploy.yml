@@ -22,7 +22,8 @@ jobs:
         with:
           app-id: ${{ secrets.GH_APP_ID }}
           private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
-          installation-id: ${{ secrets.GH_APP_INSTALLATION_ID }}
+          owner: kaique-010
+          repositories: mobile-sps
 
       - name: Espelhar para o repositório mirror
         env:
