@@ -243,12 +243,11 @@
     }
 </style>
 
-<div class="container mt-4 no-print">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3>Impressão de Etiquetas</h3>
-        <button onclick="window.history.back()" class="btn btn-secondary">
-            <i class="bi bi-arrow-left"></i> Voltar
-        </button>
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
+
+<div class="container page-container">
+    <div class="page-header">
+        <h2 class="page-title"><i class="bi bi-boxes"></i> Impressão de Etiquetas de Produtos</h2>
     </div>
 
     <!-- Formulário de Busca -->
@@ -261,10 +260,56 @@
                         value="{{ termo_busca|default:'' }}" autofocus>
                 </div>
                 <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                    <button type="submit" class="btn btn-outline-primary btn-lg w-100">
                         <i class="bi bi-search"></i> Buscar
                     </button>
                 </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <form method="get" class="mb-0">
+                <p class="text-muted">
+                    <i class="bi bi-info-circle"></i>
+                    Filtros por Marca, Grupo e Sub-Grupo de Produtos
+                </p>
+                
+                <!-- Preservar termo de busca -->
+                {% if termo_busca %}
+                <input type="hidden" name="q" value="{{ termo_busca }}">
+                {% endif %}
+                
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="bi bi-check2"></i> Marca:
+                        <select name="marca" class="form-select form-select-sm d-inline-block w-auto ms-2" onchange="this.form.submit()">
+                            <option value="">Todas</option>
+                            {% for m in marcas %}
+                            <option value="{{ m.codigo }}" {% if filtro_marca == m.codigo|stringformat:"s" %}selected{% endif %}>{{ m.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check2"></i> Grupo:
+                        <select name="grupo" class="form-select form-select-sm d-inline-block w-auto ms-2" onchange="this.form.submit()">
+                            <option value="">Todos</option>
+                            {% for g in grupos %}
+                            <option value="{{ g.codigo }}" {% if filtro_grupo == g.codigo|stringformat:"s" %}selected{% endif %}>{{ g.descricao }}</option>
+                            {% endfor %}
+                        </select>
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check2"></i> Sub-Grupo:
+                        <select name="sub_grupo" class="form-select form-select-sm d-inline-block w-auto ms-2" onchange="this.form.submit()">
+                            <option value="">Todos</option>
+                            {% for s in subgrupos %}
+                            <option value="{{ s.codigo }}" {% if filtro_subgrupo == s.codigo|stringformat:"s" %}selected{% endif %}>{{ s.descricao }}</option>
+                            {% endfor %}
+                        </select>
+                    </li>
+                </ul>
             </form>
         </div>
     </div>
@@ -309,8 +354,7 @@
                             <td>{{ produto.prod_marc.nome|default:"-" }}</td>
                             <td>R$ {{ produto.prod_preco_vista|floatformat:2 }}</td>
                             <td>
-                                <span
-                                    class="badge {% if produto.saldo_estoque > 0 %}bg-success{% else %}bg-danger{% endif %}">
+                                <span class="badge {% if produto.saldo_estoque > 0 %}bg-success{% else %}bg-danger{% endif %}">
                                     {{ produto.saldo_estoque|floatformat:0 }}
                                 </span>
                             </td>
@@ -331,83 +375,90 @@
         <i class="bi bi-exclamation-triangle"></i> Nenhum produto encontrado para "<strong>{{ termo_busca }}</strong>".
     </div>
     {% endif %}
+
+    {% if not produtos_busca and not termo_busca %}
+    {% endif %}
 </div>
 
-<!-- Área de Impressão (Só aparece se tiver etiquetas geradas) -->
+<!-- Modal de Impressão (Só aparece se tiver etiquetas geradas) -->
 {% if etiquetas %}
-<div class="no-print container mt-5 text-center">
-    <div class="alert alert-success d-flex justify-content-between align-items-center">
-        <div>
-            <i class="bi bi-check-circle-fill fs-4 me-2"></i>
-            <span class="fs-5">{{ etiquetas|length }} etiquetas geradas com sucesso!</span>
-        </div>
-        <div>
-            <button onclick="window.print()" class="btn btn-primary btn-lg me-2">
-                <i class="bi bi-printer-fill"></i> Imprimir Agora
-            </button>
-            <a href="?" class="btn btn-outline-secondary">Limpar</a>
+<div class="modal fade" id="modalEtiquetas" tabindex="-1" aria-labelledby="modalEtiquetasLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header no-print">
+                <h5 class="modal-title" id="modalEtiquetasLabel">
+                    <i class="bi bi-printer-fill"></i> Pré-visualização de Etiquetas
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body bg-light">
+                <div class="alert alert-success d-flex justify-content-between align-items-center no-print">
+                    <div>
+                        <i class="bi bi-check-circle-fill fs-4 me-2"></i>
+                        <span class="fs-5">{{ etiquetas|length }} etiquetas geradas com sucesso!</span>
+                    </div>
+                </div>
+
+                <div class="print-container">
+                    {% for etiqueta in etiquetas %}
+                    <div class="etiqueta">
+                        <!-- Seção: Descrição -->
+                        <div class="etiqueta-section border-bottom">
+                            <div class="etiqueta-label">Descrição do produto</div>
+                            <div class="etiqueta-value large">{{ etiqueta.descricao|truncatechars:30 }}</div>
+                        </div>
+
+                        <!-- Seção: Fábrica e SKU -->
+                        <div class="etiqueta-section border-bottom">
+                            <div style="margin-bottom: 2mm;">
+                                <div class="etiqueta-label">Fabricante</div>
+                                <div class="etiqueta-value">{{ etiqueta.fabricante|default:"PADRÃO" }}</div>
+                            </div>
+
+                            <div>
+                                <div class="etiqueta-label">Código do produto</div>
+                                <div class="etiqueta-value">{{ etiqueta.codigo }}</div>
+                            </div>
+                        </div>
+
+                        <!-- Seção: QR Code e Texto Lateral -->
+                        <div class="etiqueta-bottom">
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data={{ etiqueta.qr_code_url }}"
+                                class="qr-code" alt="QR Code">
+                            <div class="vertical-text">
+                                <img src="{% static 'logo.png' %}" style="height:12px; margin-right: 12px;" alt="Logo" />
+                                Sps Sistemas
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="modal-footer no-print">
+                <a href="?" class="btn btn-secondary">Fechar e Limpar</a>
+                <button onclick="window.print()" class="btn btn-primary btn-lg">
+                    <i class="bi bi-printer-fill"></i> Imprimir Agora
+                </button>
+            </div>
         </div>
     </div>
-    <p class="text-muted small">Abaixo está a pré-visualização. Clique em "Imprimir Agora" para enviar para a
-        impressora.</p>
 </div>
 
-<div class="print-container">
-    {% for etiqueta in etiquetas %}
-    <div class="etiqueta">
-        <!-- Seção: Descrição -->
-        <div class="etiqueta-section border-bottom">
-            <div class="etiqueta-label">Descrição do produto</div>
-            <div class="etiqueta-value large">{{ etiqueta.descricao|truncatechars:30 }}</div>
-        </div>
-
-        <!-- Seção: Fábrica e SKU -->
-        <div class="etiqueta-section border-bottom">
-            <div style="margin-bottom: 2mm;">
-                <div class="etiqueta-label">Fábricante</div>
-                <div class="etiqueta-value">{{ etiqueta.fabricante|default:"PADRÃO" }}</div>
-            </div>
-
-            <div>
-                <div class="etiqueta-label">Código do produto</div>
-                <div class="etiqueta-value">{{ etiqueta.codigo }}</div>
-            </div>
-        </div>
-
-        <!-- Seção: QR Code e Texto Lateral -->
-        <div class="etiqueta-bottom">
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data={{ etiqueta.qr_code_url }}"
-                class="qr-code" alt="QR Code">
-            <!-- <svg id="barcode-{{ forloop.counter }}" class="barcode-img"></svg> -->
-            <div class="vertical-text"><img src="{% static 'logo.png' %}" style="height:12px; margin-right: 12Px;" />
-                Sps Sistemas
-            </div>
-        </div>
-    </div>
-    {% endfor %}
-</div>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        var modalEtiquetas = new bootstrap.Modal(document.getElementById('modalEtiquetas'), {
+            keyboard: false
+        });
+        modalEtiquetas.show();
+    });
+</script>
+{% endif %}
 
 <!-- Biblioteca para gerar Barcode -->
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
 
 <script>
     document.addEventListener("DOMContentLoaded", function () {
-        //{% for etiqueta in etiquetas %}
-        //try {
-        //  JsBarcode("#barcode-{{ forloop.counter }}", "{{ etiqueta.barcode }}", {
-        //    format: "CODE128",
-        //  displayValue: true,
-        // fontSize: 12,
-        //height: 30,
-        //width: 1,
-        //margin: 0
-        //});
-        //} catch (e) {
-        //  console.error("Erro ao gerar barcode para {{ etiqueta.barcode }}:", e);
-        // }
-        //{% endfor %}
-
-        // Script para Selecionar Todos
         const checkAll = document.getElementById('checkAll');
         if (checkAll) {
             checkAll.addEventListener('change', function () {
@@ -417,13 +468,5 @@
         }
     });
 </script>
-{% else %}
-{% if not produtos_busca and not termo_busca %}
-<div class="container mt-5 no-print text-center text-muted">
-    <i class="bi bi-search display-1"></i>
-    <p class="mt-3 fs-5">Utilize a busca acima para encontrar produtos e gerar etiquetas.</p>
-</div>
-{% endif %}
-{% endif %}
 
 {% endblock %}

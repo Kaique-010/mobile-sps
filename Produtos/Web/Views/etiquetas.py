@@ -5,7 +5,7 @@ from django.db.models import Q, Subquery, OuterRef, DecimalField, Value as V, Ch
 
 logger = logging.getLogger(__name__)
 from django.db.models.functions import Coalesce, Cast
-from Produtos.models import Produtos, SaldoProduto, Tabelaprecos
+from Produtos.models import Produtos, SaldoProduto, Tabelaprecos, Marca, GrupoProduto, SubgrupoProduto
 from Produtos.utils import formatar_dados_etiqueta
 from core.registry import get_licenca_db_config
 from core.decorator import ModuloRequeridoMixin
@@ -22,9 +22,26 @@ class EtiquetasView(ModuloRequeridoMixin, TemplateView):
         banco = get_licenca_db_config(request)
         if not banco:
             return context
-        # 1. Lógica de Busca de Produtos (para seleção)
+        
+        # Carregar listas para filtros (Marca, Grupo, Subgrupo)
+        context['marcas'] = Marca.objects.using(banco).all().order_by('nome')
+        context['grupos'] = GrupoProduto.objects.using(banco).all().order_by('descricao')
+        context['subgrupos'] = SubgrupoProduto.objects.using(banco).all().order_by('descricao')
+
+        # Capturar filtros do request
         busca = request.GET.get('q', '').strip()
-        if busca:
+        f_marca = request.GET.get('marca')
+        f_grupo = request.GET.get('grupo')
+        f_subgrupo = request.GET.get('sub_grupo')
+
+        # Persistir filtros no context
+        context['termo_busca'] = busca
+        context['filtro_marca'] = f_marca
+        context['filtro_grupo'] = f_grupo
+        context['filtro_subgrupo'] = f_subgrupo
+
+        # Se houver qualquer filtro ativo ou busca
+        if busca or f_marca or f_grupo or f_subgrupo:
             saldo_subquery = Subquery(
                 SaldoProduto.objects.using(banco).filter(
                     produto_codigo=OuterRef('pk')
@@ -44,7 +61,7 @@ class EtiquetasView(ModuloRequeridoMixin, TemplateView):
                 output_field=DecimalField()
             )
             
-            produtos_busca = Produtos.objects.using(banco).annotate(
+            qs = Produtos.objects.using(banco).annotate(
                 saldo_estoque=Coalesce(saldo_subquery, V(0), output_field=DecimalField()),
                 prod_preco_vista=Coalesce(preco_vista_subquery, V(0), output_field=DecimalField()),
                 prod_coba_str=Coalesce(Cast('prod_coba', CharField()), V('')),
@@ -53,13 +70,33 @@ class EtiquetasView(ModuloRequeridoMixin, TemplateView):
                     default=V(None),
                     output_field=IntegerField()
                 )
-            ).filter(
-                Q(prod_nome__icontains=busca) |
-                Q(prod_coba_str__exact=busca) |
-                Q(prod_codi__exact=busca.lstrip("0"))
-            ).order_by('prod_empr', 'prod_codi_int')[:50]
+            )
+
+            # Aplicar filtros
+            if busca:
+                qs = qs.filter(
+                    Q(prod_nome__icontains=busca) |
+                    Q(prod_coba_str__exact=busca) |
+                    Q(prod_codi__exact=busca.lstrip("0"))
+                )
+            
+            if f_marca:
+                qs = qs.filter(prod_marc__codigo=f_marca)
+            
+            if f_grupo:
+                qs = qs.filter(prod_grup__codigo=f_grupo)
+                
+            if f_subgrupo:
+                qs = qs.filter(prod_sugr__codigo=f_subgrupo)
+
+            # Tenta obter empresa do contexto para filtrar lista de produtos (opcional, mas bom pra evitar sujeira)
+            empr_id = getattr(request.user, 'empresa_id', None) or request.session.get('empresa_id')
+            if empr_id:
+                qs = qs.filter(prod_empr=empr_id)
+
+            produtos_busca = qs.order_by('prod_empr', 'prod_codi_int')[:50]
             context['produtos_busca'] = produtos_busca
-            context['termo_busca'] = busca
+
 
         ids = request.GET.get('ids')
         if ids:
