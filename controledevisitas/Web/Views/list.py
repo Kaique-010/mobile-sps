@@ -1,4 +1,3 @@
-from tarfile import data_filter
 from django.views.generic import ListView, TemplateView
 from core.utils import get_licenca_db_config
 from controledevisitas.models import Controlevisita, ItensVisita
