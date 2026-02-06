@@ -383,6 +383,7 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                 )
 
     
+            if f_marca:
                 if f_marca == '__sem_marca__':
                     produtos = produtos.filter(
                         Q(prod_marc__isnull=True) | 
@@ -429,14 +430,19 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         produtos_ids = serializer.validated_data["produtos"]
         
         # Obter empresa da sessão/header para restringir a geração
-        empr_id = request.query_params.get('prod_empr') or request.META.get('HTTP_X_EMPRESA')
-        if not empr_id and hasattr(request.user, 'empresa_id'):
+        # PRIORIDADE 1: Usuário autenticado (Segurança)
+        empr_id = None
+        if request.user.is_authenticated and hasattr(request.user, 'empresa_id') and request.user.empresa_id:
              empr_id = request.user.empresa_id
         
-        if not empr_id:
-             # Fallback seguro: tenta pegar da sessão se disponível (comum em views híbridas)
-             empr_id = request.session.get('empresa_id') if hasattr(request, 'session') else None
+        # PRIORIDADE 2: Sessão
+        if not empr_id and hasattr(request, 'session'):
+             empr_id = request.session.get('empresa_id')
 
+        # PRIORIDADE 3: Params (Apenas se não houver contexto seguro)
+        if not empr_id:
+            empr_id = request.query_params.get('prod_empr') or request.META.get('HTTP_X_EMPRESA')
+        
         if not empr_id:
              empr_id = 1 # Fallback final para manter compatibilidade com sistemas legados mono-empresa
              logger.warning("Empresa não identificada na geração de etiquetas via API. Usando empresa 1.")
