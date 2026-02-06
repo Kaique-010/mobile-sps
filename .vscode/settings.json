@@ -253,6 +253,17 @@
       "database": "savexml969",
       "username": "savexml969",
       "password": "WWYYYYYYaaaa"
+    },
+    {
+      "ssh": "Disabled",
+      "previewLimit": 50,
+      "server": "localhost",
+      "port": 5432,
+      "driver": "PostgreSQL",
+      "name": "ipa",
+      "database": "ipa",
+      "username": "postgres",
+      "password": "@spartacus201@"
     }
   ],
   "liveServer.settings.port": 5501

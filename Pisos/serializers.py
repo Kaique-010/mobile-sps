@@ -6,6 +6,7 @@ from .models import Orcamentopisos, Itensorcapisos, Itenspedidospisos, Pedidospi
 from Licencas.models import Empresas
 from Produtos.models import Produtos   
 from Entidades.models import Entidades
+from datetime import date, datetime, timedelta
 from .services.preco_service import get_preco_produto
 from .services.utils_service import parse_decimal, arredondar
 from .services.calculo_services import calcular_item, calcular_ambientes, calcular_total_geral
@@ -120,6 +121,7 @@ class OrcamentopisosSerializer(BancoContextMixin, serializers.ModelSerializer):
         except Exception as e:
             logger.warning(f"Erro ao buscar empresa: {e}")
             return None
+        
     def get_vendedor_nome(self, obj):
         # Tentar usar cache primeiro
         vendedores_cache = self.context.get('vendedores_cache')
@@ -190,7 +192,17 @@ class OrcamentopisosSerializer(BancoContextMixin, serializers.ModelSerializer):
             if "item_nome" in item_data_clean:
                 # Se vier item_nome, mapear para item_nome_ambi (nome do ambiente)
                 item_data_clean["item_nome_ambi"] = item_data_clean.pop("item_nome")
+            
+            # Garante ambiente padrão se não informado
+            if not item_data_clean.get("item_ambi"):
+                item_data_clean["item_ambi"] = 1
+                if not item_data_clean.get("item_nome_ambi"):
+                    item_data_clean["item_nome_ambi"] = "Padrão"
 
+            if not item_data_clean.get("item_unit"):
+                item_data_clean["item_unit"] = 0
+        
+            
             # Processar dados de cálculo do frontend
             dados_calc = item_data_clean.pop("dados_calculo", None)
             if dados_calc:
@@ -252,6 +264,14 @@ class OrcamentopisosSerializer(BancoContextMixin, serializers.ModelSerializer):
         print(f"DEBUG SERIALIZER: total_geral={total_geral}")
         orcamento.orca_tota = q2(total_geral) or Decimal('0.00')
         print(f"DEBUG SERIALIZER: orcamento.orca_tota={orcamento.orca_tota}")
+        
+        data_orcamento = item_data_clean.get("orca_data")
+        if not data_orcamento:
+            data_orcamento = date.today()
+        data_vencimento = item_data_clean.get("orca_data_prev_entr")
+        if not data_vencimento:
+            data_vencimento = date.today() + timedelta(days=30)
+                
         orcamento.save(using=banco)
 
         return orcamento
@@ -349,6 +369,12 @@ class OrcamentopisosSerializer(BancoContextMixin, serializers.ModelSerializer):
                 if "item_nome" in item_data_clean:
                     # Se vier item_nome, mapear para item_nome_ambi (nome do ambiente)
                     item_data_clean["item_nome_ambi"] = item_data_clean.pop("item_nome")
+
+                # Garante ambiente padrão se não informado
+                if not item_data_clean.get("item_ambi"):
+                    item_data_clean["item_ambi"] = 1
+                    if not item_data_clean.get("item_nome_ambi"):
+                        item_data_clean["item_nome_ambi"] = "Padrão"
 
                 # Processar dados de cálculo do frontend
                 dados_calc = item_data_clean.pop("dados_calculo", None)

@@ -252,11 +252,14 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             banco = get_licenca_db_config(self.request)
 
             q = request.query_params.get("q", "").strip()
+            f_marca = request.query_params.get('marca_nome') 
+            f_saldo = request.query_params.get('saldo')  
+            com_saldo = request.query_params.get('com_saldo')
+            sem_saldo = request.query_params.get('sem_saldo')
             
-            if not q:
+            if not q and not f_marca and not f_saldo and not com_saldo and not sem_saldo:
                 return Response([], status=200)
 
-            # Tratamento para leitura de QR Code (URL completa)
             if "/p/" in q:
                 logger.info(f"Detectado URL de QR Code na busca: {q}")
                 try:
@@ -313,7 +316,7 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                     pass
 
             # Cache para buscas frequentes
-            cache_key = f"produto_busca_{banco}_{q}"
+            cache_key = f"produto_busca_{banco}_{q}_{f_marca}_{f_saldo}"
             cached_result = cache.get(cache_key)
             
             if cached_result:
@@ -369,12 +372,40 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                     default=V(None),
                     output_field=IntegerField()
                 )
-            ).filter(
-                Q(prod_nome__icontains=q) |
-                Q(prod_coba_str__exact=q) |
-                Q(prod_codi=q) | # Match exato (importante para QR Code)
-                Q(prod_codi__exact=q.lstrip("0"))
-            ).order_by('prod_empr', 'prod_codi_int')[:50]  # Limitar resultados
+            )
+
+            if q:
+                produtos = produtos.filter(
+                    Q(prod_nome__icontains=q) |
+                    Q(prod_coba_str__exact=q) |
+                    Q(prod_codi=q) | 
+                    Q(prod_codi__exact=q.lstrip("0"))
+                )
+
+    
+                if f_marca == '__sem_marca__':
+                    produtos = produtos.filter(
+                        Q(prod_marc__isnull=True) | 
+                        Q(prod_marc__nome__isnull=True) |
+                        Q(prod_marc__nome='')
+                    )
+                else:
+                    produtos = produtos.filter(prod_marc__nome=f_marca)  # ✅ Agora usa nome
+
+            # ✅ CORREÇÃO DO FILTRO DE SALDO
+            # Suporta tanto 'com_saldo'/'sem_saldo' quanto 'saldo'
+            if com_saldo and str(com_saldo).lower() in ['true', '1']:
+                produtos = produtos.filter(saldo_estoque__gt=0)
+            elif sem_saldo and str(sem_saldo).lower() in ['true', '1']:
+                produtos = produtos.filter(saldo_estoque=0)
+            elif f_saldo:
+                if f_saldo == 'com':
+                    produtos = produtos.filter(saldo_estoque__gt=0)
+                elif f_saldo == 'sem':
+                    produtos = produtos.filter(saldo_estoque=0)
+                # 'todos' não aplica filtro
+
+            produtos = produtos.order_by('prod_empr', 'prod_codi_int')[:50]
 
             serializer = self.get_serializer(produtos, many=True)
             result_data = serializer.data

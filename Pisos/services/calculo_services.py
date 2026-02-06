@@ -74,6 +74,8 @@ def calcular_ambientes(itens):
 
     for item in itens:
         amb = item.item_ambi or 0
+        if not amb:
+            amb = 1
         # Usar o subtotal já calculado (item_suto) em vez de recalcular
         item_subtotal = parse_decimal(getattr(item, 'item_suto', 0))
         item_m2 = parse_decimal(getattr(item, 'item_m2', 0))
