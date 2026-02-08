@@ -461,3 +461,38 @@ LEFT JOIN gruposprodutos grup ON prod.prod_grup = grup.grup_codi
 LEFT JOIN marca marc ON prod.prod_marc = marc.marc_codi
 LEFT JOIN tabelaprecos tabe ON prod.prod_codi = tabe.tabe_prod AND prod.prod_empr = tabe.tabe_empr
 LEFT JOIN saldosprodutos sald ON prod.prod_codi = sald.sapr_prod;
+
+
+
+
+produtos/
+│   ├── views/
+│   │   ├── produto_viewset.py
+│   │   ├── marca_views.py
+│   │   ├── unidade_medida_views.py
+│   │   └── estoque_views.py
+│   └── serializers/
+│       └── ...
+│
+├── consultas/
+│   ├── produto_consultas.py
+│   ├── estoque_consultas.py
+│   ├── tabela_preco_consultas.py
+│   └── marca_consultas.py
+│
+├── servicos/
+│   ├── produto_servico.py
+│   ├── preco_servico.py
+│   ├── etiqueta_servico.py
+│   └── estoque_servico.py
+│
+├── regras/
+│   ├── excecoes.py
+│   └── regras.py
+│
+├── utils/
+│   ├── hash.py
+│   ├── etiquetas.py
+│   └── cache.py
+│
+└── models.py

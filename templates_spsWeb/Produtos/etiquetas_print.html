@@ -4,24 +4,15 @@
 {% block title %}Impressão de Etiquetas{% endblock %}
 
 {% block content %}
-<style>
-    /* Estilos para visualização na tela */
-    .print-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        padding: 20px;
-        justify-content: center;
-        background-color: #f9f9f9;
-        margin-top: 20px;
-        border-top: 2px dashed #ccc;
-    }
-
+<style id="estilos-etiqueta">
+    /* Estilos base para a etiqueta */
     .etiqueta {
         width: 40mm;
         height: 60mm;
-        background: rgb(167, 162, 162);
+        background-color: #ffffff !important;
+        color: #000000 !important;
         border: 1px solid #ccc;
+        /* Borda para visualização na tela */
         padding: 3mm;
         box-sizing: border-box;
         display: flex;
@@ -30,9 +21,10 @@
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         position: relative;
         page-break-inside: avoid;
-        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+        break-inside: avoid;
         overflow: hidden;
         text-align: left;
+        margin: 0;
     }
 
     .etiqueta-section {
@@ -55,7 +47,7 @@
     .etiqueta-value {
         font-size: 9px;
         font-weight: 700;
-        color: #555;
+        color: #000;
         line-height: 1.2;
         text-transform: uppercase;
         word-wrap: break-word;
@@ -82,164 +74,78 @@
         object-fit: contain;
     }
 
-    .barcode-img {
-        width: 90%;
-        height: 12mm;
-        display: block;
-    }
-
     .vertical-text {
         position: absolute;
         right: -10mm;
         top: 50%;
         transform: translateY(-50%) rotate(-90deg);
         font-size: 7px;
-        color: #555;
+        color: #000;
         white-space: nowrap;
         font-weight: 500;
         letter-spacing: 0.5px;
     }
+</style>
 
-    /* Ajuste para remover barcode styles antigos */
-    .barcode-container,
-    .barcode-text {
-        display: none;
+<style>
+    /* Estilos para visualização na tela (container e afins) */
+    .print-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 20px;
+        justify-content: center;
+        background-color: #f9f9f9;
+        margin-top: 20px;
+        border-top: 2px dashed #ccc;
     }
 
-    .no-print {
-        background: #212529;
+    .etiqueta {
+        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+        /* Sombra apenas na tela */
     }
 
-    /* Estilos específicos para impressão */
+    /* Dark mode overrides for modal preview */
+    .modal-content {
+        background-color: #f8f9fa;
+        color: #212529;
+    }
+
+    /* Ocultar elementos irrelevantes na impressão nativa se o usuário usar Ctrl+P */
     @media print {
         body * {
             visibility: hidden;
         }
 
-        .print-container,
-        .print-container * {
+        #area-impressao,
+        #area-impressao * {
             visibility: visible;
         }
 
-        .print-container {
+        #area-impressao {
             position: absolute;
             left: 0;
             top: 0;
             width: 100%;
-            padding: 0;
             margin: 0;
-            background: none;
-            gap: 0;
-            display: block;
+            padding: 0;
+            display: grid !important;
+            grid-template-columns: repeat(auto-fill, 40mm);
+            gap: 2mm;
             border: none;
         }
 
         .etiqueta {
-            border: none;
+            border: 1px dashed #ddd;
+            /* Borda leve para corte na impressão */
             box-shadow: none;
-            margin: 0;
-            float: left;
-            page-break-inside: avoid;
         }
 
+        .modal-header,
+        .modal-footer,
         .no-print {
             display: none !important;
         }
-
-        @page {
-            margin: 0;
-            size: auto;
-        }
-    }
-
-    body {
-        background-color: #212529;
-        color: #e0e0e0;
-    }
-
-    .card {
-        background-color: #1e1e1e !important;
-        border: 1px solid #333 !important;
-    }
-
-    .card-header {
-        background-color: #252525 !important;
-        border-bottom: 1px solid #333 !important;
-        color: #fff !important;
-    }
-
-    .card-footer {
-        background-color: #252525 !important;
-        border-top: 1px solid #333 !important;
-    }
-
-    .form-control {
-        background-color: #2d2d2d;
-        border: 1px solid #444;
-        color: #fff;
-    }
-
-    .form-control:focus {
-        background-color: #333;
-        color: #fff;
-        border-color: #666;
-        box-shadow: none;
-    }
-
-    .table {
-        color: #e0e0e0;
-        border-color: #333;
-    }
-
-    .table-light {
-        background-color: #2c2c2c;
-        color: #fff;
-        border-color: #333;
-    }
-
-    .table-light th {
-        background-color: #2c2c2c;
-        color: #fff;
-        border-color: #333;
-    }
-
-    .table-hover tbody tr:hover {
-        color: #fff;
-        background-color: #333;
-    }
-
-    .print-container {
-        background-color: #121212;
-        border-top: 2px dashed #444;
-    }
-
-    /* Buttons */
-    .btn-secondary {
-        background-color: #444;
-        border-color: #444;
-    }
-
-    .alert-warning {
-        background-color: #332701;
-        border-color: #664d03;
-        color: #ffda6a;
-    }
-
-    .alert-success {
-        background-color: #0f2b1d;
-        border-color: #146c43;
-        color: #75b798;
-    }
-
-    /* Checkbox dark mode fix */
-    .form-check-input {
-        background-color: #2d2d2d;
-        border-color: #444;
-    }
-
-    .form-check-input:checked {
-        background-color: #0d6efd;
-        border-color: #0d6efd;
     }
 </style>
 
@@ -275,16 +181,17 @@
                     <i class="bi bi-info-circle"></i>
                     Filtros por Marca, Grupo e Sub-Grupo de Produtos
                 </p>
-                
+
                 <!-- Preservar termo de busca -->
                 {% if termo_busca %}
                 <input type="hidden" name="q" value="{{ termo_busca }}">
                 {% endif %}
-                
+
                 <ul class="list-unstyled">
                     <li class="mb-2">
                         <i class="bi bi-check2"></i> Marca:
-                        <select name="marca" class="form-select form-select-sm d-inline-block w-auto ms-2" onchange="this.form.submit()">
+                        <select name="marca" class="form-select form-select-sm d-inline-block w-auto ms-2"
+                            onchange="this.form.submit()">
                             <option value="">Todas</option>
                             {% for m in marcas %}
                             <option value="{{ m.codigo }}" {% if filtro_marca == m.codigo|stringformat:"s" %}selected{% endif %}>{{ m.nome }}</option>
@@ -293,7 +200,8 @@
                     </li>
                     <li class="mb-2">
                         <i class="bi bi-check2"></i> Grupo:
-                        <select name="grupo" class="form-select form-select-sm d-inline-block w-auto ms-2" onchange="this.form.submit()">
+                        <select name="grupo" class="form-select form-select-sm d-inline-block w-auto ms-2"
+                            onchange="this.form.submit()">
                             <option value="">Todos</option>
                             {% for g in grupos %}
                             <option value="{{ g.codigo }}" {% if filtro_grupo == g.codigo|stringformat:"s" %}selected{% endif %}>{{ g.descricao }}</option>
@@ -302,7 +210,8 @@
                     </li>
                     <li class="mb-2">
                         <i class="bi bi-check2"></i> Sub-Grupo:
-                        <select name="sub_grupo" class="form-select form-select-sm d-inline-block w-auto ms-2" onchange="this.form.submit()">
+                        <select name="sub_grupo" class="form-select form-select-sm d-inline-block w-auto ms-2"
+                            onchange="this.form.submit()">
                             <option value="">Todos</option>
                             {% for s in subgrupos %}
                             <option value="{{ s.codigo }}" {% if filtro_subgrupo == s.codigo|stringformat:"s" %}selected{% endif %}>{{ s.descricao }}</option>
@@ -354,7 +263,8 @@
                             <td>{{ produto.prod_marc.nome|default:"-" }}</td>
                             <td>R$ {{ produto.prod_preco_vista|floatformat:2 }}</td>
                             <td>
-                                <span class="badge {% if produto.saldo_estoque > 0 %}bg-success{% else %}bg-danger{% endif %}">
+                                <span
+                                    class="badge {% if produto.saldo_estoque > 0 %}bg-success{% else %}bg-danger{% endif %}">
                                     {{ produto.saldo_estoque|floatformat:0 }}
                                 </span>
                             </td>
@@ -370,6 +280,46 @@
             </div>
         </div>
     </form>
+
+    <!-- Paginação -->
+    {% if produtos_busca.has_other_pages %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if produtos_busca.has_previous %}
+            <li class="page-item">
+                <a class="page-link"
+                    href="?page={{ produtos_busca.previous_page_number }}&q={{ termo_busca }}&marca={{ filtro_marca }}&grupo={{ filtro_grupo }}&sub_grupo={{ filtro_subgrupo }}">
+                    <i class="bi bi-chevron-left"></i> Anterior
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link"><i class="bi bi-chevron-left"></i> Anterior</span>
+            </li>
+            {% endif %}
+
+            <li class="page-item disabled">
+                <span class="page-link text-dark">
+                    Página {{ produtos_busca.number }} de {{ produtos_busca.paginator.num_pages }}
+                </span>
+            </li>
+
+            {% if produtos_busca.has_next %}
+            <li class="page-item">
+                <a class="page-link"
+                    href="?page={{ produtos_busca.next_page_number }}&q={{ termo_busca }}&marca={{ filtro_marca }}&grupo={{ filtro_grupo }}&sub_grupo={{ filtro_subgrupo }}">
+                    Próximo <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">Próximo <i class="bi bi-chevron-right"></i></span>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+
     {% elif termo_busca %}
     <div class="alert alert-warning text-center">
         <i class="bi bi-exclamation-triangle"></i> Nenhum produto encontrado para "<strong>{{ termo_busca }}</strong>".
@@ -399,7 +349,7 @@
                     </div>
                 </div>
 
-                <div class="print-container">
+                <div class="print-container" id="area-impressao">
                     {% for etiqueta in etiquetas %}
                     <div class="etiqueta">
                         <!-- Seção: Descrição -->
@@ -426,7 +376,8 @@
                             <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data={{ etiqueta.qr_code_url }}"
                                 class="qr-code" alt="QR Code">
                             <div class="vertical-text">
-                                <img src="{% static 'logo.png' %}" style="height:12px; margin-right: 12px;" alt="Logo" />
+                                <img src="{% static 'logo.png' %}" style="height:12px; margin-right: 12px;"
+                                    alt="Logo" />
                                 Sps Sistemas
                             </div>
                         </div>
@@ -436,7 +387,7 @@
             </div>
             <div class="modal-footer no-print">
                 <a href="?" class="btn btn-secondary">Fechar e Limpar</a>
-                <button onclick="window.print()" class="btn btn-primary btn-lg">
+                <button onclick="imprimirEtiquetas()" class="btn btn-primary btn-lg">
                     <i class="bi bi-printer-fill"></i> Imprimir Agora
                 </button>
             </div>
@@ -451,6 +402,43 @@
         });
         modalEtiquetas.show();
     });
+
+    function imprimirEtiquetas() {
+        const conteudo = document.getElementById('area-impressao').innerHTML;
+        const estilos = document.getElementById('estilos-etiqueta').innerHTML;
+
+        // Estilos específicos para o layout de grade na impressão
+        const estilosLayout = `
+            body {
+                margin: 0;
+                padding: 5mm;
+                display: grid;
+                grid-template-columns: repeat(auto-fill, 40mm);
+                gap: 2mm;
+            }
+            .etiqueta {
+                border: 1px dashed #ddd !important; /* Borda de corte */
+                box-shadow: none !important;
+                margin: 0 !important;
+                page-break-inside: avoid;
+            }
+        `;
+
+        const janelaImpressao = window.open('', '', 'height=600,width=800');
+        janelaImpressao.document.write('<html><head><title>Impressão de Etiquetas</title>');
+        janelaImpressao.document.write('<style>' + estilos + estilosLayout + '</style>');
+        janelaImpressao.document.write('</head><body>');
+        janelaImpressao.document.write(conteudo);
+        janelaImpressao.document.write('</body></html>');
+
+        janelaImpressao.document.close();
+        janelaImpressao.focus();
+
+        setTimeout(function () {
+            janelaImpressao.print();
+            janelaImpressao.close();
+        }, 900);
+    }
 </script>
 {% endif %}
 

@@ -9,6 +9,7 @@ from Produtos.models import Produtos, SaldoProduto, Tabelaprecos, Marca, GrupoPr
 from Produtos.utils import formatar_dados_etiqueta
 from core.registry import get_licenca_db_config
 from core.decorator import ModuloRequeridoMixin
+from django.core.paginator import Paginator
 
 class EtiquetasView(ModuloRequeridoMixin, TemplateView):
     template_name = "Produtos/etiquetas_print.html"
@@ -94,8 +95,14 @@ class EtiquetasView(ModuloRequeridoMixin, TemplateView):
             if empr_id:
                 qs = qs.filter(prod_empr=empr_id)
 
-            produtos_busca = qs.order_by('prod_empr', 'prod_codi_int')[:50]
-            context['produtos_busca'] = produtos_busca
+            qs = qs.order_by('prod_empr', 'prod_codi_int')
+            
+            # Paginação (50 por página)
+            paginator = Paginator(qs, 50)
+            page_number = request.GET.get('page')
+            page_obj = paginator.get_page(page_number)
+            
+            context['produtos_busca'] = page_obj
 
 
         ids = request.GET.get('ids')

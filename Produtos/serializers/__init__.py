@@ -1,0 +1,5 @@
+from .marca_serializer import MarcaSerializer
+from .unidade_medida_serializer import UnidadeMedidaSerializer
+from .tabela_preco_serializer import TabelaPrecoSerializer
+from .produto_serializer import ProdutoSerializer, ProdutoServicoSerializer, ProdutoDetalhadoSerializer
+from .produto_etiqueta_serializer import ProdutoEtiquetasSerializer
