@@ -187,7 +187,7 @@ class OrcamentopisosViewSet(BaseMultiDBModelViewSet, VendedorEntidadeMixin):
                     item_caix=item_orc.item_caix,
                     item_desc=item_orc.item_desc,
                     item_queb=item_orc.item_queb,
-                    item_inst_incl=item_orc.item_inst_incl,
+                    #item_inst_incl=item_orc.item_inst_incl,
                 )
             
             # Atualizar status do orçamento

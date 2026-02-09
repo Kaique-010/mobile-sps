@@ -49,12 +49,14 @@ def get_modulos_usuario_db(request):
         # Resolve empresa/filial sem stepover esquisito
         empresa = (
             _to_int(request.headers.get("X-Empresa"))
+            or _to_int(request.headers.get("Empresa_id"))
             or request.session.get("empresa_id")
             or _to_int(getattr(request.user, "usua_empr", None))
         )
 
         filial = (
             _to_int(request.headers.get("X-Filial"))
+            or _to_int(request.headers.get("Filial_id"))
             or request.session.get("filial_id")
             or _to_int(getattr(request.user, "usua_fili", None))
         )

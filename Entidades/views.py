@@ -1,6 +1,7 @@
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import viewsets
+from django.core.exceptions import ValidationError  
 from rest_framework.filters import SearchFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.permissions import IsAuthenticated
@@ -10,10 +11,16 @@ from core.middleware import get_licenca_slug
 from core.registry import get_licenca_db_config
 from core.utils import get_db_from_slug
 from .models import Entidades
-from .serializers import EntidadesSerializer
+from .serializers import EntidadesSerializer, EntidadesTipoOutrosSerializer
 from .utils import buscar_endereco_por_cep
 from django.db.models import Q
 from django.core.cache import cache
+from .services.entidades_tipooutros import EntidadeServico
+
+
+BANCOS_CEP_FIXO = {"savexml896", "pg pisos", 'demonstracao'}
+CEP_FALLBACK_PG_PISOS = "84010200"
+CEP_FALLBACK_DEMONSTRACAO = "84015265"
 
 class EntidadesViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
     modulo_requerido = 'Entidades'
@@ -30,7 +37,7 @@ class EntidadesViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
         
         if not banco:
             return Entidades.objects.none()
-        empresa_id = self.request.query_params.get('enti_empr') or self.request.session.get("empresa_id") or self.request.headers.get("Empresa_id")
+        empresa_id = self.request.query_params.get('enti_empr') or self.request.headers.get("X-Empresa") or self.request.session.get("empresa_id") or self.request.headers.get("Empresa_id")
         # Base queryset otimizada
         queryset = Entidades.objects.using(banco).filter(enti_empr= empresa_id)
         # Aplicar filtros de forma otimizada
@@ -101,6 +108,7 @@ class EntidadesViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
     def perform_create(self, serializer):
         empresa_id = (
             self.request.data.get('enti_empr')
+            or self.request.headers.get("X-Empresa")
             or self.request.session.get("empresa_id")
             or self.request.headers.get("Empresa_id")
         )
@@ -139,10 +147,61 @@ class EntidadesViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
             return Response(endereco)
         else:
             return Response({"erro": "CEP inválido ou não encontrado"}, status=404)
+        
+
+
+    @action(detail=False, methods=['post'], url_path='cadastro-rapido-outros')
+    def cadastro_rapido_outros(self, request, slug=None):
+        serializer = EntidadesTipoOutrosSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        banco = get_licenca_db_config(request)
+
+        empresa_id = (
+            request.data.get("enti_empr")
+            or request.headers.get("X-Empresa")
+            or request.session.get("empresa_id")
+            or request.headers.get("Empresa_id")
+        )
+
+        filial_id = (
+            request.headers.get("X-Filial")
+            or request.session.get("filial_id")
+            or request.headers.get("Filial_id")
+        )
+
+        if banco == 'demonstracao':
+            cep_fallback = CEP_FALLBACK_DEMONSTRACAO
+        elif banco in BANCOS_CEP_FIXO:
+            cep_fallback = CEP_FALLBACK_PG_PISOS
+        else:
+            cep_fallback = None
+        print(f"empresa_id: {empresa_id}, filial_id: {filial_id}, banco: {banco}, cep_fallback: {cep_fallback}")
+
+        try:
+            entidade = EntidadeServico.cadastrar_outros(
+                data=serializer.validated_data,
+                empresa_id=empresa_id,
+                filial_id=filial_id,
+                banco=banco,
+                cep_fallback=cep_fallback
+            )
+            print(f"Entidade criada com sucesso: {entidade}")
+            print(f"DEBUG enti_clie: {getattr(entidade, 'enti_clie', 'NÃO ENCONTRADO')}")
+        except ValidationError as e:
+            return Response(
+                {"erro": e.message},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        return Response(
+            {"enti_clie": entidade.enti_clie, "enti_nome": entidade.enti_nome},
+            status=status.HTTP_201_CREATED
+        )
 
 
 
-# api_entidades.py
+
 from rest_framework.views import APIView
 from django.db.models import Count
 

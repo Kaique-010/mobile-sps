@@ -114,3 +114,7 @@ class EntidadesSerializer(serializers.ModelSerializer):
                     break
             raise e  # Relevanta o erro original depois de logar
 
+
+class EntidadesTipoOutrosSerializer(serializers.Serializer):
+    enti_nome = serializers.CharField(max_length=255)
+    enti_cep = serializers.CharField(max_length=8, required=False, allow_blank=True)
