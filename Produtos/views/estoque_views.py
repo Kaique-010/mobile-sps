@@ -27,8 +27,8 @@ class ProdutosDetalhadosViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         return context
 
     def get_queryset(self, slug=None):
-        slug = get_licenca_slug()
-        qs = ProdutosDetalhados.objects.using(slug).all()
+        banco = get_licenca_db_config(self.request)
+        qs = ProdutosDetalhados.objects.using(banco).all()
 
         empresa = self.request.query_params.get('empresa') or \
                   self.request.headers.get('X-Empresa') or \
@@ -69,8 +69,8 @@ class EstoqueResumoView(APIView):
     modulo_necessario = 'dash'
 
     def get(self, request, *args, **kwargs):
-        slug = get_licenca_slug()
-        qs = ProdutosDetalhados.objects.using(slug).all()
+        banco = get_licenca_db_config(request)
+        qs = ProdutosDetalhados.objects.using(banco).all()
 
         # Filtros opcionais
         marca = request.query_params.get('marca')

@@ -61,13 +61,26 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         banco = get_licenca_db_config(self.request)
-        empresa_id = self.request.query_params.get('prod_empr')
+        
+        empresa_id = (
+            self.request.query_params.get('prod_empr') or 
+            self.request.headers.get('X-Empresa') or 
+            self.request.session.get('empresa_id') or
+            self.request.headers.get('Empresa_id')
+        )
+
+        filial_id = (
+            self.request.query_params.get('prod_fili') or
+            self.request.headers.get('X-Filial') or 
+            self.request.session.get('filial_id') or
+            self.request.headers.get('Filial_id')
+        )
         
         # Reutiliza a consulta otimizada, mas sem limite padrão do ListView
         return listar_produtos(
             banco=banco,
             empresa_id=empresa_id,
-            filial_id=self.request.headers.get('X-Filial')
+            filial_id=filial_id
         )
 
     def get_serializer_context(self):
@@ -78,7 +91,12 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def busca(self, request, slug=None):
         banco = get_licenca_db_config(request)
-        empresa_id = request.query_params.get('empresa') or request.headers.get('X-Empresa')
+        empresa_id = (
+            request.query_params.get('empresa') or 
+            request.headers.get('X-Empresa') or 
+            request.session.get('empresa_id') or
+            request.headers.get('Empresa_id')
+        )
         
         # 1. Busca por Hash (QR Code)
         hash_busca = request.query_params.get('hash')
@@ -93,6 +111,21 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
 
         # 2. Busca convencional
         termo = request.query_params.get('q') or request.query_params.get('termo')
+        
+        # Lógica de fallback para leitura de QR Code direto no campo de busca
+        if termo and "/p/" in termo:
+            try:
+                # Extrai o hash da URL (ex: https://mobile-sps.site/p/HASH)
+                parts = termo.split("/p/")
+                if len(parts) > 1:
+                    hash_extraido = parts[1].strip().split("/")[0].split("?")[0].split("#")[0]
+                    
+                    cod_produto = buscar_produto_por_hash(banco, hash_extraido, empresa_id)
+                    if cod_produto:
+                        termo = cod_produto
+            except Exception:
+                pass
+
         if not termo:
             return Response([])
 
