@@ -264,6 +264,17 @@
       "database": "ipa",
       "username": "postgres",
       "password": "@spartacus201@"
+    },
+    {
+      "ssh": "Disabled",
+      "previewLimit": 50,
+      "server": "base.rtalmeida.com.br",
+      "port": 5432,
+      "driver": "PostgreSQL",
+      "name": "pgpisos",
+      "database": "savexml896",
+      "username": "savexml896",
+      "password": "UUWWWWWWYYYY"
     }
   ],
   "liveServer.settings.port": 5501

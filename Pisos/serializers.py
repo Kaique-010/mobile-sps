@@ -480,14 +480,19 @@ class PedidospisosSerializer(BancoContextMixin, serializers.ModelSerializer):
 
     def get_itens(self, obj):
         banco = self.context.get('banco')
-        itens = Itenspedidospisos.objects.using(banco).filter(
-            item_empr=obj.pedi_empr,
-            item_fili=obj.pedi_fili,
-            item_pedi=str(obj.pedi_nume)
-        )
-        return ItenspedidospisosSerializer(itens, many=True, context=self.context).data
+        if not banco:
+            return []
+        try:
+            itens = Itenspedidospisos.objects.using(banco).filter(
+                item_empr=obj.pedi_empr,
+                item_fili=obj.pedi_fili,
+                item_pedi=obj.pedi_nume
+            )
+            return ItenspedidospisosSerializer(itens, many=True, context=self.context).data
+        except Exception as e:
+            logger.error(f"Erro ao buscar itens do pedido {obj.pedi_nume}: {e}")
+            return []
 
-    
     def get_cliente_nome(self, obj):
         # Primeiro tentar usar o cache do contexto
         entidades_cache = self.context.get('entidades_cache')
@@ -555,9 +560,9 @@ class PedidospisosSerializer(BancoContextMixin, serializers.ModelSerializer):
             return None
         try:
             ambientes = Itenspedidospisos.objects.using(banco).filter(
-                item_empr=obj.item_empr,
-                item_fili=obj.item_fili,
-                item_pedi=obj.item_pedi
+                item_empr=obj.pedi_empr,
+                item_fili=obj.pedi_fili,
+                item_pedi=obj.pedi_nume
             ).values_list('item_ambi', flat=True).distinct()
             return calcular_ambientes(ambientes)
         except Exception as e:

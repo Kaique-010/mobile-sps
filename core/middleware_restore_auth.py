@@ -12,8 +12,8 @@ class RestoreUserMiddleware:
 
     def __call__(self, request):
 
-        # Só aplicar em rotas web
-        if request.path.startswith("/web/"):
+        # Aplicar em rotas web e api
+        if request.path.startswith("/web/") or request.path.startswith("/api/"):
 
             if request.user.is_authenticated:
                 return self.get_response(request)

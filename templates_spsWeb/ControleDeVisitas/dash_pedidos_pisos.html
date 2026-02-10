@@ -1,0 +1,1084 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    /* Minimalist & Modern CSS Overrides - Dark/Light Mode Compatible */
+    :root {
+        --primary-color: #4f46e5;
+        /* Indigo 600 */
+        --card-radius: 12px;
+    }
+
+    /* Override Bootstrap variables for cleaner look if needed, but rely on BS for colors */
+
+    .card {
+        border: none;
+        border-radius: var(--card-radius);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        background-color: var(--bs-card-bg);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        margin-bottom: 1.5rem;
+    }
+
+    .card-header {
+        background-color: transparent;
+        border-bottom: 1px solid var(--bs-border-color);
+        padding: 1.25rem 1.5rem;
+        font-weight: 600;
+        color: var(--bs-heading-color, var(--bs-body-color));
+        font-size: 1.1rem;
+    }
+
+    .card-body {
+        padding: 1.5rem;
+    }
+
+    /* KPI Cards */
+    .kpi-card {
+        border-radius: var(--card-radius);
+        overflow: hidden;
+        position: relative;
+    }
+
+    /* Modern Table */
+    .table-modern {
+        width: 100%;
+        margin-bottom: 0;
+        color: var(--bs-body-color);
+        vertical-align: middle;
+        border-color: var(--bs-border-color);
+    }
+
+    .table-modern thead th {
+        background-color: var(--bs-tertiary-bg);
+        color: var(--bs-secondary-color);
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        border-bottom: none;
+        padding: 1rem 1.5rem;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .table-modern tbody td {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid var(--bs-border-color);
+        font-size: 0.9rem;
+        color: var(--bs-body-color);
+    }
+
+    .table-modern tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .table-modern tbody tr:hover {
+        background-color: var(--bs-tertiary-bg);
+    }
+
+    /* Status Badges - Keeping specific colors but ensuring readability */
+    .badge-modern {
+        padding: 0.35em 0.8em;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border-radius: 9999px;
+        letter-spacing: 0.025em;
+    }
+
+    /* Dark mode adjustments for badges to ensure contrast */
+    [data-bs-theme="dark"] .badge-pending {
+        background-color: rgba(217, 119, 6, 0.2);
+        color: #fbbf24;
+    }
+
+    [data-bs-theme="light"] .badge-pending {
+        background-color: #fef3c7;
+        color: #d97706;
+    }
+
+    [data-bs-theme="dark"] .badge-approved {
+        background-color: rgba(5, 150, 105, 0.2);
+        color: #34d399;
+    }
+
+    [data-bs-theme="light"] .badge-approved {
+        background-color: #d1fae5;
+        color: #059669;
+    }
+
+    [data-bs-theme="dark"] .badge-production {
+        background-color: rgba(37, 99, 235, 0.2);
+        color: #60a5fa;
+    }
+
+    [data-bs-theme="light"] .badge-production {
+        background-color: #dbeafe;
+        color: #2563eb;
+    }
+
+    [data-bs-theme="dark"] .badge-completed {
+        background-color: rgba(79, 70, 229, 0.2);
+        color: #818cf8;
+    }
+
+    [data-bs-theme="light"] .badge-completed {
+        background-color: #e0e7ff;
+        color: #4f46e5;
+    }
+
+    [data-bs-theme="dark"] .badge-cancelled {
+        background-color: rgba(220, 38, 38, 0.2);
+        color: #f87171;
+    }
+
+    [data-bs-theme="light"] .badge-cancelled {
+        background-color: #fee2e2;
+        color: #dc2626;
+    }
+
+    /* Chart Controls */
+    .chart-controls .btn-group {
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+
+    .chart-controls .btn {
+        border: 1px solid var(--bs-border-color);
+        background-color: var(--bs-card-bg);
+        color: var(--bs-secondary-color);
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .chart-controls .btn:hover {
+        background-color: var(--bs-tertiary-bg);
+        color: var(--bs-body-color);
+    }
+
+    .chart-controls .btn.active {
+        background-color: var(--bs-tertiary-bg);
+        color: var(--primary-color);
+        border-color: var(--bs-border-color);
+        font-weight: 600;
+    }
+
+    /* Filters */
+    .filter-card .form-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--bs-secondary-color);
+        margin-bottom: 0.4rem;
+    }
+
+    .filter-card .form-control,
+    .filter-card .form-select {
+        /* Bootstrap handles bg/border/color automatically in dark mode */
+        border-radius: 8px;
+        padding: 0.6rem 0.8rem;
+        font-size: 0.9rem;
+    }
+
+    .filter-card .form-control:focus,
+    .filter-card .form-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+
+    /* Pagination */
+    .pagination .page-link {
+        border: none;
+        color: var(--bs-secondary-color);
+        background-color: transparent;
+        border-radius: 8px;
+        margin: 0 2px;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+    }
+
+    .pagination .page-link:hover {
+        background-color: var(--bs-tertiary-bg);
+        color: var(--primary-color);
+    }
+
+    .pagination .page-item.disabled .page-link {
+        background-color: transparent;
+        color: var(--bs-tertiary-color);
+    }
+</style>
+
+<div class="container mt-4 mb-5">
+
+    <div class="d-flex justify-content-center align-items-center mb-4 position-relative">
+        <h2 class="fw-bold text-body mb-0" style="letter-spacing: -0.5px; font-size: 2.0rem;">
+            <i class="bi bi-graph-up-arrow text-primary me-2"></i>Dashboard Pedidos
+        </h2>
+        <div class="text-muted small position-absolute end-0">
+            <i class="bi bi-clock"></i> Atualizado: <span id="lastUpdated">Hoje</span>
+        </div>
+    </div>
+
+    <!-- Alert para erros -->
+    <div id="errorAlert" class="alert alert-danger alert-dismissible fade" role="alert" style="display: none;">
+        <strong>Erro:</strong> <span id="errorMessage"></span>
+        <button type="button" class="btn-close" onclick="hideError()"></button>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card filter-card mb-4">
+        <div class="card-header border-bottom-0 pt-4 pb-0">
+            <h5 class="mb-0 fw-bold text-secondary"><i class="bi bi-funnel me-2"></i>Filtros de Pesquisa</h5>
+        </div>
+        <div class="card-body">
+            <form id="filterForm" class="row g-3">
+                <div class="col-md-3">
+                    <label for="empresa" class="form-label">Empresa</label>
+                    <select class="form-select" id="empresa" name="pedi_empr">
+                        <option value="">Todas</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="filial" class="form-label">Filial</label>
+                    <select class="form-select" id="filial" name="pedi_fili">
+                        <option value="">Todas</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="dataInicio" class="form-label">Data Início</label>
+                    <input type="date" class="form-control" id="dataInicio" name="data_inicial">
+                </div>
+                <div class="col-md-3">
+                    <label for="dataFim" class="form-label">Data Fim</label>
+                    <input type="date" class="form-control" id="dataFim" name="data_final">
+                </div>
+                <div class="col-md-3">
+                    <label for="cliente" class="form-label">Cliente</label>
+                    <input type="text" class="form-control" id="cliente" name="cliente_nome"
+                        placeholder="Nome do cliente">
+                </div>
+                <div class="col-md-3">
+                    <label for="vendedor" class="form-label">Vendedor</label>
+                    <input type="text" class="form-control" id="vendedor" name="vendedor_nome"
+                        placeholder="Nome do vendedor">
+                </div>
+                <div class="col-md-3">
+                    <label for="item" class="form-label">Item</label>
+                    <input type="text" class="form-control" id="item" name="item_nome" placeholder="Nome do produto">
+                </div>
+                <div class="col-12 text-end mt-4">
+                    <button type="button" class="btn btn-light me-2 text-secondary border" onclick="limparFiltros()">
+                        <i class="bi bi-x-circle me-1"></i> Limpar
+                    </button>
+                    <button type="submit" class="btn btn-primary px-4"><i class="bi bi-search me-1"></i>
+                        Filtrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Loading indicator -->
+    <div id="loadingIndicator" class="text-center my-4" style="display: none;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Carregando...</span>
+        </div>
+        <p class="mt-2">Carregando dados...</p>
+    </div>
+
+    <!-- KPIs -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-3">
+            <div class="card kpi-card h-100 border-start border-4 border-primary">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-uppercase text-muted small fw-bold mb-1" style="font-size: 0.75rem;">Total
+                                Pedidos</h6>
+                            <h4 class="fw-bold text-body mb-0" id="kpiQtd">0</h4>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 p-2 rounded-circle">
+                            <i class="bi bi-receipt fs-5 text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card kpi-card h-100 border-start border-4 border-info">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-uppercase text-muted small fw-bold mb-1" style="font-size: 0.75rem;">Total
+                                Itens</h6>
+                            <h4 class="fw-bold text-body mb-0" id="kpiQtdItens">0</h4>
+                        </div>
+                        <div class="bg-info bg-opacity-10 p-2 rounded-circle">
+                            <i class="bi bi-box-seam fs-5 text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card kpi-card h-100 border-start border-4 border-success">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-uppercase text-muted small fw-bold mb-1" style="font-size: 0.75rem;">Volume
+                                de Vendas</h6>
+                            <h4 class="fw-bold text-body mb-0" id="kpiTotal">R$ 0,00</h4>
+                        </div>
+                        <div class="bg-success bg-opacity-10 p-2 rounded-circle">
+                            <i class="bi bi-currency-dollar fs-5 text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card kpi-card h-100 border-start border-4 border-warning">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-uppercase text-muted small fw-bold mb-1" style="font-size: 0.75rem;">Ticket
+                                Médio</h6>
+                            <h4 class="fw-bold text-body mb-0" id="kpiTicket">R$ 0,00</h4>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 p-2 rounded-circle">
+                            <i class="bi bi-graph-up fs-5 text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficos -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card h-100">
+                <div
+                    class="card-header d-flex justify-content-between align-items-center border-0 bg-transparent pt-4 px-4">
+                    <div>
+                        <h5 class="mb-1 text-body fw-bold">Desempenho por Vendedor</h5>
+                        <small class="text-muted" id="chartSubtitle">Top 6 Vendedores</small>
+                    </div>
+                    <div class="chart-controls">
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-sm btn-outline-light text-secondary active"
+                                id="btnBarChart" onclick="switchChart('bar')">
+                                <i class="bi bi-bar-chart-fill me-1"></i> Barras
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-light text-secondary" id="btnPieChart"
+                                onclick="switchChart('pie')">
+                                <i class="bi bi-pie-chart-fill me-1"></i> Pizza
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-5">
+                    <div style="height: 400px; position: relative;">
+                        <canvas id="mainChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela -->
+    <div class="card">
+        <div class="card-header bg-transparent border-0 pt-4 px-4">
+            <h5 class="mb-0 fw-bold text-body">Últimos Pedidos</h5>
+        </div>
+        <div class="card-body px-0">
+            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                <table class="table table-modern mb-0" id="pedidosTable">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">Número</th>
+                            <th>Data</th>
+                            <th>Cliente</th>
+                            <th>Vendedor</th>
+                            <th>Status</th>
+                            <th class="pe-4 text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr id="noDataRow">
+                            <td colspan="6" class="text-center py-5 text-muted">Nenhum dado disponível</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <!-- Paginação -->
+        <div class="card-footer bg-transparent border-0 d-flex justify-content-between align-items-center px-4 pb-4">
+            <span class="text-muted" id="paginationInfo">Mostrando 0 de 0</span>
+            <nav aria-label="Navegação de página">
+                <ul class="pagination mb-0">
+                    <li class="page-item disabled" id="prevPageItem">
+                        <button class="page-link" onclick="changePage(-1)">Anterior</button>
+                    </li>
+                    <li class="page-item disabled">
+                        <span class="page-link" id="currentPageDisplay">1</span>
+                    </li>
+                    <li class="page-item disabled" id="nextPageItem">
+                        <button class="page-link" onclick="changePage(1)">Próximo</button>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+{{ empresas_list|json_script:"empresas-data" }}
+{{ filiais_list|json_script:"filiais-data" }}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    let currentChartInstance = null;
+    let currentChartType = 'bar';
+    let currentSalesData = {};
+    let currentPage = 1;
+    let totalPages = 1;
+    const pageSize = 50;
+
+    function changePage(delta) {
+        const newPage = currentPage + delta;
+        if (newPage >= 1 && newPage <= totalPages) {
+            currentPage = newPage;
+            fetchData();
+        }
+    }
+
+    function showError(message) {
+        const errorAlert = document.getElementById('errorAlert');
+        const errorMessage = document.getElementById('errorMessage');
+        errorMessage.textContent = message;
+        errorAlert.style.display = 'block';
+        errorAlert.classList.add('show');
+
+        // Auto-hide após 10 segundos
+        setTimeout(() => hideError(), 10000);
+    }
+
+    function hideError() {
+        const errorAlert = document.getElementById('errorAlert');
+        errorAlert.classList.remove('show');
+        setTimeout(() => {
+            errorAlert.style.display = 'none';
+        }, 150);
+    }
+
+    function showLoading() {
+        document.getElementById('loadingIndicator').style.display = 'block';
+    }
+
+    function hideLoading() {
+        document.getElementById('loadingIndicator').style.display = 'none';
+    }
+
+    function limparFiltros() {
+        document.getElementById('filterForm').reset();
+
+        // Restore context defaults
+        const contextEmpresa = "{{ empresa|default:'' }}";
+        const contextFilial = "{{ filial|default:'' }}";
+        if (contextEmpresa) document.getElementById('empresa').value = contextEmpresa;
+        if (contextFilial) document.getElementById('filial').value = contextFilial;
+
+        const today = new Date();
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        document.getElementById('dataInicio').valueAsDate = firstDay;
+        document.getElementById('dataFim').valueAsDate = today;
+
+        // Reset pagination
+        currentPage = 1;
+        fetchData();
+    }
+
+    function switchChart(type) {
+        currentChartType = type;
+
+        document.getElementById('btnBarChart').classList.toggle('active', type === 'bar');
+        document.getElementById('btnPieChart').classList.toggle('active', type === 'pie');
+
+        document.getElementById('chartSubtitle').textContent = type === 'bar' ? 'Top 6 Vendedores' : 'Top 5 Vendedores';
+
+        if (currentSalesData && Object.keys(currentSalesData).length > 0) {
+            renderChart(currentSalesData);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const filterForm = document.getElementById('filterForm');
+
+        // Carregar dados de Empresas e Filiais
+        const empresasData = JSON.parse(document.getElementById('empresas-data').textContent || '[]');
+        const filiaisData = JSON.parse(document.getElementById('filiais-data').textContent || '[]');
+
+        const empresaSelect = document.getElementById('empresa');
+        const filialSelect = document.getElementById('filial');
+
+        // Popular Empresas
+        empresasData.forEach(emp => {
+            const option = document.createElement('option');
+            option.value = emp.empr_codi;
+            option.textContent = `${emp.empr_nome} (${emp.empr_codi})`;
+            empresaSelect.appendChild(option);
+        });
+
+        // Função para atualizar filiais
+        function updateFiliais(selectedEmpresaId) {
+            filialSelect.innerHTML = '<option value="">Todas</option>';
+            if (!selectedEmpresaId) return;
+
+            const filiaisFiltradas = filiaisData.filter(fil => fil.empr_empr == selectedEmpresaId);
+            filiaisFiltradas.forEach(fil => {
+                const option = document.createElement('option');
+                option.value = fil.empr_codi; // Branch ID
+                option.textContent = `${fil.empr_nome} (${fil.empr_codi})`;
+                filialSelect.appendChild(option);
+            });
+        }
+
+        // Listener para mudança de empresa
+        empresaSelect.addEventListener('change', function () {
+            updateFiliais(this.value);
+        });
+
+        // Dados de contexto do Django (Sessão)
+        const contextEmpresa = "{{ empresa|default:'' }}";
+        const contextFilial = "{{ filial|default:'' }}";
+
+        console.log('=== DEBUG INICIAL ===');
+        console.log('Contexto Empresa:', contextEmpresa);
+        console.log('Contexto Filial:', contextFilial);
+
+        // Set default values for Empresa/Filial if available
+        if (contextEmpresa) {
+            empresaSelect.value = contextEmpresa;
+            // Atualizar filiais baseado na empresa selecionada
+            updateFiliais(contextEmpresa);
+            // Selecionar a filial se houver
+            if (contextFilial) {
+                filialSelect.value = contextFilial;
+            }
+        }
+
+        // Set default dates (current month)
+        const today = new Date();
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        document.getElementById('dataInicio').valueAsDate = firstDay;
+        document.getElementById('dataFim').valueAsDate = today;
+
+        filterForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            currentPage = 1; // Reset to first page on new filter
+            fetchData();
+        });
+
+        // Initial load
+        fetchData();
+    });
+
+    function fetchData() {
+        const formData = new FormData(document.getElementById('filterForm'));
+        const params = new URLSearchParams();
+
+        // Adicionar filtros do formulário
+        for (const [key, value] of formData.entries()) {
+            if (value && key !== 'item_nome') params.append(key, value);
+        }
+
+        // Filtros de empresa/filial já estão no formData se preenchidos
+        // (inputs 'empresa' e 'filial' adicionados ao form)
+
+        // Pagination parameters
+        params.append('page', currentPage);
+        params.append('page_size', pageSize);
+
+        // Removing limit/page_size=10000 to allow standard pagination
+        // params.append('limit', '10000');
+        // params.append('page_size', '10000');
+
+        console.log('Query Params finais:', params.toString());
+
+        showLoading();
+        hideError();
+
+        let slug = "{{ slug|default:'' }}";
+        if (!slug) {
+            const parts = window.location.pathname.split('/');
+            if (parts[1] === 'web' && parts[2]) {
+                slug = parts[2];
+            }
+        }
+
+        console.log('=== DEBUG INFO ===');
+        console.log('Slug:', slug);
+        console.log('URL da API:', `/api/${slug}/pisos/pedidos-pisos/?${params.toString()}`);
+
+        if (!slug) {
+            hideLoading();
+            showError('Erro: Não foi possível identificar a empresa (slug).');
+            return;
+        }
+
+        fetch(`/api/${slug}/pisos/pedidos-pisos/?${params.toString()}`, {
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+            .then(response => {
+                console.log('Response Status:', response.status);
+                console.log('Response Headers:', [...response.headers.entries()]);
+
+                if (response.status === 401 || response.status === 403) {
+                    throw new Error('Não autorizado. Por favor, faça login novamente.');
+                }
+                if (response.status === 500) {
+                    throw new Error('Erro no servidor (500). Verifique os logs do backend.');
+                }
+                if (!response.ok) {
+                    throw new Error(`Erro na requisição: ${response.status} ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Data recebida:', data);
+
+                // Handle DRF pagination response structure
+                const results = data.results || data;
+                const totalCount = data.count || (Array.isArray(data) ? data.length : 0);
+
+                console.log('Total de registros:', totalCount);
+
+                // Dados agregados do backend
+                const aggregates = {
+                    totalPedidos: data.total_pedidos,
+                    totalValor: data.total_valor,
+                    salesBySeller: data.sales_by_seller,
+                    totalItens: data.total_itens // Pode vir 0 se desativado no backend
+                };
+
+                // Update Pagination UI
+                if (data.count !== undefined) {
+                    totalPages = Math.ceil(totalCount / pageSize);
+                    document.getElementById('paginationInfo').textContent = `Mostrando página ${currentPage} de ${totalPages} (Total: ${totalCount})`;
+                    document.getElementById('currentPageDisplay').textContent = currentPage;
+
+                    // Update buttons state
+                    const prevBtn = document.getElementById('prevPageItem');
+                    const nextBtn = document.getElementById('nextPageItem');
+
+                    if (currentPage > 1) prevBtn.classList.remove('disabled');
+                    else prevBtn.classList.add('disabled');
+
+                    if (currentPage < totalPages) nextBtn.classList.remove('disabled');
+                    else nextBtn.classList.add('disabled');
+                } else {
+                    // Fallback if API doesn't return pagination metadata
+                    document.getElementById('paginationInfo').textContent = `Mostrando ${results.length} registros`;
+                    totalPages = 1;
+                    document.getElementById('prevPageItem').classList.add('disabled');
+                    document.getElementById('nextPageItem').classList.add('disabled');
+                }
+
+                processData(results, aggregates);
+            })
+            .catch(error => {
+                console.error('Erro completo:', error);
+                showError(error.message);
+            })
+            .finally(() => {
+                hideLoading();
+            });
+    }
+
+    function processData(data, aggregates) {
+        console.log('Processando dados:', data);
+        console.log('Agregados recebidos:', aggregates);
+
+        if (!Array.isArray(data)) {
+            console.error('Dados não são um array:', data);
+            showError('Formato de dados inválido recebido da API');
+            return;
+        }
+
+        const itemFilter = document.getElementById('item').value.toLowerCase();
+
+        // Filtro local apenas afeta a tabela e contagens SE houver filtro de item
+        // Se não houver filtro de item, usamos os dados da página para a tabela, mas totais globais para KPIs
+
+        const filteredData = data.filter(order => {
+            if (!itemFilter) return true;
+
+            // Verifica diferentes estruturas possíveis
+            if (order.itens && Array.isArray(order.itens)) {
+                return order.itens.some(item =>
+                    item.produto_nome && item.produto_nome.toLowerCase().includes(itemFilter)
+                );
+            }
+
+            // Fallback para estrutura flat
+            if (order.item_nome) {
+                return order.item_nome.toLowerCase().includes(itemFilter);
+            }
+
+            return false;
+        });
+
+        console.log('Dados filtrados (página atual):', filteredData.length, 'de', data.length);
+
+        let totalValor = 0;
+        let qtdPedidos = 0;
+        let qtdItens = 0;
+        let salesBySeller = {};
+        let ticketMedio = 0;
+
+        // Se temos agregados do backend e NÃO há filtro local de item, usamos os totais reais
+        if (aggregates && aggregates.totalPedidos !== undefined && !itemFilter) {
+            qtdPedidos = aggregates.totalPedidos;
+            totalValor = parseFloat(aggregates.totalValor || 0);
+
+            // Gráfico usa dados globais
+            if (aggregates.salesBySeller) {
+                salesBySeller = aggregates.salesBySeller;
+            }
+
+            // Itens: se o backend mandar, usamos. Se não, somamos da página atual (melhor que 0)
+            // Como backend retorna 0 atualmente para itens, vamos calcular da página como fallback parcial
+            // ou deixar 0 se preferir precisão (mas 0 parece bug).
+            // Vamos somar da página atual para ter algo visual, mas sabendo que é parcial.
+            filteredData.forEach(item => {
+                if (item.itens && Array.isArray(item.itens)) {
+                    item.itens.forEach(subItem => {
+                        qtdItens += parseFloat(subItem.item_quan || 0);
+                    });
+                } else if (item.item_quan) {
+                    qtdItens += parseFloat(item.item_quan || 0);
+                } else {
+                    qtdItens += 1;
+                }
+            });
+
+        } else {
+            // Fallback: cálculo local baseado na página atual (ou filtrada)
+            // Isso acontece se a API não retornar agregados OU se o usuário filtrar por item localmente
+            qtdPedidos = filteredData.length;
+
+            filteredData.forEach(item => {
+                const valor = parseFloat(item.pedi_tota || 0);
+                totalValor += valor;
+
+                // Tenta diferentes estruturas para contar itens
+                if (item.itens && Array.isArray(item.itens)) {
+                    item.itens.forEach(subItem => {
+                        qtdItens += parseFloat(subItem.item_quan || 0);
+                    });
+                } else if (item.item_quan) {
+                    qtdItens += parseFloat(item.item_quan || 0);
+                } else {
+                    // Se não tem quantidade, conta como 1 item
+                    qtdItens += 1;
+                }
+
+                const vendedor = item.vendedor_nome || item.pedi_vend || 'Sem Vendedor';
+                salesBySeller[vendedor] = (salesBySeller[vendedor] || 0) + valor;
+            });
+        }
+
+        ticketMedio = qtdPedidos > 0 ? totalValor / qtdPedidos : 0;
+
+        console.log('KPIs calculados:', { totalValor, qtdPedidos, qtdItens, ticketMedio });
+
+        document.getElementById('kpiTotal').textContent = formatCurrency(totalValor);
+        document.getElementById('kpiQtd').textContent = qtdPedidos;
+        document.getElementById('kpiQtdItens').textContent = Math.round(qtdItens);
+        document.getElementById('kpiTicket').textContent = formatCurrency(ticketMedio);
+
+        currentSalesData = salesBySeller;
+        renderChart(salesBySeller);
+
+        updateTable(filteredData.slice(0, 50));
+    }
+
+    function updateTable(items) {
+        const tbody = document.querySelector('#pedidosTable tbody');
+        tbody.innerHTML = '';
+
+        if (items.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-muted">Nenhum pedido encontrado</td></tr>';
+            return;
+        }
+
+        items.forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                    <td class="ps-4 fw-bold text-secondary">#${item.pedi_nume || '-'}</td>
+                    <td>${formatDate(item.pedi_data)}</td>
+                    <td><span class="d-block text-truncate" style="max-width: 200px;">${item.cliente_nome || item.pedi_clie || '-'}</span></td>
+                    <td><span class="d-block text-truncate" style="max-width: 150px;">${item.vendedor_nome || item.pedi_vend || '-'}</span></td>
+                    <td>${getStatusLabel(item.pedi_stat)}</td>
+                    <td class="pe-4 text-end fw-bold text-body">${formatCurrency(item.pedi_tota)}</td>
+                `;
+            tbody.appendChild(row);
+        });
+    }
+
+    function getStatusLabel(status) {
+        const statusMap = {
+            '0': { label: 'Pendente', class: 'badge-pending' },
+            '1': { label: 'Aprovado', class: 'badge-approved' },
+            '2': { label: 'Em Produção', class: 'badge-production' },
+            '3': { label: 'Concluído', class: 'badge-completed' },
+            '4': { label: 'Cancelado', class: 'badge-cancelled' }
+        };
+
+        const statusConfig = statusMap[String(status)] || { label: status || '-', class: 'bg-secondary text-white badge-modern' };
+
+        // If it's a known class, add badge-modern
+        const className = statusConfig.class.includes('badge-modern') ? statusConfig.class : `badge-modern ${statusConfig.class}`;
+
+        return `<span class="badge ${className}">${statusConfig.label}</span>`;
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Observer for theme changes to update chart
+    document.addEventListener('DOMContentLoaded', function () {
+        const observer = new MutationObserver(function (mutations) {
+            mutations.forEach(function (mutation) {
+                if (mutation.type === "attributes" && mutation.attributeName === "data-bs-theme") {
+                    if (currentSalesData && Object.keys(currentSalesData).length > 0) {
+                        renderChart(currentSalesData);
+                    }
+                }
+            });
+        });
+
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ["data-bs-theme"]
+        });
+    });
+
+    function getChartTheme() {
+        const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+        const computedStyle = getComputedStyle(document.documentElement);
+
+        // Use CSS variables if available, otherwise fallback
+        const textColor = isDark ? '#cbd5e1' : '#64748b'; // slate-300 : slate-500
+        const gridColor = isDark ? '#334155' : '#f1f5f9'; // slate-700 : slate-100
+        const tooltipBg = isDark ? '#0f172a' : '#1e293b'; // slate-900 : slate-800
+
+        return {
+            textColor,
+            gridColor,
+            tooltipBg,
+            fontFamily: "'Inter', sans-serif"
+        };
+    }
+
+    function renderChart(salesBySeller) {
+        const ctx = document.getElementById('mainChart').getContext('2d');
+        const theme = getChartTheme();
+
+        if (currentChartInstance) {
+            currentChartInstance.destroy();
+        }
+
+        const sortedSellers = Object.entries(salesBySeller)
+            .sort(([, a], [, b]) => b - a);
+
+        if (sortedSellers.length === 0) {
+            // Mostrar mensagem no gráfico
+            ctx.save();
+            ctx.font = `16px ${theme.fontFamily}`;
+            ctx.fillStyle = theme.textColor;
+            ctx.textAlign = 'center';
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            ctx.fillText('Nenhum dado disponível', ctx.canvas.width / 2, ctx.canvas.height / 2);
+            ctx.restore();
+            return;
+        }
+
+        let labels, data, backgroundColor, type, options;
+        const fontConfig = { family: theme.fontFamily, size: 12 };
+
+        if (currentChartType === 'bar') {
+            const topSellers = sortedSellers.slice(0, 6);
+
+            labels = topSellers.map(([name]) => {
+                if (!name || name === 'Sem Vendedor') return 'Sem Vendedor';
+                const parts = name.split(' ');
+                if (parts.length >= 2) return `${parts[0]} ${parts[1].charAt(0)}.`;
+                return name.length > 10 ? name.substring(0, 10) + '...' : name;
+            });
+
+            data = topSellers.map(([, val]) => val);
+            // Gradient or solid modern color
+            backgroundColor = '#4f46e5'; // Indigo 600
+            type = 'bar';
+
+            options = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: theme.tooltipBg,
+                        padding: 12,
+                        cornerRadius: 8,
+                        titleFont: { family: theme.fontFamily, size: 13 },
+                        bodyFont: { family: theme.fontFamily, size: 13 },
+                        callbacks: {
+                            label: function (context) {
+                                return formatCurrency(context.raw);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: fontConfig, color: theme.textColor }
+                    },
+                    y: {
+                        border: { display: false },
+                        grid: {
+                            color: theme.gridColor,
+                            borderDash: [5, 5]
+                        },
+                        ticks: {
+                            font: fontConfig,
+                            color: theme.textColor,
+                            callback: function (value) {
+                                return 'R$ ' + value.toLocaleString('pt-BR', { notation: "compact" });
+                            }
+                        }
+                    }
+                },
+                elements: {
+                    bar: {
+                        borderRadius: 6,
+                        borderSkipped: false
+                    }
+                }
+            };
+        } else {
+            const topSellersPie = sortedSellers.slice(0, 5);
+
+            labels = topSellersPie.map(([name]) => {
+                if (!name || name === 'Sem Vendedor') return 'Sem Vendedor';
+                const parts = name.split(' ');
+                if (parts.length >= 2) return `${parts[0]} ${parts[1].charAt(0)}.`;
+                return name.length > 10 ? name.substring(0, 10) + '...' : name;
+            });
+
+            data = topSellersPie.map(([, val]) => val);
+            // Modern palette
+            backgroundColor = ['#4f46e5', '#3b82f6', '#0ea5e9', '#6366f1', '#8b5cf6'];
+            type = 'pie';
+
+            options = {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: {
+                    padding: 20
+                },
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            font: fontConfig,
+                            color: theme.textColor,
+                            usePointStyle: true,
+                            padding: 20
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: theme.tooltipBg,
+                        padding: 12,
+                        cornerRadius: 8,
+                        callbacks: {
+                            label: function (context) {
+                                const value = context.raw;
+                                const label = context.label;
+                                return `${label}: ${formatCurrency(value)}`;
+                            }
+                        }
+                    }
+                },
+                elements: {
+                    arc: {
+                        borderWidth: 2,
+                        borderColor: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? '#1e293b' : '#ffffff'
+                    }
+                }
+            };
+        }
+
+        currentChartInstance = new Chart(ctx, {
+            type: type,
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Vendas',
+                    data: data,
+                    backgroundColor: backgroundColor,
+                    borderColor: currentChartType === 'bar' ? 'transparent' : (document.documentElement.getAttribute('data-bs-theme') === 'dark' ? '#1e293b' : '#ffffff'),
+                    borderWidth: currentChartType === 'bar' ? 0 : 2,
+                    // For bar chart, set max bar thickness
+                    maxBarThickness: 50
+                }]
+            },
+            options: options
+        });
+
+        // Update last updated timestamp
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('pt-BR');
+        const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const lastUpdatedEl = document.getElementById('lastUpdated');
+        if (lastUpdatedEl) lastUpdatedEl.textContent = `${dateStr} às ${timeStr}`;
+    }
+
+    function formatCurrency(value) {
+        if (value === null || value === undefined || isNaN(value)) return 'R$ 0,00';
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+    }
+
+    function formatDate(dateString) {
+        if (!dateString) return '-';
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return '-';
+            return date.toLocaleDateString('pt-BR');
+        } catch {
+            return '-';
+        }
+    }
+</script>
+{% endblock %}

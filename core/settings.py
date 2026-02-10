@@ -151,10 +151,10 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'core.middleware.LicencaMiddleware',
     'core.middleware_restore_auth.RestoreUserMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'core.middleware.LicencaMiddleware',
     'auditoria.middleware.AuditoriaMiddleware',
     #'perfilweb.middleware.PerfilPermissionMiddleware',
 ]
