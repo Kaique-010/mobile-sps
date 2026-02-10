@@ -1,19 +1,36 @@
 import os
 import psycopg2
 import subprocess
-import os
 import django
+import sys
+import argparse
 from django.core.management import call_command
-from decouple import config  
+from decouple import config
+from django.db import connections, OperationalError
 
+# Adicionar o diretório raiz ao sys.path para permitir importações do projeto
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-# Conexão com o banco de dados local
-LOCAL_DB_NAME = config('LOCAL_DB_NAME')
-LOCAL_DB_USER = config('LOCAL_DB_USER')
-LOCAL_DB_PASSWORD = config('LOCAL_DB_PASSWORD')
-LOCAL_DB_HOST = config('LOCAL_DB_HOST')
-LOCAL_DB_PORT = config('LOCAL_DB_PORT')
+# Tentar importar o carregador de licenças
+try:
+    from core.licencas_loader import carregar_licencas_dict
+except ImportError:
+    carregar_licencas_dict = None
 
+# Configurações do Banco Local (Default)
+LOCAL_DB_NAME = config('LOCAL_DB_NAME', default='mobile_sps')
+LOCAL_DB_USER = config('LOCAL_DB_USER', default='postgres')
+LOCAL_DB_PASSWORD = config('LOCAL_DB_PASSWORD', default='postgres')
+LOCAL_DB_HOST = config('LOCAL_DB_HOST', default='localhost')
+LOCAL_DB_PORT = config('LOCAL_DB_PORT', default='5432')
+
+# Apps que devem ter migrações executadas
+APPS_TO_MIGRATE = [
+    'contenttypes',
+    'auth',
+    
+    # Adicione outros apps conforme necessário
+]
 
 # SQL para criar tabelas essenciais do Django
 SQL_DJANGO_CORE = """
@@ -104,7 +121,7 @@ CREATE TABLE IF NOT EXISTS django_migrations (
 
 --Criação da Tabela para auditoria
 
-CREATE TABLE auditoria_logacao (
+CREATE TABLE IF NOT EXISTS auditoria_logacao (
 id SERIAL PRIMARY KEY,
 usuario_id INTEGER REFERENCES usuarios(usua_codi) ON DELETE SET NULL,
 data_hora TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -122,10 +139,10 @@ empresa VARCHAR(100),
 licenca VARCHAR(100)
 );
 
-CREATE INDEX idx_auditoria_empresa_licenca_datahora ON auditoria_logacao (empresa, licenca, data_hora);
-CREATE INDEX idx_auditoria_usuario_datahora ON auditoria_logacao (usuario_id, data_hora);
-CREATE INDEX idx_auditoria_modelo_objeto ON auditoria_logacao (modelo, objeto_id);
-CREATE INDEX idx_auditoria_tipoacao_datahora ON auditoria_logacao (tipo_acao, data_hora);
+CREATE INDEX IF NOT EXISTS idx_auditoria_empresa_licenca_datahora ON auditoria_logacao (empresa, licenca, data_hora);
+CREATE INDEX IF NOT EXISTS idx_auditoria_usuario_datahora ON auditoria_logacao (usuario_id, data_hora);
+CREATE INDEX IF NOT EXISTS idx_auditoria_modelo_objeto ON auditoria_logacao (modelo, objeto_id);
+CREATE INDEX IF NOT EXISTS idx_auditoria_tipoacao_datahora ON auditoria_logacao (tipo_acao, data_hora);
 
 
 --criar tabela de onboarding_step_progress se não existir
@@ -411,9 +428,9 @@ WHERE NOT EXISTS (SELECT 1 FROM parametrosmobile WHERE para_empr = 1 AND para_fi
 
 
 # Ajustes de schema para ncm_cfop_dif
-SQL_FIX_NCM_CFOP_DIF = """
-ALTER TABLE ncm_cfop_dif ADD COLUMN IF NOT EXISTS ncm_empr INTEGER NOT NULL DEFAULT 1;
-DO $$
+SQL_FIX_NCM_CFOP_DIF = [
+    "ALTER TABLE ncm_cfop_dif ADD COLUMN IF NOT EXISTS ncm_empr INTEGER NOT NULL DEFAULT 1",
+    """DO $$
 DECLARE r RECORD;
 BEGIN
   -- Drop all foreign key constraints on ncm_cfop_dif to avoid type mismatch
@@ -423,12 +440,9 @@ BEGIN
   ) LOOP
     EXECUTE format('ALTER TABLE ncm_cfop_dif DROP CONSTRAINT %I', r.conname);
   END LOOP;
-END $$;
-
-ALTER TABLE ncm_cfop_dif ALTER COLUMN ncm_id TYPE VARCHAR(10) USING ncm_id::text;
-
--- Ensure ncm.ncm_codi is unique for FK reference
-DO $$
+END $$""",
+    "ALTER TABLE ncm_cfop_dif ALTER COLUMN ncm_id TYPE VARCHAR(10) USING ncm_id::text",
+    """DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint 
@@ -436,15 +450,14 @@ BEGIN
   ) THEN
     ALTER TABLE ncm ADD CONSTRAINT ncm_codi_unique UNIQUE (ncm_codi);
   END IF;
-END $$;
-
--- Recreate FK to ncm(ncm_codi)
-ALTER TABLE ncm_cfop_dif ADD CONSTRAINT ncm_cfop_dif_ncm_fkey FOREIGN KEY (ncm_id) REFERENCES ncm(ncm_codi);
-"""
+END $$""",
+    "ALTER TABLE ncm_cfop_dif ADD CONSTRAINT ncm_cfop_dif_ncm_fkey FOREIGN KEY (ncm_id) REFERENCES ncm(ncm_codi)"
+]
 
 # SQL de views
 SQL_VIEWS = """
 -- View produtos_detalhados
+DROP VIEW IF EXISTS public.produtos_detalhados CASCADE;
 CREATE OR REPLACE VIEW public.produtos_detalhados
  AS
  SELECT prod.prod_codi AS codigo,
@@ -474,6 +487,7 @@ CREATE OR REPLACE VIEW public.produtos_detalhados
      LEFT JOIN saldosprodutos sald ON prod.prod_codi::text = sald.sapr_prod::text;
 
 -- View Pedidos_geral
+DROP VIEW IF EXISTS public.pedidos_geral CASCADE;
 CREATE OR REPLACE VIEW public.pedidos_geral
  AS
  WITH itens_agrupados AS (
@@ -509,6 +523,7 @@ CREATE OR REPLACE VIEW public.pedidos_geral
   ORDER BY p.pedi_data DESC, p.pedi_nume DESC;
 
 -- View os_geral
+DROP VIEW IF EXISTS public.os_geral CASCADE;
 CREATE OR REPLACE VIEW public.os_geral
  AS
  WITH pecas_agrupadas AS (
@@ -613,6 +628,7 @@ CREATE OR REPLACE VIEW public.os_geral
   ORDER BY t.titu_venc;
 
 -- View balancete_cc
+DROP VIEW IF EXISTS public.balancete_cc CASCADE;
 CREATE OR REPLACE VIEW public.balancete_cc
  AS
  WITH recebimentos AS (
@@ -688,6 +704,7 @@ CREATE OR REPLACE VIEW public.balancete_cc
      FULL JOIN pagamentos p ON r.cecu_redu = p.cecu_redu AND r.mes_num = p.mes_num AND r.empr = p.empr AND r.fili = p.fili
   ORDER BY (COALESCE(r.mes_ordem, p.mes_ordem));
 
+DROP VIEW IF EXISTS public.enviarcobranca CASCADE;
 -- view para envio de cobrança 
 CREATE OR REPLACE VIEW public.enviarcobranca
  AS
@@ -739,6 +756,7 @@ CREATE OR REPLACE VIEW public.enviarcobranca
    FROM titulos_abertos t
      LEFT JOIN entidades e ON e.enti_clie = t.titu_clie AND e.enti_empr = t.titu_empr
   ORDER BY t.titu_venc;
+DROP VIEW IF EXISTS public.aniversariantes CASCADE;
 
 --view aniversariantes
 CREATE OR REPLACE VIEW public.aniversariantes
@@ -799,6 +817,7 @@ CREATE OR REPLACE VIEW public.aniversariantes
 
 
 -- View extrato_caixa
+DROP VIEW IF EXISTS public.extrato_caixa CASCADE;
 CREATE OR REPLACE VIEW public.extrato_caixa
  AS(
  SELECT x.iped_pedi AS "Pedido",
@@ -934,22 +953,45 @@ CREATE TABLE IF NOT EXISTS nf_nota_evento (
 CREATE INDEX IF NOT EXISTS ix_nf_evento_nota_tipo ON nf_nota_evento(nota_id, tipo);
 """
 
-def executar_sql(sql, titulo="SQL", ignore_errors=False):
+def montar_db_config(lic):
+    config = {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": lic["db_name"],
+        "USER": lic["db_user"],
+        "PASSWORD": lic["db_password"],
+        "HOST": lic["db_host"],
+        "PORT": lic["db_port"],
+        "CONN_MAX_AGE": 60,
+    }
+    return config
+
+def executar_sql(sql, db_config, titulo="SQL", ignore_errors=False):
     print(f"🚀 Executando: {titulo}")
     conn = psycopg2.connect(
-        dbname=LOCAL_DB_NAME,
-        user=LOCAL_DB_USER,
-        password=LOCAL_DB_PASSWORD,
-        host=LOCAL_DB_HOST,
-        port=LOCAL_DB_PORT
+        dbname=db_config['NAME'],
+        user=db_config['USER'],
+        password=db_config['PASSWORD'],
+        host=db_config['HOST'],
+        port=db_config['PORT']
     )
     conn.autocommit = True
     try:
         with conn.cursor() as cur:
-            statements = [s.strip() for s in sql.split(';') if s.strip()]
+            if isinstance(sql, list):
+                statements = sql
+            else:
+                statements = [s.strip() for s in sql.split(';') if s.strip()]
+                
             for stmt in statements:
                 try:
-                    cur.execute(stmt + ';')
+                    # If statement ends with semicolon, execute as is, otherwise add it?
+                    # Actually psycopg2 doesn't strictly need it, but let's be consistent.
+                    # If it's a list item (like the DO block), it might not have a semicolon at the end.
+                    # Let's check.
+                    if not stmt.strip().endswith(';'):
+                        cur.execute(stmt + ';')
+                    else:
+                        cur.execute(stmt)
                 except Exception as e:
                     if not ignore_errors:
                         raise
@@ -970,64 +1012,154 @@ def rodar_comando(cmd, ignore_errors=False):
             raise e
     
 
+def setup_tenant(db_config, alias='default'):
+    """
+    Executa o setup para um tenant específico (ou default).
+    db_config: dicionário com configurações de conexão (NAME, USER, PASSWORD, HOST, PORT)
+    alias: alias da conexão Django (ex: 'default', 'tenant_xyz')
+    """
+    
+    print(f"\n🔧 Iniciando setup para [{alias}] em {db_config['HOST']}:{db_config['PORT']}/{db_config['NAME']}...")
+    
+    # Configurar conexão Django dinamicamente se não for default
+    if alias != 'default':
+        connections.databases[alias] = db_config
+        # Testar conexão
+        try:
+            with connections[alias].cursor() as cursor:
+                cursor.execute("SELECT 1")
+        except OperationalError:
+            print(f"🛑 [{alias}] Banco de dados inacessível. Pulando.")
+            return
+        except Exception as e:
+            print(f"🛑 [{alias}] Erro de conexão: {e}")
+            return
+
+    # Executar SQL direto (Psycopg2)
+    print(f"🔧 [{alias}] Criando tabelas essenciais do Django via SQL...")
+    executar_sql(SQL_DJANGO_CORE, db_config, "Criação de tabelas essenciais do Django", ignore_errors=True)
+    
+    # Rodar migrações
+    print(f"📦 [{alias}] Aplicando migrações dos apps: {', '.join(APPS_TO_MIGRATE)}...")
+    
+    # Argumentos comuns para call_command
+    migrate_kwargs = {
+        'interactive': False,
+        'verbosity': 0,
+        'fake_initial': True
+    }
+    
+    if alias != 'default':
+        migrate_kwargs['database'] = alias
+        
+    for app in APPS_TO_MIGRATE:
+        print(f"   -> Migrando {app}...")
+        try:
+            call_command('migrate', app, **migrate_kwargs)
+        except Exception as e:
+            print(f"⚠️ [{alias}] Falha ao migrar {app} via call_command: {e}")
+            # Fallback para subprocess apenas se for default (pois subprocess usa settings.py que aponta para default)
+            if alias == 'default':
+                 print(f"   -> Tentando via subprocess para {app}...")
+                 rodar_comando(f"python manage.py migrate {app} --fake-initial --noinput --verbosity 0", ignore_errors=True)
+
+    # Migração consolidada final (para outros apps não listados explicitamente)
+    print(f"📦 [{alias}] Executando migrate geral...")
+    try:
+        call_command('migrate', **migrate_kwargs)
+    except Exception as e:
+        print(f"⚠️ [{alias}] Migração geral falhou: {e}")
+
+    # Executar SQL customizado
+    print(f"📦 [{alias}] Executando SQL customizado...")
+    executar_sql(SQL_COMMANDS, db_config, "Criação e atualização de tabelas", ignore_errors=True)
+    executar_sql(SQL_INSERT_PERMISSAO, db_config, "Inserção de permissões", ignore_errors=True)
+    executar_sql(SQL_PARAMETROS_LOTE, db_config, "Parâmetros de lote", ignore_errors=True)
+    executar_sql(SQL_NOTAS_FISCAIS, db_config, "Tabelas NF-e", ignore_errors=True)
+    executar_sql(SQL_FIX_NCM_CFOP_DIF, db_config, "Ajustes NCM CFOP", ignore_errors=True)
+    try:
+        executar_sql(SQL_VIEWS, db_config, "Criação de views")
+    except Exception as e:
+        print(f"⚠️ [{alias}] Falha ao criar views: {e}\n")
+
+    # Popular parâmetros
+    print(f"📊 [{alias}] Populando parâmetros iniciais...")
+    try:
+        # Passar database=alias se não for default (ou mesmo se for default, já que o comando suporta)
+        # Se for default, podemos passar 'default' explicitamente ou omitir.
+        # O comando agora suporta --database.
+        db_arg = alias if alias != 'default' else 'default'
+        
+        call_command('populate_parametros', 
+                     empresa='1', 
+                     filial='1', 
+                     verbosity=0, 
+                     database=db_arg)
+                     
+    except Exception as e:
+        print(f"⚠️ [{alias}] populate_parametros falhou: {e}")
+        if alias == 'default':
+             rodar_comando("python manage.py populate_parametros --empresa 1 --filial 1")
+
+    print(f"🎉 [{alias}] Setup finalizado com sucesso.")
+
+
 def main():
     os.environ['DISABLE_AUDIT_SIGNALS'] = '1'
     os.environ['DISABLE_PARAM_ADMIN_READY'] = '1'
+    
+    # Configurar Django
     if not django.apps.apps.ready:
         os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
         django.setup()
-    print("🔧 Criando tabelas essenciais do Django...")
-    executar_sql(SQL_DJANGO_CORE, "Criação de tabelas essenciais do Django", ignore_errors=True)
+
+    parser = argparse.ArgumentParser(description="Script de Setup Mobile SPS")
+    parser.add_argument('--tenant', type=str, help="Slug do tenant para rodar o setup (ex: empresa1)")
+    parser.add_argument('--all', action='store_true', help="Rodar para todos os tenants encontrados nas licenças")
     
-    print("📦 Aplicando migrações respeitando dependências (user model customizado)...")
-    # Com AUTH_USER_MODEL = 'Licencas.Usuarios', o app admin depende de Licencas.
-    # Usamos --fake-initial para marcar as iniciais quando as tabelas já existem pelo SQL, mas
-    # garantimos que Licencas rode antes para evitar InconsistentMigrationHistory.
-    try:
-        call_command('migrate', 'contenttypes', '0001', fake=True, interactive=False, verbosity=0)
-        call_command('migrate', 'contenttypes', '0002', fake=True, interactive=False, verbosity=0)
-        call_command('migrate', 'Licencas', fake_initial=True, interactive=False, verbosity=0)
-        call_command('migrate', fake_initial=True, interactive=False, verbosity=0)
-    except Exception as e:
-        print(f"⚠️ Migração inicial com call_command falhou, continuando com subprocess: {e}")
-        rodar_comando("python manage.py migrate contenttypes 0001 --fake --noinput --verbosity 0", ignore_errors=True)
-        rodar_comando("python manage.py migrate contenttypes 0002 --fake --noinput --verbosity 0", ignore_errors=True)
-        rodar_comando("python manage.py migrate Licencas --fake-initial --noinput --verbosity 0", ignore_errors=True)
-        rodar_comando("python manage.py migrate --fake-initial --noinput --verbosity 0", ignore_errors=True)
-    # Migração consolidada sem varrer app a app (mais leve)
-    try:
-        call_command('migrate', fake_initial=True, interactive=False, verbosity=0)
-    except Exception as e:
-        print(f"⚠️ Migração consolidada falhou, usando subprocess: {e}")
-        rodar_comando("python manage.py migrate --fake-initial --noinput --verbosity 0", ignore_errors=True)
+    args = parser.parse_args()
     
-    print("📦 Executando SQL customizado...")
-    executar_sql(SQL_COMMANDS, "Criação e atualização de tabelas", ignore_errors=True)
-    executar_sql(SQL_INSERT_PERMISSAO, "Inserção de permissões para usuário 1", ignore_errors=True)
-    executar_sql(SQL_PARAMETROS_LOTE, "Inserção de parâmetros de controle de lote", ignore_errors=True)
-    executar_sql(SQL_NOTAS_FISCAIS, "Criação de tabelas Notas Fiscais (NF-e)", ignore_errors=True)
-    executar_sql(SQL_FIX_NCM_CFOP_DIF, "Ajustes de schema ncm_cfop_dif", ignore_errors=True)
-    try:
-        executar_sql(SQL_VIEWS, "Criação de views")
-    except Exception as e:
-        print(f"⚠️ Falha ao criar views, continuando setup: {e}\n")
-
-    print("📊 Populando parâmetros iniciais...")
-    try:
-        call_command('populate_parametros', empresa='1', filial='1', verbosity=0)
-    except Exception as e:
-        print(f"⚠️ Comando populate_parametros via call_command falhou, usando subprocess: {e}")
-        rodar_comando("python manage.py populate_parametros --empresa 1 --filial 1")
-
-    print("📦 Rodando migrações do app onboarding...")
-    try:
-        call_command('migrate', 'onboarding', fake_initial=True, interactive=False, verbosity=0)
-    except Exception as e:
-        print(f"⚠️ Migração do app onboarding via call_command falhou, usando subprocess: {e}")
-        rodar_comando("python manage.py migrate onboarding --fake-initial", ignore_errors=True)
-
-    print("🎉 Setup do banco finalizado com sucesso.")
-
+    # Modo 1: Rodar para tenant específico ou todos (Baseado em licenças)
+    if args.tenant or args.all:
+        if not carregar_licencas_dict:
+            print("❌ Erro: Não foi possível importar carregar_licencas_dict. Verifique o caminho.")
+            sys.exit(1)
+            
+        print("🔍 Carregando licenças...")
+        licencas = carregar_licencas_dict()
+        if not licencas:
+            print("❌ Nenhuma licença encontrada.")
+            sys.exit(1)
+            
+        targets = []
+        if args.tenant:
+            targets = [l for l in licencas if l['slug'] == args.tenant]
+            if not targets:
+                print(f"❌ Tenant '{args.tenant}' não encontrado nas licenças.")
+                sys.exit(1)
+        else:
+            targets = licencas
+            
+        print(f"🎯 Encontrados {len(targets)} tenants para processar.")
+        
+        for lic in targets:
+            alias = f"tenant_{lic['slug']}"
+            db_config = montar_db_config(lic)
+            setup_tenant(db_config, alias=alias)
+            
+    # Modo 2: Rodar local/padrão (Compatibilidade com comportamento anterior)
+    else:
+        print("ℹ️ Nenhum tenant especificado. Rodando em modo LOCAL/DEFAULT (baseado no .env).")
+        # Configuração do .env
+        default_config = {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": LOCAL_DB_NAME,
+            "USER": LOCAL_DB_USER,
+            "PASSWORD": LOCAL_DB_PASSWORD,
+            "HOST": LOCAL_DB_HOST,
+            "PORT": LOCAL_DB_PORT,
+        }
+        setup_tenant(default_config, alias='default')
 
 if __name__ == "__main__":
     main()

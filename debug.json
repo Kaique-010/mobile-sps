@@ -1,39 +1,39 @@
 {
-  "debug_id": "09c25fbf-29d3-44ab-91b1-06a24d4feb3b",
-  "timestamp_inicio": "2026-01-16T12:50:53.029457Z",
+  "debug_id": "05375b70-f240-4dae-8b1d-8e1e39d315e3",
+  "timestamp_inicio": "2026-02-10T20:51:35.353292Z",
   "ambiente": {
     "debug": true,
-    "database_alias": "casaa"
+    "database_alias": "indus"
   },
   "tabelas_tributacao": {
     "versao": "desconhecida"
   },
   "nota": {
-    "id": 154,
+    "id": 1,
     "modelo": "55",
     "serie": "1",
-    "numero": "13",
+    "numero": "1",
     "empresa": "1",
     "filial": "1",
-    "destinatario_id": "306",
+    "destinatario_id": "2",
     "uf_origem": "PR",
     "uf_destino": "PR",
     "regime": "1"
   },
   "itens": [
     {
-      "id": 300,
-      "produto_id": "2005",
-      "descricao_produto": "computador mac",
-      "ncm_produto": "8472****",
+      "id": 1,
+      "produto_id": "100",
+      "descricao_produto": "PAINEL ASSOALHO P.P. - PEROBA MICA 18X101X280/2235",
+      "ncm_produto": "4418****",
       "cfop_inicial": "5102",
-      "quantidade": "1.0000",
-      "unitario": "3875.0000",
+      "quantidade": "5.0000",
+      "unitario": "1008.7500",
       "desconto": "0.0000",
       "logs": [
         {
-          "id": "cdd7b2fd-8d7e-40cd-acbe-fdabce1ad464",
-          "timestamp": "2026-01-16T12:50:53.081726Z",
+          "id": "58179018-53f5-47fb-b8a2-79e2c573b297",
+          "timestamp": "2026-02-10T20:51:35.390827Z",
           "tipo": "antes_calculo_item",
           "mensagem": "Início do cálculo de impostos para o item.",
           "dados": {
@@ -47,50 +47,50 @@
       "fonte_tributacao": "PRODUTO",
       "cfop_resolvido": "5102",
       "cfop_flags": {
-        "exig_icms": true,
-        "exig_ipi": true,
-        "exig_pis_cofins": true,
+        "exig_icms": false,
+        "exig_ipi": false,
+        "exig_pis_cofins": false,
         "exig_cbs": false,
         "exig_ibs": false,
         "gera_st": false
       },
-      "ncm_resolvido": "8472****",
+      "ncm_resolvido": "4418****",
       "bases": {
-        "raiz": "3875.00",
-        "icms": "3875.00",
+        "raiz": "5043.75",
+        "icms": "5043.75",
         "st": null
       },
       "aliquotas": {
-        "ipi": "0",
-        "icms": "0.00",
+        "ipi": null,
+        "icms": null,
         "st": null,
-        "pis": "0",
-        "cofins": "0",
-        "cbs": null,
-        "ibs": null
+        "pis": null,
+        "cofins": null,
+        "cbs": "0.00",
+        "ibs": "0.00"
       },
       "valores_calculados": {
-        "ipi": "0",
-        "icms": "0.00",
+        "ipi": null,
+        "icms": null,
         "st": null,
-        "pis": "0",
-        "cofins": "0",
-        "cbs": null,
-        "ibs": null
+        "pis": null,
+        "cofins": null,
+        "cbs": "0",
+        "ibs": "0"
       },
       "csts": {
-        "ipi": "99",
-        "icms": "102",
+        "ipi": null,
+        "icms": null,
         "st": null,
-        "pis": "49",
-        "cofins": "49",
-        "cbs": null,
-        "ibs": null
+        "pis": null,
+        "cofins": null,
+        "cbs": "2",
+        "ibs": "2"
       },
       "condicionais_aplicadas": {
-        "icms_habilitado_cfop": true,
-        "ipi_habilitado_cfop": true,
-        "pis_cofins_habilitado_cfop": true,
+        "icms_habilitado_cfop": false,
+        "ipi_habilitado_cfop": false,
+        "pis_cofins_habilitado_cfop": false,
         "cbs_habilitado_cfop": false,
         "ibs_habilitado_cfop": false
       }
@@ -98,8 +98,8 @@
   ],
   "logs": [
     {
-      "id": "9b418f3d-852c-4e5d-a401-a2887b9110eb",
-      "timestamp": "2026-01-16T12:50:53.078129Z",
+      "id": "f1b3d576-8d6e-4eed-95c7-fe941c7c0472",
+      "timestamp": "2026-02-10T20:51:35.387834Z",
       "tipo": "contexto_nota",
       "mensagem": "Contexto fiscal inicial da nota.",
       "dados": {
@@ -107,5 +107,5 @@
       }
     }
   ],
-  "timestamp_fim": "2026-01-16T12:50:53.174763Z"
+  "timestamp_fim": "2026-02-10T20:51:35.475669Z"
 }

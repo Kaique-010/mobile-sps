@@ -17,13 +17,19 @@ class Command(BaseCommand):
             help='ID da filial específica'
         )
         parser.add_argument(
+            '--database',
+            default='default',
+            help='Alias do banco de dados a ser usado (padrão: default)'
+        )
+        parser.add_argument(
             '--listar',
             action='store_true',
-            help='Apenas listar parâmetros existentes'
+            help='Listar parâmetros existentes'
         )
     
     def handle(self, *args, **options):
-        populate = PopulateParametros()
+        db_alias = options.get('database', 'default')
+        populate = PopulateParametros(db_alias=db_alias)
         
         if options['listar']:
             populate.listar_parametros_existentes()

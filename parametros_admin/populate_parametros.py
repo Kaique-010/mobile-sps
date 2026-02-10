@@ -23,7 +23,8 @@ class PopulateParametros:
     Classe para popular parâmetros do sistema automaticamente
     """
     
-    def __init__(self):
+    def __init__(self, db_alias='default'):
+        self.db_alias = db_alias
         self.modulos_parametros = {
             'Entradas_Estoque': {
                 'nome': 'Entradas_Estoque',
@@ -258,10 +259,10 @@ class PopulateParametros:
         """
         Cria os módulos no banco de dados
         """
-        print("Criando módulos...")
+        print(f"Criando módulos no banco '{self.db_alias}'...")
         
         for modulo_key, modulo_data in self.modulos_parametros.items():
-            modulo, created = Modulo.objects.get_or_create(
+            modulo, created = Modulo.objects.using(self.db_alias).get_or_create(
                 modu_nome=modulo_data['nome'],
                 defaults={
                     'modu_desc': modulo_data['descricao'],
@@ -280,14 +281,14 @@ class PopulateParametros:
         """
         Cria parâmetros para uma empresa/filial específica
         """
-        print(f"Criando parâmetros para Empresa {empresa_id}, Filial {filial_id}...")
+        print(f"Criando parâmetros para Empresa {empresa_id}, Filial {filial_id} no banco '{self.db_alias}'...")
         
         for modulo_key, modulo_data in self.modulos_parametros.items():
             try:
-                modulo = Modulo.objects.get(modu_nome=modulo_data['nome'])
+                modulo = Modulo.objects.using(self.db_alias).get(modu_nome=modulo_data['nome'])
                 
                 for param_data in modulo_data['parametros']:
-                    parametro, created = ParametroSistema.objects.get_or_create(
+                    parametro, created = ParametroSistema.objects.using(self.db_alias).get_or_create(
                         para_empr=empresa_id,
                         para_fili=filial_id,
                         para_modu=modulo,
@@ -332,11 +333,11 @@ class PopulateParametros:
         Executa a população completa do sistema
         """
         print("=" * 60)
-        print("INICIANDO POPULAÇÃO DE PARÂMETROS DO SISTEMA")
+        print(f"INICIANDO POPULAÇÃO DE PARÂMETROS DO SISTEMA (DB: {self.db_alias})")
         print("=" * 60)
         
         try:
-            with transaction.atomic():
+            with transaction.atomic(using=self.db_alias):
                 # Criar módulos
                 self.criar_modulos()
                 print()
@@ -359,17 +360,17 @@ class PopulateParametros:
         Lista todos os parâmetros existentes no sistema
         """
         print("=" * 60)
-        print("PARÂMETROS EXISTENTES NO SISTEMA")
+        print(f"PARÂMETROS EXISTENTES NO SISTEMA (DB: {self.db_alias})")
         print("=" * 60)
         
-        modulos = Modulo.objects.all().order_by('modu_orde', 'modu_nome')
+        modulos = Modulo.objects.using(self.db_alias).all().order_by('modu_orde', 'modu_nome')
         
         for modulo in modulos:
             print(f"\nMódulo: {modulo.modu_nome} (ID: {modulo.modu_codi})")
             print(f"Descrição: {modulo.modu_desc}")
             print(f"Ativo: {'Sim' if modulo.modu_ativ else 'Não'}")
             
-            parametros = ParametroSistema.objects.filter(para_modu=modulo).order_by('para_empr', 'para_fili', 'para_nome')
+            parametros = ParametroSistema.objects.using(self.db_alias).filter(para_modu=modulo).order_by('para_empr', 'para_fili', 'para_nome')
             
             if parametros.exists():
                 print("Parâmetros:")

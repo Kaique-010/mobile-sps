@@ -320,12 +320,12 @@ class CalculoImpostosService:
         item.cfop = pacote["cfop"].cfop_codi if pacote["cfop"] else item.cfop
         item.fonte_tributacao = pacote.get("fonte_tributacao")        
         csts = pacote["csts"]
-        item.cst_icms = csts.get("icms", "")
-        item.cst_pis = csts.get("pis", "")
-        item.cst_cofins = csts.get("cofins", "")
-        item.cst_ipi = csts.get("ipi", "")
-        item.cst_ibs = csts.get("ibs", "")
-        item.cst_cbs = csts.get("cbs", "")
+        item.cst_icms = csts.get("icms") or ""
+        item.cst_pis = csts.get("pis") or ""
+        item.cst_cofins = csts.get("cofins") or ""
+        item.cst_ipi = csts.get("ipi") or ""
+        item.cst_ibs = csts.get("ibs") or ""
+        item.cst_cbs = csts.get("cbs") or ""
 
         item.save(using=self.banco)
 
