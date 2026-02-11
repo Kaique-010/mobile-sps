@@ -193,7 +193,15 @@ class GeradorXML:
         def f2(v): return f"{self._f(v):.2f}"
 
         if len(cst) == 3:  # Simples Nacional (CSOSN)
-            tag = f"ICMSSN{cst}"
+            # Mapeamento de Grupos do Simples Nacional
+            if cst in ("102", "103", "300", "400"):
+                tag = "ICMSSN102"
+            elif cst in ("202", "203"):
+                tag = "ICMSSN202"
+            else:
+                # 101, 201, 500, 900 possuem tags com o mesmo número (ex: ICMSSN101)
+                tag = f"ICMSSN{cst}"
+
             group = etree.SubElement(icms, tag)
             etree.SubElement(group, "orig").text = orig
             etree.SubElement(group, "CSOSN").text = cst
@@ -307,7 +315,8 @@ class GeradorXML:
     def _ibs(self, parent, item):
         # NT 2023.004
         val = self._f(item.get("valor_ibs"))
-        if val <= 0: return
+        # Removido check de valor zerado para forçar geração da tag conforme solicitado
+        # if val <= 0: return
 
         ibs = etree.SubElement(parent, "IBS")
         # Por enquanto simplificado, pois o schema final pode variar
@@ -319,7 +328,8 @@ class GeradorXML:
     def _cbs(self, parent, item):
         # NT 2023.004
         val = self._f(item.get("valor_cbs"))
-        if val <= 0: return
+        # Removido check de valor zerado para forçar geração da tag conforme solicitado
+        # if val <= 0: return
 
         cbs = etree.SubElement(parent, "CBS")
         etree.SubElement(cbs, "vBCCBS").text = f"{self._f(item.get('base_cbs')):.2f}"

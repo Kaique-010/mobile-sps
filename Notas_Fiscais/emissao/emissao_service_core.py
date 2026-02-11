@@ -130,7 +130,24 @@ class EmissaoServiceCore:
         emit = dto["emitente"]
 
         cUF = emit["cUF"]
-        aamm = datetime.now().strftime("%y%m")
+        
+        # Tenta usar a data de emissão do DTO para evitar rejeição de Ano-Mês
+        dh_emi_str = dto.get("data_emissao")
+        if dh_emi_str:
+            try:
+                # Tenta formatos comuns
+                if "T" in dh_emi_str:
+                    dt = datetime.fromisoformat(dh_emi_str)
+                else:
+                    # Pode ser apenas data ou data com espaço
+                    dt = datetime.strptime(dh_emi_str.split(".")[0], "%Y-%m-%d %H:%M:%S")
+                aamm = dt.strftime("%y%m")
+            except Exception:
+                # Fallback para agora
+                aamm = datetime.now().strftime("%y%m")
+        else:
+            aamm = datetime.now().strftime("%y%m")
+
         cnpj = emit["cnpj"].zfill(14)
         mod = str(dto.get("modelo", "55")).zfill(2)
         serie = str(dto.get("serie", 1)).zfill(3)

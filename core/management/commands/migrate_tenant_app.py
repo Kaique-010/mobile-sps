@@ -10,8 +10,7 @@ DEPENDENCY_APPS = [
     "contenttypes",
   
 ]
-
-def produtosDetalhados(alias: str):
+def criar_usuarios_if_not_exists(alias: str):
     with connections[alias].cursor() as cursor:
         cursor.execute(
             """
@@ -47,6 +46,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("app_label", type=str)
+        parser.add_argument("--license", type=str, required=False, help="Slug da licença específica para rodar o migrate")
 
     def handle(self, *args, **options):
         # Desconecta signals de post_migrate que causam problemas em bancos legados
@@ -69,7 +69,13 @@ class Command(BaseCommand):
             pass
 
         app_label = options["app_label"]
+        target_license = options.get("license")
         licencas = carregar_licencas_dict()
+
+        if target_license:
+            licencas = [l for l in licencas if l["slug"] == target_license]
+            if not licencas:
+                raise CommandError(f"Licença '{target_license}' não encontrada.")
 
         if not licencas:
             raise CommandError("Nenhuma licença encontrada")
@@ -119,7 +125,7 @@ class Command(BaseCommand):
                     pass
 
                 try:
-                    produtosDetalhados(alias)
+                    criar_usuarios_if_not_exists(alias)
                 except Exception as e:
                     self.stdout.write(self.style.ERROR(f"[{alias}] Erro ao criar usuarios: {e}"))
 

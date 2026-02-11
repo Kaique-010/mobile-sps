@@ -1,6 +1,6 @@
 {
-  "debug_id": "05375b70-f240-4dae-8b1d-8e1e39d315e3",
-  "timestamp_inicio": "2026-02-10T20:51:35.353292Z",
+  "debug_id": "21bd6a3b-f614-4827-a08e-fcb2e4f58751",
+  "timestamp_inicio": "2026-02-11T12:14:32.792175Z",
   "ambiente": {
     "debug": true,
     "database_alias": "indus"
@@ -9,31 +9,31 @@
     "versao": "desconhecida"
   },
   "nota": {
-    "id": 1,
+    "id": 5,
     "modelo": "55",
     "serie": "1",
-    "numero": "1",
+    "numero": "5",
     "empresa": "1",
     "filial": "1",
-    "destinatario_id": "2",
+    "destinatario_id": "2775",
     "uf_origem": "PR",
     "uf_destino": "PR",
     "regime": "1"
   },
   "itens": [
     {
-      "id": 1,
+      "id": 5,
       "produto_id": "100",
       "descricao_produto": "PAINEL ASSOALHO P.P. - PEROBA MICA 18X101X280/2235",
       "ncm_produto": "4418****",
       "cfop_inicial": "5102",
-      "quantidade": "5.0000",
+      "quantidade": "2.0000",
       "unitario": "1008.7500",
       "desconto": "0.0000",
       "logs": [
         {
-          "id": "58179018-53f5-47fb-b8a2-79e2c573b297",
-          "timestamp": "2026-02-10T20:51:35.390827Z",
+          "id": "6137e4ee-f7e1-4d41-b7b6-539182b38eb0",
+          "timestamp": "2026-02-11T12:14:32.940253Z",
           "tipo": "antes_calculo_item",
           "mensagem": "Início do cálculo de impostos para o item.",
           "dados": {
@@ -56,8 +56,8 @@
       },
       "ncm_resolvido": "4418****",
       "bases": {
-        "raiz": "5043.75",
-        "icms": "5043.75",
+        "raiz": "2017.50",
+        "icms": "2017.50",
         "st": null
       },
       "aliquotas": {
@@ -98,8 +98,8 @@
   ],
   "logs": [
     {
-      "id": "f1b3d576-8d6e-4eed-95c7-fe941c7c0472",
-      "timestamp": "2026-02-10T20:51:35.387834Z",
+      "id": "9f459ad8-2e7a-4953-a121-927df0170dfe",
+      "timestamp": "2026-02-11T12:14:32.938288Z",
       "tipo": "contexto_nota",
       "mensagem": "Contexto fiscal inicial da nota.",
       "dados": {
@@ -107,5 +107,5 @@
       }
     }
   ],
-  "timestamp_fim": "2026-02-10T20:51:35.475669Z"
+  "timestamp_fim": "2026-02-11T12:14:33.926809Z"
 }

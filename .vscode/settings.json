@@ -275,6 +275,17 @@
       "database": "savexml896",
       "username": "savexml896",
       "password": "UUWWWWWWYYYY"
+    },
+    {
+      "ssh": "Disabled",
+      "previewLimit": 50,
+      "server": "localhost",
+      "port": 5432,
+      "driver": "PostgreSQL",
+      "name": "indus",
+      "database": "indus",
+      "username": "postgres",
+      "password": "@spartacus201@"
     }
   ],
   "liveServer.settings.port": 5501

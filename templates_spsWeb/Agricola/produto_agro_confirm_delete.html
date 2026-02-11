@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h3 class="card-title mb-0"><i class="bi bi-exclamation-triangle"></i> Confirmar Exclusão</h3>
+                </div>
+                <div class="card-body">
+                    <p class="lead">Tem certeza que deseja excluir o Produto <strong>{{ object }}</strong>?</p>
+                    <p class="text-muted">Esta ação não pode ser desfeita.</p>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'AgricolaWeb:produto_agro_list' slug=view.kwargs.slug %}" class="btn btn-secondary">Cancelar</a>
+                            <button type="submit" class="btn btn-danger">Confirmar Exclusão</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Listagem de Categorias de Produtos{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
+
+<div class="container page-container">
+  <div class="page-header-custom">
+    <div class="container align-items-center">
+      <h2 class="page-title">
+        <i class="bi bi-tags"></i> Categorias de Produtos
+      </h2>
+    </div>
+    <div class="container d-flex justify-content-end">
+      <a class="btn btn-success" href="{% url 'AgricolaWeb:categoria_produto_create' slug=view.kwargs.slug %}">Nova Categoria</a>
+    </div>
+  </div>
+
+  {% if messages %}
+  {% for message in messages %}
+  <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <form class="row g-3 mb-3" method="get">
+    <div class="col-md-4">
+      <input type="text" name="q" value="{{ request.GET.q }}" class="form-control" placeholder="Buscar por nome...">
+    </div>
+    <div class="col-md-2">
+      <button class="btn btn-outline-secondary w-100" type="submit">Filtrar</button>
+    </div>
+  </form>
+
+  <div class="table-responsive d-none d-md-block">
+    <table class="table table-hover align-left">
+      <thead class="table">
+        <tr>
+          <th>ID</th>
+          <th>Nome</th>
+          <th class="text-end">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for categoria in categorias_produtos %}
+        <tr>
+          <td>{{ categoria.id }}</td>
+          <td>{{ categoria.cate_nome }}</td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-outline-primary" href="{% url 'AgricolaWeb:categoria_produto_update' slug=view.kwargs.slug pk=categoria.pk %}">Editar</a>
+            <a class="btn btn-sm btn-outline-danger" href="{% url 'AgricolaWeb:categoria_produto_delete' slug=view.kwargs.slug pk=categoria.pk %}">Excluir</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="3" class="text-center">Nenhuma categoria encontrada.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Mobile View -->
+  <div class="d-md-none">
+      {% for categoria in categorias_produtos %}
+      <div class="card mb-3">
+          <div class="card-body">
+              <h5 class="card-title">{{ categoria.cate_nome }}</h5>
+              <div class="text-end">
+                  <a href="{% url 'AgricolaWeb:categoria_produto_update' slug=view.kwargs.slug pk=categoria.pk %}" class="btn btn-sm btn-outline-primary">Editar</a>
+              </div>
+          </div>
+      </div>
+      {% endfor %}
+  </div>
+
+  {% if is_paginated %}
+  <nav>
+    <ul class="pagination justify-content-center">
+      {% if page_obj.has_previous %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ request.GET.q }}">Anterior</a></li>
+      {% endif %}
+      <li class="page-item disabled"><span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span></li>
+      {% if page_obj.has_next %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ request.GET.q }}">Próxima</a></li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+</div>
+{% endblock %}

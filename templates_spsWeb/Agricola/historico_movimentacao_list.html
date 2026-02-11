@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Histórico de Movimentações{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
+
+<div class="container page-container">
+  <div class="page-header-custom">
+    <div class="container align-items-center">
+      <h2 class="page-title">
+        <i class="bi bi-clock-history"></i> Histórico de Movimentações
+      </h2>
+    </div>
+    <!-- No 'Novo' button for history usually -->
+  </div>
+
+  {% if messages %}
+  {% for message in messages %}
+  <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <form class="row g-3 mb-3" method="get">
+    <div class="col-md-4">
+      <input type="text" name="q" value="{{ request.GET.q }}" class="form-control" placeholder="Buscar por produto, fazenda ou tipo...">
+    </div>
+    <div class="col-md-2">
+      <button class="btn btn-outline-secondary w-100" type="submit">Filtrar</button>
+    </div>
+  </form>
+
+  <div class="table-responsive d-none d-md-block">
+    <table class="table table-hover align-left">
+      <thead class="table">
+        <tr>
+          <th>Data</th>
+          <th>Fazenda</th>
+          <th>Produto</th>
+          <th>Tipo</th>
+          <th>Quantidade</th>
+          <th>Usuário</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for hist in historicos_movimentacao %}
+        <tr>
+          <td>{{ hist.hist_data|date:"d/m/Y H:i" }}</td>
+          <td>{{ hist.hist_faze.faze_nome }}</td>
+          <td>{{ hist.hist_produto.prod_nome_agro }}</td>
+          <td>
+             <span class="badge {% if hist.hist_tipo == 'entrada' %}bg-success{% else %}bg-danger{% endif %}">
+              {{ hist.get_hist_tipo_display }}
+            </span>
+          </td>
+          <td>{{ hist.hist_quant }}</td>
+          <td>{{ hist.hist_usuario.username|default:"-" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="6" class="text-center">Nenhum histórico encontrado.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Mobile View -->
+  <div class="d-md-none">
+      {% for hist in historicos_movimentacao %}
+      <div class="card mb-3">
+          <div class="card-body">
+              <h5 class="card-title">{{ hist.hist_produto.prod_nome_agro }}</h5>
+              <p class="card-text">
+                  <strong>Data:</strong> {{ hist.hist_data|date:"d/m/Y H:i" }}<br>
+                  <strong>Tipo:</strong> <span class="badge {% if hist.hist_tipo == 'entrada' %}bg-success{% else %}bg-danger{% endif %}">{{ hist.get_hist_tipo_display }}</span><br>
+                  <strong>Qtd:</strong> {{ hist.hist_quant }}<br>
+                  <strong>Usuário:</strong> {{ hist.hist_usuario.username|default:"-" }}
+              </p>
+          </div>
+      </div>
+      {% endfor %}
+  </div>
+
+  {% if is_paginated %}
+  <nav>
+    <ul class="pagination justify-content-center">
+      {% if page_obj.has_previous %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ request.GET.q }}">Anterior</a></li>
+      {% endif %}
+      <li class="page-item disabled"><span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span></li>
+      {% if page_obj.has_next %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ request.GET.q }}">Próxima</a></li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+</div>
+{% endblock %}

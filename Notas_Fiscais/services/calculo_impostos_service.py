@@ -219,7 +219,7 @@ class CalculoImpostosService:
 
                 debug_data["itens"].append(item_debug)
 
-                self._aplicar_no_item_nota(item, pacote)
+                self._aplicar_no_item_nota(item, pacote, regime)
 
         debug_data["timestamp_fim"] = datetime.utcnow().isoformat() + "Z"
 
@@ -315,15 +315,30 @@ class CalculoImpostosService:
     # ------------------------------------------------------------------
     # PERSISTÊNCIA EM NotaItem + NotaItemImposto
     # ------------------------------------------------------------------
-    def _aplicar_no_item_nota(self, item: NotaItem, pacote: dict):
+    def _aplicar_no_item_nota(self, item: NotaItem, pacote: dict, regime: str = None):
         # Atualiza campos do NotaItem
         item.cfop = pacote["cfop"].cfop_codi if pacote["cfop"] else item.cfop
         item.fonte_tributacao = pacote.get("fonte_tributacao")        
         csts = pacote["csts"]
-        item.cst_icms = csts.get("icms") or ""
-        item.cst_pis = csts.get("pis") or ""
-        item.cst_cofins = csts.get("cofins") or ""
-        item.cst_ipi = csts.get("ipi") or ""
+        
+        # Defensiva: Garante CSTs válidos se o motor não retornar
+        # ICMS
+        cst_icms = csts.get("icms")
+        if not cst_icms:
+            # Se regime for Simples (1), default 400 (Não Tributada). Se Normal (3), default 90 (Outras)
+            if str(regime) == "1":
+                cst_icms = "400"
+            else:
+                cst_icms = "90"
+        item.cst_icms = cst_icms
+
+        # PIS/COFINS (Default 07 - Isenta, se nulo)
+        item.cst_pis = csts.get("pis") or "07"
+        item.cst_cofins = csts.get("cofins") or "07"
+        
+        # IPI (Default 53 - Não Tributada, se nulo)
+        item.cst_ipi = csts.get("ipi") or "53"
+        
         item.cst_ibs = csts.get("ibs") or ""
         item.cst_cbs = csts.get("cbs") or ""
 

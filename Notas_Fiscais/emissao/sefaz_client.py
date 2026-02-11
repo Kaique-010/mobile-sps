@@ -90,6 +90,13 @@ class SefazClient:
         logger.debug("=== SEFAZ RESPONSE ===")
         logger.debug("STATUS: %s", resp.status_code)
         logger.debug("CONTENT:\n%s", resp.text)
+        
+        # DEBUG EXPLICITO PARA O TERMINAL (SOLICITADO PELO USUARIO)
+        print("\n\n" + "="*50)
+        print(f"=== SEFAZ RESPONSE (DEBUG TERMINAL) ===")
+        print(f"STATUS: {resp.status_code}")
+        print(f"CONTENT:\n{resp.text}")
+        print("="*50 + "\n\n")
 
         resp.raise_for_status()
 

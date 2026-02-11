@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="card shadow">
+        <div class="card-header">
+            <h3 class="card-title">{% if form.instance.pk %}Editar{% else %}Nova{% endif %} Aplicação de Insumos</h3>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                {% for field in form %}
+                {% if field.name == 'apli_talh' %}
+                <div class="mb-3 position-relative">
+                    <label for="autocomplete-talhao" class="form-label">{{ field.label }}</label>
+                    <div class="input-group">
+                        <input type="text" id="autocomplete-talhao" class="form-control"
+                            placeholder="Digite o nome do talhão..." autocomplete="off">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    </div>
+                    {{ field }}
+                    {% if field.help_text %}
+                    <div class="form-text">{{ field.help_text }}</div>
+                    {% endif %}
+                    {% for error in field.errors %}
+                    <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                    <div id="talhao-dropdown" class="autocomplete-dropdown list-group position-absolute w-100"
+                        style="z-index: 1000;"></div>
+                </div>
+                {% elif field.name == 'apli_prod' %}
+                <div class="mb-3 position-relative">
+                    <label for="autocomplete-produto" class="form-label">{{ field.label }}</label>
+                    <div class="input-group">
+                        <input type="text" id="autocomplete-produto" class="form-control"
+                            placeholder="Digite o nome do produto..." autocomplete="off">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    </div>
+                    {{ field }}
+                    {% if field.help_text %}
+                    <div class="form-text">{{ field.help_text }}</div>
+                    {% endif %}
+                    {% for error in field.errors %}
+                    <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                    <div id="produto-dropdown" class="autocomplete-dropdown list-group position-absolute w-100"
+                        style="z-index: 1000;"></div>
+                </div>
+                {% else %}
+                <div class="mb-3">
+                    <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}
+                    <div class="form-text">{{ field.help_text }}</div>
+                    {% endif %}
+                    {% for error in field.errors %}
+                    <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% endfor %}
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-success"><i class="bi bi-check-circle"></i> Salvar</button>
+                    <a href="{% url 'AgricolaWeb:aplicacao_insumos_list' slug=view.kwargs.slug %}"
+                        class="btn btn-secondary"><i class="bi bi-x-circle"></i> Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        function setupAutocomplete(inputId, hiddenId, dropdownId, url) {
+            const input = document.getElementById(inputId);
+            const hidden = document.getElementById(hiddenId);
+            const dropdown = document.getElementById(dropdownId);
+
+            let controller = null;
+            let debounce = null;
+
+            if (input && hidden) {
+                // Prefill if value exists
+                if (hidden.value) {
+                    fetch(`${url}?id=${hidden.value}`)
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.results && data.results.length > 0) {
+                                input.value = data.results[0].text;
+                            }
+                        })
+                        .catch(e => console.error(`Error prefilling ${inputId}:`, e));
+                }
+
+                input.addEventListener('input', function (e) {
+                    const term = e.target.value.trim();
+
+                    // Clear hidden if input is cleared
+                    if (term === '') {
+                        hidden.value = '';
+                    }
+
+                    clearTimeout(debounce);
+
+                    if (term.length < 1) {
+                        dropdown.innerHTML = '';
+                        return;
+                    }
+
+                    debounce = setTimeout(async () => {
+                        try {
+                            if (controller) controller.abort();
+                            controller = new AbortController();
+
+                            const resp = await fetch(`${url}?term=${encodeURIComponent(term)}`, { signal: controller.signal });
+                            const data = await resp.json();
+
+                            dropdown.innerHTML = '';
+
+                            if (data.results && data.results.length > 0) {
+                                data.results.forEach(item => {
+                                    const a = document.createElement('a');
+                                    a.href = '#';
+                                    a.className = 'list-group-item list-group-item-action';
+                                    a.textContent = item.text;
+                                    a.addEventListener('click', (ev) => {
+                                        ev.preventDefault();
+                                        input.value = item.text;
+                                        hidden.value = item.id;
+                                        dropdown.innerHTML = '';
+                                    });
+                                    dropdown.appendChild(a);
+                                });
+                            } else {
+                                dropdown.innerHTML = '<div class="list-group-item">Nenhum resultado encontrado</div>';
+                            }
+                        } catch (e) {
+                            if (e.name !== 'AbortError') {
+                                console.error('Autocomplete error:', e);
+                            }
+                        }
+                    }, 300);
+                });
+
+                // Close dropdown when clicking outside
+                document.addEventListener('click', function (e) {
+                    if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+                        dropdown.innerHTML = '';
+                    }
+                });
+            }
+        }
+
+        // Setup Talhão Autocomplete
+        setupAutocomplete(
+            'autocomplete-talhao',
+            '{{ form.apli_talh.id_for_label }}',
+            'talhao-dropdown',
+            "{% url 'AgricolaWeb:autocomplete_talhoes' slug=view.kwargs.slug %}"
+        );
+
+        // Setup Produto Autocomplete
+        setupAutocomplete(
+            'autocomplete-produto',
+            '{{ form.apli_prod.id_for_label }}',
+            'produto-dropdown',
+            "{% url 'AgricolaWeb:autocomplete_produtos_agro' slug=view.kwargs.slug %}"
+        );
+    });
+</script>
+{% endblock %}

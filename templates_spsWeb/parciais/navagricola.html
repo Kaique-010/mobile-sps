@@ -1,19 +1,20 @@
-<li class="nav-item" data-modulo="Floresta">
-    <a class="nav-link collapsed" data-bs-toggle="collapse" href="#" role="button" data-bs-target="#collapseAgricola" aria-expanded="false" aria-controls="collapseAgricola">
-        <i class="bi bi-tree fs-4"></i> Agrícola
+<li class="nav-item">
+    <a class="nav-link collapsed" data-bs-toggle="collapse" href="#agricolaMenu" role="button" aria-expanded="false"
+        aria-controls="agricolaMenu" data-modulo="agricola">
+        <i class="bi bi-flower1"></i> Agrícola
     </a>
-    <div class="collapse" id="collapseAgricola">
-        <ul class="list-unstyled ps-4">
-            <li><a class="nav-link" href="#">Animais</a></li>
-            <li><a class="nav-link" href="#">Aplicação de insumos</a></li>
-            <li><a class="nav-link" href="#">Categorias de Produtos Agrícolas</a></li>
-            <li><a class="nav-link" href="#">Ciclos Florestais</a></li>
-            <li><a class="nav-link" href="#">Estoque Fazenda</a></li>
-            <li><a class="nav-link" href="#">Fazendas</a></li>
-            <li><a class="nav-link" href="#">Movimentações de estoque</a></li>
-            <li><a class="nav-link" href="#">Produtos Agrícolas</a></li>
-            <li><a class="nav-link" href="#">Talhões</a></li>
-            <li><a class="nav-link" href="#">Movimentações em lista</a></li>
+    <div class="collapse" id="agricolaMenu" data-modulo-requerido="agricola">
+        <ul class="list-unstyled ps-3">
+            <li><a class="nav-link" href="#" data-slug-route="/web/{slug}/agricola/fazendas/"><i class="bi bi-house-door"></i> Fazendas</a></li>
+            <li><a class="nav-link" href="#" data-slug-route="/web/{slug}/agricola/talhoes/"><i class="bi bi-grid-3x3"></i> Talhões</a></li>
+            <li><a class="nav-link" href="#" data-slug-route="/web/{slug}/agricola/produtos-agro/"><i class="bi bi-box-seam"></i> Produtos</a></li>
+            <li><a class="nav-link" href="#" data-slug-route="/web/{slug}/agricola/categorias-produtos/"><i class="bi bi-tags"></i> Categorias</a></li>
+            <li><a class="nav-link" href="#" data-slug-route="/web/{slug}/agricola/estoque-fazenda/"><i class="bi bi-boxes"></i> Estoque</a></li>
+            <li><a class="nav-link" href="#" data-slug-route="/web/{slug}/agricola/movimentacoes-estoque/"><i class="bi bi-arrow-left-right"></i> Movimentações</a></li>
+            <li><a class="nav-link" href="#" data-slug-route="/web/{slug}/agricola/historico-movimentacoes/"><i class="bi bi-clock-history"></i> Histórico</a></li>
+            <li><a class="nav-link" href="#" data-slug-route="/web/{slug}/agricola/aplicacao-insumos/"><i class="bi bi-droplet"></i> Aplicações</a></li>
+            <li><a class="nav-link" href="#" data-slug-route="/web/{slug}/agricola/animais/"><i class="bi bi-github"></i> Animais</a></li>
+            <li><a class="nav-link" href="#" data-slug-route="/web/{slug}/agricola/eventos-animais/"><i class="bi bi-calendar-event"></i> Eventos</a></li>
         </ul>
     </div>
 </li>

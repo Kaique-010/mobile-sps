@@ -140,6 +140,7 @@ INSTALLED_APPS = [
     'licencas_web',
     'perfilweb',
     'controledePonto',
+    'Agricola',
 ]
 
 # Middleware

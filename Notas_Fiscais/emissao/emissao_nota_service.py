@@ -98,7 +98,7 @@ class EmissaoNotaService:
         logger.debug("Resposta SEFAZ dict:\n%s", resposta)
         logger.debug("cStat: %s", cStat)
 
-        if cStat == "100":
+        if str(cStat) == "100":
             NotaService.transmitir(
                 nota,
                 descricao="NF-e autorizada pela SEFAZ",

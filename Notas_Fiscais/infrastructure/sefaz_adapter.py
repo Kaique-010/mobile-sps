@@ -2,6 +2,7 @@ from pynfe.processamento.comunicacao import ComunicacaoSefaz
 from pynfe.processamento.assinatura import AssinaturaA1
 from pynfe.processamento.serializacao import SerializacaoXML
 from pynfe.entidades.fonte_dados import _fonte_dados
+from lxml import etree
 
 class SefazAdapter:
 
@@ -17,6 +18,11 @@ class SefazAdapter:
     def emitir(self, nota_fiscal):
         serializador = SerializacaoXML(_fonte_dados, homologacao=self.homologacao)
         nfe = serializador.exportar(nota_fiscal)
+        
+        # Injeta IBS e CBS se disponíveis (contornando limitação do PyNFe)
+        if hasattr(nota_fiscal, '_itens_extra'):
+            self._injetar_ibs_cbs(nfe, nota_fiscal._itens_extra)
+            
         xml_assinado = self.assinador.assinar(nfe)
 
         envio = self.comunicacao.autorizacao(modelo='nfe', nota_fiscal=xml_assinado)
@@ -31,6 +37,14 @@ class SefazAdapter:
             # envio[0] é o status retornado pelo PyNFe (pode ser 1 para sucesso, mas precisamos do cStat da SEFAZ)
             # envio[1] é o objeto response do requests
             resposta = envio[1]
+
+            # DEBUG EXPLICITO PARA O TERMINAL (SOLICITADO PELO USUARIO)
+            if resposta and hasattr(resposta, 'text'):
+                print("\n\n" + "="*50)
+                print(f"=== SEFAZ ADAPTER RESPONSE (DEBUG TERMINAL) ===")
+                print(f"STATUS HTTP: {getattr(resposta, 'status_code', 'N/A')}")
+                print(f"CONTENT:\n{resposta.text}")
+                print("="*50 + "\n\n")
             
             # Tenta extrair informações do XML de retorno da SEFAZ
             if resposta and hasattr(resposta, 'content'):
@@ -99,3 +113,75 @@ class SefazAdapter:
             "chave": chave,
             "xml_protocolo": xml_protocolo,
         }
+
+    def _injetar_ibs_cbs(self, nfe_elem, itens_extra):
+        # Namespace
+        ns_uri = 'http://www.portalfiscal.inf.br/nfe'
+        ns = {'ns': ns_uri}
+        
+        # Encontra os detalhes (itens)
+        dets = nfe_elem.findall('.//ns:det', namespaces=ns)
+        
+        # Fallback: tentar sem namespace se não encontrar
+        if not dets:
+            dets = nfe_elem.findall('.//det')
+            
+        print(f"DEBUG: _injetar_ibs_cbs: Encontrados {len(dets)} dets e {len(itens_extra)} itens_extra")
+
+        if len(dets) != len(itens_extra):
+            print("DEBUG: _injetar_ibs_cbs: Contagem incompatível. Abortando injeção.")
+            return
+
+        for i, det in enumerate(dets):
+            dados = itens_extra[i]
+            
+            # Tenta encontrar imposto com ou sem namespace
+            imposto = det.find('.//ns:imposto', namespaces=ns)
+            if imposto is None:
+                imposto = det.find('.//imposto')
+                
+            if imposto is None: 
+                print(f"DEBUG: Item {i} sem tag imposto.")
+                continue
+            
+            def fmt(v): return "{:.2f}".format(float(v or 0))
+            
+            # Helper para criar elemento com namespace correto (se o pai tiver)
+            def sub(parent, tag, text=None):
+                # Se o pai tem namespace, tenta usar o mesmo
+                if parent.tag.startswith('{'):
+                    ns_prefix = parent.tag.split('}')[0] + '}'
+                    elem = etree.SubElement(parent, f"{ns_prefix}{tag}")
+                else:
+                    elem = etree.SubElement(parent, tag)
+                if text: elem.text = text
+                return elem
+            
+            # IBS
+                ibs_data = dados.get('ibs')
+                if ibs_data:
+                    # Validar se tem valor antes de injetar (Evitar erro de Schema 225)
+                    # A SEFAZ pode rejeitar tags de imposto com valor 0.00
+                    valor_ibs = float(ibs_data.get('valor') or 0)
+                    if valor_ibs > 0:
+                        ibs = sub(imposto, "IBS")
+                        sub(ibs, "vBCIBS", fmt(ibs_data.get('base')))
+                        sub(ibs, "pIBS", fmt(ibs_data.get('aliq')))
+                        sub(ibs, "vIBS", fmt(ibs_data.get('valor')))
+                    else:
+                        print(f"DEBUG: IBS zerado ({valor_ibs}), ignorando injeção para evitar erro 225.")
+                
+                # CBS
+                cbs_data = dados.get('cbs')
+                if cbs_data:
+                    # Validar se tem valor antes de injetar
+                    valor_cbs = float(cbs_data.get('valor') or 0)
+                    if valor_cbs > 0:
+                        cbs = sub(imposto, "CBS")
+                        sub(cbs, "vBCCBS", fmt(cbs_data.get('base')))
+                        sub(cbs, "pCBS", fmt(cbs_data.get('aliq')))
+                        sub(cbs, "vCBS", fmt(cbs_data.get('valor')))
+                    else:
+                        print(f"DEBUG: CBS zerado ({valor_cbs}), ignorando injeção para evitar erro 225.")
+            
+            print(f"DEBUG: Injetado IBS/CBS no item {i}")

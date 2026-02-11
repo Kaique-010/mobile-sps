@@ -264,11 +264,11 @@ class OrcamentosListView(ListView):
 
     def get_queryset(self):
         banco = get_licenca_db_config(self.request) or 'default'
-        from Entidades.models import Entidades
+        from Entidades.models import Entidadess
         
         qs = Orcamentos.objects.using(banco).filter(
             pedi_empr=self.request.session.get('empresa_id', 1),
-            pedi_fili=self.request.session.get('filiacao_id', 1),
+            pedi_fili=self.request.session.get('filial_id', 1),
         )
         
         # Filtros
@@ -331,10 +331,10 @@ class OrcamentosListView(ListView):
 
         # Totais usando queryset base (sem annotations/order_by) para evitar GROUP BY
         banco = get_licenca_db_config(self.request) or 'default'
-        from Entidades.models import Entidades
+        from Entidades.models import Entidadess
         qs_total = Orcamentos.objects.using(banco).filter(
             pedi_empr=self.request.session.get('empresa_id', 1),
-            pedi_fili=self.request.session.get('filiacao_id', 1),
+            pedi_fili=self.request.session.get('filial_id', 1),
         )
 
         cliente_param = (self.request.GET.get('cliente') or '').strip()

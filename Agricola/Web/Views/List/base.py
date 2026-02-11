@@ -1,0 +1,30 @@
+from django.views.generic import ListView
+from core.utils import get_licenca_db_config
+
+class BaseListView(ListView):
+    model = None
+    template_name = None
+    context_object_name = None
+    empresa_field = None
+    filial_field = None
+    order_by_field = 'id'
+    
+    def get_queryset(self):
+        banco = get_licenca_db_config(self.request) or 'default'
+        db_name = banco if isinstance(banco, str) else banco.get('db_name', 'default')
+        queryset = self.model.objects.using(db_name).all()
+        
+        if self.empresa_field and self.filial_field:
+            empresa = getattr(self.request.user, 'empresa', None) or self.request.session.get('empresa_id', 1)
+            filial = getattr(self.request.user, 'filial', None) or self.request.session.get('filial_id', 1)
+            
+            filters = {
+                self.empresa_field: empresa,
+                self.filial_field: filial
+            }
+            queryset = queryset.filter(**filters)
+            
+        if self.order_by_field:
+            queryset = queryset.order_by(self.order_by_field)
+            
+        return queryset[:100]

@@ -13,6 +13,11 @@ class SefazResponseParser:
 
     def parse(self, xml_str: str):
         logger.debug("SEFAZ XML RESPOSTA (bruto): %s", xml_str)
+        
+        # DEBUG EXPLICITO PARA O TERMINAL
+        print("\n" + "-"*30)
+        print("=== PARSER SEFAZ (DEBUG TERMINAL) ===")
+        print(f"XML Bruto: {xml_str}")
 
         if not xml_str or not str(xml_str).strip():
             return {

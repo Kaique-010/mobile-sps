@@ -1,5 +1,6 @@
 from decimal import Decimal
 import datetime
+import random
 
 from pynfe.entidades.emitente import Emitente
 from pynfe.entidades.cliente import Cliente
@@ -75,6 +76,7 @@ def construir_nfe_pynfe(dto):
         transporte_modalidade_frete=dto.modalidade_frete or 9,
         informacoes_adicionais_interesse_fisco="",
         totais_tributos_aproximado=None,
+        codigo_numerico=str(random.randint(10000000, 99999999)), # Gera cNF aleatório para evitar Rejeição 656 (Consumo Indevido)
     )
 
     for item in dto.itens:
@@ -97,12 +99,40 @@ def construir_nfe_pynfe(dto):
             quantidade_tributavel=qtd,
             valor_unitario_tributavel=vunit,
             ind_total=1,
-            icms_modalidade="102" if str(dto.emitente.regime_trib) == "1" else None,
+            icms_modalidade=_obter_modalidade_csosn(item.cst_icms) if str(dto.emitente.regime_trib) == "1" else None,
             icms_origem=0,
-            icms_csosn="400" if str(dto.emitente.regime_trib) == "1" else None,
+            icms_csosn=item.cst_icms if str(dto.emitente.regime_trib) == "1" else None,
             pis_modalidade="07",
             cofins_modalidade="07",
             valor_tributos_aprox=None,
         )
+        
+        # Armazena dados de IBS/CBS para injeção posterior no XML (SefazAdapter)
+        if not hasattr(nota_fiscal, '_itens_extra'):
+            nota_fiscal._itens_extra = []
+            
+        nota_fiscal._itens_extra.append({
+            'ibs': {
+                'valor': item.valor_ibs, 
+                'base': item.base_ibs, 
+                'aliq': item.aliq_ibs
+            },
+            'cbs': {
+                'valor': item.valor_cbs, 
+                'base': item.base_cbs, 
+                'aliq': item.aliq_cbs
+            }
+        })
 
     return nota_fiscal
+
+def _obter_modalidade_csosn(csosn):
+    if not csosn: return "102"
+    c = str(csosn)
+    if c in ["101"]: return "101"
+    if c in ["102", "103", "300", "400"]: return "102"
+    if c in ["201"]: return "201"
+    if c in ["202", "203"]: return "202"
+    if c in ["500"]: return "500"
+    if c in ["900"]: return "900"
+    return "102"

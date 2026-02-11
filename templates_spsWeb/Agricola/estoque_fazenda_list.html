@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Listagem de Estoque{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
+
+<div class="container page-container">
+    <div class="page-header-custom">
+        <div class="container align-items-center">
+            <h2 class="page-title">
+                <i class="bi bi-boxes"></i> Estoque em Fazendas
+            </h2>
+        </div>
+        <div class="container d-flex justify-content-end">
+            <a class="btn btn-success" href="{% url 'AgricolaWeb:estoque_fazenda_create' slug=view.kwargs.slug %}">Novo Estoque</a>
+        </div>
+    </div>
+
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <form class="row g-3 mb-3" method="get">
+        <div class="col-md-4">
+            <input type="text" name="q" value="{{ request.GET.q }}" class="form-control"
+                placeholder="Buscar por produto ou fazenda...">
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-outline-secondary w-100" type="submit">Filtrar</button>
+        </div>
+    </form>
+
+    <div class="table-responsive d-none d-md-block">
+        <table class="table table-hover align-left">
+            <thead class="table">
+                <tr>
+                    <th>ID</th>
+                    <th>Fazenda</th>
+                    <th>Produto</th>
+                    <th>Quantidade</th>
+                    <th>Custo Médio</th>
+                    <th class="text-end">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for estoque in estoques_fazenda %}
+                <tr>
+                    <td>{{ estoque.id }}</td>
+                    <td>{{ estoque.estq_faze.faze_nome }}</td>
+                    <td>{{ estoque.estq_prod.prod_nome_agro }}</td>
+                    <td>{{ estoque.estq_quant }} {{ estoque.estq_prod.prod_unmd_agro }}</td>
+                    <td>R$ {{ estoque.estq_cust_medi|floatformat:2 }}</td>
+                    <td class="text-end">
+                        <a class="btn btn-sm btn-outline-primary"
+                            href="{% url 'AgricolaWeb:estoque_fazenda_update' slug=view.kwargs.slug pk=estoque.pk %}">Editar</a>
+                        <a class="btn btn-sm btn-outline-danger"
+                            href="{% url 'AgricolaWeb:estoque_fazenda_delete' slug=view.kwargs.slug pk=estoque.pk %}">Excluir</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center">Nenhum estoque encontrado.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Mobile View -->
+    <div class="d-md-none">
+        {% for estoque in estoques_fazenda %}
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">{{ estoque.estq_prod.prod_nome_agro }}</h5>
+                <p class="card-text">
+                    <strong>Fazenda:</strong> {{ estoque.estq_faze.faze_nome }}<br>
+                    <strong>Qtd:</strong> {{ estoque.estq_quant }} {{ estoque.estq_prod.prod_unmd_agro }}<br>
+                    <strong>Custo:</strong> R$ {{ estoque.estq_cust_medi|floatformat:2 }}
+                </p>
+                <div class="text-end">
+                    <a href="{% url 'AgricolaWeb:estoque_fazenda_update' slug=view.kwargs.slug pk=estoque.pk %}"
+                        class="btn btn-sm btn-outline-primary">Editar</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if is_paginated %}
+    <nav>
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link"
+                    href="?page={{ page_obj.previous_page_number }}&q={{ request.GET.q }}">Anterior</a></li>
+            {% endif %}
+            <li class="page-item disabled"><span class="page-link">Página {{ page_obj.number }} de {{
+                    page_obj.paginator.num_pages }}</span></li>
+            {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link"
+                    href="?page={{ page_obj.next_page_number }}&q={{ request.GET.q }}">Próxima</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}
