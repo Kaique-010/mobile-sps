@@ -24,6 +24,11 @@ from .Views.Delete import (
     HistoricoMovimentacaoDeleteView, AplicacaoInsumosDeleteView,
     AnimalDeleteView, EventoAnimalDeleteView
 )
+from .Views.Reports import (
+    RelatorioProdutosPorLoteView,
+    RelatorioProdutosSemLoteView,
+    RelatorioExtratoMovimentacaoView
+)
 from .Views.Update import lotes as lotes_update
 from .Views.Delete import lotes as lotes_delete
 from Agricola.Rest.autocompletes import FazendaAutocompleteView, CategoriaProdutoAutocomplete, ProdutoAutocompleteView, TalhaoAutocompleteView, AnimalAutocompleteView
@@ -106,4 +111,9 @@ urlpatterns = [
     path('lotes/htmx/form/<int:produto_id>/', LoteFormHTMXView.as_view(), name='lote_form_htmx'),
     path('lotes/<int:pk>/editar/', lotes_update.LoteProdutosUpdateView.as_view(), name='lote_update'),
     path('lotes/<int:pk>/excluir/', lotes_delete.LoteProdutosDeleteView.as_view(), name='lote_delete'),
+    
+    # Relatórios
+    path('relatorios/produtos-por-lote/', RelatorioProdutosPorLoteView.as_view(), name='relatorio_produtos_lote'),
+    path('relatorios/produtos-sem-lote/', RelatorioProdutosSemLoteView.as_view(), name='relatorio_produtos_sem_lote'),
+    path('relatorios/extrato-movimentacao/', RelatorioExtratoMovimentacaoView.as_view(), name='relatorio_extrato_movimentacao'),
 ]
