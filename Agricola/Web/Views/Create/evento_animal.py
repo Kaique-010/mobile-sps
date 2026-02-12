@@ -9,7 +9,10 @@ class EventoAnimalCreateView(BaseCreateView):
     model = EventoAnimal
     form_class = EventoAnimalForm
     template_name = 'Agricola/evento_animal_form.html'
-    
+    empresa_field = 'evnt_empr'
+    filial_field = 'evnt_fili'
+    usuario_field = 'evnt_usua'
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         banco = get_licenca_db_config(self.request) or 'default'
@@ -20,5 +23,3 @@ class EventoAnimalCreateView(BaseCreateView):
     def get_success_url(self):
         from django.urls import reverse
         return reverse('AgricolaWeb:evento_animal_list', kwargs={'slug': self.kwargs['slug']})
-    empresa_field = 'evnt_empr'
-    filial_field = 'evnt_fili'

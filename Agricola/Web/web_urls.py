@@ -9,7 +9,8 @@ from .Views.Create import (
     FazendaCreateView, TalhaoCreateView, CategoriaProdutoCreateView,
     ProdutoAgroCreateView, EstoqueFazendaCreateView, MovimentacaoEstoqueCreateView,
     HistoricoMovimentacaoCreateView, AplicacaoInsumosCreateView,
-    AnimalCreateView, EventoAnimalCreateView
+    AnimalCreateView, EventoAnimalCreateView,
+    LoteCreateView, LoteCreateHTMXView, LoteFormHTMXView
 )
 from .Views.Update import (
     FazendaUpdateView, TalhaoUpdateView, CategoriaProdutoUpdateView,
@@ -23,6 +24,8 @@ from .Views.Delete import (
     HistoricoMovimentacaoDeleteView, AplicacaoInsumosDeleteView,
     AnimalDeleteView, EventoAnimalDeleteView
 )
+from .Views.Update import lotes as lotes_update
+from .Views.Delete import lotes as lotes_delete
 from Agricola.Rest.autocompletes import FazendaAutocompleteView, CategoriaProdutoAutocomplete, ProdutoAutocompleteView, TalhaoAutocompleteView, AnimalAutocompleteView
 
 app_name = 'AgricolaWeb'
@@ -96,4 +99,11 @@ urlpatterns = [
     path('eventos-animais/criar/', EventoAnimalCreateView.as_view(), name='evento_animal_create'),
     path('eventos-animais/<int:pk>/editar/', EventoAnimalUpdateView.as_view(), name='evento_animal_update'),
     path('eventos-animais/<int:pk>/excluir/', EventoAnimalDeleteView.as_view(), name='evento_animal_delete'),
+
+    # Lote (HTMX)
+    path('lotes/criar/', LoteCreateView.as_view(), name='lote_create'),
+    path('lotes/htmx/criar/<int:produto_id>/', LoteCreateHTMXView.as_view(), name='lote_create_htmx'),
+    path('lotes/htmx/form/<int:produto_id>/', LoteFormHTMXView.as_view(), name='lote_form_htmx'),
+    path('lotes/<int:pk>/editar/', lotes_update.LoteProdutosUpdateView.as_view(), name='lote_update'),
+    path('lotes/<int:pk>/excluir/', lotes_delete.LoteProdutosDeleteView.as_view(), name='lote_delete'),
 ]

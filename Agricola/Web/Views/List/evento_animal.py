@@ -16,8 +16,7 @@ class EventoAnimalListView(BaseListView):
         
         if q:
             # Configurar DB para buscar animais
-            banco = get_licenca_db_config(self.request) or 'default'
-            db_name = banco if isinstance(banco, str) else banco.get('db_name', 'default')
+            db_name = get_licenca_db_config(self.request) or 'default'
             
             # Buscar IDs de animais que correspondem à pesquisa
             # Assumindo que evnt_anim guarda o ID do animal
@@ -48,8 +47,7 @@ class EventoAnimalListView(BaseListView):
         
         if animais_ids:
             # Configurar DB
-            banco = get_licenca_db_config(self.request) or 'default'
-            db_name = banco if isinstance(banco, str) else banco.get('db_name', 'default')
+            db_name = get_licenca_db_config(self.request) or 'default'
             
             # Buscar animais
             animais = Animal.objects.using(db_name).filter(id__in=animais_ids)

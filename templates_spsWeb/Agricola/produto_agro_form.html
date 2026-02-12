@@ -23,11 +23,67 @@
                 {% endfor %}
                 <div class="mt-4">
                     <button type="submit" class="btn btn-success"><i class="bi bi-check-circle"></i> Salvar</button>
-                    <a href="{% url 'AgricolaWeb:produto_agro_list' slug=view.kwargs.slug %}" class="btn btn-secondary"><i
-                            class="bi bi-x-circle"></i> Cancelar</a>
+                    <a href="{% url 'AgricolaWeb:produto_agro_list' slug=view.kwargs.slug %}"
+                        class="btn btn-secondary"><i class="bi bi-x-circle"></i> Cancelar</a>
                 </div>
             </form>
+
+            {% if form.instance.pk %}
+            <hr class="my-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4>Lotes</h4>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#loteModal"
+                    hx-get="{% url 'AgricolaWeb:lote_form_htmx' slug=view.kwargs.slug produto_id=form.instance.pk %}"
+                    hx-target="#loteModalContent" hx-swap="innerHTML">
+                    <i class="bi bi-plus-circle"></i> Gerenciar Lotes
+                </button>
+            </div>
+
+            <div id="lotes-table-container">
+                {% include "Agricola/parciais/lote_list.html" %}
+            </div>
+
+            {% endif %}
         </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Log quando o HTMX faz a requisição
+        document.body.addEventListener('htmx:beforeRequest', function (evt) {
+            console.log('🚀 HTMX Request:', evt.detail.xhr.responseURL);
+        });
+
+        // Log quando recebe resposta
+        document.body.addEventListener('htmx:afterRequest', function (evt) {
+            console.log('✅ HTMX Response:', evt.detail.successful, evt.detail.xhr.status);
+        });
+
+        // Log de erros
+        document.body.addEventListener('htmx:responseError', function (evt) {
+            console.error('❌ HTMX Error:', evt.detail);
+        });
+    });
+</script>
+
+{% if form.instance.pk %}
+<!-- Modal -->
+<div class="modal fade" id="loteModal" tabindex="-1" aria-labelledby="loteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" id="loteModalContent">
+            <div class="modal-header">
+                <h5 class="modal-title">Carregando...</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Carregando...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {% endblock %}

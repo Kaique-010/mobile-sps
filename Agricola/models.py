@@ -3,6 +3,21 @@ from django.db.models import Sum
 from decimal import Decimal
 
 
+class SequencialControle(models.Model):
+    seq_empr = models.CharField(max_length=100)
+    seq_fili = models.CharField(max_length=100)
+    seq_tipo = models.CharField(max_length=30)  # PRODUTO ou LOTE
+    seq_chave_extra = models.CharField(max_length=100, null=True, blank=True)
+    seq_atual = models.BigIntegerField(default=0)
+
+    class Meta:
+        db_table = "controle_de_sequenciais"
+        unique_together = ("seq_empr", "seq_fili", "seq_tipo", "seq_chave_extra")
+        
+    def __str__(self):
+        return f"{self.seq_empr} - {self.seq_fili} - {self.seq_tipo} - {self.seq_chave_extra}"
+
+
 """Modelo para representar uma fazenda."""
 class Fazenda(models.Model):
     faze_nome = models.CharField(max_length=255)
@@ -113,6 +128,35 @@ class ProdutoAgro(models.Model):
     def __str__(self):
         return f"{self.prod_codi_agro} - {self.prod_nome_agro} ({self.prod_cate_agro})"
     
+
+class LoteProdutos(models.Model):
+    lote_empr = models.CharField(max_length=100, db_column='lote_empr')
+    lote_fili = models.CharField(max_length=100, db_column='lote_fili')
+    lote_ident = models.CharField(max_length=255, db_column="lote_ident", help_text="Identificador único do lote")
+    lote_prod = models.CharField(max_length=100, db_column="lote_prod", help_text="Produto do lote")
+    lote_quant = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Quantidade do produto no lote")
+    lote_cust_unit = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=0, 
+        help_text="Custo unitário do lote"
+    )
+    lote_valo_vend = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=0, 
+        help_text="Valor de venda unitário do lote"
+    )
+    lote_data_emi = models.DateField(null=True, blank=True, help_text="Data de emissão do lote")
+    lote_data_venc = models.DateField(null=True, blank=True, help_text="Data de vencimento do lote")
+    
+    
+    class Meta:
+        db_table = 'produtos_lotes'
+        unique_together = ('lote_empr', 'lote_fili', 'lote_ident', 'lote_prod')
+        
+    def __str__(self):
+        return f"{self.lote_ident} - {self.lote_prod}"
     
 """Modelo para representar o estoque de um produto agrícola em uma fazenda."""
 class EstoqueFazenda(models.Model):
@@ -311,4 +355,4 @@ class EventoAnimal(models.Model):
         db_table = 'agricola_eventos_animais'
     
     def __str__(self):
-        return f"{self.evnt_anim.anim_ident} - {self.get_tipo_even_display()} em {self.evnt_data_even}"
+        return f"{self.evnt_anim} - {self.get_evnt_tipo_even_display()} em {self.evnt_data_even}"

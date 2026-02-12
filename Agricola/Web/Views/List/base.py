@@ -10,8 +10,7 @@ class BaseListView(ListView):
     order_by_field = 'id'
     
     def get_queryset(self):
-        banco = get_licenca_db_config(self.request) or 'default'
-        db_name = banco if isinstance(banco, str) else banco.get('db_name', 'default')
+        db_name = get_licenca_db_config(self.request) or 'default'
         queryset = self.model.objects.using(db_name).all()
         
         if self.empresa_field and self.filial_field:

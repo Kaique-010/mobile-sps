@@ -12,3 +12,4 @@ class EventoAnimalUpdateView(BaseUpdateView):
         return reverse('AgricolaWeb:evento_animal_list', kwargs={'slug': self.kwargs['slug']})
     empresa_field = 'evnt_empr'
     filial_field = 'evnt_fili'
+    usuario_field = 'evnt_usua'

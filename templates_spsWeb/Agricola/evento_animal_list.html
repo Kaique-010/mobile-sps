@@ -10,7 +10,7 @@
   <div class="page-header-custom">
     <div class="container align-items-center">
       <h2 class="page-title">
-        <i class="bi bi-calendar-event"></i> Eventos de Animais
+        <i class="bi bi-calendar-event"></i> Eventos Animais
       </h2>
     </div>
     <div class="container d-flex justify-content-end">
@@ -40,6 +40,7 @@
     <table class="table table-hover align-left">
       <thead class="table">
         <tr>
+          <th scope="col">ID</th>
           <th>Data</th>
           <th>Animal</th>
           <th>Tipo</th>
@@ -50,6 +51,7 @@
       <tbody>
         {% for evento in eventos_animais %}
         <tr>
+          <td>{{ evento.pk }}</td>
           <td>{{ evento.evnt_data_even|date:"d/m/Y" }}</td>
           <td>{{ evento.evnt_anim.anim_ident_display }}</td>
           <td>{{ evento.get_evnt_tipo_even_display }}</td>

@@ -7,10 +7,11 @@ class FazendaAutocompleteView(View):
     def get(self, request, *args, **kwargs):
         term = request.GET.get('term', '').strip()
         pk = request.GET.get('id', '').strip()
-        banco = get_licenca_db_config(request) or 'default'
-        db_name = banco['db_name'] if isinstance(banco, dict) else 'default'
+        db_name = get_licenca_db_config(request) or 'default'
+        print(db_name)
         
         queryset = Fazenda.objects.using(db_name).all()
+        print(queryset)
         
         # Filter by tenant/empresa/filial
         empresa = getattr(request.user, 'empresa', None) or request.session.get('empresa_id', 1)
@@ -32,6 +33,7 @@ class FazendaAutocompleteView(View):
                 'id': fazenda.id,
                 'text': fazenda.faze_nome
             })
+            print(fazenda.faze_nome)
             
         return JsonResponse({'results': results})
 
@@ -40,8 +42,7 @@ class TalhaoAutocompleteView(View):
     def get(self, request, *args, **kwargs):
         term = request.GET.get('term', '').strip()
         pk = request.GET.get('id', '').strip()
-        banco = get_licenca_db_config(request) or 'default'
-        db_name = banco['db_name'] if isinstance(banco, dict) else 'default'
+        db_name = get_licenca_db_config(request) or 'default'
         
         queryset = Talhao.objects.using(db_name).all()
         
@@ -80,8 +81,7 @@ class CategoriaProdutoAutocomplete(View):
      def get(self, request, *args, **kwargs):
         term = request.GET.get('term', '').strip()
         pk = request.GET.get('id', '').strip()
-        banco = get_licenca_db_config(request) or 'default'
-        db_name = banco['db_name'] if isinstance(banco, dict) else 'default'
+        db_name = get_licenca_db_config(request) or 'default'
         
         queryset = CategoriaProduto.objects.using(db_name).all()
         
@@ -105,8 +105,7 @@ class ProdutoAutocompleteView(View):
     def get(self, request, *args, **kwargs):
         term = request.GET.get('term', '').strip()
         pk = request.GET.get('id', '').strip()
-        banco = get_licenca_db_config(request) or 'default'
-        db_name = banco['db_name'] if isinstance(banco, dict) else 'default'
+        db_name = get_licenca_db_config(request) or 'default'
         queryset = ProdutoAgro.objects.using(db_name).all()
         
         # Filter by tenant/empresa/filial
@@ -144,8 +143,7 @@ class AnimalAutocompleteView(View):
     def get(self, request, *args, **kwargs):
         term = request.GET.get('term', '').strip()
         pk = request.GET.get('id', '').strip()
-        banco = get_licenca_db_config(request) or 'default'
-        db_name = banco['db_name'] if isinstance(banco, dict) else 'default'
+        db_name = get_licenca_db_config(request) or 'default'
         
         queryset = Animal.objects.using(db_name).all()
 

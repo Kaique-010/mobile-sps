@@ -19,8 +19,7 @@ class TalhaoListView(BaseListView):
         
         if faze_ids:
             # Configurar DB
-            banco = get_licenca_db_config(self.request) or 'default'
-            db_name = banco['db_name'] if isinstance(banco, dict) else 'default'
+            db_name = get_licenca_db_config(self.request) or 'default'
             
             # Buscar fazendas
             fazendas = Fazenda.objects.using(db_name).filter(id__in=faze_ids)

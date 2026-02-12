@@ -1,0 +1,36 @@
+<form
+    hx-post="{% if form.instance.pk %}{% url 'AgricolaWeb:lote_update' slug=slug pk=form.instance.pk %}{% else %}{% url 'AgricolaWeb:lote_create_htmx' slug=slug produto_id=produto_id %}{% endif %}"
+    hx-target="#lotes-table-container" hx-swap="innerHTML"
+    hx-on::after-request="if(event.detail.successful) { bootstrap.Modal.getInstance(document.getElementById('loteModal')).hide(); }">
+    {% csrf_token %}
+
+    <div class="modal-header">
+        <h5 class="modal-title" id="loteModalLabel">{% if form.instance.pk %}Editar Lote{% else %}Novo Lote{% endif %}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    </div>
+
+    <div class="modal-body">
+        {% for field in form %}
+        {% if field.is_hidden %}
+        {{ field }}
+        {% else %}
+        <div class="mb-3">
+            <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}
+            <div class="form-text">{{ field.help_text }}</div>
+            {% endif %}
+            {% for error in field.errors %}
+            <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Salvar Lote</button>
+    </div>
+</form>

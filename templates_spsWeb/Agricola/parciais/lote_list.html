@@ -1,0 +1,39 @@
+<div class="table-responsive">
+    <table class="table table-sm table-hover">
+        <thead>
+            <tr>
+                <th>Lote</th>
+                <th>Quantidade</th>
+                <th>Validade</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for lote in lotes %}
+            <tr>
+                <td>{{ lote.lote_ident }}</td>
+                <td>{{ lote.lote_quant }}</td>
+                <td>{{ lote.lote_data_venc|date:"d/m/Y"|default:"-" }}</td>
+                <td>
+                    <button type="button"
+                        hx-get="{% url 'AgricolaWeb:lote_update' slug=slug|default:view.kwargs.slug pk=lote.id %}"
+                        hx-target="#loteModalContent" hx-swap="innerHTML" data-bs-toggle="modal"
+                        data-bs-target="#loteModal" class="btn btn-sm btn-warning">
+                        Editar
+                    </button>
+                    <button type="button"
+                        hx-post="{% url 'AgricolaWeb:lote_delete' slug=slug|default:view.kwargs.slug pk=lote.id %}"
+                        hx-confirm="Tem certeza que deseja excluir este lote?" hx-target="#lotes-table-container"
+                        class="btn btn-sm btn-danger">
+                        Excluir
+                    </button>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" class="text-center text-muted">Nenhum lote cadastrado.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

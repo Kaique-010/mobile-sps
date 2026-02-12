@@ -8,3 +8,4 @@ from .historico_movimentacao import HistoricoMovimentacaoCreateView
 from .aplicacao_insumos import AplicacaoInsumosCreateView
 from .animal import AnimalCreateView
 from .evento_animal import EventoAnimalCreateView
+from .lote import LoteCreateView, LoteCreateHTMXView, LoteFormHTMXView

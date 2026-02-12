@@ -1,0 +1,17 @@
+<form hx-post="{% url 'AgricolaWeb:lote_delete' slug=slug pk=object.pk %}"
+      hx-target="#lotes-table-container"
+      hx-swap="innerHTML"
+      hx-on::after-request="if(event.detail.successful) { bootstrap.Modal.getInstance(document.getElementById('loteModal')).hide(); }">
+    {% csrf_token %}
+    <div class="modal-header">
+        <h5 class="modal-title">Excluir Lote</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    </div>
+    <div class="modal-body">
+        <p>Tem certeza que deseja excluir o lote <strong>{{ object.lote_ident }}</strong>?</p>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-danger">Excluir</button>
+    </div>
+</form>

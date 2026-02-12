@@ -2,7 +2,7 @@ from django import forms
 from ..models import (
     Fazenda, Talhao, CategoriaProduto, ProdutoAgro, 
     EstoqueFazenda, MovimentacaoEstoque, HistoricoMovimentacao,
-    AplicacaoInsumos, Animal, EventoAnimal
+    AplicacaoInsumos, Animal, EventoAnimal, LoteProdutos
 )
 
 # ====== Fazenda ======
@@ -54,11 +54,15 @@ class CategoriaProdutoForm(forms.ModelForm):
 
 # ====== Produto Agro ======
 class ProdutoAgroForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['prod_codi_agro'].required = False
+
     class Meta:
         model = ProdutoAgro
         fields = ['prod_codi_agro', 'prod_nome_agro', 'prod_cate_agro', 'prod_unmd_agro', 'prod_desc_agro', 'prod_cust_unit']
         widgets = {
-            'prod_codi_agro': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Código'}),
+            'prod_codi_agro': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Deixe vazio para gerar automaticamente'}),
             'prod_nome_agro': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome do Produto'}),
             'prod_cate_agro': forms.Select(attrs={'class': 'form-select'}),
             'prod_unmd_agro': forms.Select(attrs={'class': 'form-select'}),
@@ -73,6 +77,7 @@ class ProdutoAgroForm(forms.ModelForm):
             'prod_desc_agro': 'Descrição',
             'prod_cust_unit': 'Custo Unitário',
         }
+        exclude = ['prod_cate_agro']
 
 # ====== Estoque Fazenda ======
 class EstoqueFazendaForm(forms.ModelForm):
@@ -194,4 +199,43 @@ class EventoAnimalForm(forms.ModelForm):
             'evnt_data_even': 'Data do Evento',
             'evnt_cust': 'Custo',
             'evnt_desc': 'Descrição',
+        }
+
+class LoteProdutosForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['lote_ident'].required = False
+        for field in self.fields.values():
+            if not isinstance(field.widget, forms.HiddenInput):
+                current_class = field.widget.attrs.get('class', '')
+                if 'form-control' not in current_class:
+                    field.widget.attrs['class'] = (current_class + ' form-control').strip()
+
+    class Meta:
+        model = LoteProdutos
+        fields = '__all__'
+        widgets = {
+            'lote_empr': forms.HiddenInput(),
+            'lote_fili': forms.HiddenInput(),
+            'lote_prod': forms.HiddenInput(),
+            'lote_quant': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'lote_data_emi': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'lote_data_venc': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+        }
+        labels = {
+            'lote_empr': 'Empresa',
+            'lote_fili': 'Filial',
+            'lote_prod': 'Produto',
+            'lote_quant': 'Quantidade',
+            'lote_data_emi': 'Data de Emissão',
+            'lote_data_venc': 'Data de Vencimento',
+            'lote_ident': 'Identificação do Lote',
+            'lote_cust_unit': 'Custo unitário',
+            'lote_valo_vend': 'Valor venda',
+        }
+        help_texts = {
+            'lote_ident': 'Identificação única do lote',
+            'lote_quant': 'Quantidade do lote',
+            'lote_data_emi': 'Data de emissão do lote',
+            'lote_data_venc': 'Data de vencimento do lote',
         }
