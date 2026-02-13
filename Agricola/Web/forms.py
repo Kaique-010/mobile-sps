@@ -99,21 +99,39 @@ class EstoqueFazendaForm(forms.ModelForm):
 
 # ====== Movimentação Estoque ======
 class MovimentacaoEstoqueForm(forms.ModelForm):
+    FORMA_PAGAMENTO_CHOICES = [
+        ('54', 'Dinheiro/Outros'),
+        ('15', 'Boleto Bancário'),
+        ('17', 'PIX'),
+        ('01', 'Dinheiro'),
+        ('02', 'Cheque'),
+    ]
+
+    movi_estq_form_paga = forms.ChoiceField(
+        choices=FORMA_PAGAMENTO_CHOICES, 
+        required=False, 
+        label="Forma de Pagamento",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+
     class Meta:
         model = MovimentacaoEstoque
         fields = [
             'movi_estq_faze', 'movi_estq_prod', 'movi_estq_quant', 'movi_estq_tipo', 
-            'movi_estq_moti', 'movi_estq_docu_refe', 'movi_estq_cust_unit', 'movi_estq_cust_tota'
+            'movi_estq_moti', 'movi_estq_docu_refe', 'movi_estq_cust_unit', 'movi_estq_cust_tota',
+            'movi_estq_enti', 'movi_estq_venc', 'movi_estq_form_paga'
         ]
         widgets = {
             'movi_estq_faze': forms.HiddenInput(),
             'movi_estq_prod': forms.HiddenInput(),
+            'movi_estq_enti': forms.HiddenInput(),
             'movi_estq_quant': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'movi_estq_tipo': forms.Select(attrs={'class': 'form-select'}),
             'movi_estq_moti': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Motivo'}),
             'movi_estq_docu_refe': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Documento Referência'}),
             'movi_estq_cust_unit': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'movi_estq_cust_tota': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'readonly': 'readonly'}),
+            'movi_estq_venc': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
         }
         labels = {
             'movi_estq_faze': 'Fazenda',
@@ -124,6 +142,9 @@ class MovimentacaoEstoqueForm(forms.ModelForm):
             'movi_estq_docu_refe': 'Documento Referência',
             'movi_estq_cust_unit': 'Custo Unitário',
             'movi_estq_cust_tota': 'Custo Total',
+            'movi_estq_enti': 'Entidade (Cliente/Fornecedor)',
+            'movi_estq_venc': 'Data de Vencimento',
+            'movi_estq_form_paga': 'Forma de Pagamento',
         }
 
 # ====== Histórico Movimentação ======

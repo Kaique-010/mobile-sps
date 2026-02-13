@@ -12,66 +12,155 @@
                 <input type="hidden" name="movimentacoes_json" id="movimentacoes_json">
 
                 <!-- Área de Inserção de Itens -->
-                <div class="row g-3 border-bottom pb-4 mb-4">
-                    <div class="col-md-6">
-                        <label for="autocomplete-fazenda" class="form-label">Fazenda</label>
-                        <div class="input-group position-relative">
-                            <input type="text" id="autocomplete-fazenda" class="form-control"
-                                placeholder="Buscar fazenda..." autocomplete="off">
-                            <span class="input-group-text"><i class="bi bi-search"></i></span>
-                            <div id="fazenda-dropdown" class="autocomplete-dropdown list-group position-absolute w-100"
-                                style="z-index: 1000; top: 100%;"></div>
+                <ul class="nav nav-tabs mb-3" id="movimentacaoTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="geral-tab" data-bs-toggle="tab" data-bs-target="#geral"
+                            type="button" role="tab" aria-controls="geral" aria-selected="true">Dados Gerais</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="financeiro-tab" data-bs-toggle="tab" data-bs-target="#financeiro"
+                            type="button" role="tab" aria-controls="financeiro"
+                            aria-selected="false">Financeiro</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content border-bottom pb-4 mb-4" id="movimentacaoTabContent">
+                    <!-- Aba Geral -->
+                    <div class="tab-pane fade show active" id="geral" role="tabpanel" aria-labelledby="geral-tab">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="autocomplete-fazenda" class="form-label">Fazenda</label>
+                                <div class="input-group position-relative">
+                                    <input type="text" id="autocomplete-fazenda" class="form-control"
+                                        placeholder="Buscar fazenda..." autocomplete="off"
+                                        value="{{ initial_fazenda|default:'' }}">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    <div id="fazenda-dropdown"
+                                        class="autocomplete-dropdown list-group position-absolute w-100"
+                                        style="z-index: 1000; top: 100%;"></div>
+                                </div>
+                                {{ form.movi_estq_faze }}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="autocomplete-produto" class="form-label">Produto</label>
+                                <div class="input-group position-relative">
+                                    <input type="text" id="autocomplete-produto" class="form-control"
+                                        placeholder="Buscar produto..." autocomplete="off"
+                                        value="{{ initial_produto|default:'' }}">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    <div id="produto-dropdown"
+                                        class="autocomplete-dropdown list-group position-absolute w-100"
+                                        style="z-index: 1000; top: 100%;"></div>
+                                </div>
+                                {{ form.movi_estq_prod }}
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">{{ form.movi_estq_tipo.label }}</label>
+                                {{ form.movi_estq_tipo }}
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">{{ form.movi_estq_quant.label }}</label>
+                                {{ form.movi_estq_quant }}
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">{{ form.movi_estq_cust_unit.label }}</label>
+                                {{ form.movi_estq_cust_unit }}
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Custo Total (Estimado)</label>
+                                <input type="text" class="form-control" id="custo-total-display" readonly>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">{{ form.movi_estq_moti.label }}</label>
+                                {{ form.movi_estq_moti }}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">{{ form.movi_estq_docu_refe.label }}</label>
+                                {{ form.movi_estq_docu_refe }}
+                            </div>
                         </div>
-                        {{ form.movi_estq_faze }}
                     </div>
 
-                    <div class="col-md-6">
-                        <label for="autocomplete-produto" class="form-label">Produto</label>
-                        <div class="input-group position-relative">
-                            <input type="text" id="autocomplete-produto" class="form-control"
-                                placeholder="Buscar produto..." autocomplete="off">
-                            <span class="input-group-text"><i class="bi bi-search"></i></span>
-                            <div id="produto-dropdown" class="autocomplete-dropdown list-group position-absolute w-100"
-                                style="z-index: 1000; top: 100%;"></div>
+                    <!-- Aba Financeiro -->
+                    <div class="tab-pane fade" id="financeiro" role="tabpanel" aria-labelledby="financeiro-tab">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="autocomplete-entidade" class="form-label">
+                                    {{ form.movi_estq_enti.label }}</label>
+                                <div class="input-group position-relative">
+                                    <input type="text" id="autocomplete-entidade" class="form-control"
+                                        placeholder="Buscar entidade (Cliente/Fornecedor)..." autocomplete="off"
+                                        value="{{ initial_entidade|default:'' }}">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    <div id="entidade-dropdown"
+                                        class="autocomplete-dropdown list-group position-absolute w-100"
+                                        style="z-index: 1000; top: 100%;"></div>
+                                </div>
+                                {{ form.movi_estq_enti }}
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">{{ form.movi_estq_venc.label }}</label>
+                                {{ form.movi_estq_venc }}
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">{{ form.movi_estq_form_paga.label }}</label>
+                                {{ form.movi_estq_form_paga }}
+                            </div>
+
+                            <div class="col-12 mt-3">
+                                {% if object.pk %}
+                                <button type="submit" name="gerar_financeiro" value="true" class="btn btn-warning"
+                                    id="btn-gerar-financeiro">
+                                    <i class="bi bi-cash-coin"></i> Salvar e Gerar Financeiro
+                                </button>
+                                {% endif %}
+                            </div>
+
+                            <!-- Lista de Títulos Financeiros -->
+                            <div class="col-12 mt-4">
+                                <h5 class="border-bottom pb-2">Títulos Financeiros Vinculados</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered table-hover" id="tabela-financeiro">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Título</th>
+                                                <th>Parcela</th>
+                                                <th>Vencimento</th>
+                                                <th>Valor</th>
+                                                <th>Situação</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td colspan="5" class="text-center text-muted">
+                                                    {% if object.pk %}
+                                                    Carregando...
+                                                    {% else %}
+                                                    Salve a movimentação para visualizar o financeiro.
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
-                        {{ form.movi_estq_prod }}
                     </div>
+                </div>
 
-                    <div class="col-md-3">
-                        <label class="form-label">{{ form.movi_estq_tipo.label }}</label>
-                        {{ form.movi_estq_tipo }}
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">{{ form.movi_estq_quant.label }}</label>
-                        {{ form.movi_estq_quant }}
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">{{ form.movi_estq_cust_unit.label }}</label>
-                        {{ form.movi_estq_cust_unit }}
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">Custo Total (Estimado)</label>
-                        <input type="text" class="form-control" id="custo-total-display" readonly>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label">{{ form.movi_estq_moti.label }}</label>
-                        {{ form.movi_estq_moti }}
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label">{{ form.movi_estq_docu_refe.label }}</label>
-                        {{ form.movi_estq_docu_refe }}
-                    </div>
-
-                    <div class="col-12 text-end">
-                        <button type="button" class="btn btn-primary" id="btn-adicionar">
-                            <i class="bi bi-plus-circle"></i> Adicionar Movimentação
-                        </button>
-                    </div>
+                <div class="col-12 text-end mb-4">
+                    <button type="button" class="btn btn-primary" id="btn-adicionar">
+                        <i class="bi bi-plus-circle"></i> Adicionar Movimentação
+                    </button>
                 </div>
 
                 <!-- Lista de Itens Adicionados -->
@@ -118,6 +207,8 @@
         const btnSave = document.getElementById('btn-salvar-todos');
         const tbody = document.querySelector('#tabela-movimentacoes tbody');
         const emptyMsg = document.getElementById('empty-message');
+        const btnGerarFinanceiro = document.getElementById('btn-gerar-financeiro');
+        const tableContainer = document.getElementById('tabela-movimentacoes').parentElement; // Container da tabela de itens
 
         // Inputs
         const inputFaze = document.getElementById('autocomplete-fazenda');
@@ -133,6 +224,18 @@
         const displayTotal = document.getElementById('custo-total-display');
 
         let items = [];
+        const isEditMode = "{{ object.pk|default:'' }}" !== "";
+
+        // Ajustes de UI para Modo Edição
+        if (isEditMode) {
+            if (btnAdd) btnAdd.style.display = 'none'; // Esconde botão Adicionar
+            if (tableContainer) tableContainer.style.display = 'none'; // Esconde tabela de itens
+            if (btnSave) {
+                btnSave.disabled = false;
+                btnSave.innerHTML = '<i class="bi bi-check-circle"></i> Salvar Alterações';
+            }
+        }
+
 
         // --- Helper: Atualizar Total ---
         function updateTotal() {
@@ -148,7 +251,10 @@
             tbody.innerHTML = '';
             if (items.length === 0) {
                 emptyMsg.style.display = 'block';
-                btnSave.disabled = true;
+                // Disable save only if NOT in edit mode
+                if (!isEditMode) {
+                    btnSave.disabled = true;
+                }
                 return;
             }
             emptyMsg.style.display = 'none';
@@ -297,13 +403,112 @@
             "{% url 'AgricolaWeb:autocomplete_produtos_agro' slug=view.kwargs.slug %}"
         );
 
+        setupAutocomplete(
+            'autocomplete-entidade',
+            '{{ form.movi_estq_enti.id_for_label }}',
+            'entidade-dropdown',
+            "{% url 'AgricolaWeb:autocomplete_entidades' slug=view.kwargs.slug %}"
+        );
+
         // Intercept form submit
         form.addEventListener('submit', function (e) {
+            // Se for Edição, não valida items.length (salva direto o form)
+            if (isEditMode) {
+                return;
+            }
+
+            // Se for Criação (Batch), exige itens na lista
             if (items.length === 0) {
+                const submitter = e.submitter;
+                if (submitter && submitter.id === 'btn-gerar-financeiro') return;
+
                 e.preventDefault();
                 alert('Adicione pelo menos uma movimentação.');
             }
         });
+
+        // --- Carregar Financeiro ao mudar de aba ---
+        const financeiroTabBtn = document.getElementById('financeiro-tab');
+        const tabelaFinanceiroBody = document.querySelector('#tabela-financeiro tbody');
+
+        if (financeiroTabBtn && isEditMode) {
+            financeiroTabBtn.addEventListener('shown.bs.tab', function (e) {
+                console.log("Aba Financeiro ativada. Carregando dados...");
+                loadFinanceiroData();
+            });
+
+            // Se já estiver na aba financeiro ao carregar (ex: refresh), carrega também
+            if (financeiroTabBtn.classList.contains('active')) {
+                loadFinanceiroData();
+            }
+        }
+
+        async function loadFinanceiroData() {
+            if (!isEditMode) return;
+
+            // Define URL
+            const url = "{% if object.pk %}{% url 'AgricolaWeb:movimentacao_estoque_financeiro_list' slug=view.kwargs.slug pk=object.pk %}{% endif %}";
+            if (!url) return;
+
+            console.log("Buscando financeiro em:", url);
+            tabelaFinanceiroBody.innerHTML = '<tr><td colspan="5" class="text-center">Carregando dados financeiros...</td></tr>';
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Erro na requisição: ' + response.status);
+
+                const data = await response.json();
+                console.log("Dados recebidos:", data);
+
+                tabelaFinanceiroBody.innerHTML = '';
+
+                if (data.results && data.results.length > 0) {
+                    console.log(`✅ Encontrados ${data.results.length} título(s)`);
+
+                    data.results.forEach((t, index) => {
+                        const tr = document.createElement('tr');
+                        // Removido estilos inline para suportar dark mode
+
+                        let valorFormatado = 'R$ 0,00';
+                        try {
+                            valorFormatado = new Intl.NumberFormat('pt-BR', {
+                                style: 'currency',
+                                currency: 'BRL'
+                            }).format(t.valor);
+                        } catch (err) {
+                            console.error("Erro ao formatar valor:", err);
+                            valorFormatado = `R$ ${t.valor}`;
+                        }
+
+                        console.log(`Linha ${index + 1}:`, {
+                            titulo: t.titulo,
+                            parcela: t.parcela,
+                            vencimento: t.vencimento,
+                            valor: valorFormatado,
+                            situacao: t.situacao
+                        });
+
+                        tr.innerHTML = `
+                            <td style="padding: 8px;">${t.titulo || '-'}</td>
+                            <td style="padding: 8px;">${t.parcela || '-'}</td>
+                            <td style="padding: 8px;">${t.vencimento || '-'}</td>
+                            <td style="padding: 8px;">${valorFormatado}</td>
+                            <td style="padding: 8px;"><span class="badge ${t.situacao === 'Aberto' ? 'bg-warning text-dark' : 'bg-success text-white'}">${t.situacao || 'N/A'}</span></td>
+                        `;
+                        tabelaFinanceiroBody.appendChild(tr);
+                    });
+
+                    console.log(`✅ Tabela preenchida com ${data.results.length} linha(s)`);
+                } else {
+                    console.log('⚠️ Nenhum título encontrado');
+                    tabelaFinanceiroBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted" style="padding: 15px;">Nenhum título encontrado para esta movimentação.</td></tr>';
+                }
+
+            } catch (e) {
+                console.error("❌ Erro ao carregar financeiro:", e);
+                tabelaFinanceiroBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger" style="padding: 15px;">Erro ao carregar dados: ${e.message}</td></tr>`;
+            }
+        }
     });
 </script>
 {% endblock %}

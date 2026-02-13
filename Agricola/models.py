@@ -212,6 +212,9 @@ class MovimentacaoEstoque(models.Model):
         blank=True, 
         help_text="Custo total na movimentação (para atualização do custo médio)"
     )
+    movi_estq_enti = models.IntegerField(db_column="movi_estq_enti", null=True, blank=True, help_text="Entidade (Cliente/Fornecedor) para financeiro")
+    movi_estq_venc = models.DateField(null=True, blank=True, help_text="Data de vencimento do título financeiro")
+    movi_estq_form_paga = models.CharField(max_length=100, null=True, blank=True, help_text="Forma de pagamento")
     
     class Meta:
         db_table = 'agricola_movimentacao_estoque'

@@ -3,8 +3,9 @@ from .talhao import TalhaoUpdateView
 from .categoria_produto import CategoriaProdutoUpdateView
 from .produto_agro import ProdutoAgroUpdateView
 from .estoque_fazenda import EstoqueFazendaUpdateView
-from .movimentacao_estoque import MovimentacaoEstoqueUpdateView
+from .movimentacao_estoque import MovimentacaoEstoqueUpdateView, GerarFinanceiroMovimentacaoView, MovimentacaoFinanceiroListView
 from .historico_movimentacao import HistoricoMovimentacaoUpdateView
 from .aplicacao_insumos import AplicacaoInsumosUpdateView
 from .animal import AnimalUpdateView
 from .evento_animal import EventoAnimalUpdateView
+

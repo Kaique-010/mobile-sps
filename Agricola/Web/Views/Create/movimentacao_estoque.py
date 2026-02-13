@@ -3,6 +3,7 @@ from .base import BaseCreateView
 from Agricola.models import MovimentacaoEstoque
 from Agricola.Web.forms import MovimentacaoEstoqueForm
 from Agricola.service.produto_agro_service import MovimentacaoEstoqueService
+from Agricola.service.financeiro_service import AgricolaFinanceiroService
 import json
 from django.db import transaction
 from django.shortcuts import redirect
@@ -60,6 +61,16 @@ class MovimentacaoEstoqueCreateView(BaseCreateView):
         db_name = banco if isinstance(banco, str) else banco.get('db_name', 'default')
         
         self.object.save(using=db_name)
+        
+        # Gerar financeiro se necessário
+        try:
+            AgricolaFinanceiroService.gerar_titulo_movimentacao(self.object, using=db_name)
+        except Exception as e:
+            # Log error but don't fail the request? Or show warning?
+            # User wants to generate financial, so failure might be important.
+            # But the movement is already saved.
+            messages.warning(self.request, f"Movimentação salva, mas erro ao gerar financeiro: {e}")
+
         return super().form_valid(form)
     
     def registrar_inumeras_movimentacoes(self, movimentacoes, db_name):
@@ -97,8 +108,22 @@ class MovimentacaoEstoqueCreateView(BaseCreateView):
             # Remove helper fields if they exist
             data.pop('fazeText', None)
             data.pop('prodText', None)
+            data.pop('entiText', None) # Remove entity text helper if exists
 
-            MovimentacaoEstoqueService.registrar_movimentacao(
+            # Handle empty financial fields
+            if not data.get("movi_estq_enti"):
+                data["movi_estq_enti"] = None
+            
+            if not data.get("movi_estq_venc"):
+                data["movi_estq_venc"] = None
+                
+            if not data.get("movi_estq_form_paga"):
+                data["movi_estq_form_paga"] = None
+
+            created_mov = MovimentacaoEstoqueService.registrar_movimentacao(
                 data=data,
                 using=db_name,
             )
+            
+            # Gerar financeiro
+            AgricolaFinanceiroService.gerar_titulo_movimentacao(created_mov, using=db_name)

@@ -15,6 +15,7 @@ from .Views.Create import (
 from .Views.Update import (
     FazendaUpdateView, TalhaoUpdateView, CategoriaProdutoUpdateView,
     ProdutoAgroUpdateView, EstoqueFazendaUpdateView, MovimentacaoEstoqueUpdateView,
+    GerarFinanceiroMovimentacaoView, MovimentacaoFinanceiroListView,
     HistoricoMovimentacaoUpdateView, AplicacaoInsumosUpdateView,
     AnimalUpdateView, EventoAnimalUpdateView
 )
@@ -31,7 +32,7 @@ from .Views.Reports import (
 )
 from .Views.Update import lotes as lotes_update
 from .Views.Delete import lotes as lotes_delete
-from Agricola.Rest.autocompletes import FazendaAutocompleteView, CategoriaProdutoAutocomplete, ProdutoAutocompleteView, TalhaoAutocompleteView, AnimalAutocompleteView
+from Agricola.Rest.autocompletes import FazendaAutocompleteView, CategoriaProdutoAutocomplete, ProdutoAutocompleteView, TalhaoAutocompleteView, AnimalAutocompleteView, EntidadeAutocompleteView
 from Agricola.views import ParametrosAgricolasView
 
 app_name = 'AgricolaWeb'
@@ -43,6 +44,7 @@ urlpatterns = [
     path('autocompletes/produtos-agro/', ProdutoAutocompleteView.as_view(), name='autocomplete_produtos_agro'),
     path('autocompletes/talhoes/', TalhaoAutocompleteView.as_view(), name='autocomplete_talhoes'),
     path('autocompletes/animais/', AnimalAutocompleteView.as_view(), name='autocomplete_animais'),
+    path('autocompletes/entidades/', EntidadeAutocompleteView.as_view(), name='autocomplete_entidades'),
     
 
 
@@ -80,6 +82,8 @@ urlpatterns = [
     path('movimentacoes-estoque/', MovimentacaoEstoqueListView.as_view(), name='movimentacao_estoque_list'),
     path('movimentacoes-estoque/criar/', MovimentacaoEstoqueCreateView.as_view(), name='movimentacao_estoque_create'),
     path('movimentacoes-estoque/<int:pk>/editar/', MovimentacaoEstoqueUpdateView.as_view(), name='movimentacao_estoque_update'),
+    path('movimentacoes-estoque/<int:pk>/financeiro/', GerarFinanceiroMovimentacaoView.as_view(), name='movimentacao_estoque_financeiro'),
+    path('movimentacoes-estoque/<int:pk>/financeiro-list/', MovimentacaoFinanceiroListView.as_view(), name='movimentacao_estoque_financeiro_list'),
     path('movimentacoes-estoque/<int:pk>/excluir/', MovimentacaoEstoqueDeleteView.as_view(), name='movimentacao_estoque_delete'),
 
     # HistoricoMovimentacao
