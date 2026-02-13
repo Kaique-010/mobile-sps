@@ -104,6 +104,10 @@ class GerarFinanceiroMovimentacaoView(View):
         return redirect('AgricolaWeb:movimentacao_estoque_update', slug=slug, pk=pk)
 
 class MovimentacaoFinanceiroListView(View):
+    def dispatch(self, request, *args, **kwargs):
+        logger.info(f"[MovimentacaoFinanceiroListView] Dispatching request. User: {request.user}, Path: {request.path}, GET: {request.GET}")
+        return super().dispatch(request, *args, **kwargs)
+
     def get(self, request, *args, **kwargs):
         pk = kwargs.get('pk')
         

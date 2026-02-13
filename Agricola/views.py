@@ -55,4 +55,4 @@ class ParametrosAgricolasView(View):
         # Ordena por grupo para o regroup funcionar corretamente
         parametros_list.sort(key=lambda x: x['grupo'])
         
-        return render(request, "agricola/parametros_agricolas.html", {"parametros": parametros_list})
+        return render(request, "Agricola/parametros_agricolas.html", {"parametros": parametros_list})
