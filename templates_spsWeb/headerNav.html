@@ -76,7 +76,7 @@
                             {% include 'parciais/navagricola.html' %}
                             {% include 'parciais/navnotificacoes.html' %}
                             {% include 'parciais/navcentraldeajuda.html' %}
-                          
+
                         </ul>
                     </div>
                 </div>
@@ -337,5 +337,18 @@
             [...homeItems, ...otherItems].forEach(li => ul.appendChild(li));
         };
         document.addEventListener('DOMContentLoaded', sortMainMenu);
+
+        // Logout handler
+        const btnLogout = document.getElementById('logout-jwt');
+        if (btnLogout) {
+            btnLogout.addEventListener('click', () => {
+                localStorage.removeItem('access');
+                localStorage.removeItem('refresh');
+                localStorage.removeItem('slug');
+                localStorage.removeItem('empresa_id');
+                localStorage.removeItem('filial_id');
+                window.location.href = '/web/login/';
+            });
+        }
     })();
 </script>

@@ -14,7 +14,8 @@
       </h2>
     </div>
     <div class="container d-flex justify-content-end">
-      <a class="btn btn-success" href="{% url 'AgricolaWeb:aplicacao_insumos_create' slug=view.kwargs.slug %}">Nova Aplicação</a>
+      <a class="btn btn-success" href="{% url 'AgricolaWeb:aplicacao_insumos_create' slug=view.kwargs.slug %}">Nova
+        Aplicação</a>
     </div>
   </div>
 
@@ -29,7 +30,8 @@
 
   <form class="row g-3 mb-3" method="get">
     <div class="col-md-4">
-      <input type="text" name="q" value="{{ request.GET.q }}" class="form-control" placeholder="Buscar por talhão ou produto...">
+      <input type="text" name="q" value="{{ request.GET.q }}" class="form-control"
+        placeholder="Buscar por talhão ou produto...">
     </div>
     <div class="col-md-2">
       <button class="btn btn-outline-secondary w-100" type="submit">Filtrar</button>
@@ -52,18 +54,20 @@
         {% for app in aplicacoes_insumos %}
         <tr>
           <td>{{ app.apli_data|date:"d/m/Y H:i" }}</td>
-          <td>{{ app.apli_talh.talh_nome }}</td>
-          <td>{{ app.apli_prod.prod_nome_agro }}</td>
+          <td>{{ app.talhao_obj.talh_nome|default:app.apli_talh }}</td>
+          <td>{{ app.produto_obj.prod_nome_agro|default:app.apli_prod }}</td>
           <td>{{ app.apli_quant }}</td>
           <td>{{ app.apli_resp.username|default:"-" }}</td>
           <td class="text-end">
-            <a class="btn btn-sm btn-outline-primary" href="{% url 'AgricolaWeb:aplicacao_insumos_update' slug=view.kwargs.slug pk=app.pk %}">Editar</a>
-            <a class="btn btn-sm btn-outline-danger" href="{% url 'AgricolaWeb:aplicacao_insumos_delete' slug=view.kwargs.slug pk=app.pk %}">Excluir</a>
+            <a class="btn btn-sm btn-outline-primary"
+              href="{% url 'AgricolaWeb:aplicacao_insumos_update' slug=view.kwargs.slug pk=app.pk %}">Editar</a>
+            <a class="btn btn-sm btn-outline-danger"
+              href="{% url 'AgricolaWeb:aplicacao_insumos_delete' slug=view.kwargs.slug pk=app.pk %}">Excluir</a>
           </td>
         </tr>
         {% empty %}
         <tr>
-            <td colspan="6" class="text-center">Nenhuma aplicação encontrada.</td>
+          <td colspan="6" class="text-center">Nenhuma aplicação encontrada.</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -72,33 +76,37 @@
 
   <!-- Mobile View -->
   <div class="d-md-none">
-      {% for app in aplicacoes_insumos %}
-      <div class="card mb-3">
-          <div class="card-body">
-              <h5 class="card-title">{{ app.apli_prod.prod_nome_agro }}</h5>
-              <p class="card-text">
-                  <strong>Data:</strong> {{ app.apli_data|date:"d/m/Y H:i" }}<br>
-                  <strong>Talhão:</strong> {{ app.apli_talh.talh_nome }}<br>
-                  <strong>Qtd:</strong> {{ app.apli_quant }}<br>
-                  <strong>Resp:</strong> {{ app.apli_resp.username|default:"-" }}
-              </p>
-              <div class="text-end">
-                  <a href="{% url 'AgricolaWeb:aplicacao_insumos_update' slug=view.kwargs.slug pk=app.pk %}" class="btn btn-sm btn-outline-primary">Editar</a>
-              </div>
-          </div>
+    {% for app in aplicacoes_insumos %}
+    <div class="card mb-3">
+      <div class="card-body">
+        <h5 class="card-title">{{ app.produto_obj.prod_nome_agro|default:app.apli_prod }}</h5>
+        <p class="card-text">
+          <strong>Data:</strong> {{ app.apli_data|date:"d/m/Y H:i" }}<br>
+          <strong>Talhão:</strong> {{ app.talhao_obj.talh_nome|default:app.apli_talh }}<br>
+          <strong>Qtd:</strong> {{ app.apli_quant }}<br>
+          <strong>Resp:</strong> {{ app.apli_resp.username|default:"-" }}
+        </p>
+        <div class="text-end">
+          <a href="{% url 'AgricolaWeb:aplicacao_insumos_update' slug=view.kwargs.slug pk=app.pk %}"
+            class="btn btn-sm btn-outline-primary">Editar</a>
+        </div>
       </div>
-      {% endfor %}
+    </div>
+    {% endfor %}
   </div>
 
   {% if is_paginated %}
   <nav>
     <ul class="pagination justify-content-center">
       {% if page_obj.has_previous %}
-      <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ request.GET.q }}">Anterior</a></li>
+      <li class="page-item"><a class="page-link"
+          href="?page={{ page_obj.previous_page_number }}&q={{ request.GET.q }}">Anterior</a></li>
       {% endif %}
-      <li class="page-item disabled"><span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span></li>
+      <li class="page-item disabled"><span class="page-link">Página {{ page_obj.number }} de {{
+          page_obj.paginator.num_pages }}</span></li>
       {% if page_obj.has_next %}
-      <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ request.GET.q }}">Próxima</a></li>
+      <li class="page-item"><a class="page-link"
+          href="?page={{ page_obj.next_page_number }}&q={{ request.GET.q }}">Próxima</a></li>
       {% endif %}
     </ul>
   </nav>

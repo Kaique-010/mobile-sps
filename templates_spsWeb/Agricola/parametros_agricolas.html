@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+
+<style>
+    /* Badges Style from modulos_list */
+    .badge {
+        padding: 4px 8px;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        min-width: 60px;
+        text-align: center;
+        transition: all 0.3s;
+    }
+
+    .badge.ok {
+        background: #0f766e;
+        color: #e2e8f0;
+    }
+
+    .badge.off {
+        background: #7c2d12;
+        color: #e2e8f0;
+    }
+
+    /* Toggle Switch Styles */
+    .toggle-checkbox:checked {
+        right: 0;
+        border-color: #0f766e;
+    }
+
+    .toggle-checkbox:checked+.toggle-label {
+        background-color: #0f766e;
+    }
+
+    .toggle-checkbox {
+        right: 50%;
+        /* Inicialmente à esquerda */
+        transition: all 0.3s;
+    }
+
+    /* Custom Scrollbar for the page if needed */
+    ::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: #0f1419;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #334155;
+        border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #475569;
+    }
+</style>
+<div class="container mx-auto px-4 py-6" style="max-width: 1100px;">
+
+    <div class="card bg-[#121826] border border-[#64ffda26] rounded-xl p-6 shadow-lg">
+
+        <div class="header flex items-center justify-between mb-6">
+            <div class="flex items-center gap-3">
+                <i class="fas fa-tractor text-[#64ffda] text-2xl"></i>
+                <h2 class="text-2xl font-bold text-[#64ffda]" style="text-align: center;">Parâmetros Agrícolas</h2>
+            </div>
+        </div>
+
+
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+
+            {% regroup parametros by grupo as grupos %}
+
+            {% for grupo in grupos %}
+            <div class="bg-[#0e1523] border border-[#64ffda1a] rounded-lg p-5">
+                <h3 class="text-lg font-semibold text-gray-200 mb-4 border-b border-[#64ffda1a] pb-2">
+                    {{ grupo.grouper|default:"Geral" }}
+                </h3>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {% for p in grupo.list %}
+                    <div
+                        class="item flex items-center justify-between bg-[#0e1523] p-3 rounded-lg border border-[#64ffda1a] hover:border-[#64ffda50] transition group">
+                        <label for="id_{{ p.chave }}"
+                            class="text-gray-200 font-medium cursor-pointer select-none flex-1 group-hover:text-white transition">
+                            {{ p.label }}
+                        </label>
+
+                        <div class="flex items-center gap-3">
+                            {% if p.is_bool %}
+                            <span id="badge_{{ p.chave }}" class="badge {% if p.valor %}ok{% else %}off{% endif %}">
+                                {% if p.valor %}Ativo{% else %}Inativo{% endif %}
+                            </span>
+
+                            <div
+                                class="relative inline-block w-12 align-middle select-none transition duration-200 ease-in">
+                                <input type="checkbox" name="{{ p.chave }}" id="id_{{ p.chave }}"
+                                    class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
+                                    {% if p.valor %}checked{% endif %} value="True"
+                                    onchange="toggleBadge('{{ p.chave }}', this)" />
+                                <label for="id_{{ p.chave }}"
+                                    class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-700 cursor-pointer"></label>
+                            </div>
+                            {% else %}
+                            <input type="text" name="{{ p.chave }}" value="{{ p.valor }}"
+                                class="bg-gray-800 text-white rounded px-2 py-1 w-full border border-gray-700 focus:border-[#64ffda] outline-none">
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+
+            <div class="flex justify-end pt-4 gap-4">
+                <button type="submit"
+                    class="bg-[#0f766e] hover:bg-[#115e59] text-white font-bold py-2 px-6 rounded-lg transition shadow-lg flex items-center gap-2">
+                    <i class="fas fa-save"></i> Salvar Alterações
+                </button>
+                <a href="{% url 'home' %}"
+                    class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg transition shadow-lg flex items-center gap-2">
+                    <i class="fas fa-undo"></i> Voltar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<script>
+    function toggleBadge(chave, input) {
+        const badge = document.getElementById('badge_' + chave);
+        if (input.checked) {
+            badge.textContent = 'Ativo';
+            badge.classList.remove('off');
+            badge.classList.add('ok');
+        } else {
+            badge.textContent = 'Inativo';
+            badge.classList.remove('ok');
+            badge.classList.add('off');
+        }
+    }
+</script>
+{% endblock %}

@@ -108,7 +108,7 @@ class CategoriaProduto(models.Model):
 
 """Modelo para representar um produto agrícola."""
 class ProdutoAgro(models.Model):
-    prod_codi_agro = models.CharField(max_length=100, unique=True)
+    prod_codi_agro = models.CharField(max_length=100)
     prod_nome_agro = models.CharField(max_length=255)
     prod_cate_agro = models.CharField(max_length=100, db_column="prod_cate_agro")
     prod_unmd_agro = models.CharField(max_length=50, choices=[('kg', 'Kilograma'), ('litro', 'Litro'), ('saco', 'Saco'), ('unidade', 'Unidade'), ('m²', 'Metro Quadrado'), ('ha', 'Hectare')])  # Ex: kg, litro, saco
@@ -124,6 +124,7 @@ class ProdutoAgro(models.Model):
     
     class Meta:
         db_table = 'agricola_produtos_agro'
+        unique_together = ('prod_codi_agro', 'prod_empr_agro', 'prod_fili_agro')
         
     def __str__(self):
         return f"{self.prod_codi_agro} - {self.prod_nome_agro} ({self.prod_cate_agro})"
@@ -214,6 +215,7 @@ class MovimentacaoEstoque(models.Model):
     
     class Meta:
         db_table = 'agricola_movimentacao_estoque'
+        unique_together = ('movi_estq_empr', 'movi_estq_fili', 'movi_estq_faze', 'id')
     
     def __str__(self):
         return f"{self.movi_estq_faze} - {self.movi_estq_prod} ({self.movi_estq_tipo} de {self.movi_estq_quant}) em {self.movi_estq_data}"
@@ -356,3 +358,18 @@ class EventoAnimal(models.Model):
     
     def __str__(self):
         return f"{self.evnt_anim} - {self.get_evnt_tipo_even_display()} em {self.evnt_data_even}"
+
+
+class ParametroAgricola(models.Model):
+    para_empr = models.IntegerField(db_column="para_empr")
+    para_fili = models.IntegerField(db_column="para_fili")
+
+    para_chav = models.CharField(max_length=60, db_column="para_chav")
+    para_valo = models.TextField(db_column="para_valo")
+
+    class Meta:
+        db_table = "agricola_parametros"
+        unique_together = ("para_empr", "para_fili", "para_chav")
+
+    def __str__(self):
+        return f"{self.para_empr}-{self.para_fili} | {self.para_chav}"

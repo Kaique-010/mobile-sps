@@ -32,6 +32,7 @@ from .Views.Reports import (
 from .Views.Update import lotes as lotes_update
 from .Views.Delete import lotes as lotes_delete
 from Agricola.Rest.autocompletes import FazendaAutocompleteView, CategoriaProdutoAutocomplete, ProdutoAutocompleteView, TalhaoAutocompleteView, AnimalAutocompleteView
+from Agricola.views import ParametrosAgricolasView
 
 app_name = 'AgricolaWeb'
 
@@ -104,6 +105,9 @@ urlpatterns = [
     path('eventos-animais/criar/', EventoAnimalCreateView.as_view(), name='evento_animal_create'),
     path('eventos-animais/<int:pk>/editar/', EventoAnimalUpdateView.as_view(), name='evento_animal_update'),
     path('eventos-animais/<int:pk>/excluir/', EventoAnimalDeleteView.as_view(), name='evento_animal_delete'),
+
+    # Parametros
+    path('parametros/', ParametrosAgricolasView.as_view(), name='parametros_agricolas'),
 
     # Lote (HTMX)
     path('lotes/criar/', LoteCreateView.as_view(), name='lote_create'),

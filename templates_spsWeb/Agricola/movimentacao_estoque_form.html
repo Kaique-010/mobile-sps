@@ -4,30 +4,306 @@
 <div class="container py-4">
     <div class="card shadow">
         <div class="card-header">
-            <h3 class="card-title">{% if form.instance.pk %}Editar{% else %}Nova{% endif %} Movimentação de Estoque</h3>
+            <h3 class="card-title">Registrar Movimentações de Estoque</h3>
         </div>
         <div class="card-body">
-            <form method="post">
+            <form method="post" id="movimentacao-form" novalidate>
                 {% csrf_token %}
-                {% for field in form %}
-                <div class="mb-3">
-                    <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                    {{ field }}
-                    {% if field.help_text %}
-                    <div class="form-text">{{ field.help_text }}</div>
-                    {% endif %}
-                    {% for error in field.errors %}
-                    <div class="text-danger small">{{ error }}</div>
-                    {% endfor %}
+                <input type="hidden" name="movimentacoes_json" id="movimentacoes_json">
+
+                <!-- Área de Inserção de Itens -->
+                <div class="row g-3 border-bottom pb-4 mb-4">
+                    <div class="col-md-6">
+                        <label for="autocomplete-fazenda" class="form-label">Fazenda</label>
+                        <div class="input-group position-relative">
+                            <input type="text" id="autocomplete-fazenda" class="form-control"
+                                placeholder="Buscar fazenda..." autocomplete="off">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <div id="fazenda-dropdown" class="autocomplete-dropdown list-group position-absolute w-100"
+                                style="z-index: 1000; top: 100%;"></div>
+                        </div>
+                        {{ form.movi_estq_faze }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="autocomplete-produto" class="form-label">Produto</label>
+                        <div class="input-group position-relative">
+                            <input type="text" id="autocomplete-produto" class="form-control"
+                                placeholder="Buscar produto..." autocomplete="off">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <div id="produto-dropdown" class="autocomplete-dropdown list-group position-absolute w-100"
+                                style="z-index: 1000; top: 100%;"></div>
+                        </div>
+                        {{ form.movi_estq_prod }}
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">{{ form.movi_estq_tipo.label }}</label>
+                        {{ form.movi_estq_tipo }}
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">{{ form.movi_estq_quant.label }}</label>
+                        {{ form.movi_estq_quant }}
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">{{ form.movi_estq_cust_unit.label }}</label>
+                        {{ form.movi_estq_cust_unit }}
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Custo Total (Estimado)</label>
+                        <input type="text" class="form-control" id="custo-total-display" readonly>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">{{ form.movi_estq_moti.label }}</label>
+                        {{ form.movi_estq_moti }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">{{ form.movi_estq_docu_refe.label }}</label>
+                        {{ form.movi_estq_docu_refe }}
+                    </div>
+
+                    <div class="col-12 text-end">
+                        <button type="button" class="btn btn-primary" id="btn-adicionar">
+                            <i class="bi bi-plus-circle"></i> Adicionar Movimentação
+                        </button>
+                    </div>
                 </div>
-                {% endfor %}
+
+                <!-- Lista de Itens Adicionados -->
+                <div class="table-responsive mb-4">
+                    <table class="table table-hover table-bordered" id="tabela-movimentacoes">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Fazenda</th>
+                                <th>Produto</th>
+                                <th>Tipo</th>
+                                <th>Qtd.</th>
+                                <th>Custo Unit.</th>
+                                <th>Motivo</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Itens serão inseridos via JS -->
+                        </tbody>
+                    </table>
+                    <div id="empty-message" class="text-center text-muted p-3">Nenhuma movimentação adicionada.</div>
+                </div>
+
                 <div class="mt-4">
-                    <button type="submit" class="btn btn-success"><i class="bi bi-check-circle"></i> Salvar</button>
-                    <a href="{% url 'AgricolaWeb:movimentacao_estoque_list' slug=view.kwargs.slug %}" class="btn btn-secondary"><i
-                            class="bi bi-x-circle"></i> Cancelar</a>
+                    <button type="submit" class="btn btn-success" id="btn-salvar-todos" disabled>
+                        <i class="bi bi-check-circle"></i> Processar Todas
+                    </button>
+                    <a href="{% url 'AgricolaWeb:movimentacao_estoque_list' slug=view.kwargs.slug %}"
+                        class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </a>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // --- Referências DOM ---
+        const form = document.getElementById('movimentacao-form');
+        const hiddenJson = document.getElementById('movimentacoes_json');
+        const btnAdd = document.getElementById('btn-adicionar');
+        const btnSave = document.getElementById('btn-salvar-todos');
+        const tbody = document.querySelector('#tabela-movimentacoes tbody');
+        const emptyMsg = document.getElementById('empty-message');
+
+        // Inputs
+        const inputFaze = document.getElementById('autocomplete-fazenda');
+        const hiddenFaze = document.getElementById('{{ form.movi_estq_faze.id_for_label }}');
+        const inputProd = document.getElementById('autocomplete-produto');
+        const hiddenProd = document.getElementById('{{ form.movi_estq_prod.id_for_label }}');
+
+        const inputTipo = document.getElementById('{{ form.movi_estq_tipo.id_for_label }}');
+        const inputQuant = document.getElementById('{{ form.movi_estq_quant.id_for_label }}');
+        const inputCust = document.getElementById('{{ form.movi_estq_cust_unit.id_for_label }}');
+        const inputMoti = document.getElementById('{{ form.movi_estq_moti.id_for_label }}');
+        const inputDoc = document.getElementById('{{ form.movi_estq_docu_refe.id_for_label }}');
+        const displayTotal = document.getElementById('custo-total-display');
+
+        let items = [];
+
+        // --- Helper: Atualizar Total ---
+        function updateTotal() {
+            const q = parseFloat(inputQuant.value) || 0;
+            const c = parseFloat(inputCust.value) || 0;
+            displayTotal.value = (q * c).toFixed(2);
+        }
+        inputQuant.addEventListener('input', updateTotal);
+        inputCust.addEventListener('input', updateTotal);
+
+        // --- Helper: Renderizar Tabela ---
+        function renderTable() {
+            tbody.innerHTML = '';
+            if (items.length === 0) {
+                emptyMsg.style.display = 'block';
+                btnSave.disabled = true;
+                return;
+            }
+            emptyMsg.style.display = 'none';
+            btnSave.disabled = false;
+
+            items.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${item.fazeText}</td>
+                    <td>${item.prodText}</td>
+                    <td><span class="badge ${item.movi_estq_tipo === 'entrada' ? 'bg-success' : 'bg-danger'}">${(item.movi_estq_tipo || '').toUpperCase()}</span></td>
+                    <td>${item.movi_estq_quant}</td>
+                    <td>${item.movi_estq_cust_unit || '-'}</td>
+                    <td>${item.movi_estq_moti || '-'}</td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-outline-danger btn-remove" data-index="${index}">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Rebind remove buttons
+            document.querySelectorAll('.btn-remove').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const idx = parseInt(this.dataset.index);
+                    items.splice(idx, 1);
+                    renderTable();
+                });
+            });
+
+            // Update JSON
+            hiddenJson.value = JSON.stringify(items);
+        }
+
+        // --- Ação: Adicionar Item ---
+        btnAdd.addEventListener('click', function () {
+            // Validação simples
+            if (!hiddenFaze.value || !hiddenProd.value || !inputQuant.value || !inputTipo.value) {
+                alert('Preencha os campos obrigatórios (Fazenda, Produto, Tipo, Quantidade).');
+                return;
+            }
+
+            const item = {
+                movi_estq_faze: hiddenFaze.value,
+                fazeText: inputFaze.value,
+                movi_estq_prod: hiddenProd.value,
+                prodText: inputProd.value,
+                movi_estq_tipo: inputTipo.value,
+                movi_estq_quant: inputQuant.value,
+                movi_estq_cust_unit: inputCust.value,
+                movi_estq_moti: inputMoti.value,
+                movi_estq_docu_refe: inputDoc.value
+            };
+
+            items.push(item);
+            renderTable();
+
+            // Limpar inputs (exceto Fazenda, talvez o usuário queira continuar na mesma)
+            // Mas vamos limpar Produto e Qtd para evitar duplicidade acidental
+            hiddenProd.value = '';
+            inputProd.value = '';
+            inputQuant.value = '';
+            inputCust.value = '';
+            inputMoti.value = '';
+            inputDoc.value = '';
+            displayTotal.value = '';
+            // Focar no produto para próxima entrada
+            inputProd.focus();
+        });
+
+        // --- Autocomplete Setup ---
+        function setupAutocomplete(inputId, hiddenId, dropdownId, url) {
+            const input = document.getElementById(inputId);
+            const hidden = document.getElementById(hiddenId);
+            const dropdown = document.getElementById(dropdownId);
+            let debounce = null;
+            let controller = null;
+
+            if (!input || !hidden || !dropdown) return;
+
+            input.addEventListener('input', function () {
+                const term = this.value.trim();
+                clearTimeout(debounce);
+
+                if (term.length < 2) {
+                    dropdown.innerHTML = '';
+                    return;
+                }
+
+                debounce = setTimeout(async () => {
+                    try {
+                        if (controller) controller.abort();
+                        controller = new AbortController();
+
+                        const response = await fetch(`${url}?term=${encodeURIComponent(term)}`, {
+                            signal: controller.signal
+                        });
+                        const data = await response.json();
+
+                        dropdown.innerHTML = '';
+
+                        if (data.results && data.results.length > 0) {
+                            data.results.forEach(item => {
+                                const a = document.createElement('a');
+                                a.className = 'list-group-item list-group-item-action';
+                                a.href = '#';
+                                a.textContent = item.text;
+                                a.addEventListener('click', (e) => {
+                                    e.preventDefault();
+                                    input.value = item.text;
+                                    hidden.value = item.id;
+                                    dropdown.innerHTML = '';
+                                });
+                                dropdown.appendChild(a);
+                            });
+                        } else {
+                            dropdown.innerHTML = '<div class="list-group-item text-muted">Nenhum resultado</div>';
+                        }
+                    } catch (e) {
+                        if (e.name !== 'AbortError') console.error(e);
+                    }
+                }, 300);
+            });
+
+            // Fechar ao clicar fora
+            document.addEventListener('click', function (e) {
+                if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.innerHTML = '';
+                }
+            });
+        }
+
+        setupAutocomplete(
+            'autocomplete-fazenda',
+            '{{ form.movi_estq_faze.id_for_label }}',
+            'fazenda-dropdown',
+            "{% url 'AgricolaWeb:autocomplete_fazendas' slug=view.kwargs.slug %}"
+        );
+
+        setupAutocomplete(
+            'autocomplete-produto',
+            '{{ form.movi_estq_prod.id_for_label }}',
+            'produto-dropdown',
+            "{% url 'AgricolaWeb:autocomplete_produtos_agro' slug=view.kwargs.slug %}"
+        );
+
+        // Intercept form submit
+        form.addEventListener('submit', function (e) {
+            if (items.length === 0) {
+                e.preventDefault();
+                alert('Adicione pelo menos uma movimentação.');
+            }
+        });
+    });
+</script>
 {% endblock %}

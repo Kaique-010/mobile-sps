@@ -14,7 +14,8 @@
             </h2>
         </div>
         <div class="container d-flex justify-content-end">
-            <a class="btn btn-success" href="{% url 'AgricolaWeb:estoque_fazenda_create' slug=view.kwargs.slug %}">Novo Estoque</a>
+            <a class="btn btn-success" href="{% url 'AgricolaWeb:estoque_fazenda_create' slug=view.kwargs.slug %}">Novo
+                Estoque</a>
         </div>
     </div>
 
@@ -53,9 +54,9 @@
                 {% for estoque in estoques_fazenda %}
                 <tr>
                     <td>{{ estoque.id }}</td>
-                    <td>{{ estoque.estq_faze.faze_nome }}</td>
-                    <td>{{ estoque.estq_prod.prod_nome_agro }}</td>
-                    <td>{{ estoque.estq_quant }} {{ estoque.estq_prod.prod_unmd_agro }}</td>
+                    <td>{{ estoque.faze_obj.faze_nome|default:estoque.estq_faze }}</td>
+                    <td>{{ estoque.prod_obj.prod_nome_agro|default:estoque.estq_prod }}</td>
+                    <td>{{ estoque.estq_quant }} {{ estoque.prod_obj.prod_unmd_agro|default:"" }}</td>
                     <td>R$ {{ estoque.estq_cust_medi|floatformat:2 }}</td>
                     <td class="text-end">
                         <a class="btn btn-sm btn-outline-primary"
@@ -78,10 +79,10 @@
         {% for estoque in estoques_fazenda %}
         <div class="card mb-3">
             <div class="card-body">
-                <h5 class="card-title">{{ estoque.estq_prod.prod_nome_agro }}</h5>
+                <h5 class="card-title">{{ estoque.prod_obj.prod_nome_agro|default:estoque.estq_prod }}</h5>
                 <p class="card-text">
-                    <strong>Fazenda:</strong> {{ estoque.estq_faze.faze_nome }}<br>
-                    <strong>Qtd:</strong> {{ estoque.estq_quant }} {{ estoque.estq_prod.prod_unmd_agro }}<br>
+                    <strong>Fazenda:</strong> {{ estoque.faze_obj.faze_nome|default:estoque.estq_faze }}<br>
+                    <strong>Qtd:</strong> {{ estoque.estq_quant }} {{ estoque.prod_obj.prod_unmd_agro|default:"" }}<br>
                     <strong>Custo:</strong> R$ {{ estoque.estq_cust_medi|floatformat:2 }}
                 </p>
                 <div class="text-end">

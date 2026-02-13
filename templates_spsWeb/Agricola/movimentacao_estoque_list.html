@@ -14,7 +14,8 @@
       </h2>
     </div>
     <div class="container d-flex justify-content-end">
-      <a class="btn btn-success" href="{% url 'AgricolaWeb:movimentacao_estoque_create' slug=view.kwargs.slug %}">Nova Movimentação</a>
+      <a class="btn btn-success" href="{% url 'AgricolaWeb:movimentacao_estoque_create' slug=view.kwargs.slug %}">Nova
+        Movimentação</a>
     </div>
   </div>
 
@@ -29,7 +30,8 @@
 
   <form class="row g-3 mb-3" method="get">
     <div class="col-md-4">
-      <input type="text" name="q" value="{{ request.GET.q }}" class="form-control" placeholder="Buscar por produto, fazenda ou tipo...">
+      <input type="text" name="q" value="{{ request.GET.q }}" class="form-control"
+        placeholder="Buscar por produto, fazenda ou tipo...">
     </div>
     <div class="col-md-2">
       <button class="btn btn-outline-secondary w-100" type="submit">Filtrar</button>
@@ -53,8 +55,8 @@
         {% for mov in movimentacoes_estoque %}
         <tr>
           <td>{{ mov.movi_estq_data|date:"d/m/Y H:i" }}</td>
-          <td>{{ mov.movi_estq_faze.faze_nome }}</td>
-          <td>{{ mov.movi_estq_prod.prod_nome_agro }}</td>
+          <td>{{ mov.faze_nome_display }}</td>
+          <td>{{ mov.prod_nome_display }}</td>
           <td>
             <span class="badge {% if mov.movi_estq_tipo == 'entrada' %}bg-success{% else %}bg-danger{% endif %}">
               {{ mov.get_movi_estq_tipo_display }}
@@ -63,13 +65,15 @@
           <td>{{ mov.movi_estq_quant }}</td>
           <td>{{ mov.movi_estq_moti|default:"-" }}</td>
           <td class="text-end">
-            <a class="btn btn-sm btn-outline-primary" href="{% url 'AgricolaWeb:movimentacao_estoque_update' slug=view.kwargs.slug pk=mov.pk %}">Editar</a>
-            <a class="btn btn-sm btn-outline-danger" href="{% url 'AgricolaWeb:movimentacao_estoque_delete' slug=view.kwargs.slug pk=mov.pk %}">Excluir</a>
+            <a class="btn btn-sm btn-outline-primary"
+              href="{% url 'AgricolaWeb:movimentacao_estoque_update' slug=view.kwargs.slug pk=mov.pk %}">Editar</a>
+            <a class="btn btn-sm btn-outline-danger"
+              href="{% url 'AgricolaWeb:movimentacao_estoque_delete' slug=view.kwargs.slug pk=mov.pk %}">Excluir</a>
           </td>
         </tr>
         {% empty %}
         <tr>
-            <td colspan="7" class="text-center">Nenhuma movimentação encontrada.</td>
+          <td colspan="7" class="text-center">Nenhuma movimentação encontrada.</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -78,33 +82,39 @@
 
   <!-- Mobile View -->
   <div class="d-md-none">
-      {% for mov in movimentacoes_estoque %}
-      <div class="card mb-3">
-          <div class="card-body">
-              <h5 class="card-title">{{ mov.movi_estq_prod.prod_nome_agro }}</h5>
-              <p class="card-text">
-                  <strong>Data:</strong> {{ mov.movi_estq_data|date:"d/m/Y H:i" }}<br>
-                  <strong>Tipo:</strong> <span class="badge {% if mov.movi_estq_tipo == 'entrada' %}bg-success{% else %}bg-danger{% endif %}">{{ mov.get_movi_estq_tipo_display }}</span><br>
-                  <strong>Qtd:</strong> {{ mov.movi_estq_quant }}<br>
-                  <strong>Fazenda:</strong> {{ mov.movi_estq_faze.faze_nome }}
-              </p>
-              <div class="text-end">
-                  <a href="{% url 'AgricolaWeb:movimentacao_estoque_update' slug=view.kwargs.slug pk=mov.pk %}" class="btn btn-sm btn-outline-primary">Editar</a>
-              </div>
-          </div>
+    {% for mov in movimentacoes_estoque %}
+    <div class="card mb-3">
+      <div class="card-body">
+        <h5 class="card-title">{{ mov.prod_nome_display }}</h5>
+        <p class="card-text">
+          <strong>Data:</strong> {{ mov.movi_estq_data|date:"d/m/Y H:i" }}<br>
+          <strong>Tipo:</strong> <span
+            class="badge {% if mov.movi_estq_tipo == 'entrada' %}bg-success{% else %}bg-danger{% endif %}">{{
+            mov.get_movi_estq_tipo_display }}</span><br>
+          <strong>Qtd:</strong> {{ mov.movi_estq_quant }}<br>
+          <strong>Fazenda:</strong> {{ mov.faze_nome_display }}
+        </p>
+        <div class="text-end">
+          <a href="{% url 'AgricolaWeb:movimentacao_estoque_update' slug=view.kwargs.slug pk=mov.pk %}"
+            class="btn btn-sm btn-outline-primary">Editar</a>
+        </div>
       </div>
-      {% endfor %}
+    </div>
+    {% endfor %}
   </div>
 
   {% if is_paginated %}
   <nav>
     <ul class="pagination justify-content-center">
       {% if page_obj.has_previous %}
-      <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ request.GET.q }}">Anterior</a></li>
+      <li class="page-item"><a class="page-link"
+          href="?page={{ page_obj.previous_page_number }}&q={{ request.GET.q }}">Anterior</a></li>
       {% endif %}
-      <li class="page-item disabled"><span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span></li>
+      <li class="page-item disabled"><span class="page-link">Página {{ page_obj.number }} de {{
+          page_obj.paginator.num_pages }}</span></li>
       {% if page_obj.has_next %}
-      <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ request.GET.q }}">Próxima</a></li>
+      <li class="page-item"><a class="page-link"
+          href="?page={{ page_obj.next_page_number }}&q={{ request.GET.q }}">Próxima</a></li>
       {% endif %}
     </ul>
   </nav>
