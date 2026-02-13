@@ -30,9 +30,41 @@ def _safe_q(request):
     return q[:120]
 
 
+import logging
+logger = logging.getLogger(__name__)
+
+def _get_empresa_id(request):
+    # Tenta recuperar a empresa da sessão
+    empresa = request.session.get("empresa_id")
+    
+    # Se não encontrar, tenta pelo usuário autenticado
+    if not empresa and request.user.is_authenticated:
+        empresa_user = getattr(request.user, 'empresa', None)
+        if hasattr(empresa_user, 'id'):
+            empresa = empresa_user.id
+        elif empresa_user:
+            empresa = empresa_user
+            
+    # Tenta pelos headers (comum em chamadas API/HTMX)
+    if not empresa:
+        empresa = request.headers.get("X-Empresa")
+        
+    try:
+        if empresa:
+            return int(empresa)
+    except (ValueError, TypeError):
+        pass
+        
+    # Se ainda não encontrou, loga aviso
+    if not empresa:
+        logger.warning(f"_get_empresa_id: Empresa não encontrada na sessão/usuário/headers. User: {request.user}")
+        
+    return empresa
+
 def etapas_autocomplete(request, slug=None):
     banco = get_licenca_db_config(request) or "default"
-    empresa = request.session.get("empresa_id")
+    empresa = _get_empresa_id(request)
+    logger.info(f"etapas_autocomplete: slug={slug}, banco={banco}, empresa={empresa}")
     q = _safe_q(request)
     limit, offset = _get_pagination(request)
 
@@ -56,7 +88,8 @@ def etapas_autocomplete(request, slug=None):
 
 def clientes_autocomplete(request, slug=None):
     banco = get_licenca_db_config(request) or "default"
-    empresa = request.session.get("empresa_id")
+    empresa = _get_empresa_id(request)
+    logger.info(f"clientes_autocomplete: slug={slug}, banco={banco}, empresa={empresa}")
     q = _safe_q(request)
     limit, offset = _get_pagination(request)
 
@@ -81,7 +114,8 @@ def clientes_autocomplete(request, slug=None):
 
 def vendedores_autocomplete(request, slug=None):
     banco = get_licenca_db_config(request) or "default"
-    empresa = request.session.get("empresa_id")
+    empresa = _get_empresa_id(request)
+    logger.info(f"vendedores_autocomplete: slug={slug}, banco={banco}, empresa={empresa}")
     q = _safe_q(request)
     limit, offset = _get_pagination(request)
 

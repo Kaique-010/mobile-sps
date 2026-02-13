@@ -1,10 +1,14 @@
+import logging
 from django.shortcuts import render, redirect
 from django.contrib import messages
+
+logger = logging.getLogger(__name__)
 from django.utils import timezone
 from django.http import Http404, HttpResponse
 from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from Agricola.service.cadastros_service import CadastrosDomainService
 from urllib.parse import quote_plus
 
 from .models import Entidades
@@ -88,10 +92,107 @@ class EntidadeCreateView(DBAndSlugMixin, CreateView):
         kwargs = super().get_form_kwargs()
         kwargs['request'] = self.request
         return kwargs
+    
+
+    def form_valid(self, form):
+        logger.info("EntidadeCreateView.form_valid chamado.")
+        db_alias = getattr(self.request, 'db_alias', 'default')
+        try:
+            self.object = self.execute_create(form, db_alias)
+            logger.info(f"Entidade criada com sucesso: {self.object}")
+        except Exception as e:
+            logger.error(f"Erro no execute_create: {e}", exc_info=True)
+            form.add_error(None, f"Erro ao cadastrar entidade: {e}")
+            return self.form_invalid(form)
+
+        messages.success(self.request, 'Entidade cadastrada com sucesso.')
+        return redirect(self.get_success_url())
 
     def get_success_url(self):
         return reverse_lazy('entidades_web', kwargs={'slug': self.slug})
 
+    def execute_create(self, form, db_name):
+        logger.info("execute_create iniciado.")
+        data = form.cleaned_data.copy()        
+        
+        # Tenta obter empresa/filial de várias fontes
+        empresa = self.empresa_id
+        filial = self.filial_id
+
+        # Fallback para request.user (comum em outros módulos)
+        if not empresa and self.request.user.is_authenticated:
+            empresa_user = getattr(self.request.user, 'empresa', None)
+            if hasattr(empresa_user, 'id'):
+                empresa = empresa_user.id
+            elif empresa_user:
+                empresa = empresa_user
+            
+            if empresa:
+                logger.info(f"Empresa recuperada de request.user: {empresa}")
+
+        # Fallback direto para session se ainda não encontrou
+        if not empresa:
+            empresa = self.request.session.get('empresa_id')
+            if empresa:
+                logger.info(f"Empresa recuperada diretamente da session: {empresa}")
+
+        # Fallback para filial
+        if not filial and self.request.user.is_authenticated:
+            filial_user = getattr(self.request.user, 'filial', None)
+            if hasattr(filial_user, 'id'):
+                filial = filial_user.id
+            elif filial_user:
+                filial = filial_user
+            
+        if not filial:
+             filial = self.request.session.get('filial_id', 1)
+
+        # Garante que são inteiros
+        try:
+            if empresa: empresa = int(empresa)
+            if filial: filial = int(filial)
+        except (ValueError, TypeError):
+             logger.warning(f"Falha ao converter empresa/filial para int: {empresa}/{filial}")
+
+        logger.info(f"Empresa final: {empresa}, Filial final: {filial}")
+        
+        # Debug da sessão se falhar
+        if not empresa:
+            logger.error(f"Sessão keys: {list(self.request.session.keys())}")
+            try:
+                 logger.error(f"User dir: {dir(self.request.user)}")
+                 logger.error(f"User is_authenticated: {self.request.user.is_authenticated}")
+            except:
+                 pass
+            
+        if not empresa and 'enti_empr' in data:
+            empresa = data['enti_empr']
+            logger.info(f"Empresa recuperada do form data: {empresa}")
+
+        # ÚLTIMA TENTATIVA: Header X-Empresa vindo do frontend (HTMX/Ajax)
+        if not empresa:
+            empresa = self.request.headers.get('X-Empresa')
+            if empresa:
+                logger.info(f"Empresa recuperada do Header X-Empresa: {empresa}")
+            
+        if not empresa:
+            # Tenta pegar da URL se for GET ou query params no POST
+            empresa = self.request.GET.get('enti_empr')
+            if empresa:
+                 logger.info(f"Empresa recuperada do request.GET: {empresa}")
+
+        if not empresa:
+            logger.error("Empresa não identificada.")
+            raise ValueError("Empresa não identificada para o cadastro.")
+
+        data['enti_empr'] = empresa
+        
+        return CadastrosDomainService.cadastrar_entidade(
+            empresa=empresa,
+            filial=filial,
+            dados=data,
+            using=db_name
+        )
 
 class EntidadeUpdateView(DBAndSlugMixin, UpdateView):
     template_name = 'Entidades/entidade_form.html'

@@ -202,6 +202,7 @@
             event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
         });
     </script>
+    {% block extra_js %}{% endblock %}
 </body>
 
 </html>
