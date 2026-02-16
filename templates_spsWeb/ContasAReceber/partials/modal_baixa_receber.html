@@ -40,8 +40,12 @@
           <input id="historico-rec" type="text" />
         </div>
         <div>
-          <label>Banco (código)</label>
-          <input id="banco-rec" type="number" />
+          <label>Banco</label>
+          <div class="position-relative">
+            <input id="banco-rec-display" type="text" autocomplete="off"
+              placeholder="Digite o código ou nome do banco..." />
+          </div>
+          <input id="banco-rec" type="hidden" />
         </div>
         <div>
           <label>Cheque (nº)</label>
@@ -65,3 +69,80 @@
     </div>
   </div>
 </div>
+
+<script>
+  (function () {
+    const inputBanco = document.getElementById('banco-rec-display');
+    const hiddenBanco = document.getElementById('banco-rec');
+
+    if (!inputBanco || !hiddenBanco) return;
+
+    let ddBanco = null;
+    let controllerBanco = null;
+
+    function dropdownBanco() {
+      if (ddBanco) return ddBanco;
+      ddBanco = document.createElement('div');
+      ddBanco.className = 'list-group position-absolute w-100';
+      ddBanco.style.marginTop = '4px';
+      inputBanco.parentElement.appendChild(ddBanco);
+      return ddBanco;
+    }
+
+    let bancoDebounceId = null;
+    inputBanco.addEventListener('input', function () {
+      clearTimeout(bancoDebounceId);
+      bancoDebounceId = setTimeout(async () => {
+        const term = inputBanco.value.trim();
+        if (term.length < 2) {
+          if (ddBanco) ddBanco.innerHTML = '';
+          return;
+        }
+
+        try {
+          if (controllerBanco) controllerBanco.abort();
+          controllerBanco = new AbortController();
+
+          const url = `/web/{{ slug }}/contas-a-receber/autocomplete/bancos/?q=${encodeURIComponent(term)}`;
+          const resp = await fetch(url, { signal: controllerBanco.signal });
+          const data = await resp.json();
+          const results = data.results || [];
+          const d = dropdownBanco();
+          d.innerHTML = '';
+
+          if (results.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'list-group-item text-muted';
+            empty.textContent = 'Nenhum banco encontrado';
+            d.appendChild(empty);
+            return;
+          }
+
+          results.forEach(it => {
+            const a = document.createElement('a');
+            a.href = '#';
+            a.className = 'list-group-item list-group-item-action';
+            a.textContent = it.text || it.id || '';
+            a.addEventListener('click', ev => {
+              ev.preventDefault();
+              hiddenBanco.value = it.id || '';
+              inputBanco.value = it.text || it.id || '';
+              d.innerHTML = '';
+            });
+            d.appendChild(a);
+          });
+        } catch (e) {
+          if (e.name !== 'AbortError') {
+            console.error('Erro ao buscar bancos (receber):', e);
+          }
+        }
+      }, 250);
+    });
+
+    document.addEventListener('click', (ev) => {
+      if (ddBanco && !inputBanco.parentElement.contains(ev.target)) {
+        ddBanco.innerHTML = '';
+      }
+    });
+  })();
+</script>

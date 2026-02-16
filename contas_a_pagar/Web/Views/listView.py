@@ -30,6 +30,7 @@ class TitulosPagarListView(DBAndSlugMixin, ListView):
         venc_ini = self.request.GET.get('venc_ini')
         venc_fim = self.request.GET.get('venc_fim')
         serie = self.request.GET.get('titu_seri')
+        titu_titu = self.request.GET.get('titu_titu')
 
         # Se NÃO houver filtro de data explícito, aplica o padrão (mês atual até hoje)
         if not venc_ini and not venc_fim:
@@ -58,6 +59,8 @@ class TitulosPagarListView(DBAndSlugMixin, ListView):
             qs = qs.filter(titu_venc__lte=venc_fim)
         if serie:
             qs = qs.filter(titu_seri__iexact=serie)
+        if titu_titu:
+            qs = qs.filter(titu_titu__iexact=titu_titu)
 
         # Filtro por nome do fornecedor via Entidades
         if fornecedor_nome:
@@ -150,6 +153,7 @@ class TitulosPagarListView(DBAndSlugMixin, ListView):
             'venc_ini': self.request.GET.get('venc_ini') or '',
             'venc_fim': self.request.GET.get('venc_fim') or '',
             'titu_seri': self.request.GET.get('titu_seri') or '',
+            'titu_titu': self.request.GET.get('titu_titu') or '',
         }
         preserved_qs = {k: v for k, v in preserved.items() if v}
 
@@ -167,6 +171,9 @@ class TitulosPagarListView(DBAndSlugMixin, ListView):
             'percent_a_pagar': percent_a_pagar,
         })
         return context
+
+class TitulosPagarParcelasListView(TitulosPagarListView):
+    template_name = 'ContasAPagar/parcelas_a_pagar_list.html'
 
 def autocomplete_fornecedores(request, slug=None):
     banco = get_licenca_db_config(request) or 'default'

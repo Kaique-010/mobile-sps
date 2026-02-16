@@ -141,6 +141,7 @@ INSTALLED_APPS = [
     'perfilweb',
     'controledePonto',
     'Agricola',
+    'adiantamentos',
 ]
 
 # Middleware

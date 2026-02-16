@@ -61,5 +61,6 @@ PERMISSION_MAP = {
     'contas_a_receber_web:excluir': ('contas_a_receber', 'titulosreceber', 'excluir'),
     'contas_a_receber_web:autocomplete_clientes': ('contas_a_receber', 'titulosreceber', 'listar'),
     'contas_a_receber_web:autocomplete_centrodecustos': ('contas_a_receber', 'titulosreceber', 'listar'),
+    'contas_a_receber_web:autocomplete_bancos': ('contas_a_receber', 'titulosreceber', 'listar'),
 }
 

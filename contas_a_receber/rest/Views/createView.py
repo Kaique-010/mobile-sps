@@ -7,23 +7,27 @@ def handle_create(viewset, request):
     banco = get_licenca_db_config(request)
     serializer = viewset.get_serializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    from ...services import criar_titulo_receber
-    emp = (request.session.get('empresa_id')
+    from ...services import criar_titulo_receber, gera_parcelas_a_receber
+    empresa = (request.session.get('empresa_id')
            or request.headers.get('X-Empresa')
            or request.GET.get('titu_empr')
            or serializer.validated_data.get('titu_empr'))
-    fil = (request.session.get('filial_id')
+    filial = (request.session.get('filial_id')
            or request.headers.get('X-Filial')
            or request.GET.get('titu_fili')
            or serializer.validated_data.get('titu_fili'))
     try:
-        emp = int(emp) if emp is not None else emp
+        empresa = int(empresa) if empresa is not None else empresa
     except Exception:
         pass
     try:
-        fil = int(fil) if fil is not None else fil
+        filial = int(filial) if filial is not None else filial
     except Exception:
         pass
-    obj = criar_titulo_receber(banco=banco, dados=serializer.validated_data, empresa_id=emp, filial_id=fil)
+    obj = criar_titulo_receber(banco=banco, dados=serializer.validated_data, empresa_id=empresa, filial_id= filial)
+    gera_parcelas_a_receber(
+        titulo=obj,
+        banco=banco,
+    )
     out = viewset.get_serializer(obj)
     return Response(out.data, status=status.HTTP_201_CREATED)

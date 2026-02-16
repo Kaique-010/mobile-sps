@@ -57,6 +57,72 @@
     ::-webkit-scrollbar-thumb:hover {
         background: #475569;
     }
+
+    .btn {
+        border: none;
+        padding: 8px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        text-decoration: none;
+    }
+
+    .btn-primary {
+        background: #0f766e;
+        color: #ffffff;
+        transition: background 0.2s;
+    }
+
+    .btn-primary:hover {
+        background: #115e59;
+    }
+
+    .btn-secondary {
+        background: #4b5563;
+        color: #ffffff;
+        border: 1px solid rgba(226, 232, 240, 0.12);
+        transition: background 0.2s;
+    }
+
+    .btn-secondary:hover {
+        background: #374151;
+    }
+
+    .actions-row {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        padding-top: 16px;
+    }
+
+    .parametros-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .parametros-grid .item {
+        flex: 0 0 calc(33.333% - 16px);
+        max-width: calc(33.333% - 16px);
+    }
+
+    @media (max-width: 900px) {
+        .parametros-grid .item {
+            flex: 0 0 calc(50% - 16px);
+            max-width: calc(50% - 16px);
+        }
+    }
+
+    @media (max-width: 640px) {
+        .parametros-grid .item {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+    }
 </style>
 <div class="container mx-auto px-4 py-6" style="max-width: 1100px;">
 
@@ -81,7 +147,7 @@
                     {{ grupo.grouper|default:"Geral" }}
                 </h3>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="parametros-grid">
                     {% for p in grupo.list %}
                     <div
                         class="item flex items-center justify-between bg-[#0e1523] p-3 rounded-lg border border-[#64ffda1a] hover:border-[#64ffda50] transition group">
@@ -116,13 +182,11 @@
             </div>
             {% endfor %}
 
-            <div class="flex justify-end pt-4 gap-4">
-                <button type="submit"
-                    class="bg-[#0f766e] hover:bg-[#115e59] text-white font-bold py-2 px-6 rounded-lg transition shadow-lg flex items-center gap-2">
+            <div class="actions-row">
+                <button type="submit" class="btn btn-primary">
                     <i class="fas fa-save"></i> Salvar Alterações
                 </button>
-                <a href="{% url 'home' %}"
-                    class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg transition shadow-lg flex items-center gap-2">
+                <a href="{% url 'home' %}" class="btn btn-secondary">
                     <i class="fas fa-undo"></i> Voltar
                 </a>
             </div>

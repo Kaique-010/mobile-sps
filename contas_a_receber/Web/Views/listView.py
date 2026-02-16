@@ -25,6 +25,7 @@ class TitulosReceberListView(DBAndSlugMixin, ListView):
         venc_ini = self.request.GET.get('venc_ini')
         venc_fim = self.request.GET.get('venc_fim')
         parcela = self.request.GET.get('titu_parc')
+        titu_titu = self.request.GET.get('titu_titu')
         serie = self.request.GET.get('titu_seri')
 
         # Se NÃO houver filtro de data explícito, aplica o padrão (mês atual até hoje)
@@ -54,6 +55,8 @@ class TitulosReceberListView(DBAndSlugMixin, ListView):
             qs = qs.filter(titu_venc__lte=venc_fim)
         if serie:
             qs = qs.filter(titu_seri__iexact=serie)
+        if titu_titu:
+            qs = qs.filter(titu_titu__iexact=titu_titu)
 
         if cliente_nome:
             entidades_qs = Entidades.objects.using(self.db_alias).filter(enti_nome__icontains=cliente_nome)
@@ -80,9 +83,11 @@ class TitulosReceberListView(DBAndSlugMixin, ListView):
 
         for t in page_qs:
             setattr(t, 'cliente_nome', entidades_map.get(t.titu_clie, ''))
-
+            setattr(t, 'titu_titu', t.titu_titu)
+        
         preserved = {
             'titu_clie': self.request.GET.get('titu_clie') or '',
+            'titu_titu': self.request.GET.get('titu_titu') or '',
             'titu_parc': self.request.GET.get('titu_parc') or '',
             'cliente_nome': self.request.GET.get('cliente_nome') or '',
             'titu_aber': self.request.GET.get('titu_aber') or '',
@@ -90,6 +95,7 @@ class TitulosReceberListView(DBAndSlugMixin, ListView):
             'venc_fim': self.request.GET.get('venc_fim') or '',
             'titu_seri': self.request.GET.get('titu_seri') or '',
         }
+
         preserved_qs = {k: v for k, v in preserved.items() if v}
 
         # Cálculo dos indicadores de resumo (Total Recebido, Em Aberto, Percentuais)
@@ -114,6 +120,8 @@ class TitulosReceberListView(DBAndSlugMixin, ListView):
             qs_total = qs_total.filter(titu_venc__lte=preserved['venc_fim'])
         if preserved['titu_parc']:
             qs_total = qs_total.filter(titu_parc=preserved['titu_parc'])
+        if preserved['titu_titu']:
+            qs_total = qs_total.filter(titu_titu=preserved['titu_titu'])
 
         total_geral = qs_total.aggregate(total=Sum('titu_valo'))['total'] or 0
         total_quitado = qs_total.filter(titu_aber='T').aggregate(total=Sum('titu_valo'))['total'] or 0
@@ -156,6 +164,10 @@ class TitulosReceberListView(DBAndSlugMixin, ListView):
             'percent_a_receber': percent_a_receber,
         })
         return context
+
+
+class TitulosReceberParcelasListView(TitulosReceberListView):
+    template_name = 'ContasAReceber/parcelas_receber_list.html'
 
 def autocomplete_clientes(request, slug=None):
     banco = get_licenca_db_config(request) or 'default'

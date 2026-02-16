@@ -41,29 +41,79 @@ class TitulosReceberCreateView(DBAndSlugMixin, CreateView):
     def form_valid(self, form):
         banco = get_licenca_db_config(self.request) or 'default'
         dados = form.cleaned_data
-        emp = (self.request.session.get('empresa_id')
+        empresa = (self.request.session.get('empresa_id')
                or self.request.headers.get('X-Empresa')
                or self.request.GET.get('titu_empr')
                or getattr(self, 'empresa_id', None))
-        fil = (self.request.session.get('filial_id')
+        filial = (self.request.session.get('filial_id')
                or self.request.headers.get('X-Filial')
                or self.request.GET.get('titu_fili')
                or getattr(self, 'filial_id', None))
-        if emp is not None:
+        if empresa is not None:
             try:
-                dados['titu_empr'] = int(emp)
+                dados['titu_empr'] = int(empresa)
             except Exception:
-                dados['titu_empr'] = emp
-        if fil is not None:
+                dados['titu_empr'] = empresa
+        if filial is not None:
             try:
-                dados['titu_fili'] = int(fil)
+                dados['titu_fili'] = int(filial)
             except Exception:
-                dados['titu_fili'] = fil
-        from ...services import criar_titulo_receber
-        criar_titulo_receber(
+                dados['titu_fili'] = filial
+        from ...services import criar_titulo_receber, gera_parcelas_a_receber
+        self.object = criar_titulo_receber(
             banco=banco,
             dados=dados,
-            empresa_id=(dados.get('titu_empr') or emp),
-            filial_id=(dados.get('titu_fili') or fil)
+            empresa_id=(dados.get('titu_empr') or empresa),
+            filial_id=(dados.get('titu_fili') or filial)
+        )
+        gera_parcelas_a_receber(
+            titulo=self.object,
+            banco=banco,
         )
         return redirect('contas_a_receber_web:titulos_receber_list', slug=self.slug)
+
+
+class TitulosReceberParcelasCreateView(DBAndSlugMixin, CreateView):
+    model = Titulosreceber
+    form_class = TitulosReceberForm
+    template_name = 'ContasAReceber/parcelas_receber_criar.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['titulo'] = self.object
+        return context
+    
+    def form_valid(self, form):
+        banco = get_licenca_db_config(self.request) or 'default'
+        dados = form.cleaned_data
+        empresa = (self.request.session.get('empresa_id')
+               or self.request.headers.get('X-Empresa')
+               or self.request.GET.get('titu_empr')
+               or getattr(self, 'empresa_id', None))
+        filial = (self.request.session.get('filial_id')
+               or self.request.headers.get('X-Filial')
+               or self.request.GET.get('titu_fili')
+               or getattr(self, 'filial_id', None))
+        if empresa is not None:
+            try:
+                dados['titu_empr'] = int(empresa)
+            except Exception:
+                dados['titu_empr'] = empresa
+        if filial is not None:
+            try:
+                dados['titu_fili'] = int(filial)
+            except Exception:
+                dados['titu_fili'] = filial
+        from ...services import criar_titulo_receber, gera_parcelas_a_receber
+        self.object = criar_titulo_receber(
+            banco=banco,
+            dados=dados,
+            empresa_id=(dados.get('titu_empr') or empresa),
+            filial_id=(dados.get('titu_fili') or filial)
+        )
+        gera_parcelas_a_receber(
+            titulo=self.object,
+            banco=banco,
+        )
+        print("criação de parcelas a recebert:", self.object)
+        return redirect('contas_a_receber_web:parcelas_a_receber_list', slug=self.slug)

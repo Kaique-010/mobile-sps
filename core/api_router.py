@@ -53,6 +53,7 @@ urlpatterns = [
     path("<slug>/ParametrosSps/", include("ParametrosSps.urls")),
     path("<slug>/boletos/", include("boletos.REST.urls")),
     path("<slug>/controledePonto/", include("controledePonto.Rest.urls")),
+    path("<slug>/adiantamentos/", include("adiantamentos.Rest.urls")),
 
     # Documentação da API
     path("schema/", SpectacularAPIView.as_view(), name="schema"),

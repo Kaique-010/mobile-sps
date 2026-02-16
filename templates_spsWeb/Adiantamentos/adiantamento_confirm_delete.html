@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Excluir Adiantamento</h2>
+
+    <p>Confirma a exclusão do adiantamento {{ object.adia_docu }}/{{ object.adia_seri }} para a entidade {{
+        object.adia_enti }}?</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Excluir</button>
+        <a href="{% url 'adiantamentos_web:adiantamentos_list' slug=request.resolver_match.kwargs.slug %}"
+            class="btn btn-secondary">Cancelar</a>
+    </form>
+</div>
+{% endblock %}

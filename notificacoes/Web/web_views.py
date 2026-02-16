@@ -42,8 +42,12 @@ class NotificacoesDashboardView(DBAndSlugMixin, TemplateView):
         w_start, w_end = _week_range(today)
         d_start, d_end = _day_bounds(today)
         
-        forncedor_nome = Entidades.objects.using(self.db_alias).filter(enti_empr=self.empresa_id).values('enti_clie', 'enti_nome')
-        logger.info(f'forncedor_nome: {forncedor_nome}')
+        fornecedores = dict(
+            Entidades.objects.using(self.db_alias)
+            .filter(enti_empr=self.empresa_id)
+            .values_list('enti_clie', 'enti_nome')
+        )
+        logger.info(f'fornecedores: {fornecedores}')
 
         pagar_qs = Titulospagar.objects.using(self.db_alias).filter(titu_empr=self.empresa_id, titu_fili=self.filial_id)
         logger.info(f'pagar_qs: {pagar_qs}')
@@ -55,13 +59,14 @@ class NotificacoesDashboardView(DBAndSlugMixin, TemplateView):
         logger.info(f'ped_qs: {ped_qs}')
 
         def _to_row(obj, tipo):
+            forn_id = getattr(obj, 'titu_forn', None)
             return {
                 'tipo': tipo,
                 'titu_titu': getattr(obj, 'titu_titu', ''),
                 'titu_parc': getattr(obj, 'titu_parc', ''),
                 'titu_valo': getattr(obj, 'titu_valo', ''),
-                'titu_forn': getattr(obj, 'titu_forn', ''),
-                'forncedor_nome': forncedor_nome.filter(enti_clie=getattr(obj, 'titu_forn', '')).first().get('enti_nome') if forncedor_nome.filter(enti_clie=getattr(obj, 'titu_forn', '')).exists() else '',
+                'titu_forn': forn_id,
+                'forncedor_nome': fornecedores.get(forn_id, ''),
                 'titu_venc': getattr(obj, 'titu_venc', ''),
                 'titu_aber': getattr(obj, 'titu_aber', ''),
             }
@@ -100,14 +105,21 @@ class TitulosCriadosHojeListView(DBAndSlugMixin, ListView):
         pagar_qs = Titulospagar.objects.using(self.db_alias).filter(titu_empr=self.empresa_id, titu_fili=self.filial_id, titu_emis__gte=d_start, titu_emis__lt=d_end).order_by('titu_venc', 'titu_titu')
         receber_qs = Titulosreceber.objects.using(self.db_alias).filter(titu_empr=self.empresa_id, titu_fili=self.filial_id, titu_emis__gte=d_start, titu_emis__lt=d_end).order_by('titu_venc', 'titu_titu')
 
+        fornecedores = dict(
+            Entidades.objects.using(self.db_alias)
+            .filter(enti_empr=self.empresa_id)
+            .values_list('enti_clie', 'enti_nome')
+        )
+
         def _to_row(obj, tipo_label):
+            forn_id = getattr(obj, 'titu_forn', None)
             return {
                 'tipo': tipo_label,
                 'titu_titu': getattr(obj, 'titu_titu', ''),
                 'titu_parc': getattr(obj, 'titu_parc', ''),
                 'titu_valo': getattr(obj, 'titu_valo', ''),
-                'titu_forn': getattr(obj, 'titu_forn', ''),
-                'forncedor_nome': forncedor_nome.filter(enti_clie=getattr(obj, 'titu_forn', '')).first().get('enti_nome') if forncedor_nome.filter(enti_clie=getattr(obj, 'titu_forn', '')).exists() else '',
+                'titu_forn': forn_id,
+                'forncedor_nome': fornecedores.get(forn_id, ''),
                 'titu_venc': getattr(obj, 'titu_venc', ''),
                 'titu_aber': getattr(obj, 'titu_aber', ''),
             }

@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Editar Adiantamento</h2>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+
+        <div class="row">
+            <div class="col-md-2">
+                {{ form.adia_tipo.label_tag }} {{ form.adia_tipo }}
+            </div>
+            <div class="col-md-4 position-relative">
+                <label for="autocomplete-entidade">Entidade</label>
+                <div class="autocomplete-wrapper">
+                    <input type="text" class="form-control autocomplete-input" id="autocomplete-entidade"
+                        value="{{ form.adia_enti.value|default:'' }}"
+                        placeholder="Digite o código ou nome da entidade...">
+                </div>
+                {{ form.adia_enti.as_hidden }}
+            </div>
+            <div class="col-md-2">
+                {{ form.adia_docu.label_tag }} {{ form.adia_docu }}
+            </div>
+            <div class="col-md-2">
+                {{ form.adia_seri.label_tag }} {{ form.adia_seri }}
+            </div>
+            <div class="col-md-2">
+                {{ form.adia_valo.label_tag }} {{ form.adia_valo }}
+            </div>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col-md-4 position-relative">
+                <label for="autocomplete-banco">Banco</label>
+                <div class="autocomplete-wrapper">
+                    <input type="text"
+                           class="form-control autocomplete-input"
+                           id="autocomplete-banco"
+                           value="{{ form.adia_banc.value|default:'' }}"
+                           placeholder="Digite o código ou nome do banco...">
+                </div>
+                {{ form.adia_banc.as_hidden }}
+            </div>
+            <div class="col-md-4">
+                {{ form.adia_ctrl_banc.label_tag }} {{ form.adia_ctrl_banc }}
+            </div>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col-12">
+                {{ form.adia_obse.label_tag }} {{ form.adia_obse }}
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <button type="submit" class="btn btn-primary">Salvar</button>
+            <a href="{% url 'adiantamentos_web:adiantamentos_list' slug=request.resolver_match.kwargs.slug %}"
+                class="btn btn-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+<script>
+    const slugTplAdtoEdit = '{{ request.resolver_match.kwargs.slug|default:"" }}';
+    const slugAdtoEdit = slugTplAdtoEdit || (function () {
+        try {
+            const p = location.pathname.split('/');
+            return p.length > 2 ? p[2] : '';
+        } catch (e) {
+            return '';
+        }
+    })();
+
+    const entInputEdit = document.getElementById('autocomplete-entidade');
+    const entHiddenEdit = document.getElementById('{{ form.adia_enti.id_for_label }}');
+
+    if (entInputEdit && entHiddenEdit) {
+        let entControllerEdit = null;
+        let entDdEdit = null;
+        let entDebounceIdEdit = null;
+
+        function entDropdownEdit() {
+            if (entDdEdit) return entDdEdit;
+            entDdEdit = document.createElement('div');
+            entDdEdit.className = 'list-group position-absolute w-100';
+            entDdEdit.style.marginTop = '4px';
+            entInputEdit.parentElement.appendChild(entDdEdit);
+            return entDdEdit;
+        }
+
+        entInputEdit.addEventListener('input', function () {
+            clearTimeout(entDebounceIdEdit);
+            entDebounceIdEdit = setTimeout(async () => {
+                const term = entInputEdit.value.trim();
+                if (term.length < 2) {
+                    if (entDdEdit) entDdEdit.innerHTML = '';
+                    return;
+                }
+
+                try {
+                    if (entControllerEdit) entControllerEdit.abort();
+                    entControllerEdit = new AbortController();
+
+                    const r = await fetch(`/web/${slugAdtoEdit}/adiantamentos/autocomplete/entidades/?q=${encodeURIComponent(term)}`, {
+                        signal: entControllerEdit.signal
+                    });
+                    const j = await r.json();
+                    const results = j.results || [];
+                    const d = entDropdownEdit();
+                    d.innerHTML = '';
+
+                    if (results.length === 0) {
+                        const empty = document.createElement('div');
+                        empty.className = 'list-group-item text-muted';
+                        empty.textContent = 'Nenhuma entidade encontrada';
+                        d.appendChild(empty);
+                        return;
+                    }
+
+                    results.forEach(it => {
+                        const a = document.createElement('a');
+                        a.href = '#';
+                        a.className = 'list-group-item list-group-item-action';
+                        a.textContent = it.text || it.id || '';
+                        a.addEventListener('click', ev => {
+                            ev.preventDefault();
+                            entHiddenEdit.value = it.id || '';
+                            entInputEdit.value = it.text || it.id || '';
+                            d.innerHTML = '';
+                        });
+                        d.appendChild(a);
+                    });
+                } catch (e) {
+                    if (e.name !== 'AbortError') {
+                        console.error('Erro ao buscar entidades:', e);
+                    }
+                }
+            }, 250);
+        });
+
+        document.addEventListener('click', e => {
+            if (entDdEdit && !entInputEdit.parentElement.contains(e.target)) {
+                entDdEdit.innerHTML = '';
+            }
+        });
+    }
+
+    const bancoInputEdit = document.getElementById('autocomplete-banco');
+    const bancoHiddenEdit = document.getElementById('{{ form.adia_banc.id_for_label }}');
+
+    if (bancoInputEdit && bancoHiddenEdit) {
+        let bancoControllerEdit = null;
+        let bancoDdEdit = null;
+        let bancoDebounceIdEdit = null;
+
+        function bancoDropdownEdit() {
+            if (bancoDdEdit) return bancoDdEdit;
+            bancoDdEdit = document.createElement('div');
+            bancoDdEdit.className = 'list-group position-absolute w-100';
+            bancoDdEdit.style.marginTop = '4px';
+            bancoInputEdit.parentElement.appendChild(bancoDdEdit);
+            return bancoDdEdit;
+        }
+
+        bancoInputEdit.addEventListener('input', function () {
+            clearTimeout(bancoDebounceIdEdit);
+            bancoDebounceIdEdit = setTimeout(async () => {
+                const term = bancoInputEdit.value.trim();
+                if (term.length < 2) {
+                    if (bancoDdEdit) bancoDdEdit.innerHTML = '';
+                    return;
+                }
+
+                try {
+                    if (bancoControllerEdit) bancoControllerEdit.abort();
+                    bancoControllerEdit = new AbortController();
+
+                    const r = await fetch(`/web/${slugAdtoEdit}/adiantamentos/autocomplete/bancos/?q=${encodeURIComponent(term)}`, {
+                        signal: bancoControllerEdit.signal
+                    });
+                    const j = await r.json();
+                    const results = j.results || [];
+                    const d = bancoDropdownEdit();
+                    d.innerHTML = '';
+
+                    if (results.length === 0) {
+                        const empty = document.createElement('div');
+                        empty.className = 'list-group-item text-muted';
+                        empty.textContent = 'Nenhum banco encontrado';
+                        d.appendChild(empty);
+                        return;
+                    }
+
+                    results.forEach(it => {
+                        const a = document.createElement('a');
+                        a.href = '#';
+                        a.className = 'list-group-item list-group-item-action';
+                        a.textContent = it.text || it.id || '';
+                        a.addEventListener('click', ev => {
+                            ev.preventDefault();
+                            bancoHiddenEdit.value = it.id || '';
+                            bancoInputEdit.value = it.text || it.id || '';
+                            d.innerHTML = '';
+                        });
+                        d.appendChild(a);
+                    });
+                } catch (e) {
+                    if (e.name !== 'AbortError') {
+                        console.error('Erro ao buscar bancos:', e);
+                    }
+                }
+            }, 250);
+        });
+
+        document.addEventListener('click', e => {
+            if (bancoDdEdit && !bancoInputEdit.parentElement.contains(e.target)) {
+                bancoDdEdit.innerHTML = '';
+            }
+        });
+    }
+</script>
+{% endblock %}

@@ -119,7 +119,10 @@ CREATE TABLE IF NOT EXISTS django_migrations (
     applied TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
---Criação da Tabela para auditoria
+alter table adiantamentos
+add column if not exists adia_ctrl INTEGER default 0;
+        
+ --Criação da Tabela para auditoria
 
 CREATE TABLE IF NOT EXISTS auditoria_logacao (
 id SERIAL PRIMARY KEY,

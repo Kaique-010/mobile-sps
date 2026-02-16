@@ -18,6 +18,7 @@ from decimal import Decimal
 from datetime import date
 from django.utils.timezone import now
 from Lancamentos_Bancarios.utils import criar_lancamento_bancario_baixa
+from adiantamentos.services import AdiantamentosService
 
 class TitulospagarViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
     """CRUD de títulos a pagar com ações de baixa e histórico."""
@@ -209,7 +210,6 @@ class TitulospagarViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         
         try:
             with transaction.atomic(using=banco):
-                # Buscar a baixa específica
                 baixa = Bapatitulos.objects.using(banco).get(
                     bapa_sequ=baixa_id,
                     bapa_empr=titulo.titu_empr,
@@ -219,9 +219,19 @@ class TitulospagarViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                     bapa_seri=titulo.titu_seri,
                     bapa_parc=titulo.titu_parc
                 )
-                
-               
-                # Excluir a baixa
+
+                valor_baixa = baixa.bapa_valo_pago or baixa.bapa_sub_tota or Decimal('0')
+                if baixa.bapa_form == 'A' and valor_baixa > 0:
+                    from adiantamentos.services import AdiantamentosService
+                    AdiantamentosService.estornar_adiantamento_by_context(
+                        empresa=titulo.titu_empr,
+                        filial=titulo.titu_fili,
+                        entidade=titulo.titu_forn,
+                        tipo='P',
+                        valor=valor_baixa,
+                        using=banco,
+                    )
+
                 baixa.delete()
                 
                 # Recalcular status do título
@@ -365,6 +375,28 @@ class TitulospagarViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                     tipo_baixa_final = 'P'  # Parcial
                 
                 logger.info(f"Tipo de baixa determinado: {tipo_baixa_final}")
+                
+                if data.get('forma_pagamento') == 'A':
+                    try:
+                        AdiantamentosService.usar_adiantamento_by_context(
+                            empresa=titulo.titu_empr,
+                            filial=titulo.titu_fili,
+                            entidade=titulo.titu_forn,
+                            tipo='P',
+                            valor=valor_pago,
+                            using=banco,
+                            referencia={
+                                'modulo': 'contas_a_pagar',
+                                'titu': titulo.titu_titu,
+                                'seri': titulo.titu_seri,
+                                'parc': titulo.titu_parc
+                            }
+                        )
+                    except ValueError as e:
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.warning(f"Uso de adiantamento rejeitado: {e}")
+                        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
                 
                 # Criar registro de baixa
                 baixa = Bapatitulos.objects.using(banco).create(

@@ -19,6 +19,7 @@ from decimal import Decimal
 from datetime import date
 from django.utils.timezone import now
 from Lancamentos_Bancarios.utils import criar_lancamento_bancario_baixa
+from adiantamentos.services import AdiantamentosService
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +89,6 @@ class TitulosreceberViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
     def get_object(self):
         banco = get_licenca_db_config(self.request)
         try:
-            # Permitir buscar títulos abertos ('A') ou parcialmente recebidos ('P')
             queryset = Titulosreceber.objects.using(banco).only(
                 'titu_empr','titu_fili','titu_titu','titu_seri','titu_parc',
                 'titu_clie','titu_valo','titu_emis','titu_venc','titu_situ',
@@ -100,22 +100,22 @@ class TitulosreceberViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
                 titu_titu=self.kwargs["titu_titu"],
                 titu_seri=self.kwargs["titu_seri"],
                 titu_parc=self.kwargs["titu_parc"],
-                titu_emis=self.kwargs["titu_emis"], 
-                titu_venc=self.kwargs["titu_venc"], 
-                titu_aber__in=['A', 'P']  # Permite títulos abertos ou parcialmente recebidos
+                titu_emis=self.kwargs["titu_emis"],
+                titu_venc=self.kwargs["titu_venc"],
+                titu_aber__in=['A', 'P'],
+            ).filter(
+                (models.Q(titu_emis__isnull=True) | models.Q(titu_emis__gte=date(1900, 1, 1))),
+                (models.Q(titu_venc__isnull=True) | models.Q(titu_venc__gte=date(1900, 1, 1))),
             )
-            queryset = queryset.filter(
-                (models.Q(titu_emis__isnull=True) | models.Q(titu_emis__gte=date(1900,1,1))),
-                (models.Q(titu_venc__isnull=True) | models.Q(titu_venc__gte=date(1900,1,1))),
-            )
-            
-            if queryset.count() == 0:
+
+            obj = queryset.first()
+            if obj is None:
                 raise Http404("Título não encontrado ou já baixado")
-            elif queryset.count() > 1:
+
+            if queryset.count() > 1:
                 logger.warning(f"Múltiplos títulos encontrados para {self.kwargs}, usando o primeiro")
-                return queryset.first()
-            else:
-                return queryset.get()
+
+            return obj
         except KeyError as e:
             logger.error(f"Parâmetro obrigatório ausente: {e}")
             raise Http404(f"Parâmetro obrigatório ausente: {e}")
@@ -219,6 +219,26 @@ class TitulosreceberViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
                 
                 logger.info(f"Tipo de baixa determinado: {tipo_baixa_final}")
                 
+                if data.get('forma_pagamento') == 'A':
+                    try:
+                        AdiantamentosService.usar_adiantamento_by_context(
+                            empresa=titulo.titu_empr,
+                            filial=titulo.titu_fili,
+                            entidade=titulo.titu_clie,
+                            tipo='R',
+                            valor=valor_recebido,
+                            using=banco,
+                            referencia={
+                                'modulo': 'contas_a_receber',
+                                'titu': titulo.titu_titu,
+                                'seri': titulo.titu_seri,
+                                'parc': titulo.titu_parc
+                            }
+                        )
+                    except ValueError as e:
+                        logger.warning(f"Uso de adiantamento rejeitado: {e}")
+                        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+                
                 # Criar registro de baixa
                 baixa = Baretitulos.objects.using(banco).create(
                     bare_sequ=proximo_sequ,
@@ -319,22 +339,21 @@ class TitulosreceberViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
                 titu_titu=self.kwargs["titu_titu"],
                 titu_seri=self.kwargs["titu_seri"],
                 titu_parc=self.kwargs["titu_parc"],
-                titu_emis=self.kwargs["titu_emis"], 
-                titu_venc=self.kwargs["titu_venc"]
-                
+                titu_emis=self.kwargs["titu_emis"],
+                titu_venc=self.kwargs["titu_venc"],
+            ).filter(
+                (models.Q(titu_emis__isnull=True) | models.Q(titu_emis__gte=date(1900, 1, 1))),
+                (models.Q(titu_venc__isnull=True) | models.Q(titu_venc__gte=date(1900, 1, 1))),
             )
-            queryset = queryset.filter(
-                (models.Q(titu_emis__isnull=True) | models.Q(titu_emis__gte=date(1900,1,1))),
-                (models.Q(titu_venc__isnull=True) | models.Q(titu_venc__gte=date(1900,1,1))),
-            )
-            
-            if queryset.count() == 0:
+
+            obj = queryset.first()
+            if obj is None:
                 raise Http404("Título não encontrado")
-            elif queryset.count() > 1:
+
+            if queryset.count() > 1:
                 logger.warning(f"Múltiplos títulos encontrados para {self.kwargs}, usando o primeiro")
-                return queryset.first()
-            else:
-                return queryset.get()
+
+            return obj
         except KeyError as e:
             logger.error(f"Parâmetro obrigatório ausente: {e}")
             raise Http404(f"Parâmetro obrigatório ausente: {e}")
@@ -391,7 +410,6 @@ class TitulosreceberViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
         
         try:
             with transaction.atomic(using=banco):
-                # Buscar a baixa específica
                 baixa = Baretitulos.objects.using(banco).get(
                     bare_sequ=baixa_id,
                     bare_empr=titulo.titu_empr,
@@ -401,9 +419,19 @@ class TitulosreceberViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
                     bare_seri=titulo.titu_seri,
                     bare_parc=titulo.titu_parc
                 )
-                
-                
-                # Excluir a baixa
+
+                valor_baixa = baixa.bare_valo_pago or baixa.bare_sub_tota or Decimal('0')
+                if baixa.bare_form == 'A' and valor_baixa > 0:
+                    from adiantamentos.services import AdiantamentosService
+                    AdiantamentosService.estornar_adiantamento_by_context(
+                        empresa=titulo.titu_empr,
+                        filial=titulo.titu_fili,
+                        entidade=titulo.titu_clie,
+                        tipo='R',
+                        valor=valor_baixa,
+                        using=banco,
+                    )
+
                 baixa.delete()
                 
                 # Recalcular status do título

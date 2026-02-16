@@ -105,7 +105,7 @@
     
     
 
-    <div class="row">
+    <div class="row" id="titulos-grid-pagar">
       {% for t in titulos %}
       <div class="col-md-4 mb-3">
         <div class="card h-100">
@@ -130,13 +130,15 @@
               <button type="button" class="btn btn-outline-success btn-sm btn-baixar" title="Pagar título" data-tipo="pagar"
                 data-empr="{{ t.titu_empr }}" data-fili="{{ t.titu_fili }}" data-forn="{{ t.titu_forn }}"
                 data-titu="{{ t.titu_titu }}" data-seri="{{ t.titu_seri }}" data-parc="{{ t.titu_parc }}"
-                data-emis="{{ t.titu_emis|date:'Y-m-d' }}" data-venc="{{ t.titu_venc|date:'Y-m-d' }}">💵 Pagar</button>
+                data-emis="{{ t.titu_emis|date:'Y-m-d' }}" data-venc="{{ t.titu_venc|date:'Y-m-d' }}"
+                data-valo="{{ t.titu_valo }}">💵 Pagar</button>
               {% endif %}
               {% if t.titu_aber == 'T' or t.titu_aber == 'P' %}
               <button type="button" class="btn btn-outline-warning btn-sm btn-reabrir" title="Reab./Liqu."
                 data-empr="{{ t.titu_empr }}" data-fili="{{ t.titu_fili }}" data-forn="{{ t.titu_forn }}"
                 data-titu="{{ t.titu_titu }}" data-seri="{{ t.titu_seri }}" data-parc="{{ t.titu_parc }}"
-                data-emis="{{ t.titu_emis|date:'Y-m-d' }}" data-venc="{{ t.titu_venc|date:'Y-m-d' }}">🔄 Reab./Liqu.</button>
+                data-emis="{{ t.titu_emis|date:'Y-m-d' }}" data-venc="{{ t.titu_venc|date:'Y-m-d' }}"
+                data-valo="{{ t.titu_valo }}">🔄 Reab./Liqu.</button>
               {% endif %}
               <a href="{% url 'contas_a_pagar_web:editar' slug=slug titu_titu=t.titu_titu titu_parc=t.titu_parc %}" class="btn btn-outline-primary btn-sm" title="Editar">✏️ Editar</a>
               <a href="{% url 'contas_a_pagar_web:excluir' slug=slug titu_titu=t.titu_titu %}" class="btn btn-outline-danger btn-sm" title="Excluir">🗑️ Excluir</a>
@@ -153,6 +155,7 @@
 
 
     {% include 'components/pagination.html' with page_obj=page_obj extra_query=preserved_query %}
+    {% include 'components/infinite_scroll.html' with infinite_append_selector='#titulos-grid-pagar' %}
     {% include 'ContasAPagar/partials/modal_baixa_pagar.html' %}
     {% include 'ContasAPagar/partials/modal_reabrir_pagar.html' %}
     {% include 'ContasAPagar/partials/form_criar_titulo.html' %}
@@ -245,6 +248,7 @@
         const parc = btn.dataset.parc;
         const emis = formatDateISO(btn.dataset.emis);
         const venc = formatDateISO(btn.dataset.venc);
+        const valo = parseFloat(btn.dataset.valo || '0');
 
         const histUrl = `/api/{{ slug }}/contas_a_pagar/titulos-pagar/${empr}/${fili}/${forn}/${titu}/${seri}/${parc}/${emis}/${venc}/historico_baixas/`;
         try {
@@ -261,9 +265,17 @@
             alert('Nenhuma baixa encontrada para reabrir.');
             return;
           }
-          contextoReabrir = { empr, fili, forn, titu, seri, parc, emis, venc, historico };
+          let totalPago = 0;
+          historico.forEach(b => {
+            const v = parseFloat(b.bapa_valo_pago ?? b.bapa_sub_tota ?? b.valo_pago ?? b.sub_tota ?? 0);
+            if (!isNaN(v)) totalPago += v;
+          });
+          const saldo = Math.max(valo - totalPago, 0);
+          contextoReabrir = { empr, fili, forn, titu, seri, parc, emis, venc, historico, valo, saldo };
           preencherModalReabrirPag(historico);
           document.getElementById('modal-reabrir-pag').style.display = 'block';
+          const lblSaldo = document.getElementById('saldo-restante-pag');
+          if (lblSaldo) lblSaldo.textContent = saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         } catch (err) {
           alert('Falha na requisição: ' + err.message);
         }
@@ -305,6 +317,7 @@
             parc: btn.dataset.parc,
             emis: formatDateISO(btn.dataset.emis),
             venc: formatDateISO(btn.dataset.venc),
+            valo: parseFloat(btn.dataset.valo || '0') || 0,
           };
           // reset
           if (form) form.reset();
@@ -323,6 +336,65 @@
 
         document.getElementById('btn-cancelar-baixa')?.addEventListener('click', fecharModalBaixa);
 
+        const formaPagamentoSelect = document.getElementById('forma_pagamento');
+        const valorPagoInput = document.getElementById('valor_pago');
+
+        async function abrirSelecaoAdiantamento(contexto, valorTitulo) {
+          const { empresa, filial } = getEmpresaFilial();
+          const url = `/api/{{ slug }}/adiantamentos/disponiveis/?empresa=${encodeURIComponent(empresa)}&filial=${encodeURIComponent(filial)}&entidade=${encodeURIComponent(contexto.forn)}&tipo=P`;
+          try {
+            const resp = await fetch(url, {
+              credentials: 'same-origin',
+              headers: {
+                'Accept': 'application/json',
+                'X-Empresa': empresa,
+                'X-Filial': filial,
+              },
+            });
+            if (!resp.ok) {
+              const txt = await resp.text();
+              alert('Erro ao buscar adiantamentos: ' + txt);
+              return;
+            }
+            const lista = await resp.json();
+            if (!Array.isArray(lista) || lista.length === 0) {
+              alert('Nenhum adiantamento disponível para este fornecedor.');
+              return;
+            }
+            let msg = 'Selecione o índice do adiantamento para usar:\n';
+            lista.forEach((a, idx) => {
+              const saldo = Number(a.adia_sald || 0);
+              msg += `${idx + 1}) Doc ${a.adia_docu}/${a.adia_seri} - Saldo: ${saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}\n`;
+            });
+            const escolha = prompt(msg + '\nDigite o número desejado:');
+            const idx = parseInt(escolha || '0', 10) - 1;
+            if (isNaN(idx) || idx < 0 || idx >= lista.length) return;
+            const selecionado = lista[idx];
+            const saldo = Number(selecionado.adia_sald || 0);
+            const maximo = Math.min(saldo, valorTitulo);
+            const valorStr = prompt(`Informe o valor a usar (máx ${maximo.toFixed(2)}):`, maximo.toFixed(2));
+            const valor = parseFloat(valorStr || '0');
+            if (!valor || isNaN(valor) || valor <= 0 || valor > maximo) {
+              alert('Valor inválido para uso de adiantamento.');
+              return;
+            }
+            if (valorPagoInput) valorPagoInput.value = valor.toFixed(2);
+          } catch (e) {
+            alert('Falha ao carregar adiantamentos: ' + e.message);
+          }
+        }
+
+        if (formaPagamentoSelect) {
+          formaPagamentoSelect.addEventListener('change', async () => {
+            if (!contextoBaixa) return;
+            const forma = formaPagamentoSelect.value;
+            if (forma === 'A') {
+              const valorTitulo = parseFloat(contextoBaixa.valo || '0') || 0;
+              await abrirSelecaoAdiantamento(contextoBaixa, valorTitulo);
+            }
+          });
+        }
+
         document.getElementById('btn-confirmar-baixa')?.addEventListener('click', async () => {
           if (!contextoBaixa) return;
           const dataPagamento = document.getElementById('data_pagamento').value;
@@ -333,7 +405,7 @@
           const historico = document.getElementById('historico').value || '';
           const banco = document.getElementById('banco').value || '';
           const cheque = document.getElementById('cheque').value || '';
-          const formaPagamento = document.getElementById('forma_pagamento').value || 'B';
+          const formaPagamento = formaPagamentoSelect ? formaPagamentoSelect.value || 'B' : 'B';
           const tipoBaixa = 'N';
 
           if (!dataPagamento || isNaN(valorPago) || valorPago <= 0) {
@@ -380,6 +452,18 @@
             alert('Falha na requisição: ' + err.message);
           }
         });
+
+        function abrirModalBaixaComContexto(ctx, valorPreset) {
+          contextoBaixa = ctx;
+          if (form) form.reset();
+          document.getElementById('historico').value = `Liquidação restante do título ${ctx.titu}`;
+          document.getElementById('data_pagamento').value = new Date().toISOString().slice(0,10);
+          if (typeof valorPreset === 'number' && !isNaN(valorPreset)) {
+            const vp = document.getElementById('valor_pago');
+            if (vp) vp.value = valorPreset.toFixed(2);
+          }
+          modal.style.display = 'block';
+        }
 
         // Fechar modal ao clicar fora
         window.addEventListener('click', (event) => {
@@ -428,6 +512,23 @@
           } catch (err) {
             alert('Falha na requisição: ' + err.message);
           }
+        });
+        document.getElementById('btn-liquidar-restante-pag')?.addEventListener('click', () => {
+          if (!contextoReabrir) return;
+          const ctx = {
+            tipo: 'pagar',
+            empr: contextoReabrir.empr,
+            fili: contextoReabrir.fili,
+            forn: contextoReabrir.forn,
+            titu: contextoReabrir.titu,
+            seri: contextoReabrir.seri,
+            parc: contextoReabrir.parc,
+            emis: contextoReabrir.emis,
+            venc: contextoReabrir.venc,
+          };
+          const saldo = typeof contextoReabrir.saldo === 'number' ? contextoReabrir.saldo : 0;
+          fecharModalReabrirPag();
+          abrirModalBaixaComContexto(ctx, saldo);
         });
         window.addEventListener('click', (event) => {
           if (event.target === modalReabrirPag) fecharModalReabrirPag();

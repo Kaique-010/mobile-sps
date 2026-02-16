@@ -49,4 +49,5 @@ urlpatterns = [
     path("<slug:slug>/central-de-ajuda/", include("centraldeajuda.urls")),
     path("<slug:slug>/parametros-admin/", include("parametros_admin.web_urls")),
     path("<slug:slug>/perfil/", include("perfilweb.urls")),
+    path("<slug:slug>/adiantamentos/", include("adiantamentos.Web.urls")),
 ]

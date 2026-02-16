@@ -1,6 +1,6 @@
 <div id="modal-reabrir-pag" class="modal-overlay">
   <div class="modal-content">
-    <h5>Reabrir/Liquidar (Excluir Baixa)</h5>
+    <h5>Reabrir/Liquidar</h5>
     <div>
       <ul id="lista-baixas-pag" style="list-style:none; padding-left:0;"></ul>
     </div>
@@ -10,9 +10,14 @@
         <input id="motivo-reabrir-pag" type="text" placeholder="Informe o motivo" />
       </div>
     </div>
+    <div style="margin: 8px 0; color: #e2e8f0;">
+      Saldo em aberto: <strong id="saldo-restante-pag">--</strong>
+    </div>
     <div class="modal-actions">
       <button id="btn-cancelar-reabrir-pag" type="button" class="btn btn-secondary btn-sm">Cancelar</button>
-      <button id="btn-confirmar-reabrir-pag" type="button" class="btn btn-warning btn-sm">Excluir baixa selecionada</button>
+      <button id="btn-confirmar-reabrir-pag" type="button" class="btn btn-warning btn-sm">Excluir baixa
+        selecionada</button>
+      <button id="btn-liquidar-restante-pag" type="button" class="btn btn-success btn-sm">Liquidar restante</button>
     </div>
   </div>
 </div>

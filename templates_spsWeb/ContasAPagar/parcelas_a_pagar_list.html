@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
+<div class="container py-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="page-title mb-0">Parcelas — Contas a Pagar</h3>
+    <a href="{% url 'contas_a_pagar_web:parcelas_a_pagar_criar' slug=slug %}" class="btn btn-success">
+      Incluir Parcelas
+    </a>
+  </div>
+  <form method="get" class="row g-3 mb-3">
+    <div class="col-md-2">
+      <label class="form-label">Fornecedor (ID)</label>
+      <input type="text" name="titu_forn" value="{{ filters.titu_forn }}" class="form-control"
+        placeholder="ID do fornecedor">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Fornecedor (Nome)</label>
+      <input type="text" name="fornecedor_nome" value="{{ filters.fornecedor_nome }}" class="form-control"
+        placeholder="Nome do fornecedor">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Status</label>
+      <select name="titu_aber" class="form-select">
+        <option value="">Todos</option>
+        <option value="A" {% if filters.titu_aber == 'A' %}selected{% endif %}>Aberto</option>
+        <option value="P" {% if filters.titu_aber == 'P' %}selected{% endif %}>Parcial</option>
+        <option value="T" {% if filters.titu_aber == 'T' %}selected{% endif %}>Total</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Venc. Inicial</label>
+      <input type="date" name="venc_ini" value="{{ filters.venc_ini }}" class="form-control">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Venc. Final</label>
+      <input type="date" name="venc_fim" value="{{ filters.venc_fim }}" class="form-control">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Série</label>
+      <input type="text" name="titu_seri" value="{{ filters.titu_seri }}" class="form-control"
+        placeholder="Ex.: PEV, ORS">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Título</label>
+      <input type="text" name="titu_titu" value="{{ filters.titu_titu }}" class="form-control"
+        placeholder="Ex.: 12345678901234567890123456789012">
+    </div>
+    <div class="col-12">
+      <button type="submit" class="btn btn-primary">Filtrar</button>
+      <a href="?" class="btn btn-secondary">Limpar</a>
+    </div>
+  </form>
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead>
+        <tr>
+          <th>Título</th>
+          <th>Fornecedor</th>
+          <th>Nome Fornecedor</th>
+          <th>Parcela</th>
+          <th>Valor</th>
+          <th>Emissão</th>
+          <th>Vencimento</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in object_list %}
+        <tr>
+          <td>{{ t.titu_titu }}</td>
+          <td>{{ t.titu_forn }}</td>
+          <td>{{ t.fornecedor_nome }}</td>
+          <td>{{ t.titu_parc }}</td>
+          <td>{{ t.titu_valo }}</td>
+          <td>{{ t.titu_emis }}</td>
+          <td>{{ t.titu_venc }}</td>
+          <td>
+            {% if t.titu_aber == 'T' %}
+            <span class="badge bg-secondary">Pago</span>
+            {% else %}
+            <span class="badge bg-primary">Aberto</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center">Sem parcelas</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include 'components/pagination.html' with page_obj=page_obj extra_query=preserved_query %}
+  {% include 'components/infinite_scroll.html' with infinite_append_selector='table tbody' %}
+</div>
+{% endblock %}
