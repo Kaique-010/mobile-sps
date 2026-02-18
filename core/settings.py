@@ -142,6 +142,7 @@ INSTALLED_APPS = [
     'controledePonto',
     'Agricola',
     'adiantamentos',
+    'Renegociacao',
 ]
 
 # Middleware

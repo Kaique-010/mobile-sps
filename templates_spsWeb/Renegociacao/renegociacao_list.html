@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
+
+<div class="container page-container py-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="page-title">
+      Renegociações
+    </h2>
+    <a href="{% url 'renegociacao_create' slug=slug %}" class="btn btn-success">
+      Nova Renegociação
+    </a>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Empresa</th>
+              <th>Filial</th>
+              <th>Cliente</th>
+              <th>Valor Original</th>
+              <th>Valor Final</th>
+              <th>Parcelas</th>
+              <th>Data</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in renegociacoes %}
+            <tr>
+              <td>{{ r.rene_id }}</td>
+              <td>{{ r.rene_empr }}</td>
+              <td>{{ r.rene_fili }}</td>
+              <td>{{ r.rene_clie }}</td>
+              <td>{{ r.rene_valo }}</td>
+              <td>{{ r.rene_vlfn }}</td>
+              <td>{{ r.rene_parc }}</td>
+              <td>{{ r.rene_data|date:"d/m/Y" }}</td>
+              <td>{{ r.rene_stat }}</td>
+              <td class="text-end">
+                <a href="{% url 'renegociacao_edit' slug=slug rene_id=r.rene_id %}" class="btn btn-sm btn-primary">
+                  Detalhes
+                </a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="10" class="text-center">
+                Nenhuma renegociação encontrada.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

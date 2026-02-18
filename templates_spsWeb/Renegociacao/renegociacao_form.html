@@ -1,0 +1,370 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
+
+<div class="container py-4">
+  <div class="card shadow-sm">
+    <div class="card-header">
+      <h3 class="mb-0">Nova Renegociação</h3>
+    </div>
+    <div class="card-body">
+      {% if erro %}
+      <div class="alert alert-danger">{{ erro }}</div>
+      {% endif %}
+      <form method="post" id="form-renegociacao">
+        {% csrf_token %}
+        <input type="hidden" name="titulos_ids" id="titulos_ids">
+        <div class="row g-3">
+          <div class="col-md-8">
+            <label class="form-label">Cliente</label>
+            <input type="text" id="cliente_nome" class="form-control" placeholder="Digite nome ou ID do cliente">
+            <input type="hidden" id="cliente_id" name="rene_clie">
+            <div id="cliente_sugestoes" class="list-group mt-1" style="max-height: 240px; overflow-y: auto;"></div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Cliente Selecionado</label>
+            <input type="text" id="cliente_selecionado" class="form-control" readonly>
+          </div>
+        </div>
+
+        <div class="mt-4">
+          <label class="form-label">Títulos do cliente (abertos)</label>
+          <div id="lista_titulos" class="border rounded p-2" style="max-height: 260px; overflow-y: auto;">
+            <small class="text-muted">Selecione um cliente para carregar os títulos...</small>
+          </div>
+        </div>
+
+        <div class="mt-4">
+          <div class="row g-3">
+            <div class="col-md-3">
+              <div class="card">
+                <div class="card-body">
+                  <div class="small text-muted">Total Selecionado</div>
+                  <div class="fs-5 fw-bold" id="total_selecionado">R$ 0,00</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card">
+                <div class="card-body">
+                  <div class="small text-muted">Valor Final (Juros+Multa-Desc)</div>
+                  <div class="fs-5 fw-bold" id="valor_final">R$ 0,00</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card mt-3">
+            <div class="card-body">
+              <div class="small text-muted mb-1">Simulação de Parcelas</div>
+              <div id="simulacao_info" class="text-muted small mb-2"></div>
+              <div id="simulacao_parcelas" class="d-flex flex-wrap gap-2"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label">Juros</label>
+            <input type="number" step="0.01" name="juros" class="form-control" value="0">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Multa</label>
+            <input type="number" step="0.01" name="multa" class="form-control" value="0">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Desconto</label>
+            <input type="number" step="0.01" name="desconto" class="form-control" value="0">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Quantidade de parcelas</label>
+            <input type="number" name="parcelas" min="1" class="form-control" value="1">
+          </div>
+        </div>
+        <div class="row g-3 mt-2">
+          <div class="col-md-3">
+            <label class="form-label">Base de vencimento</label>
+            <input type="date" name="venc_base" id="venc_base" class="form-control">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Regra de parcelamento</label>
+            <input type="text" name="regra_parc" id="regra_parc" class="form-control"
+              placeholder="Ex.: 30,30 ou 15+15 ou 30+15+15">
+          </div>
+          <div class="col-md-3 d-flex align-items-end">
+            <button class="btn btn-outline-secondary w-100" type="button" id="btn-preencher-regra">Preencher com 30 em
+              30</button>
+          </div>
+        </div>
+        <div class="mt-4 d-flex justify-content-between">
+          <a href="{% url 'renegociacao_list' slug=slug %}" class="btn btn-secondary">Voltar</a>
+          <button type="submit" class="btn btn-success">Criar renegociação</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const slug = "{{ slug }}";
+    const empresaId = "{{ empresa_id|default:'1' }}";
+    const filialId = "{{ filial_id|default:'1' }}";
+    const inputNome = document.getElementById('cliente_nome');
+    const inputId = document.getElementById('cliente_id');
+    const inputSel = document.getElementById('cliente_selecionado');
+    const sugestoes = document.getElementById('cliente_sugestoes');
+    const listaTitulos = document.getElementById('lista_titulos');
+    const titulosIdsHidden = document.getElementById('titulos_ids');
+    const form = document.getElementById('form-renegociacao');
+
+    let debounceTimer = null;
+
+    function limparSugestoes() {
+      sugestoes.innerHTML = '';
+    }
+
+    function renderSugestoes(items) {
+      limparSugestoes();
+      if (!items || items.length === 0) {
+        return;
+      }
+      items.forEach(item => {
+        const a = document.createElement('a');
+        a.href = '#';
+        a.className = 'list-group-item list-group-item-action';
+        a.textContent = item.label;
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          inputId.value = item.id;
+          inputSel.value = item.label;
+          limparSugestoes();
+          carregarTitulos(item.id);
+        });
+        sugestoes.appendChild(a);
+      });
+    }
+
+    function buscarClientes(q) {
+      if (!q || q.length < 1) {
+        limparSugestoes();
+        return;
+      }
+      const url = `/api/${slug}/renegociacao/renegociacoes/autocomplete-clientes/?q=${encodeURIComponent(q)}&empresa_id=${encodeURIComponent(empresaId)}`;
+      fetch(url).then(r => r.json()).then(renderSugestoes).catch(() => { });
+    }
+
+    function carregarTitulos(clienteId) {
+      listaTitulos.innerHTML = '<small class="text-muted">Carregando títulos...</small>';
+      const url = `/api/${slug}/renegociacao/renegociacoes/titulos-por-cliente/?empresa_id=${encodeURIComponent(empresaId)}&filial_id=${encodeURIComponent(filialId)}&cliente_id=${encodeURIComponent(clienteId)}`;
+      fetch(url).then(r => r.json()).then(items => {
+        // Garante apenas títulos em Aberto (titu_aber === 'A')
+        const abertos = Array.isArray(items) ? items.filter(t => (t.titu_aber || 'A') === 'A') : [];
+        if (!Array.isArray(abertos) || abertos.length === 0) {
+          listaTitulos.innerHTML = '<small class="text-muted">Nenhum título em aberto para este cliente.</small>';
+          return;
+        }
+        const wrapper = document.createElement('div');
+        abertos.forEach(t => {
+          const id = `titu_${t.titu_titu}_${t.titu_parc}`;
+          const row = document.createElement('div');
+          row.className = 'form-check';
+          const chk = document.createElement('input');
+          chk.type = 'checkbox';
+          chk.className = 'form-check-input';
+          chk.id = id;
+          chk.dataset.titu = t.titu_titu;
+          chk.dataset.valor = String(t.titu_valo ?? 0);
+          chk.dataset.venc = t.titu_venc ? String(t.titu_venc) : '';
+          chk.addEventListener('change', recalcularTotais);
+          const label = document.createElement('label');
+          label.className = 'form-check-label';
+          const venc = t.titu_venc ? new Date(t.titu_venc).toLocaleDateString('pt-BR') : '';
+          label.htmlFor = id;
+          label.textContent = `${t.titu_titu} • Parc.${t.titu_parc} • Venc.${venc} • R$ ${Number(t.titu_valo).toFixed(2)} • Status: A`;
+          row.appendChild(chk);
+          row.appendChild(label);
+          wrapper.appendChild(row);
+        });
+        listaTitulos.innerHTML = '';
+        listaTitulos.appendChild(wrapper);
+        recalcularTotais();
+      }).catch(() => {
+        listaTitulos.innerHTML = '<small class="text-danger">Erro ao carregar títulos.</small>';
+      });
+    }
+
+    // --- Totalizador e simulador ---
+    const elTotal = document.getElementById('total_selecionado');
+    const elFinal = document.getElementById('valor_final');
+    const elParc = document.getElementById('simulacao_parcelas');
+    const elInfo = document.getElementById('simulacao_info');
+    const inpJuros = document.querySelector('input[name="juros"]');
+    const inpMulta = document.querySelector('input[name="multa"]');
+    const inpDesc = document.querySelector('input[name="desconto"]');
+    const inpParc = document.querySelector('input[name="parcelas"]');
+    const inpBase = document.getElementById('venc_base');
+    const inpRegra = document.getElementById('regra_parc');
+    const btnRegra = document.getElementById('btn-preencher-regra');
+
+    [inpJuros, inpMulta, inpDesc, inpParc, inpBase, inpRegra].forEach(el => {
+      if (el) el.addEventListener('input', () => recalcularTotais());
+    });
+    if (btnRegra) btnRegra.addEventListener('click', () => {
+      const n = parseInt(inpParc?.value || '1', 10);
+      if (n > 1) {
+        inpRegra.value = new Array(n - 1).fill('30').join(',');
+      } else {
+        inpRegra.value = '';
+      }
+      recalcularTotais();
+    });
+
+    function toCents(x) {
+      const n = parseFloat(String(x).replace(',', '.')) || 0;
+      return Math.round(n * 100);
+    }
+    function centsToBRL(c) {
+      const v = (c / 100).toFixed(2);
+      return 'R$ ' + v.replace('.', ',');
+    }
+
+    function calcularParcelasCents(totalCents, n) {
+      n = Math.max(parseInt(n || 1, 10), 1);
+      const base = Math.floor(totalCents / n);
+      const resto = totalCents - base * n;
+      const arr = new Array(n).fill(base);
+      for (let i = 0; i < resto; i++) {
+        arr[i] += 1;
+      }
+      return arr;
+    }
+
+    function somarSelecionadosCents() {
+      const checks = listaTitulos.querySelectorAll('input[type="checkbox"]:checked');
+      let soma = 0;
+      checks.forEach(chk => {
+        soma += toCents(chk.dataset.valor || 0);
+      });
+      return soma;
+    }
+
+    function dataBaseSelecionados() {
+      const checks = listaTitulos.querySelectorAll('input[type="checkbox"]:checked');
+      let maxTs = 0;
+      checks.forEach(chk => {
+        const v = chk.dataset.venc || '';
+        if (v) {
+          const ts = Date.parse(v);
+          if (!isNaN(ts) && ts > maxTs) maxTs = ts;
+        }
+      });
+      if (maxTs > 0) return new Date(maxTs);
+      return new Date(); // fallback hoje
+    }
+
+    function addDays(d, days) {
+      const dt = new Date(d.getTime());
+      dt.setDate(dt.getDate() + days);
+      return dt;
+    }
+
+    function brDate(d) {
+      return d.toLocaleDateString('pt-BR');
+    }
+
+    function parseRegra(str) {
+      if (!str) return [];
+      const s = String(str).trim().replace(/\s+/g, '').replace(/\+/g, ',');
+      const parts = s.split(',').filter(Boolean);
+      const nums = [];
+      for (const p of parts) {
+        const v = parseInt(p, 10);
+        if (!isNaN(v) && v >= 0) nums.push(v);
+      }
+      return nums;
+    }
+
+    function baseSelecionada() {
+      const v = inpBase?.value;
+      if (v) {
+        const d = new Date(v + 'T00:00:00');
+        if (!isNaN(d.getTime())) return d;
+      }
+      return dataBaseSelecionados();
+    }
+
+    function renderParcelas(arrCents) {
+      elParc.innerHTML = '';
+      if (!arrCents || arrCents.length === 0) {
+        elParc.textContent = 'Sem parcelas a exibir.';
+        if (elInfo) elInfo.textContent = '';
+        return;
+      }
+      const base = baseSelecionada();
+      const regraArr = parseRegra(inpRegra?.value || '');
+      if (elInfo) {
+        const regraTxt = regraArr.length ? regraArr.join('+') : '30';
+        elInfo.textContent = `Base: ${brDate(base)} • Regra: ${regraTxt}`;
+      }
+      arrCents.forEach((c, i) => {
+        let dias = 0;
+        if (i > 0) {
+          if (regraArr.length === 0) {
+            dias = 30 * i;
+          } else {
+            const rep = [...regraArr];
+            while (rep.length < i) rep.push(regraArr[regraArr.length - 1]);
+            dias = rep.slice(0, i).reduce((a, b) => a + b, 0);
+          }
+        }
+        const parcelaData = addDays(base, dias);
+        const badge = document.createElement('span');
+        badge.className = 'badge bg-secondary';
+        badge.textContent = `Parc ${i + 1} (${brDate(parcelaData)}): ${centsToBRL(c)}`;
+        elParc.appendChild(badge);
+      });
+    }
+
+    function recalcularTotais() {
+      const totalSel = somarSelecionadosCents();
+      const juros = toCents(inpJuros?.value || 0);
+      const multa = toCents(inpMulta?.value || 0);
+      const desc = toCents(inpDesc?.value || 0);
+      let totalFinal = totalSel + juros + multa - desc;
+      if (totalFinal < 0) totalFinal = 0;
+      const nParc = parseInt(inpParc?.value || '1', 10);
+      const parcelas = calcularParcelasCents(totalFinal, nParc);
+      elTotal.textContent = centsToBRL(totalSel);
+      elFinal.textContent = centsToBRL(totalFinal);
+      renderParcelas(parcelas);
+    }
+
+    inputNome.addEventListener('input', () => {
+      const q = inputNome.value.trim();
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => buscarClientes(q), 250);
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!sugestoes.contains(e.target) && e.target !== inputNome) {
+        limparSugestoes();
+      }
+    });
+
+    form.addEventListener('submit', (e) => {
+      // Monta CSV de titulos_ids (apenas titu_titu) dos itens marcados
+      const checks = listaTitulos.querySelectorAll('input[type="checkbox"]:checked');
+      const ids = [];
+      checks.forEach(chk => {
+        const titu = chk.dataset.titu;
+        if (titu) ids.push(titu);
+      });
+      titulosIdsHidden.value = ids.join(',');
+    });
+  })();
+</script>
+
+{% endblock %}
