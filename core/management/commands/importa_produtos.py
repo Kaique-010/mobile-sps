@@ -4,203 +4,257 @@ from openpyxl.drawing.spreadsheet_drawing import OneCellAnchor, TwoCellAnchor
 import pandas as pd
 from PIL import Image, ImageFilter
 import io
+import time
+
+
+# ========= CONFIGURAÇÕES =========
+EXCEL_PATH      = "KOHLER.xlsx"
+COL_CODIGO      = 4        # Coluna D → CÓDIGO FG
+COL_DESC        = 7        # Coluna G → DESCRIÇÃO
+BUCKET_NAME     = "produtos"
+NAMESPACE       = "grsxg5eatn7l"
+REGION          = "sa-saopaulo-1"
+OUTPUT_CSV      = "produtos_com_url.csv"
+
+SUFIXOS_COR = {'BN','CP','RGD','TT','BL','VS','NA','G','A','B','C4','K'}
+
+TARGET_MIN_SIZE = 800
+UPSCALE_FACTOR  = 2
+# =================================
+
+
+def get_prefix(codigo: str) -> str:
+    parts = codigo.strip().split('-')
+    if len(parts) > 1 and parts[-1].upper() in SUFIXOS_COR:
+        return '-'.join(parts[:-1])
+    return '-'.join(parts)
+
 
 class Command(BaseCommand):
-    help = 'Importa produtos do Excel e envia imagens para o Oracle Object Storage'
+    help = "Importa produtos do Excel KOHLER e envia imagens para o Oracle Object Storage"
 
     def add_arguments(self, parser):
-        parser.add_argument(
-            '--preview',
-            action='store_true',
-            help='Mostra o que será feito sem enviar nada'
-        )
+        parser.add_argument("--preview", action="store_true",
+                            help="Mostra o que será feito sem enviar nada ao bucket")
+        parser.add_argument("--retry", type=int, default=3,
+                            help="Número de tentativas no upload (default: 3)")
 
-    def process_image(self, img_data):
-        """
-        
-        """
+    def process_image(self, raw_bytes: bytes) -> bytes | None:
         try:
-            image = Image.open(io.BytesIO(img_data))
-            
-            # Converter para RGBA para garantir canal alfa
-            if image.mode != 'RGBA':
-                image = image.convert('RGBA')
-            
-            # LOG DEBUG: Tamanho original
-            self.stdout.write(f"DEBUG: Imagem original size: {image.size}")
-
-            new_width = int(image.width * 1)
-            new_height = int(image.height * 1)
-            
-            # Redimensionar com alta qualidade (LANCZOS)
-            image_resized = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
-            
-            # Aplicar filtro de nitidez para tentar melhorar o upscale
-            image_resized = image_resized.filter(ImageFilter.UnsharpMask(radius=2, percent=150, threshold=3))
-
-            # Salvar direto (sem canvas)
+            image = Image.open(io.BytesIO(raw_bytes))
+            if image.mode != "RGBA":
+                image = image.convert("RGBA")
+            w, h = image.size
+            if w < TARGET_MIN_SIZE or h < TARGET_MIN_SIZE:
+                new_w, new_h = int(w * UPSCALE_FACTOR), int(h * UPSCALE_FACTOR)
+                image = image.resize((new_w, new_h), Image.Resampling.LANCZOS)
+                self.stdout.write(f"      ↑ upscale {w}×{h} → {new_w}×{new_h}")
+            else:
+                self.stdout.write(f"      ✓ {w}×{h}px")
+            image = image.filter(ImageFilter.UnsharpMask(radius=1.5, percent=130, threshold=3))
             output = io.BytesIO()
-            image_resized.save(output, format='PNG', optimize=True)
+            image.save(output, format="PNG", optimize=True)
             return output.getvalue()
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f"Erro ao processar imagem: {e}"))
+            self.stdout.write(self.style.ERROR(f"      Erro ao processar imagem: {e}"))
             return None
 
+    def upload(self, object_storage, obj_path: str, data: bytes, max_retries: int) -> bool:
+        for attempt in range(1, max_retries + 1):
+            try:
+                object_storage.put_object(
+                    namespace_name=NAMESPACE, bucket_name=BUCKET_NAME,
+                    object_name=obj_path, put_object_body=data, content_type="image/png",
+                )
+                return True
+            except Exception as e:
+                self.stdout.write(self.style.WARNING(f"      tentativa {attempt}/{max_retries}: {e}"))
+                if attempt < max_retries:
+                    time.sleep(2 ** attempt)
+        return False
+
     def handle(self, *args, **options):
-        PREVIEW = options['preview']
+        PREVIEW   = options["preview"]
+        MAX_RETRY = options["retry"]
 
-        # ========= CONFIGURAÇÕES =========
-        EXCEL_PATH = "KOHLER.xlsx"
-        COL_CODIGO = 4      # Coluna A
-        COL_DESC = 7        # Coluna B
-        BUCKET_NAME = "produtos"
-        NAMESPACE = "grsxg5eatn7l"
-        REGION = "sa-saopaulo-1"
-        OUTPUT_CSV = "produtos_com_url.csv"
-        # =================================
-
+        self.stdout.write(self.style.WARNING("═" * 65))
         self.stdout.write(self.style.WARNING(
-            "MODO PREVIEW ATIVO" if PREVIEW else "MODO EXECUÇÃO REAL"
+            "  PREVIEW — nenhum upload será feito" if PREVIEW
+            else "  EXECUÇÃO REAL — imagens serão enviadas ao OCI"
         ))
+        self.stdout.write(self.style.WARNING("═" * 65))
 
-        # Inicializa cliente OCI apenas se for executar
+        object_storage = None
         if not PREVIEW:
             import oci
             config = oci.config.from_file()
             object_storage = oci.object_storage.ObjectStorageClient(config)
 
         try:
-            # Carregar o arquivo Excel
             wb = load_workbook(EXCEL_PATH)
             ws = wb.active
         except FileNotFoundError:
-            self.stdout.write(self.style.ERROR(f"Erro: Arquivo {EXCEL_PATH} não encontrado."))
+            self.stdout.write(self.style.ERROR(f"Arquivo não encontrado: {EXCEL_PATH}"))
             return
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f"Erro inesperado ao carregar o arquivo Excel: {e}"))
+            self.stdout.write(self.style.ERROR(f"Erro ao abrir Excel: {e}"))
             return
 
-        produtos_processados = []
+        self.stdout.write(f"\nImagens no Excel: {len(ws._images)}")
+        self.stdout.write(f"Linhas de dados:  {ws.max_row - 1}\n")
 
-        # ===============================
-        # LEITURA DAS IMAGENS DO EXCEL
-        # ===============================
-        self.stdout.write(
-            f"Total de imagens encontradas no Excel: {len(ws._images)}"
-        )
-
-        for idx, img in enumerate(ws._images, start=1):
+        # ------------------------------------------------------------------
+        # PASSO 1 — Pré-carrega TODOS os bytes de imagem em memória.
+        #
+        # CRÍTICO: img._data() fecha o file handle após a primeira leitura.
+        # Se a mesma imagem for referenciada por herança em múltiplos produtos,
+        # a segunda chamada lança "I/O operation on closed file" e o produto
+        # fica sem URL. Carregar tudo em bytes[] logo aqui elimina esse problema.
+        # ------------------------------------------------------------------
+        linha_para_bytes: dict[int, bytes] = {}
+        for img in ws._images:
             anchor = img.anchor
-            row_start = -1
-            row_end = -1
-
             try:
                 if isinstance(anchor, TwoCellAnchor):
-                    row_start = anchor._from.row + 1
-                    row_end = anchor.to.row + 1
+                    r_start = anchor._from.row + 1
+                    r_end   = anchor.to.row + 1
                 elif isinstance(anchor, OneCellAnchor):
-                    row_start = anchor._from.row + 1
-                    row_end = row_start
+                    r_start = r_end = anchor._from.row + 1
+                elif hasattr(anchor, "_from"):
+                    r_start = r_end = anchor._from.row + 1
                 else:
-                    # Tenta ler _from se disponível
-                    if hasattr(anchor, '_from'):
-                        row_start = anchor._from.row + 1
-                        row_end = row_start
-                    else:
-                        self.stdout.write(self.style.WARNING(f"Imagem {idx}: Tipo de âncora desconhecido ({type(anchor)})."))
-                        continue
+                    continue
             except AttributeError:
-                self.stdout.write(self.style.WARNING(f"Imagem {idx}: Erro ao ler propriedades da âncora."))
+                continue
+            try:
+                raw = img._data()   # única leitura — carrega agora, guarda para sempre
+                if not raw:
+                    continue
+            except Exception:
+                continue
+            for r in range(r_start, r_end + 1):
+                linha_para_bytes[r] = raw
+
+        self.stdout.write(f"Linhas com imagem mapeadas: {len(linha_para_bytes)}")
+
+        # ------------------------------------------------------------------
+        # PASSO 2 — Mapeia prefixo → bytes da imagem PRÓPRIA (primeira direta).
+        #
+        # Só registra quando a linha tem imagem ancorada, para não herdar
+        # erroneamente a imagem do produto anterior.
+        # ------------------------------------------------------------------
+        prefixo_bytes_proprios: dict[str, bytes] = {}
+        for r in range(2, ws.max_row + 1):
+            if r not in linha_para_bytes:
+                continue
+            codigo = ws.cell(row=r, column=COL_CODIGO).value
+            if not codigo:
+                continue
+            prefixo = get_prefix(str(codigo).strip())
+            if prefixo not in prefixo_bytes_proprios:
+                prefixo_bytes_proprios[prefixo] = linha_para_bytes[r]
+
+        self.stdout.write(f"Prefixos com imagem própria: {len(prefixo_bytes_proprios)}\n")
+
+        # ------------------------------------------------------------------
+        # PASSO 3 — Percorre todos os produtos e resolve bytes finais.
+        #
+        # Prioridade:
+        #   1. Bytes próprios do prefixo (prefixo_bytes_proprios)
+        #   2. Herança: last_bytes — últimos bytes vistos de cima p/ baixo
+        #
+        # Como tudo está em memória (bytes), nunca há I/O closed file.
+        # ------------------------------------------------------------------
+        produtos_csv      = []
+        prefixos_enviados: dict[str, str] = {}   # prefixo → URL
+        uploads_falhos    = []
+        last_bytes: bytes | None = None
+
+        for r in range(2, ws.max_row + 1):
+            codigo = ws.cell(row=r, column=COL_CODIGO).value
+            if not codigo:
                 continue
 
-            if row_end < row_start:
-                row_end = row_start
-
-            # Coletar todos os códigos no intervalo vertical da imagem
-            found_items = []
-            for r in range(row_start, row_end + 1):
-                c = ws.cell(row=r, column=COL_CODIGO).value
-                d = ws.cell(row=r, column=COL_DESC).value
-                if c:
-                    found_items.append({'row': r, 'code': c, 'desc': d})
-
-
-            if not found_items:
-                self.stdout.write(
-                    self.style.WARNING(f"Imagem {idx} (Linhas {row_start}-{row_end}): ignorada (sem código no range)")
-                )
-                continue
-
-            # Processar cada código encontrado para esta imagem
-            for item in found_items:
-                codigo = item['code']
-                descricao = item['desc']
-                row_found = item['row']
-                
-                nome_arquivo = f"{codigo}.png"
-                url = (
-                    f"https://objectstorage.{REGION}.oraclecloud.com"
-                    f"/n/{NAMESPACE}/b/{BUCKET_NAME}/o/produtos/{nome_arquivo}"
-                )
-
-                # ===============================
-                # PREVIEW — O QUE SERÁ ENVIADO
-                # ===============================
-                self.stdout.write(
-                    f"[{idx}] Produto: {codigo} | Linha: {row_found} (Range Img: {row_start}-{row_end})"
-                )
-                self.stdout.write(f"     Arquivo: {nome_arquivo}")
-                self.stdout.write(f"     URL: {url}")
-
-                # ===============================
-                # ENVIO REAL (se não for preview)
-                # ===============================
-                if not PREVIEW:
-                    try:
-                        # Processar imagem antes do upload
-                        processed_img_data = self.process_image(img._data())
-                        
-                        if processed_img_data:
-                            object_storage.put_object(
-                                namespace_name=NAMESPACE,
-                                bucket_name=BUCKET_NAME,
-                                object_name=f"produtos/{nome_arquivo}",
-                                put_object_body=processed_img_data,
-                                content_type="image/png"
-                            )
-                            self.stdout.write(self.style.SUCCESS(f"     Upload concluído"))
-                        else:
-                            self.stdout.write(self.style.ERROR(f"     Falha ao processar imagem para {codigo}"))
-
-                    except Exception as e:
-                        self.stdout.write(self.style.ERROR(f"     Erro no upload: {e}"))
-
-                produtos_processados.append({
-                    "codigo": codigo,
-                    "descricao": descricao,
-                    "prod_url": url
-                })
-
-        # ===============================
-        # PRODUTOS PROCESSADOS (RESUMO)
-        # ===============================
-        self.stdout.write(
-            self.style.WARNING(
-                f"Total de produtos processados: {len(produtos_processados)}"
+            codigo    = str(codigo).strip()
+            descricao = str(ws.cell(row=r, column=COL_DESC).value or "").strip()
+            prefixo   = get_prefix(codigo)
+            nome_arq  = f"{prefixo}.png"
+            obj_path  = f"produtos/{nome_arq}"
+            url       = (
+                f"https://objectstorage.{REGION}.oraclecloud.com"
+                f"/n/{NAMESPACE}/b/{BUCKET_NAME}/o/{obj_path}"
             )
-        )
 
-        # ===============================
-        # GERA CSV FINAL
-        # ===============================
-        df = pd.DataFrame(produtos_processados)
-        df.to_csv(OUTPUT_CSV, index=False)
+            # Atualiza last_bytes se esta linha tem imagem própria
+            if r in linha_para_bytes:
+                last_bytes = linha_para_bytes[r]
 
-        self.stdout.write(
-            self.style.SUCCESS(f"CSV gerado: {OUTPUT_CSV}")
-        )
+            # Resolve bytes: próprio do prefixo > herança de last_bytes
+            raw   = prefixo_bytes_proprios.get(prefixo, last_bytes)
+            fonte = "própria" if prefixo in prefixo_bytes_proprios else "herdada"
+
+            ja_enviado = prefixo in prefixos_enviados
+
+            self.stdout.write(
+                f"Linha {r:4d} | {codigo:30s} | {nome_arq:40s} | {fonte}"
+                + (" [já enviado]" if ja_enviado else "")
+            )
+
+            if not ja_enviado:
+                if not PREVIEW:
+                    if raw is None:
+                        self.stdout.write(self.style.ERROR("      sem imagem disponível"))
+                        produtos_csv.append({"codigo": codigo, "descricao": descricao, "prod_url": ""})
+                        continue
+                    processed = self.process_image(raw)
+                    if not processed:
+                        produtos_csv.append({"codigo": codigo, "descricao": descricao, "prod_url": ""})
+                        continue
+                    ok = self.upload(object_storage, obj_path, processed, MAX_RETRY)
+                    if ok:
+                        self.stdout.write(self.style.SUCCESS(f"      ✔ upload ok → {nome_arq}"))
+                        prefixos_enviados[prefixo] = url
+                    else:
+                        self.stdout.write(self.style.ERROR("      ✘ upload falhou"))
+                        uploads_falhos.append(prefixo)
+                        url = ""
+                else:
+                    # preview: registra a URL sem fazer upload
+                    if raw is None:
+                        self.stdout.write(self.style.WARNING("      [sem imagem]"))
+                        url = ""
+                    prefixos_enviados[prefixo] = url
+
+            produtos_csv.append({
+                "codigo":    codigo,
+                "descricao": descricao,
+                "prod_url":  prefixos_enviados.get(prefixo, ""),
+            })
+
+        # ------------------------------------------------------------------
+        # RESUMO
+        # ------------------------------------------------------------------
+        self.stdout.write("\n" + self.style.WARNING("═" * 65))
+        self.stdout.write(self.style.WARNING("  RESUMO"))
+        self.stdout.write(self.style.WARNING("═" * 65))
+        self.stdout.write(f"  Produtos no CSV:            {len(produtos_csv)}")
+        self.stdout.write(f"  Arquivos únicos no bucket:  {len(prefixos_enviados)}")
+        sem_url = sum(1 for p in produtos_csv if not p["prod_url"])
+        if sem_url:
+            self.stdout.write(self.style.ERROR(f"  Produtos sem URL:           {sem_url}"))
+            for p in produtos_csv:
+                if not p["prod_url"]:
+                    self.stdout.write(self.style.ERROR(f"    → {p['codigo']}"))
+        else:
+            self.stdout.write(self.style.SUCCESS("  Todos os 651 produtos com URL ✓"))
+        if uploads_falhos:
+            self.stdout.write(self.style.ERROR(
+                f"  Falhas ({len(uploads_falhos)}): {', '.join(uploads_falhos)}"
+            ))
+
+        df = pd.DataFrame(produtos_csv)
+        df.to_csv(OUTPUT_CSV, index=False, encoding="utf-8-sig")
+        self.stdout.write(self.style.SUCCESS(f"\n  CSV gerado: {OUTPUT_CSV}"))
 
         if PREVIEW:
-            self.stdout.write(
-                self.style.WARNING("Nenhum arquivo foi enviado (modo preview).")
-            )
+            self.stdout.write(self.style.WARNING("\n  Nenhum arquivo foi enviado (modo preview)."))

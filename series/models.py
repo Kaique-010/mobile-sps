@@ -6,6 +6,7 @@ tipo_documento = (
     ('FR', 'Fatura a Receber'),
     ('FP', 'Fatura a Pagar'),
     ('NC', 'Nota do Consumidor'),
+    ('PR', 'Produtor Rural')
 )
 
 class Series(models.Model):

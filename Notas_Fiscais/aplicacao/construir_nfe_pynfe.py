@@ -1,11 +1,22 @@
 from decimal import Decimal
 import datetime
 import random
+import re
 
 from pynfe.entidades.emitente import Emitente
 from pynfe.entidades.cliente import Cliente
 from pynfe.entidades.notafiscal import NotaFiscal
 from pynfe.utils.flags import CODIGO_BRASIL
+
+
+def _limpar_inscricao_estadual(valor):
+    s = str(valor or "").strip()
+    if not s:
+        return ""
+    if "ISENTO" in s.upper():
+        return "ISENTO"
+    somente_digitos = re.sub(r"\D", "", s)
+    return somente_digitos[:14]
 
 
 def construir_nfe_pynfe(dto):
@@ -16,7 +27,7 @@ def construir_nfe_pynfe(dto):
         nome_fantasia=homolog_text or dto.emitente.fantasia,
         cnpj=dto.emitente.cnpj,
         codigo_de_regime_tributario=str(dto.emitente.regime_trib or "1"),
-        inscricao_estadual=(dto.emitente.ie or "")[:14],
+        inscricao_estadual=_limpar_inscricao_estadual(dto.emitente.ie),
         inscricao_municipal="",
         cnae_fiscal="",
         endereco_logradouro=dto.emitente.logradouro,
@@ -35,7 +46,7 @@ def construir_nfe_pynfe(dto):
         email="",
         numero_documento=dto.destinatario.documento,
         indicador_ie=int(dto.destinatario.ind_ie or "9"),
-        inscricao_estadual=dto.destinatario.ie or "",
+        inscricao_estadual=_limpar_inscricao_estadual(dto.destinatario.ie),
         endereco_logradouro=dto.destinatario.logradouro,
         endereco_numero=dto.destinatario.numero,
         endereco_complemento="",

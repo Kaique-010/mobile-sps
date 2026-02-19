@@ -10,6 +10,7 @@ from django.utils import timezone
 from core.utils import get_licenca_db_config
 from ...models import Titulospagar, Bapatitulos
 from Entidades.models import Entidades
+from CentrodeCustos.models import Centrodecustos
 from datetime import date
 from django.utils.timezone import now
 
@@ -26,6 +27,8 @@ class TitulosPagarListView(DBAndSlugMixin, ListView):
         # Captura os parâmetros de filtro da URL
         fornecedor_id = self.request.GET.get('titu_forn')
         fornecedor_nome = self.request.GET.get('fornecedor_nome')
+        titu_cecu = self.request.GET.get('titu_cecu')
+        nome_centro_custo = self.request.GET.get('nome_centro_custo')
         status_aber = self.request.GET.get('titu_aber')
         venc_ini = self.request.GET.get('venc_ini')
         venc_fim = self.request.GET.get('venc_fim')
@@ -41,7 +44,19 @@ class TitulosPagarListView(DBAndSlugMixin, ListView):
             )
 
         # Seleciona apenas os campos necessários
-        qs = qs.only('titu_empr','titu_fili','titu_forn','titu_titu','titu_seri','titu_parc','titu_valo','titu_venc','titu_emis','titu_aber')
+        qs = qs.only(
+            'titu_empr',
+            'titu_fili',
+            'titu_forn',
+            'titu_titu',
+            'titu_seri',
+            'titu_parc',
+            'titu_valo',
+            'titu_venc',
+            'titu_emis',
+            'titu_aber',
+            'titu_cecu',
+        )
 
         # Aplica os filtros recebidos
 
@@ -61,6 +76,8 @@ class TitulosPagarListView(DBAndSlugMixin, ListView):
             qs = qs.filter(titu_seri__iexact=serie)
         if titu_titu:
             qs = qs.filter(titu_titu__iexact=titu_titu)
+        if titu_cecu:
+            qs = qs.filter(titu_cecu__iexact=titu_cecu)
 
         # Filtro por nome do fornecedor via Entidades
         if fornecedor_nome:
@@ -70,6 +87,16 @@ class TitulosPagarListView(DBAndSlugMixin, ListView):
                 qs = qs.filter(titu_forn__in=fornecedor_ids)
             else:
                 qs = qs.none()
+        
+        # Filtro por nome do Centro de Custo
+        if nome_centro_custo:
+            centro_custos_qs = Centrodecustos.objects.using(self.db_alias).filter(cecu_nome__icontains=nome_centro_custo)
+            titu_cecu_ids = list(centro_custos_qs.values_list('cecu_redu', flat=True))
+            if titu_cecu_ids:
+                qs = qs.filter(titu_cecu__in=titu_cecu_ids)
+            else:
+                qs = qs.none()
+        
         return qs.order_by('titu_venc', 'titu_titu')
       
 
@@ -132,18 +159,27 @@ class TitulosPagarListView(DBAndSlugMixin, ListView):
         percent_pago = float(((total_pago or 0) / (total_geral or 1)) * 100) if total_geral else 0.0
         percent_a_pagar = float(100.0 - percent_pago) if total_geral else 0.0
         fornecedor_ids = set()
+        cecu_ids = set()
         for t in page_qs:
             if t.titu_forn:
                 fornecedor_ids.add(t.titu_forn)
+            if t.titu_cecu:
+                cecu_ids.add(t.titu_cecu)
 
         entidades_map = {}
         if fornecedor_ids:
             ents = Entidades.objects.using(self.db_alias).filter(enti_clie__in=list(fornecedor_ids))
             entidades_map = {e.enti_clie: e.enti_nome for e in ents}
 
+        centros_map = {}
+        if cecu_ids:
+            centros = Centrodecustos.objects.using(self.db_alias).filter(cecu_redu__in=list(cecu_ids))
+            centros_map = {c.cecu_redu: c.cecu_nome for c in centros}
+
         # Anota nome do fornecedor em cada título para fácil renderização no template
         for t in page_qs:
             setattr(t, 'fornecedor_nome', entidades_map.get(t.titu_forn, ''))
+            setattr(t, 'nome_centro_custo', centros_map.get(t.titu_cecu, ''))
 
         # Preserva filtros na paginação
         preserved = {

@@ -1,6 +1,9 @@
 from django.views.generic import ListView
 from core.utils import get_licenca_db_config
 from ...models import Series
+from ...service import SeriesService
+
+
 
 class SeriesListView(ListView):
     model = Series
@@ -12,12 +15,17 @@ class SeriesListView(ListView):
         self.slug = kwargs.get("slug")
         self.db_alias = get_licenca_db_config(request)
         self.empresa_id = request.session.get("empresa_id")
+        self.filial_id = request.session.get("filial_id")
         return super().dispatch(request, *args, **kwargs)
 
-    def get_queryset(self):
-        return Series.objects.using(self.db_alias).filter(seri_empr=self.empresa_id)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["slug"] = self.slug
         return context
+
+    def get_queryset(self):
+        return SeriesService.get_series(self.empresa_id, self.filial_id)
+    
+    def series_produtor_rural(self):
+        return SeriesService.obter_series_produtor_rural(self.empresa_id, self.filial_id)

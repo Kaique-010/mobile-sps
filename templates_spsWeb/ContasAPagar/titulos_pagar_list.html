@@ -97,6 +97,10 @@
           <label class="form-label">Série</label>
           <input type="text" name="titu_seri" value="{{ filters.titu_seri }}" class="form-control" placeholder="Ex.: PEV, ORS">
         </div>
+        <div class="col-md-3">
+          <label class="form-label">Centro de Custo (Nome)</label>
+          <input type="text" name="nome_centro_custo" value="{{ filters.nome_centro_custo }}" class="form-control" placeholder="Nome do Centro de Custo">
+        </div>
         <div class="col-12">
           <button type="submit" class="btn btn-outline-primary" id="btn-filtrar">Filtrar</button>
           <a href="?" class="btn btn-outline-secondary">Limpar</a>
@@ -120,11 +124,13 @@
               <span class="badge bg-success">Quitado</span>
               {% endif %}
             </div>
-            <p class="card-text mb-1"><strong>Fornecedor:</strong> {{ t.fornecedor_nome }} (ID {{ t.titu_forn }})
-            </p>
+            <p class="card-text mb-1"><strong>Fornecedor:</strong> {{ t.fornecedor_nome }} (ID {{ t.titu_forn }})</p>
             <p class="card-text"><strong>Vencimento:</strong> {{ t.titu_venc|date:'d/m/Y' }}<br>
               <strong>Valor:</strong> {{ t.titu_valo|brl }}
             </p>
+            <p class="card-text"><strong>Série:</strong> {{ t.titu_seri }}</p>
+            <p class="card-text"><strong>Parcela:</strong> {{ t.titu_parc }}</p>
+            <p class="card-text"><strong>Centro de Custo:</strong> {{ t.titu_cecu }}- {{ t.nome_centro_custo }}</p>
             <div class="mt-3 d-flex flex-wrap gap-2">
               {% if t.titu_aber == 'A' %}
               <button type="button" class="btn btn-outline-success btn-sm btn-baixar" title="Pagar título" data-tipo="pagar"

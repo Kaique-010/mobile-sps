@@ -145,7 +145,7 @@ class PedidosService:
             moes_data=pedido.pedi_data,
             moes_seri="PEV",  # Série do pedido
             moes_docu=next_doc_number,  # Número sequencial do documento
-            moes_mode="01",  # Modo de operação
+            moes_mode="PV",  # Modo de operação
             moes_item=1,  # Número do item
            
         )
@@ -241,7 +241,7 @@ class PedidosService:
                 moes_data=pedido.pedi_data,
                 moes_seri="PEV",  # Série do pedido
                 moes_docu=next_doc_number,  # Número sequencial do documento
-                moes_mode="01",  # Modo de operação
+                moes_mode="PV",  # Modo de operação
                 moes_item=1,  # Número do item
              
             )

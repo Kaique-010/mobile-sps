@@ -35,4 +35,31 @@
     </div>
   </div>
 </div>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var tipo = document.getElementById('id_seri_nome');
+    var input = document.getElementById('id_seri_codi');
+    var select = document.getElementById('seri_codi_pr');
+    if (!tipo || !input || !select) return;
+    function syncFromSelect() {
+      input.value = select.value || input.value;
+    }
+    function toggleFields() {
+      if (tipo.value === 'PR') {
+        input.classList.add('d-none');
+        select.classList.remove('d-none');
+        if (!select.value && select.options.length) {
+          select.value = select.options[0].value;
+        }
+        syncFromSelect();
+      } else {
+        select.classList.add('d-none');
+        input.classList.remove('d-none');
+      }
+    }
+    select.addEventListener('change', syncFromSelect);
+    tipo.addEventListener('change', toggleFields);
+    toggleFields();
+  });
+</script>
 {% endblock %}

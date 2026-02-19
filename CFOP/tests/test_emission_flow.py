@@ -7,36 +7,55 @@ from Notas_Fiscais.models import Nota, NotaItem, NotaItemImposto
 from Licencas.models import Filiais
 from Entidades.models import Entidades
 from Produtos.models import Produtos, UnidadeMedida
+from core.utils import get_db_from_slug
+from django.conf import settings
+
+
+# Usamos o roteamento/licenças para apontar para a base indus (mesmo slug do login)
+TEST_DB_ALIAS = get_db_from_slug("indus")
+
+# Para testes, evitamos espelhar no 'default' (que pode estar em localhost)
+# e deixamos o alias 'indus' usar diretamente o host/DB configurado nas licenças.
+if "TEST" in settings.DATABASES.get(TEST_DB_ALIAS, {}):
+    settings.DATABASES[TEST_DB_ALIAS]["TEST"]["MIRROR"] = None
+
 
 class EmissionFlowTest(TestCase):
+    # Limitamos o teste ao alias configurado via licenças/roteamento
+    databases = {TEST_DB_ALIAS}
+
     def setUp(self):
         # Create dependencies
         self.empresa = 1
         self.filial_id = 1
+        self.db_alias = TEST_DB_ALIAS
         
-        self.unidade = UnidadeMedida.objects.create(
+        self.unidade = UnidadeMedida.objects.using(self.db_alias).create(
             unid_codi="UN",
             unid_desc="Unidade"
         )
         print(f"DEBUG: self.unidade type: {type(self.unidade)}")
         print(f"DEBUG: self.unidade: {self.unidade}")
         
-        self.filial_obj = Filiais.objects.create(
+        self.filial_obj = Filiais.objects.using(self.db_alias).create(
             empr_empr=self.empresa,
             empr_codi=self.filial_id,
-            empr_docu="12345678000199",
-            empr_nome="Minha Empresa",
-            empr_regi_trib="3",
-            empr_ende="Rua Teste",
-            empr_nume="100",
-            empr_bair="Centro",
-            empr_cida="Cidade",
-            empr_esta="SP",
-            empr_cep="12345000",
+            empr_docu="62377583000121",
+            empr_nome="NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL",
+            empr_fant="NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL",
+            empr_insc_esta="91168869-76",
+            empr_regi_trib="1",
+            empr_ende="RUA PADRE LADISLAU KULA",
+            empr_nume="800",
+            empr_bair="SANTO INACIO",
+            empr_cida="CURITIBA",
+            empr_esta="PR",
+            empr_cep="82010210",
+            empr_codi_cida="4106902",
             empr_cert_digi=b"fake_cert"
         )
 
-        self.cliente = Entidades.objects.create(
+        self.cliente = Entidades.objects.using(self.db_alias).create(
             enti_empr=self.empresa,
             enti_clie=100,
             enti_nome="Cliente Teste",
@@ -48,7 +67,7 @@ class EmissionFlowTest(TestCase):
             enti_cep="12345000"
         )
 
-        self.produto = Produtos.objects.create(
+        self.produto = Produtos.objects.using(self.db_alias).create(
             prod_codi="1",
             prod_nome="Produto Teste",
             prod_ncm="12345678",
@@ -69,9 +88,9 @@ class EmissionFlowTest(TestCase):
                 "logradouro": self.filial_obj.empr_ende,
                 "numero": self.filial_obj.empr_nume,
                 "municipio": self.filial_obj.empr_cida,
-                "cod_municipio": "3550308",
+                "cod_municipio": "4106902",
                 "cep": self.filial_obj.empr_cep,
-                "ie": "123"
+                "ie": "911.688.69-76"
             },
             "destinatario": {
                 "documento": self.cliente.enti_cnpj,
@@ -90,8 +109,9 @@ class EmissionFlowTest(TestCase):
                     "descricao": self.produto.prod_nome,
                     "quantidade": 10,
                     "valor_unit": 100,
-                    "ncm": "12345678",
-                    "cfop": "5102",
+                    "ncm": "4418.75.00",
+                    "cfop": "5.102",
+                    "cest": "12.345.67",
                     "cst_icms": "00",
                     "cst_pis": "01",
                     "cst_cofins": "01",
@@ -127,7 +147,12 @@ class EmissionFlowTest(TestCase):
 
         MockCalculo.return_value.aplicar_impostos.side_effect = side_effect_calc
 
-        result = EmissaoNotaService.emitir_nota(self.dto, self.empresa, self.filial_id)
+        result = EmissaoNotaService.emitir_nota(
+            self.dto,
+            self.empresa,
+            self.filial_id,
+            database=self.db_alias,
+        )
         
         self.assertEqual(result["sefaz"]["status"], "100")
         
@@ -144,12 +169,23 @@ class EmissionFlowTest(TestCase):
         self.assertEqual(item_dto["valor_seguro"], Decimal("10.00"))
         self.assertEqual(item_dto["valor_outras_despesas"], Decimal("5.00"))
 
+        emit_dto = dto_generated["emitente"]
+        self.assertEqual(emit_dto["ie"], "9116886976")
+        self.assertEqual(item_dto["ncm"], "44187500")
+        self.assertEqual(item_dto["cfop"], "5102")
+        self.assertEqual(item_dto.get("cest"), "1234567")
+
     def test_validacao_inicial_falha(self):
         dto_invalido = self.dto.copy()
         dto_invalido.pop("destinatario")
         
         with self.assertRaises(ErroValidacao):
-            EmissaoNotaService.emitir_nota(dto_invalido, self.empresa, self.filial_id)
+            EmissaoNotaService.emitir_nota(
+                dto_invalido,
+                self.empresa,
+                self.filial_id,
+                database=self.db_alias,
+            )
 
     @patch("Notas_Fiscais.emissao.emissao_nota_service.CalculoImpostosService")
     def test_validacao_calculada_falha(self, MockCalculo):
@@ -157,7 +193,12 @@ class EmissionFlowTest(TestCase):
         MockCalculo.return_value.aplicar_impostos.return_value = None
         
         with self.assertRaises(ErroValidacao) as cm:
-            EmissaoNotaService.emitir_nota(self.dto, self.empresa, self.filial_id)
+            EmissaoNotaService.emitir_nota(
+                self.dto,
+                self.empresa,
+                self.filial_id,
+                database=self.db_alias,
+            )
         
         self.assertIn("Impostos não foram calculados", str(cm.exception))
 
@@ -189,7 +230,12 @@ class EmissionFlowTest(TestCase):
 
         MockCalculo.return_value.aplicar_impostos.side_effect = side_effect_calc
 
-        result = EmissaoNotaService.emitir_nota(self.dto, self.empresa, self.filial_id)
+        result = EmissaoNotaService.emitir_nota(
+            self.dto,
+            self.empresa,
+            self.filial_id,
+            database=self.db_alias,
+        )
         
         args, _ = MockEmissorCore.call_args
         dto_generated = args[0]

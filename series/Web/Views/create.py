@@ -3,6 +3,9 @@ from django.views.generic import CreateView
 from core.utils import get_licenca_db_config
 from ...models import Series
 from ..form import SeriesForm
+from ...service import SeriesService
+
+
 
 class SeriesCreateView(CreateView):
     model = Series
@@ -35,4 +38,8 @@ class SeriesCreateView(CreateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["slug"] = self.slug
+        ctx["series_pr"] = [f"{i:03d}" for i in range(920, 970)]
         return ctx
+    
+    def series_produtor_rural(self):
+        return SeriesService.obter_series_produtor_rural(self.empresa_id, self.filial_id)

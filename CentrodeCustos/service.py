@@ -55,36 +55,23 @@ def gerar_proximo_codigo(parent_code: str | None, empresa_id: int, db_alias: str
     return novo_codigo, tipo
 
 def get_children(codigo, empresa_id, db_alias: str | None = None):
-    """Retorna apenas filhos imediatos do código informado.
+    codigo_str = str(codigo or "").strip()
+    if not codigo_str:
+        return Centrodecustos.objects.none()
 
-    Primeiro tenta localizar por prefixo expandido e nível (mais confiável).
-    Se não houver resultado, faz fallback para o vínculo `cecu_niv1`.
-    """
-    codigo_str = str(codigo)
     qs = Centrodecustos.objects.using(db_alias) if db_alias else Centrodecustos.objects
 
-    try:
-        prefix = codigo_str + "."
-        pattern = r"^" + prefix.replace(".", r"\.") + r"[^.]+$"
-        imediatos = qs.filter(
-            cecu_empr=empresa_id,
-            cecu_expa__regex=pattern,
-        ).exclude(cecu_expa=codigo_str).order_by("cecu_expa").distinct("cecu_redu")
-        if imediatos.exists():
-            return imediatos
-    except Exception:
-        pass
+    partes = codigo_str.split(".")
+    nivel_parent = len(partes)
+    prefixo = codigo_str + "."
 
-    try:
-        parent_redu = int(codigo_str.replace(".", ""))
-    except Exception:
-        parent_redu = 0
+    filtros = {
+        "cecu_empr": empresa_id,
+        "cecu_expa__startswith": prefixo,
+    }
 
-    # Fallback apenas para nível 1: filhos diretos nível 2 com vínculo cecu_niv1 = 1,2,3,4
-    try:
-        partes = codigo_str.split('.')
-        nivel_parent = len(partes)
-    except Exception:
-        nivel_parent = 0
+    if nivel_parent >= 1:
+        filtros["cecu_nive"] = nivel_parent + 1
 
-    return qs.none()
+    filhos = qs.filter(**filtros).order_by("cecu_expa")
+    return filhos

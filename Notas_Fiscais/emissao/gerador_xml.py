@@ -2,6 +2,7 @@
 from lxml import etree
 from datetime import datetime
 import logging
+import re
 
 NFE_NS = "http://www.portalfiscal.inf.br/nfe"
 NSMAP = {None: NFE_NS}
@@ -86,6 +87,15 @@ class GeradorXML:
         etree.SubElement(ide, "procEmi").text = "0"
         etree.SubElement(ide, "verProc").text = "SPS-ERP-1.0"
 
+    def _limpar_ie(self, valor):
+        s = str(valor or "").strip()
+        if not s:
+            return ""
+        if "ISENTO" in s.upper():
+            return "ISENTO"
+        somente_digitos = re.sub(r"\D", "", s)
+        return somente_digitos[:14]
+
     # ----------------------------------------------------------------------
     # emitente
     # ----------------------------------------------------------------------
@@ -94,7 +104,7 @@ class GeradorXML:
 
         etree.SubElement(e, "CNPJ").text = emit["cnpj"].zfill(14)
         etree.SubElement(e, "xNome").text = emit["razao"]
-        etree.SubElement(e, "IE").text = emit["ie"]
+        etree.SubElement(e, "IE").text = self._limpar_ie(emit["ie"])
 
         end = etree.SubElement(e, "enderEmit")
         etree.SubElement(end, "xLgr").text = emit["logradouro"]

@@ -2,6 +2,7 @@ from .dto import NotaFiscalDTO, EmitenteDTO, DestinatarioDTO, ItemDTO
 from ..models import Nota
 from Licencas.models import Filiais
 from Produtos.models import Produtos
+import re
 
 
 class NotaBuilder:
@@ -10,6 +11,30 @@ class NotaBuilder:
         self.database = database or nota._state.db
         self.filial = Filiais.objects.using(self.database).get(empr_empr=nota.empresa, empr_codi=nota.filial)
         self.dest = nota.destinatario
+
+    def _limpar_inscricao_estadual(self, valor):
+        s = str(valor or "").strip()
+        if not s:
+            return ""
+        if "ISENTO" in s.upper():
+            return "ISENTO"
+        somente_digitos = re.sub(r"\D", "", s)
+        return somente_digitos[:14]
+
+    def _somente_digitos(self, valor, max_len=None):
+        s = re.sub(r"\D", "", str(valor or ""))
+        if max_len is not None:
+            s = s[:max_len]
+        return s
+
+    def _limpar_ncm(self, valor):
+        return self._somente_digitos(valor, 8)
+
+    def _limpar_cfop(self, valor):
+        return self._somente_digitos(valor, 4)
+
+    def _limpar_cest(self, valor):
+        return self._somente_digitos(valor, 7)
 
     # -------------------------------
     # EMITENTE (FILIAL)
@@ -20,7 +45,7 @@ class NotaBuilder:
             cnpj=f.empr_docu,
             razao=f.empr_nome,
             fantasia=f.empr_fant or f.empr_nome,
-            ie=f.empr_insc_esta or "",
+            ie=self._limpar_inscricao_estadual(f.empr_insc_esta),
             regime_trib=f.empr_regi_trib,
 
             logradouro=f.empr_ende,
@@ -90,9 +115,9 @@ class NotaBuilder:
                 valor_unit=it.unitario,
                 desconto=it.desconto,
 
-                ncm=it.ncm,
-                cest=it.cest,
-                cfop=it.cfop,
+                ncm=self._limpar_ncm(it.ncm),
+                cest=self._limpar_cest(it.cest),
+                cfop=self._limpar_cfop(it.cfop),
 
                 cst_icms=it.cst_icms,
                 cst_pis=it.cst_pis,

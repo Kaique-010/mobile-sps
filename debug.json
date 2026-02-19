@@ -1,6 +1,6 @@
 {
-  "debug_id": "21bd6a3b-f614-4827-a08e-fcb2e4f58751",
-  "timestamp_inicio": "2026-02-11T12:14:32.792175Z",
+  "debug_id": "83aab8fd-deb3-4d31-98af-a26858be660c",
+  "timestamp_inicio": "2026-02-19T13:59:32.901557Z",
   "ambiente": {
     "debug": true,
     "database_alias": "indus"
@@ -9,42 +9,42 @@
     "versao": "desconhecida"
   },
   "nota": {
-    "id": 5,
+    "id": 9,
     "modelo": "55",
     "serie": "1",
-    "numero": "5",
+    "numero": "9",
     "empresa": "1",
     "filial": "1",
-    "destinatario_id": "2775",
+    "destinatario_id": "2816",
     "uf_origem": "PR",
-    "uf_destino": "PR",
+    "uf_destino": "SC",
     "regime": "1"
   },
   "itens": [
     {
-      "id": 5,
-      "produto_id": "100",
-      "descricao_produto": "PAINEL ASSOALHO P.P. - PEROBA MICA 18X101X280/2235",
+      "id": 9,
+      "produto_id": "761",
+      "descricao_produto": "PISO DE MAD. WIREBRUSH TAUARI 12,5X90X305-2134MM TEAK PN - MC\t10 ( PROD. ESPECIAL)",
       "ncm_produto": "4418****",
       "cfop_inicial": "5102",
-      "quantidade": "2.0000",
-      "unitario": "1008.7500",
+      "quantidade": "3.0000",
+      "unitario": "275.0000",
       "desconto": "0.0000",
       "logs": [
         {
-          "id": "6137e4ee-f7e1-4d41-b7b6-539182b38eb0",
-          "timestamp": "2026-02-11T12:14:32.940253Z",
+          "id": "e68ffb24-d97f-4276-bead-cad96e748889",
+          "timestamp": "2026-02-19T13:59:32.942099Z",
           "tipo": "antes_calculo_item",
           "mensagem": "Início do cálculo de impostos para o item.",
           "dados": {
             "uf_origem": "PR",
-            "uf_destino": "PR",
+            "uf_destino": "SC",
             "regime": "1",
             "tipo_operacao": "VENDA"
           }
         }
       ],
-      "fonte_tributacao": "PRODUTO",
+      "fonte_tributacao": null,
       "cfop_resolvido": "5102",
       "cfop_flags": {
         "exig_icms": false,
@@ -54,10 +54,10 @@
         "exig_ibs": false,
         "gera_st": false
       },
-      "ncm_resolvido": "4418****",
+      "ncm_resolvido": null,
       "bases": {
-        "raiz": "2017.50",
-        "icms": "2017.50",
+        "raiz": "825.00",
+        "icms": "825.00",
         "st": null
       },
       "aliquotas": {
@@ -66,8 +66,8 @@
         "st": null,
         "pis": null,
         "cofins": null,
-        "cbs": "0.00",
-        "ibs": "0.00"
+        "cbs": null,
+        "ibs": null
       },
       "valores_calculados": {
         "ipi": null,
@@ -75,8 +75,8 @@
         "st": null,
         "pis": null,
         "cofins": null,
-        "cbs": "0",
-        "ibs": "0"
+        "cbs": null,
+        "ibs": null
       },
       "csts": {
         "ipi": null,
@@ -84,8 +84,8 @@
         "st": null,
         "pis": null,
         "cofins": null,
-        "cbs": "2",
-        "ibs": "2"
+        "cbs": null,
+        "ibs": null
       },
       "condicionais_aplicadas": {
         "icms_habilitado_cfop": false,
@@ -98,8 +98,8 @@
   ],
   "logs": [
     {
-      "id": "9f459ad8-2e7a-4953-a121-927df0170dfe",
-      "timestamp": "2026-02-11T12:14:32.938288Z",
+      "id": "e6fa9a95-8b11-4f77-bb4c-70d06fdabfaa",
+      "timestamp": "2026-02-19T13:59:32.940130Z",
       "tipo": "contexto_nota",
       "mensagem": "Contexto fiscal inicial da nota.",
       "dados": {
@@ -107,5 +107,5 @@
       }
     }
   ],
-  "timestamp_fim": "2026-02-11T12:14:33.926809Z"
+  "timestamp_fim": "2026-02-19T13:59:32.996073Z"
 }

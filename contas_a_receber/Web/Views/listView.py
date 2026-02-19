@@ -7,6 +7,7 @@ from django.http import JsonResponse
 from core.utils import get_licenca_db_config
 from ...models import Titulosreceber, Baretitulos
 from Entidades.models import Entidades
+from CentrodeCustos.models import Centrodecustos
 
 
 class TitulosReceberListView(DBAndSlugMixin, ListView):
@@ -21,6 +22,7 @@ class TitulosReceberListView(DBAndSlugMixin, ListView):
         # Captura parâmetros
         cliente_id = self.request.GET.get('titu_clie')
         cliente_nome = self.request.GET.get('cliente_nome')
+        nome_centro_custo = self.request.GET.get('nome_centro_custo')
         status_aber = self.request.GET.get('titu_aber')
         venc_ini = self.request.GET.get('venc_ini')
         venc_fim = self.request.GET.get('venc_fim')
@@ -37,7 +39,19 @@ class TitulosReceberListView(DBAndSlugMixin, ListView):
             )
 
         # Seleciona apenas os campos necessários
-        qs = qs.only('titu_empr','titu_fili','titu_clie','titu_titu','titu_seri','titu_parc','titu_valo','titu_venc','titu_emis','titu_aber')
+        qs = qs.only(
+            'titu_empr',
+            'titu_fili',
+            'titu_clie',
+            'titu_titu',
+            'titu_seri',
+            'titu_parc',
+            'titu_valo',
+            'titu_venc',
+            'titu_emis',
+            'titu_aber',
+            'titu_cecu',
+        )
 
         if self.empresa_id:
             qs = qs.filter(titu_empr=self.empresa_id)
@@ -66,30 +80,48 @@ class TitulosReceberListView(DBAndSlugMixin, ListView):
             else:
                 qs = qs.none()
 
+        if nome_centro_custo:
+            centro_custos_qs = Centrodecustos.objects.using(self.db_alias).filter(cecu_nome__icontains=nome_centro_custo)
+            titu_cecu_ids = list(centro_custos_qs.values_list('cecu_redu', flat=True))
+            if titu_cecu_ids:
+                qs = qs.filter(titu_cecu__in=titu_cecu_ids)
+            else:
+                qs = qs.none()
+
         return qs.order_by('titu_venc', 'titu_titu', 'titu_parc')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         page_qs = context.get('titulos')
         cliente_ids = set()
+        cecu_ids = set()
         for t in page_qs:
             if t.titu_clie:
                 cliente_ids.add(t.titu_clie)
+            if getattr(t, 'titu_cecu', None):
+                cecu_ids.add(t.titu_cecu)
 
         entidades_map = {}
         if cliente_ids:
             ents = Entidades.objects.using(self.db_alias).filter(enti_clie__in=list(cliente_ids))
             entidades_map = {e.enti_clie: e.enti_nome for e in ents}
 
+        centros_map = {}
+        if cecu_ids:
+            centros = Centrodecustos.objects.using(self.db_alias).filter(cecu_redu__in=list(cecu_ids))
+            centros_map = {c.cecu_redu: c.cecu_nome for c in centros}
+
         for t in page_qs:
             setattr(t, 'cliente_nome', entidades_map.get(t.titu_clie, ''))
             setattr(t, 'titu_titu', t.titu_titu)
+            setattr(t, 'nome_centro_custo', centros_map.get(getattr(t, 'titu_cecu', None), ''))
         
         preserved = {
             'titu_clie': self.request.GET.get('titu_clie') or '',
             'titu_titu': self.request.GET.get('titu_titu') or '',
             'titu_parc': self.request.GET.get('titu_parc') or '',
             'cliente_nome': self.request.GET.get('cliente_nome') or '',
+            'nome_centro_custo': self.request.GET.get('nome_centro_custo') or '',
             'titu_aber': self.request.GET.get('titu_aber') or '',
             'venc_ini': self.request.GET.get('venc_ini') or '',
             'venc_fim': self.request.GET.get('venc_fim') or '',

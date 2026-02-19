@@ -46,9 +46,22 @@ def atualizar_titulo_pagar(titulo: Titulospagar, *, banco: str, dados: dict) -> 
         'titu_valo': titulo.titu_valo,
     }, **dados})
     with transaction.atomic(using=banco):
-        for k, v in dados.items():
+        imutaveis = {'titu_empr','titu_fili','titu_forn','titu_titu','titu_seri','titu_parc'}
+        atualizaveis = {k: v for k, v in dados.items() if k not in imutaveis}
+        if not atualizaveis:
+            return titulo
+        # Atualiza diretamente via QuerySet usando a chave composta real do banco
+        Titulospagar.objects.using(banco).filter(
+            titu_empr=titulo.titu_empr,
+            titu_fili=titulo.titu_fili,
+            titu_forn=titulo.titu_forn,
+            titu_titu=titulo.titu_titu,
+            titu_seri=titulo.titu_seri,
+            titu_parc=titulo.titu_parc,
+        ).update(**atualizaveis)
+        # Refresca a instância para refletir as alterações
+        for k, v in atualizaveis.items():
             setattr(titulo, k, v)
-        titulo.save(using=banco)
         return titulo
 
 def excluir_titulo_pagar(titulo: Titulospagar, *, banco: str) -> None:
