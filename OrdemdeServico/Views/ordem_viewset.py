@@ -15,6 +15,7 @@ from Entidades.models import Entidades
 
 from ..services import workflow_service, ordem_service, total_service
 from ..handlers.dominio_handler import tratar_erro
+from django.db.models import Q
 
 class OrdemViewSet(BaseMultiDBModelViewSet):
     modulo_necessario = 'OrdemdeServico'
@@ -39,6 +40,18 @@ class OrdemViewSet(BaseMultiDBModelViewSet):
 
         # Garantir que datas inválidas não quebrem
         qs = qs.filter(orde_data_aber__year__gte=1900, orde_data_aber__year__lte=2100)
+        qs = qs.filter(
+            Q(orde_data_fech__isnull=True) | (Q(orde_data_fech__year__gte=1900) & Q(orde_data_fech__year__lte=2100))
+        )
+        qs = qs.filter(
+            Q(orde_nf_data__isnull=True) | (Q(orde_nf_data__year__gte=1900) & Q(orde_nf_data__year__lte=2100))
+        )
+        qs = qs.filter(
+            Q(orde_data_repr__isnull=True) | (Q(orde_data_repr__year__gte=1900) & Q(orde_data_repr__year__lte=2100))
+        )
+        qs = qs.filter(
+            Q(orde_ulti_alte__isnull=True) | (Q(orde_ulti_alte__year__gte=1900) & Q(orde_ulti_alte__year__lte=2100))
+        )
 
         # Filtro por setor do usuário (só se houver)
         if user_setor and getattr(user_setor, "osfs_codi", None):
