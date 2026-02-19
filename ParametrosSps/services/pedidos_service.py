@@ -125,13 +125,6 @@ class PedidosService:
             
         print(f"🔄 [ESTOQUE] Baixando item {produto_codigo} do pedido {pedido.pedi_nume}")
         total_movimentacao = valor_unitario * abs(quantidade)
-        next_doc_number = PedidosService._get_next_document_number(
-            empresa=pedido.pedi_empr,
-            filial=pedido.pedi_fili,
-            entidade=pedido.pedi_forn,
-            tipo="S",
-            banco=banco
-        )
         # Criar movimentação de estoque (SAÍDA)
         Movimentoestoque.objects.using(banco).create(
             moes_empr=pedido.pedi_empr,
@@ -144,7 +137,7 @@ class PedidosService:
             moes_enti=pedido.pedi_forn,   
             moes_data=pedido.pedi_data,
             moes_seri="PEV",  # Série do pedido
-            moes_docu=next_doc_number,  # Número sequencial do documento
+            moes_docu=pedido.pedi_nume,  # Usa o número do pedido gerado
             moes_mode="PV",  # Modo de operação
             moes_item=1,  # Número do item
            
