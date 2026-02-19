@@ -90,9 +90,9 @@
           <label class="form-label">Status</label>
           <select name="titu_aber" class="form-select">
             <option value="">Todos</option>
-            <option value="A" {% if filters.titu_aber=='A' %}selected{% endif %}>Aberto</option>
-            <option value="P" {% if filters.titu_aber=='P' %}selected{% endif %}>Parcial</option>
-            <option value="T" {% if filters.titu_aber=='T' %}selected{% endif %}>Total</option>
+            <option value="A" {% if filters.titu_aber == 'A' %}selected{% endif %}>Aberto</option>
+            <option value="P" {% if filters.titu_aber == 'P' %}selected{% endif %}>Parcial</option>
+            <option value="T" {% if filters.titu_aber == 'T' %}selected{% endif %}>Total</option>
           </select>
         </div>
         <div class="col-md-2">

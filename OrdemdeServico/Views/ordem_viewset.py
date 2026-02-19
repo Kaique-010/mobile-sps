@@ -74,6 +74,7 @@ class OrdemViewSet(BaseMultiDBModelViewSet):
 
         
         qs = qs.order_by('-orde_data_aber', '-orde_nume')
+        print(f"QuerySet final: {qs}")
         return qs
 
     def get_next_ordem_numero(self, empre, fili, data):
