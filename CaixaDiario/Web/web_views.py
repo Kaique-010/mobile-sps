@@ -5,7 +5,8 @@ from core.middleware import get_licenca_slug
 from django.http import JsonResponse
 from core.utils import get_licenca_db_config
 from django.views.decorators.http import require_http_methods
-from django.db.models import Sum, Max
+from django.views.decorators.csrf import csrf_exempt
+from django.db.models import Sum, Max, Q
 from django.db import transaction
 from datetime import datetime
 from ..models import Caixageral, Movicaixa
@@ -27,6 +28,7 @@ class CaixaDashboardView(TemplateView):
 
         kpi = {'saldo_inicial': 0.0, 'entradas': 0.0, 'saidas': 0.0, 'saldo_atual': 0.0}
         caixas_data = []
+        caixa_aberto_ctx = None
         try:
             if empresa and filial:
                 qs = Caixageral.objects.using(banco).filter(caix_empr=empresa, caix_fili=filial, caix_aber='A').order_by('-caix_data', '-caix_hora')
@@ -40,6 +42,12 @@ class CaixaDashboardView(TemplateView):
                     })
                 caixa_aberto = qs.first()
                 if caixa_aberto:
+                    caixa_aberto_ctx = {
+                        'numero': int(caixa_aberto.caix_caix),
+                        'data': str(caixa_aberto.caix_data),
+                        'hora': str(caixa_aberto.caix_hora),
+                        'operador': str(caixa_aberto.caix_oper),
+                    }
                     saldo_inicial = float(getattr(caixa_aberto, 'caix_valo', 0) or getattr(caixa_aberto, 'caix_sald_ini', 0) or 0)
                     movs = Movicaixa.objects.using(banco).filter(
                         movi_empr=empresa,
@@ -66,6 +74,7 @@ class CaixaDashboardView(TemplateView):
             },
             'kpi': kpi,
             'caixas_abertos': caixas_data,
+            'caixa_aberto': caixa_aberto_ctx,
         })
         return ctx
 
@@ -123,12 +132,33 @@ class CaixaAbaProcessamentoPageView(TemplateView):
         ctx.update({'slug': slug_val, 'empresa': empresa, 'filial': filial, 'numero_venda': numero_venda})
         return ctx
 
+
+class CaixaAbaExtratoPageView(TemplateView):
+    template_name = 'CaixaDiario/aba_extrato.html'
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        try:
+            slug_val = self.kwargs.get('slug') or get_licenca_slug()
+        except Exception:
+            slug_val = self.kwargs.get('slug')
+        empresa = self.request.session.get('empresa_id') or self.request.headers.get('X-Empresa') or self.request.GET.get('empresa')
+        filial = self.request.session.get('filial_id') or self.request.headers.get('X-Filial') or self.request.GET.get('filial')
+        caixa = self.request.GET.get('caixa') or ''
+        ctx.update({'slug': slug_val, 'empresa': empresa, 'filial': filial, 'caixa': caixa})
+        return ctx
+
 def autocomplete_clientes(request, slug=None):
     banco = get_licenca_db_config(request) or 'default'
     empresa_id = request.session.get('empresa_id', 1)
     term = (request.GET.get('term') or request.GET.get('q') or '').strip()
     from Entidades.models import Entidades
-    qs = Entidades.objects.using(banco).filter(enti_empr=str(empresa_id), enti_tipo_enti__icontains='CL')
+    qs = Entidades.objects.using(banco).filter(
+        enti_empr=str(empresa_id),
+        enti_clie__isnull=False,
+    ).filter(
+        Q(enti_tipo_enti__icontains='CL') | Q(enti_tipo_enti__icontains='AM')
+    )
     if term:
         if term.isdigit():
             qs = qs.filter(enti_clie__icontains=term)
@@ -198,21 +228,40 @@ def origens_caixa(request, slug=None):
     filial_id = request.session.get('filial_id') or request.headers.get('X-Filial') or request.GET.get('filial')
     if not empresa_id or not filial_id:
         return JsonResponse({'detail': 'Empresa e Filial são obrigatórios'}, status=400)
-    q = (request.GET.get('q') or '').strip()
-    base = (
+
+    termo = (request.GET.get('term') or request.GET.get('q') or '').strip()
+
+    from Entidades.models import Entidades
+
+    base_ids = list(
         Caixageral.objects.using(banco)
         .filter(caix_empr=empresa_id, caix_fili=filial_id)
         .values_list('caix_caix', flat=True)
         .distinct()
-        .order_by('caix_caix')
     )
-    valores = list(base[:200])
-    if q:
-        try:
-            valores = [v for v in valores if q in str(v)]
-        except Exception:
-            pass
-    return JsonResponse({'results': valores})
+
+    qs = Entidades.objects.using(banco).filter(
+        enti_empr=str(empresa_id),
+        enti_clie__in=base_ids or [-1],
+    )
+
+    if termo:
+        if termo.isdigit():
+            qs = qs.filter(enti_clie__icontains=termo)
+        else:
+            qs = qs.filter(enti_nome__icontains=termo)
+
+    qs = qs.order_by('enti_nome')[:20]
+
+    resultados = [
+        {
+            'id': int(obj.enti_clie),
+            'text': f"{obj.enti_clie} - {obj.enti_nome}",
+        }
+        for obj in qs
+    ]
+
+    return JsonResponse({'results': resultados})
 
 @require_http_methods(["GET"])
 def proximo_caixa_numero(request, slug=None):
@@ -279,6 +328,7 @@ def caixa_resumo(request, slug=None):
         'por_forma': por_forma
     })
 
+@csrf_exempt
 @require_http_methods(["POST"])
 def venda_iniciar(request, slug=None):
     banco = get_licenca_db_config(request)
@@ -326,6 +376,7 @@ def venda_iniciar(request, slug=None):
             )
     return JsonResponse({'numero_venda': numero_venda, 'cliente': cliente, 'vendedor': vendedor, 'caixa': caixa})
 
+@csrf_exempt
 @require_http_methods(["POST"])
 def venda_adicionar_item(request, slug=None):
     banco = get_licenca_db_config(request)
@@ -370,7 +421,84 @@ def venda_adicionar_item(request, slug=None):
         pedido.save(using=banco)
     return JsonResponse({'numero_venda': numero_venda, 'produto': produto, 'quantidade': float(quantidade), 'valor_unitario': float(valor_unitario), 'valor_total': float(valor_total), 'total_pedido': float(total_pedido), 'status': 'Item adicionado com sucesso'})
 
-@require_http_methods(["POST"]) 
+@csrf_exempt
+@require_http_methods(["POST"])
+def venda_atualizar_item(request, slug=None):
+    banco = get_licenca_db_config(request)
+    empresa_id = request.session.get('empresa_id') or request.headers.get('X-Empresa') or request.GET.get('empresa')
+    filial_id = request.session.get('filial_id') or request.headers.get('X-Filial') or request.GET.get('filial')
+    if not empresa_id or not filial_id:
+        return JsonResponse({'detail': 'Empresa e Filial são obrigatórios'}, status=400)
+    data = request.POST or request.GET
+    numero_venda = data.get('numero_venda')
+    produto = data.get('produto')
+    quantidade = data.get('quantidade')
+    valor_unitario = data.get('valor_unitario')
+    if not all([numero_venda, produto]):
+        return JsonResponse({'detail': 'Número da venda e produto são obrigatórios'}, status=400)
+    with transaction.atomic(using=banco):
+        item = Itenspedidovenda.objects.using(banco).filter(
+            iped_empr=empresa_id, iped_fili=filial_id, iped_pedi=str(numero_venda), iped_prod=produto
+        ).first()
+        if not item:
+            return JsonResponse({'detail': 'Item não encontrado'}, status=404)
+        if quantidade is not None and quantidade != '':
+            item.iped_quan = float(quantidade)
+        if valor_unitario is not None and valor_unitario != '':
+            item.iped_unit = float(valor_unitario)
+        item.iped_tota = float(item.iped_quan) * float(item.iped_unit)
+        item.save(using=banco)
+        total_pedido = Itenspedidovenda.objects.using(banco).filter(
+            iped_empr=empresa_id, iped_fili=filial_id, iped_pedi=str(numero_venda)
+        ).aggregate(Sum('iped_tota'))['iped_tota__sum'] or 0
+        pedido = PedidoVenda.objects.using(banco).filter(
+            pedi_empr=empresa_id, pedi_fili=filial_id, pedi_nume=numero_venda
+        ).first()
+        if pedido:
+            pedido.pedi_tota = total_pedido
+            pedido.save(using=banco)
+    return JsonResponse({
+        'numero_venda': numero_venda,
+        'produto': produto,
+        'quantidade': float(item.iped_quan),
+        'valor_unitario': float(item.iped_unit),
+        'valor_total': float(item.iped_tota),
+        'total_pedido': float(total_pedido),
+        'status': 'Item atualizado com sucesso'
+    })
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def venda_remover_item(request, slug=None):
+    banco = get_licenca_db_config(request)
+    empresa_id = request.session.get('empresa_id') or request.headers.get('X-Empresa') or request.GET.get('empresa')
+    filial_id = request.session.get('filial_id') or request.headers.get('X-Filial') or request.GET.get('filial')
+    if not empresa_id or not filial_id:
+        return JsonResponse({'detail': 'Empresa e Filial são obrigatórios'}, status=400)
+    data = request.POST or request.GET
+    numero_venda = data.get('numero_venda')
+    produto = data.get('produto')
+    if not all([numero_venda, produto]):
+        return JsonResponse({'detail': 'Número da venda e produto são obrigatórios'}, status=400)
+    with transaction.atomic(using=banco):
+        deleted, _ = Itenspedidovenda.objects.using(banco).filter(
+            iped_empr=empresa_id, iped_fili=filial_id, iped_pedi=str(numero_venda), iped_prod=produto
+        ).delete()
+        if not deleted:
+            return JsonResponse({'detail': 'Item não encontrado'}, status=404)
+        total_pedido = Itenspedidovenda.objects.using(banco).filter(
+            iped_empr=empresa_id, iped_fili=filial_id, iped_pedi=str(numero_venda)
+        ).aggregate(Sum('iped_tota'))['iped_tota__sum'] or 0
+        pedido = PedidoVenda.objects.using(banco).filter(
+            pedi_empr=empresa_id, pedi_fili=filial_id, pedi_nume=numero_venda
+        ).first()
+        if pedido:
+            pedido.pedi_tota = total_pedido
+            pedido.save(using=banco)
+    return JsonResponse({'numero_venda': numero_venda, 'produto': produto, 'total_pedido': float(total_pedido), 'status': 'Item removido com sucesso'})
+
+@csrf_exempt
+@require_http_methods(["POST"])
 def venda_processar_pagamento(request, slug=None):
     banco = get_licenca_db_config(request)
     empresa_id = request.session.get('empresa_id') or request.headers.get('X-Empresa') or request.GET.get('empresa')
@@ -425,7 +553,8 @@ def venda_processar_pagamento(request, slug=None):
     )
     return JsonResponse({'success': True, 'movimento_id': movimento.movi_ctrl, 'movi_tipo': tipo_movimento, 'movi_tipo_movi': forma_pagamento, 'descricao_tipo': dict(TIPO_MOVIMENTO).get(tipo_movimento), 'valor_pago': float(valor_pago or valor), 'troco': movimento.movi_said, 'parcelas': parcelas, 'movi_entr': movimento.movi_entr, 'movi_said': movimento.movi_said})
 
-@require_http_methods(["POST"]) 
+@csrf_exempt
+@require_http_methods(["POST"])
 def venda_finalizar(request, slug=None):
     banco = get_licenca_db_config(request)
     empresa_id = request.session.get('empresa_id') or request.headers.get('X-Empresa') or request.GET.get('empresa')
@@ -447,6 +576,7 @@ def venda_finalizar(request, slug=None):
     return JsonResponse({'numero_venda': numero_venda, 'total_itens': float(total_itens), 'total_pagamentos': float(total_pagamentos), 'status': 'Finalizada'})
 
 
+@csrf_exempt
 @require_http_methods(["POST"])
 def venda_emitir(request, slug=None):
     """
@@ -528,6 +658,17 @@ def venda_emitir(request, slug=None):
             'iped_tota'
         )
     )
+    try:
+        from Produtos.models import Produtos
+        cods = [str(i['iped_prod']) for i in itens]
+        nomes_map = {
+            str(r['prod_codi']): r['prod_nome']
+            for r in Produtos.objects.using(banco)
+            .filter(prod_empr=str(empresa_id), prod_codi__in=cods)
+            .values('prod_codi', 'prod_nome')
+        }
+    except Exception:
+        nomes_map = {}
     
     # Calcula total
     total_venda = sum(
@@ -626,8 +767,7 @@ def venda_emitir(request, slug=None):
     # Itens
     for item in itens:
         codigo = str(item['iped_prod'])[:8]
-        # Descrição do produto (buscar se necessário)
-        desc = codigo  # Simplificado
+        desc = nomes_map.get(str(item['iped_prod'])) or codigo
         
         linhas.append(
             f"{codigo:<8} {desc:<15}"
@@ -735,6 +875,11 @@ def venda_status(request, slug=None):
     numero_venda = request.GET.get('numero_venda')
     if not numero_venda:
         return JsonResponse({'detail': 'Número da venda é obrigatório'}, status=400)
+    pedido = PedidoVenda.objects.using(banco).filter(
+        pedi_empr=empresa_id,
+        pedi_fili=filial_id,
+        pedi_nume=numero_venda
+    ).first()
     total_pedido = Itenspedidovenda.objects.using(banco).filter(
         iped_empr=empresa_id,
         iped_fili=filial_id,
@@ -748,6 +893,9 @@ def venda_status(request, slug=None):
     saldo = float(total_pedido) - float(total_pagamentos)
     return JsonResponse({
         'numero_venda': numero_venda,
+        'exists': bool(pedido),
+        'cliente': str(pedido.pedi_forn) if pedido else '',
+        'vendedor': str(pedido.pedi_vend) if pedido else '',
         'total_venda': float(total_pedido),
         'total_pagamentos': float(total_pagamentos),
         'saldo_a_pagar': saldo
@@ -776,6 +924,114 @@ def caixa_aberto(request, slug=None):
 
 
 @require_http_methods(["GET"])
+def venda_extrato(request, slug=None):
+    banco = get_licenca_db_config(request)
+    empresa_id = request.session.get('empresa_id') or request.headers.get('X-Empresa') or request.GET.get('empresa')
+    filial_id = request.session.get('filial_id') or request.headers.get('X-Filial') or request.GET.get('filial')
+    if not empresa_id or not filial_id:
+        return JsonResponse({'detail': 'Empresa e Filial são obrigatórios'}, status=400)
+    caixa = request.GET.get('caixa')
+    data_str = request.GET.get('data') or request.GET.get('data_ref')
+    vendedor = request.GET.get('vendedor') or request.GET.get('pedi_vend') or request.GET.get('movi_vend')
+    forma = request.GET.get('forma') or request.GET.get('forma_pagamento') or request.GET.get('movi_tipo_movi') or request.GET.get('movi_tipo')
+    data_ref = None
+    if data_str:
+        try:
+            data_ref = datetime.strptime(data_str, '%Y-%m-%d').date()
+        except Exception:
+            data_ref = None
+    movimentos = Movicaixa.objects.using(banco).filter(movi_empr=empresa_id, movi_fili=filial_id)
+    if caixa:
+        movimentos = movimentos.filter(movi_caix=caixa)
+    if data_ref:
+        movimentos = movimentos.filter(movi_data=data_ref)
+    if vendedor:
+        movimentos = movimentos.filter(movi_vend=str(vendedor))
+    if forma:
+        movimentos = movimentos.filter(Q(movi_tipo_movi=str(forma)) | Q(movi_tipo=str(forma)))
+    movimentos = movimentos.exclude(movi_nume_vend__isnull=True)
+    numeros = list(movimentos.values_list('movi_nume_vend', flat=True).distinct())
+    resultados = []
+    tipos_map = {
+        '1': 'DINHEIRO',
+        '2': 'CHEQUE',
+        '3': 'CARTÃO DE CREDITO',
+        '4': 'CARTÃO DE DEBITO',
+        '5': 'CREDIÁRIO',
+        '6': 'PIX',
+    }
+    for num in numeros:
+        pedido = PedidoVenda.objects.using(banco).filter(pedi_empr=empresa_id, pedi_fili=filial_id, pedi_nume=num).first()
+        cliente_codigo = str(pedido.pedi_forn) if pedido and pedido.pedi_forn else ''
+        cliente_nome = ''
+        if cliente_codigo:
+            try:
+                from Entidades.models import Entidades
+                cliente_nome = Entidades.objects.using(banco).filter(
+                    enti_empr=str(empresa_id),
+                    enti_clie=cliente_codigo,
+                ).values_list('enti_nome', flat=True).first() or ''
+            except Exception:
+                cliente_nome = ''
+        cliente_display = f'{cliente_codigo} - {cliente_nome}' if cliente_nome else cliente_codigo
+        itens_qs = Itenspedidovenda.objects.using(banco).filter(iped_empr=empresa_id, iped_fili=filial_id, iped_pedi=str(num))
+        try:
+            from Produtos.models import Produtos
+            cods = list(itens_qs.values_list('iped_prod', flat=True))
+            nomes_map = {
+                str(r['prod_codi']): r['prod_nome']
+                for r in Produtos.objects.using(banco)
+                .filter(prod_empr=str(empresa_id), prod_codi__in=cods)
+                .values('prod_codi', 'prod_nome')
+            }
+        except Exception:
+            nomes_map = {}
+        itens = []
+        for it in itens_qs:
+            itens.append({
+                'produto': str(it.iped_prod),
+                'descricao': nomes_map.get(str(it.iped_prod)) or str(it.iped_prod),
+                'quantidade': float(it.iped_quan or 0),
+                'unitario': float(it.iped_unit or 0),
+                'total': float(it.iped_tota or 0),
+            })
+        total_venda = float(itens_qs.aggregate(Sum('iped_tota'))['iped_tota__sum'] or 0)
+        movs_venda = movimentos.filter(movi_nume_vend=num)
+        total_pagamentos = float(movs_venda.exclude(movi_tipo='1').aggregate(total=Sum('movi_entr'))['total'] or 0)
+        saldo = float(total_venda) - total_pagamentos
+        pagamentos = []
+        for row in movs_venda.exclude(movi_tipo='1').values('movi_tipo').annotate(total=Sum('movi_entr')).order_by('-total'):
+            tipo = str(row.get('movi_tipo'))
+            pagamentos.append({
+                'tipo': tipo,
+                'descricao': tipos_map.get(tipo, tipo),
+                'total': float(row.get('total') or 0),
+            })
+        resultados.append({
+            'numero_venda': int(num),
+            'data': str(pedido.pedi_data) if pedido and pedido.pedi_data else '',
+            'caixa': int(movs_venda.first().movi_caix) if movs_venda.first() else None,
+            'vendedor': str(pedido.pedi_vend) if pedido else '',
+            'cliente': cliente_display,
+            'cliente_codigo': cliente_codigo,
+            'cliente_nome': cliente_nome,
+            'total_venda': total_venda,
+            'total_pagamentos': total_pagamentos,
+            'saldo': saldo,
+            'pagamentos': pagamentos,
+            'itens': itens,
+        })
+    totais = []
+    for row in movimentos.exclude(movi_tipo='1').values('movi_tipo').annotate(total=Sum('movi_entr')).order_by('-total'):
+        t = str(row.get('movi_tipo'))
+        totais.append({
+            'tipo': t,
+            'descricao': tipos_map.get(t, t),
+            'total': float(row.get('total') or 0),
+        })
+    return JsonResponse({'results': resultados, 'totais': totais})
+
+@require_http_methods(["GET"])
 def caixa_fechado(request, slug=None):
     banco = get_licenca_db_config(request)
     empresa_id = request.session.get('empresa_id') or request.headers.get('X-Empresa') or request.GET.get('empresa')
@@ -797,6 +1053,7 @@ def caixa_fechado(request, slug=None):
     return JsonResponse({'results': data})  
 
 
+@csrf_exempt
 @require_http_methods(["POST"])
 def caixa_fechar(request, slug=None):
     banco = get_licenca_db_config(request)
@@ -843,6 +1100,7 @@ def caixa_fechar(request, slug=None):
     })
         
         
+@csrf_exempt
 @require_http_methods(["POST"])
 def lancamento(request, slug=None):
     banco = get_licenca_db_config(request)

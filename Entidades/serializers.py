@@ -118,3 +118,9 @@ class EntidadesSerializer(serializers.ModelSerializer):
 class EntidadesTipoOutrosSerializer(serializers.Serializer):
     enti_nome = serializers.CharField(max_length=255)
     enti_cep = serializers.CharField(max_length=8, required=False, allow_blank=True)
+
+
+class EntidadesCadastroRapidoCreateSerializer(serializers.Serializer):
+    enti_cpf = serializers.CharField(max_length=11, required=False, allow_blank=True)
+    enti_cep = serializers.CharField(max_length=8, required=False, allow_blank=True)
+    enti_nome = serializers.CharField(max_length=255)

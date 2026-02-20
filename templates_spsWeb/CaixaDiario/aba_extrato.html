@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/ui.css' %}">
+<div class="container py-4">
+  <div class="container align-items-center">
+    <h2 class="page-title text-center mb-4"><i class="bi bi-receipt"></i> Extrato do Caixa</h2>
+  </div>
+   <div class="mb-4 text-end">
+            <a class="btn btn-outline-success btn-lg d-inline-flex align-items-center gap-2" href="{% url 'CaixaDiarioWeb:caixa_venda' slug %}">
+              <i class="bi bi-cash-stack"></i>
+              <span>movimentações</span>
+            </a>
+      </div>
+  <div class="row g-3 mb-3" id="cardsTotais"></div>
+  <div class="row g-3">
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-header">Filtros</div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">Data</label>
+            <input type="date" class="form-control" id="filtroData">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Vendedor</label>
+            <input class="form-control" id="filtroVendedor" placeholder="Código ou nome do vendedor">
+            <input type="hidden" id="filtroVendedorId">
+            <div id="sugVendedorExtrato" class="list-group mt-1"></div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Forma de processamento</label>
+            <select class="form-select" id="filtroForma">
+              <option value="">Todas</option>
+              <option value="51">Cartão Crédito</option>
+              <option value="52">Cartão Débito</option>
+              <option value="54">Dinheiro</option>
+              <option value="60">PIX</option>
+              <option value="1">Dinheiro (tipo movimento)</option>
+              <option value="2">Cheque</option>
+              <option value="3">Cartão Crédito (tipo)</option>
+              <option value="4">Cartão Débito (tipo)</option>
+              <option value="5">Crediário</option>
+              <option value="6">PIX (tipo)</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Caixa</label>
+            <input class="form-control" id="filtroCaixa" readonly>
+          </div>
+            
+          <div class="d-grid">
+            <button class="btn btn-primary" id="btnAplicarFiltros">Aplicar filtros</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span>Resultados</span>
+          <span id="resumoTotais" class="small text-muted"></span>
+        </div>
+        <div class="card-body">
+          <div id="listaExtrato" class="accordion"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  const slug = '{{ slug|default:"" }}' || (function () { try { const p = location.pathname.split('/'); return p.length > 2 ? p[2] : ''; } catch (e) { return '' } })();
+  const empresa = '{{ empresa|default:"" }}';
+  const filial = '{{ filial|default:"" }}';
+  const caixaInicial = '{{ caixa|default:"" }}';
+  function headersGet() { const h = { 'Accept': 'application/json' }; const t = localStorage.getItem('access') || sessionStorage.getItem('access'); if (t) h['Authorization'] = `Bearer ${t}`; if (empresa) h['X-Empresa'] = empresa; if (filial) h['X-Filial'] = filial; return h }
+  function brl(v) { try { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v || 0)) } catch (e) { return `R$ ${v}` } }
+  function todayISO() { try { return new Date().toISOString().slice(0, 10) } catch (e) { return '' } }
+  function renderSugVendedor(items) { const el = document.getElementById('sugVendedorExtrato'); if (!el) return; el.innerHTML = ''; (items || []).forEach(it => { const a = document.createElement('a'); a.href = '#'; a.className = 'list-group-item list-group-item-action'; a.textContent = `${it.id} - ${it.text}`; a.addEventListener('click', ev => { ev.preventDefault(); document.getElementById('filtroVendedor').value = `${it.id} - ${it.text}`; document.getElementById('filtroVendedorId').value = it.id; el.innerHTML = ''; }); el.appendChild(a); }); }
+  async function buscarVendedoresExtrato(q) { if (!q || q.length < 2) { renderSugVendedor([]); return; } const url = `/web/${slug}/caixa-diario/autocomplete/vendedores/?q=${encodeURIComponent(q)}`; const r = await fetch(url, { credentials: 'same-origin', headers: headersGet() }); if (!r.ok) return; const d = await r.json(); renderSugVendedor(d.results); }
+  function renderCardsTotais(data) { const el = document.getElementById('cardsTotais'); if (!el) return; el.innerHTML = ''; const cores = { 'DINHEIRO': 'success', 'CHEQUE': 'secondary', 'CARTÃO DE CREDITO': 'primary', 'CARTÃO DE DEBITO': 'info', 'CREDIÁRIO': 'warning', 'PIX': 'success' }; (data || []).forEach(t => { const col = document.createElement('div'); col.className = 'col-6 col-md-2'; const card = document.createElement('div'); card.className = `card border-${cores[t.descricao] || 'secondary'}`; card.innerHTML = `<div class="card-body"><div class="small text-muted">${t.descricao}</div><div class="h5 mb-0">${brl(t.total || 0)}</div></div>`; col.appendChild(card); el.appendChild(col); }); }
+  async function carregarExtrato() { const params = new URLSearchParams(); if (empresa) params.append('empresa', empresa); if (filial) params.append('filial', filial); const data = document.getElementById('filtroData').value || ''; const vendId = document.getElementById('filtroVendedorId').value || ''; const forma = document.getElementById('filtroForma').value || ''; const caixaVal = document.getElementById('filtroCaixa').value || ''; if (data) params.append('data', data); if (vendId) params.append('vendedor', vendId); if (forma) params.append('forma', forma); if (caixaVal) params.append('caixa', caixaVal); const url = `/web/${slug}/caixa-diario/venda/extrato/?${params.toString()}`; const r = await fetch(url, { credentials: 'same-origin', headers: headersGet() }); const lista = document.getElementById('listaExtrato'); if (!r.ok) { if (lista) lista.innerHTML = '<div class="text-danger">Erro ao carregar extrato</div>'; renderCardsTotais([]); return; } const d = await r.json(); renderCardsTotais(d.totais || []); const arr = d.results || []; if (!lista) return; lista.innerHTML = ''; let totalGeral = 0, totalPago = 0, totalSaldo = 0; arr.forEach((venda, idx) => { totalGeral += Number(venda.total_venda || 0); totalPago += Number(venda.total_pagamentos || 0); totalSaldo += Number(venda.saldo || 0); const item = document.createElement('div'); item.className = 'accordion-item'; const headId = `extrato-head-${idx}`; const bodyId = `extrato-body-${idx}`; const titulo = `Venda ${venda.numero_venda} — Data: ${venda.data || ''} — Vendedor: ${venda.vendedor || ''} — Total: ${brl(venda.total_venda)}`; const pagamentosTxt = (venda.pagamentos || []).map(pg => `${pg.descricao}: ${brl(pg.total)}`).join(' | ') || 'Nenhum'; const linhas = (venda.itens || []).map(it => `<tr><td>${it.produto}</td><td>${it.descricao}</td><td class="text-end">${Number(it.quantidade || 0).toFixed(2)}</td><td class="text-end">${brl(it.unitario)}</td><td class="text-end">${brl(it.total)}</td></tr>`).join(''); item.innerHTML = `<h2 class="accordion-header" id="${headId}"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${bodyId}" aria-expanded="false" aria-controls="${bodyId}">${titulo}</button></h2><div id="${bodyId}" class="accordion-collapse collapse" aria-labelledby="${headId}"><div class="accordion-body"><div class="mb-2"><strong>Cliente:</strong> ${venda.cliente || ''}</div><div class="mb-2"><strong>Pagamentos:</strong> ${pagamentosTxt}</div><div class="mb-2"><strong>Total pago:</strong> ${brl(venda.total_pagamentos || 0)} — <strong>Saldo:</strong> ${brl(venda.saldo || 0)}</div><div class="table-responsive"><table class="table table-sm table-dark mb-0"><thead><tr><th>Código</th><th>Descrição</th><th class="text-end">Qtd</th><th class="text-end">Unitário</th><th class="text-end">Total</th></tr></thead><tbody>${linhas}</tbody></table></div></div></div>`; lista.appendChild(item); }); const resumo = document.getElementById('resumoTotais'); if (resumo) resumo.textContent = `Vendas: ${arr.length} | Total: ${brl(totalGeral)} | Pago: ${brl(totalPago)} | Saldo: ${brl(totalSaldo)}`; }
+  document.addEventListener('DOMContentLoaded', () => { const dataEl = document.getElementById('filtroData'); if (dataEl && !dataEl.value) dataEl.value = todayISO(); const urlCaixa = new URLSearchParams(window.location.search || '').get('caixa') || ''; const cxEl = document.getElementById('filtroCaixa'); if (cxEl) cxEl.value = caixaInicial || urlCaixa || ''; const vendInput = document.getElementById('filtroVendedor'); if (vendInput) { let tid = null; vendInput.addEventListener('input', () => { clearTimeout(tid); document.getElementById('filtroVendedorId').value = ''; const v = vendInput.value || ''; tid = setTimeout(() => buscarVendedoresExtrato(v), 300); }); } document.getElementById('btnAplicarFiltros')?.addEventListener('click', carregarExtrato); carregarExtrato(); });
+</script>
+{% endblock %}

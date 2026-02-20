@@ -7,15 +7,18 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.permissions import IsAuthenticated
 from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from rest_framework import status
+from rest_framework.views import APIView
+from django.db.models import Count
 from core.middleware import get_licenca_slug
 from core.registry import get_licenca_db_config
 from core.utils import get_db_from_slug
 from .models import Entidades
-from .serializers import EntidadesSerializer, EntidadesTipoOutrosSerializer
+from .serializers import EntidadesSerializer, EntidadesTipoOutrosSerializer, EntidadesCadastroRapidoCreateSerializer
 from .utils import buscar_endereco_por_cep
 from django.db.models import Q
 from django.core.cache import cache
 from .services.entidades_tipooutros import EntidadeServico
+from .services.cadastro_rapido import EntidadeCadastroRapido
 
 
 BANCOS_CEP_FIXO = {"savexml896", "pg pisos", 'demonstracao'}
@@ -198,12 +201,62 @@ class EntidadesViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
             {"enti_clie": entidade.enti_clie, "enti_nome": entidade.enti_nome},
             status=status.HTTP_201_CREATED
         )
+        
+    
+    @action(detail=False, methods=['post'], url_path='cadastro-rapido')
+    def cadastro_rapido(self, request, slug=None):
+        serializer = EntidadesCadastroRapidoCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        banco = get_licenca_db_config(request)
+
+        empresa_id = (
+            request.data.get("enti_empr")
+            or request.headers.get("X-Empresa")
+            or request.session.get("empresa_id")
+            or request.headers.get("Empresa_id")
+        )
+
+        filial_id = (
+            request.headers.get("X-Filial")
+            or request.session.get("filial_id")
+            or request.headers.get("Filial_id")
+        )
+
+        if banco == 'demonstracao':
+            cep_fallback = CEP_FALLBACK_DEMONSTRACAO
+        elif banco in BANCOS_CEP_FIXO:
+            cep_fallback = CEP_FALLBACK_PG_PISOS
+        else:
+            cep_fallback = None
+        print(f"empresa_id: {empresa_id}, filial_id: {filial_id}, banco: {banco}, cep_fallback: {cep_fallback}")
+
+        try:
+            entidade = EntidadeCadastroRapido.cadastrar_rapido(
+                data=serializer.validated_data,
+                empresa_id=empresa_id,
+                filial_id=filial_id,
+                banco=banco,
+                cep_fallback=cep_fallback if not serializer.validated_data.get("enti_cep") else None,
+                cpf=serializer.validated_data.get("enti_cpf") or None,
+            )
+            print(f"Entidade criada com sucesso: {entidade}")
+            print(f"DEBUG enti_clie: {getattr(entidade, 'enti_clie', 'NÃO ENCONTRADO')}")
+        except ValidationError as e:
+            return Response(
+                {"erro": e.message},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        return Response(
+            {"enti_clie": entidade.enti_clie, "enti_nome": entidade.enti_nome},
+            status=status.HTTP_201_CREATED
+        )
 
 
 
 
-from rest_framework.views import APIView
-from django.db.models import Count
+
 
 class EntidadesRelatorioAPI(APIView):
     

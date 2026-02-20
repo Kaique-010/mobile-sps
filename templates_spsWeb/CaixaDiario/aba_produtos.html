@@ -34,7 +34,8 @@
 
       <div class="row mt-2">
         <div class="col-md-3">
-          <img id="produtoImg" src="" alt="Imagem do produto" class="img-thumbnail" style="display:none; max-height:140px;">
+          <img id="produtoImg" src="" alt="Imagem do produto" class="img-thumbnail"
+            style="display:none; max-height:140px;">
         </div>
       </div>
 
@@ -44,7 +45,10 @@
       </div>
 
       <div class="mt-3 d-flex justify-content-between">
-        <div><strong>Total da lista:</strong> <span id="totalLista">R$ 0,00</span></div>
+        <div>
+          <strong>Total da lista:</strong> <span id="totalLista">R$ 0,00</span>
+          — <strong>Quantidade total:</strong> <span id="qtdLista">0</span>
+        </div>
         <div>
           <a class="btn btn-outline-success" id="btnAvancarProc" href="#">Ir para processamento</a>
         </div>
@@ -53,29 +57,111 @@
   </div>
 </div>
 <script>
-  const slug='{{ slug|default:"" }}'||(function(){try{const p=location.pathname.split('/');return p.length>2?p[2]:''}catch(e){return''}})();
-  const empresa='{{ empresa|default:"" }}'; const filial='{{ filial|default:"" }}'; const numeroVenda='{{ numero_venda|default:"" }}';
-  function getCSRFToken(){try{const name='csrftoken=';for(let c of document.cookie.split(';')){c=c.trim();if(c.startsWith(name))return c.substring(name.length)}}catch(e){}return''}
-  function headersForm(){const h={'Accept':'application/json','Content-Type':'application/x-www-form-urlencoded'};const t=localStorage.getItem('access')||sessionStorage.getItem('access');if(t)h['Authorization']=`Bearer ${t}`;if(empresa)h['X-Empresa']=empresa;if(filial)h['X-Filial']=filial;h['X-CSRFToken']=getCSRFToken();return h}
-  function headersGet(){const h={'Accept':'application/json'};const t=localStorage.getItem('access')||sessionStorage.getItem('access');if(t)h['Authorization']=`Bearer ${t}`;if(empresa)h['X-Empresa']=empresa;if(filial)h['X-Filial']=filial;return h}
-  function brl(v){try{return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(v||0))}catch(e){return`R$ ${v}`}}
-  const itens=[]; function render(){const ul=document.getElementById('listaItens');ul.innerHTML='';let total=0;itens.forEach(it=>{const li=document.createElement('div');li.className='list-group-item d-flex justify-content-between align-items-center';li.innerHTML=`<div><strong>${it.produto}</strong> — Qtd: ${it.quantidade} × R$ ${Number(it.valor_unitario).toFixed(2)}</div><div>${brl(it.quantidade*it.valor_unitario)}</div>`;ul.appendChild(li); total+=it.quantidade*it.valor_unitario;});document.getElementById('totalLista').textContent=brl(total)}
-  async function addItem(){const produto=document.getElementById('produto').value||document.getElementById('produtoBusca').value||'';const quantidade=Number(document.getElementById('quantidade').value||0);const valor_unitario=Number(document.getElementById('valorUnit').value||0);if(!produto||!quantidade||!valor_unitario){alert('Preencha produto, quantidade e valor unitário');return}
-    const form=new URLSearchParams();form.append('numero_venda',numeroVenda);form.append('produto',produto);form.append('quantidade',String(quantidade));form.append('valor_unitario',String(valor_unitario));
-    const r=await fetch(`/web/${slug}/caixa-diario/venda/adicionar-item/`,{method:'POST',credentials:'same-origin',headers:headersForm(),body:form.toString()}); if(!r.ok){alert('Falha ao adicionar item');return}const d=await r.json();
-    const ex=itens.find(i=>i.produto===produto); if(ex){ex.quantidade+=quantidade; ex.valor_unitario=valor_unitario;} else {itens.push({produto,quantidade,valor_unitario});}
+  const slug = '{{ slug|default:"" }}' || (function () { try { const p = location.pathname.split('/'); return p.length > 2 ? p[2] : '' } catch (e) { return '' } })();
+  const empresa = '{{ empresa|default:"" }}'; const filial = '{{ filial|default:"" }}'; const numeroVenda = '{{ numero_venda|default:"" }}';
+  function getCSRFToken() { try { const name = 'csrftoken='; for (let c of document.cookie.split(';')) { c = c.trim(); if (c.startsWith(name)) return c.substring(name.length) } } catch (e) { } return '' }
+  function headersForm() { const h = { 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' }; const t = localStorage.getItem('access') || sessionStorage.getItem('access'); if (t) h['Authorization'] = `Bearer ${t}`; if (empresa) h['X-Empresa'] = empresa; if (filial) h['X-Filial'] = filial; h['X-CSRFToken'] = getCSRFToken(); return h }
+  function headersGet() { const h = { 'Accept': 'application/json' }; const t = localStorage.getItem('access') || sessionStorage.getItem('access'); if (t) h['Authorization'] = `Bearer ${t}`; if (empresa) h['X-Empresa'] = empresa; if (filial) h['X-Filial'] = filial; return h }
+  function brl(v) { try { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v || 0)) } catch (e) { return `R$ ${v}` } }
+  const itens = [];
+  function render() {
+    const ul = document.getElementById('listaItens');
+    ul.innerHTML = '';
+    let total = 0;
+    let qtdTotal = 0;
+    itens.forEach(it => {
+      const li = document.createElement('div');
+      li.className = 'list-group-item d-flex justify-content-between align-items-center';
+      li.innerHTML = `
+        <div class="d-flex flex-column">
+          <div><strong>${it.produto}</strong></div>
+          <div class="d-flex align-items-center gap-2 mt-1">
+            <label class="me-1">Qtd:</label>
+            <input type="number" step="0.01" min="0" class="form-control form-control-sm w-auto qty-input" data-prod="${it.produto}" value="${Number(it.quantidade).toFixed(2)}">
+            <span class="ms-2">× R$ ${Number(it.valor_unitario).toFixed(2)}</span>
+            <button class="btn btn-sm btn-outline-danger ms-3 btn-remover-item" data-prod="${it.produto}">
+              Remover
+            </button>
+          </div>
+        </div>
+        <div class="text-end">
+          <div>${brl(it.quantidade * it.valor_unitario)}</div>
+        </div>
+      `;
+      ul.appendChild(li);
+      total += it.quantidade * it.valor_unitario;
+      qtdTotal += it.quantidade;
+    });
+    document.getElementById('totalLista').textContent = brl(total);
+    const elQtd = document.getElementById('qtdLista'); if (elQtd) elQtd.textContent = (qtdTotal.toFixed(2).replace('.', ','));
+  }
+  async function atualizarQuantidade(produto, novaQuantidade) {
+    const it = itens.find(i => i.produto === produto);
+    if (!it) return;
+    const form = new URLSearchParams();
+    form.append('numero_venda', numeroVenda);
+    form.append('produto', produto);
+    form.append('quantidade', String(novaQuantidade));
+    form.append('valor_unitario', String(it.valor_unitario));
+    const r = await fetch(`/web/${slug}/caixa-diario/venda/atualizar-item/`, { method: 'POST', credentials: 'same-origin', headers: headersForm(), body: form.toString() });
+    if (!r.ok) { alert('Falha ao atualizar item'); return; }
+    it.quantidade = Number(novaQuantidade);
     render();
-    document.getElementById('produto').value='';
-    document.getElementById('produtoBusca').value='';
-    const sug=document.getElementById('sugProduto'); if(sug) sug.innerHTML='';
-    const img=document.getElementById('produtoImg'); if(img){img.style.display='none'; img.src='';}
-    document.getElementById('valorUnit').value='';}
-  function renderSugProduto(items){const el=document.getElementById('sugProduto');el.innerHTML='';(items||[]).forEach(it=>{const a=document.createElement('a');a.href='#';a.className='list-group-item list-group-item-action';a.textContent=`${it.id} - ${it.text.split(' - ').slice(1).join(' - ')}`;a.dataset.id=it.id;a.addEventListener('click',async(ev)=>{ev.preventDefault();document.getElementById('produto').value=it.id;document.getElementById('produtoBusca').value=it.text;el.innerHTML='';await preencherPrecoEImagem(it.id)});el.appendChild(a)});}
-  async function buscarProdutos(q){if(!q||q.length<2){renderSugProduto([]);return;}const r=await fetch(`/web/${slug}/caixa-diario/autocomplete/produtos/?q=${encodeURIComponent(q)}`,{credentials:'same-origin',headers:headersGet()});if(!r.ok)return;const d=await r.json();renderSugProduto(d.results)}
-  async function preencherPrecoEImagem(codigo){try{const rp=await fetch(`/web/${slug}/pedidos/preco/?prod_codi=${encodeURIComponent(codigo)}&pedi_fina=1`,{credentials:'same-origin',headers:headersGet()});if(rp.ok){const jp=await rp.json();if(typeof jp.unit_price!=='undefined'){document.getElementById('valorUnit').value=Number(jp.unit_price||0).toFixed(2)}}}catch(e){}
-    const img=document.getElementById('produtoImg');img.style.display='none';img.src=`/web/${slug}/produtos/${encodeURIComponent(codigo)}/foto/`;img.onload=function(){img.style.display='block'};img.onerror=function(){img.style.display='none'}}
-  let tidP=null; function onProdutoInput(){clearTimeout(tidP);document.getElementById('produto').value='';const v=document.getElementById('produtoBusca').value||'';tidP=setTimeout(()=>buscarProdutos(v),300)}
-  document.addEventListener('DOMContentLoaded',()=>{document.getElementById('numeroVenda').value=numeroVenda; document.getElementById('btnAddItem')?.addEventListener('click',addItem); document.getElementById('btnAvancarProc').href=`/web/${slug}/caixa-diario/processamento/?numero_venda=${encodeURIComponent(numeroVenda)}`;});
-  document.getElementById('produtoBusca')?.addEventListener('input',onProdutoInput)
+  }
+  async function removerItem(produto) {
+    const idx = itens.findIndex(i => i.produto === produto);
+    if (idx === -1) return;
+    const form = new URLSearchParams();
+    form.append('numero_venda', numeroVenda);
+    form.append('produto', produto);
+    const r = await fetch(`/web/${slug}/caixa-diario/venda/remover-item/`, { method: 'POST', credentials: 'same-origin', headers: headersForm(), body: form.toString() });
+    if (!r.ok) { alert('Falha ao remover item'); return; }
+    itens.splice(idx, 1);
+    render();
+  }
+  async function addItem() {
+    const produto = document.getElementById('produto').value || document.getElementById('produtoBusca').value || ''; const quantidade = Number(document.getElementById('quantidade').value || 0); const valor_unitario = Number(document.getElementById('valorUnit').value || 0); if (!produto || !quantidade || !valor_unitario) { alert('Preencha produto, quantidade e valor unitário'); return }
+    const form = new URLSearchParams(); form.append('numero_venda', numeroVenda); form.append('produto', produto); form.append('quantidade', String(quantidade)); form.append('valor_unitario', String(valor_unitario));
+    const r = await fetch(`/web/${slug}/caixa-diario/venda/adicionar-item/`, { method: 'POST', credentials: 'same-origin', headers: headersForm(), body: form.toString() }); if (!r.ok) { alert('Falha ao adicionar item'); return } const d = await r.json();
+    const ex = itens.find(i => i.produto === produto); if (ex) { ex.quantidade += quantidade; ex.valor_unitario = valor_unitario; } else { itens.push({ produto, quantidade, valor_unitario }); }
+    render();
+    document.getElementById('produto').value = '';
+    document.getElementById('produtoBusca').value = '';
+    const sug = document.getElementById('sugProduto'); if (sug) sug.innerHTML = '';
+    const img = document.getElementById('produtoImg'); if (img) { img.style.display = 'none'; img.src = ''; }
+    document.getElementById('valorUnit').value = '';
+  }
+  function renderSugProduto(items) { const el = document.getElementById('sugProduto'); el.innerHTML = ''; (items || []).forEach(it => { const a = document.createElement('a'); a.href = '#'; a.className = 'list-group-item list-group-item-action'; a.textContent = `${it.id} - ${it.text.split(' - ').slice(1).join(' - ')}`; a.dataset.id = it.id; a.addEventListener('click', async (ev) => { ev.preventDefault(); document.getElementById('produto').value = it.id; document.getElementById('produtoBusca').value = it.text; el.innerHTML = ''; await preencherPrecoEImagem(it.id) }); el.appendChild(a) }); }
+  async function buscarProdutos(q) { if (!q || q.length < 2) { renderSugProduto([]); return; } const r = await fetch(`/web/${slug}/caixa-diario/autocomplete/produtos/?q=${encodeURIComponent(q)}`, { credentials: 'same-origin', headers: headersGet() }); if (!r.ok) return; const d = await r.json(); renderSugProduto(d.results) }
+  async function preencherPrecoEImagem(codigo) {
+    try { const rp = await fetch(`/web/${slug}/pedidos/preco/?prod_codi=${encodeURIComponent(codigo)}&pedi_fina=1`, { credentials: 'same-origin', headers: headersGet() }); if (rp.ok) { const jp = await rp.json(); if (typeof jp.unit_price !== 'undefined') { document.getElementById('valorUnit').value = Number(jp.unit_price || 0).toFixed(2) } } } catch (e) { }
+    const img = document.getElementById('produtoImg'); img.style.display = 'none'; img.src = `/web/${slug}/produtos/${encodeURIComponent(codigo)}/foto/`; img.onload = function () { img.style.display = 'block' }; img.onerror = function () { img.style.display = 'none' }
+  }
+  let tidP = null; function onProdutoInput() { clearTimeout(tidP); document.getElementById('produto').value = ''; const v = document.getElementById('produtoBusca').value || ''; tidP = setTimeout(() => buscarProdutos(v), 300) }
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('numeroVenda').value = numeroVenda;
+    document.getElementById('btnAddItem')?.addEventListener('click', addItem);
+    document.getElementById('btnAvancarProc').href = `/web/${slug}/caixa-diario/processamento/?numero_venda=${encodeURIComponent(numeroVenda)}`;
+    const lista = document.getElementById('listaItens');
+    if (lista) {
+      lista.addEventListener('change', async (ev) => {
+        const t = ev.target;
+        if (t && t.classList.contains('qty-input')) {
+          const prod = t.getAttribute('data-prod') || '';
+          const val = Number(t.value || 0);
+          if (val <= 0) { await removerItem(prod); } else { await atualizarQuantidade(prod, val); }
+        }
+      });
+      lista.addEventListener('click', async (ev) => {
+        const btn = ev.target.closest('.btn-remover-item');
+        if (btn) {
+          ev.preventDefault();
+          const prod = btn.getAttribute('data-prod') || '';
+          await removerItem(prod);
+        }
+      });
+    }
+  });
+  document.getElementById('produtoBusca')?.addEventListener('input', onProdutoInput)
 </script>
 {% endblock %}

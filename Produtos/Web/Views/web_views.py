@@ -1330,7 +1330,16 @@ class ExportarProdutosView(DBAndSlugMixin, View):
         response['Content-Disposition'] = 'attachment; filename="produtos.csv"'
         response.write('empresa,codigo,nome,unidade,grupo,subgrupo,familia,marca\n')
         for p in qs.order_by('prod_empr', 'prod_codi'):
-            response.write(f"{p.prod_empr},{p.prod_codi},\"{p.prod_nome}\",{getattr(p.prod_unme,'pk', '')},{getattr(p.prod_grup,'pk','')},{getattr(p.prod_sugr,'pk','')},{getattr(p.prod_fami,'pk','')},{getattr(p.prod_marc,'pk','')}\n")
+            response.write(
+                f"{p.prod_empr},"
+                f"{p.prod_codi},"
+                f"\"{p.prod_nome}\","
+                f"{p.prod_unme_id or ''},"
+                f"{p.prod_grup_id or ''},"
+                f"{p.prod_sugr_id or ''},"
+                f"{p.prod_fami_id or ''},"
+                f"{p.prod_marc_id or ''}\n"
+            )
         return response
 
 

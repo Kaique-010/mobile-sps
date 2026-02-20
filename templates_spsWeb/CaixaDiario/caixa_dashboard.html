@@ -8,6 +8,13 @@
       <i class="bi bi-cash-coin"></i> Caixa Diário
     </h2>
   </div>
+  <div class="mb-4 text-end">
+    <a class="btn btn-outline-success btn-lg d-inline-flex align-items-center gap-2"
+      href="{% url 'CaixaDiarioWeb:caixa_venda' slug %}">
+      <i class="bi bi-cash-stack"></i>
+      <span>movimentações</span>
+    </a>
+  </div>
   <div id="caixa-warning" class="alert alert-warning d-none">Necessário estar logado para carregar os dados.</div>
 
   <div class="kpi-grid mb-4">
@@ -40,7 +47,7 @@
   <div class="row g-3">
     <div class="col-md-12">
       <div class="card">
-        <div class="card-header text-center">Lançamentos</div>
+        <div class="card-header text-center">Lançamentos Manuais</div>
         <div class="card-body d-grid gap-2">
           <div class="row g-2 align-items-end">
             <div class="col-md-3">
@@ -63,7 +70,12 @@
               <input type="text" class="form-control" id="obsEntrada" placeholder="Entrada" />
             </div>
             <div class="col-md-2 d-grid">
-              <button class="btn btn-outline-success" id="btnEntrada">Registrar entrada</button>
+              <button type="button"
+                class="btn btn-outline-success d-inline-flex justify-content-center align-items-center gap-2"
+                id="btnEntrada">
+                <i class="bi bi-arrow-down-circle"></i>
+                <span>Registrar entrada</span>
+              </button>
             </div>
           </div>
           <div class="row g-2 align-items-end mt-2">
@@ -87,7 +99,12 @@
               <input type="text" class="form-control" id="obsSaida" placeholder="Saída" />
             </div>
             <div class="col-md-2 d-grid">
-              <button class="btn btn-outline-warning" id="btnSaida">Registrar saída</button>
+              <button type="button"
+                class="btn btn-outline-warning d-inline-flex justify-content-center align-items-center gap-2"
+                id="btnSaida">
+                <i class="bi bi-arrow-up-circle"></i>
+                <span>Registrar saída</span>
+              </button>
             </div>
           </div>
         </div>
@@ -95,7 +112,20 @@
     </div>
     <div class="col-md-12">
       <div class="card">
-        <div class="card-header text-center">Fechamento de caixa</div>
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span>Fechamento de caixa</span>
+          <div class="d-flex align-items-center gap-2">
+            {% if caixa_aberto %}
+            <span class="badge bg-success">
+              Caixa {{ caixa_aberto.numero }} — do dia {{ caixa_aberto.data }}
+            </span>
+            <a class="btn btn-outline-info btn-sm"
+              href="/web/{{ slug }}/caixa-diario/extrato/?caixa={{ caixa_aberto.numero }}">Extrato do caixa</a>
+            {% else %}
+            <span class="badge bg-secondary">Nenhum caixa aberto</span>
+            {% endif %}
+          </div>
+        </div>
         <div class="card-body d-grid gap-2">
           <div class="input-group">
             <span class="input-group-text">Observação</span>
@@ -106,7 +136,6 @@
         </div>
       </div>
     </div>
-
 
     <script>
       const slug = '{{ slug|default:"" }}' || (function () { try { const p = location.pathname.split('/'); return p.length > 2 ? p[2] : ''; } catch (e) { return ''; } })();

@@ -12,14 +12,21 @@
         <div class="card-header">Dados da venda</div>
         <div class="card-body">
           <div class="mb-3">
-            <label class="form-label">Caixa</label>
+            <label class="form-label">Caixa/Operador</label>
             <select class="form-select" id="selCaixa"></select>
           </div>
           <div class="mb-3">
             <label class="form-label">Cliente</label>
-            <input class="form-control" id="cliente" placeholder="Código ou nome do cliente">
-            <input type="hidden" id="clienteId">
-            <div id="sugCliente" class="list-group mt-1"></div>
+            <div class="d-flex gap-2">
+              <div class="flex-grow-1">
+                <input class="form-control" id="cliente" placeholder="Código ou nome do cliente">
+                <input type="hidden" id="clienteId">
+                <div id="sugCliente" class="list-group mt-1"></div>
+              </div>
+              <button type="button" class="btn btn-outline-success" id="btnNovoCliente">
+                Novo
+              </button>
+            </div>
           </div>
           <div class="mb-3">
             <label class="form-label">Vendedor</label>
@@ -30,7 +37,8 @@
           <div class="d-grid"><button class="btn btn-outline-primary" id="btnIniciar">Iniciar venda</button></div>
           <div class="mt-3">
             <label class="form-label">Número da venda</label>
-            <input class="form-control" id="numeroVenda" readonly>
+            <input class="form-control" id="numeroVenda" placeholder="Digite para retomar uma venda aberta">
+            <div class="form-text">Pressione Enter para ir ao Processamento</div>
           </div>
         </div>
       </div>
@@ -41,6 +49,7 @@
         <div class="card-body">
           <a class="btn btn-outline-secondary" id="linkProdutos" href="#">Produtos</a>
           <a class="btn btn-outline-success ms-2" id="linkProcessamento" href="#">Processamento</a>
+          <a class="btn btn-outline-info ms-2" id="linkExtrato" href="#">Extrato</a>
         </div>
       </div>
       <div class="card mt-3">
@@ -84,6 +93,18 @@
     </div>
   </div>
 </div>
+
+<div class="modal fade" id="modalClienteRapido" tabindex="-1" aria-labelledby="modalClienteRapidoLabel"
+  aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="formClienteRapido">
+        {% include 'Entidades/parciais/entidade_cadastro_rapido_modal.html' %}
+      </form>
+    </div>
+  </div>
+</div>
+
 <script>
   const slug = '{{ slug|default:"" }}' || (function () { try { const p = location.pathname.split('/'); return p.length > 2 ? p[2] : ''; } catch (e) { return '' } })();
   const empresa = '{{ empresa|default:"" }}'; const filial = '{{ filial|default:"" }}';
@@ -93,13 +114,116 @@
   async function carregarCaixas() { const r = await fetch(`/web/${slug}/caixa-diario/caixas/abertos/?empresa=${empresa}&filial=${filial}`, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } }); const d = await r.json(); const sel = document.getElementById('selCaixa'); sel.innerHTML = ''; (d.results || []).forEach(it => { const o = document.createElement('option'); o.value = it.caixa; o.textContent = `${it.caixa} - ${it.operador || ''}`; sel.appendChild(o) }); atualizarResumoCaixa(); }
   function brl(v) { try { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v || 0)) } catch (e) { return `R$ ${v}` } }
   async function atualizarResumoCaixa() { try { const sel = document.getElementById('selCaixa'); const cx = sel ? sel.value : ''; const params = new URLSearchParams(); if (empresa) params.append('empresa', empresa); if (filial) params.append('filial', filial); if (cx) params.append('caixa', cx); const url = `/web/${slug}/caixa-diario/caixa/resumo/?${params.toString()}`; const r = await fetch(url, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } }); if (!r.ok) return; const d = await r.json(); document.getElementById('res-saldo-inicial').textContent = brl(d.saldo_inicial || 0); document.getElementById('res-saldo-atual').textContent = brl(d.saldo_atual || 0); document.getElementById('res-entradas').textContent = brl(d.entradas || 0); document.getElementById('res-saidas').textContent = brl(d.saidas || 0); const lista = document.getElementById('res-por-forma'); if (lista) { lista.innerHTML = ''; (d.por_forma || []).forEach(it => { const row = document.createElement('div'); row.className = 'list-group-item d-flex justify-content-between align-items-center'; row.innerHTML = `<div>${it.descricao}</div><div>${brl(it.total)}</div>`; lista.appendChild(row) }); } } catch (e) { } }
-  async function iniciar() { const form = new URLSearchParams(); form.append('caixa', document.getElementById('selCaixa').value || ''); form.append('cliente', document.getElementById('clienteId').value || document.getElementById('cliente').value || ''); form.append('vendedor', document.getElementById('vendedorId').value || document.getElementById('vendedor').value || ''); const r = await fetch(`/web/${slug}/caixa-diario/venda/iniciar/`, { method: 'POST', credentials: 'same-origin', headers: headersForm(), body: form.toString() }); if (!r.ok) { const t = await r.text(); alert('Falha ao iniciar: ' + t); return } const d = await r.json(); document.getElementById('numeroVenda').value = d.numero_venda; document.getElementById('linkProdutos').href = `/web/${slug}/caixa-diario/produtos/?numero_venda=${d.numero_venda}`; document.getElementById('linkProcessamento').href = `/web/${slug}/caixa-diario/processamento/?numero_venda=${d.numero_venda}` }
+  async function retomarPorNumero(ev) { if (ev && ev.key && ev.key !== 'Enter') return; const num = (document.getElementById('numeroVenda').value || '').trim(); if (!num) return; const params = new URLSearchParams({ numero_venda: num }); if (empresa) params.append('empresa', empresa); if (filial) params.append('filial', filial); const url = `/web/${slug}/caixa-diario/venda/status/?${params.toString()}`; try { const r = await fetch(url, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' }); if (!r.ok) { alert('Venda não encontrada'); return; } const d = await r.json(); if (!d.exists && Number(d.total_venda || 0) === 0 && Number(d.total_pagamentos || 0) === 0) { alert('Venda não encontrada'); return; } const linkProd = document.getElementById('linkProdutos'); const linkProc = document.getElementById('linkProcessamento'); if (linkProd) linkProd.href = `/web/${slug}/caixa-diario/produtos/?numero_venda=${encodeURIComponent(num)}`; if (linkProc) linkProc.href = `/web/${slug}/caixa-diario/processamento/?numero_venda=${encodeURIComponent(num)}`; window.location.href = linkProc ? linkProc.href : `/web/${slug}/caixa-diario/processamento/?numero_venda=${encodeURIComponent(num)}`; } catch (e) { alert('Falha ao verificar venda'); } }
+  function atualizarLinkExtrato() { const sel = document.getElementById('selCaixa'); const cx = sel ? sel.value : ''; let url = `/web/${slug}/caixa-diario/extrato/`; if (cx) url += `?caixa=${encodeURIComponent(cx)}`; const el = document.getElementById('linkExtrato'); if (el) el.href = url; }
+  async function iniciar() { const form = new URLSearchParams(); const sel = document.getElementById('selCaixa'); form.append('caixa', sel ? (sel.value || '') : ''); form.append('cliente', document.getElementById('clienteId').value || document.getElementById('cliente').value || ''); form.append('vendedor', document.getElementById('vendedorId').value || document.getElementById('vendedor').value || ''); const r = await fetch(`/web/${slug}/caixa-diario/venda/iniciar/`, { method: 'POST', credentials: 'same-origin', headers: headersForm(), body: form.toString() }); if (!r.ok) { const t = await r.text(); alert('Falha ao iniciar: ' + t); return } const d = await r.json(); document.getElementById('numeroVenda').value = d.numero_venda; document.getElementById('linkProdutos').href = `/web/${slug}/caixa-diario/produtos/?numero_venda=${d.numero_venda}`; document.getElementById('linkProcessamento').href = `/web/${slug}/caixa-diario/processamento/?numero_venda=${d.numero_venda}`; atualizarLinkExtrato(); }
+
+  function abrirModalClienteRapido() {
+    const modalEl = document.getElementById('modalClienteRapido');
+    if (!modalEl) return;
+    let inst = null;
+    if (window.bootstrap && bootstrap.Modal) {
+      inst = typeof bootstrap.Modal.getOrCreateInstance === 'function'
+        ? bootstrap.Modal.getOrCreateInstance(modalEl)
+        : new bootstrap.Modal(modalEl);
+      inst.show();
+    }
+  }
+
+  async function submitClienteRapido(ev) {
+    ev.preventDefault();
+    const formEl = document.getElementById('formClienteRapido');
+    if (!formEl) return;
+
+    const formData = new FormData(formEl);
+    const payload = new URLSearchParams();
+    for (const [k, v] of formData.entries()) {
+      payload.append(k, v);
+    }
+
+    const url = `/api/${slug}/entidades/entidades/cadastro-rapido/`;
+    try {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: headersForm(),
+        credentials: 'same-origin',
+        body: payload.toString()
+      });
+      if (!r.ok) {
+        let msg = 'Falha ao cadastrar cliente';
+        try {
+          const err = await r.json();
+          if (err && (err.erro || err.detail)) msg = err.erro || err.detail;
+        } catch (e) { }
+        alert(msg);
+        return;
+      }
+      const d = await r.json();
+      document.getElementById('clienteId').value = d.enti_clie;
+      document.getElementById('cliente').value = `${d.enti_clie} - ${d.enti_nome}`;
+      document.getElementById('sugCliente').innerHTML = '';
+
+      const modalEl = document.getElementById('modalClienteRapido');
+      if (modalEl && window.bootstrap && bootstrap.Modal) {
+        const inst = typeof bootstrap.Modal.getInstance === 'function'
+          ? bootstrap.Modal.getInstance(modalEl)
+          : null;
+        if (inst && typeof inst.hide === 'function') {
+          inst.hide();
+        }
+      }
+    } catch (e) {
+      alert('Erro inesperado ao cadastrar cliente');
+    }
+  }
   let tidC = null, tidV = null; function renderSug(id, targetHidden, listEl) { return function (items) { const el = document.getElementById(listEl); el.innerHTML = ''; (items || []).forEach(it => { const a = document.createElement('a'); a.href = '#'; a.className = 'list-group-item list-group-item-action'; a.textContent = `${it.id} - ${it.text}`; a.addEventListener('click', ev => { ev.preventDefault(); document.getElementById(id).value = `${it.id} - ${it.text}`; document.getElementById(targetHidden).value = it.id; el.innerHTML = ''; }); el.appendChild(a); }); } }
   const renderSugCliente = renderSug('cliente', 'clienteId', 'sugCliente'); const renderSugVendedor = renderSug('vendedor', 'vendedorId', 'sugVendedor');
-  async function buscarClientes(q) { if (!q || q.length < 2) { renderSugCliente([]); return; } const r = await fetch(`/web/${slug}/caixa-diario/autocomplete/clientes/?q=${encodeURIComponent(q)}`, { credentials: 'same-origin', headers: headersGet() }); if (!r.ok) return; const d = await r.json(); renderSugCliente(d.results) }
+  let clienteAbort = null;
+  async function buscarClientes(q) {
+    if (!q || q.length < 2) { renderSugCliente([]); return; }
+    try {
+      if (clienteAbort) { try { clienteAbort.abort(); } catch (e) { } }
+      clienteAbort = new AbortController();
+      const r = await fetch(`/web/${slug}/caixa-diario/autocomplete/clientes/?q=${encodeURIComponent(q)}`, {
+        credentials: 'same-origin',
+        headers: headersGet(),
+        signal: clienteAbort.signal
+      });
+      if (!r.ok) return;
+      const d = await r.json();
+      renderSugCliente(d.results);
+    } catch (e) {
+      if (e.name !== 'AbortError') { /* ignora */ }
+    } finally {
+      clienteAbort = null;
+    }
+  }
   async function buscarVendedores(q) { if (!q || q.length < 2) { renderSugVendedor([]); return; } const r = await fetch(`/web/${slug}/caixa-diario/autocomplete/vendedores/?q=${encodeURIComponent(q)}`, { credentials: 'same-origin', headers: headersGet() }); if (!r.ok) return; const d = await r.json(); renderSugVendedor(d.results) }
-  function onClienteInput() { clearTimeout(tidC); const v = document.getElementById('cliente').value || ''; document.getElementById('clienteId').value = ''; tidC = setTimeout(() => buscarClientes(v), 300) }
+  function onClienteInput() {
+    clearTimeout(tidC);
+    const v = document.getElementById('cliente').value || '';
+    document.getElementById('clienteId').value = '';
+    tidC = setTimeout(() => buscarClientes(v), 250);
+  }
   function onVendedorInput() { clearTimeout(tidV); const v = document.getElementById('vendedor').value || ''; document.getElementById('vendedorId').value = ''; tidV = setTimeout(() => buscarVendedores(v), 300) }
-  document.addEventListener('DOMContentLoaded', () => { carregarCaixas(); document.getElementById('btnIniciar')?.addEventListener('click', iniciar); document.getElementById('cliente')?.addEventListener('input', onClienteInput); document.getElementById('vendedor')?.addEventListener('input', onVendedorInput); document.getElementById('selCaixa')?.addEventListener('change', atualizarResumoCaixa) });
+  document.addEventListener('DOMContentLoaded', () => {
+    carregarCaixas().then(atualizarLinkExtrato).catch(() => atualizarLinkExtrato());
+    document.getElementById('btnIniciar')?.addEventListener('click', iniciar);
+    document.getElementById('cliente')?.addEventListener('input', onClienteInput);
+    document.getElementById('vendedor')?.addEventListener('input', onVendedorInput);
+    document.getElementById('selCaixa')?.addEventListener('change', () => { atualizarResumoCaixa(); atualizarLinkExtrato(); });
+    document.getElementById('numeroVenda')?.addEventListener('keyup', retomarPorNumero);
+    document.getElementById('numeroVenda')?.addEventListener('blur', retomarPorNumero);
+    document.getElementById('btnNovoCliente')?.addEventListener('click', abrirModalClienteRapido);
+    document.getElementById('formClienteRapido')?.addEventListener('submit', submitClienteRapido);
+
+    document.addEventListener('click', (ev) => {
+      const sug = document.getElementById('sugCliente');
+      const input = document.getElementById('cliente');
+      if (!sug || !input) return;
+      const clickedInside = sug.contains(ev.target) || input.contains(ev.target);
+      if (!clickedInside) { sug.innerHTML = ''; }
+    });
+  });
 </script>
 {% endblock %}
