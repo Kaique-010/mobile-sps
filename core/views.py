@@ -202,6 +202,10 @@ def home(request, slug=None, empresa=None, filial=None):
     lucro_percent = 0.0
     itens_contagem = 0
     clientes_distintos = 0
+    dias_periodo = max((fim - ini).days + 1, 1)
+    itens_por_pedido = 0.0
+    valor_medio_item = 0.0
+    pedidos_por_dia = 0.0
 
     if dashboard_tipo == 'pisos':
         pedidos_qs = Pedidospisos.objects.using(banco).filter(pedi_data__gte=ini, pedi_data__lte=fim)
@@ -232,6 +236,9 @@ def home(request, slug=None, empresa=None, filial=None):
             clientes_distintos = pedidos_qs.exclude(pedi_clie__isnull=True).values('pedi_clie').distinct().count()
         except Exception:
             clientes_distintos = 0
+        itens_por_pedido = (float(itens_contagem) / float(qtd_pedidos)) if qtd_pedidos else 0.0
+        valor_medio_item = (float(total_valor) / float(itens_contagem)) if itens_contagem else 0.0
+        pedidos_por_dia = (float(qtd_pedidos) / float(dias_periodo)) if dias_periodo else 0.0
         template_name = 'Home/home_pisos.html'
     elif dashboard_tipo == 'os':
         pedidos_qs = Ordemservico.objects.using(banco).filter(orde_data_aber__gte=ini, orde_data_aber__lte=fim)
@@ -249,6 +256,9 @@ def home(request, slug=None, empresa=None, filial=None):
             clientes_distintos = pedidos_qs.exclude(orde_enti__isnull=True).values('orde_enti').distinct().count()
         except Exception:
             clientes_distintos = 0
+        itens_por_pedido = (float(itens_contagem) / float(qtd_pedidos)) if qtd_pedidos else 0.0
+        valor_medio_item = (float(total_valor) / float(itens_contagem)) if itens_contagem else 0.0
+        pedidos_por_dia = (float(qtd_pedidos) / float(dias_periodo)) if dias_periodo else 0.0
         template_name = 'Home/home_os.html'
     else:
         pedidos_qs = PedidoVenda.objects.using(banco).filter(pedi_canc=False, pedi_data__gte=ini, pedi_data__lte=fim)
@@ -279,6 +289,13 @@ def home(request, slug=None, empresa=None, filial=None):
         lucro_valor = (float(total_valor) - float(total_custo)) if total_valor else 0.0
         lucro_percent = (lucro_valor / float(total_valor) * 100.0) if total_valor else 0.0
         itens_contagem = itens_qs.count()
+        try:
+            clientes_distintos = pedidos_qs.exclude(pedi_forn__isnull=True).values('pedi_forn').distinct().count()
+        except Exception:
+            clientes_distintos = 0
+        itens_por_pedido = (float(itens_contagem) / float(qtd_pedidos)) if qtd_pedidos else 0.0
+        valor_medio_item = (float(total_valor) / float(itens_contagem)) if itens_contagem else 0.0
+        pedidos_por_dia = (float(qtd_pedidos) / float(dias_periodo)) if dias_periodo else 0.0
 
     context = {
         'vendedores': vendedores_qs,
@@ -297,6 +314,10 @@ def home(request, slug=None, empresa=None, filial=None):
             'qtd_pedidos': int(qtd_pedidos),
             'itens_contagem': int(itens_contagem),
             'clientes_distintos': int(clientes_distintos),
+            'itens_por_pedido': float(itens_por_pedido),
+            'valor_medio_item': float(valor_medio_item),
+            'pedidos_por_dia': float(pedidos_por_dia),
+            'dias_periodo': int(dias_periodo),
         },
     }
     return render(request, template_name, context)

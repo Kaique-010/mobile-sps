@@ -90,78 +90,158 @@
             <div class="page-header">
 
             </div>
-            <div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-3 mt-2">
-                <div class="col">
-                    <div class="card chart-card h-100">
-                        <div class="card-body d-flex align-items-center gap-2">
-                            <div
-                                style="width:34px;height:34px;border-radius:17px;background:#19875422;display:flex;align-items:center;justify-content:center">
-                                <i class="bi bi-cash-stack text-success"></i>
+            <div id="kpisCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="4000">
+                <div class="carousel-indicators">
+                    <button type="button" data-bs-target="#kpisCarousel" data-bs-slide-to="0" class="active"
+                        aria-current="true" aria-label="Slide 1"></button>
+                    <button type="button" data-bs-target="#kpisCarousel" data-bs-slide-to="1"
+                        aria-label="Slide 2"></button>
+                </div>
+                <div class="carousel-inner">
+                    <div class="carousel-item active">
+                        <div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-3 mt-2">
+                            <div class="col">
+                                <div class="card chart-card h-100">
+                                    <div class="card-body d-flex align-items-center gap-2">
+                                        <div
+                                            style="width:34px;height:34px;border-radius:17px;background:#19875422;display:flex;align-items:center;justify-content:center">
+                                            <i class="bi bi-cash-stack text-success"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-muted small">Total vendido</div>
+                                            <div class="fs-6 fw-semibold text-success">{{ kpis.total_valor|brl }}</div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <div class="text-muted small">Total vendido</div>
-                                <div class="fs-6 fw-semibold text-success">{{ kpis.total_valor|brl }}</div>
+                            <div class="col">
+                                <div class="card chart-card h-100">
+                                    <div class="card-body d-flex align-items-center gap-2">
+                                        <div
+                                            style="width:34px;height:34px;border-radius:17px;background:#20c99722;display:flex;align-items:center;justify-content:center">
+                                            <i class="bi bi-graph-up-arrow text-info"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-muted small">Lucro (%)</div>
+                                            <div class="fs-6 fw-semibold text-info">{{ kpis.lucro_percent|floatformat:2 }}%</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="card chart-card h-100">
+                                    <div class="card-body d-flex align-items-center gap-2">
+                                        <div
+                                            style="width:34px;height:34px;border-radius:17px;background:#fd7e1422;display:flex;align-items:center;justify-content:center">
+                                            <i class="bi bi-receipt text-warning"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-muted small">Ticket médio</div>
+                                            <div class="fs-6 fw-semibold text-warning">{{ kpis.ticket_medio|brl }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="card chart-card h-100">
+                                    <div class="card-body d-flex align-items-center gap-2">
+                                        <div
+                                            style="width:34px;height:34px;border-radius:17px;background:#0d6efd22;display:flex;align-items:center;justify-content:center">
+                                            <i class="bi bi-clipboard-check text-primary"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-muted small">Pedidos</div>
+                                            <div class="fs-6 fw-semibold text-primary">{{ kpis.qtd_pedidos }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="card chart-card h-100">
+                                    <div class="card-body d-flex align-items-center gap-2">
+                                        <div
+                                            style="width:34px;height:34px;border-radius:17px;background:#6f42c122;display:flex;align-items:center;justify-content:center">
+                                            <i class="bi bi-box-seam" style="color:#6f42c1"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-muted small">Itens vendidos</div>
+                                            <div class="fs-6 fw-semibold" style="color:#6f42c1">{{ kpis.itens_contagem}}</div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-                <div class="col">
-                    <div class="card chart-card h-100">
-                        <div class="card-body d-flex align-items-center gap-2">
-                            <div
-                                style="width:34px;height:34px;border-radius:17px;background:#20c99722;display:flex;align-items:center;justify-content:center">
-                                <i class="bi bi-graph-up-arrow text-info"></i>
+                    <div class="carousel-item">
+                        <div class="row row-cols-2 row-cols-md-3 row-cols-xl-4 g-3 mt-2">
+                            <div class="col">
+                                <div class="card chart-card h-100">
+                                    <div class="card-body d-flex align-items-center gap-2">
+                                        <div
+                                            style="width:34px;height:34px;border-radius:17px;background:#0dcaf022;display:flex;align-items:center;justify-content:center">
+                                            <i class="bi bi-people text-info"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-muted small">Clientes distintos</div>
+                                            <div class="fs-6 fw-semibold text-info">{{ kpis.clientes_distintos }}</div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <div class="text-muted small">Lucro (%)</div>
-                                <div class="fs-6 fw-semibold text-info">{{ kpis.lucro_percent|floatformat:2 }}%</div>
+                            <div class="col">
+                                <div class="card chart-card h-100">
+                                    <div class="card-body d-flex align-items-center gap-2">
+                                        <div
+                                            style="width:34px;height:34px;border-radius:17px;background:#6610f222;display:flex;align-items:center;justify-content:center">
+                                            <i class="bi bi-diagram-3" style="color:#6610f2"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-muted small">Itens por pedido</div>
+                                            <div class="fs-6 fw-semibold" style="color:#6610f2">{{ kpis.itens_por_pedido|floatformat:2 }}</div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="card chart-card h-100">
-                        <div class="card-body d-flex align-items-center gap-2">
-                            <div
-                                style="width:34px;height:34px;border-radius:17px;background:#fd7e1422;display:flex;align-items:center;justify-content:center">
-                                <i class="bi bi-receipt text-warning"></i>
+                            <div class="col">
+                                <div class="card chart-card h-100">
+                                    <div class="card-body d-flex align-items-center gap-2">
+                                        <div
+                                            style="width:34px;height:34px;border-radius:17px;background:#dc354522;display:flex;align-items:center;justify-content:center">
+                                            <i class="bi bi-tag text-danger"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-muted small">Valor médio item</div>
+                                            <div class="fs-6 fw-semibold text-danger">{{ kpis.valor_medio_item|brl }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <div class="text-muted small">Ticket médio</div>
-                                <div class="fs-6 fw-semibold text-warning">{{ kpis.ticket_medio|brl }}
+                            <div class="col">
+                                <div class="card chart-card h-100">
+                                    <div class="card-body d-flex align-items-center gap-2">
+                                        <div
+                                            style="width:34px;height:34px;border-radius:17px;background:#19875422;display:flex;align-items:center;justify-content:center">
+                                            <i class="bi bi-speedometer2 text-success"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-muted small">Pedidos/dia</div>
+                                            <div class="fs-6 fw-semibold text-success">{{ kpis.pedidos_por_dia|floatformat:2 }}</div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="col">
-                    <div class="card chart-card h-100">
-                        <div class="card-body d-flex align-items-center gap-2">
-                            <div
-                                style="width:34px;height:34px;border-radius:17px;background:#0d6efd22;display:flex;align-items:center;justify-content:center">
-                                <i class="bi bi-clipboard-check text-primary"></i>
-                            </div>
-                            <div>
-                                <div class="text-muted small">Pedidos</div>
-                                <div class="fs-6 fw-semibold text-primary">{{ kpis.qtd_pedidos }}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-md-3">
-                    <div class="card chart-card h-100">
-                        <div class="card-body d-flex align-items-center gap-2">
-                            <div
-                                style="width:34px;height:34px;border-radius:17px;background:#6f42c122;display:flex;align-items:center;justify-content:center">
-                                <i class="bi bi-box-seam" style="color:#6f42c1"></i>
-                            </div>
-                            <div>
-                                <div class="text-muted small">Itens vendidos</div>
-                                <div class="fs-6 fw-semibold" style="color:#6f42c1">{{ kpis.itens_contagem }}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#kpisCarousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Anterior</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#kpisCarousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Próximo</span>
+                </button>
             </div>
         </div>
     </div>
@@ -190,25 +270,59 @@
 
     </form>
 
-    <div class="row g-3 align-items-stretch">
-        <div class="col-lg-6 d-flex">
-            <div class="card chart-card w-100">
-                <div class="card-body">
-                    <h3 class="h6 text-body mb-3 text-center">Pedidos por Vendedor</h3>
-                    <canvas id="totalPedidosChart" class="chart-canvas"></canvas>
+    <div id="chartsCarousel" class="carousel slide mb-4" data-bs-ride="carousel" data-bs-interval="5000">
+        <div class="carousel-inner">
+            <div class="carousel-item active">
+                <div class="row g-3 align-items-stretch">
+                    <div class="col-lg-6 d-flex">
+                        <div class="card chart-card w-100">
+                            <div class="card-body">
+                                <h3 class="h6 text-body mb-3 text-center">Pedidos por Vendedor</h3>
+                                <canvas id="chartPedidosVendedor" class="chart-canvas"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 d-flex">
+                        <div class="card chart-card w-100">
+                            <div class="card-body">
+                                <h3 class="h6 text-body mb-3 text-center">Valor Pedidos por Vendedor</h3>
+                                <canvas id="chartValorVendedor" class="chart-canvas"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="carousel-item">
+                <div class="row g-3 align-items-stretch">
+                    <div class="col-lg-6 d-flex">
+                        <div class="card chart-card w-100">
+                            <div class="card-body">
+                                <h3 class="h6 text-body mb-3 text-center">Pedidos por Período</h3>
+                                <canvas id="chartPedidosPeriodo" class="chart-canvas"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 d-flex">
+                        <div class="card chart-card w-100">
+                            <div class="card-body">
+                                <h3 class="h6 text-body mb-3 text-center">Itens mais vendidos (quantidade)</h3>
+                                <canvas id="chartItensMaisVendidos" class="chart-canvas"></canvas>
+                                <button id="abrirKronos" class="btn btn-outline-custom2 ms-2"><img
+                                        src="{% static 'logo.png' %}" style="height:24px" />Fale com Kronos</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-lg-6 d-flex">
-            <div class="card chart-card w-100">
-                <div class="card-body">
-                    <h3 class="h6 text-body mb-3 text-center">Valor Pedidos por Vendedor</h3>
-                    <canvas id="totalValorPedidoChart" class="chart-canvas"></canvas>
-                    <button id="abrirKronos" class="btn btn-outline-custom2 ms-2"><img src="{% static 'logo.png' %}"
-                            style="height:24px" />Fale com Kronos</button>
-                </div>
-            </div>
-        </div>
+        <button class="carousel-control-prev" type="button" data-bs-target="#chartsCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Anterior</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#chartsCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Próximo</span>
+        </button>
     </div>
 
     <div id="kronosModal" class="modal" tabindex="-1">
@@ -286,11 +400,14 @@
         }
     }
 
-    // Estado dos gráficos
-    const totalPedidosCtx = document.getElementById('totalPedidosChart');
-    const totalValorPedidoCtx = document.getElementById('totalValorPedidoChart');
-    let totalPedidosChart = null;
-    let totalValorChart = null;
+    const chartPedidosVendedorCtx = document.getElementById('chartPedidosVendedor');
+    const chartValorVendedorCtx = document.getElementById('chartValorVendedor');
+    const chartPedidosPeriodoCtx = document.getElementById('chartPedidosPeriodo');
+    const chartItensVendidosCtx = document.getElementById('chartItensMaisVendidos');
+    let chartPedidosVendedor = null;
+    let chartValorVendedor = null;
+    let chartPedidosPeriodo = null;
+    let chartItensVendidos = null;
 
     function createBarGradient(ctx) {
         const g = ctx.createLinearGradient(0, ctx.canvas.height, 0, 0); g.addColorStop(0, '#4a6cf7'); g.addColorStop(1, '#82a0ff'); return g
@@ -300,66 +417,159 @@
     function isWhiteTheme() { return !isDarkTheme() }
     function themeAxis() { const dark = isDarkTheme(); return { gridColor: dark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.12)', tickColor: dark ? '#ffffff' : '#212529', legendColor: dark ? '#ffffff' : '#212529' } }
 
-    function upsertCharts(labels, valoresCount, valoresSum) {
-        const barCtx = totalPedidosCtx ? totalPedidosCtx.getContext('2d') : null;
-        const pieCtx = totalValorPedidoCtx ? totalValorPedidoCtx.getContext('2d') : null;
-
+    function upsertPedidosPeriodo(labels, valoresCount) {
+        const ctx = chartPedidosPeriodoCtx ? chartPedidosPeriodoCtx.getContext('2d') : null;
         const countData = {
             labels,
             datasets: [{
-                label: 'Total de Pedidos',
+                label: 'Pedidos',
                 data: valoresCount,
-                backgroundColor: barCtx ? createBarGradient(barCtx) : '#82a0ff',
+                backgroundColor: ctx ? createBarGradient(ctx) : '#82a0ff',
                 borderColor: '#4a6cf7',
                 borderWidth: 1,
                 borderRadius: 6
             }]
         };
-
-        const palette = ['#4a6cf7', '#6ea8fe', '#06b6d4', '#82d4a0', '#8b5cf6', '#e99e60', '#e2b783', '#d69292', '#0ea5e9', '#10b981', '#c084fc', '#84cc16'];
-        const sumData = {
-            labels,
-            datasets: [{
-                label: 'Valor Total dos Pedidos',
-                data: valoresSum,
-                backgroundColor: labels.map((_, i) => palette[i % palette.length]),
-                borderColor: '#ffffff',
-                borderWidth: 1,
-                hoverOffset: 8
-            }]
-        };
-
         const axis = themeAxis();
-        if (totalPedidosChart) {
-            totalPedidosChart.data = countData;
-            totalPedidosChart.options.scales.y.grid.color = axis.gridColor;
-            totalPedidosChart.options.scales.y.ticks.color = axis.tickColor;
-            totalPedidosChart.options.scales.x.grid.color = axis.gridColor;
-            totalPedidosChart.options.scales.x.ticks.color = axis.tickColor;
-            totalPedidosChart.update();
-        } else if (barCtx) {
-            totalPedidosChart = new Chart(barCtx, { type: 'bar', data: countData, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } }, x: { grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } } }, plugins: { legend: { display: false } } }, plugins: [shadowPlugin] });
-        }
-
-        if (totalValorChart && totalValorChart.config.type !== 'pie') {
-            totalValorChart.destroy();
-            totalValorChart = null;
-        }
-        if (totalValorChart) {
-            totalValorChart.data = sumData;
-            totalValorChart.options.plugins.legend.labels.color = axis.legendColor;
-            totalValorChart.update();
-        } else if (pieCtx) {
-            totalValorChart = new Chart(pieCtx, { type: 'pie', data: sumData, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: axis.legendColor } } }, layout: { padding: 8 } } });
+        if (chartPedidosPeriodo) {
+            chartPedidosPeriodo.data = countData;
+            chartPedidosPeriodo.options.scales.y.grid.color = axis.gridColor;
+            chartPedidosPeriodo.options.scales.y.ticks.color = axis.tickColor;
+            chartPedidosPeriodo.options.scales.x.grid.color = axis.gridColor;
+            chartPedidosPeriodo.options.scales.x.ticks.color = axis.tickColor;
+            chartPedidosPeriodo.update();
+        } else if (ctx) {
+            chartPedidosPeriodo = new Chart(ctx, {
+                type: 'bar',
+                data: countData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } },
+                        x: { grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            }, plugins = [shadowPlugin]);
         }
     }
 
+    function upsertPedidosVendedor(labels, contagens, valores) {
+        const ctxCount = chartPedidosVendedorCtx ? chartPedidosVendedorCtx.getContext('2d') : null;
+        const ctxValor = chartValorVendedorCtx ? chartValorVendedorCtx.getContext('2d') : null;
+        const axis = themeAxis();
+        const palette = ['#8bb4ff', '#78a8ff', '#659cff', '#5290ff', '#1a5e7e', '#1b3f50', '#004766', '#003a52', '#002d44', '#00243a', '#001a26', '#001119'];
+        const countData = {
+            labels,
+            datasets: [{
+                label: 'Pedidos',
+                data: contagens,
+                backgroundColor: labels.map((_, i) => palette[i % palette.length]),
+                borderColor: '#ffffff',
+                borderWidth: 1
+            }]
+        };
+        const valorData = {
+            labels,
+            datasets: [{
+                label: 'Valor dos Pedidos',
+                data: valores,
+                backgroundColor: 'rgba(13,110,253,.35)',
+                borderColor: 'rgba(13,110,253,.9)',
+                borderWidth: 1.5,
+                borderRadius: 6
+            }]
+        };
+        if (chartPedidosVendedor && chartPedidosVendedor.config?.type !== 'pie') {
+            chartPedidosVendedor.destroy();
+            chartPedidosVendedor = null;
+        }
+        if (chartPedidosVendedor) {
+            chartPedidosVendedor.data = countData;
+            if (chartPedidosVendedor.options?.plugins?.legend?.labels) {
+                chartPedidosVendedor.options.plugins.legend.labels.color = axis.legendColor;
+            }
+            chartPedidosVendedor.update();
+        } else if (ctxCount) {
+            chartPedidosVendedor = new Chart(ctxCount, {
+                type: 'pie',
+                data: countData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { color: axis.legendColor } } }
+                }
+            });
+        }
+        if (chartValorVendedor) {
+            chartValorVendedor.data = valorData;
+            chartValorVendedor.options.scales.y.grid.color = axis.gridColor;
+            chartValorVendedor.options.scales.y.ticks.color = axis.tickColor;
+            chartValorVendedor.options.scales.x.grid.color = axis.gridColor;
+            chartValorVendedor.options.scales.x.ticks.color = axis.tickColor;
+            chartValorVendedor.update();
+        } else if (ctxValor) {
+            chartValorVendedor = new Chart(ctxValor, {
+                type: 'bar',
+                data: valorData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } },
+                        x: { grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+    }
+    function upsertTopItens(labels, quantities) {
+        const ctx = chartItensVendidosCtx ? chartItensVendidosCtx.getContext('2d') : null;
+        const palette = ['#8bb4ff', '#78a8ff', '#659cff', '#5290ff', '#1a5e7e', '#1b3f50', '#004766', '#003a52', '#002d44', '#00243a', '#001a26', '#001119'];
+        const data = {
+            labels,
+            datasets: [{
+                label: 'Quantidade',
+                data: quantities,
+                backgroundColor: labels.map((_, i) => palette[i % palette.length]),
+                borderColor: '#ffffff',
+                borderWidth: 1
+            }]
+        };
+        const axis = themeAxis();
+        if (chartItensVendidos) {
+            chartItensVendidos.data = data;
+            chartItensVendidos.options.indexAxis = 'y';
+            chartItensVendidos.options.plugins.legend.labels.color = axis.legendColor;
+            chartItensVendidos.options.scales = {
+                x: { beginAtZero: true, grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } },
+                y: { grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } }
+            };
+            chartItensVendidos.update();
+        } else if (ctx) {
+            chartItensVendidos = new Chart(ctx, {
+                type: 'bar',
+                data,
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { beginAtZero: true, grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } },
+                        y: { grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } }
+                    }
+                }
+            });
+        }
+    }
     async function loadData(paramsOverride = {}) {
         const slug = localStorage.getItem('slug');
         const token = localStorage.getItem('access');
         if (!slug || !token) {
             alert('Necessário estar logado.');
-            window.location.href = '/web/login/';
             return;
         }
 
@@ -385,7 +595,6 @@
         if (empresa) params.set('empresa', empresa);
         if (filial) params.set('filial', filial);
         if (nomeVendedor) params.set('nome_vendedor', nomeVendedor);
-        // Endpoint: Pedidos gerais (usaremos para agregar por vendedor)
         const url = `/api/${slug}/pedidos/pedidos-geral/?${params.toString()}`;
 
         try {
@@ -394,22 +603,47 @@
             const data = await resp.json();
             const items = Array.isArray(data) ? data : (data.results || []);
 
-            const porVendedorCount = {};
-            const porVendedorValor = {};
+            const porDiaCount = {};
+            const porVendCount = {};
+            const porVendValor = {};
             for (const item of items) {
+                const dia = item.data_pedido;
+                if (dia) {
+                    porDiaCount[dia] = (porDiaCount[dia] || 0) + 1;
+                }
                 const vend = item.nome_vendedor || 'N/D';
-                const valor = parseFloat(item.valor_total) || 0;
-                porVendedorCount[vend] = (porVendedorCount[vend] || 0) + 1;
-                porVendedorValor[vend] = (porVendedorValor[vend] || 0) + valor;
+                const valor = Number(item.valor_total || 0);
+                porVendCount[vend] = (porVendCount[vend] || 0) + 1;
+                porVendValor[vend] = (porVendValor[vend] || 0) + valor;
             }
 
-            const labels = Object.keys(porVendedorCount);
-            const valoresCount = labels.map(v => porVendedorCount[v]);
-            const valoresSum = labels.map(v => porVendedorValor[v]);
-            upsertCharts(labels, valoresCount, valoresSum);
+            const labelsDia = Object.keys(porDiaCount).sort((a, b) => a.localeCompare(b));
+            const valoresDia = labelsDia.map(d => porDiaCount[d]);
+            upsertPedidosPeriodo(labelsDia, valoresDia);
+
+            const vendedores = Object.keys(porVendCount);
+            vendedores.sort((a, b) => (porVendValor[b] || 0) - (porVendValor[a] || 0));
+            const contagens = vendedores.map(v => porVendCount[v]);
+            const valores = vendedores.map(v => porVendValor[v]);
+            upsertPedidosVendedor(vendedores, contagens, valores);
         } catch (err) {
-            console.error('Falha ao carregar dados do dashboard:', err);
-            upsertCharts([], [], []);
+            console.error('Falha ao carregar dados de pedidos:', err);
+            upsertPedidosPeriodo([], []);
+            upsertPedidosVendedor([], [], []);
+        }
+
+        try {
+            const urlTop = `/api/${slug}/dashboards/vendas/?data_ini=${encodeURIComponent(data_inicial)}&data_fim=${encodeURIComponent(data_final)}`;
+            const respTop = await authFetch(urlTop);
+            if (!respTop.ok) throw new Error(`Erro ${respTop.status}`);
+            const dadosTop = await respTop.json();
+            const top = Array.isArray(dadosTop?.top_vendas) ? dadosTop.top_vendas : [];
+            const labelsTop = top.map(t => t.iped_prod);
+            const qtyTop = top.map(t => Number(t.total || 0));
+            upsertTopItens(labelsTop, qtyTop);
+        } catch (err) {
+            console.error('Falha ao carregar itens mais vendidos:', err);
+            upsertTopItens([], []);
         }
     }
 
@@ -452,7 +686,7 @@
             if (slugTpl && (!localStorage.getItem('slug') || localStorage.getItem('slug') !== slugTpl)) {
                 localStorage.setItem('slug', slugTpl);
             }
-        } catch(e){}
+        } catch (e) { }
         loadData();
         carregarVendedores();
     });

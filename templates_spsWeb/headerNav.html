@@ -30,6 +30,49 @@
         font-weight: bold;
         color: var(--bs-body-color);
     }
+
+    :root {
+        --sps-radius: 24px;
+    }
+
+    .offcanvas.offcanvas-end {
+        border-top-left-radius: var(--sps-radius);
+        border-bottom-left-radius: var(--sps-radius);
+        overflow: hidden;
+        box-shadow: var(--bs-box-shadow-lg);
+        border: 1px solid var(--bs-border-color);
+    }
+
+    #main-navbar {
+        border-bottom-left-radius: var(--sps-radius);
+        border-bottom-right-radius: var(--sps-radius);
+        box-shadow: var(--bs-box-shadow-sm);
+        border-bottom: 1px solid var(--bs-border-color);
+    }
+
+    .navbar-toggler {
+        border-radius: 10px;
+        border-color: var(--bs-border-color);
+    }
+
+    .offcanvas .nav-link {
+        border-radius: 8px;
+        padding: .5rem .75rem;
+        transition: background-color .15s ease, color .15s ease;
+    }
+
+    .offcanvas .nav-link:hover {
+        background-color: var(--bs-secondary-bg);
+        color: var(--bs-body-color);
+    }
+
+    .offcanvas-footer {
+        border-top: 1px solid var(--bs-border-color);
+    }
+
+    .offcanvas-backdrop.show {
+        backdrop-filter: blur(2px);
+    }
 </style>
 <header class="bg-body">
     <nav class="navbar fixed-top bg-body" id="main-navbar">
