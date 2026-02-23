@@ -33,6 +33,22 @@ class OrdemServicoPecasSerializer(serializers.ModelSerializer):
         if 'peca_tota' not in data and 'peca_quan' in data and 'peca_unit' in data:
             data['peca_tota'] = data['peca_quan'] * data['peca_unit']
 
+        banco = self.context.get('banco')
+        if not banco:
+            raise ValidationError("Banco de dados não fornecido.")
+
+        qs = Ordemservicopecas.objects.using(banco).filter(
+            peca_empr=data.get('peca_empr') if data.get('peca_empr') is not None else getattr(self.instance, 'peca_empr', None),
+            peca_fili=data.get('peca_fili') if data.get('peca_fili') is not None else getattr(self.instance, 'peca_fili', None),
+            peca_orde=data.get('peca_orde') if data.get('peca_orde') is not None else getattr(self.instance, 'peca_orde', None),
+            peca_codi=data.get('peca_codi') if data.get('peca_codi') is not None else getattr(self.instance, 'peca_codi', None),
+        )
+        if self.instance is not None:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError("Esta peça já foi informada nesta ordem de serviço.")
+        print('Query:', qs)
+
         return data
 
     def create(self, validated_data):
@@ -103,6 +119,21 @@ class OrdemServicoServicosSerializer(BancoModelSerializer):
 
         if 'serv_tota' not in data and 'serv_quan' in data and 'serv_unit' in data:
             data['serv_tota'] = data['serv_quan'] * data['serv_unit']
+
+        banco = self.context.get('banco')
+        if not banco:
+            raise ValidationError("Banco de dados não fornecido.")
+
+        qs = Ordemservicoservicos.objects.using(banco).filter(
+            serv_empr=data.get('serv_empr') if data.get('serv_empr') is not None else getattr(self.instance, 'serv_empr', None),
+            serv_fili=data.get('serv_fili') if data.get('serv_fili') is not None else getattr(self.instance, 'serv_fili', None),
+            serv_orde=data.get('serv_orde') if data.get('serv_orde') is not None else getattr(self.instance, 'serv_orde', None),
+            serv_codi=data.get('serv_codi') if data.get('serv_codi') is not None else getattr(self.instance, 'serv_codi', None),
+        )
+        if self.instance is not None:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError("Este serviço já foi informado nesta ordem de serviço.")
 
         return data
 
