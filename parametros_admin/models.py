@@ -123,7 +123,19 @@ class PermissaoModulo(models.Model):
             def invalidate_cache():
                 try:
                     slug = get_licenca_slug() or alias
+                    # Cache original do parametros_admin
                     cache.delete(f"modulos_licenca_{slug}_{self.perm_empr}_{self.perm_fili}")
+                    # Cache do middleware (core)
+                    cache.delete(f"mod_{slug}_{self.perm_empr}_{self.perm_fili}")
+                    
+                    # Cache de permissão individual (permissions.py)
+                    try:
+                        if self.perm_modu_id:
+                            # Tenta obter nome do módulo sem query extra se possível, ou busca
+                            modu_nome = self.perm_modu.modu_nome
+                            cache.delete(f"perm_modulo_{slug}_{modu_nome}")
+                    except Exception:
+                        pass
                 except Exception:
                     pass
 

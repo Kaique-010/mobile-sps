@@ -1,6 +1,7 @@
 from django.http import JsonResponse
 from django.db.models import Q
-from core.utils import get_licenca_db_config
+from core.utils import get_licenca_db_config, get_db_from_slug
+
 from CFOP.models import CFOP as CFOPModel, NCM_CFOP_DIF
 from ...models import (
     GrupoProduto,
@@ -66,7 +67,7 @@ def autocomplete_marcas(request, slug=None):
 
 
 def autocomplete_ncms(request, slug=None):
-    banco = get_licenca_db_config(request) or 'default'
+    banco = get_db_from_slug('savexml1') or 'save1'
     term = (request.GET.get('term') or request.GET.get('q') or '').strip()
     qs = Ncm.objects.using(banco).all()
     if term:

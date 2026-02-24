@@ -138,6 +138,7 @@ INSTALLED_APPS = [
     'centraldeajuda',
     'osexterna',
     'licencas_web',
+    'planos',
     'perfilweb',
     'controledePonto',
     'Agricola',

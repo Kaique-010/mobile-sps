@@ -11,6 +11,7 @@ class LicencaWeb(models.Model):
 
     db_user = models.CharField(max_length=128, blank=True, default='')
     db_password = models.CharField(max_length=256, blank=True, default='')
+    plano = models.OneToOneField('planos.Plano', on_delete=models.SET_NULL, null=True, blank=True, related_name='licenca_web', db_column='plano_id')
 
     class Meta:
         verbose_name = 'Licença Web'

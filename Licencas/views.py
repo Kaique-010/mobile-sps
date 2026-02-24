@@ -11,6 +11,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from Licencas.models import Empresas, Filiais, Licencas, Usuarios
+from licencas_web.models import LicencaWeb
 from Licencas.crypto import encrypt_bytes, encrypt_str
 from cryptography.hazmat.primitives.serialization.pkcs12 import load_key_and_certificates
 from Licencas.serializers import EmpresaSerializer, FilialSerializer, UsuarioSerializer, EmpresaDetailSerializer, FilialDetailSerializer
@@ -60,11 +61,18 @@ class LoginView(APIView):
 
         # Log: Buscar licença
         licenca_start = time.time()
-        licenca = Licencas.objects.using(banco).filter(lice_docu=docu).first()
+        try:
+            licenca = Licencas.objects.using(banco).filter(lice_docu=docu).first()
+        except Exception:
+            licenca = None
+            
+        # LicencaWeb fica no banco default (gerenciador)
+        licenca_web = LicencaWeb.objects.using('default').filter(cnpj=docu).first()
+        
         licenca_time = (time.time() - licenca_start) * 1000
         logger.debug(f"[LOGIN] Buscar licença: {licenca_time:.2f}ms")
         
-        if not licenca :
+        if not licenca and not licenca_web:
             return Response({'error': 'CNPJ inválido ou licença bloqueada.'}, status=403)
 
         # Log: Buscar usuário
@@ -96,8 +104,14 @@ class LoginView(APIView):
         refresh['username'] = usuario.usua_nome
         refresh['usuario_id'] = usuario.usua_codi
         refresh['setor'] = usuario.usua_seto
-        refresh['lice_id'] = licenca.lice_id
-        refresh['lice_nome'] = licenca.lice_nome
+        
+        if licenca:
+            refresh['lice_id'] = licenca.lice_id
+            refresh['lice_nome'] = licenca.lice_nome
+        elif licenca_web:
+            refresh['lice_id'] = licenca_web.id
+            refresh['lice_nome'] = licenca_web.slug
+            
         refresh['empresa_id'] = empresa_id
         refresh['filial_id'] = filial_id
         refresh['lice_slug'] = slug_from_docu
@@ -106,12 +120,12 @@ class LoginView(APIView):
         try:
             request.session.cycle_key()
         except Exception:
-            logger.exception("[LOGIN] cycle_key falhou")
-            request.session["usua_codi"] = usuario.usua_codi
-            request.session["docu"] = docu
-            request.session["slug"] = slug_from_docu if slug_from_docu else request.session.get('slug')
-            request.session.modified = True
-            request.session["usua_codi"] = usuario.usua_codi
+             logger.exception("[LOGIN] cycle_key falhou")
+        request.session["usua_codi"] = usuario.usua_codi
+        request.session["docu"] = docu
+        request.session["slug"] = slug_from_docu if slug_from_docu else request.session.get('slug')
+        request.session.modified = True
+        request.session["usua_codi"] = usuario.usua_codi
         try:
             request.session.save()
         except Exception:
@@ -126,8 +140,14 @@ class LoginView(APIView):
         access['username'] = usuario.usua_nome
         access['usuario_id'] = usuario.usua_codi
         access['setor'] = usuario.usua_seto
-        access['lice_id'] = licenca.lice_id
-        access['lice_nome'] = licenca.lice_nome
+        
+        if licenca:
+            access['lice_id'] = licenca.lice_id
+            access['lice_nome'] = licenca.lice_nome
+        elif licenca_web:
+            access['lice_id'] = licenca_web.id
+            access['lice_nome'] = licenca_web.slug
+
         access['empresa_id'] = empresa_id
         access['filial_id'] = filial_id
         logger.debug(f"[LOGIN] Token claims: setor refresh={refresh.get('setor')} access={access.get('setor')}")
@@ -152,8 +172,8 @@ class LoginView(APIView):
                 'filial_id': filial_id,
             },
             'licenca': {
-                'lice_id': licenca.lice_id,
-                'lice_nome': licenca.lice_nome,
+                'lice_id': licenca.lice_id if licenca else (licenca_web.id if licenca_web else None),
+                'lice_nome': licenca.lice_nome if licenca else (licenca_web.slug if licenca_web else None),
             },
             'modulos': modulos_login,
         })

@@ -1,0 +1,281 @@
+<!-- Modal Trial Signup -->
+<style>
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(5px);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+        overflow-y: auto;
+    }
+
+    .modal-content {
+        background: linear-gradient(135deg, #1a1a2e, #16213e);
+        border: 1px solid rgba(100, 255, 218, 0.2);
+        border-radius: 16px;
+        padding: 32px;
+        width: 90%;
+        max-width: 600px;
+        position: relative;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        margin: 40px auto;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        border-bottom: 1px solid rgba(100, 255, 218, 0.1);
+        padding-bottom: 16px;
+    }
+
+    .modal-title {
+        font-family: 'Orbitron', sans-serif;
+        color: #64ffda;
+        font-size: 1.5rem;
+        margin: 0;
+    }
+
+    .close-btn {
+        background: none;
+        border: none;
+        color: #8892b0;
+        font-size: 1.5rem;
+        cursor: pointer;
+        transition: color 0.3s ease;
+    }
+
+    .close-btn:hover {
+        color: #ff6b6b;
+    }
+
+    .form-group {
+        margin-bottom: 16px;
+    }
+
+    .form-label {
+        display: block;
+        color: #8892b0;
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(100, 255, 218, 0.1);
+        border-radius: 8px;
+        color: #e6f1ff;
+        font-family: 'Roboto Mono', monospace;
+        font-size: 1rem;
+        transition: border-color 0.3s ease;
+        box-sizing: border-box;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #64ffda;
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    .btn-submit {
+        width: 100%;
+        padding: 14px;
+        background: linear-gradient(135deg, #64ffda, #00b8d4);
+        color: #0a192f;
+        border: none;
+        border-radius: 8px;
+        font-family: 'Orbitron', sans-serif;
+        font-weight: 700;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        margin-top: 20px;
+    }
+
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(100, 255, 218, 0.4);
+    }
+
+    .loading-spinner {
+        display: none;
+        margin-left: 10px;
+    }
+
+    .error-msg {
+        color: #ff6b6b;
+        font-size: 0.9rem;
+        margin-top: 10px;
+        display: none;
+        text-align: center;
+    }
+    
+    .success-msg {
+        color: #64ffda;
+        font-size: 0.9rem;
+        margin-top: 10px;
+        display: none;
+        text-align: center;
+    }
+
+    .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+</style>
+
+<div id="trialModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">Iniciar Teste Grátis</h2>
+            <button class="close-btn" onclick="closeTrialModal()">&times;</button>
+        </div>
+        
+        <form id="trialForm" onsubmit="submitTrial(event)">
+            <div class="form-group">
+                <label class="form-label">Nome da Empresa *</label>
+                <input type="text" class="form-control" name="nome_empresa" required placeholder="Sua Empresa Ltda">
+            </div>
+            
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">CNPJ *</label>
+                    <input type="text" class="form-control" name="cnpj" required placeholder="00.000.000/0000-00">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email *</label>
+                    <input type="email" class="form-control" name="email" required placeholder="admin@empresa.com">
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">Nome Fantasia</label>
+                    <input type="text" class="form-control" name="nome_fantasia" placeholder="Nome Comercial">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Telefone</label>
+                    <input type="text" class="form-control" name="telefone" placeholder="(11) 99999-9999">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Endereço</label>
+                <input type="text" class="form-control" name="endereco" placeholder="Rua, Número, Bairro">
+            </div>
+
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">Cidade</label>
+                    <input type="text" class="form-control" name="cidade" placeholder="São Paulo">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">UF</label>
+                    <input type="text" class="form-control" name="uf" placeholder="SP" maxlength="2">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Nome da Filial</label>
+                <input type="text" class="form-control" name="nome_filial" placeholder="Matriz (Opcional)">
+            </div>
+
+            <button type="submit" class="btn-submit">
+                <span id="btnText">CRIAR AMBIENTE</span>
+                <i class="fas fa-spinner fa-spin loading-spinner" id="spinner"></i>
+            </button>
+            
+            <div id="errorMsg" class="error-msg"></div>
+            <div id="successMsg" class="success-msg"></div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openTrialModal() {
+        document.getElementById('trialModal').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeTrialModal() {
+        document.getElementById('trialModal').style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+
+    // Fecha modal ao clicar fora
+    document.getElementById('trialModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeTrialModal();
+        }
+    });
+
+    async function submitTrial(event) {
+        event.preventDefault();
+        
+        const form = document.getElementById('trialForm');
+        const btn = form.querySelector('.btn-submit');
+        const btnText = document.getElementById('btnText');
+        const spinner = document.getElementById('spinner');
+        const errorMsg = document.getElementById('errorMsg');
+        const successMsg = document.getElementById('successMsg');
+        
+        // Reset states
+        btn.disabled = true;
+        btnText.textContent = "CRIANDO AMBIENTE...";
+        spinner.style.display = 'inline-block';
+        errorMsg.style.display = 'none';
+        successMsg.style.display = 'none';
+        
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+        
+        try {
+            const response = await fetch('/api/planos/signup/trial/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                successMsg.textContent = `Sucesso! Usuário: ${result.usuario} | Senha: ${result.senha_inicial}`;
+                successMsg.style.display = 'block';
+                btnText.textContent = "AMBIENTE CRIADO!";
+                
+                // Redireciona para login após 2s
+                setTimeout(() => {
+                    const cnpj = data.cnpj;
+                    const user = result.usuario;
+                    const pass = result.senha_inicial;
+                    // Redireciona passando dados via URL para preenchimento automático
+                    window.location.href = `/web/login/?docu=${encodeURIComponent(cnpj)}&user=${encodeURIComponent(user)}&pass=${encodeURIComponent(pass)}`;
+                }, 2000);
+            } else {
+                throw new Error(result.error || 'Erro ao criar ambiente');
+            }
+        } catch (error) {
+            errorMsg.textContent = error.message;
+            errorMsg.style.display = 'block';
+            btnText.textContent = "TENTAR NOVAMENTE";
+        } finally {
+            btn.disabled = false;
+            spinner.style.display = 'none';
+            if (btnText.textContent === "CRIANDO AMBIENTE...") {
+                 btnText.textContent = "CRIAR AMBIENTE";
+            }
+        }
+    }
+</script>

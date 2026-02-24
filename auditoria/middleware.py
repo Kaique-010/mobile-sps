@@ -208,8 +208,8 @@ class AuditoriaMiddleware:
             return self.get_response(request)
 
 
-        # Ignorar endpoint público de mapa de licenças
-        if request.path.startswith('/api/licencas/mapa/'):
+        # Ignorar endpoint público de mapa de licenças e signup de trial
+        if request.path.startswith('/api/licencas/mapa/') or request.path.startswith('/api/planos/signup/trial/'):
             return self.get_response(request)
 
         try:

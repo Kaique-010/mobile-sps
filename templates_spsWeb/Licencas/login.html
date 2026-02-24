@@ -281,6 +281,18 @@
 </div>
 
 <script>
+  // Auto-fill from URL params (useful for trial signup redirect)
+  window.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    const docuParam = params.get('docu');
+    const userParam = params.get('user');
+    const passParam = params.get('pass');
+
+    if (docuParam) document.getElementById('docu').value = docuParam;
+    if (userParam) document.getElementById('username').value = userParam;
+    if (passParam) document.getElementById('password').value = passParam;
+  });
+
   const showError = (msg) => {
     const el = document.getElementById('alert');
     el.textContent = msg;

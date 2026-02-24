@@ -4,6 +4,7 @@ from Licencas.views import licencas_mapa, TokenRefreshCustomView
 
 urlpatterns = [
     # Rotas públicas
+    path("planos/", include("planos.api.urls")),
     path("licencas/mapa/", licencas_mapa, name="licencas-mapa"),
     path("<slug>/entidades-login/", include("Entidades.urls")),
 

@@ -388,6 +388,7 @@
 </head>
 <a href="/web/login/" class="btn btn-custom btn-sm">Acessar o Sistema</a>
 
+
 <body>
     <div class="container">
         <div class="header">
@@ -399,6 +400,10 @@
                 <a href="https://youtu.be/iMvPEE0lNzs" target="_blank" class="general-video-btn">
                     🎬 Apresentação Geral do Sistema
                 </a>
+                <button onclick="openTrialModal()" class="general-video-btn"
+                    style="cursor: pointer; margin-left: 20px; background: linear-gradient(135deg, #64ffda, #00b8d4); color: #0a192f; border: none;">
+                    🚀 Quero Testar Grátis
+                </button>
             </div>
         </div>
 
@@ -666,23 +671,25 @@
             });
         });
     </script>
-</body>
-<footer>
-    <p>&copy; 2025 Spartacus Sistemas. Todos os direitos reservados.</p>
-    <div class="elementor-widget-container">
-        <div class="ct-icon1 style2">
-            <a href="https://www.facebook.com/Spartacus.sistemas/?rf=220514235038325" target="_blank">
-                <i aria-hidden="true" class="fab fa-facebook-f"></i> </a>
-            <a href="https://twitter.com/spartacusgestao" target="_blank">
-                <i aria-hidden="true" class="fab fa-twitter"></i> </a>
-            <a href="https://www.instagram.com/spartacus.sistemas/" target="_blank">
-                <i aria-hidden="true" class="fab fa-instagram"></i> </a>
-            <a href="https://www.youtube.com/channel/UCLYrLJ6tgej7ScLQj2ONKOA" target="_blank">
-                <i aria-hidden="true" class="fab fa-youtube"></i> </a>
-            <a href="https://api.whatsapp.com/send?phone=5542988018764">
-                <i aria-hidden="true" class="fab fa-whatsapp"></i> </a>
+    <footer>
+        <p>&copy; 2025 Spartacus Sistemas. Todos os direitos reservados.</p>
+        <div class="elementor-widget-container">
+            <div class="ct-icon1 style2">
+                <a href="https://www.facebook.com/Spartacus.sistemas/?rf=220514235038325" target="_blank">
+                    <i aria-hidden="true" class="fab fa-facebook-f"></i> </a>
+                <a href="https://twitter.com/spartacusgestao" target="_blank">
+                    <i aria-hidden="true" class="fab fa-twitter"></i> </a>
+                <a href="https://www.instagram.com/spartacus.sistemas/" target="_blank">
+                    <i aria-hidden="true" class="fab fa-instagram"></i> </a>
+                <a href="https://www.youtube.com/channel/UCLYrLJ6tgej7ScLQj2ONKOA" target="_blank">
+                    <i aria-hidden="true" class="fab fa-youtube"></i> </a>
+                <a href="https://api.whatsapp.com/send?phone=5542988018764">
+                    <i aria-hidden="true" class="fab fa-whatsapp"></i> </a>
+            </div>
         </div>
-    </div>
-</footer>
+    </footer>
+
+    {% include 'parcials/trial_modal.html' %}
+</body>
 
 </html>

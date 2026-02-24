@@ -44,6 +44,7 @@ class LicencaMiddleware:
             "/api/licencas/mapa/",
             "/api/selecionar-empresa/",
             "/api/entidades-login/",
+            "/api/planos/signup/trial/",
             "/web/",
             "/admin/",
             "/static/",

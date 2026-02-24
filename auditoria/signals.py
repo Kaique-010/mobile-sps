@@ -64,7 +64,9 @@ def capturar_dados_antes_salvar(sender, instance, **kwargs):
     # Só capturar se é uma atualização (objeto já existe)
     if instance.pk:
         try:
-            db_alias = getattr(getattr(instance, '_state', None), 'db', None)
+            # Tenta pegar db_alias do kwargs (pre_save recebe 'using'), do state, ou assume None
+            db_alias = kwargs.get('using') or getattr(getattr(instance, '_state', None), 'db', None)
+            
             manager = sender.objects if not db_alias else sender.objects.using(db_alias)
             dados_anteriores = manager.get(pk=instance.pk)
             # Armazenar no contexto da thread

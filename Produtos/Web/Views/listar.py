@@ -1,6 +1,6 @@
 from django.views.generic import ListView
 from django.contrib import messages
-
+from core.utils import get_db_from_slug
 from Produtos.models import Ncm
 from CFOP.models import NcmFiscalPadrao
 from .web_views import DBAndSlugMixin
@@ -12,7 +12,8 @@ class NcmListView(DBAndSlugMixin, ListView):
     context_object_name = "itens"
 
     def get_queryset(self):
-        qs = Ncm.objects.using(self.db_alias).all()
+        db_alias = get_db_from_slug('savexml1') or 'save1'
+        qs = Ncm.objects.using(db_alias).all()
         q = (self.request.GET.get("q") or "").strip()
         if q:
             from django.db.models import Q

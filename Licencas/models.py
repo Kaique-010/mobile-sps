@@ -110,6 +110,12 @@ class Empresas(models.Model):
     empr_codi = models.AutoField(primary_key=True, db_column='empr_codi')
     empr_nome = models.CharField('Nome da Empresa', max_length=100, db_column='empr_nome')
     empr_docu = models.CharField('CNPJ', max_length=14, unique=True, db_column='empr_cnpj')
+    empr_fant = models.CharField('Nome Fantasia', max_length=100, db_column='empr_fant', blank=True, null=True)
+    empr_emai = models.CharField(max_length=100, db_column='empr_emai', blank=True, null=True)
+    empr_fone = models.CharField(max_length=14, db_column='empr_fone', blank=True, null=True)
+    empr_ende = models.CharField(max_length=60, db_column='empr_ende', blank=True, null=True)
+    empr_cida = models.CharField(max_length=60, db_column='empr_cida', blank=True, null=True)
+    empr_esta = models.CharField(max_length=2, db_column='empr_esta', blank=True, null=True)
 
     class Meta:
         db_table = 'empresas'
