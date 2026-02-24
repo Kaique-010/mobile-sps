@@ -32,7 +32,15 @@ class OrdemViewSet(BaseMultiDBModelViewSet):
     def get_queryset(self):
         banco = self.get_banco()
         user_setor = getattr(self.request.user, 'setor', None)
-        qs = Ordemservico.objects.using(banco).all()
+        
+        # Deferir campos de data que podem conter valores corrompidos (ano < 1 ou > 9999)
+        # O Django tenta converter datas automaticamente ao carregar o modelo, o que gera o erro ValueError
+        qs = Ordemservico.objects.using(banco).defer(
+            'orde_data_repr', 
+            'orde_data_fech', 
+            'orde_nf_data', 
+            'orde_ulti_alte'
+        ).all()
 
         # Filtrar por campos válidos
         qs = qs.filter(orde_seto__isnull=False).exclude(orde_seto=0)
@@ -46,9 +54,10 @@ class OrdemViewSet(BaseMultiDBModelViewSet):
         qs = qs.filter(
             Q(orde_nf_data__isnull=True) | (Q(orde_nf_data__year__gte=1900) & Q(orde_nf_data__year__lte=2100))
         )
-        qs = qs.filter(
-            Q(orde_data_repr__isnull=True) | (Q(orde_data_repr__year__gte=1900) & Q(orde_data_repr__year__lte=2100))
-        )
+        # Removido filtro estrito de data de reprovação pois estava causando erro 'year out of range' em datas corrompidas
+        # qs = qs.filter(
+        #    Q(orde_data_repr__isnull=True) | (Q(orde_data_repr__year__gte=1900) & Q(orde_data_repr__year__lte=2100))
+        # )
         qs = qs.filter(
             Q(orde_ulti_alte__isnull=True) | (Q(orde_ulti_alte__year__gte=1900) & Q(orde_ulti_alte__year__lte=2100))
         )

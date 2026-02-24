@@ -17,6 +17,43 @@ class OrdemServicoSerializer(BancoModelSerializer):
     proximos_setores = serializers.SerializerMethodField(read_only=True)
     pode_avancar = serializers.SerializerMethodField(read_only=True)
 
+    def to_representation(self, instance):
+        # Tratar campos de data deferidos/corrompidos para evitar ValueError
+        
+        # Lista de campos de data problemáticos
+        date_fields = ['orde_data_repr', 'orde_data_fech', 'orde_nf_data', 'orde_ulti_alte']
+        
+        for field in date_fields:
+            # Se já está no __dict__, pode estar ok ou já ter sido carregado
+            # Se não está, foi deferido. O acesso dispara o refresh.
+            
+            try:
+                # Tenta ler o valor. Se for data inválida no banco, o driver/Django lança erro
+                # Precisamos capturar ANTES que o serializer tente ler
+                
+                # Se o campo foi deferido, ele NÃO está no __dict__
+                # Mas acessar instance.field dispara a query.
+                
+                # O problema é que o erro acontece DENTRO da query do Django quando ele tenta converter
+                # a data inválida vinda do banco.
+                
+                # Uma estratégia mais segura:
+                # Se o campo está deferido, assumimos que pode ser problemático e definimos como None
+                # na instância ANTES de qualquer leitura, SE o objetivo for apenas listar
+                # Mas se precisarmos mostrar a data válida, temos um problema.
+                
+                # Vamos tentar ler. Se der erro, setamos None e evitamos o crash.
+                _ = getattr(instance, field)
+            except (ValueError, TypeError, OverflowError):
+                # Data inválida detectada (ex: ano -18)
+                setattr(instance, field, None)
+                # Força o valor None no dicionário interno para evitar novas consultas
+                instance.__dict__[field] = None
+            except Exception:
+                pass
+
+        return super().to_representation(instance)
+
     class Meta:
         model = Ordemservico
         fields = '__all__'
