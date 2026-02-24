@@ -262,8 +262,10 @@ class LicencaMiddleware:
 
                 cache.set(key, mods, 1800)
             except Exception as e:
-                logger.error("Erro ao carregar módulos: %s", e)
+                logger.error("Erro ao carregar módulos (timeout/erro): %s", e)
                 mods = []
+                # Cacheia lista vazia por 5 min para evitar timeouts repetitivos
+                cache.set(key, mods, 300)
 
         request.modulos_disponiveis = mods
         set_modulos_disponiveis(mods)

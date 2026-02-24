@@ -48,6 +48,9 @@ def get_licenca_db_config(request_or_slug):
         'PASSWORD': db_password,
         'HOST': licenca["db_host"],
         'PORT': licenca["db_port"],
+        'OPTIONS': {
+            'connect_timeout': 3,
+        },
         'TEST': {
             'MIRROR': 'default',
             'DEPENDENCIES': [],
