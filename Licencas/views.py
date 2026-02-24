@@ -52,7 +52,12 @@ class LoginView(APIView):
 
         # Log: Buscar configuração do banco
         db_start = time.time()
-        banco = get_licenca_db_config(request)
+        try:
+            banco = get_licenca_db_config(request)
+        except Exception as e:
+            logger.error(f"[LOGIN] Erro ao obter config do banco: {e}")
+            return Response({'error': f'Erro na configuração da licença: {str(e)}'}, status=500)
+            
         db_time = (time.time() - db_start) * 1000
         logger.debug(f"[LOGIN] get_licenca_db_config: {db_time:.2f}ms")
         
@@ -81,6 +86,10 @@ class LoginView(APIView):
             usuario = Usuarios.objects.using(banco).get(usua_nome__iexact=username)
         except Usuarios.DoesNotExist:
             return Response({'error': 'Usuário não encontrado.'}, status=404)
+        except Exception as e:
+            logger.error(f"[LOGIN] Erro ao buscar usuário no banco {banco}: {e}")
+            return Response({'error': f'Erro ao conectar no banco da empresa: {str(e)}'}, status=500)
+        
         user_time = (time.time() - user_start) * 1000
         logger.debug(f"[LOGIN] Buscar usuário: {user_time:.2f}ms")
 
@@ -353,8 +362,13 @@ def licencas_mapa(request, slug=None):
     
     
     # Retorna as licenças públicas sem depender de slug
-    from core.licenca_context import get_licencas_map
-    return Response(get_licencas_map())
+    try:
+        from core.licenca_context import get_licencas_map
+        return Response(get_licencas_map())
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return Response({'error': str(e), 'trace': traceback.format_exc()}, status=200)
 
 
 class UsuariosViewSet(viewsets.ModelViewSet):

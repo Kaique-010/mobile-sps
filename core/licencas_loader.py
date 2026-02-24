@@ -56,6 +56,11 @@ def carregar_licencas_dict():
                     continue
 
                 # Monta item final
+                try:
+                    mods_list = json.loads(modulos or "[]")
+                except Exception:
+                    mods_list = []
+
                 item = {
                     "slug": (slug or "").strip().lower(),
                     "cnpj": norm_doc,
@@ -64,7 +69,7 @@ def carregar_licencas_dict():
                     "db_port": db_port or default_port,
                     "db_user": db_user,
                     "db_password": db_password,
-                    "modulos": modulos or "[]",
+                    "modulos": mods_list,
                 }
 
                 resultado.append(item)

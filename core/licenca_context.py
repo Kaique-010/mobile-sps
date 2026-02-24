@@ -25,10 +25,14 @@ def get_licencas_map():
             return data
     except Exception:
         logger.warning("[LICENCAS_CONTEXT] erro ao carregar da tabela, usando fallback JSON")
-    with open(json_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-        
-        return data
+    
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            return data
+    except Exception as e:
+        logger.error(f"[LICENCAS_CONTEXT] Erro fatal ao ler JSON de fallback: {e}")
+        return []
 
 def get_licencas_login_clientes():
     """
