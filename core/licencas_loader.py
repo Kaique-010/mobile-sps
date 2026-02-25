@@ -18,9 +18,6 @@ def carregar_licencas_dict():
     conf = getattr(settings, 'DATABASES', {}).get('default', {})
     alias = 'default'
 
-    logger.warning("[LICENCAS_LOADER] INICIO alias=%s db=%s@%s",
-                   alias, conf.get('NAME'), conf.get('HOST'))
-
     # Garantir existência da tabela
     _bootstrap_licencas_web_if_missing()
 

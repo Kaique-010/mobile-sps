@@ -25,7 +25,14 @@ class OrdemServicoPecasViewSet(BaseMultiDBModelViewSet, ModelViewSet):
     def atualizar_total_ordem(self, peca_empr, peca_fili, peca_orde):
         banco = self.get_banco()
         try:
-            ordem = Ordemservico.objects.using(banco).get(
+            # Deferir campos de data que podem conter valores inválidos (ano < 1900 ou > 9999)
+            # Isso evita erros como "ValueError: year -18 is out of range" ao carregar o objeto
+            ordem = Ordemservico.objects.using(banco).defer(
+                'orde_data_repr', 
+                'orde_data_fech', 
+                'orde_nf_data', 
+                'orde_ulti_alte'
+            ).get(
                 orde_empr=peca_empr,
                 orde_fili=peca_fili,
                 orde_nume=peca_orde
@@ -195,13 +202,13 @@ class OrdemServicoPecasViewSet(BaseMultiDBModelViewSet, ModelViewSet):
                             'item': item
                         })
 
-                    try:
-                        Ordemservico.objects.using(banco).get(
-                            orde_empr=item['peca_empr'],
-                            orde_fili=item['peca_fili'],
-                            orde_nume=item['peca_orde']
-                        )
-                    except Ordemservico.DoesNotExist:
+                    # Validar existência da ordem sem carregar o objeto inteiro
+                    # para evitar erro de datas inválidas
+                    if not Ordemservico.objects.using(banco).filter(
+                        orde_empr=item['peca_empr'],
+                        orde_fili=item['peca_fili'],
+                        orde_nume=item['peca_orde']
+                    ).exists():
                         raise ValidationError({
                             'error': (
                                 f"Ordem de serviço não encontrada para empresa={item['peca_empr']}, "
@@ -209,6 +216,21 @@ class OrdemServicoPecasViewSet(BaseMultiDBModelViewSet, ModelViewSet):
                             ),
                             'item': item
                         })
+
+                    # try:
+                    #     Ordemservico.objects.using(banco).get(
+                    #         orde_empr=item['peca_empr'],
+                    #         orde_fili=item['peca_fili'],
+                    #         orde_nume=item['peca_orde']
+                    #     )
+                    # except Ordemservico.DoesNotExist:
+                    #     raise ValidationError({
+                    #         'error': (
+                    #             f"Ordem de serviço não encontrada para empresa={item['peca_empr']}, "
+                    #             f"filial={item['peca_fili']}, ordem={item['peca_orde']}"
+                    #         ),
+                    #         'item': item
+                    #     })
 
                     item['peca_id'] = get_next_item_number_sequence(
                         banco, item['peca_orde'], item['peca_empr'], item['peca_fili']
@@ -308,7 +330,14 @@ class OrdemServicoServicosViewSet(BaseMultiDBModelViewSet):
     def atualizar_total_ordem(self, serv_empr, serv_fili, serv_orde):
         banco = self.get_banco()
         try:
-            ordem = Ordemservico.objects.using(banco).get(
+            # Deferir campos de data que podem conter valores inválidos (ano < 1900 ou > 9999)
+            # Isso evita erros como "ValueError: year -18 is out of range" ao carregar o objeto
+            ordem = Ordemservico.objects.using(banco).defer(
+                'orde_data_repr', 
+                'orde_data_fech', 
+                'orde_nf_data', 
+                'orde_ulti_alte'
+            ).get(
                 orde_empr=serv_empr,
                 orde_fili=serv_fili,
                 orde_nume=serv_orde
@@ -359,6 +388,7 @@ class OrdemServicoServicosViewSet(BaseMultiDBModelViewSet):
         )
 
         resposta = {'adicionados': [], 'editados': [], 'removidos': []}
+        affected_orders = set()
 
         try:
             with transaction.atomic(using=banco):
@@ -417,6 +447,7 @@ class OrdemServicoServicosViewSet(BaseMultiDBModelViewSet):
                     serializer.is_valid(raise_exception=True)
                     obj = serializer.save()
                     resposta['adicionados'].append(serializer.data)
+                    affected_orders.add((obj.serv_empr, obj.serv_fili, obj.serv_orde))
 
                 # Editar serviços existentes
                 for item in editar:
@@ -435,8 +466,9 @@ class OrdemServicoServicosViewSet(BaseMultiDBModelViewSet):
                         )
                         serializer = self.get_serializer(obj, data=item, partial=True)
                         serializer.is_valid(raise_exception=True)
-                        serializer.save()
+                        obj = serializer.save()
                         resposta['editados'].append(serializer.data)
+                        affected_orders.add((obj.serv_empr, obj.serv_fili, obj.serv_orde))
                     except Ordemservicoservicos.DoesNotExist:
                         logger.warning(f"Serviço não encontrado para edição: {item}")
                         continue
@@ -462,6 +494,14 @@ class OrdemServicoServicosViewSet(BaseMultiDBModelViewSet):
                         serv_fili=item['serv_fili']
                     ).delete()
                     resposta['removidos'].append(item['serv_id'])
+                    affected_orders.add((item['serv_empr'], item['serv_fili'], item['serv_orde']))
+
+            # Atualizar totais das ordens afetadas
+            for (empr, fili, orde) in affected_orders:
+                try:
+                    self.atualizar_total_ordem(empr, fili, orde)
+                except Exception as e:
+                    logger.error(f"Falha ao atualizar total da OS (empr={empr}, fili={fili}, orde={orde}): {e}")
 
             return Response(resposta)
 

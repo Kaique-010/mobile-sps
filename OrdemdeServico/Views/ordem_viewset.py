@@ -79,11 +79,8 @@ class OrdemViewSet(BaseMultiDBModelViewSet):
             )
             if entidades_ids:
                 qs = qs.filter(orde_enti__in=entidades_ids)
-                print(f"Filtro por cliente '{cliente_nome}' aplicado. IDs: {entidades_ids}")
-
         
         qs = qs.order_by('-orde_data_aber', '-orde_nume')
-        print(f"QuerySet final: {qs}")
         return qs
 
     def get_next_ordem_numero(self, empre, fili, data):

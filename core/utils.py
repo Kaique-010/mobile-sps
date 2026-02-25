@@ -21,7 +21,6 @@ def get_db_from_slug(slug):
         raise Exception(f"Licença com slug '{slug}' não encontrada.")
 
     if slug in settings.DATABASES:
-        logger.info(f"🔄 Conexão {slug} já existe (reutilizada)")
         return slug
     
     prefixo = slug.upper()

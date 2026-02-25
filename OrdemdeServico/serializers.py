@@ -390,6 +390,34 @@ class OrdensEletroSerializer(serializers.ModelSerializer):
         ]
 
 
+class SafeDateField(serializers.DateField):
+    def to_representation(self, value):
+        try:
+            return super().to_representation(value)
+        except Exception:
+            return None
+
+    def get_attribute(self, instance):
+        try:
+            return super().get_attribute(instance)
+        except (ValueError, TypeError, Exception):
+            return None
+
+
+class SafeDateTimeField(serializers.DateTimeField):
+    def to_representation(self, value):
+        try:
+            return super().to_representation(value)
+        except Exception:
+            return None
+
+    def get_attribute(self, instance):
+        try:
+            return super().get_attribute(instance)
+        except (ValueError, TypeError, Exception):
+            return None
+
+
 class OrdemServicoSerializer(BancoModelSerializer):
     pecas = OrdemServicoPecasSerializer(many=True, required=False)
     servicos = OrdemServicoServicosSerializer(many=True, required=False)
@@ -397,6 +425,12 @@ class OrdemServicoSerializer(BancoModelSerializer):
     cliente_nome = serializers.SerializerMethodField(read_only=True)
     proximos_setores = serializers.SerializerMethodField(read_only=True)
     pode_avancar = serializers.SerializerMethodField(read_only=True)
+    
+    # Campos seguros para datas que podem estar corrompidas no banco
+    orde_data_repr = SafeDateField(required=False, allow_null=True)
+    orde_data_fech = SafeDateField(required=False, allow_null=True)
+    orde_nf_data = SafeDateField(required=False, allow_null=True)
+    orde_ulti_alte = SafeDateTimeField(required=False, allow_null=True)
 
     class Meta:
         model = Ordemservico
