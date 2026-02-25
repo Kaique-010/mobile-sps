@@ -3,6 +3,63 @@
 {% block title %}Lista de Entidades{% endblock %}
 
 {% block content %}
+<style>
+    .stat-card {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 16px 20px;
+        border-radius: 12px;
+        height: 100%;
+        color: #fff;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.10);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+
+    .stat-total        { background: linear-gradient(135deg, #7182cf, #431a8a); }
+    .stat-clientes     { background: linear-gradient(135deg, #71ac98, #145843); }
+    .stat-fornecedores { background: linear-gradient(135deg, #b68e4a, #ffa43c); }
+    .stat-ambos        { background: linear-gradient(135deg, #7099ac, #0e5c83); }
+
+    .stat-icon {
+        font-size: 2rem;
+        opacity: 0.85;
+        flex-shrink: 0;
+    }
+
+    .stat-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .stat-label {
+        font-size: 0.78rem;
+        font-weight: 500;
+        opacity: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .stat-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        line-height: 1.1;
+    }
+    #btn-nova-entidade {
+        margin-top: 10px;
+        margin-left: auto;
+    }
+    #btn-filtrar-entidades {
+        margin-top: 10px;
+        margin-left: auto;
+        border-color: #0e5c83;
+    }
+</style>
 <link rel="stylesheet" href="{% static 'css/list.css' %}">
 
 <div class="container page-container">
@@ -12,39 +69,101 @@
                 <i class="bi bi-person-badge"></i> Entidades
             </h2>
         </div>
-        <div class="container d-flex justify-content-end">
-            <div class="page-actions">
-                <a href="{% url 'entidade_form_web' slug=slug %}" class="btn btn-success">
-                    <i class="bi bi-plus"></i> Nova Entidade
-                </a>
+
+        <div class="container mt-3">
+            <div class="row g-3 align-items-stretch">
+                <div class="col-6 col-md-3">
+                    <div class="stat-card stat-total">
+                        <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Total de Entidades</span>
+                            <span class="stat-value">{{ total_entidades }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="stat-card stat-clientes">
+                        <div class="stat-icon"><i class="bi bi-person-check-fill"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Clientes</span>
+                            <span class="stat-value">{{ total_de_clientes }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="stat-card stat-fornecedores">
+                        <div class="stat-icon"><i class="bi bi-truck"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Fornecedores</span>
+                            <span class="stat-value">{{ total_de_fornecedores }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="stat-card stat-ambos">
+                        <div class="stat-icon"><i class="bi bi-arrow-left-right"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Ambos</span>
+                            <span class="stat-value">{{ total_de_ambos }}</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
+         <a href="{% url 'entidade_form_web' slug=slug %}" class="btn btn-success" id="btn-nova-entidade">
+         <i class="bi bi-plus"></i> Nova Entidade
+         </a>
     </div>
-
+    
     <div class="card card-corporate mb-3">
         <div class="card-body">
-            <!-- Mensagens de Sucesso e Erro -->
             {% if messages %}
-            {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}">
-                {{ message }}
-            </div>
-            {% endfor %}
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+                {% endfor %}
             {% endif %}
+
             <form method="get" class="mb-0">
-                <div class="row">
-                    <div class="col-md-4">
+                <div class="row g-2">
+                    <div class="col-md-3">
                         <label for="enti_nome" class="form-label">Nome</label>
                         <input type="text" id="enti_nome" name="enti_nome" class="form-control"
                             value="{{ request.GET.enti_nome }}" placeholder="Filtrar por nome">
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-2">
                         <label for="enti_clie" class="form-label">ID</label>
                         <input type="text" id="enti_clie" name="enti_clie" class="form-control"
                             value="{{ request.GET.enti_clie }}" placeholder="Filtrar por ID">
                     </div>
-                    <div class="col-md-4 d-flex align-items-end">
-                        <button type="submit" class="btn btn-primary" id="btn-filtrar">Filtrar</button>
+                    <div class="col-md-2">
+                        <label for="enti_tipo_enti" class="form-label">Tipo</label>
+                        <select id="enti_tipo_enti" name="enti_tipo_enti" class="form-select">
+                            <option value="">Todos</option>
+                            {% for codigo, descricao in tipos_entidade %}
+                            <option value="{{ codigo }}" {% if codigo == tipo_selecionado %}selected{% endif %}>
+                                {{ descricao }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="enti_situ" class="form-label">Situação</label>
+                        <select id="enti_situ" name="enti_situ" class="form-select">
+                            <option value="">Todas</option>
+                            {% for codigo, descricao in situacoes_entidade %}
+                            <option value="{{ codigo }}" {% if codigo == situacao_selecionada %}selected{% endif %}>
+                                {{ descricao }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end gap-2">
+                        <button type="submit" class="btn btn-outline-primary" id="btn-filtrar-entidades">
+                            <i class="bi bi-search"></i> Filtrar
+                        </button>
+                       
                     </div>
                 </div>
             </form>
@@ -67,18 +186,24 @@
                             </div>
                             <p class="text-body-secondary mb-2">ID {{ entidade.enti_clie|default_if_none:"" }}</p>
                             <div class="small">
-                                {% if entidade.enti_cpf %}<div><i class="bi bi-person-badge"></i> CPF: 
-                                    {{ entidade.enti_cpf }}</div>{% endif %}
-                                {% if entidade.enti_cnpj %}<div><i class="bi bi-building"></i> CNPJ: 
-                                    {{ entidade.enti_cnpj }}</div>{% endif %}
-                                {% if entidade.enti_cida or entidade.enti_esta %}<div><i class="bi bi-geo-alt"></i> 
-                                    {{entidade.enti_cida|default_if_none:"" }}{% if entidade.enti_esta %}/{{entidade.enti_esta }}{% endif %}</div>{% endif %}
-                                {% if entidade.enti_fone %}<div><i class="bi bi-telephone"></i> {{ entidade.enti_fone }}
-                                </div>{% endif %}
-                                {% if entidade.enti_celu %}<div><i class="bi bi-phone"></i> {{ entidade.enti_celu }}
-                                </div>{% endif %}
-                                {% if entidade.enti_emai %}<div><i class="bi bi-envelope"></i> {{ entidade.enti_emai }}
-                                </div>{% endif %}
+                                {% if entidade.enti_cpf %}
+                                <div><i class="bi bi-person-badge"></i> CPF: {{ entidade.enti_cpf }}</div>
+                                {% endif %}
+                                {% if entidade.enti_cnpj %}
+                                <div><i class="bi bi-building"></i> CNPJ: {{ entidade.enti_cnpj }}</div>
+                                {% endif %}
+                                {% if entidade.enti_cida or entidade.enti_esta %}
+                                <div><i class="bi bi-geo-alt"></i> {{ entidade.enti_cida|default_if_none:"" }}{% if entidade.enti_esta %}/{{ entidade.enti_esta }}{% endif %}</div>
+                                {% endif %}
+                                {% if entidade.enti_fone %}
+                                <div><i class="bi bi-telephone"></i> {{ entidade.enti_fone }}</div>
+                                {% endif %}
+                                {% if entidade.enti_celu %}
+                                <div><i class="bi bi-phone"></i> {{ entidade.enti_celu }}</div>
+                                {% endif %}
+                                {% if entidade.enti_emai %}
+                                <div><i class="bi bi-envelope"></i> {{ entidade.enti_emai }}</div>
+                                {% endif %}
                             </div>
                         </div>
                         <div class="card-footer d-flex gap-2">
@@ -99,13 +224,18 @@
                 </div>
                 {% endfor %}
             </div>
+
             {% if page_obj.has_other_pages %}
             {% include 'components/pagination.html' with page_obj=page_obj extra_query=extra_query %}
             {% endif %}
+
             {% else %}
             <p>Não há entidades para exibir.</p>
             {% endif %}
-            <a href="{% url 'exportar_entidades_web' slug=slug %}" class="btn btn-success mb-2">Exportar para Excel</a>
+
+            <a href="{% url 'exportar_entidades_web' slug=slug %}" class="btn btn-success mb-2 mt-3">
+                <i class="bi bi-file-earmark-excel"></i> Exportar para Excel
+            </a>
         </div>
     </div>
 </div>

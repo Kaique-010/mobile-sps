@@ -20,6 +20,28 @@
       <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
 
+        <div class="row">
+          <div class="col-md-9"></div>
+          <div class="col-md-3">
+            <div class="form-group">
+              <label class="d-block mb-2">Situação</label>
+              <div class="form-check form-switch">
+                {{ form.enti_situ }}
+                <label class="form-check-label" for="{{ form.enti_situ.id_for_label }}">
+                   Ativo
+                </label>
+              </div>
+              {% if form.enti_situ.errors %}
+              <div class="text-danger">
+                {% for error in form.enti_situ.errors %}
+                <p>{{ error }}</p>
+                {% endfor %}
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
         <!-- Tabs (Bootstrap 5) -->
         <ul class="nav nav-tabs" id="tabMenu" role="tablist">
           <li class="nav-item" role="presentation">

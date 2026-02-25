@@ -58,6 +58,13 @@ class EntidadeListView(DBAndSlugMixin, ListView):
         qs = qs.order_by('enti_empr', 'enti_nome')
         nome = request.GET.get('enti_nome', '')
         id_cliente = request.GET.get('enti_clie', '')
+        tipo = request.GET.get('enti_tipo_enti', '')
+        situacao = request.GET.get('enti_situ', '')
+        
+        if tipo:
+            qs = qs.filter(enti_tipo_enti__icontains=tipo)
+        if situacao:
+            qs = qs.filter(enti_situ__icontains=situacao)
         if nome:
             qs = qs.filter(enti_nome__icontains=nome)
         if id_cliente:
@@ -65,21 +72,49 @@ class EntidadeListView(DBAndSlugMixin, ListView):
                 qs = qs.filter(enti_clie=int(id_cliente))
             except (ValueError, TypeError):
                 pass
+        if tipo:
+            qs = qs.filter(enti_tipo_enti__icontains=tipo)
+        if situacao:
+            qs = qs.filter(enti_situ__icontains=situacao)
         return qs
 
     def get_context_data(self, **kwargs):
+        qs = self.get_queryset()
         context = super().get_context_data(**kwargs)
         request = self.request
         nome = request.GET.get('enti_nome', '')
         id_cliente = request.GET.get('enti_clie', '')
+        tipo = request.GET.get('enti_tipo_enti', '')
+        situacao = request.GET.get('enti_situ', '')
+        total_entidades = qs.count()
+        total_de_clientes = qs.filter(enti_tipo_enti='CL').count()
+        total_de_fornecedores = qs.filter(enti_tipo_enti='FO').count()
+        total_de_ambos = qs.filter(enti_tipo_enti__in=['AM']).count()
+
         context['nome'] = nome
         context['id_cliente'] = id_cliente
+        context['tipo_selecionado'] = tipo
+        context['situacao_selecionada'] = situacao
+        context['total_entidades'] = total_entidades
+        context['total_de_clientes'] = total_de_clientes
+        context['total_de_fornecedores'] = total_de_fornecedores
+        context['total_de_ambos'] = total_de_ambos
+        
+        # Opções para os filtros
+        context['tipos_entidade'] = Entidades.TIPO_ENTIDADES
+        context['situacoes_entidade'] = Entidades._meta.get_field('enti_situ').choices
+
         # Preservar filtros na paginação
         extra_parts = []
         if nome:
             extra_parts.append('&enti_nome=' + quote_plus(nome))
         if id_cliente:
             extra_parts.append('&enti_clie=' + quote_plus(id_cliente))
+        if tipo:
+            extra_parts.append('&enti_tipo_enti=' + quote_plus(tipo))
+        if situacao:
+            extra_parts.append('&enti_situ=' + quote_plus(situacao))
+            
         context['extra_query'] = ''.join(extra_parts)
         return context
 

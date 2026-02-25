@@ -8,13 +8,23 @@ logger = logging.getLogger(__name__)
 
 
 class EntidadesForm(forms.ModelForm):
+    enti_situ = forms.BooleanField(
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input', 
+            'role': 'switch', 
+            'style': 'width: 3em; height: 1.5em;'
+        }),
+        required=False,
+        label='Situação'
+    )
+
     class Meta:
         model = Entidades
         fields = [
             'enti_nome', 'enti_tipo_enti', 'enti_fant', 
             'enti_cpf', 'enti_cnpj', 'enti_insc_esta', 'enti_cep', 'enti_ende', 
             'enti_nume', 'enti_cida','enti_codi_cida', 'enti_esta', 'enti_fone', 'enti_celu', 
-            'enti_emai'
+            'enti_emai', 'enti_situ'
         ]
         widgets = {
             'enti_nome': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome completo'}),
@@ -34,10 +44,17 @@ class EntidadesForm(forms.ModelForm):
             'enti_emai': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email Pessoal'}),
         }
 
+    def clean_enti_situ(self):
+        return '1' if self.cleaned_data.get('enti_situ') else '0'
+
     def __init__(self, *args, db_name=None, request=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.db_name = db_name  # Guarda o nome do banco para ser usado no save()
         self.request = request  # Store the request object
+
+        # Ajusta o valor inicial do campo booleano com base no valor '0'/'1' do model
+        if self.instance and self.instance.pk:
+            self.fields['enti_situ'].initial = (self.instance.enti_situ == '1')
 
         # Tornar certos campos não obrigatórios
         for field in ['enti_cpf', 'enti_cnpj', 'enti_fone', 'enti_emai',
