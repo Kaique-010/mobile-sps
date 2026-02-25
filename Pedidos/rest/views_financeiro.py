@@ -72,7 +72,7 @@ class GerarTitulosPedidoView(APIView):
                 titu_seri="PEV",
                 titu_titu=str(pedi_nume),
                 titu_clie=pedi_forn,
-                titu_parc=1,
+                titu_parc="001",
                 titu_valo=entrada,
                 titu_venc=data_base,
                 titu_form_reci=forma_pagamento or "",
@@ -82,7 +82,8 @@ class GerarTitulosPedidoView(APIView):
                 titu_port="0",
                 titu_even="0",
                 titu_prov=True,
-                titu_tipo="Receber"
+                titu_tipo="Receber",
+                titu_inte= True
             ))
             offset = 2
 
@@ -99,7 +100,7 @@ class GerarTitulosPedidoView(APIView):
                 titu_seri="PEV",
                 titu_titu=str(pedi_nume),
                 titu_clie=pedi_forn,
-                titu_parc=i + offset,
+                titu_parc=str(i + offset).zfill(3),
                 titu_valo=valor_atual,
                 titu_venc=vencimento,
                 titu_form_reci=forma_pagamento or "",
@@ -109,7 +110,8 @@ class GerarTitulosPedidoView(APIView):
                 titu_port="0",
                 titu_even="0",
                 titu_prov=True,
-                titu_tipo="Receber"
+                titu_tipo="Receber",
+                titu_inte= True
             ))
 
         try:
