@@ -30,7 +30,7 @@
 
     .chart-card .card-body {
         padding: 5px;
-
+        position: relative;
     }
 
     .chart-canvas {
@@ -46,9 +46,11 @@
         transition: all 0.3s ease-in-out;
         padding: 8px 12px;
         position: absolute;
-        right: 5px;
-        bottom: -5px;
+        right: 10px;
+        bottom: 10px;
         font-size: 10px;
+        z-index: 1050;
+        background-color: var(--bs-card-bg);
     }
 
     .btn-outline-custom2:hover {
@@ -123,7 +125,8 @@
                                         </div>
                                         <div>
                                             <div class="text-muted small">Lucro (%)</div>
-                                            <div class="fs-6 fw-semibold text-info">{{ kpis.lucro_percent|floatformat:2 }}%</div>
+                                            <div class="fs-6 fw-semibold text-info">{{ kpis.lucro_percent|floatformat:2
+                                                }}%</div>
                                         </div>
                                     </div>
                                 </div>
@@ -165,7 +168,8 @@
                                         </div>
                                         <div>
                                             <div class="text-muted small">Itens vendidos</div>
-                                            <div class="fs-6 fw-semibold" style="color:#6f42c1">{{ kpis.itens_contagem}}</div>
+                                            <div class="fs-6 fw-semibold" style="color:#6f42c1">{{ kpis.itens_contagem}}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -197,7 +201,8 @@
                                         </div>
                                         <div>
                                             <div class="text-muted small">Itens por pedido</div>
-                                            <div class="fs-6 fw-semibold" style="color:#6610f2">{{ kpis.itens_por_pedido|floatformat:2 }}</div>
+                                            <div class="fs-6 fw-semibold" style="color:#6610f2">{{
+                                                kpis.itens_por_pedido|floatformat:2 }}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -226,7 +231,8 @@
                                         </div>
                                         <div>
                                             <div class="text-muted small">Pedidos/dia</div>
-                                            <div class="fs-6 fw-semibold text-success">{{ kpis.pedidos_por_dia|floatformat:2 }}</div>
+                                            <div class="fs-6 fw-semibold text-success">{{
+                                                kpis.pedidos_por_dia|floatformat:2 }}</div>
                                         </div>
                                     </div>
                                 </div>

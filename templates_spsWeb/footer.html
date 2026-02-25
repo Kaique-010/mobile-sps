@@ -31,8 +31,8 @@
 
     .mascot-container {
         position: fixed;
-        bottom: 25px;
-        right: 25px;
+        bottom: 35px;
+        left: 35px;
         width: 100px;
         height: 100px;
         z-index: 99999;
@@ -43,6 +43,17 @@
     .mascot-img {
         width: 100%;
         height: 70%;
+    }
+
+    #mascot-text {
+        position: absolute;
+        bottom: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.6rem;
+        color: #69D9F0;
+        font-weight: bold;
+        text-shadow: 0 0 9px #ffffff;
     }
 
     @keyframes neonFloat {
@@ -106,7 +117,8 @@
         </p>
     </div>
     <div id="mascot-container" class="mascot-container" onclick="toggleAssistant()">
-        <img src="{% static 'assis.png' %}" class="mascot-img" style="border-radius: 65%;">
+        <img src="{% static 'assis.png' %}" class="mascot-img" style="border-radius: 65%;"><span
+            id="mascot-text">Configure aqui sua Empresa</span>
     </div>
 
 </footer>
