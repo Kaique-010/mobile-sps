@@ -218,7 +218,8 @@ class AuditoriaMiddleware:
                 # Endpoints públicos/essenciais (login, refresh, auth)
                 if (len(parts) >= 4 and parts[2] == 'licencas' and parts[3] == 'login') \
                    or (len(parts) >= 4 and parts[2] == 'entidades' and parts[3] == 'login') \
-                   or (len(parts) >= 3 and parts[2] == 'auth'):
+                   or (len(parts) >= 3 and parts[2] == 'auth') \
+                   or (len(parts) >= 2 and parts[1] in ('schema', 'swagger')):
                     pass
                 else:
                     app_candidate = parts[2]

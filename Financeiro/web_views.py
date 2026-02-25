@@ -412,3 +412,61 @@ class DetalhesCaixaView(DBAndSlugMixin, View):
                 'saldo': total_receb - total_paga,
             }
         })
+
+
+
+class InadimplentesView(DBAndSlugMixin, View):
+    def get(self, request, year, month, *args, **kwargs):
+        y = int(year)
+        m = int(month)
+        start = date(y, m, 1)
+        end = date(y, m, monthrange(y, m)[1])
+        empresa = self.empresa_id or None
+        filial = self.filial_id or None
+
+        inad_qs = Titulospagar.objects.using(self.db_alias).filter(
+            titu_situ=1,
+            titu_emit__isnull=False,
+            titu_forn__isnull=False,
+            titu_venc__lte=end,
+            titu_empr=empresa,
+            titu_fili=filial,
+        ).annotate(
+            saldo_a_pagar=Func(
+                F('titu_empr'),
+                F('titu_fili'),
+                F('titu_forn'),
+                F('titu_titu'),
+                F('titu_seri'),
+                F('titu_parc'),
+                Value(end),
+                function='fnc_saldo_pagar',
+                output_field=DecimalField(max_digits=15, decimal_places=2),
+            )
+        ).only(
+            'titu_titu','titu_empr','titu_fili','titu_forn','titu_parc','titu_seri','titu_emis','titu_venc','saldo_a_pagar'
+        )
+
+        inadimplentes = [
+            {
+                'titulo': p.titu_titu,
+                'empresa': p.titu_empr,
+                'filial': p.titu_fili,
+                'fornecedor': p.titu_forn,
+                'parcela': p.titu_parc,
+                'serie': p.titu_seri,
+                'emissao': p.titu_emis,
+                'vencimento': p.titu_venc,
+                'valor': float(p.saldo_a_pagar or 0),
+            }
+            for p in inad_qs[:500]
+        ]
+        
+        total_inadimplentes = sum(item['valor'] for item in inadimplentes)
+        return JsonResponse({
+            'inadimplentes': inadimplentes,
+            'totais': {
+                'inadimplentes': total_inadimplentes,
+            }
+        })
+        

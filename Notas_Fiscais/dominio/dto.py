@@ -32,6 +32,15 @@ class DestinatarioDTO(BaseModel):
     cep: str
 
 
+class ResponsavelTecnicoDTO(BaseModel):
+    cnpj: str
+    contato: str
+    email: str
+    fone: str
+    id_csrt: Optional[str] = None
+    hash_csrt: Optional[str] = None
+
+
 class ItemDTO(BaseModel):
     codigo: str
     descricao: str
@@ -97,6 +106,7 @@ class NotaFiscalDTO(BaseModel):
 
     emitente: EmitenteDTO
     destinatario: DestinatarioDTO
+    responsavel_tecnico: Optional[ResponsavelTecnicoDTO] = None
     itens: List[ItemDTO]
 
     modalidade_frete: Optional[int] = None

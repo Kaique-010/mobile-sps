@@ -86,6 +86,7 @@ class DBAndSlugMixin:
             SubgrupoProduto: 'subgrupos_web',
             FamiliaProduto: 'familias_web',
             Marca: 'marcas_web',
+            UnidadeMedida: 'unidades_web',
         }
         name = mapping.get(mdl, 'produtos_web')
         return reverse_lazy(name, kwargs={'slug': self.slug or get_licenca_slug()})
@@ -884,6 +885,7 @@ class UnidadeMedidaListView(DBAndSlugMixin, ListView):
     context_object_name = 'unidades'
     paginate_by = 20
     
+    
     def get_queryset(self):
         qs = UnidadeMedida.objects.using(self.db_alias).all()
         descricao = (self.request.GET.get('descricao') or '').strip()
@@ -909,12 +911,9 @@ class UnidadeMedidaCreateView(DBAndSlugMixin, CreateView):
     
     def form_valid(self, form):
         obj = form.save(commit=False)
-        from django.db.models import IntegerField
-        from django.db.models.functions import Cast
-        qs = UnidadeMedida.objects.using(self.db_alias)
-        maior = qs.annotate(codigo_int=Cast('unid_codi', IntegerField())).order_by('-codigo_int').first()
-        proximo = (int(maior.unid_codi) + 1) if maior else 1
-        obj.unid_codi = str(proximo)
+        # O código (unid_codi) é inserido manualmente pelo usuário
+        if obj.unid_codi:
+            obj.unid_codi = obj.unid_codi.upper()
         obj.save(using=self.db_alias)
         messages.success(self.request, 'Unidade de medida criada com sucesso.')
         return redirect(self.get_success_url())
@@ -924,7 +923,7 @@ class UnidadeMedidaUpdateView(DBAndSlugMixin, UpdateView):
     model = UnidadeMedida
     form_class = UnidadeMedidaForm
     template_name = 'Produtos/unidade_update.html'
-    pk_url_kwarg = 'unid_codi'
+    pk_url_kwarg = 'codigo'
 
     def get_queryset(self):
         return UnidadeMedida.objects.using(self.db_alias).all()
@@ -936,6 +935,8 @@ class UnidadeMedidaUpdateView(DBAndSlugMixin, UpdateView):
 
     def form_valid(self, form):
         obj = form.save(commit=False)
+        if obj.unid_codi:
+            obj.unid_codi = obj.unid_codi.upper()
         obj.save(using=self.db_alias)
         messages.success(self.request, 'Unidade de medida atualizada com sucesso.')
         return redirect(self.get_success_url())
@@ -944,7 +945,7 @@ class UnidadeMedidaUpdateView(DBAndSlugMixin, UpdateView):
 class UnidadeMedidaDeleteView(DBAndSlugMixin, DeleteView):
     model = UnidadeMedida
     template_name = 'Produtos/unidade_delete.html'
-    pk_url_kwarg = 'unid_codi'
+    pk_url_kwarg = 'codigo'
     success_url = reverse_lazy('unidades_list')
 
     def get_queryset(self):

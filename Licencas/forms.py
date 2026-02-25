@@ -35,12 +35,12 @@ class EmpresaForm(forms.ModelForm):
         labels = {
             'empr_codi': 'Código',
             'empr_nome': 'Nome da Empresa',
-            'empr_docu': 'CNPJ',
+            'empr_docu': 'CNPJ / CPF',
         }
         widgets = {
             'empr_codi': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Código da empresa'}),
             'empr_nome': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome da empresa'}),
-            'empr_docu': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'CNPJ'}),
+            'empr_docu': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'CNPJ / CPF', 'maxlength': 14}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -63,7 +63,7 @@ class FilialForm(forms.ModelForm):
         model = Filiais
         exclude = ['empr_empr','empr_codi']
         labels = {
-            'empr_docu': 'CNPJ da Filial',
+            'empr_docu': 'CNPJ / CPF da Filial',
             'empr_insc_esta': 'Inscrição Estadual',
             'empr_insc_muni': 'Inscrição Municipal',
             'empr_fant': 'Nome Fantasia',
@@ -119,7 +119,7 @@ class FilialForm(forms.ModelForm):
         widgets = {
             'empr_nome': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome da Filial'}),
             'empr_fant': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome Fantasia'}),
-            'empr_docu': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'CNPJ da Filial'}),
+            'empr_docu': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'CNPJ / CPF da Filial', 'maxlength': 14}),
             'empr_insc_esta': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Inscrição Estadual'}),
             'empr_insc_muni': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Inscrição Municipal'}),
             'empr_sufr': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'SUFRAMA'}),

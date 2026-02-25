@@ -27,8 +27,10 @@ def emitir_nota(request, slug, nota_id):
         if status:
             resposta["mensagem"] = mensagem_amigavel
             # Se não for autorizado (100) nem processamento (103, 105), pode ser erro
-            if status != 100:
+            # Status de sucesso/processamento: 100, 101, 102, 103, 105
+            if str(status) not in ('100', '101', '102', '103', '105'):
                 resposta["erro"] = mensagem_amigavel
+                return JsonResponse(resposta, status=400)
 
         return JsonResponse(resposta)
     except Exception as e:

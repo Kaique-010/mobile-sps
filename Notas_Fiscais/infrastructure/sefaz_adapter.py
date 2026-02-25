@@ -22,6 +22,10 @@ class SefazAdapter:
         # Injeta IBS e CBS se disponíveis (contornando limitação do PyNFe)
         if hasattr(nota_fiscal, '_itens_extra'):
             self._injetar_ibs_cbs(nfe, nota_fiscal._itens_extra)
+
+        # Injeta Responsável Técnico se disponível (necessário para evitar Rejeição 972/225)
+        if hasattr(nota_fiscal, '_responsavel_tecnico'):
+            self._injetar_responsavel_tecnico(nfe, nota_fiscal._responsavel_tecnico)
             
         xml_assinado = self.assinador.assinar(nfe)
 
@@ -158,30 +162,67 @@ class SefazAdapter:
                 return elem
             
             # IBS
-                ibs_data = dados.get('ibs')
-                if ibs_data:
-                    # Validar se tem valor antes de injetar (Evitar erro de Schema 225)
-                    # A SEFAZ pode rejeitar tags de imposto com valor 0.00
-                    valor_ibs = float(ibs_data.get('valor') or 0)
-                    if valor_ibs > 0:
-                        ibs = sub(imposto, "IBS")
-                        sub(ibs, "vBCIBS", fmt(ibs_data.get('base')))
-                        sub(ibs, "pIBS", fmt(ibs_data.get('aliq')))
-                        sub(ibs, "vIBS", fmt(ibs_data.get('valor')))
-                    else:
-                        print(f"DEBUG: IBS zerado ({valor_ibs}), ignorando injeção para evitar erro 225.")
-                
-                # CBS
-                cbs_data = dados.get('cbs')
-                if cbs_data:
-                    # Validar se tem valor antes de injetar
-                    valor_cbs = float(cbs_data.get('valor') or 0)
-                    if valor_cbs > 0:
-                        cbs = sub(imposto, "CBS")
-                        sub(cbs, "vBCCBS", fmt(cbs_data.get('base')))
-                        sub(cbs, "pCBS", fmt(cbs_data.get('aliq')))
-                        sub(cbs, "vCBS", fmt(cbs_data.get('valor')))
-                    else:
-                        print(f"DEBUG: CBS zerado ({valor_cbs}), ignorando injeção para evitar erro 225.")
+            ibs_data = dados.get('ibs')
+            if ibs_data:
+                # Validar se tem valor antes de injetar (Evitar erro de Schema 225)
+                # A SEFAZ pode rejeitar tags de imposto com valor 0.00
+                valor_ibs = float(ibs_data.get('valor') or 0)
+                if valor_ibs > 0:
+                    ibs = sub(imposto, "IBS")
+                    sub(ibs, "vBCIBS", fmt(ibs_data.get('base')))
+                    sub(ibs, "pIBS", fmt(ibs_data.get('aliq')))
+                    sub(ibs, "vIBS", fmt(ibs_data.get('valor')))
+                else:
+                    print(f"DEBUG: IBS zerado ({valor_ibs}), ignorando injeção para evitar erro 225.")
+            
+            # CBS
+            cbs_data = dados.get('cbs')
+            if cbs_data:
+                # Validar se tem valor antes de injetar
+                valor_cbs = float(cbs_data.get('valor') or 0)
+                if valor_cbs > 0:
+                    cbs = sub(imposto, "CBS")
+                    sub(cbs, "vBCCBS", fmt(cbs_data.get('base')))
+                    sub(cbs, "pCBS", fmt(cbs_data.get('aliq')))
+                    sub(cbs, "vCBS", fmt(cbs_data.get('valor')))
+                else:
+                    print(f"DEBUG: CBS zerado ({valor_cbs}), ignorando injeção para evitar erro 225.")
             
             print(f"DEBUG: Injetado IBS/CBS no item {i}")
+
+    def _injetar_responsavel_tecnico(self, nfe_elem, resp_dto):
+        # Helper para criar elemento com namespace correto
+        def sub(parent, tag, text=None):
+            if parent.tag.startswith('{'):
+                ns_prefix = parent.tag.split('}')[0] + '}'
+                elem = etree.SubElement(parent, f"{ns_prefix}{tag}")
+            else:
+                elem = etree.SubElement(parent, tag)
+            if text: elem.text = str(text)
+            return elem
+
+        ns_uri = 'http://www.portalfiscal.inf.br/nfe'
+        ns = {'ns': ns_uri}
+        
+        # Encontra infNFe
+        inf_nfe = nfe_elem.find('.//ns:infNFe', namespaces=ns)
+        if inf_nfe is None:
+            inf_nfe = nfe_elem.find('.//infNFe')
+            
+        if inf_nfe is None:
+            print("DEBUG: _injetar_responsavel_tecnico: infNFe não encontrado.")
+            return
+
+        print(f"DEBUG: Injetando infRespTec para CNPJ {resp_dto.cnpj}")
+
+        # Cria o grupo infRespTec
+        resp = sub(inf_nfe, "infRespTec")
+        sub(resp, "CNPJ", resp_dto.cnpj)
+        sub(resp, "xContato", resp_dto.contato)
+        sub(resp, "email", resp_dto.email)
+        sub(resp, "fone", resp_dto.fone)
+        
+        if resp_dto.id_csrt:
+            sub(resp, "idCSRT", resp_dto.id_csrt)
+        if resp_dto.hash_csrt:
+            sub(resp, "hashCSRT", resp_dto.hash_csrt)

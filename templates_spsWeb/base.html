@@ -41,7 +41,7 @@
         // Tema claro/escuro usando data-bs-theme
         (function () {
             const root = document.documentElement;
-            const saved = localStorage.getItem('sps_theme') || 'light';
+            const saved = localStorage.getItem('sps_theme') || 'dark';
             const applyThemeAttr = (theme) => { root.setAttribute('data-bs-theme', theme); };
             applyThemeAttr(saved);
             window.addEventListener('DOMContentLoaded', () => {

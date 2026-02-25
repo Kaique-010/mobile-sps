@@ -22,7 +22,7 @@ graph TD
     subgraph Camada_Servico [2. Regras de Negócio]
         CalcService[calculo_impostos_service.py\n(Cálculo de Tributos)]:::service
         NotaService[nota_service.py\n(Orquestrador)]:::service
-        
+
         Models --> NotaService
         NotaService --> CalcService
         CalcService -->|Atualiza Impostos| Models
@@ -31,7 +31,7 @@ graph TD
     subgraph Camada_Dominio [3. Transformação de Dados]
         Builder[dominio/builder.py\n(NotaBuilder)]:::dto
         DTO[dominio/dto.py\n(NotaFiscalDTO)]:::dto
-        
+
         NotaService -->|Aciona| Builder
         Builder -->|Lê| Models
         Builder -->|Gera| DTO
@@ -40,7 +40,7 @@ graph TD
     subgraph Camada_Aplicacao [4. Construção do XML]
         PyNFeBuilder[aplicacao/construir_nfe_pynfe.py\n(Adapter PyNFe)]:::adapter
         PyNFeObj[Objeto PyNFe\n(NotaFiscal)]:::adapter
-        
+
         DTO -->|Input| PyNFeBuilder
         PyNFeBuilder -->|Output| PyNFeObj
         PyNFeBuilder -.->|Armazena IBS/CBS| ExtraData[lista _itens_extra]:::adapter
@@ -48,7 +48,7 @@ graph TD
 
     subgraph Camada_Infraestrutura [5. Comunicação SEFAZ]
         SefazAdapter[infrastructure/sefaz_adapter.py\n(Assinatura e Envio)]:::adapter
-        
+
         PyNFeObj -->|Serializa| SefazAdapter
         ExtraData -->|Injeção Manual| SefazAdapter
         SefazAdapter -->|Assina XML| SefazAdapter
@@ -65,43 +65,54 @@ graph TD
 ## 📂 Detalhamento dos Arquivos e Responsabilidades
 
 ### 1. Modelos de Dados (`models.py`)
-*   **Localização:** `d:\mobile-sps\Notas_Fiscais\models.py`
-*   **Função:** Representa as tabelas do banco de dados.
-*   **Principais Classes:**
-    *   `Nota`: Cabeçalho da nota (emitente, destinatário, valores totais).
-    *   `NotaItem`: Itens da nota (produtos, quantidades, valores unitários).
-    *   `NotaItemImposto`: Detalhes fiscais de cada item (ICMS, IPI, PIS, COFINS, e agora IBS/CBS).
+
+- **Localização:** `d:\mobile-sps\Notas_Fiscais\models.py`
+- **Função:** Representa as tabelas do banco de dados.
+- **Principais Classes:**
+  - `Nota`: Cabeçalho da nota (emitente, destinatário, valores totais).
+  - `NotaItem`: Itens da nota (produtos, quantidades, valores unitários).
+  - `NotaItemImposto`: Detalhes fiscais de cada item (ICMS, IPI, PIS, COFINS, e agora IBS/CBS).
 
 ### 2. Serviço de Cálculo (`calculo_impostos_service.py`)
-*   **Localização:** `d:\mobile-sps\Notas_Fiscais\services\calculo_impostos_service.py`
-*   **Função:** Realiza todos os cálculos tributários antes da emissão.
-*   **Destaque:** É aqui que definimos as alíquotas de IBS/CBS e calculamos os valores baseados na quantidade e valor unitário dos itens. Também aplica regras defensivas para evitar erros de integridade (como `cst_icms` nulo).
+
+- **Localização:** `d:\mobile-sps\Notas_Fiscais\services\calculo_impostos_service.py`
+- **Função:** Realiza todos os cálculos tributários antes da emissão.
+- **Destaque:** É aqui que definimos as alíquotas de IBS/CBS e calculamos os valores baseados na quantidade e valor unitário dos itens. Também aplica regras defensivas para evitar erros de integridade (como `cst_icms` nulo).
 
 ### 3. Builder de DTO (`dominio/builder.py`)
-*   **Localização:** `d:\mobile-sps\Notas_Fiscais\dominio\builder.py`
-*   **Função:** Padrão de projeto *Builder*. Extrai dados complexos dos modelos Django e os converte em um objeto simples e plano (DTO - Data Transfer Object).
-*   **Por que existe?** Para desacoplar a lógica de emissão da estrutura do banco de dados. Se o banco mudar, só precisamos ajustar o Builder, sem quebrar a comunicação com a SEFAZ.
+
+- **Localização:** `d:\mobile-sps\Notas_Fiscais\dominio\builder.py`
+- **Função:** Padrão de projeto _Builder_. Extrai dados complexos dos modelos Django e os converte em um objeto simples e plano (DTO - Data Transfer Object).
+- **Por que existe?** Para desacoplar a lógica de emissão da estrutura do banco de dados. Se o banco mudar, só precisamos ajustar o Builder, sem quebrar a comunicação com a SEFAZ.
 
 ### 4. DTO (`dominio/dto.py`)
-*   **Localização:** `d:\mobile-sps\Notas_Fiscais\dominio\dto.py`
-*   **Função:** Define a estrutura de dados pura que será usada para gerar o XML.
-*   **Atributos:** Contém campos para `emitente`, `destinatario`, `itens`, incluindo os novos campos `valor_ibs`, `valor_cbs`, etc.
+
+- **Localização:** `d:\mobile-sps\Notas_Fiscais\dominio\dto.py`
+- **Função:** Define a estrutura de dados pura que será usada para gerar o XML.
+- **Atributos:** Contém campos para `emitente`, `destinatario`, `itens`, incluindo os novos campos `valor_ibs`, `valor_cbs`, etc.
 
 ### 5. Construtor PyNFe (`aplicacao/construir_nfe_pynfe.py`)
-*   **Localização:** `d:\mobile-sps\Notas_Fiscais\aplicacao\construir_nfe_pynfe.py`
-*   **Função:** Converte nosso `NotaFiscalDTO` para os objetos da biblioteca `PyNFe` (que gera o XML base).
-*   **O "Pulo do Gato":** Como a biblioteca `PyNFe` ainda não suporta nativamente os campos da Reforma Tributária (IBS/CBS), nós armazenamos esses dados em uma lista oculta chamada `_itens_extra` dentro do objeto da nota. Isso permite que esses dados "peguem carona" até o momento da assinatura.
+
+- **Localização:** `d:\mobile-sps\Notas_Fiscais\aplicacao\construir_nfe_pynfe.py`
+- **Função:** Converte nosso `NotaFiscalDTO` para os objetos da biblioteca `PyNFe` (que gera o XML base).
+- **O "Pulo do Gato":** Como a biblioteca `PyNFe` ainda não suporta nativamente os campos da Reforma Tributária (IBS/CBS), nós armazenamos esses dados em uma lista oculta chamada `_itens_extra` dentro do objeto da nota. Isso permite que esses dados "peguem carona" até o momento da assinatura.
 
 ### 6. Adaptador SEFAZ (`infrastructure/sefaz_adapter.py`)
-*   **Localização:** `d:\mobile-sps\Notas_Fiscais\infrastructure\sefaz_adapter.py`
-*   **Função:** É o coração da comunicação com o governo.
-*   **Responsabilidades Críticas:**
-    1.  **Serialização:** Gera o XML padrão a partir do objeto PyNFe.
-    2.  **Injeção Manual (Patch):** Intercepta o XML gerado e injeta manualmente as tags `<IBS>` e `<CBS>` lendo a lista `_itens_extra`. *Importante: Só injeta se os valores forem maiores que zero para evitar Erro 225.*
-    3.  **Assinatura:** Assina digitalmente o XML modificado usando o certificado A1.
-    4.  **Transmissão:** Envia o XML assinado para os servidores da SEFAZ via SOAP.
-    5.  **Debug:** Imprime logs detalhados do retorno (Status HTTP, XML de resposta) para diagnóstico de erros (como o 656 ou 225).
+
+- **Localização:** `d:\mobile-sps\Notas_Fiscais\infrastructure\sefaz_adapter.py`
+- **Função:** É o coração da comunicação com o governo.
+- **Responsabilidades Críticas:**
+  1.  **Serialização:** Gera o XML padrão a partir do objeto PyNFe.
+  2.  **Injeção Manual (Patch):** Intercepta o XML gerado e injeta manualmente as tags `<IBS>` e `<CBS>` lendo a lista `_itens_extra`. _Importante: Só injeta se os valores forem maiores que zero para evitar Erro 225._
+  3.  **Assinatura:** Assina digitalmente o XML modificado usando o certificado A1.
+  4.  **Transmissão:** Envia o XML assinado para os servidores da SEFAZ via SOAP.
+  5.  **Debug:** Imprime logs detalhados do retorno (Status HTTP, XML de resposta) para diagnóstico de erros (como o 656 ou 225).
 
 ### 7. Orquestrador (`services/nota_service.py`)
-*   **Localização:** `d:\mobile-sps\Notas_Fiscais\services\nota_service.py`
-*   **Função:** Gerencia o fluxo completo. Chama o cálculo, constrói o DTO, invoca o Adapter da SEFAZ e, dependendo do retorno, atualiza o status da nota no banco de dados (Autorizada, Rejeitada, Cancelada).
+
+- **Localização:** `d:\mobile-sps\Notas_Fiscais\services\nota_service.py`
+- **Função:** Gerencia o fluxo completo. Chama o cálculo, constrói o DTO, invoca o Adapter da SEFAZ e, dependendo do retorno, atualiza o status da nota no banco de dados (Autorizada, Rejeitada, Cancelada).
+
+faltam os campos de `id_csrt` e `hash_csrt` no `ResponsavelTecnicoDTO`.
+iremos conseguir obter esses valores do banco de dados nos dados da filial ou das emissões enviadas no Xml pelo Spartacus.
+

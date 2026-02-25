@@ -1,63 +1,56 @@
 {
-  "debug_id": "83aab8fd-deb3-4d31-98af-a26858be660c",
-  "timestamp_inicio": "2026-02-19T13:59:32.901557Z",
+  "debug_id": "3cdd2372-2890-45c2-8452-14d25c6f05e1",
+  "timestamp_inicio": "2026-02-25T14:54:27.738351Z",
   "ambiente": {
     "debug": true,
-    "database_alias": "indus"
+    "database_alias": "saveweb001"
   },
   "tabelas_tributacao": {
     "versao": "desconhecida"
   },
   "nota": {
-    "id": 9,
+    "id": 2,
     "modelo": "55",
     "serie": "1",
-    "numero": "9",
+    "numero": "2",
     "empresa": "1",
     "filial": "1",
-    "destinatario_id": "2816",
+    "destinatario_id": "1",
     "uf_origem": "PR",
-    "uf_destino": "SC",
+    "uf_destino": "PR",
     "regime": "1"
   },
   "itens": [
     {
-      "id": 9,
-      "produto_id": "761",
-      "descricao_produto": "PISO DE MAD. WIREBRUSH TAUARI 12,5X90X305-2134MM TEAK PN - MC\t10 ( PROD. ESPECIAL)",
-      "ncm_produto": "4418****",
+      "id": 2,
+      "produto_id": "1",
+      "descricao_produto": "VACINA DE BACTRE",
+      "ncm_produto": "8419****",
       "cfop_inicial": "5102",
-      "quantidade": "3.0000",
-      "unitario": "275.0000",
+      "quantidade": "1.0000",
+      "unitario": "125.0000",
       "desconto": "0.0000",
       "logs": [
         {
-          "id": "e68ffb24-d97f-4276-bead-cad96e748889",
-          "timestamp": "2026-02-19T13:59:32.942099Z",
+          "id": "29f03b01-6817-4351-bf40-dc01ee2bab0a",
+          "timestamp": "2026-02-25T14:54:27.839954Z",
           "tipo": "antes_calculo_item",
           "mensagem": "Início do cálculo de impostos para o item.",
           "dados": {
             "uf_origem": "PR",
-            "uf_destino": "SC",
+            "uf_destino": "PR",
             "regime": "1",
             "tipo_operacao": "VENDA"
           }
         }
       ],
       "fonte_tributacao": null,
-      "cfop_resolvido": "5102",
-      "cfop_flags": {
-        "exig_icms": false,
-        "exig_ipi": false,
-        "exig_pis_cofins": false,
-        "exig_cbs": false,
-        "exig_ibs": false,
-        "gera_st": false
-      },
+      "cfop_resolvido": null,
+      "cfop_flags": null,
       "ncm_resolvido": null,
       "bases": {
-        "raiz": "825.00",
-        "icms": "825.00",
+        "raiz": "125.00",
+        "icms": "125.00",
         "st": null
       },
       "aliquotas": {
@@ -88,18 +81,18 @@
         "ibs": null
       },
       "condicionais_aplicadas": {
-        "icms_habilitado_cfop": false,
-        "ipi_habilitado_cfop": false,
-        "pis_cofins_habilitado_cfop": false,
-        "cbs_habilitado_cfop": false,
-        "ibs_habilitado_cfop": false
+        "icms_habilitado_cfop": null,
+        "ipi_habilitado_cfop": null,
+        "pis_cofins_habilitado_cfop": null,
+        "cbs_habilitado_cfop": null,
+        "ibs_habilitado_cfop": null
       }
     }
   ],
   "logs": [
     {
-      "id": "e6fa9a95-8b11-4f77-bb4c-70d06fdabfaa",
-      "timestamp": "2026-02-19T13:59:32.940130Z",
+      "id": "2279a1f4-1b19-4d77-98ad-f8c1d6941288",
+      "timestamp": "2026-02-25T14:54:27.816604Z",
       "tipo": "contexto_nota",
       "mensagem": "Contexto fiscal inicial da nota.",
       "dados": {
@@ -107,5 +100,5 @@
       }
     }
   ],
-  "timestamp_fim": "2026-02-19T13:59:32.996073Z"
+  "timestamp_fim": "2026-02-25T14:54:28.023259Z"
 }

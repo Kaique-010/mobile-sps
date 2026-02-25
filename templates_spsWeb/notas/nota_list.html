@@ -109,7 +109,7 @@
           <td>{{ n.destinatario_nome }}</td>
           <td>
             <span class="d-inline-block text-truncate" style="max-width: 150px;" data-bs-toggle="tooltip"
-              data-bs-placement="top" title="{{ n.status|sefaz_status_label }}">
+              data-bs-placement="top" title="{{ n.motivo_status|default:n.status|sefaz_status_label }}">
               {{ n.status|sefaz_status_short }}
             </span>
           </td>

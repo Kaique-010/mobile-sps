@@ -77,14 +77,31 @@ class NCMFiscalPadraoForm(forms.ModelForm):
         # Format expectation: "12345678" or "12345678 - Description"
         code = str(ncm_input).split(' - ')[0].strip()
         
-        try:
-            return Ncm.objects.using(self.database).get(ncm_codi=code)
-        except Ncm.DoesNotExist:
+        # Primeiro tenta buscar no banco de NCMs (prioridade)
+        obj = Ncm.objects.using(self.ncm_database).filter(ncm_codi=code).first()
+        
+        # Se não encontrar, tenta no banco local (fallback)
+        if not obj:
+            obj = Ncm.objects.using(self.database).filter(ncm_codi=code).first()
+            
+        if not obj:
             raise forms.ValidationError(f"NCM '{code}' não encontrado.")
+            
+        # Valida se já existe regra para este NCM
+        # A validação de unicidade deve ser feita no banco onde a regra será salva (self.database)
+        qs = NcmFiscalPadrao.objects.using(self.database).filter(ncm_id=obj.ncm_codi)
+        if self.instance and self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+            
+        if qs.exists():
+            raise forms.ValidationError(f"Já existe uma regra fiscal padrão para o NCM {code}. Edite a regra existente.")
+
+        return obj
 
     def __init__(self, *args, **kwargs):
         cst_choices = kwargs.pop('cst_choices', None)
         self.database = kwargs.pop('database', 'default')
+        self.ncm_database = kwargs.pop('ncm_database', self.database)
         super().__init__(*args, **kwargs)
 
         # Force ncm to be a CharField to allow custom cleaning of "CODE - DESC" format
@@ -144,16 +161,34 @@ class NCMFiscalPadraoForm(forms.ModelForm):
                 self.fields[field].required = False
 
     def clean_ncm(self):
-        value = self.cleaned_data.get('ncm')
-        if isinstance(value, Ncm):
-            return value
-        codigo = str(value or '').strip()
-        if not codigo:
-            raise forms.ValidationError('Informe o NCM')
-        # tolerar formato "12345678 - descrição"
-        if '-' in codigo:
-            codigo = codigo.split('-')[0].strip()
-        obj = Ncm.objects.using(self.database).filter(ncm_codi=codigo).first()
+        ncm_input = self.cleaned_data.get('ncm')
+        if not ncm_input:
+            return None
+            
+        if isinstance(ncm_input, Ncm):
+            return ncm_input
+            
+        # Remove formatting and description if present
+        # Format expectation: "12345678" or "12345678 - Description"
+        code = str(ncm_input).split(' - ')[0].strip()
+        
+        # Primeiro tenta buscar no banco de NCMs (prioridade)
+        obj = Ncm.objects.using(self.ncm_database).filter(ncm_codi=code).first()
+        
+        # Se não encontrar, tenta no banco local (fallback)
         if not obj:
-            raise forms.ValidationError('NCM inválido')
+            obj = Ncm.objects.using(self.database).filter(ncm_codi=code).first()
+            
+        if not obj:
+            raise forms.ValidationError(f"NCM '{code}' não encontrado.")
+            
+        # Valida se já existe regra para este NCM
+        # A validação de unicidade deve ser feita no banco onde a regra será salva (self.database)
+        qs = NcmFiscalPadrao.objects.using(self.database).filter(ncm_id=obj.ncm_codi)
+        if self.instance and self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+            
+        if qs.exists():
+            raise forms.ValidationError(f"Já existe uma regra fiscal padrão para o NCM {code}. Edite a regra existente.")
+
         return obj

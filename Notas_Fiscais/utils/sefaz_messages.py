@@ -98,6 +98,7 @@ SEFAZ_MESSAGES = {
     269: "Rejeição: CNPJ Emitente da NF Complementar difere do CNPJ da NF Referenciada",
     270: "Rejeição: Código Município do Fato Gerador: dígito inválido",
     271: "Rejeição: Código Município do Fato Gerador: difere da UF do emitente",
+    778: "Rejeição: Informado NCM inexistente",
     272: "Rejeição: Código Município do Emitente: dígito inválido",
     273: "Rejeição: Código Município do Emitente: difere da UF do emitente",
     274: "Rejeição: Código Município do Destinatário: dígito inválido",
@@ -128,6 +129,7 @@ SEFAZ_MESSAGES = {
     299: "Rejeição: XML da área de cabeçalho com codificação diferente de UTF-8",
     539: "Rejeição: Duplicidade de NF-e com diferença na Chave de Acesso",
     600: "Rejeição: CSOSN incompatível na operação com Não Contribuinte",
+    601: "Rejeição: CSOSN incompatível na operação com Contribuinte",
 }
 
 def get_sefaz_message(cstat, xmotivo_original=None):

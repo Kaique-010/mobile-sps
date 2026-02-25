@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Lista de Unidades de Medida{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
+
+<div class="container page-container">
+    <div class="page-header">
+        <h2 class="page-title"><i class="bi bi-ruler"></i> Unidades de Medida</h2>
+        <div class="page-actions">
+            <a href="{% url 'unidade_create_web' slug=slug %}" class="btn btn-success">
+                <i class="bi bi-plus"></i> Nova Unidade
+            </a>
+        </div>
+    </div>
+
+<div class="container mt-3">
+    <div class="card">
+        <div class="card-body">
+            
+            {% if messages %}
+            <div class="alert-container">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <form method="get" class="mb-4">
+                <div class="row">
+                    <div class="col-md-8">
+                        <label for="descricao" class="form-label">Nome da Unidade</label>
+                        <input type="text" id="descricao" name="descricao" class="form-control" value="{{ descricao }}"
+                               placeholder="Filtrar por nome">
+                    </div>
+                    <div class="col-md-4  d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary">Filtrar</button>
+                    </div>
+                </div>
+            </form>
+
+            {% if unidades %}
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>Ações</th>
+                            <th>Código</th>
+                            <th>Descrição</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for unidade in unidades %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'unidade_edit_web' slug=slug codigo=unidade.unid_codi %}" class="btn btn-warning btn-sm">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="{% url 'unidade_delete_web' slug=slug codigo=unidade.unid_codi %}" class="btn btn-danger btn-sm">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </td>
+                            <td>{{ unidade.unid_codi }}</td>
+                            <td>{{ unidade.unid_desc }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-center">Nenhuma unidade de medida encontrada.</p>
+            {% endif %}
+
+            <a href="{% url 'produtos_web' slug=slug %}" class="btn btn-secondary mt-3" title="Voltar para Produtos">
+                <i class="bi bi-arrow-left"></i> Voltar para Produtos
+            </a>
+            
+            <div class="container-fluid">
+                {% if page_obj.has_other_pages %}
+                <nav>
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if descricao %}&descricao={{ descricao }}{% endif %}">Primeira</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if descricao %}&descricao={{ descricao }}{% endif %}">Anterior</a>
+                        </li>
+                        {% endif %}
+
+                        {% for page_number in page_obj.paginator.page_range %}
+                        {% if page_number <= page_obj.number|add:3 and page_number >= page_obj.number|add:-3 %}
+                            <li class="page-item {% if page_obj.number == page_number %}active{% endif %}">
+                                <a class="page-link" href="?page={{ page_number }}{% if descricao %}&descricao={{ descricao }}{% endif %}">{{ page_number }}</a>
+                            </li>
+                        {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if descricao %}&descricao={{ descricao }}{% endif %}">Próxima</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if descricao %}&descricao={{ descricao }}{% endif %}">Última</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+{% endblock %}

@@ -108,6 +108,37 @@ class EmissaoService:
             nota.protocolo_autorizacao = resposta.get("protocolo")
             nota.xml_assinado = resposta["xml"]
             nota.status = resposta.get("status", 0)
+            
+            # Persistir motivo/mensagem de erro
+            motivo = resposta.get("motivo")
+            if motivo:
+                from ..utils.sefaz_messages import get_sefaz_message
+                status_code = resposta.get("status")
+                msg_amigavel = get_sefaz_message(status_code, motivo)
+                if str(status_code) == '778':
+                    # Tenta sugerir NCMs corretos da tabela TIPI
+                    try:
+                        from ..utils.ncm_validator import buscar_sugestoes_ncm
+                        # Extrai o NCM do XML ou do item da nota (precisa pegar o primeiro item se possível)
+                        # Como não temos fácil acesso ao item aqui, vamos tentar pegar do XML se disponível
+                        # Mas o XML pode não ter sido gerado se falhou antes.
+                        # Melhor: Vamos pegar o NCM do primeiro item da nota no banco.
+                        primeiro_item = nota.itens.first()
+                        ncm_usado = getattr(primeiro_item, 'ncm', '') if primeiro_item else ''
+                        
+                        sugestoes = buscar_sugestoes_ncm(ncm_usado)
+                        if sugestoes:
+                            # Monta a mensagem final com as sugestões
+                            mensagens_sugestoes = [s['mensagem'] for s in sugestoes]
+                            msg_amigavel += " " + " ".join(mensagens_sugestoes)
+                        else:
+                            msg_amigavel += " Verifique se o NCM no cadastro do produto está correto e ativo na SEFAZ."
+                    except Exception as e:
+                        msg_amigavel += " Verifique se o NCM no cadastro do produto está correto e ativo na SEFAZ."
+                
+                nota.motivo_status = msg_amigavel
+            else:
+                nota.motivo_status = None
 
             # Se autorizada e temos o protocolo, montamos o procNFe para o xml_autorizado
             if nota.status == 100 and resposta.get("xml_protocolo"):

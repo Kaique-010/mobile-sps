@@ -35,7 +35,7 @@ class GeradorXML:
         self._det(inf, dto["itens"])
         self._total(inf, dto)
         self._pag(inf, dto)
-        self._resp_tecnico(root)
+        self._resp_tecnico(inf, dto)
 
         xml = etree.tostring(
             root,
@@ -439,8 +439,33 @@ class GeradorXML:
     # ----------------------------------------------------------------------
     # responsável técnico
     # ----------------------------------------------------------------------
-    def _resp_tecnico(self, root):
+    def _resp_tecnico(self, root, dto=None):
         r = etree.SubElement(root, "infRespTec")
-        etree.SubElement(r, "CNPJ").text = "20702018000142"
-        etree.SubElement(r, "xContato").text = "SPS Web"
-        etree.SubElement(r, "email").text = "suporte@spartacus.com.br"
+        
+        # Default values (Spartacus)
+        cnpj = "20702018000142"
+        contato = "DANIEL DIAS DE ALMEIDA"
+        email = "spartacus@spartacus.com.br"
+        fone = "4232236164"
+        id_csrt = None
+        hash_csrt = None
+        
+        if dto and "responsavel_tecnico" in dto and dto["responsavel_tecnico"]:
+            resp = dto["responsavel_tecnico"]
+            # Prioritize DTO values if present
+            if resp.get("cnpj"): cnpj = resp.get("cnpj")
+            if resp.get("contato"): contato = resp.get("contato")
+            if resp.get("email"): email = resp.get("email")
+            if resp.get("fone"): fone = resp.get("fone")
+            id_csrt = resp.get("id_csrt")
+            hash_csrt = resp.get("hash_csrt")
+
+        etree.SubElement(r, "CNPJ").text = cnpj
+        etree.SubElement(r, "xContato").text = contato
+        etree.SubElement(r, "email").text = email
+        etree.SubElement(r, "fone").text = fone
+        
+        if id_csrt:
+            etree.SubElement(r, "idCSRT").text = str(id_csrt)
+        if hash_csrt:
+            etree.SubElement(r, "hashCSRT").text = str(hash_csrt)

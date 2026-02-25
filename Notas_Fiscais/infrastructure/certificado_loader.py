@@ -29,6 +29,9 @@ class CertificadoLoader:
         except Exception:
             senha = senha_token
 
+        if senha is None:
+            senha = ""
+
         logger.info("Carregando certificado digital para filial %s", getattr(self.filial, "id", None))
 
         try:

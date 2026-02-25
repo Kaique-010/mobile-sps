@@ -1,4 +1,4 @@
-from .dto import NotaFiscalDTO, EmitenteDTO, DestinatarioDTO, ItemDTO
+from .dto import NotaFiscalDTO, EmitenteDTO, DestinatarioDTO, ItemDTO, ResponsavelTecnicoDTO
 from ..models import Nota
 from Licencas.models import Filiais
 from Produtos.models import Produtos
@@ -41,8 +41,12 @@ class NotaBuilder:
     # -------------------------------
     def build_emitente(self):
         f = self.filial
+        cnpj = self._somente_digitos(f.empr_docu)
+        if len(cnpj) <= 14:
+            cnpj = cnpj.zfill(14)
+            
         return EmitenteDTO(
-            cnpj=f.empr_docu,
+            cnpj=cnpj,
             razao=f.empr_nome,
             fantasia=f.empr_fant or f.empr_nome,
             ie=self._limpar_inscricao_estadual(f.empr_insc_esta),
@@ -63,9 +67,17 @@ class NotaBuilder:
     def build_destinatario(self):
         d = self.dest
 
-        doc = d.enti_cnpj or d.enti_cpf
-        raw_ie = (d.enti_insc_esta or "").strip()
-        if d.enti_cnpj and raw_ie and raw_ie.isdigit():
+        raw_doc = d.enti_cnpj or d.enti_cpf
+        doc = self._somente_digitos(raw_doc)
+        
+        if len(doc) > 11:
+            doc = doc.zfill(14)
+        elif doc:
+            doc = doc.zfill(11)
+
+        raw_ie = self._somente_digitos(d.enti_insc_esta)
+        # Se tem CNPJ e IE válida (pelo menos 2 dígitos)
+        if len(doc) == 14 and raw_ie and len(raw_ie) > 1:
             ind_ie = "1"
             ie_val = raw_ie[:14]
         else:
@@ -92,8 +104,13 @@ class NotaBuilder:
     # -------------------------------
     def build_itens(self):
         itens = []
+        
+        # Ensure we use the correct database for related manager
+        itens_qs = self.nota.itens.all()
+        if self.database:
+             itens_qs = itens_qs.using(self.database)
 
-        for it in self.nota.itens.all():
+        for it in itens_qs:
             prod_qs = Produtos.objects.using(self.database).filter(prod_codi=it.produto_id)
             empresa = getattr(self.nota, "empresa", None)
             if empresa is not None:
@@ -162,6 +179,24 @@ class NotaBuilder:
         return itens
 
     # -------------------------------
+    # RESPONSÁVEL TÉCNICO
+    # -------------------------------
+    def build_responsavel_tecnico(self):
+        f = self.filial
+        fone = self._somente_digitos(f.empr_fone)
+        if not fone:
+            fone = "4232236164"  # Default Spartacus Phone
+            
+        return ResponsavelTecnicoDTO(
+            cnpj="20702018000142",
+            contato="DANIEL DIAS DE ALMEIDA",
+            email="spartacus@spartacus.com.br",
+            fone=fone,
+            id_csrt=None,
+            hash_csrt=None
+        )
+
+    # -------------------------------
     # NOTA FISCAL DTO
     # -------------------------------
     def build(self):
@@ -179,6 +214,8 @@ class NotaBuilder:
             modelo=n.modelo,
             serie=n.serie,
             numero=n.numero,
+            
+            responsavel_tecnico=self.build_responsavel_tecnico(),
 
             data_emissao=str(n.data_emissao),
             data_saida=str(n.data_saida) if n.data_saida else None,

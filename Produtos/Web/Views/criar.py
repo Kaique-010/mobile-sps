@@ -20,14 +20,11 @@ class NcmCreateView(DBAndSlugMixin, CreateView):
         return reverse("ncm_list", kwargs={"slug": self.slug})
 
     def form_valid(self, form):
+        from django.http import HttpResponseRedirect
         self.object = form.save(commit=False)
-        try:
-            self.object.save(using=self.db_alias)
-        except Exception:
-            self.object.save()
-        resp = super().form_valid(form)
+        self.object.save(using=self.db_alias)
         messages.success(self.request, "NCM cadastrado com sucesso.")
-        return resp
+        return HttpResponseRedirect(self.get_success_url())
 
     def form_invalid(self, form):
         if form.errors:
@@ -65,13 +62,18 @@ class NcmFiscalPadraoCreateView(DBAndSlugMixin, CreateView):
         return reverse("ncmfiscalpadrao_list", kwargs={"slug": self.slug})
 
     def form_valid(self, form):
+        from django.http import HttpResponseRedirect
         self.object = form.save(commit=False)
-        try:
-            self.object.save(using=self.db_alias)
-        except Exception:
-            self.object.save()
+        self.object.save(using=self.db_alias)
         messages.success(self.request, "Alíquotas Fiscal Padrão cadastradas com sucesso.")
-        return super().form_valid(form)
+        return HttpResponseRedirect(self.get_success_url())
+
+    def form_invalid(self, form):
+        if form.errors:
+            for field, errs in form.errors.items():
+                for err in errs:
+                    messages.error(self.request, f"Erro em {field}: {err}")
+        return super().form_invalid(form)
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -82,6 +84,8 @@ class NcmFiscalPadraoCreateView(DBAndSlugMixin, CreateView):
         kwargs = super().get_form_kwargs()
         kwargs['cst_choices'] = self._get_cst_choices()
         kwargs['database'] = self.db_alias
+        from core.utils import get_db_from_slug
+        kwargs['ncm_database'] = get_db_from_slug('savexml1') or 'save1'
         return kwargs
 
 

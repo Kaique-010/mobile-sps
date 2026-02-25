@@ -77,6 +77,7 @@ class Nota(models.Model):
     status = models.IntegerField(choices=STATUS_CHOICES, default=0)
     chave_acesso = models.CharField(max_length=50, blank=True, null=True)
     protocolo_autorizacao = models.CharField(max_length=60, blank=True, null=True)
+    motivo_status = models.TextField(blank=True, null=True, help_text="Motivo do status retornado pela SEFAZ")
 
     xml_assinado = models.TextField(blank=True, null=True)
     xml_autorizado = models.TextField(blank=True, null=True)
