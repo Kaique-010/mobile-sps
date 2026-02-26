@@ -50,7 +50,7 @@ class LoginView(APIView):
         filial_id = data.get("filial_id", 1)    
         
         if not docu:
-            return Response({'error': 'CNPJ não informado.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'CNPJ não informado. deve e obrigatoriamente ser informado.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Log: Buscar configuração do banco
         db_start = time.time()
