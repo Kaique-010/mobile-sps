@@ -35,6 +35,8 @@ def get_banco_por_docu(docu):
 
 
 class LoginView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
     
     def post(self, request, slug=None):  
         start_time = time.time()
