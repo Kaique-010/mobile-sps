@@ -86,18 +86,30 @@ class ControleVisitaSerializer(serializers.ModelSerializer):
         
         if not banco:
             raise serializers.ValidationError("Banco não encontrado")
-        if not empresa_id:
+        
+        # Em requisições PATCH (partial update), não exigimos empresa_id se já estiver na instância
+        is_partial = self.partial if hasattr(self, 'partial') else False
+        
+        if not empresa_id and not is_partial:
             raise serializers.ValidationError("Empresa não encontrada no contexto")
         
         erros = {}
         obrigatorios = ['ctrl_empresa', 'ctrl_filial', 'ctrl_data', 'ctrl_cliente']
         
-        for campo in obrigatorios:
-            if not data.get(campo):
-                erros[campo] = ['Este campo é obrigatório.']
+        # Apenas valida campos obrigatórios se não for atualização parcial
+        # Ou se o campo foi enviado explicitamente
+        if not is_partial:
+            for campo in obrigatorios:
+                if not data.get(campo):
+                    erros[campo] = ['Este campo é obrigatório.']
+        else:
+            # Em PATCH, verifica apenas se os campos enviados não são nulos/vazios
+            for campo in obrigatorios:
+                if campo in data and not data.get(campo):
+                     erros[campo] = ['Este campo não pode ser vazio.']
         
         # Validar se cliente existe na empresa (filial é compartilhada)
-        if data.get('ctrl_cliente'):
+        if data.get('ctrl_cliente') and empresa_id:
             from Entidades.models import Entidades
             cliente_exists = Entidades.objects.using(banco).filter(
                 enti_clie=data['ctrl_cliente'].enti_clie,

@@ -67,11 +67,31 @@
     <div class="card-body">
       <form method="get" class="row g-3 mb-3">
         <div class="col-md-3">
-          <label class="form-label">Fornecedor (ID)</label>
-          <input type="text" name="titu_forn" value="{{ filters.titu_forn }}" class="form-control"
-            placeholder="ID do fornecedor">
+          <label class="form-label">Empresa</label>
+          <select name="titu_empr" class="form-select" onchange="this.form.submit()">
+            {% for emp in empresas %}
+            <option value="{{ emp.empr_codi }}" {% if filters.titu_empr|add:"0" == emp.empr_codi|add:"0" %}selected{% endif %}>
+              {{ emp.empr_nome }}
+            </option>
+            {% endfor %}
+          </select>
         </div>
         <div class="col-md-3">
+          <label class="form-label">Filial</label>
+          <select name="titu_fili" class="form-select" onchange="this.form.submit()">
+            {% for fil in filiais %}
+            <option value="{{ fil.empr_empr }}" {% if filters.titu_fili|add:"0" == fil.empr_empr|add:"0" %}selected{% endif %}>
+              {{ fil.empr_nome }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Fornecedor (ID)</label>
+          <input type="text" name="titu_forn" value="{{ filters.titu_forn }}" class="form-control"
+            placeholder="ID">
+        </div>
+        <div class="col-md-4">
           <label class="form-label">Fornecedor (Nome)</label>
           <input type="text" name="fornecedor_nome" value="{{ filters.fornecedor_nome }}" class="form-control"
             placeholder="Nome do fornecedor">
@@ -97,7 +117,7 @@
           <label class="form-label">Série</label>
           <input type="text" name="titu_seri" value="{{ filters.titu_seri }}" class="form-control" placeholder="Ex.: PEV, ORS">
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
           <label class="form-label">Centro de Custo (Nome)</label>
           <input type="text" name="nome_centro_custo" value="{{ filters.nome_centro_custo }}" class="form-control" placeholder="Nome do Centro de Custo">
         </div>

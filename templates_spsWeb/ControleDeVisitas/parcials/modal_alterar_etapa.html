@@ -1,0 +1,108 @@
+<!-- Modal Alterar Etapa -->
+<div class="modal fade" id="modalAlterarEtapa" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Alterar Etapa da Visita</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formAlterarEtapa">
+                    {% csrf_token %}
+                </form>
+                <input type="hidden" id="modalVisitId">
+                <div class="mb-3">
+                    <label for="selectEtapa" class="form-label">Nova Etapa</label>
+                    <select class="form-select" id="selectEtapa">
+                        <option value="">Carregando etapas...</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="salvarNovaEtapa()">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function abrirModalEtapa(visitId, currentEtapaId) {
+        const modalEl = document.getElementById('modalAlterarEtapa');
+        const modal = new bootstrap.Modal(modalEl);
+        document.getElementById('modalVisitId').value = visitId;
+
+        // Carregar etapas
+        const select = document.getElementById('selectEtapa');
+        select.innerHTML = '<option value="">Carregando...</option>';
+        select.disabled = true;
+
+        // Endpoint de autocomplete de etapas
+        // Assumindo que o endpoint é /api/{slug}/controledevisitas/autocomplete/etapas/
+        const slug = "{{ slug }}";
+        const url = `/api/${slug}/controledevisitas/autocomplete/etapas/?limit=100`;
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                select.innerHTML = '<option value="">Selecione uma etapa...</option>';
+                data.forEach(etapa => {
+                    const option = document.createElement('option');
+                    option.value = etapa.value; // ou etapa.etap_id
+                    option.text = etapa.label; // ou etapa.etap_descricao
+                    if (String(etapa.value) === String(currentEtapaId)) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                });
+                select.disabled = false;
+            })
+            .catch(error => {
+                console.error('Erro ao carregar etapas:', error);
+                select.innerHTML = '<option value="">Erro ao carregar</option>';
+            });
+
+        modal.show();
+    }
+
+    function salvarNovaEtapa() {
+        const visitId = document.getElementById('modalVisitId').value;
+        const newEtapaId = document.getElementById('selectEtapa').value;
+
+        if (!newEtapaId) {
+            alert('Selecione uma etapa');
+            return;
+        }
+
+        const slug = "{{ slug }}";
+        // Endpoint para atualizar a visita: /api/{slug}/controledevisitas/controle-visitas/{id}/
+        const url = `/api/${slug}/controledevisitas/controle-visitas/${visitId}/`;
+
+        // Obter CSRF token do input hidden gerado pelo Django
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        fetch(url, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({
+                ctrl_etapa: newEtapaId
+            })
+        })
+            .then(response => {
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    return response.json().then(err => {
+                        throw new Error(JSON.stringify(err));
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao salvar etapa:', error);
+                alert('Erro ao atualizar etapa: ' + error.message);
+            });
+    }
+</script>

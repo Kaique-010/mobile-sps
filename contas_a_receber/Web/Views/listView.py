@@ -8,6 +8,7 @@ from core.utils import get_licenca_db_config
 from ...models import Titulosreceber, Baretitulos
 from Entidades.models import Entidades
 from CentrodeCustos.models import Centrodecustos
+from Licencas.models import Empresas, Filiais
 
 
 class TitulosReceberListView(DBAndSlugMixin, ListView):
@@ -20,6 +21,22 @@ class TitulosReceberListView(DBAndSlugMixin, ListView):
         qs = Titulosreceber.objects.using(self.db_alias).all()
 
         # Captura parâmetros
+        try:
+            if self.request.GET.get('titu_empr'):
+                self.empresa_id = int(self.request.GET.get('titu_empr'))
+            if self.request.GET.get('titu_fili'):
+                self.filial_id = int(self.request.GET.get('titu_fili'))
+        except (ValueError, TypeError):
+            pass
+
+        # Validação de consistência Filial x Empresa
+        if self.empresa_id and self.filial_id:
+            filial_obj = Filiais.objects.using(self.db_alias).filter(empr_empr=self.filial_id).first()
+            if filial_obj and str(filial_obj.empr_codi) != str(self.empresa_id):
+                # Filial não pertence à empresa selecionada. Tenta achar uma válida ou reseta.
+                valid = Filiais.objects.using(self.db_alias).filter(empr_codi=self.empresa_id).first()
+                self.filial_id = valid.empr_empr if valid else None
+
         cliente_id = self.request.GET.get('titu_clie')
         cliente_nome = self.request.GET.get('cliente_nome')
         nome_centro_custo = self.request.GET.get('nome_centro_custo')
@@ -117,6 +134,8 @@ class TitulosReceberListView(DBAndSlugMixin, ListView):
             setattr(t, 'nome_centro_custo', centros_map.get(getattr(t, 'titu_cecu', None), ''))
         
         preserved = {
+            'titu_empr': self.empresa_id,
+            'titu_fili': self.filial_id,
             'titu_clie': self.request.GET.get('titu_clie') or '',
             'titu_titu': self.request.GET.get('titu_titu') or '',
             'titu_parc': self.request.GET.get('titu_parc') or '',
@@ -129,6 +148,18 @@ class TitulosReceberListView(DBAndSlugMixin, ListView):
         }
 
         preserved_qs = {k: v for k, v in preserved.items() if v}
+
+        # Carregar listas para os selects de filtro
+        try:
+            context['empresas'] = Empresas.objects.using(self.db_alias).all().order_by('empr_nome')
+            
+            filiais_qs = Filiais.objects.using(self.db_alias).all()
+            if self.empresa_id:
+                filiais_qs = filiais_qs.filter(empr_codi=self.empresa_id)
+            context['filiais'] = filiais_qs.order_by('empr_nome')
+        except Exception:
+            context['empresas'] = []
+            context['filiais'] = []
 
         # Cálculo dos indicadores de resumo (Total Recebido, Em Aberto, Percentuais)
         qs_total = Titulosreceber.objects.using(self.db_alias).all()

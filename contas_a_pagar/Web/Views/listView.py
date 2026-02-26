@@ -11,6 +11,7 @@ from core.utils import get_licenca_db_config
 from ...models import Titulospagar, Bapatitulos
 from Entidades.models import Entidades
 from CentrodeCustos.models import Centrodecustos
+from Licencas.models import Empresas, Filiais
 from datetime import date
 from django.utils.timezone import now
 
@@ -22,6 +23,22 @@ class TitulosPagarListView(DBAndSlugMixin, ListView):
     paginate_by = 20
 
     def get_queryset(self):
+        # Prioridade para GET params no filtro
+        try:
+            if self.request.GET.get('titu_empr'):
+                self.empresa_id = int(self.request.GET.get('titu_empr'))
+            if self.request.GET.get('titu_fili'):
+                self.filial_id = int(self.request.GET.get('titu_fili'))
+        except (ValueError, TypeError):
+            pass
+
+        # Validação de consistência Filial x Empresa
+        if self.empresa_id and self.filial_id:
+            filial_obj = Filiais.objects.using(self.db_alias).filter(empr_empr=self.filial_id).first()
+            if filial_obj and str(filial_obj.empr_codi) != str(self.empresa_id):
+                valid = Filiais.objects.using(self.db_alias).filter(empr_codi=self.empresa_id).first()
+                self.filial_id = valid.empr_empr if valid else None
+
         qs = Titulospagar.objects.using(self.db_alias).all()
 
         # Captura os parâmetros de filtro da URL
@@ -190,8 +207,22 @@ class TitulosPagarListView(DBAndSlugMixin, ListView):
             'venc_fim': self.request.GET.get('venc_fim') or '',
             'titu_seri': self.request.GET.get('titu_seri') or '',
             'titu_titu': self.request.GET.get('titu_titu') or '',
+            'titu_empr': self.empresa_id,
+            'titu_fili': self.filial_id,
         }
         preserved_qs = {k: v for k, v in preserved.items() if v}
+
+        # Carregar listas para os selects de filtro
+        try:
+            context['empresas'] = Empresas.objects.using(self.db_alias).all().order_by('empr_nome')
+            
+            filiais_qs = Filiais.objects.using(self.db_alias).all()
+            if self.empresa_id:
+                filiais_qs = filiais_qs.filter(empr_codi=self.empresa_id)
+            context['filiais'] = filiais_qs.order_by('empr_nome')
+        except Exception:
+            context['empresas'] = []
+            context['filiais'] = []
 
         context.update({
             'slug': self.slug,

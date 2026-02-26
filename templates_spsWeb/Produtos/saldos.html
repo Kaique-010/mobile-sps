@@ -27,6 +27,25 @@
       <label class="form-label">Data final</label>
       <input type="date" name="data_fim" id="saldoDataFinal" class="form-control" value="{{ filtros.data_final }}" />
     </div>
+    <div class="col-md-3">
+      <label class="form-label">Empresa</label>
+      <select name="empresa" id="saldoEmpresa" class="form-control">
+        <option value="">Todas</option>
+        {% for empresa in empresas %}
+        <option value="{{ empresa.empr_codi }}" {% if empresa.empr_codi == filtros.empresa %}selected{% endif %}>{{ empresa.empr_nome }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Filial</label>
+      <select name="filial" id="saldoFilial" class="form-control">
+        <option value="">Todas</option>
+        {% for filial in filiais %}
+        <option value="{{ filial.empr_empr }}" {% if filial.empr_empr == filtros.filial %}selected{% endif %}>{{ filial.empr_nome }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    
     <div class="col-12 d-flex justify-content-end gap-2">
       <button class="btn btn-outline-secondary" type="button" id="btnLimpar">Limpar</button>
       <button class="btn btn-primary" type="submit">Filtrar</button>

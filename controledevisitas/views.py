@@ -71,7 +71,19 @@ class ControleVisitaViewSet(BancoContextMixin, ModuloRequeridoMixin, VendedorEnt
             raise NotFound("Banco de dados não encontrado.")
         
         empresa_id = self.request.headers.get("X-Empresa")
+        if not empresa_id:
+            empresa_id = self.request.session.get("empresa_id")
+            
+        if not empresa_id and self.request.user.is_authenticated:
+            empresa_user = getattr(self.request.user, 'empresa', None)
+            if hasattr(empresa_user, 'id'):
+                empresa_id = empresa_user.id
+            elif hasattr(self.request.user, 'empresa_id'):
+                empresa_id = self.request.user.empresa_id
+
         filial_id = self.request.headers.get("X-Filial")
+        if not filial_id:
+            filial_id = self.request.session.get("filial_id")
         
         # Base queryset com select_related para otimização
         queryset = Controlevisita.objects.using(banco).select_related(
@@ -146,19 +158,42 @@ class ControleVisitaViewSet(BancoContextMixin, ModuloRequeridoMixin, VendedorEnt
         except Exception:
             context['banco'] = 'default'
         
-        # Pegar empresa_id do header X-Empresa (prioridade)
+        # Pegar empresa_id com fallback robusto (Header -> Session -> User -> Body)
         empresa_id = self.request.headers.get("X-Empresa")
         
-        # Fallback: pegar do usuário logado
-        if not empresa_id and hasattr(self.request.user, 'empresa_id'):
-            empresa_id = self.request.user.empresa_id
+        if not empresa_id:
+            empresa_id = self.request.session.get("empresa_id")
+            
+        if not empresa_id and self.request.user.is_authenticated:
+            empresa_user = getattr(self.request.user, 'empresa', None)
+            if hasattr(empresa_user, 'id'):
+                empresa_id = empresa_user.id
+            elif hasattr(self.request.user, 'empresa_id'):
+                empresa_id = self.request.user.empresa_id
         
-        # Fallback: pegar dos dados da requisição
-        if not empresa_id and self.request.data.get('ctrl_empresa'):
+        if not empresa_id and self.request.data:
             empresa_id = self.request.data.get('ctrl_empresa')
         
         if empresa_id:
-            context['empresa_id'] = int(empresa_id)
+            try:
+                context['empresa_id'] = int(empresa_id)
+            except (ValueError, TypeError):
+                pass
+                
+        # Pegar filial_id com fallback robusto
+        filial_id = self.request.headers.get("X-Filial")
+        
+        if not filial_id:
+            filial_id = self.request.session.get("filial_id")
+            
+        if not filial_id and self.request.data:
+            filial_id = self.request.data.get('ctrl_filial')
+            
+        if filial_id:
+            try:
+                context['filial_id'] = int(filial_id)
+            except (ValueError, TypeError):
+                pass
         
         print(f"🔍 CONTEXTO EMPRESA_ID: {context.get('empresa_id')}")
         return context

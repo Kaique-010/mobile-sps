@@ -46,7 +46,7 @@ from CFOP.services.services import MotorFiscal
 from CFOP.services.bases import FiscalContexto
 import json
 from decimal import Decimal
-from Licencas.models import Filiais
+from Licencas.models import Filiais, Empresas
 from CFOP.cst_utils import get_csts_por_regime
 
 
@@ -1371,10 +1371,12 @@ class SaldosDashboardView(DBAndSlugMixin, TemplateView):
         ctx = super().get_context_data(**kwargs)
         ctx['slug'] = self.slug
         banco = self.db_alias
-        empresa = self.empresa_id or self.request.session.get('empresa_id') or self.request.headers.get('X-Empresa') or 1
-        filial = self.filial_id or self.request.session.get('filial_id') or self.request.headers.get('X-Filial') or 1
+        
+        # Filtros (Prioridade: GET > Atributos da View > Sessão > Headers > Default)
+        empresa = self.request.GET.get('empresa') or self.empresa_id or self.request.session.get('empresa_id') or self.request.headers.get('X-Empresa') or 1
+        filial = self.request.GET.get('filial') or self.filial_id or self.request.session.get('filial_id') or self.request.headers.get('X-Filial') or 1
 
-        # Filtros
+        # Filtros de produto e data
         raw_list = self.request.GET.getlist('produto')
         raw_str = (self.request.GET.get('produto') or '').strip()
         if raw_str and not raw_list:
@@ -1382,6 +1384,27 @@ class SaldosDashboardView(DBAndSlugMixin, TemplateView):
         produtos_sel = [str(x) for x in raw_list if x]
         data_inicio = (self.request.GET.get('data_inicio') or '').strip()
         data_fim = (self.request.GET.get('data_fim') or '').strip()
+        
+        filtro_empresa = Empresas.objects.using(banco).filter(empr_codi=empresa).first()
+        # Filtra filial considerando também a empresa para garantir consistência
+        filtro_filial = Filiais.objects.using(banco).filter(empr_empr=filial).first()
+        if filtro_filial and str(filtro_filial.empr_codi) != str(empresa):
+             # Se a filial não pertencer à empresa selecionada, tenta pegar a primeira filial da empresa
+             filtro_filial = Filiais.objects.using(banco).filter(empr_codi=empresa).first()
+             if filtro_filial:
+                 filial = filtro_filial.empr_empr
+
+        # Carregar listas para os selects de filtro
+        try:
+            ctx['empresas'] = Empresas.objects.using(banco).all().order_by('empr_nome')
+            
+            filiais_qs = Filiais.objects.using(banco).all()
+            if empresa:
+                filiais_qs = filiais_qs.filter(empr_codi=empresa)
+            ctx['filiais'] = filiais_qs.order_by('empr_nome')
+        except Exception:
+            ctx['empresas'] = []
+            ctx['filiais'] = []    
 
         # Defaults de período: últimos 30 dias
         from datetime import date, timedelta
@@ -1473,7 +1496,12 @@ class SaldosDashboardView(DBAndSlugMixin, TemplateView):
         # Saldos atuais por produto
         saldos_list = []
         try:
-            saldos_qs = SaldoProduto.objects.using(banco).filter(empresa=str(empresa), filial=str(filial))
+            if filtro_empresa:
+                saldos_qs = SaldoProduto.objects.using(banco).filter(empresa=str(empresa))
+                if filtro_filial:
+                    saldos_qs = saldos_qs.filter(filial=str(filial))
+            else:
+                saldos_qs = SaldoProduto.objects.using(banco).filter(empresa__in=[str(empresa), '0'], filial=str(filial))
             if produtos_sel:
                 saldos_qs = saldos_qs.filter(produto_codigo__in=produtos_sel)
             saldos_qs = saldos_qs.order_by('produto_codigo')[:300]
@@ -1494,18 +1522,33 @@ class SaldosDashboardView(DBAndSlugMixin, TemplateView):
         saldo_prod_sel = None
         if produtos_sel:
             try:
-                sp = SaldoProduto.objects.using(banco).filter(produto_codigo__in=produtos_sel, empresa=str(empresa), filial=str(filial)).first()
+                if filtro_empresa:
+                    sp = SaldoProduto.objects.using(banco).filter(produto_codigo__in=produtos_sel, empresa=str(empresa), filial=str(filial)).first()
+                else:
+                    sp = SaldoProduto.objects.using(banco).filter(produto_codigo__in=produtos_sel, empresa=str(empresa), filial=str(filial)).first()
                 if sp:
                     saldo_prod_sel = getattr(sp, 'saldo_estoque', None)
             except Exception:
                 saldo_prod_sel = None
 
+        try:
+            empresa_val = int(empresa)
+        except (ValueError, TypeError):
+            empresa_val = empresa
+            
+        try:
+            filial_val = int(filial)
+        except (ValueError, TypeError):
+            filial_val = filial
+
         filtros_ctx = {
-            'empresa': empresa,
-            'filial': filial,
+            'empresa': empresa_val,
+            'filial': filial_val,
             'data_inicial': data_inicio,
             'data_final': data_fim,
             'produto': ','.join(produtos_sel) if produtos_sel else '',
+            'filtro_empresa': filtro_empresa,
+            'filtro_filial': filtro_filial,
         }
 
         ctx.update({
