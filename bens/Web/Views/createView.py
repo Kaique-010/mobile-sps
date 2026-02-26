@@ -21,6 +21,7 @@ class BensCreateView(CreateView):
         return kwargs
 
     def form_valid(self, form):
+        print(f"DEBUG: form_valid called with data: {form.cleaned_data}")
         banco = get_licenca_db_config(self.request) or 'default'
         dados = form.cleaned_data
         
@@ -33,25 +34,50 @@ class BensCreateView(CreateView):
             dados['bens_fili'] = int(filial)
             
         # Converter objetos relacionados para IDs se o Service esperar IDs
-        # O Service BensptrService.criar_bem espera 'bens_grup' como ID (pois Bensptr.bens_grup é IntegerField)
-        # O Form usa ModelChoiceField, então 'bens_grup' no cleaned_data é um objeto Grupobens.
-        if dados.get('bens_grup'):
-            dados['bens_grup'] = dados['bens_grup'].grup_codi
-            
-        if dados.get('bens_moti'):
-            dados['bens_moti'] = dados['bens_moti'].moti_codi
-            
-        if dados.get('bens_forn'):
-            # bens_forn é IntegerField? Vamos assumir que sim, Entidades.enti_clie (que é PK)
-            # Mas Entidades PK é BigIntegerField.
-            dados['bens_forn'] = dados['bens_forn'].enti_clie
+        # O Form já limpa para IDs nos métodos clean_*, mas se passar pelo form.save, ele pode tentar salvar o objeto
+        # BensptrForm é ModelForm.
+        # Mas aqui chamamos BensptrService.criar_bem.
+        
+        # Como adicionamos clean_bens_grup no form, o cleaned_data['bens_grup'] já deve ser o ID (int) ou None.
+        # Verificamos para garantir.
+        
+        print(f"DEBUG: dados['bens_grup'] type: {type(dados.get('bens_grup'))} value: {dados.get('bens_grup')}")
+        
+        # Se clean_* funcionou, não precisamos acessar .grup_codi aqui, pois já é int.
+        # Se for objeto, acessamos.
+        
+        if hasattr(dados.get('bens_grup'), 'grup_codi'):
+             dados['bens_grup'] = dados['bens_grup'].grup_codi
+             
+        if hasattr(dados.get('bens_moti'), 'moti_codi'):
+             dados['bens_moti'] = dados['bens_moti'].moti_codi
 
-        self.object = BensptrService.criar_bem(
-            dados=dados,
-            using=banco,
-        )
+        if hasattr(dados.get('bens_forn'), 'enti_clie'):
+             dados['bens_forn'] = dados['bens_forn'].enti_clie
+        elif hasattr(dados.get('bens_forn'), 'enti_codi'): # Se for Entidades, pode ser enti_codi ou enti_clie a chave?
+             # Entidades model: enti_codi (char) não é PK?
+             # Vamos checar Entidades model se necessário. Mas o form clean usa enti_clie? Não, usa enti_codi no clean anterior que fiz.
+             # Vou corrigir form clean para usar enti_codi se for o que salva no banco.
+             pass
+
+        try:
+            self.object = BensptrService.criar_bem(
+                dados=dados,
+                using=banco,
+            )
+            print(f"DEBUG: Bem created successfully: {self.object}")
+        except Exception as e:
+            print(f"DEBUG: Error creating bem: {e}")
+            import traceback
+            traceback.print_exc()
+            form.add_error(None, f"Erro ao salvar: {e}")
+            return self.form_invalid(form)
 
         slug = self.kwargs.get('slug')
         # Redirecionar para lista
         # Precisamos definir o namespace 'bens_web' no urls.py
         return redirect('bens_web:bens_list', slug=slug)
+
+    def form_invalid(self, form):
+        print(f"DEBUG: form_invalid called with errors: {form.errors}")
+        return super().form_invalid(form)

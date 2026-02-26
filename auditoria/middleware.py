@@ -51,6 +51,8 @@ class AuditoriaMiddleware:
             # Mapear nomes de apps para os nomes reais dos apps Django
             app_mapping = {
                 'Assistente_Spart': 'Assistente_Spart',  
+                'assistente_spart': 'Assistente_Spart',
+                'assistente': 'Assistente_Spart',
                 'auditoria': 'auditoria',
                 'boletos': 'Boletos',
                 'caixadiario': 'CaixaDiario',
@@ -100,6 +102,8 @@ class AuditoriaMiddleware:
                 'permissoes_modulos': 'permissoes_modulos',
                 'pisos': 'Pisos',
                 'Assistente_Spart': 'Assistente_Spart',
+                'assistente_spart': 'Assistente_Spart',
+                'assistente': 'Assistente_Spart',
                 'notas-fiscais': 'Nota',
 
             }
@@ -239,6 +243,8 @@ class AuditoriaMiddleware:
                         'notasfiscais': ['notas_fiscais', 'notas-fiscais', 'notas fiscais'],
                         'notas_fiscais': ['notasfiscais', 'notas-fiscais', 'notas fiscais'],
                         'notas-fiscais': ['notasfiscais', 'notas_fiscais', 'notas fiscais'],
+                         'assistente': ['assistente_spart'],
+                         'assistente_spart': ['assistente'],
                     }
                     candidates = {app_slug}
                     for alt in aliases.get(app_slug, []):

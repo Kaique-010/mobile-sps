@@ -18,6 +18,12 @@ from collections import Counter
 import json
 import re
 
+import time
+import logging
+from collections import defaultdict
+
+logger = logging.getLogger(__name__)
+
 llm = ChatOpenAI(model=CHAT_MODEL, temperature=0)
 
 _Schema_Cache = {}
@@ -51,35 +57,103 @@ def relacionamentos_heuristicos(schema: dict) -> list:
     """
     Analisa o esquema do banco de dados e identifica relacionamentos heurísticos.
     Baseia-se em nomes de colunas similares entre tabelas.
+    OTIMIZADO: Usa dicionário reverso e ignora colunas genéricas.
     """
-    rels = []
+    # Colunas genéricas que não devem gerar relacionamentos automáticos
+    IGNORED_COLS = {
+        'id', 'uuid', 'created_at', 'updated_at', 'deleted_at', 
+        'status', 'ativo', 'obs', 'observacao', 'nome', 'descricao',
+        'data_cadastro', 'data_alteracao'
+    }
+    
+    # Mapa: nome_normalizado -> lista de (tabela, coluna_original)
+    col_map = defaultdict(list)
+    
     tabelas = list(schema.keys())
-
-    for t1 in tabelas:
-        for t2 in tabelas:
-            if t1 == t2:
+    for t in tabelas:
+        for col_info in schema[t]:
+            c = col_info['coluna']
+            
+            if c.lower() in IGNORED_COLS:
                 continue
+                
+            # Normaliza removendo sufixo _id
+            norm = re.sub(r"_id$", "", c.lower())
+            
+            # Ignora termos muito curtos após normalização
+            if len(norm) < 3:
+                continue
+                
+            col_map[norm].append((t, c))
+            
+    rels = set()
+    
+    for norm, ocorrencias in col_map.items():
+        if len(ocorrencias) < 2:
+            continue
+            
+        # Gera pares entre tabelas diferentes
+        for i in range(len(ocorrencias)):
+            for j in range(i + 1, len(ocorrencias)):
+                t1, c1 = ocorrencias[i]
+                t2, c2 = ocorrencias[j]
+                
+                if t1 == t2:
+                    continue
+                
+                # Garante ordem alfabética para consistência (A <-> B)
+                if t1 < t2:
+                    rels.add((t1, c1, t2, c2))
+                else:
+                    rels.add((t2, c2, t1, c1))
 
-            colunas1 = [c['coluna'] for c in schema[t1]]
-            colunas2 = [c['coluna'] for c in schema[t2]]
-
-            # Heurística: nomes de colunas iguais ou com sufixos semelhantes
-            for c1 in colunas1:
-                for c2 in colunas2:
-                    if c1 == c2 and len(c1) > 3:
-                        rels.append((t1, c1, t2, c2))
-                    elif re.sub(r"_id$", "", c1) == re.sub(r"_id$", "", c2):
-                        rels.append((t1, c1, t2, c2))
-
-    # Remove duplicados
-    rels_unicos = list({(a, b, c, d) for a, b, c, d in rels})
-    return rels_unicos
+    return list(rels)
 
 def gerar_sql(pergunta: str, schema: dict, relacionamentos: list) -> str:
     """Gera SQL a partir de pergunta e contexto de schema e relacionamentos."""
-    schema_txt = json.dumps(schema, ensure_ascii=False, indent=2)
-    rel_txt = "\n".join([f"{a}.{b} ↔ {c}.{d}" for a, b, c, d in relacionamentos])
-
+    # Reduz o schema apenas para tabelas relevantes (Heurística simples baseada em keywords)
+    # Se o schema for muito grande, o LLM estoura o limite de tokens.
+    
+    tabelas_filtradas = {}
+    keywords = set(re.findall(r"\w{4,}", pergunta.lower()))
+    
+    # 1. Tenta encontrar tabelas que contenham keywords da pergunta
+    for tabela, cols in schema.items():
+        if any(k in tabela.lower() for k in keywords):
+            tabelas_filtradas[tabela] = cols
+            continue
+        # 2. Ou que tenham colunas com keywords
+        for col in cols:
+            if any(k in col['coluna'].lower() for k in keywords):
+                tabelas_filtradas[tabela] = cols
+                break
+    
+    # Se não encontrou nada ou se a pergunta for muito genérica, usa todo o schema (com risco)
+    # Mas se o schema original for gigante (>50 tabelas), pega só as top 20 mais "conectadas" ou apenas as filtradas
+    if not tabelas_filtradas and len(schema) < 50:
+        tabelas_filtradas = schema
+    elif not tabelas_filtradas:
+        # Fallback: pega as primeiras 20 tabelas (melhor que estourar erro)
+        tabelas_filtradas = dict(list(schema.items())[:20])
+        
+    schema_txt = json.dumps(tabelas_filtradas, ensure_ascii=False, indent=2)
+    
+    # Filtra relacionamentos apenas das tabelas selecionadas
+    rels_filtrados = [
+        r for r in relacionamentos 
+        if r[0] in tabelas_filtradas and r[2] in tabelas_filtradas
+    ]
+    rel_txt = "\n".join([f"{a}.{b} ↔ {c}.{d}" for a, b, c, d in rels_filtrados])
+    
+    # PROTEÇÃO CONTRA ESTOURO DE CONTEXTO (HARD LIMIT)
+    # gpt-4o tem limite de 128k tokens, mas o output é limitado. 
+    # Manter input < 100k chars é seguro.
+    if len(schema_txt) + len(rel_txt) > 100000:
+        logger.warning(f"⚠️ Contexto muito grande ({len(schema_txt) + len(rel_txt)} chars). Truncando schema...")
+        # Pega apenas as primeiras 5 tabelas se estourar
+        tabelas_filtradas = dict(list(tabelas_filtradas.items())[:5])
+        schema_txt = json.dumps(tabelas_filtradas, ensure_ascii=False, indent=2)
+        
     prompt = f"""
 Você é um gerador de SQL para PostgreSQL.
 Regras:
@@ -99,8 +173,12 @@ Relacionamentos conhecidos:
 Pergunta:
 {pergunta}
 """
-    resposta = llm.invoke(prompt)
-    return resposta.content.strip()
+    try:
+        resposta = llm.invoke(prompt)
+        return resposta.content.strip()
+    except Exception as e:
+        logger.error(f"❌ Erro ao invocar LLM para gerar SQL: {e}")
+        return "" # Retorna vazio para ser tratado pelo chamador
 
 
 def gerar_insights(colunas, linhas):
@@ -156,6 +234,8 @@ def consulta_inteligente_prime(pergunta: str, slug: str = "default") -> str:
     Executa uma consulta inteligente no banco PostgreSQL.
     Analisa o schema (com cache), infere relacionamentos e retorna somente os insights finais.
     """
+    inicio = time.time()
+    
     try:
         # Validação de entrada
         if not pergunta or not pergunta.strip():
@@ -169,10 +249,12 @@ def consulta_inteligente_prime(pergunta: str, slug: str = "default") -> str:
             return f"❌ Banco de dados '{slug}' não encontrado."
         
         schema = ler_schema_db(slug)
+        
         if not schema:
             return "❌ Não foi possível obter o schema do banco de dados."
             
         rels = relacionamentos_heuristicos(schema)
+
         sql = gerar_sql(pergunta, schema, rels)
 
         if not isinstance(sql, str) or not sql.strip():
@@ -186,7 +268,12 @@ def consulta_inteligente_prime(pergunta: str, slug: str = "default") -> str:
             try:
                 cur.execute(sql)
                 colunas = [desc[0] for desc in cur.description] if cur.description else []
-                linhas = cur.fetchall()
+                
+                # Proteção contra OOM/Hang: Limita a 5000 linhas
+                linhas = cur.fetchmany(5000)
+                if len(linhas) >= 5000:
+                    logger.warning(f"⚠️ Resultado truncado em 5000 linhas (SQL: {sql[:100]}...)")
+                    
             except Exception as db_error:
                 return f"❌ Erro ao executar consulta SQL: {str(db_error)}"
 
@@ -211,8 +298,6 @@ def consulta_inteligente_prime(pergunta: str, slug: str = "default") -> str:
         import traceback
         error_msg = f"❌ Erro interno ao executar consulta: {str(e)}"
         try:
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(f"[CONSULTA_INTELIGENTE] {error_msg}\n{traceback.format_exc()}")
         except:
             pass

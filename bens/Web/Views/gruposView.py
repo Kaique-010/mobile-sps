@@ -38,6 +38,7 @@ class GrupobensCreateView(CreateView):
     template_name = 'Bens/Grupos/grupo_form.html'
 
     def form_valid(self, form):
+        print(f"DEBUG: form_valid called with data: {form.cleaned_data}")
         banco = get_licenca_db_config(self.request) or 'default'
         dados = form.cleaned_data
         
@@ -48,13 +49,25 @@ class GrupobensCreateView(CreateView):
         if empresa:
             dados['grup_empr'] = int(empresa)
             
-        GrupobensService.criar_grupo(
-            dados=dados,
-            using=banco,
-        )
+        try:
+            grupo = GrupobensService.criar_grupo(
+                dados=dados,
+                using=banco,
+            )
+            print(f"DEBUG: Grupo created successfully: {grupo}")
+        except Exception as e:
+            print(f"DEBUG: Error creating grupo: {e}")
+            import traceback
+            traceback.print_exc()
+            form.add_error(None, f"Erro ao salvar: {e}")
+            return self.form_invalid(form)
 
         slug = self.kwargs.get('slug')
         return redirect('bens_web:grupo_list', slug=slug)
+
+    def form_invalid(self, form):
+        print(f"DEBUG: form_invalid called with errors: {form.errors}")
+        return super().form_invalid(form)
 
 class GrupobensUpdateView(UpdateView):
     model = Grupobens

@@ -63,7 +63,9 @@ class SpartView(APIView):
         empresa_id = request.META.get("HTTP_X_EMPRESA", 1)
         filial_id = request.META.get("HTTP_X_FILIAL", 1)
 
-        config = RunnableConfig(configurable={
+        config = RunnableConfig(
+            recursion_limit=50,
+            configurable={
             "thread_id": str(request.user.usua_codi),
             "empresa_id": str(empresa_id),
             "filial_id": str(filial_id),
@@ -80,7 +82,7 @@ class SpartView(APIView):
         inicio_pre_roteador = time.time()
         rota = pre_rotear(mensagem_usuario)
         tempo_pre_roteador = round(time.time() - inicio_pre_roteador, 3)
-        logger.info(f"🎯 Pré-roteador: {rota['tipo']} (confiança: {rota['confianca']}) em {tempo_pre_roteador}s")
+        # logger.info(f"🎯 Pré-roteador: {rota['tipo']} (confiança: {rota['confianca']}) em {tempo_pre_roteador}s")
         metricas.registrar("pre_roteador", tempo_pre_roteador)
 
         # ======== CONTEXTO FAISS (CONDICIONAL + CACHE) ========
@@ -88,15 +90,16 @@ class SpartView(APIView):
         if rota["precisa_faiss"]:
             inicio_faiss = time.time()
             try:
-                logger.info("🔍 Buscando contexto FAISS (com cache)...")
+                # logger.info("🔍 Buscando contexto FAISS (com cache)...")
                 contexto_faiss = faiss_cached(mensagem_usuario)
                 tempo_faiss = round(time.time() - inicio_faiss, 2)
-                logger.info(f"✅ FAISS em {tempo_faiss}s")
+                # logger.info(f"✅ FAISS em {tempo_faiss}s")
                 metricas.registrar("faiss", tempo_faiss)
             except Exception as e:
                 logger.warning(f"[FAISS] Erro: {e}")
         else:
-            logger.info("⚡ FAISS ignorado (consulta direta detectada)")
+            # logger.info("⚡ FAISS ignorado (consulta direta detectada)")
+            pass
 
         # ======== PROMPT OTIMIZADO ========
         # Estratégia: Deixar executar_intencao fazer o trabalho pesado
@@ -128,7 +131,7 @@ Ela já faz o roteamento inteligente para a tool correta.""")
         inicio_agente = time.time()
 
         try:
-            logger.info(f"🤖 Executando agente (tipo: {rota['tipo']})...")
+            # logger.info(f"🤖 Executando agente (tipo: {rota['tipo']})...")
             
             # Configuração robusta
             resultado = agenteReact.invoke(
@@ -137,7 +140,7 @@ Ela já faz o roteamento inteligente para a tool correta.""")
             )
             
             tempo_agente = round(time.time() - inicio_agente, 2)
-            logger.info(f"✅ Agente concluído em {tempo_agente}s")
+            # logger.info(f"✅ Agente concluído em {tempo_agente}s")
             metricas.registrar("agente", tempo_agente)
             
             # Extração robusta de mensagens
@@ -180,7 +183,7 @@ Ela já faz o roteamento inteligente para a tool correta.""")
                         if conteudo:
                             resposta_texto = str(conteudo)
                 
-                logger.info(f"🔧 Tools executadas: {tools_usadas or ['nenhuma']}")
+                # logger.info(f"🔧 Tools executadas: {tools_usadas or ['nenhuma']}")
                 
                 # Validação final
                 if not resposta_texto or resposta_texto.strip() == "":
@@ -239,7 +242,7 @@ Ela já faz o roteamento inteligente para a tool correta.""")
         thread_tts.join(timeout=3.0)
         
         tempo_total = round(time.time() - inicio_total, 2)
-        logger.info(f"✅ Tempo total: {tempo_total}s")
+        # logger.info(f"✅ Tempo total: {tempo_total}s")
         metricas.registrar("total", tempo_total)
 
         return Response({
@@ -269,7 +272,9 @@ Ela já faz o roteamento inteligente para a tool correta.""")
             empresa_id = request.META.get("HTTP_X_EMPRESA", 1)
             filial_id = request.META.get("HTTP_X_FILIAL", 1)
             
-            config = RunnableConfig(configurable={
+            config = RunnableConfig(
+                recursion_limit=50,
+                configurable={
                 "thread_id": str(request.user.usua_codi),
                 "empresa_id": str(empresa_id),
                 "filial_id": str(filial_id),
@@ -387,12 +392,14 @@ Ela já faz o roteamento inteligente para a tool correta.""")
 
     def _processar_entrada(self, request, client):
         """Processa texto ou áudio (com Whisper)"""
+        from .agenteReact import metricas  # Importação local
+
         if "mensagem" in request.data:
             return request.data.get("mensagem")
         
         elif "audio" in request.FILES:
             inicio = time.time()
-            logger.info("🎤 Transcrevendo áudio...")
+            # logger.info("🎤 Transcrevendo áudio...")
             
             audio_file = request.FILES["audio"]
             with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
@@ -408,7 +415,7 @@ Ela já faz o roteamento inteligente para a tool correta.""")
                 )
             
             tempo = round(time.time() - inicio, 2)
-            logger.info(f"✅ Whisper em {tempo}s: {transcript.text[:50]}...")
+            # logger.info(f"✅ Whisper em {tempo}s: {transcript.text[:50]}...")
             metricas.registrar("whisper", tempo)
             return transcript.text
         
@@ -421,6 +428,8 @@ Ela já faz o roteamento inteligente para a tool correta.""")
         - Speed 1.15x (15% mais rápido)
         - Timeout de 5s
         """
+        from .agenteReact import metricas  # Importação local para evitar ciclo
+        
         if not texto:
             return ""
         
@@ -430,7 +439,7 @@ Ela já faz o roteamento inteligente para a tool correta.""")
         
         inicio = time.time()
         try:
-            logger.info("🔊 Gerando TTS...")
+            # logger.info("🔊 Gerando TTS...")
             response = client.audio.speech.create(
                 model="gpt-4o-mini-tts",
                 voice="alloy",
@@ -440,7 +449,7 @@ Ela já faz o roteamento inteligente para a tool correta.""")
             
             audio_base64 = base64.b64encode(response.read()).decode("utf-8")
             tempo = round(time.time() - inicio, 2)
-            logger.info(f"✅ TTS em {tempo}s")
+            # logger.info(f"✅ TTS em {tempo}s")
             metricas.registrar("tts", tempo)
             return audio_base64
             

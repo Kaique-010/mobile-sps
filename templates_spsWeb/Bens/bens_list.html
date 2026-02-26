@@ -11,6 +11,9 @@
             <a href="{% url 'bens_web:bens_criar' slug=view.kwargs.slug %}" class="btn btn-outline-primary">
                 <i class="bi bi-plus-lg"></i> Novo Bem
             </a>
+            <a href="{% url 'bens_web:relatorio_depreciacao' slug=view.kwargs.slug %}" class="btn btn-outline-secondary ms-2">
+                <i class="bi bi-calculator"></i> Relatório
+            </a>
         </div>
         <div class="container mt-3">
             <div class="row g-3 align-items-stretch">

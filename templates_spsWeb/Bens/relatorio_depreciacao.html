@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Header Centralizado -->
+    <div class="text-center mb-4">
+        <h2><i class="bi bi-calculator"></i> Relatório de Depreciação</h2>
+        <div class="text-muted">
+            Data de Referência: <strong>{{ data_referencia|date:"d/m/Y" }}</strong>
+        </div>
+    </div>
+
+    <!-- Filtro de Data -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label for="data_referencia" class="form-label">Data de Referência</label>
+                    <input type="date" class="form-control" id="data_referencia" name="data_referencia" 
+                           value="{{ data_referencia }}">
+                </div>
+                
+                <div class="col-md-4">
+                    <label for="bens_filtro" class="form-label">Bem (Cód/Desc)</label>
+                    <input type="text" class="form-control" id="bens_filtro" name="bens_filtro" 
+                           value="{{ bens_filtro }}" placeholder="Pesquisar por código ou descrição...">
+                </div>
+
+                <div class="col-md-3">
+                    <label for="grupo_filtro" class="form-label">Grupo</label>
+                    <select class="form-select" id="grupo_filtro" name="grupo_filtro">
+                        <option value="">Todos os Grupos</option>
+                        {% for grupo in grupos %}
+                        <option value="{{ grupo.grup_codi }}" {% if grupo.grup_codi == grupo_filtro %}selected{% endif %}>
+                            {{ grupo.grup_nome }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-filter"></i> Filtrar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lista de Cards -->
+    <div class="row g-3">
+        {% for bem in bens %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-header  d-flex justify-content-between align-items-center">
+                    <span class="badge bg-secondary">{{ bem.bens_codi }}</span>
+                    <small class="text-muted">Grupo: {{ bem.bens_grup|default:"-" }}</small>
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title text-truncate mb-3" title="{{ bem.bens_desc }}">
+                        {{ bem.bens_desc }}
+                    </h5>
+                    
+                    <div class="row g-2 small">
+                        <div class="col-6">
+                            <span class="d-block text-muted">Aquisição</span>
+                            <strong>{{ bem.bens_data_aqui|date:"d/m/Y" }}</strong>
+                        </div>
+                        <div class="col-6 text-end">
+                            <span class="d-block text-muted">Valor Original</span>
+                            <strong>R$ {{ bem.bens_valo_aqui|floatformat:2 }}</strong>
+                        </div>
+                        
+                        <div class="col-6">
+                            <span class="d-block text-muted">Início Depr.</span>
+                            <strong>{{ bem.bens_inic_depr|date:"d/m/Y"|default:"-" }}</strong>
+                        </div>
+                        <div class="col-6 text-end">
+                            <span class="d-block text-muted">Taxa Anual</span>
+                            <strong>{{ bem.bens_depr_ano|default:"0" }}%</strong>
+                        </div>
+                    </div>
+
+                    <hr class="my-3">
+
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted">Depr. Acumulada:</span>
+                        <span class="text-danger fw-bold">R$ {{ bem.depreciacao_acumulada|floatformat:2 }}</span>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center p-2 rounded">
+                        <span class="fw-bold text-success">Valor Atual:</span>
+                        <span class="fw-bold text-success fs-5">R$ {{ bem.valor_atual|floatformat:2 }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info text-center py-5">
+                <i class="bi bi-info-circle display-4 mb-3 d-block"></i>
+                Nenhum bem encontrado para os critérios selecionados.
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Totais (Resumo Fixo) -->
+    {% if bens %}
+    <div class="card mt-4 mb-5 border-primary shadow">
+        <div class="card-header  text-white text-center fw-bold">
+            <i class="bi bi-bar-chart-fill me-2"></i> Resumo Geral
+        </div>
+        <div class="card-body">
+            <div class="row text-center g-3">
+                <div class="col-md-4">
+                    <div class="p-2">
+                        <small class="text-muted d-block text-uppercase">Total Aquisição</small>
+                        <span class="h4 text-dark">R$ {{ total_aquisicao|floatformat:2 }}</span>
+                    </div>
+                </div>
+                <div class="col-md-4 border-start border-end">
+                    <div class="p-2">
+                        <small class="text-muted d-block text-uppercase">Total Depreciação</small>
+                        <span class="h4 text-danger">R$ {{ total_depreciacao|floatformat:2 }}</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-2">
+                        <small class="text-muted d-block text-uppercase">Total Valor Atual</small>
+                        <span class="h4 text-success">R$ {{ total_atual|floatformat:2 }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -34,6 +34,9 @@ class Bensptr(models.Model):
         managed = False
         db_table = 'bensptr'
         unique_together = (('bens_empr', 'bens_fili', 'bens_codi'),)
+    
+    def __str__(self):
+        return self.bens_desc
 
 class Grupobens(models.Model):
     grup_empr = models.IntegerField(primary_key=True)
@@ -48,6 +51,9 @@ class Grupobens(models.Model):
         managed = False
         db_table = 'grupobens'
         unique_together = (('grup_empr', 'grup_codi'),)
+    
+    def __str__(self):
+        return self.grup_nome
 
 
 class Motivosptr(models.Model):
@@ -57,3 +63,6 @@ class Motivosptr(models.Model):
     class Meta:
         managed = False
         db_table = 'motivosptr'
+
+    def __str__(self):
+        return self.moti_desc

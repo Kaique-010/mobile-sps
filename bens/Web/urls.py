@@ -11,10 +11,14 @@ from .Views.motivosView import (
     MotivosptrListView, MotivosptrCreateView, 
     MotivosptrUpdateView, MotivosptrDeleteView
 )
+from .Views.relatorioView import RelatorioDepreciacaoView
 
 app_name = 'bens_web'
 
 urlpatterns = [
+    # Relatórios
+    path('relatorios/depreciacao/', RelatorioDepreciacaoView.as_view(), name='relatorio_depreciacao'),
+
     # Rotas de Bens
     path('', BensptrListView.as_view(), name='bens_list'),
     path('novo/', BensCreateView.as_view(), name='bens_criar'),

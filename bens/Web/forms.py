@@ -69,21 +69,32 @@ class BensptrForm(forms.ModelForm):
         # Nota: Grupobens e Motivosptr podem precisar de filtro por empresa se a tabela tiver grup_empr
         if self.empresa:
              self.fields['bens_grup'].queryset = Grupobens.objects.filter(grup_empr=self.empresa).order_by('grup_nome')
-             # Motivosptr não tem empresa no model dump? Tem moti_codi e moti_desc. 
-             # Mas o service MotivosService.criar_motivo usa 'moti_empr'. 
-             # Vamos checar model dump de Motivosptr de novo.
-             # class Motivosptr(models.Model): moti_codi (pk), moti_desc. 
-             # Parece global ou o dump estava incompleto? 
-             # O service usa moti_empr, moti_fili para gerar sequencial. 
-             # Mas Motivosptr model só mostrou moti_codi e moti_desc.
-             # Assumindo global ou filtragem manual se tiver campos ocultos.
-             self.fields['bens_moti'].queryset = Motivosptr.objects.all().order_by('moti_desc')
              
              self.fields['bens_forn'].queryset = Entidades.objects.filter(enti_empr=self.empresa).order_by('enti_nome')
         else:
-             self.fields['bens_grup'].queryset = Grupobens.objects.all().order_by('grup_nome')
-             self.fields['bens_moti'].queryset = Motivosptr.objects.all().order_by('moti_desc')
-             self.fields['bens_forn'].queryset = Entidades.objects.all().order_by('enti_nome')
+             self.fields['bens_grup'].queryset = Grupobens.objects.none()
+             self.fields['bens_moti'].queryset = Motivosptr.objects.none()
+             self.fields['bens_forn'].queryset = Entidades.objects.none()
+             
+        self.fields['bens_codi'].required = False
+             
+    def clean_bens_grup(self):
+        grup = self.cleaned_data.get('bens_grup')
+        if grup:
+            return grup.grup_codi
+        return None
+        
+    def clean_bens_moti(self):
+        moti = self.cleaned_data.get('bens_moti')
+        if moti:
+            return moti.moti_codi
+        return None
+        
+    def clean_bens_forn(self):
+        forn = self.cleaned_data.get('bens_forn')
+        if forn:
+            return forn.enti_clie
+        return None
 
 
 class GrupobensForm(forms.ModelForm):
@@ -103,6 +114,10 @@ class GrupobensForm(forms.ModelForm):
             'grup_perc_depr_ano': 'Taxa Anual',
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['grup_codi'].required = False
+
 
 class MotivosptrForm(forms.ModelForm):
     class Meta:
@@ -116,3 +131,7 @@ class MotivosptrForm(forms.ModelForm):
             'moti_codi': 'Código',
             'moti_desc': 'Descrição',
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['moti_codi'].required = False

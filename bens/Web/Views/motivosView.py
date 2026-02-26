@@ -13,28 +13,11 @@ class MotivosptrListView(ListView):
 
     def get_queryset(self):
         banco = get_licenca_db_config(self.request) or 'default'
-        empresa = self.request.session.get('empresa_id')
-        filial = self.request.session.get('filial_id')
+        
         
         qs = Motivosptr.objects.using(banco).all()
         
-        # Motivosptr não tem campos de empresa/filial na model definition?
-        # class Motivosptr(models.Model):
-        #     moti_codi = models.IntegerField(primary_key=True)
-        #     moti_desc = models.CharField(max_length=60, blank=True, null=True)
-        #     class Meta: ...
-        
-        # Porém, no Service 'MotivosService.criar_motivo', ele usa 'moti_empr' e 'moti_fili' para gerar sequencial.
-        # Isso sugere que o model deve ter esses campos ou o dump estava incompleto.
-        # Se o model não tiver, o create(**dados) falharia se passasse moti_empr.
-        # Mas no create, ele passa **dados.
-        
-        # Vamos assumir que Motivosptr é global ou a filtragem deve ser feita de outra forma se não tiver empresa.
-        # Se for global, não filtramos. Se tiver empresa, filtramos.
-        # Vamos verificar se conseguimos filtrar, senão retornamos all().
-        
-        # Na dúvida, vamos retornar all() por enquanto, pois o model definition mostrado anteriormente não tinha moti_empr.
-        # Se tiver erro, corrigiremos.
+
         
         nome = self.request.GET.get('moti_desc')
         if nome:
@@ -51,14 +34,7 @@ class MotivosptrCreateView(CreateView):
         banco = get_licenca_db_config(self.request) or 'default'
         dados = form.cleaned_data
         
-        empresa = self.request.session.get('empresa_id')
-        filial = self.request.session.get('filial_id')
-        
-        # O Service espera moti_empr/moti_fili para gerar sequencial
-        if empresa:
-            dados['moti_empr'] = int(empresa)
-        if filial:
-            dados['moti_fili'] = int(filial)
+
             
         MotivosService.criar_motivo(
             dados=dados,
