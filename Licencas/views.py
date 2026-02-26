@@ -9,7 +9,7 @@ from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from Licencas.models import Empresas, Filiais, Licencas, Usuarios
 from licencas_web.models import LicencaWeb
 from Licencas.crypto import encrypt_bytes, encrypt_str
@@ -189,6 +189,9 @@ class LoginView(APIView):
         
 
 class TokenRefreshCustomView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
     def post(self, request, *args, **kwargs):
         try:
             raw_refresh = request.data.get('refresh')

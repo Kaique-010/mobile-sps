@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">
+                        {% if form.instance.pk %}
+                        <i class="bi bi-pencil-square"></i> Editar Motivo
+                        {% else %}
+                        <i class="bi bi-plus-circle"></i> Novo Motivo
+                        {% endif %}
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form method="post" class="needs-validation" novalidate>
+                        {% csrf_token %}
+
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                        {% endif %}
+
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label for="{{ form.moti_codi.id_for_label }}" class="form-label">{{
+                                    form.moti_codi.label }}</label>
+                                {{ form.moti_codi }}
+                                <div class="invalid-feedback">{{ form.moti_codi.errors }}</div>
+                            </div>
+                            <div class="col-md-9">
+                                <label for="{{ form.moti_desc.id_for_label }}" class="form-label">{{
+                                    form.moti_desc.label }}</label>
+                                {{ form.moti_desc }}
+                                <div class="invalid-feedback">{{ form.moti_desc.errors }}</div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end mt-4">
+                            <a href="{% url 'bens_web:motivo_list' slug=view.kwargs.slug %}"
+                                class="btn btn-secondary me-2">Cancelar</a>
+                            <button type="submit" class="btn btn-success">Salvar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

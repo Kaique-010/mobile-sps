@@ -117,6 +117,8 @@
                             {% include 'parciais/navos.html' %}
 
                             {% include 'parciais/navagricola.html' %}
+
+                            {% include 'parciais/navpatrimonio.html' %}
                             {% include 'parciais/navnotificacoes.html' %}
                             {% include 'parciais/navcentraldeajuda.html' %}
 
@@ -217,6 +219,8 @@
                 'compras': ['compras', 'compra', 'compras dashboard', 'compras_dashboard'],
                 // Aliases para Finanças
                 'financas': ['financas', 'financeiro', 'financeiro dashboard', 'financeiro_dashboard'],
+                // Aliases para Patrimônio
+                'patrimonio': ['patrimonio', 'patrimônio', 'bens', 'Bens', 'ativo imobilizado', 'ativo_imobilizado'],
                 'centrosdecustos': ['centrosdecustos', 'centrodecustos', 'centros de custos', 'centro de custos', 'cc'],
                 // Aliases para Entidades
                 'entidades': ['entidades', 'entidade', 'cadastro entidades'],
@@ -257,7 +261,7 @@
             // Ocultar itens que requerem módulo específico (menus colapsáveis)
             document.querySelectorAll('[data-modulo-requerido]')?.forEach(el => {
                 const req = el.getAttribute('data-modulo-requerido');
-                if (!tokenMatchStrict(req)) {
+                if (!tokenMatch(req)) {
                     const li = el.closest('li.nav-item') || el;
                     if (li) li.style.display = 'none';
                     const target = el.getAttribute('data-bs-target');

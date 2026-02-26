@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
+<div class="container page-container">
+    <div class="page-header-custom">
+        <div class="container align-items-center">
+            <h2 class="page-title">
+                <i class="bi bi-collection"></i> Grupos de Bens
+            </h2>
+            <a href="{% url 'bens_web:grupo_criar' slug=view.kwargs.slug %}" class="btn btn-outline-primary">
+                <i class="bi bi-plus-lg"></i> Novo Grupo
+            </a>
+        </div>
+        <div class="container mt-3">
+            <div class="row g-3 align-items-stretch">
+                <div class="card mb-4">
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="grup_codi" class="form-label">Código</label>
+                        <input type="text" class="form-control" id="grup_codi" name="grup_codi"
+                            value="{{ request.GET.grup_codi }}">
+                    </div>
+                    <div class="col-md-9">
+                        <label for="grup_nome" class="form-label">Nome</label>
+                        <input type="text" class="form-control" id="grup_nome" name="grup_nome"
+                            value="{{ request.GET.grup_nome }}">
+                    </div>
+                    <div class="col-12 text-end">
+                        <button type="submit" class="btn btn-secondary">Filtrar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Nome</th>
+                        <th>Vida Útil (anos)</th>
+                        <th>Taxa Anual (%)</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for grupo in grupos %}
+                    <tr>
+                        <td>{{ grupo.grup_codi }}</td>
+                        <td>{{ grupo.grup_nome }}</td>
+                        <td>{{ grupo.grup_vida_util|default:"-" }}</td>
+                        <td>{{ grupo.grup_perc_depr_ano|default:"-" }}</td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{% url 'bens_web:grupo_editar' slug=view.kwargs.slug grup_empr=grupo.grup_empr grup_codi=grupo.grup_codi %}"
+                                    class="btn btn-sm btn-outline-primary" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="{% url 'bens_web:grupo_excluir' slug=view.kwargs.slug grup_empr=grupo.grup_empr grup_codi=grupo.grup_codi %}"
+                                    class="btn btn-sm btn-outline-danger" title="Excluir">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4">Nenhum grupo encontrado.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        </div>
+
+        {% if is_paginated %}
+        <nav aria-label="Navegação">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link"
+                        href="?page={{ page_obj.previous_page_number }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Anterior</a>
+                </li>
+                {% endif %}
+                <li class="page-item disabled">
+                    <span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+                </li>
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link"
+                        href="?page={{ page_obj.next_page_number }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Próxima</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

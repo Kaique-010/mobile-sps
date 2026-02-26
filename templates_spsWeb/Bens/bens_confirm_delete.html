@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0"><i class="bi bi-exclamation-triangle-fill"></i> Confirmar Exclusão</h4>
+                </div>
+                <div class="card-body text-center">
+                    <p class="lead">Tem certeza que deseja excluir o bem patrimonial abaixo?</p>
+
+                    <div class="alert alert-secondary text-start">
+                        <strong>Código:</strong> {{ object.bens_codi }}<br>
+                        <strong>Descrição:</strong> {{ object.bens_desc }}<br>
+                        <strong>Valor:</strong> {{ object.bens_valo_aqui }}
+                    </div>
+
+                    <p class="text-danger small">Esta ação não poderá ser desfeita.</p>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-grid gap-2 d-md-block">
+                            <a href="{% url 'bens_web:bens_list' slug=view.kwargs.slug %}" class="btn btn-secondary">Cancelar</a>
+                            <button type="submit" class="btn btn-danger">Confirmar Exclusão</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
