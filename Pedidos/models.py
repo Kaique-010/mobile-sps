@@ -165,3 +165,28 @@ class PedidosGeral(models.Model):
         managed = False
         db_table = 'pedidos_geral'
 
+
+
+
+
+class Parcelaspedidovenda(models.Model):
+    parc_empr = models.IntegerField()
+    parc_fili = models.IntegerField()
+    parc_pedi = models.IntegerField()
+    parc_parc = models.IntegerField(primary_key=True)
+    parc_forn = models.IntegerField()
+    parc_emis = models.DateField(blank=True, null=True)
+    parc_venc = models.DateField(blank=True, null=True)
+    parc_valo = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    parc_port = models.IntegerField(blank=True, null=True)
+    parc_situ = models.IntegerField(blank=True, null=True)
+    parc_form = models.CharField(max_length=2, blank=True, null=True)
+    parc_avis = models.BooleanField(blank=True, null=True)
+    parc_vend = models.IntegerField(blank=True, null=True)
+    parc_cecu = models.IntegerField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'parcelaspedidovenda'
+        unique_together = (('parc_empr', 'parc_fili', 'parc_pedi', 'parc_parc', 'parc_forn'),)
+

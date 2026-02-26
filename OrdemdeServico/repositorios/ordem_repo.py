@@ -35,6 +35,19 @@ def sync_pecas(ordem, pecas_data, banco):
         item['peca_orde'] = ordem.orde_nume
         
         peca_id = item.get('peca_id')
+        
+        # Se não tiver ID, tenta buscar pelo código da peça na mesma ordem para atualizar
+        if not peca_id and item.get('peca_codi'):
+            existing = Ordemservicopecas.objects.using(banco).filter(
+                peca_empr=ordem.orde_empr,
+                peca_fili=ordem.orde_fili,
+                peca_orde=ordem.orde_nume,
+                peca_codi=item['peca_codi']
+            ).first()
+            if existing:
+                peca_id = existing.peca_id
+                item['peca_id'] = peca_id
+
         if peca_id:
             # Update existing
             obj, _ = Ordemservicopecas.objects.using(banco).update_or_create(
@@ -80,6 +93,19 @@ def sync_servicos(ordem, servicos_data, banco):
         item['serv_orde'] = ordem.orde_nume
         
         serv_id = item.get('serv_id')
+        
+        # Se não tiver ID, tenta buscar pelo código do serviço na mesma ordem para atualizar
+        if not serv_id and item.get('serv_codi'):
+            existing = Ordemservicoservicos.objects.using(banco).filter(
+                serv_empr=ordem.orde_empr,
+                serv_fili=ordem.orde_fili,
+                serv_orde=ordem.orde_nume,
+                serv_codi=item['serv_codi']
+            ).first()
+            if existing:
+                serv_id = existing.serv_id
+                item['serv_id'] = serv_id
+
         if serv_id:
             obj, _ = Ordemservicoservicos.objects.using(banco).update_or_create(
                 serv_id=serv_id,

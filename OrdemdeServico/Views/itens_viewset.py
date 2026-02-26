@@ -232,23 +232,60 @@ class OrdemServicoPecasViewSet(BaseMultiDBModelViewSet, ModelViewSet):
                     #         'item': item
                     #     })
 
-                    item['peca_id'] = get_next_item_number_sequence(
-                        banco, item['peca_orde'], item['peca_empr'], item['peca_fili']
-                    )
+                    # Verifica se o item já tem ID e se existe no banco para atualização
+                    existing_id = item.get('peca_id')
+                    existing_obj = None
                     
-                    serializer = OrdemServicoPecasSerializer(data=item, context={'banco': banco})
-                    serializer.is_valid(raise_exception=True)
-                    obj = serializer.save()
+                    # 1. Tenta buscar pelo ID se fornecido
+                    if existing_id:
+                        try:
+                            existing_obj = Ordemservicopecas.objects.using(banco).get(
+                                peca_id=existing_id,
+                                peca_orde=item['peca_orde'],
+                                peca_empr=item['peca_empr'],
+                                peca_fili=item['peca_fili']
+                            )
+                        except Ordemservicopecas.DoesNotExist:
+                            existing_obj = None
 
-                    obj_refetch = Ordemservicopecas.objects.using(banco).get(
-                        peca_empr=obj.peca_empr,
-                        peca_fili=obj.peca_fili,
-                        peca_orde=obj.peca_orde,
-                        peca_id=obj.peca_id,
-                    )
-                    resposta['adicionados'].append(
-                        OrdemServicoPecasSerializer(obj_refetch, context={'banco': banco}).data
-                    )
+                    # 2. Se não encontrou pelo ID (ou não tinha ID), tenta buscar pelo código da peça na mesma ordem
+                    if not existing_obj and item.get('peca_codi'):
+                        existing_obj = Ordemservicopecas.objects.using(banco).filter(
+                            peca_codi=item['peca_codi'],
+                            peca_orde=item['peca_orde'],
+                            peca_empr=item['peca_empr'],
+                            peca_fili=item['peca_fili']
+                        ).first()
+                        
+                        if existing_obj:
+                            # Atualiza o ID no item para corresponder ao objeto encontrado
+                            item['peca_id'] = existing_obj.peca_id
+
+                    if existing_obj:
+                        # Trata como edição se o objeto já existir
+                        serializer = OrdemServicoPecasSerializer(existing_obj, data=item, context={'banco': banco}, partial=True)
+                        serializer.is_valid(raise_exception=True)
+                        obj = serializer.save()
+                        resposta['adicionados'].append(serializer.data)
+                    else:
+                        item['peca_id'] = get_next_item_number_sequence(
+                            banco, item['peca_orde'], item['peca_empr'], item['peca_fili']
+                        )
+                        
+                        serializer = OrdemServicoPecasSerializer(data=item, context={'banco': banco})
+                        serializer.is_valid(raise_exception=True)
+                        obj = serializer.save()
+
+                        obj_refetch = Ordemservicopecas.objects.using(banco).get(
+                            peca_empr=obj.peca_empr,
+                            peca_fili=obj.peca_fili,
+                            peca_orde=obj.peca_orde,
+                            peca_id=obj.peca_id,
+                        )
+                        resposta['adicionados'].append(
+                            OrdemServicoPecasSerializer(obj_refetch, context={'banco': banco}).data
+                        )
+                    
                     affected_orders.add((obj.peca_empr, obj.peca_fili, obj.peca_orde))
 
                 # Validar e editar itens existentes
@@ -436,17 +473,54 @@ class OrdemServicoServicosViewSet(BaseMultiDBModelViewSet):
                             'item': item
                         })
 
-                    item['serv_id'], item['serv_sequ'] = get_next_service_id(
-                        banco, 
-                        item['serv_orde'], 
-                        item['serv_empr'], 
-                        item['serv_fili']
-                    )
+                    # Verifica se o serviço já tem ID e se existe no banco para atualização
+                    existing_id = item.get('serv_id')
+                    existing_obj = None
+                    
+                    # 1. Tenta buscar pelo ID se fornecido
+                    if existing_id:
+                        try:
+                            existing_obj = Ordemservicoservicos.objects.using(banco).get(
+                                serv_id=existing_id,
+                                serv_orde=item['serv_orde'],
+                                serv_empr=item['serv_empr'],
+                                serv_fili=item['serv_fili']
+                            )
+                        except Ordemservicoservicos.DoesNotExist:
+                            existing_obj = None
 
-                    serializer = self.get_serializer(data=item)
-                    serializer.is_valid(raise_exception=True)
-                    obj = serializer.save()
-                    resposta['adicionados'].append(serializer.data)
+                    # 2. Se não encontrou pelo ID (ou não tinha ID), tenta buscar pelo código do serviço na mesma ordem
+                    if not existing_obj and item.get('serv_codi'):
+                        existing_obj = Ordemservicoservicos.objects.using(banco).filter(
+                            serv_codi=item['serv_codi'],
+                            serv_orde=item['serv_orde'],
+                            serv_empr=item['serv_empr'],
+                            serv_fili=item['serv_fili']
+                        ).first()
+                        
+                        if existing_obj:
+                            # Atualiza o ID no item para corresponder ao objeto encontrado
+                            item['serv_id'] = existing_obj.serv_id
+
+                    if existing_obj:
+                         # Trata como edição
+                        serializer = self.get_serializer(existing_obj, data=item, partial=True)
+                        serializer.is_valid(raise_exception=True)
+                        obj = serializer.save()
+                        resposta['adicionados'].append(serializer.data)
+                    else:
+                        item['serv_id'], item['serv_sequ'] = get_next_service_id(
+                            banco, 
+                            item['serv_orde'], 
+                            item['serv_empr'], 
+                            item['serv_fili']
+                        )
+
+                        serializer = self.get_serializer(data=item)
+                        serializer.is_valid(raise_exception=True)
+                        obj = serializer.save()
+                        resposta['adicionados'].append(serializer.data)
+                    
                     affected_orders.add((obj.serv_empr, obj.serv_fili, obj.serv_orde))
 
                 # Editar serviços existentes

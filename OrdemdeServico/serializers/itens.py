@@ -37,17 +37,20 @@ class OrdemServicoPecasSerializer(serializers.ModelSerializer):
         if not banco:
             raise ValidationError("Banco de dados não fornecido.")
 
-        qs = Ordemservicopecas.objects.using(banco).filter(
-            peca_empr=data.get('peca_empr') if data.get('peca_empr') is not None else getattr(self.instance, 'peca_empr', None),
-            peca_fili=data.get('peca_fili') if data.get('peca_fili') is not None else getattr(self.instance, 'peca_fili', None),
-            peca_orde=data.get('peca_orde') if data.get('peca_orde') is not None else getattr(self.instance, 'peca_orde', None),
-            peca_codi=data.get('peca_codi') if data.get('peca_codi') is not None else getattr(self.instance, 'peca_codi', None),
-        )
-        if self.instance is not None:
-            qs = qs.exclude(pk=self.instance.pk)
-        if qs.exists():
-            raise serializers.ValidationError("Esta peça já foi informada nesta ordem de serviço.")
-        print('Query:', qs)
+        # Validação de duplicidade
+        # Ignora se o contexto solicitar (ex: durante update geral da ordem onde IDs podem faltar)
+        if not self.context.get('skip_duplicate_check'):
+            qs = Ordemservicopecas.objects.using(banco).filter(
+                peca_empr=data.get('peca_empr') if data.get('peca_empr') is not None else getattr(self.instance, 'peca_empr', None),
+                peca_fili=data.get('peca_fili') if data.get('peca_fili') is not None else getattr(self.instance, 'peca_fili', None),
+                peca_orde=data.get('peca_orde') if data.get('peca_orde') is not None else getattr(self.instance, 'peca_orde', None),
+                peca_codi=data.get('peca_codi') if data.get('peca_codi') is not None else getattr(self.instance, 'peca_codi', None),
+            )
+            if self.instance is not None:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise serializers.ValidationError("Esta peça já foi informada nesta ordem de serviço.")
+
 
         return data
 
@@ -124,16 +127,20 @@ class OrdemServicoServicosSerializer(BancoModelSerializer):
         if not banco:
             raise ValidationError("Banco de dados não fornecido.")
 
-        qs = Ordemservicoservicos.objects.using(banco).filter(
-            serv_empr=data.get('serv_empr') if data.get('serv_empr') is not None else getattr(self.instance, 'serv_empr', None),
-            serv_fili=data.get('serv_fili') if data.get('serv_fili') is not None else getattr(self.instance, 'serv_fili', None),
-            serv_orde=data.get('serv_orde') if data.get('serv_orde') is not None else getattr(self.instance, 'serv_orde', None),
-            serv_codi=data.get('serv_codi') if data.get('serv_codi') is not None else getattr(self.instance, 'serv_codi', None),
-        )
-        if self.instance is not None:
-            qs = qs.exclude(pk=self.instance.pk)
-        if qs.exists():
-            raise serializers.ValidationError("Este serviço já foi informado nesta ordem de serviço.")
+        # Validação de duplicidade
+        # Ignora se o contexto solicitar
+        if not self.context.get('skip_duplicate_check'):
+            qs = Ordemservicoservicos.objects.using(banco).filter(
+                serv_empr=data.get('serv_empr') if data.get('serv_empr') is not None else getattr(self.instance, 'serv_empr', None),
+                serv_fili=data.get('serv_fili') if data.get('serv_fili') is not None else getattr(self.instance, 'serv_fili', None),
+                serv_orde=data.get('serv_orde') if data.get('serv_orde') is not None else getattr(self.instance, 'serv_orde', None),
+                serv_codi=data.get('serv_codi') if data.get('serv_codi') is not None else getattr(self.instance, 'serv_codi', None),
+            )
+            if self.instance is not None:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise serializers.ValidationError("Este serviço já foi informado nesta ordem de serviço.")
+
 
         return data
 

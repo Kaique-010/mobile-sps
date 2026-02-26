@@ -196,7 +196,12 @@ class OrdemViewSet(BaseMultiDBModelViewSet):
             data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
             
             # Para update, também validamos
-            serializer = self.get_serializer(instance, data=data, partial=True)
+            # Adicionamos skip_duplicate_check ao contexto para permitir que a validação de duplicidade
+            # seja ignorada neste nível, delegando a resolução para o sync_pecas/sync_servicos
+            context = self.get_serializer_context()
+            context['skip_duplicate_check'] = True
+            
+            serializer = self.get_serializer(instance, data=data, partial=True, context=context)
             serializer.is_valid(raise_exception=True)
             validated_data = serializer.validated_data
 
