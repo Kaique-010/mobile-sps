@@ -9,6 +9,7 @@ from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from Agricola.service.cadastros_service import CadastrosDomainService
+from .services.entidades_trasportadores import EntidadeTransportadoraServico
 from urllib.parse import quote_plus
 
 from .models import Entidades
@@ -222,6 +223,14 @@ class EntidadeCreateView(DBAndSlugMixin, CreateView):
 
         data['enti_empr'] = empresa
         
+        if form.cleaned_data.get('is_transportadora'):
+             return EntidadeTransportadoraServico.cadastrar_transportadora(
+                data=data,
+                empresa_id=empresa,
+                filial_id=filial,
+                banco=db_name
+            )
+
         return CadastrosDomainService.cadastrar_entidade(
             empresa=empresa,
             filial=filial,

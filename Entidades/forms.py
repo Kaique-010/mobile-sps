@@ -17,6 +17,16 @@ class EntidadesForm(forms.ModelForm):
         required=False,
         label='Situação'
     )
+    
+    is_transportadora = forms.BooleanField(
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input', 
+            'role': 'switch', 
+            'style': 'width: 3em; height: 1.5em;'
+        }),
+        required=False,
+        label='É Transportadora?'
+    )
 
     class Meta:
         model = Entidades
@@ -55,6 +65,7 @@ class EntidadesForm(forms.ModelForm):
         # Ajusta o valor inicial do campo booleano com base no valor '0'/'1' do model
         if self.instance and self.instance.pk:
             self.fields['enti_situ'].initial = (self.instance.enti_situ == '1')
+            self.fields['is_transportadora'].initial = (self.instance.enti_tien == 'T')
 
         # Tornar certos campos não obrigatórios
         for field in ['enti_cpf', 'enti_cnpj', 'enti_fone', 'enti_emai',
@@ -97,6 +108,13 @@ class EntidadesForm(forms.ModelForm):
 
         instance = super().save(commit=False)
 
+        if self.cleaned_data.get('is_transportadora'):
+            instance.enti_tien = 'T'
+            instance.enti_tipo_enti = 'FO'  # Força tipo Fornecedor se for transportadora
+        elif instance.enti_tien == 'T':
+            # Se era transportadora e desmarcou, volta para Entidade padrão
+            instance.enti_tien = 'E'
+            
         # Atribui empresa/filial a partir dos headers (com fallback à sessão)
         try:
             headers = getattr(self.request, 'headers', {})

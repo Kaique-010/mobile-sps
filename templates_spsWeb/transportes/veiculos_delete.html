@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="card card-flush h-lg-100">
+    <div class="card-header pt-7">
+        <h3 class="card-title align-items-start flex-column">
+            <span class="card-label fw-bold text-danger">Excluir Veículo</span>
+        </h3>
+    </div>
+    <div class="card-body pt-5">
+        <div class="alert alert-danger bg-light-danger border border-danger d-flex flex-column flex-sm-row w-100 p-5 mb-10">
+            <i class="bi bi-exclamation-triangle fs-2hx text-danger me-4 mb-5 mb-sm-0"></i>
+            <div class="d-flex flex-column pe-0 pe-sm-10">
+                <h5 class="mb-1">Atenção!</h5>
+                <span>Tem certeza que deseja excluir o veículo <strong>{{ object.veic_sequ }}</strong> da transportadora <strong>{{ object.veic_tran }}</strong>? Esta ação não pode ser desfeita.</span>
+            </div>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="d-flex justify-content-end">
+                <a href="{% url 'transportes:veiculos_lista' slug=view.kwargs.slug %}" class="btn btn-light me-3">Cancelar</a>
+                <button type="submit" class="btn btn-danger">Confirmar Exclusão</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

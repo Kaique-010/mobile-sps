@@ -21,7 +21,20 @@
         {% csrf_token %}
 
         <div class="row">
-          <div class="col-md-9"></div>
+          <div class="col-md-6"></div>
+          
+          <div class="col-md-3">
+            <div class="form-group">
+              <label class="d-block mb-2">Transportadora</label>
+              <div class="form-check form-switch">
+                {{ form.is_transportadora }}
+                <label class="form-check-label" for="{{ form.is_transportadora.id_for_label }}">
+                   Sim
+                </label>
+              </div>
+            </div>
+          </div>
+
           <div class="col-md-3">
             <div class="form-group">
               <label class="d-block mb-2">Situação</label>

@@ -39,16 +39,36 @@ class OrcamentosViewSet(BaseClienteViewSet):
 
 class OrdemServicoViewSet(BaseClienteViewSet):
     queryset = Ordemservico.objects.all()
+    
     serializer_class = OrdemServicoSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        
+        # Filtros
+        status_param = self.request.query_params.get('status')
+        data_inicial = self.request.query_params.get('data_inicial')
+        data_final = self.request.query_params.get('data_final')
+
+        if status_param:
+            queryset = queryset.filter(orde_stat_orde=status_param)
+        
+        if data_inicial:
+            queryset = queryset.filter(orde_data_aber__gte=data_inicial)
+        
+        if data_final:
+            queryset = queryset.filter(orde_data_aber__lte=data_final)
+            
+        return queryset
     
     @action(detail=False, methods=['get'], url_path='em-estoque')
     def listar_ordem_em_estoque(self, request, *args, **kwargs):
         try:
-            queryset = Ordemservico.objects.filter(orde_stat_orde=22)
+            queryset = self.get_queryset().filter(orde_stat_orde=22)
             print("ordens em estoque:", queryset)
             serializer = self.serializer_class(queryset, many=True)
             return tratar_sucesso(serializer.data)
-        except ErroDominio as e:
+        except (ErroDominio, ValueError) as e:
             return tratar_erro(e)
     
     

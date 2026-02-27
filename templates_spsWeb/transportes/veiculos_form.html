@@ -1,0 +1,440 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h4 class="mb-0">{% if form.instance.pk %}Editar{% else %}Novo{% endif %} Veículo</h4>
+        </div>
+        <div class="card-body">
+            <form method="post" class="needs-validation" novalidate>
+                {% csrf_token %}
+
+                {% if form.errors %}
+                <div class="alert alert-danger">
+                    Please correct the errors below.
+                    {{ form.errors }}
+                </div>
+                {% endif %}
+
+                <!-- Tabs Navigation -->
+                <ul class="nav nav-tabs mb-4" id="veiculoTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="dados-tab" data-bs-toggle="tab" data-bs-target="#dados"
+                            type="button" role="tab">Dados Principais</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="caracteristicas-tab" data-bs-toggle="tab"
+                            data-bs-target="#caracteristicas" type="button" role="tab">Características</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="documentacao-tab" data-bs-toggle="tab"
+                            data-bs-target="#documentacao" type="button" role="tab">Documentação</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="operacional-tab" data-bs-toggle="tab" data-bs-target="#operacional"
+                            type="button" role="tab">Operacional</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="motorista-tab" data-bs-toggle="tab" data-bs-target="#motorista"
+                            type="button" role="tab">Motorista</button>
+                    </li>
+                </ul>
+
+                <!-- Tabs Content -->
+                <div class="tab-content" id="veiculoTabsContent">
+
+                    <!-- Tab 1: Dados Principais -->
+                    <div class="tab-pane fade show active" id="dados" role="tabpanel">
+                        <div class="row">
+                            <!-- Transportadora Autocomplete -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">{{ form.veic_tran.label }}</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                    <input type="text" id="input_transportadora" class="form-control"
+                                        placeholder="Digite o nome da transportadora" autocomplete="off"
+                                        value="{{ transportadora_nome|default:'' }}">
+                                    {{ form.veic_tran }}
+                                </div>
+                                <div id="dropdown_transportadora" class="list-group position-absolute w-100"
+                                    style="z-index: 1000;"></div>
+                            </div>
+
+                            <!-- Marca Autocomplete -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">{{ form.veic_marc.label }}</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                    <input type="text" id="input_marca" class="form-control"
+                                        placeholder="Digite o nome da marca" autocomplete="off"
+                                        value="{{ marca_nome|default:'' }}">
+                                    {{ form.veic_marc }}
+                                </div>
+                                <div id="dropdown_marca" class="list-group position-absolute w-100"
+                                    style="z-index: 1000;"></div>
+                            </div>
+
+                            <!-- Centro de Custos Autocomplete -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">{{ form.veic_cecu.label }}</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                    <input type="text" id="input_cc" class="form-control"
+                                        placeholder="Digite o centro de custos" autocomplete="off"
+                                        value="{{ cecu_nome|default:'' }}">
+                                    {{ form.veic_cecu }}
+                                </div>
+                                <div id="dropdown_cc" class="list-group position-absolute w-100" style="z-index: 1000;">
+                                </div>
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_plac.label }}</label>
+                                {{ form.veic_plac }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_espe.label }}</label>
+                                {{ form.veic_espe }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_frot.label }}</label>
+                                {{ form.veic_frot }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_aqui.label }}</label>
+                                {{ form.veic_aqui }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_valo_aqui.label }}</label>
+                                {{ form.veic_valo_aqui }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_ano_fabr.label }}</label>
+                                {{ form.veic_ano_fabr }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_ano_mode.label }}</label>
+                                {{ form.veic_ano_mode }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_cor.label }}</label>
+                                {{ form.veic_cor }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_tipo.label }}</label>
+                                {{ form.veic_tipo }}
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <div class="form-check form-switch">
+                                    {{ form.veic_inat }}
+                                    <label class="form-check-label">{{ form.veic_inat.label }}</label>
+                                </div>
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">{{ form.veic_moti.label }}</label>
+                                {{ form.veic_moti }}
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">{{ form.veic_obse.label }}</label>
+                                {{ form.veic_obse }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Características -->
+                    <div class="tab-pane fade" id="caracteristicas" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">{{ form.veic_chass.label }}</label>
+                                {{ form.veic_chass }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">{{ form.veic_rena.label }}</label>
+                                {{ form.veic_rena }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">{{ form.veic_comb.label }}</label>
+                                {{ form.veic_comb }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">{{ form.veic_cida.label }}</label>
+                                {{ form.veic_cida }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">{{ form.veic_nome_cida.label }}</label>
+                                {{ form.veic_nome_cida }}
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">{{ form.veic_esta.label }}</label>
+                                {{ form.veic_esta }}
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">{{ form.veic_capa.label }}</label>
+                                {{ form.veic_capa }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_eixo.label }}</label>
+                                {{ form.veic_eixo }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_impl.label }}</label>
+                                {{ form.veic_impl }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_rntr.label }}</label>
+                                {{ form.veic_rntr }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_prop_veic.label }}</label>
+                                {{ form.veic_prop_veic }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_tipo_veic.label }}</label>
+                                {{ form.veic_tipo_veic }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_tipo_roda.label }}</label>
+                                {{ form.veic_tipo_roda }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_tipo_carr.label }}</label>
+                                {{ form.veic_tipo_carr }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_tipo_prop.label }}</label>
+                                {{ form.veic_tipo_prop }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_codi_patr.label }}</label>
+                                {{ form.veic_codi_patr }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_fili_patr.label }}</label>
+                                {{ form.veic_fili_patr }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 3: Documentação -->
+                    <div class="tab-pane fade" id="documentacao" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_baix.label }}</label>
+                                {{ form.veic_baix }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">{{ form.veic_nome_segu.label }}</label>
+                                {{ form.veic_nome_segu }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_venc_segu.label }}</label>
+                                {{ form.veic_venc_segu }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_venc_exti.label }}</label>
+                                {{ form.veic_venc_exti }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_ipva.label }}</label>
+                                {{ form.veic_ipva }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_segu_obri.label }}</label>
+                                {{ form.veic_segu_obri }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_rena_expe.label }}</label>
+                                {{ form.veic_rena_expe }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 4: Operacional -->
+                    <div class="tab-pane fade" id="operacional" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <div class="form-check form-switch">
+                                    {{ form.veic_agre }}
+                                    <label class="form-check-label">{{ form.veic_agre.label }}</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_inic_agre.label }}</label>
+                                {{ form.veic_inic_agre }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_fim_agre.label }}</label>
+                                {{ form.veic_fim_agre }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_adic_km.label }}</label>
+                                {{ form.veic_adic_km }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_tara_km.label }}</label>
+                                {{ form.veic_tara_km }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_capa_km.label }}</label>
+                                {{ form.veic_capa_km }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_capa_m3.label }}</label>
+                                {{ form.veic_capa_m3 }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_car1.label }}</label>
+                                {{ form.veic_car1 }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_car2.label }}</label>
+                                {{ form.veic_car2 }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_car3.label }}</label>
+                                {{ form.veic_car3 }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_car4.label }}</label>
+                                {{ form.veic_car4 }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_moni.label }}</label>
+                                {{ form.veic_moni }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_nume_rast.label }}</label>
+                                {{ form.veic_nume_rast }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_nume_moto.label }}</label>
+                                {{ form.veic_nume_moto }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 5: Motorista -->
+                    <div class="tab-pane fade" id="motorista" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">{{ form.veic_moto.label }}</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                    <input type="text" id="input_moto" class="form-control"
+                                        placeholder="Digite o nome do motorista" autocomplete="off"
+                                        value="{{ motorista_nome|default:'' }}">
+                                    {{ form.veic_moto }}
+                                </div>
+                                <div id="dropdown_moto" class="list-group position-absolute w-100"
+                                    style="z-index: 1000;"></div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">{{ form.veic_perc_comi.label }}</label>
+                                {{ form.veic_perc_comi }}
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Salvar
+                    </button>
+                    <a href="{% url 'transportes:veiculos_lista' slug=view.kwargs.slug %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Voltar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Configuração dos autocompletes
+    function setupAutocomplete(inputId, hiddenId, dropdownId, url) {
+        const input = document.getElementById(inputId);
+        const hidden = document.getElementById(hiddenId);
+        const dropdown = document.getElementById(dropdownId);
+        let debounceTimer;
+
+        input.addEventListener('input', function () {
+            clearTimeout(debounceTimer);
+            const query = this.value;
+
+            if (query.length < 1) {
+                dropdown.innerHTML = '';
+                return;
+            }
+
+            debounceTimer = setTimeout(() => {
+                fetch(`${url}?term=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        dropdown.innerHTML = '';
+                        if (data.results && data.results.length > 0) {
+                            data.results.forEach(item => {
+                                const a = document.createElement('a');
+                                a.className = 'list-group-item list-group-item-action';
+                                a.href = '#';
+                                a.textContent = item.text;
+                                a.onclick = function (e) {
+                                    e.preventDefault();
+                                    input.value = item.text;
+                                    hidden.value = item.id;
+                                    dropdown.innerHTML = '';
+                                };
+                                dropdown.appendChild(a);
+                            });
+                        } else {
+                            dropdown.innerHTML = '<div class="list-group-item">Nenhum resultado encontrado</div>';
+                        }
+                    });
+            }, 300);
+        });
+
+        // Fechar dropdown ao clicar fora
+        document.addEventListener('click', function (e) {
+            if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.innerHTML = '';
+            }
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        // Autocomplete Transportadora
+        setupAutocomplete(
+            'input_transportadora',
+            'id_veic_tran',
+            'dropdown_transportadora',
+            "{% url 'transportes:autocomplete_transportadoras' slug=view.kwargs.slug %}"
+        );
+
+        // Autocomplete Marca
+        setupAutocomplete(
+            'input_marca',
+            'id_veic_marc',
+            'dropdown_marca',
+            "{% url 'transportes:autocomplete_marcas' slug=view.kwargs.slug %}"
+        );
+
+        // Autocomplete Centro de Custos
+        setupAutocomplete(
+            'input_cc',
+            'id_veic_cecu',
+            'dropdown_cc',
+            "{% url 'transportes:autocomplete_centrodecustos' slug=view.kwargs.slug %}"
+        );
+
+        // Autocomplete Motorista
+        setupAutocomplete(
+            'input_moto',
+            'id_veic_moto',
+            'dropdown_moto',
+            "{% url 'transportes:autocomplete_entidades' slug=view.kwargs.slug %}"
+        );
+    });
+</script>
+{% endblock %}
