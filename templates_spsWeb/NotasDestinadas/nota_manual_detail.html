@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Detalhes da Nota Manual{% endblock %}
+
+{% block content %}
+<div class="container page-container">
+    <div class="page-header-custom">
+        <div class="container align-items-center">
+            <h2 class="page-title">
+                <i class="bi bi-file-text fs-4"></i> Detalhes da Nota - {{ nota.numero_nota_fiscal }}
+            </h2>
+        </div>
+        <div class="page-actions">
+            <div class="container" style="display: flex; justify-content: flex-end; gap: 10px;">
+                <a href="{% url 'notas-manuais-lista' slug=view.kwargs.slug %}" class="btn btn-secondary btn-sm">
+                    <i class="bi bi-arrow-left"></i> Voltar
+                </a>
+                <a href="{% url 'nota-manual-edit' slug=view.kwargs.slug nota_id=nota.pk %}"
+                    class="btn btn-warning btn-sm">
+                    <i class="bi bi-pencil"></i> Editar
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Informações Gerais</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <strong>Fornecedor:</strong><br>
+                    {{ nota.emitente_razao_social }} ({{ nota.emitente_cnpj }})
+                </div>
+                <div class="col-md-3">
+                    <strong>Número / Série:</strong><br>
+                    {{ nota.numero_nota_fiscal }} / {{ nota.serie }}
+                </div>
+                <div class="col-md-3">
+                    <strong>Data Emissão:</strong><br>
+                    {{ nota.data_emissao|date:"d/m/Y" }}
+                </div>
+                <div class="col-md-3">
+                    <strong>Data Entrada:</strong><br>
+                    {{ nota.data_saida_entrada|date:"d/m/Y" }}
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-3">
+                    <strong>Valor Total:</strong><br>
+                    R$ {{ nota.valor_total_nota }}
+                </div>
+                <div class="col-md-3">
+                    <strong>Chave de Acesso:</strong><br>
+                    {{ nota.chave_acesso|default:"-" }}
+                </div>
+                <div class="col-md-6">
+                    <strong>Natureza da Operação:</strong><br>
+                    {{ nota.natureza_operacao|default:"-" }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Itens da Nota</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped mb-0">
+                    <thead class="text-center">
+                        <tr>
+                            <th>Código</th>
+                            <th>Descrição</th>
+                            <th>Unidade</th>
+                            <th>Qtd</th>
+                            <th>Valor Unit.</th>
+                            <th>Valor Total</th>
+                            <th>CFOP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in itens %}
+                        <tr>
+                            <td>{{ item.cprod }}</td>
+                            <td>{{ item.xprod }}</td>
+                            <td class="text-center">{{ item.ucom }}</td>
+                            <td class="text-end">{{ item.qcom }}</td>
+                            <td class="text-end">R$ {{ item.vuncom }}</td>
+                            <td class="text-end">R$ {{ item.vprod }}</td>
+                            <td class="text-center">{{ item.cfop }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center">Nenhum item encontrado.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Financeiro (Parcelas)</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped mb-0">
+                    <thead class="text-center">
+                        <tr>
+                            <th>Parcela</th>
+                            <th>Vencimento</th>
+                            <th>Valor</th>
+                            <th>Situação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for parcela in parcelas %}
+                        <tr>
+                            <td class="text-center">{{ parcela.titu_parc }}</td>
+                            <td class="text-center">{{ parcela.titu_venc|date:"d/m/Y" }}</td>
+                            <td class="text-end">R$ {{ parcela.titu_valo }}</td>
+                            <td class="text-center">
+                                {% if parcela.titu_aber == 'A' %}
+                                <span class="badge bg-warning text-dark">Aberto</span>
+                                {% else %}
+                                <span class="badge bg-success">Pago</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center">Nenhuma parcela encontrada.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

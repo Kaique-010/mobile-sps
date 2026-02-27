@@ -356,8 +356,15 @@ class NotasDestinadasViewSet(viewsets.ModelViewSet):
         except Exception:
             pass
         from django.db.models import Q as QD
-        qs = qs.filter(QD(prod_codi__icontains=q) | QD(prod_nome__icontains=q) | QD(prod_coba__icontains=q))[:10]
-        results = [{'codigo': p.prod_codi, 'nome': p.prod_nome, 'ean': p.prod_coba} for p in qs]
+        qs = qs.filter(QD(prod_codi__icontains=q) | QD(prod_nome__icontains=q) | QD(prod_coba__icontains=q)).select_related('prod_unme')[:20]
+        results = []
+        for p in qs:
+            results.append({
+                'codigo': p.prod_codi,
+                'nome': p.prod_nome,
+                'ean': p.prod_coba,
+                'unidade': p.prod_unme.unid_codi if p.prod_unme else ''
+            })
         return Response({'results': results})
 
     @action(detail=False, methods=['get'])

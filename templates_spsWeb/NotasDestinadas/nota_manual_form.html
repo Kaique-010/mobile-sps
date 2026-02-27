@@ -1,0 +1,524 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{% if nota_existente %}Editar Nota Manual{% else %}Nova Nota Manual{% endif %}{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
+<div class="container page-container">
+    <div class="page-header-custom">
+        <h2 class="page-title">
+            <i class="bi bi-pencil-square fs-4 me-2" style="text-align: center;"></i>{% if nota_existente %}Editar Nota
+            Manual{% else %}Nova Nota Manual{% endif %}
+        </h2>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <form id="notaManualForm">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <!-- Cabeçalho -->
+                    <div class="col-md-6">
+                        <label for="{{ form.fornecedor.id_for_label }}" class="form-label">{{form.fornecedor.label}}</label>
+                        {{ form.fornecedor }}
+                    </div>
+                    <div class="col-md-3">
+                        <label for="{{ form.numero.id_for_label }}" class="form-label">{{ form.numero.label }}</label>
+                        {{ form.numero }}
+                    </div>
+                    <div class="col-md-3">
+                        <label for="{{ form.serie.id_for_label }}" class="form-label">{{ form.serie.label }}</label>
+                        {{ form.serie }}
+                    </div>
+                    <div class="col-md-3">
+                        <label for="{{ form.data_emissao.id_for_label }}" class="form-label">{{form.data_emissao.label}}</label>
+                        {{ form.data_emissao }}
+                    </div>
+                    <div class="col-md-3">
+                        <label for="{{ form.data_entrada.id_for_label }}" class="form-label">{{form.data_entrada.label}}</label>
+                        {{ form.data_entrada }}
+                    </div>
+                    <div class="col-md-3">
+                        <label for="{{ form.valor_total.id_for_label }}" class="form-label">{{form.valor_total.label}}</label>
+                        {{ form.valor_total }}
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <!-- Produtos -->
+                <h4 class="mb-3">Produtos</h4>
+                <div class="row g-3 align-items-end mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Produto</label>
+                        <div class="input-group">
+                            <input type="text" id="produto-search" class="form-control"
+                                placeholder="Digite código ou nome...">
+                            <button class="btn btn-outline-secondary" type="button" id="btn-buscar-produto">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                        <input type="hidden" id="produto-id-selecionado">
+                        <div id="produto-nome-selecionado" class="form-text text-primary fw-bold"></div>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Quantidade</label>
+                        <input type="number" id="produto-qtd" class="form-control" step="0.01" min="0.01">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Valor Unit.</label>
+                        <input type="number" id="produto-valor" class="form-control" step="0.01" min="0.01">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-success w-100" id="btn-add-item">
+                            <i class="bi bi-plus-lg"></i> Adicionar
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-responsive mb-4">
+                    <table class="table table-bordered table-hover" id="tabela-itens">
+                        <thead class="table-light text-center">
+                            <tr>
+                                <th>Código</th>
+                                <th>Descrição</th>
+                                <th>Qtd</th>
+                                <th>Vl. Unit.</th>
+                                <th>Total</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Itens adicionados via JS -->
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="4" class="text-end fw-bold">Total Itens:</td>
+                                <td colspan="2" class="fw-bold" id="total-itens">0.00</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <hr class="my-4">
+
+                <!-- Parcelas -->
+                <h4 class="mb-3">Parcelas</h4>
+                <div class="row g-3 align-items-end mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Vencimento</label>
+                        <input type="date" id="parcela-dt-venc" class="form-control">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Valor</label>
+                        <input type="number" id="parcela-valor" class="form-control" step="0.01">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-info w-100" id="btn-add-parcela">
+                            <i class="bi bi-plus-lg"></i> Incluir
+                        </button>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-secondary w-100" id="btn-gerar-parcelas">
+                            Gerar Autom.
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-responsive mb-4">
+                    <table class="table table-bordered table-hover" id="tabela-parcelas">
+                        <thead class="table-light text-center">
+                            <tr>
+                                <th>Número</th>
+                                <th>Vencimento</th>
+                                <th>Valor</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Parcelas via JS -->
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="2" class="text-end fw-bold">Total Parcelas:</td>
+                                <td colspan="2" class="fw-bold" id="total-parcelas">0.00</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{% url 'notas-manuais-lista' slug=view.kwargs.slug %}"
+                        class="btn btn-outline-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">Salvar Nota</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Busca Produto -->
+<div class="modal fade" id="modalBuscaProduto" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Buscar Produto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group mb-3">
+                    <input type="text" id="modal-search-term" class="form-control" placeholder="Nome do produto...">
+                    <button class="btn btn-primary" id="modal-btn-buscar">Buscar</button>
+                </div>
+                <div class="list-group" id="modal-lista-produtos">
+                    <!-- Resultados -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Gerar Parcelas -->
+<div class="modal fade" id="modalGerarParcelas" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Gerar Parcelas Automáticas</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Valor Total a Parcelar</label>
+                    <input type="number" id="modal-parc-total" class="form-control" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Quantidade de Parcelas</label>
+                    <input type="number" id="modal-parc-qtd" class="form-control" value="1" min="1">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Primeiro Vencimento</label>
+                    <input type="date" id="modal-parc-venc" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Intervalo (dias)</label>
+                    <input type="number" id="modal-parc-intervalo" class="form-control" value="30" min="1">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn-confirmar-parcelas">Gerar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Inicializa Select2 se disponível
+        if (typeof $ !== 'undefined' && $.fn.select2) {
+            $('.select2').select2({
+                theme: 'bootstrap-5',
+                width: '100%'
+            });
+        }
+
+        const itens = [];
+        const parcelas = [];
+
+    const itensExistentes = {{ itens_existentes|default:"[]"|safe }};
+    const parcelasExistentes = {{ parcelas_existentes|default:"[]"|safe }};
+
+    if (itensExistentes.length > 0) {
+        itensExistentes.forEach(item => {
+            itens.push({
+                produto_id: item.codigo,
+                descricao: item.descricao,
+                quantidade: item.quantidade,
+                valor_unitario: item.valor_unitario,
+                valor_total: item.valor_total
+            });
+        });
+        atualizarTabelaItens();
+    }
+
+    if (parcelasExistentes.length > 0) {
+        parcelasExistentes.forEach(p => {
+            parcelas.push({
+                data_vencimento: p.data_vencimento,
+                valor: p.valor
+            });
+        });
+        atualizarTabelaParcelas();
+    }
+
+    // --- Produtos ---
+    const btnBuscarProduto = document.getElementById('btn-buscar-produto');
+    const modalBuscaProduto = new bootstrap.Modal(document.getElementById('modalBuscaProduto'));
+
+    btnBuscarProduto.addEventListener('click', function () {
+        const termo = document.getElementById('produto-search').value;
+        buscarProdutos(termo);
+    });
+
+    document.getElementById('modal-btn-buscar').addEventListener('click', function () {
+        const termo = document.getElementById('modal-search-term').value;
+        buscarProdutos(termo);
+    });
+
+    async function buscarProdutos(termo) {
+        if (!termo) return;
+        // URL precisa ser ajustada conforme a rota da API
+        // Assumindo que temos acesso ao slug via template ou JS global, mas aqui vou tentar construir
+        // Se falhar, o usuário precisa digitar o ID ou código exato ou melhorar a busca
+        const url = `/api/${window.location.pathname.split('/')[2]}/notasdestinadas/produtos/buscar/?q=${encodeURIComponent(termo)}`;
+
+        try {
+            const resp = await fetch(url);
+            const data = await resp.json();
+
+            const lista = document.getElementById('modal-lista-produtos');
+            lista.innerHTML = '';
+
+            if (data.results && data.results.length > 0) {
+                data.results.forEach(p => {
+                    const item = document.createElement('a');
+                    item.className = 'list-group-item list-group-item-action';
+                    item.innerHTML = `<b>${p.codigo}</b> - ${p.nome} <span class="badge bg-secondary float-end">${p.unidade || ''}</span>`;
+                    item.onclick = () => selecionarProduto(p);
+                    lista.appendChild(item);
+                });
+                modalBuscaProduto.show();
+            } else {
+                alert('Nenhum produto encontrado.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Erro ao buscar produtos.');
+        }
+    }
+
+    function selecionarProduto(p) {
+        document.getElementById('produto-id-selecionado').value = p.codigo;
+        document.getElementById('produto-nome-selecionado').textContent = `${p.codigo} - ${p.nome}`;
+        document.getElementById('produto-search').value = p.codigo;
+        modalBuscaProduto.hide();
+    }
+
+    document.getElementById('btn-add-item').addEventListener('click', function () {
+        const id = document.getElementById('produto-id-selecionado').value;
+        const nomeFull = document.getElementById('produto-nome-selecionado').textContent;
+        const qtd = parseFloat(document.getElementById('produto-qtd').value);
+        const valor = parseFloat(document.getElementById('produto-valor').value);
+
+        if (!id || !qtd || !valor) {
+            alert('Preencha o produto, quantidade e valor.');
+            return;
+        }
+
+        const total = qtd * valor;
+        itens.push({
+            produto_id: id,
+            descricao: nomeFull,
+            quantidade: qtd,
+            valor_unitario: valor,
+            valor_total: total
+        });
+
+        atualizarTabelaItens();
+        limparFormItem();
+    });
+
+    function atualizarTabelaItens() {
+        const tbody = document.querySelector('#tabela-itens tbody');
+        tbody.innerHTML = '';
+        let totalGeral = 0;
+
+        itens.forEach((item, index) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                    <td>${item.produto_id}</td>
+                    <td>${item.descricao}</td>
+                    <td class="text-end">${item.quantidade.toFixed(2)}</td>
+                    <td class="text-end">${item.valor_unitario.toFixed(2)}</td>
+                    <td class="text-end">${item.valor_total.toFixed(2)}</td>
+                    <td class="text-center"><button type="button" class="btn btn-sm btn-danger" onclick="removerItem(${index})"><i class="bi bi-trash"></i></button></td>
+                `;
+            tbody.appendChild(tr);
+            totalGeral += item.valor_total;
+        });
+
+        document.getElementById('total-itens').textContent = totalGeral.toFixed(2);
+        // Atualiza valor total da nota automaticamente
+        const campoTotal = document.getElementById('{{ form.valor_total.auto_id }}');
+        campoTotal.value = totalGeral.toFixed(2);
+    }
+
+    window.removerItem = function (index) {
+        itens.splice(index, 1);
+        atualizarTabelaItens();
+    }
+
+    function limparFormItem() {
+        document.getElementById('produto-id-selecionado').value = '';
+        document.getElementById('produto-nome-selecionado').textContent = '';
+        document.getElementById('produto-search').value = '';
+        document.getElementById('produto-qtd').value = '';
+        document.getElementById('produto-valor').value = '';
+    }
+
+    // --- Parcelas ---
+    document.getElementById('btn-add-parcela').addEventListener('click', function () {
+        const venc = document.getElementById('parcela-dt-venc').value;
+        const valor = parseFloat(document.getElementById('parcela-valor').value);
+
+        if (!venc || !valor) {
+            alert('Preencha vencimento e valor.');
+            return;
+        }
+
+        parcelas.push({
+            data_vencimento: venc,
+            valor: valor
+        });
+
+        atualizarTabelaParcelas();
+        document.getElementById('parcela-dt-venc').value = '';
+        document.getElementById('parcela-valor').value = '';
+    });
+
+    const modalGerarParcelas = new bootstrap.Modal(document.getElementById('modalGerarParcelas'));
+
+    document.getElementById('btn-gerar-parcelas').addEventListener('click', function () {
+        const totalNota = parseFloat(document.getElementById('{{ form.valor_total.auto_id }}').value) || 0;
+        if (totalNota <= 0) {
+            alert('Informe o Valor Total da nota primeiro.');
+            return;
+        }
+
+        document.getElementById('modal-parc-total').value = totalNota.toFixed(2);
+
+        // Sugerir vencimento
+        const dtEmissao = document.getElementById('{{ form.data_emissao.auto_id }}').value;
+        let baseDate = dtEmissao ? new Date(dtEmissao) : new Date();
+        baseDate.setDate(baseDate.getDate() + 30);
+        document.getElementById('modal-parc-venc').value = baseDate.toISOString().split('T')[0];
+
+        modalGerarParcelas.show();
+    });
+
+    document.getElementById('btn-confirmar-parcelas').addEventListener('click', function () {
+        const total = parseFloat(document.getElementById('modal-parc-total').value);
+        const qtd = parseInt(document.getElementById('modal-parc-qtd').value);
+        const vencStr = document.getElementById('modal-parc-venc').value;
+        const intervalo = parseInt(document.getElementById('modal-parc-intervalo').value);
+
+        if (!qtd || qtd < 1 || !vencStr || !intervalo) {
+            alert('Preencha todos os campos corretamente.');
+            return;
+        }
+
+        // Limpa parcelas anteriores para recriar
+        parcelas.length = 0;
+
+        const valorParcela = Math.floor((total / qtd) * 100) / 100;
+        let soma = 0;
+        let currentData = new Date(vencStr);
+
+        for (let i = 0; i < qtd; i++) {
+            let valor = valorParcela;
+            if (i === qtd - 1) {
+                valor = parseFloat((total - soma).toFixed(2));
+            }
+
+            parcelas.push({
+                data_vencimento: currentData.toISOString().split('T')[0],
+                valor: valor
+            });
+
+            soma += valor;
+            currentData.setDate(currentData.getDate() + intervalo);
+        }
+
+        atualizarTabelaParcelas();
+        modalGerarParcelas.hide();
+    });
+
+    function atualizarTabelaParcelas() {
+        const tbody = document.querySelector('#tabela-parcelas tbody');
+        tbody.innerHTML = '';
+        let total = 0;
+
+        parcelas.sort((a, b) => new Date(a.data_vencimento) - new Date(b.data_vencimento));
+
+        parcelas.forEach((p, index) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                    <td class="text-center">${index + 1}</td>
+                    <td class="text-center">${p.data_vencimento}</td>
+                    <td class="text-end">${p.valor.toFixed(2)}</td>
+                    <td class="text-center"><button type="button" class="btn btn-sm btn-danger" onclick="removerParcela(${index})"><i class="bi bi-trash"></i></button></td>
+                `;
+            tbody.appendChild(tr);
+            total += p.valor;
+        });
+
+        document.getElementById('total-parcelas').textContent = total.toFixed(2);
+    }
+
+    window.removerParcela = function (index) {
+        parcelas.splice(index, 1);
+        atualizarTabelaParcelas();
+    }
+
+    // --- Submit ---
+    document.getElementById('notaManualForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const fornecedor = document.getElementById('{{ form.fornecedor.auto_id }}').value;
+        const numero = document.getElementById('{{ form.numero.auto_id }}').value;
+        const serie = document.getElementById('{{ form.serie.auto_id }}').value;
+        const dtEmissao = document.getElementById('{{ form.data_emissao.auto_id }}').value;
+        const dtEntrada = document.getElementById('{{ form.data_entrada.auto_id }}').value;
+        const valorTotal = document.getElementById('{{ form.valor_total.auto_id }}').value;
+
+        if (!fornecedor || !numero || !dtEmissao || !valorTotal) {
+            alert('Preencha os campos obrigatórios do cabeçalho.');
+            return;
+        }
+
+        const payload = {
+            fornecedor: fornecedor,
+            numero: numero,
+            serie: serie,
+            data_emissao: dtEmissao,
+            data_entrada: dtEntrada,
+            valor_total: valorTotal,
+            itens: itens,
+            parcelas: parcelas
+        };
+
+        try {
+            const resp = await fetch(window.location.href, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await resp.json();
+
+            if (data.status === 'success') {
+                window.location.href = data.redirect_url;
+            } else {
+                alert('Erro ao salvar: ' + (data.message || 'Erro desconhecido'));
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Erro na comunicação com o servidor.');
+        }
+    });
+    });
+</script>
+{% endblock %}

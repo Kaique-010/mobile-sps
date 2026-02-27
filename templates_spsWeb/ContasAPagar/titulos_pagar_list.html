@@ -66,6 +66,7 @@
   <div class="card">
     <div class="card-body">
       <form method="get" class="row g-3 mb-3">
+        {% csrf_token %}
         <div class="col-md-3">
           <label class="form-label">Empresa</label>
           <select name="titu_empr" class="form-select" onchange="this.form.submit()">
@@ -190,13 +191,22 @@
     {% block extra_js %}
     <script>
       function getCSRFToken() {
-        const name = 'csrftoken=';
-        const cookies = document.cookie.split(';');
-        for (let c of cookies) {
-          c = c.trim();
-          if (c.startsWith(name)) return c.substring(name.length, c.length);
+        let token = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, 10) === ('csrftoken=')) {
+                    token = decodeURIComponent(cookie.substring(10));
+                    break;
+                }
+            }
         }
-        return '';
+        if (!token) {
+           const input = document.querySelector('input[name="csrfmiddlewaretoken"]');
+           if (input) token = input.value;
+        }
+        return token || '';
       }
 
       // Obtém empresa/filial do localStorage com fallback para sessão

@@ -2,6 +2,21 @@
 {% load static %}
 {% block title %}Notas Destinadas{% endblock %}
 {% block content %}
+<style>
+  #botoes{
+    display: flex;
+    justify-content: flex-end;
+  }
+  .btn-outline-primary-sel{
+    color: #007bff;
+    border-color: #007bff;
+  }
+  .btn-primary-filtrar{
+    color: #fff;
+    background-color: transparent;
+    border-color: #2d4b6b;
+  }
+</style>
 <link rel="stylesheet" href="{% static 'css/list.css' %}">
 <div class="container page-container">
   <div class="page-header-custom">
@@ -11,9 +26,11 @@
       </h2>
     </div>
     <div class="page-actions">
-      <a href="{% url 'selecionar_empresa' %}" class="btn btn-outline-secondary btn-sm">Selecionar Empresa</a>
-      <button class="btn btn-outline-primary  btn-sm" onclick="abrirImportacao()">Importar DF-e</button>
+      <div class="container" id="botoes">
+
+      <button class="btn btn-outline-primary-sel  btn-sm" onclick="abrirImportacao()">Importar DF-e</button>
     </div>
+  </div>
   </div>
   <div class="card">
     <div class="card-body">
@@ -50,7 +67,7 @@
           <input type="text" name="cnpj" value="{{ request.GET.cnpj }}" class="form-control">
         </div>
         <div class="col-md-2 align-self-end">
-          <button class="btn btn-primary" id="btn-filtrar" type="submit">Filtrar</button>
+          <button class="btn btn-primary-filtrar" id="btn-filtrar" type="submit">Filtrar</button>
         </div>
       </form>
       <div class="table-responsive d-none d-md-block">
@@ -96,6 +113,7 @@
           </tbody>
         </table>
         {% if is_paginated %}
+        <div class="container justify-content-center" style="margin-top: 20px; text-align: center;">
         <nav class="mt-3 mx-auto text-center justify-content-center">
           <ul class="pagination">
             {% if page_obj.has_previous %}
@@ -109,6 +127,7 @@
           </ul>
         </nav>
         {% endif %}
+      </div>
       </div>
       <div class="card-list d-md-none">
         {% for n in notas %}

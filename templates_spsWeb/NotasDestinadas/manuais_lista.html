@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Notas Manuais{% endblock %}
+{% block content %}
+<style>
+    #botoes {
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .btn-outline-primary-sel {
+        color: #007bff;
+        border-color: #007bff;
+    }
+
+    .btn-primary-filtrar {
+        color: #fff;
+        background-color: transparent;
+        border-color: #2d4b6b;
+    }
+</style>
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
+<div class="container page-container">
+    <div class="page-header-custom">
+        <div class="container align-items-center">
+            <h2 class="page-title">
+                <i class="bi bi-pencil-square fs-4"></i> Notas Manuais
+            </h2>
+        </div>
+        <div class="page-actions">
+            <div class="container" id="botoes">
+                <a href="{% url 'nota-manual-nova' slug=view.kwargs.slug %}" class="btn btn-primary btn-sm">
+                    <i class="bi bi-plus-lg"></i> Nova Nota
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive d-none d-md-block">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Número</th>
+                            <th>Série</th>
+                            <th>Fornecedor</th>
+                            <th>Valor Total</th>
+                            <th>Data Emissão</th>
+                            <th>Data Entrada</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for n in object_list %}
+                        <tr>
+                            <td>{{ n.numero_nota_fiscal }}</td>
+                            <td>{{ n.serie }}</td>
+                            <td>{{ n.emitente_razao_social }}</td>
+                            <td>{{ n.valor_total_nota }}</td>
+                            <td>{{ n.data_emissao }}</td>
+                            <td>{{ n.data_saida_entrada }}</td>
+                            <td>
+                                <a href="{% url 'nota-manual-detalhe' slug=view.kwargs.slug nota_id=n.pk %}"
+                                    class="btn btn-sm btn-primary">
+                                    <i class="bi bi-eye"></i> Detalhes
+                                </a>
+                                <a href="{% url 'nota-manual-edit' slug=view.kwargs.slug nota_id=n.pk %}"
+                                    class="btn btn-sm btn-warning">
+                                    <i class="bi bi-pencil"></i> Editar
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center">Nenhuma nota manual encontrada.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% if is_paginated %}
+                <div class="container justify-content-center" style="margin-top: 20px; text-align: center;">
+                    <nav class="mt-3 mx-auto text-center justify-content-center">
+                        <ul class="pagination">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item"><a class="page-link"
+                                    href="?page={{ page_obj.previous_page_number }}">Anterior</a>
+                            </li>
+                            {% endif %}
+                            <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
+                            {% if page_obj.has_next %}
+                            <li class="page-item"><a class="page-link"
+                                    href="?page={{ page_obj.next_page_number }}">Próxima</a></li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Mobile View -->
+            <div class="card-list d-md-none">
+                {% for n in object_list %}
+                <div class="card mb-2">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="fw-semibold">NF {{ n.numero_nota_fiscal }}</div>
+                            <div class="text-muted small">{{ n.data_emissao }}</div>
+                        </div>
+                        <div class="mt-2 small">
+                            <div><strong>Série:</strong> {{ n.serie }}</div>
+                            <div><strong>Fornecedor:</strong> {{ n.emitente_razao_social }}</div>
+                            <div><strong>Valor:</strong> {{ n.valor_total_nota }}</div>
+                        </div>
+                        <div class="mt-2 d-flex justify-content-end gap-2">
+                            <a href="{% url 'nota-manual-detalhe' slug=view.kwargs.slug nota_id=n.pk %}"
+                                class="btn btn-sm btn-primary">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{% url 'nota-manual-edit' slug=view.kwargs.slug nota_id=n.pk %}"
+                                class="btn btn-sm btn-warning">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="alert alert-info">Nenhuma nota manual encontrada.</div>
+                {% endfor %}
+
+                {% if is_paginated %}
+                <nav class="mt-2 mx-auto text-center justify-content-center">
+                    <ul class="pagination pagination-sm">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item"><a class="page-link"
+                                href="?page={{ page_obj.previous_page_number }}">Anterior</a></li>
+                        {% endif %}
+                        <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
+                        {% if page_obj.has_next %}
+                        <li class="page-item"><a class="page-link"
+                                href="?page={{ page_obj.next_page_number }}">Próxima</a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
