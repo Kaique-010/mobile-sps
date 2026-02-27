@@ -167,7 +167,7 @@ jobs:
           to: ${{ secrets.SMTP_USER }}
           from: ${{ secrets.SMTP_USER }}
           body: |
-            Deploy concluído com sucesso.
+            Deploy concluído com sucesso. em ${{ github.event.deployment.deployment_created_at }}
             Mirror: spartacusWeb25/mobile-sps
             Ambiente: ${{ github.ref }}
             Commit: ${{ github.sha }}
