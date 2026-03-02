@@ -9,6 +9,8 @@ class EmitenteDTO(BaseModel):
     fantasia: str
     ie: str
     regime_trib: str
+    cnae: Optional[str] = None
+    inscricao_municipal: Optional[str] = None
     logradouro: str
     numero: str
     bairro: str
@@ -39,6 +41,7 @@ class ResponsavelTecnicoDTO(BaseModel):
     fone: str
     id_csrt: Optional[str] = None
     hash_csrt: Optional[str] = None
+    csrt_key: Optional[str] = None
 
 
 class ItemDTO(BaseModel):

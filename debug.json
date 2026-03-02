@@ -1,8 +1,8 @@
 {
-  "debug_id": "3cdd2372-2890-45c2-8452-14d25c6f05e1",
-  "timestamp_inicio": "2026-02-25T14:54:27.738351Z",
+  "debug_id": "c474fb4d-b1e7-41be-b197-132a5865896e",
+  "timestamp_inicio": "2026-03-02T00:08:06.289139Z",
   "ambiente": {
-    "debug": true,
+    "debug": false,
     "database_alias": "saveweb001"
   },
   "tabelas_tributacao": {
@@ -32,8 +32,8 @@
       "desconto": "0.0000",
       "logs": [
         {
-          "id": "29f03b01-6817-4351-bf40-dc01ee2bab0a",
-          "timestamp": "2026-02-25T14:54:27.839954Z",
+          "id": "ecd6aa52-6338-4acc-b21f-d92b936cd7e1",
+          "timestamp": "2026-03-02T00:08:06.606722Z",
           "tipo": "antes_calculo_item",
           "mensagem": "Início do cálculo de impostos para o item.",
           "dados": {
@@ -91,8 +91,8 @@
   ],
   "logs": [
     {
-      "id": "2279a1f4-1b19-4d77-98ad-f8c1d6941288",
-      "timestamp": "2026-02-25T14:54:27.816604Z",
+      "id": "8cc42493-8550-4115-963d-7fda5138b1a7",
+      "timestamp": "2026-03-02T00:08:06.507510Z",
       "tipo": "contexto_nota",
       "mensagem": "Contexto fiscal inicial da nota.",
       "dados": {
@@ -100,5 +100,5 @@
       }
     }
   ],
-  "timestamp_fim": "2026-02-25T14:54:28.023259Z"
+  "timestamp_fim": "2026-03-02T00:08:07.274309Z"
 }

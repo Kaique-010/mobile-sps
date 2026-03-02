@@ -642,6 +642,117 @@ def venda_emitir(request, slug=None):
         empr_codi=empresa_id
     ).first()
     
+    # ------------------------------------------------------------
+    # EMISSÃO NFC-e (Modelo 65)
+    # ------------------------------------------------------------
+    if tipo == 'nfce':
+        try:
+            from Notas_Fiscais.models import Nota
+            from Notas_Fiscais.services.nota_service import NotaService
+            from Notas_Fiscais.aplicacao.emissao_service import EmissaoService
+            from Notas_Fiscais.builders.pedido import PedidoNFeBuilder
+            from django.utils import timezone
+            
+            # Verifica se já existe nota para este pedido
+            nota = Nota.objects.using(banco).filter(
+                empresa=empresa_id,
+                filial=filial_id,
+                modelo='65',
+                pedido_origem=str(numero_venda)
+            ).exclude(status__in=[101, 102, 301, 302]).first()
+            
+            if not nota:
+                # Contexto para o builder
+                context = {
+                    "empresa": int(empresa_id),
+                    "filial": int(filial_id),
+                    "modelo": "65",
+                    "serie": "1", # TODO: Pegar de config da filial se houver
+                    "numero": 0,
+                    "ambiente": int(getattr(filial, 'empr_ambi_nfec', 2) or 2),
+                    "tipo_operacao": 1,
+                    "finalidade": 1,
+                }
+
+                # Cria a nota a partir do pedido
+                builder = PedidoNFeBuilder(pedido, database=banco, **context)
+                dto_dict = builder.build()
+                
+                # Prepara dados para NotaService.criar
+                # Mescla contexto com campos adicionais que o NotaService espera
+                data_nota = context.copy()
+                data_nota.update({
+                    "natureza_operacao": "VENDA",
+                    "destinatario": pedido.pedi_forn, # ID do cliente
+                    "pedido_origem": str(numero_venda),
+                    "data_emissao": timezone.now().date(),
+                    "consumidor_final": 1,
+                    "indicador_presencial": 1,
+                })
+                
+                # Prepara itens
+                itens_nota = []
+                for item_dto in dto_dict['itens']:
+                    impostos = {
+                        k: item_dto.get(k) for k in ['cst_icms', 'cst_pis', 'cst_cofins', 'cst_ipi', 'aliq_icms', 'base_icms', 'valor_icms'] if k in item_dto
+                    }
+                    item_nota = item_dto.copy()
+                    item_nota['impostos'] = impostos
+                    itens_nota.append(item_nota)
+                
+                nota = NotaService.criar(
+                    data=data_nota,
+                    itens=itens_nota,
+                    impostos_map=None,
+                    transporte=None,
+                    empresa=empresa_id,
+                    filial=filial_id,
+                    database=banco
+                )
+            
+            # Se já autorizada
+            if nota.status == 100:
+                chave = nota.chave_acesso
+                url = f"https://www.sefaz.rs.gov.br/NFCE/NFCE-COM.aspx?p={chave}" # Placeholder RS
+                return JsonResponse({
+                    'ok': True,
+                    'tipo': 'nfce',
+                    'status': 'Autorizada',
+                    'chave': chave,
+                    'xml': nota.xml_autorizado,
+                    'url_danfe': url,
+                    'mensagem': 'Nota já autorizada.'
+                })
+            
+            # Emite
+            service = EmissaoService(slug, banco)
+            resp = service.emitir(nota.id)
+            
+            if resp.get('status') == 100:
+                chave = resp.get('chave')
+                url = f"https://www.sefaz.rs.gov.br/NFCE/NFCE-COM.aspx?p={chave}" # Placeholder RS
+                return JsonResponse({
+                    'ok': True,
+                    'tipo': 'nfce',
+                    'status': 'Autorizada',
+                    'chave': chave,
+                    'xml': resp.get('xml_protocolo') or resp.get('xml'),
+                    'url_danfe': url,
+                })
+            else:
+                return JsonResponse({
+                    'ok': False,
+                    'tipo': 'nfce',
+                    'status': 'Rejeitada',
+                    'motivo': resp.get('motivo'),
+                    'erros': resp.get('erros')
+                }, status=400)
+                
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({'detail': f'Erro na emissão NFC-e: {str(e)}'}, status=500)
+    
     # Busca itens
     itens = list(
         Itenspedidovenda.objects.using(

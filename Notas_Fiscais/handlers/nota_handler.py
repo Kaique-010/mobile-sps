@@ -14,10 +14,14 @@ class NotaHandler:
         """
 
         data = data.copy()
-        # Remove campos que não pertencem ao modelo Nota
-        data.pop("itens", None)
-        data.pop("impostos", None)
-        data.pop("transporte", None)
+        # Remove campos que não pertencem ao modelo Nota (campos extras de controle/DTO)
+        campos_remover = [
+            "itens", "impostos", "transporte", 
+            "natureza_operacao", "consumidor_final", "indicador_presencial"
+        ]
+        
+        for campo in campos_remover:
+            data.pop(campo, None)
 
         data["empresa"] = empresa
         data["filial"] = filial

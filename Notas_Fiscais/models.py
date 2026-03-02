@@ -79,6 +79,8 @@ class Nota(models.Model):
     protocolo_autorizacao = models.CharField(max_length=60, blank=True, null=True)
     motivo_status = models.TextField(blank=True, null=True, help_text="Motivo do status retornado pela SEFAZ")
 
+    pedido_origem = models.CharField(max_length=20, blank=True, null=True, db_index=True, help_text="Número do Pedido de Venda de origem")
+
     xml_assinado = models.TextField(blank=True, null=True)
     xml_autorizado = models.TextField(blank=True, null=True)
 

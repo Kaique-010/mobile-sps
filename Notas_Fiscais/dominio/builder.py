@@ -51,6 +51,8 @@ class NotaBuilder:
             fantasia=f.empr_fant or f.empr_nome,
             ie=self._limpar_inscricao_estadual(f.empr_insc_esta),
             regime_trib=f.empr_regi_trib,
+            cnae=self._somente_digitos(f.empr_cnae),
+            inscricao_municipal=self._somente_digitos(f.empr_insc_muni),
 
             logradouro=f.empr_ende,
             numero=f.empr_nume,
@@ -182,18 +184,32 @@ class NotaBuilder:
     # RESPONSÁVEL TÉCNICO
     # -------------------------------
     def build_responsavel_tecnico(self):
+        from decouple import config
+        
         f = self.filial
         fone = self._somente_digitos(f.empr_fone)
         if not fone:
             fone = "4232236164"  # Default Spartacus Phone
+            
+        # Tenta ler do .env (Configuração global da Software House)
+        id_csrt = config('CSRT_ID', default=None)
+        csrt_key = config('CSRT_KEY', default=None) 
+        
+        # Se não tiver no .env, tenta verificar se existe no model Filiais (futuro)
+        if not id_csrt and hasattr(f, 'empr_csrt_id'):
+            id_csrt = getattr(f, 'empr_csrt_id')
+            
+        if not csrt_key and hasattr(f, 'empr_csrt_key'):
+            csrt_key = getattr(f, 'empr_csrt_key')
             
         return ResponsavelTecnicoDTO(
             cnpj="20702018000142",
             contato="DANIEL DIAS DE ALMEIDA",
             email="spartacus@spartacus.com.br",
             fone=fone,
-            id_csrt=None,
-            hash_csrt=None
+            id_csrt=id_csrt,
+            hash_csrt=None, # Será calculado no SefazAdapter se tiver key
+            csrt_key=csrt_key
         )
 
     # -------------------------------

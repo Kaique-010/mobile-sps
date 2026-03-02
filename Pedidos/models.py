@@ -84,7 +84,8 @@ class PedidoVenda(models.Model):
     def cliente(self):
         try:
             from Entidades.models import Entidades
-            return Entidades.objects.filter(enti_clie=self.pedi_forn, enti_empr=self.pedi_empr).first()
+            db = self._state.db or 'default'
+            return Entidades.objects.using(db).filter(enti_clie=self.pedi_forn, enti_empr=self.pedi_empr).first()
         except Exception:
             return None
     
@@ -141,7 +142,8 @@ class Itenspedidovenda(models.Model):
     def produto(self):
         try:
             from Produtos.models import Produtos
-            return Produtos.objects.filter(prod_codi=self.iped_prod, prod_empr=str(self.iped_empr)).first()
+            db = self._state.db or 'default'
+            return Produtos.objects.using(db).filter(prod_codi=self.iped_prod, prod_empr=str(self.iped_empr)).first()
         except Exception:
             return None
 

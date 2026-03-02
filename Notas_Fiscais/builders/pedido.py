@@ -4,24 +4,34 @@ from Pedidos.models import PedidoVenda
 
 class PedidoNFeBuilder:
 
-    def __init__(self, pedido: PedidoVenda):
+    def __init__(self, pedido: PedidoVenda, database=None, **kwargs):
         self.pedido = pedido
+        self.database = database or pedido._state.db or 'default'
+        self.pedido._state.db = self.database
+        self.context = kwargs
 
     # -------------------------------------------------------------------
     # MÉTODO PRINCIPAL
     # -------------------------------------------------------------------
     def build(self):
+        from datetime import date
+        
         return NotaFiscalDTO(
+            empresa=self.context.get('empresa', self.pedido.pedi_empr),
+            filial=self.context.get('filial', self.pedido.pedi_fili),
+            modelo=self.context.get('modelo', '55'),
+            serie=self.context.get('serie', '1'),
+            numero=self.context.get('numero', 0),
+            data_emissao=self.context.get('data_emissao', str(date.today())),
+            data_saida=self.context.get('data_saida', None),
+            tipo_operacao=self.context.get('tipo_operacao', 1),
+            finalidade=self.context.get('finalidade', 1),
+            ambiente=self.context.get('ambiente', 2),
+            
             emitente=self._emitente(),
             destinatario=self._destinatario(),
             itens=self._itens(),
-            totais=self._totais(),
-            pagamentos=self._pagamentos(),
-            tipo_operacao=1 if self.pedido.pedi_tipo_oper == "VENDA" else 0,
-            cfop_padrao=self._resolve_cfop(),
-            uf_origem=self._uf_origem(),
-            uf_destino=self._uf_destino(),
-        ).to_dict()
+        ).model_dump()
 
     # -------------------------------------------------------------------
     # UF DE ORIGEM (FILIAL)
@@ -34,9 +44,16 @@ class PedidoNFeBuilder:
     # -------------------------------------------------------------------
     def _uf_destino(self):
         try:
-            return self.pedido.cliente.enti_uf or ""
+            if self.pedido.cliente:
+                return self.pedido.cliente.enti_uf or ""
         except:
-            return ""
+            pass
+            
+        # Se for NFC-e sem cliente, assume mesma UF da origem (filial)
+        if str(self.context.get('modelo')) == '65':
+            return self._uf_origem()
+            
+        return ""
 
     # -------------------------------------------------------------------
     # EMITENTE = FILIAL
@@ -53,18 +70,18 @@ class PedidoNFeBuilder:
             raise Exception("Filial não encontrada para o pedido.")
 
         return {
-            "cnpj": f.empr_docu,
-            "razao": f.empr_nome,
-            "fantasia": f.empr_fant or f.empr_nome,
+            "cnpj": f.empr_docu or "",
+            "razao": f.empr_nome or "",
+            "fantasia": f.empr_fant or f.empr_nome or "",
             "ie": f.empr_insc_esta or "",
             "regime_trib": str(f.empr_regi_trib or "3"),
-            "logradouro": f.empr_ende,
-            "numero": f.empr_nume,
-            "bairro": f.empr_bair,
-            "municipio": f.empr_cida,
+            "logradouro": f.empr_ende or "",
+            "numero": f.empr_nume or "",
+            "bairro": f.empr_bair or "",
+            "municipio": f.empr_cida or "",
             "cod_municipio": str(getattr(f, 'empr_codi_cida', '') or ''),
-            "uf": f.empr_esta,
-            "cep": f.empr_cep,
+            "uf": f.empr_esta or "",
+            "cep": f.empr_cep or "",
         }
 
     # -------------------------------------------------------------------
@@ -73,6 +90,24 @@ class PedidoNFeBuilder:
     def _destinatario(self):
         c = self.pedido.cliente
         if not c:
+            # Se for NFC-e, permite sem cliente (consumidor final)
+            if str(self.context.get('modelo')) == '65':
+                # Pega a UF da filial/origem como padrão
+                uf = self._uf_origem()
+                
+                return {
+                    "documento": "",
+                    "nome": "",
+                    "ie": "",
+                    "ind_ie": "9",
+                    "logradouro": "",
+                    "numero": "",
+                    "bairro": "",
+                    "municipio": "",
+                    "cod_municipio": "",
+                    "uf": uf,
+                    "cep": "",
+                }
             raise Exception("Cliente não encontrado no pedido.")
 
         doc = c.enti_cnpj if c.enti_cnpj else c.enti_cpf
@@ -101,7 +136,11 @@ class PedidoNFeBuilder:
     def _itens(self):
         itens_dto = []
 
-        for item in self.pedido.itens:  # já retorna o queryset custom
+        qs = self.pedido.itens
+        if self.database:
+            qs = qs.using(self.database)
+
+        for item in qs:  # já retorna o queryset custom
             p = item.produto  # Produtos
 
             if not p:

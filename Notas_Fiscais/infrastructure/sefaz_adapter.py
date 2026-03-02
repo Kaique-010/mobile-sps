@@ -3,6 +3,8 @@ from pynfe.processamento.assinatura import AssinaturaA1
 from pynfe.processamento.serializacao import SerializacaoXML
 from pynfe.entidades.fonte_dados import _fonte_dados
 from lxml import etree
+import base64
+import hashlib
 
 class SefazAdapter:
 
@@ -214,6 +216,23 @@ class SefazAdapter:
             return
 
         print(f"DEBUG: Injetando infRespTec para CNPJ {resp_dto.cnpj}")
+
+        # Calcula o hashCSRT se tivermos a chave CSRT e o ID da nota
+        if resp_dto.csrt_key and not resp_dto.hash_csrt:
+            nfe_id = inf_nfe.get("Id")
+            if nfe_id and nfe_id.startswith("NFe"):
+                chave_acesso = nfe_id[3:] # Remove o prefixo NFe
+                
+                # Concatena CSRT (Key) + Chave de Acesso
+                # Nota: Algumas documentações dizem CSRT + Chave, outras Chave + CSRT.
+                # A NT 2018.005 diz: "concatenação do CSRT com a Chave de Acesso da N-Fe" -> CSRT + Chave
+                # Onde "CSRT" aqui se refere ao código alfanumérico (Key) de 16 a 36 caracteres.
+                data = resp_dto.csrt_key + chave_acesso
+                hash_bytes = hashlib.sha1(data.encode('utf-8')).digest()
+                resp_dto.hash_csrt = base64.b64encode(hash_bytes).decode('utf-8')
+                print(f"DEBUG: HashCSRT calculado: {resp_dto.hash_csrt} (Key={resp_dto.csrt_key}, Chave={chave_acesso})")
+            else:
+                print(f"DEBUG: Não foi possível calcular HashCSRT. ID da NFe inválido ou não encontrado: {nfe_id}")
 
         # Cria o grupo infRespTec
         resp = sub(inf_nfe, "infRespTec")
