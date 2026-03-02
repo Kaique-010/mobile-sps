@@ -14,10 +14,51 @@
     <div class="mb-3">
         <label class="form-label" for="cr_enti_cep">CEP</label>
         <input type="text" class="form-control" id="cr_enti_cep" name="enti_cep" maxlength="8">
+        <div id="cr_cep_feedback" class="form-text text-muted"></div>
     </div>
+
+    <!-- Campos hidden preenchidos automaticamente pelo CEP -->
+    <input type="hidden" id="cr_enti_ende"     name="enti_ende">
+    <input type="hidden" id="cr_enti_bair"     name="enti_bair">
+    <input type="hidden" id="cr_enti_cida"     name="enti_cida">
+    <input type="hidden" id="cr_enti_esta"     name="enti_esta">
+    <input type="hidden" id="cr_enti_codi_cida" name="enti_codi_cida">
 </div>
 <div class="modal-footer">
     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
     <button type="submit" class="btn btn-primary" id="btnSalvarClienteRapido">Salvar</button>
 </div>
 
+<script>
+document.getElementById('cr_enti_cep').addEventListener('blur', function() {
+    const cep = this.value.replace(/\D/g, '');
+    const feedback = document.getElementById('cr_cep_feedback');
+    
+    if (cep.length !== 8) return;
+
+    feedback.textContent = 'Buscando endereço...';
+    feedback.className = 'form-text text-muted';
+
+    fetch(`https://viacep.com.br/ws/${cep}/json/`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.erro) {
+                feedback.textContent = 'CEP não encontrado.';
+                feedback.className = 'form-text text-danger';
+                return;
+            }
+            document.getElementById('cr_enti_ende').value      = data.logradouro || '';
+            document.getElementById('cr_enti_bair').value      = data.bairro     || '';
+            document.getElementById('cr_enti_cida').value      = data.localidade || '';
+            document.getElementById('cr_enti_esta').value      = data.uf         || '';
+            document.getElementById('cr_enti_codi_cida').value = data.ibge       || '';
+
+            feedback.textContent = `${data.localidade} - ${data.uf}`;
+            feedback.className = 'form-text text-success';
+        })
+        .catch(() => {
+            feedback.textContent = 'Erro ao buscar CEP.';
+            feedback.className = 'form-text text-danger';
+        });
+});
+</script>

@@ -233,16 +233,11 @@ def origens_caixa(request, slug=None):
 
     from Entidades.models import Entidades
 
-    base_ids = list(
-        Caixageral.objects.using(banco)
-        .filter(caix_empr=empresa_id, caix_fili=filial_id)
-        .values_list('caix_caix', flat=True)
-        .distinct()
-    )
-
+    # Buscamos Entidades configuradas como CAIXA ('C') ou BANCO ('B')
+    # Isso permite selecionar caixas novos que ainda não têm movimentação
     qs = Entidades.objects.using(banco).filter(
-        enti_empr=str(empresa_id),
-        enti_clie__in=base_ids or [-1],
+        enti_empr=empresa_id,
+        enti_tien__in=['C', 'B']
     )
 
     if termo:
@@ -685,25 +680,59 @@ def venda_emitir(request, slug=None):
                     "natureza_operacao": "VENDA",
                     "destinatario": pedido.pedi_forn, # ID do cliente
                     "pedido_origem": str(numero_venda),
-                    "data_emissao": timezone.now().date(),
+                    "data_emissao": timezone.now(),
                     "consumidor_final": 1,
                     "indicador_presencial": 1,
                 })
                 
                 # Prepara itens
                 itens_nota = []
-                for item_dto in dto_dict['itens']:
-                    impostos = {
-                        k: item_dto.get(k) for k in ['cst_icms', 'cst_pis', 'cst_cofins', 'cst_ipi', 'aliq_icms', 'base_icms', 'valor_icms'] if k in item_dto
-                    }
+                impostos_map = {}
+                
+                for index, item_dto in enumerate(dto_dict['itens']):
+                    # Copia o DTO para não alterar o original
                     item_nota = item_dto.copy()
-                    item_nota['impostos'] = impostos
+                    
+                    # Remove 'impostos' se existir para não conflitar com o relacionamento
+                    if 'impostos' in item_nota:
+                        del item_nota['impostos']
+                    
+                    # Prepara o dicionário de impostos para NotaItemImposto
+                    # Mapeia os nomes usados no DTO para os nomes do model NotaItemImposto
+                    impostos_data = {}
+                    
+                    # Mapeamento de campos (DTO -> Model)
+                    mapa_campos = {
+                        'aliq_icms': 'icms_aliquota',
+                        'base_icms': 'icms_base',
+                        'valor_icms': 'icms_valor',
+                        
+                        'aliq_pis': 'pis_aliquota',
+                        'base_pis': 'pis_base',
+                        'valor_pis': 'pis_valor',
+                        
+                        'aliq_cofins': 'cofins_aliquota',
+                        'base_cofins': 'cofins_base',
+                        'valor_cofins': 'cofins_valor',
+                        
+                        'aliq_ipi': 'ipi_aliquota',
+                        'base_ipi': 'ipi_base',
+                        'valor_ipi': 'ipi_valor',
+                    }
+                    
+                    for campo_dto, campo_model in mapa_campos.items():
+                        if campo_dto in item_dto:
+                             impostos_data[campo_model] = item_dto[campo_dto]
+                             
+                    if impostos_data:
+                        impostos_map[index] = impostos_data
+
                     itens_nota.append(item_nota)
                 
                 nota = NotaService.criar(
                     data=data_nota,
                     itens=itens_nota,
-                    impostos_map=None,
+                    impostos_map=impostos_map,
                     transporte=None,
                     empresa=empresa_id,
                     filial=filial_id,

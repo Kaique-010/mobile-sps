@@ -30,6 +30,7 @@ BANCOS_BRASILEIROS = [
     ('623', '623 - Banco PAN'),
     ('633', '633 - Banco Rendimento'),
     ('197', '197 - Stone Pagamentos'),
+    ('999', '999 - Caixa Diário')
 ]
 
 
@@ -245,12 +246,15 @@ class BancoConfigForm(forms.ModelForm):
     def save(self, commit=True, using='default'):
         """Override save para garantir que enti_banc seja salvo"""
         instance = super().save(commit=False)
-        max_enti_clie = Entidades.objects.using(using).aggregate(Max('enti_clie'))['enti_clie__max'] or 0
+        
+        # Apenas gera novo ID se for inclusão (não tem PK definida)
+        if not instance.pk:
+            max_enti_clie = Entidades.objects.using(using).aggregate(Max('enti_clie'))['enti_clie__max'] or 0
+            instance.enti_clie = max_enti_clie + 1
+        
         # Pegar o código do banco do cleaned_data
         if 'codigo_banco' in self.cleaned_data:
             instance.enti_banc = self.cleaned_data['codigo_banco']
-        
-        instance.enti_clie = max_enti_clie + 1
         
         if commit:
             if using:

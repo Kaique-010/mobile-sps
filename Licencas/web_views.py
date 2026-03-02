@@ -280,14 +280,44 @@ class FilialUpdateView(DBSlugMixin, UpdateView):
     def form_valid(self, form):
         # Salvar apenas os campos NORMAIS da Filial
         filial = form.save(commit=False)
+        
+        # Campos de certificado que não devem ser sobrescritos automaticamente se vazios
+        cert_fields = ['empr_cert', 'empr_cert_digi', 'empr_senh_cert']
+        
+        update_data = {}
+        for field in form.cleaned_data.keys():
+            if field in [f.name for f in Filiais._meta.fields]:
+                # Se for campo de certificado, tratamos separadamente
+                if field not in cert_fields:
+                    update_data[field] = getattr(filial, field)
+
+        # Lógica de Upload de Certificado (similar ao CreateView)
+        arquivo = form.cleaned_data.get('certificado')
+        senha = form.cleaned_data.get('senha_certificado')
+
+        if arquivo:
+            content = arquivo.read()
+            try:
+                load_key_and_certificates(content, (senha or '').encode('utf-8'))
+            except Exception:
+                form.add_error('certificado', 'Certificado inválido ou senha incorreta.')
+                return self.form_invalid(form)
+            
+            update_data['empr_cert'] = getattr(arquivo, 'name', 'certificado.p12')
+            update_data['empr_cert_digi'] = encrypt_bytes(content)
+            
+            # Se enviou certificado, atualiza a senha se fornecida
+            if senha:
+                update_data['empr_senh_cert'] = encrypt_str(senha)
+        
+        elif senha:
+            # Se usuário trocou apenas a senha (sem upload de arquivo), atualiza a senha
+            update_data['empr_senh_cert'] = encrypt_str(senha)
+
         Filiais.objects.using(self.db_alias).filter(
             empr_empr=filial.empr_empr,
             empr_codi=filial.empr_codi
-        ).update(**{
-            field: getattr(filial, field)
-            for field in form.cleaned_data.keys()
-            if field in [f.name for f in Filiais._meta.fields]
-        })
+        ).update(**update_data)
 
         messages.success(self.request, "Filial atualizada com sucesso.")
         return HttpResponseRedirect(self.get_success_url())

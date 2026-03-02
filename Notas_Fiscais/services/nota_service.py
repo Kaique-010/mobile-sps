@@ -31,6 +31,9 @@ class NotaService:
         payload = NotaHandler.preparar_criacao(data, empresa, filial)
         payload["emitente"] = emitente
         payload["destinatario"] = destinatario
+        
+        # Define ambiente (Produção/Homologação) conforme configuração da filial
+        payload["ambiente"] = int(emitente.empr_ambi_nfe or 2)
 
         # 3.1. Número automático
         modelo = str(payload.get("modelo") or "55")
@@ -115,7 +118,7 @@ class NotaService:
 
     @staticmethod
     @transaction.atomic
-    def cancelar(nota, descricao, xml=None, protocolo=None):
+    def cancelar(nota, descricao, xml=None, protocolo=None, database="default"):
         if nota.status == 101:
             raise ValidationError("Nota já cancelada.")
 
@@ -125,10 +128,11 @@ class NotaService:
             descricao=descricao,
             xml=xml,
             protocolo=protocolo,
+            using=database
         )
 
         nota.status = 101
-        nota.save(update_fields=["status"])
+        nota.save(using=database, update_fields=["status"])
         return nota
     
     @staticmethod
@@ -155,7 +159,7 @@ class NotaService:
 
     @staticmethod
     @transaction.atomic
-    def transmitir(nota, descricao="Transmitida via painel", chave=None, protocolo=None, xml=None):
+    def transmitir(nota, descricao="Transmitida via painel", chave=None, protocolo=None, xml=None, database="default"):
         if nota.status == 100:
             raise ValidationError("Nota já autorizada.")
 
@@ -165,6 +169,7 @@ class NotaService:
             descricao=descricao,
             xml=xml,
             protocolo=protocolo,
+            using=database
         )
 
         if chave:
@@ -175,25 +180,26 @@ class NotaService:
             nota.xml_autorizado = xml
 
         nota.status = 100
-        nota.save(update_fields=["status", "chave_acesso", "protocolo_autorizacao", "xml_autorizado"])
+        nota.save(using=database, update_fields=["status", "chave_acesso", "protocolo_autorizacao", "xml_autorizado"])
         return nota
 
     @staticmethod
     @transaction.atomic
-    def gravar(nota, descricao="Rascunho criado"):
+    def gravar(nota, descricao="Rascunho criado", database="default"):
         if nota.status != 0:
             nota.status = 0
-            nota.save(update_fields=["status"])
+            nota.save(using=database, update_fields=["status"])
         EventoService.registrar(
             nota=nota,
             tipo="rascunho",
             descricao=descricao,
+            using=database
         )
         return nota
 
     @staticmethod
     @transaction.atomic
-    def inutilizar(nota, descricao, xml=None, protocolo=None):
+    def inutilizar(nota, descricao, xml=None, protocolo=None, database="default"):
         if nota.status == 102:
             raise ValidationError("Nota já inutilizada.")
 
@@ -203,8 +209,9 @@ class NotaService:
             descricao=descricao,
             xml=xml,
             protocolo=protocolo,
+            using=database
         )
 
         nota.status = 102
-        nota.save(update_fields=["status"])
+        nota.save(using=database, update_fields=["status"])
         return nota

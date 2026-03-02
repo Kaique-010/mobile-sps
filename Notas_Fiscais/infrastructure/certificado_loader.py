@@ -18,11 +18,31 @@ class CertificadoLoader:
         self.filial = filial
 
     def load(self):
-        if not self.filial.empr_cert_digi:
-            raise Exception("Filial não possui certificado digital cadastrado.")
+        cert_token = None
+        try:
+            # Tenta acessar o campo binário (pode falhar se a coluna não existir no DB)
+            if hasattr(self.filial, 'empr_cert_digi'):
+                cert_token = self.filial.empr_cert_digi
+        except Exception:
+            pass
+
+        # Se não encontrou no banco, tenta via arquivo (fallback legado)
+        if not cert_token:
+            caminho_arquivo = getattr(self.filial, 'empr_cert', None)
+            if caminho_arquivo:
+                import os
+                if os.path.isfile(caminho_arquivo):
+                    senha_token = self.filial.empr_senh_cert
+                    try:
+                        senha = decrypt_str(senha_token)
+                    except Exception:
+                        senha = senha_token
+                    return caminho_arquivo, (senha or "")
+
+        if not cert_token:
+            raise Exception("Filial não possui certificado digital cadastrado (nem banco, nem arquivo).")
 
         senha_token = self.filial.empr_senh_cert
-        cert_token = self.filial.empr_cert_digi
 
         try:
             senha = decrypt_str(senha_token)

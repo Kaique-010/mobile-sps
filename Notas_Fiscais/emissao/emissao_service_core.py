@@ -174,15 +174,27 @@ class EmissaoServiceCore:
     # =====================================================================
     def _load_certificado(self):
         """
-        Retorna (pfx_bytes, senha) direto do banco.
-        Sem decrypt. Sem arquivo temporário. Sem memoryview.
-        Simples e funcional.
+        Retorna (pfx_bytes, senha) direto do banco ou fallback para arquivo.
         """
-        if not self.filial.empr_cert_digi:
-            raise ErroImissao("Filial não possui certificado digital.")
+        pfx_bytes = None
+        try:
+            # Tenta ler do banco se a coluna existir
+            if hasattr(self.filial, 'empr_cert_digi') and self.filial.empr_cert_digi:
+                pfx_bytes = bytes(self.filial.empr_cert_digi)
+        except Exception:
+            pass
 
-        # Converter memoryview → bytes
-        pfx_bytes = bytes(self.filial.empr_cert_digi)
+        # Fallback se não encontrou no banco
+        if not pfx_bytes:
+            caminho = getattr(self.filial, 'empr_cert', None)
+            if caminho:
+                import os
+                if os.path.isfile(caminho):
+                    with open(caminho, 'rb') as f:
+                        pfx_bytes = f.read()
+
+        if not pfx_bytes:
+            raise ErroImissao("Filial não possui certificado digital (nem banco, nem arquivo).")
 
         # Senha continua criptografada no banco
         from Licencas.crypto import decrypt_str

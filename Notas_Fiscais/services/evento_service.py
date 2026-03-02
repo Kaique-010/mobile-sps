@@ -6,8 +6,8 @@ from ..models import NotaEvento
 class EventoService:
 
     @staticmethod
-    def registrar(nota, tipo, descricao, xml=None, protocolo=None):
-        return NotaEvento.objects.create(
+    def registrar(nota, tipo, descricao, xml=None, protocolo=None, using="default"):
+        return NotaEvento.objects.using(using).create(
             nota=nota,
             tipo=tipo,
             descricao=descricao,

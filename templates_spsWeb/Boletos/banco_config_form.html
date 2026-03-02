@@ -34,7 +34,7 @@
     }
 
     .form-section {
-        background: #f8f9fa;
+
         padding: 1.5rem;
         border-radius: 0.5rem;
         margin-bottom: 1.5rem;
@@ -44,7 +44,7 @@
     .form-section-title {
         font-size: 1.2rem;
         font-weight: 600;
-        color: #2c3e50;
+        color: #70a6dd;
         margin-bottom: 1.25rem;
         display: flex;
         align-items: center;
@@ -721,6 +721,55 @@
         cepInput.addEventListener('input', function (e) {
             let v = e.target.value.replace(/\D/g, '').slice(0, 8);
             e.target.value = v;
+        });
+    }
+
+    // Busca de CEP
+    if (cepInput) {
+        cepInput.addEventListener('blur', async function (e) {
+            const cep = e.target.value.replace(/\D/g, '');
+            if (cep.length === 8) {
+                const slug = "{{ slug }}";
+                const url = `/api/${slug}/entidades/entidades/buscar-endereco/?cep=${cep}`;
+
+                // Feedback visual de carregamento
+                const originalPlaceholder = cepInput.placeholder;
+                cepInput.placeholder = "Buscando...";
+                cepInput.disabled = true;
+
+                try {
+                    const response = await fetch(url);
+                    if (response.ok) {
+                        const data = await response.json();
+
+                        // Mapeia os campos retornados pela API (pode variar entre logradouro/rua/enti_ende)
+                        const logradouro = data.logradouro || data.rua || data.enti_ende || '';
+                        const bairro = data.bairro || data.enti_bair || '';
+                        const cidade = data.localidade || data.cidade || data.enti_cida || '';
+                        const uf = data.uf || data.estado || data.enti_esta || '';
+
+                        // Preenche os campos se existirem no formulário
+                        const endeField = document.querySelector('[name="enti_ende"]');
+                        const bairField = document.querySelector('[name="enti_bair"]'); // Caso exista oculto ou futuro
+                        const cidaField = document.querySelector('[name="enti_cida"]');
+                        const estaField = document.querySelector('[name="enti_esta"]');
+                        const numeField = document.querySelector('[name="enti_nume"]');
+
+                        if (endeField && logradouro) endeField.value = logradouro;
+                        if (bairField && bairro) bairField.value = bairro;
+                        if (cidaField && cidade) cidaField.value = cidade;
+                        if (estaField && uf) estaField.value = uf;
+
+                        // Foca no número para preenchimento manual
+                        if (numeField) numeField.focus();
+                    }
+                } catch (error) {
+                    console.error('Erro ao buscar CEP:', error);
+                } finally {
+                    cepInput.disabled = false;
+                    cepInput.placeholder = originalPlaceholder;
+                }
+            }
         });
     }
 

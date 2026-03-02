@@ -1,11 +1,13 @@
 from django.db import transaction
 import logging
+import re
 
 from ..models import Nota, NotaItemImposto
 from ..dominio.builder import NotaBuilder
 from ..infrastructure.certificado_loader import CertificadoLoader
 from ..infrastructure.sefaz_adapter import SefazAdapter
 from ..services.calculo_impostos_service import CalculoImpostosService
+from ..services.evento_service import EventoService
 from .construir_nfe_pynfe import construir_nfe_pynfe
 from core.excecoes import ErroDominio
 from core.dominio_handler import tratar_erro, tratar_sucesso
@@ -34,11 +36,17 @@ class EmissaoService:
 
         # 4) Certificado
         from Licencas.models import Filiais
-        filial_obj = Filiais.objects.using(self.db).get(empr_empr=nota.empresa, empr_codi=nota.filial)
+        filial_obj = Filiais.objects.using(self.db).defer('empr_cert_digi').get(empr_empr=nota.empresa, empr_codi=nota.filial)
 
         try:
             cert_path, cert_pass = CertificadoLoader(filial_obj).load()
-            logger.info(f"Certificado carregado com sucesso para empresa={nota.empresa}, filial={nota.filial}, caminho={cert_path}, senha={cert_pass}, tamanho={len(filial_obj.empr_cert_digi)} bytes")
+            tamanho = 0
+            try:
+                if hasattr(filial_obj, 'empr_cert_digi') and filial_obj.empr_cert_digi:
+                    tamanho = len(filial_obj.empr_cert_digi)
+            except Exception:
+                pass
+            logger.info(f"Certificado carregado com sucesso para empresa={nota.empresa}, filial={nota.filial}, caminho={cert_path}, senha={cert_pass}, tamanho={tamanho} bytes")
         except Exception as e:
             detalhes = {
                 "empresa": nota.empresa,
@@ -102,6 +110,41 @@ class EmissaoService:
                 except Exception:
                     resposta['xml'] = str(resposta['xml'])
 
+        # Tratamento para erro 539 (Duplicidade com diferença na Chave)
+        if resposta.get("status") == 539:
+            motivo = resposta.get("motivo", "")
+            # Tenta extrair a chave original da mensagem de erro
+            # Padrão comum: [chNFe:0000...]
+            match = re.search(r"chNFe:?\s?(\d{44})", motivo)
+            if match:
+                chave_original = match.group(1)
+                logger.info(f"Erro 539 detectado. Tentando recuperar nota pela chave original: {chave_original}")
+                
+                try:
+                    consulta = adapter.consultar(chave_original)
+                    if consulta.get("status") == 100:
+                        logger.info("Consulta bem sucedida. Nota autorizada na SEFAZ. Atualizando localmente.")
+                        resposta["status"] = 100
+                        resposta["motivo"] = "Autorizado o uso da NF-e (Recuperado de Duplicidade)"
+                        resposta["protocolo"] = consulta.get("protocolo")
+                        resposta["xml_protocolo"] = consulta.get("xml_protocolo")
+                        resposta["chave"] = chave_original
+                        # Se possível, recuperar o XML original autorizado seria ideal, 
+                        # mas a consulta retorna o protocolo e status. 
+                        # O XML assinado original pode ser diferente do que tentamos enviar agora.
+                        # Mas mantemos o XML que tentamos enviar ou usamos o da consulta se vier completo?
+                        # O metodo consultar retorna xml_protocolo que é o protNFe.
+                        # Precisamos do nfeProc completo? 
+                        # Geralmente a consulta retorna apenas o status e protocolo.
+                        # Vamos manter o XML gerado (que gerou duplicidade) mas atualizar a chave?
+                        # NÃO! Se deu duplicidade com diferença na chave, o XML que temos É DIFERENTE do que está na SEFAZ.
+                        # Deveríamos tentar baixar o XML da SEFAZ, mas a consulta pública não retorna o XML completo da nota.
+                        # Solução paliativa: Salvar com a chave correta e protocolo. O XML armazenado pode ficar inconsistente com a assinatura.
+                        # O ideal seria fazer download, mas precisa de manifesto.
+                        # Vamos apenas atualizar chave e protocolo para permitir faturamento.
+                except Exception as e_cons:
+                    logger.error(f"Erro ao consultar chave original na duplicidade: {e_cons}")
+
         # 7) Persistir
         with transaction.atomic(using=self.db):
             nota.chave_acesso = resposta.get("chave")
@@ -152,5 +195,200 @@ class EmissaoService:
                 nota.xml_autorizado = f'<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">{xml_assinado_str}{resposta["xml_protocolo"]}</nfeProc>'
 
             nota.save(using=self.db)
+            
+            # Registrar Evento
+            EventoService.registrar(
+                nota=nota,
+                tipo="autorizacao" if nota.status == 100 else "erro_emissao",
+                descricao=nota.motivo_status or motivo or "Tentativa de emissão",
+                xml=nota.xml_autorizado if nota.status == 100 else nota.xml_assinado,
+                protocolo=nota.protocolo_autorizacao,
+                using=self.db
+            )
 
         return resposta
+
+    def consultar_status(self, nota_id):
+        nota = Nota.objects.using(self.db).get(id=nota_id)
+        chave_consulta = nota.chave_acesso
+
+        if not chave_consulta:
+            # 1. Tenta recuperar chave de evento de erro anterior (539 ou outros com chNFe)
+            from ..models import NotaEvento
+            eventos_erro = NotaEvento.objects.using(self.db).filter(
+                nota=nota, 
+                descricao__contains="chNFe"
+            ).order_by("-id")
+            
+            for ev in eventos_erro:
+                # Tenta capturar qualquer sequência de 44 dígitos
+                match = re.search(r"(\d{44})", ev.descricao)
+                if match:
+                    chave_consulta = match.group(1)
+                    print(f"=== CHAVE RECUPERADA DE EVENTO {ev.id}: {chave_consulta} ===")
+                    logger.info(f"Recuperada chave {chave_consulta} do histórico de erros (Evento {ev.id}) para consulta.")
+                    break
+            
+            # 2. Se ainda não achou, tenta no motivo_status da própria nota
+            if not chave_consulta and nota.motivo_status:
+                match = re.search(r"(\d{44})", nota.motivo_status)
+                if match:
+                    chave_consulta = match.group(1)
+                    print(f"=== CHAVE RECUPERADA DE MOTIVO_STATUS: {chave_consulta} ===")
+                    logger.info(f"Recuperada chave {chave_consulta} do motivo_status da nota.")
+
+        if not chave_consulta:
+            print("=== NENHUMA CHAVE DE 44 DÍGITOS ENCONTRADA PARA CONSULTA ===")
+            # Tenta gerar a chave se tivermos os dados (não recomendado aqui pois pode gerar chave diferente da que deu erro)
+            # Mas podemos tentar ver se a chave já foi gerada e salva em algum lugar? Não.
+            raise ErroDominio("Nota não possui chave de acesso e não foi possível recuperá-la do histórico para consulta.")
+
+        from Licencas.models import Filiais
+        filial_obj = Filiais.objects.using(self.db).defer('empr_cert_digi').get(empr_empr=nota.empresa, empr_codi=nota.filial)
+
+        try:
+            cert_path, cert_pass = CertificadoLoader(filial_obj).load()
+        except Exception as e:
+            detalhes = {
+                "empresa": nota.empresa,
+                "filial": nota.filial,
+                "erro_original": str(e),
+            }
+            logger.error(
+                "Falha ao carregar certificado para consulta: %s", e
+            )
+            raise ErroDominio(
+                "Certificado digital inválido.",
+                codigo="certificado_invalido",
+                detalhes=detalhes,
+            )
+
+        try:
+            ambiente = int(filial_obj.empr_ambi_nfe or 2)
+            uf = filial_obj.empr_esta
+            adapter = SefazAdapter(cert_path, cert_pass, uf, ambiente)
+            
+            resposta = adapter.consultar(chave_consulta)
+            
+            status_sefaz = resposta.get("status")
+            motivo_sefaz = resposta.get("motivo")
+            protocolo_sefaz = resposta.get("protocolo")
+            xml_prot_sefaz = resposta.get("xml_protocolo")
+
+            with transaction.atomic(using=self.db):
+                # Se achamos a chave (seja na nota ou recuperada), salvamos ela
+                if chave_consulta and nota.chave_acesso != chave_consulta:
+                    nota.chave_acesso = chave_consulta
+
+                # Status de Sucesso (Autorizada) ou Cancelada/Denegada que são estados finais válidos
+                if status_sefaz in [100, 101, 110, 301, 302]:
+                    nota.status = status_sefaz
+                    nota.protocolo_autorizacao = protocolo_sefaz
+                    nota.motivo_status = motivo_sefaz
+                    
+                    # Se for autorizada (100) ou denegada/cancelada com protocolo, tenta montar o procNFe
+                    if xml_prot_sefaz and nota.xml_assinado:
+                        xml_assinado_str = nota.xml_assinado
+                        # Remove declaração XML se existir para não ficar duplicada ou inválida dentro do procNFe
+                        if xml_assinado_str and xml_assinado_str.strip().startswith('<?xml'):
+                            idx = xml_assinado_str.find('>')
+                            if idx != -1:
+                                xml_assinado_str = xml_assinado_str[idx+1:].strip()
+                        
+                        nota.xml_autorizado = f'<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">{xml_assinado_str}{xml_prot_sefaz}</nfeProc>'
+                    
+                    nota.save(using=self.db)
+                else:
+                     # Outros status (ex: 217 - Não consta na base, ou erro temporário)
+                     # Apenas atualizamos o motivo para o usuário saber o que houve
+                     nota.motivo_status = motivo_sefaz
+                     nota.save(using=self.db, update_fields=["motivo_status", "chave_acesso"])
+
+        except Exception as e:
+            logger.error(f"Erro ao consultar status na SEFAZ: {e}")
+            raise ErroDominio(f"Erro ao consultar status: {str(e)}")
+
+    def cancelar_nota(self, nota_id, justificativa):
+        nota = Nota.objects.using(self.db).get(id=nota_id)
+        
+        # Validar status atual
+        # 100 = Autorizada
+        # 205 = Denegada (não pode cancelar)
+        # 101 = Cancelada (já está)
+        if nota.status == 101:
+            raise ErroDominio("Nota já está cancelada.")
+            
+        if nota.status != 100:
+            raise ErroDominio(f"A nota não pode ser cancelada pois está com status {nota.status}. Apenas notas autorizadas (100) podem ser canceladas.")
+
+        if not nota.chave_acesso or not nota.protocolo_autorizacao:
+            raise ErroDominio("Nota não possui chave de acesso ou protocolo de autorização, impossível cancelar.")
+            
+        from Licencas.models import Filiais
+        filial_obj = Filiais.objects.using(self.db).defer('empr_cert_digi').get(empr_empr=nota.empresa, empr_codi=nota.filial)
+
+        try:
+            cert_path, cert_pass = CertificadoLoader(filial_obj).load()
+        except Exception as e:
+            raise ErroDominio("Falha ao carregar certificado digital.", detalhes={"erro": str(e)})
+
+        try:
+            ambiente = int(filial_obj.empr_ambi_nfe or 2)
+            uf = filial_obj.empr_esta
+            adapter = SefazAdapter(cert_path, cert_pass, uf, ambiente)
+            
+            # Precisamos do CNPJ da filial
+            cnpj = filial_obj.empr_docu
+            # Limpar CNPJ de formatação
+            cnpj = re.sub(r"\D", "", str(cnpj))
+            
+            resultado = adapter.cancelar(
+                chave=nota.chave_acesso,
+                protocolo=nota.protocolo_autorizacao,
+                justificativa=justificativa,
+                cnpj=cnpj
+            )
+            
+            # Verificar sucesso 
+            # 135: Evento registrado e vinculado a NF-e
+            # 136: Evento registrado, mas não vinculado a NF-e
+            # 155: Cancelamento homologado fora de prazo
+            status_canc = resultado.get("status")
+            motivo_canc = resultado.get("motivo")
+            protocolo_canc = resultado.get("protocolo")
+            xml_envio = resultado.get("xml_envio")
+            xml_retorno = resultado.get("xml_retorno")
+            
+            if status_canc in [135, 136, 155]: 
+                 # Atualizar banco local
+                 from ..services.nota_service import NotaService
+                 NotaService.cancelar(
+                     nota=nota, 
+                     descricao=justificativa,
+                     xml=xml_retorno,
+                     protocolo=protocolo_canc,
+                     database=self.db
+                 )
+                 
+                 logger.info(f"Nota {nota.id} cancelada com sucesso na SEFAZ. Protocolo: {protocolo_canc}")
+                 return resultado
+            else:
+                 # Erro no cancelamento
+                 logger.error(f"Falha ao cancelar nota {nota.id} na SEFAZ: {status_canc} - {motivo_canc}")
+                 
+                 # Registrar tentativa de evento de erro
+                 EventoService.registrar(
+                    nota=nota,
+                    tipo="erro_cancelamento",
+                    descricao=f"Falha ao cancelar: {motivo_canc} (Cód: {status_canc})",
+                    xml=xml_retorno or xml_envio,
+                    using=self.db
+                 )
+                 
+                 # Retorna o erro da SEFAZ
+                 raise ErroDominio(f"Falha ao cancelar na SEFAZ: {motivo_canc}", codigo="sefaz_cancelamento_erro")
+
+        except Exception as e:
+            if isinstance(e, ErroDominio):
+                raise e
+            raise ErroDominio(f"Erro inesperado ao cancelar nota: {str(e)}")

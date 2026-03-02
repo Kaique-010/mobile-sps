@@ -75,7 +75,10 @@ class BancoConfigCreateView(TemplateView):
                 pass
             if not empresa:
                 return JsonResponse({'ok': False, 'erro': 'empresa_obrigatoria'}, status=400)
-            obj = form.save(commit=False)
+            
+            # Passar using=banco aqui é CRUCIAL para calcular o Max(enti_clie) no banco correto
+            obj = form.save(commit=False, using=banco)
+            
             if not getattr(obj, 'enti_tien', None):
                 obj.enti_tien = 'B'
             obj.enti_empr = empresa

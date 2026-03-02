@@ -68,11 +68,25 @@ class EmissaoNotaService:
 
         from Licencas.models import Filiais
 
-        filial_obj = Filiais.objects.using(database).filter(
+        # Usa defer para evitar erro se a coluna empr_cert_digi não existir no banco
+        filial_obj = Filiais.objects.using(database).defer('empr_cert_digi').filter(
             empr_empr=empresa, empr_codi=filial
         ).first()
-        if not filial_obj or not getattr(filial_obj, "empr_cert_digi", None):
-            alt = Filiais.objects.using(database).filter(
+
+        # Verifica se tem certificado (banco ou arquivo) de forma segura
+        tem_cert = False
+        if filial_obj:
+            try:
+                if filial_obj.empr_cert_digi:
+                    tem_cert = True
+            except Exception:
+                pass
+            
+            if not tem_cert and getattr(filial_obj, 'empr_cert', None):
+                tem_cert = True
+
+        if not filial_obj or not tem_cert:
+            alt = Filiais.objects.using(database).defer('empr_cert_digi').filter(
                 empr_empr=filial, empr_codi=empresa
             ).first()
             filial_obj = alt or filial_obj

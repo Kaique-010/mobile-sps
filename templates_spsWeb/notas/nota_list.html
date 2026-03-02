@@ -38,14 +38,14 @@
       <label class="form-label">Até</label>
       <input type="date" name="data_fim" class="form-control" value="{{ preservado.data_fim }}" />
     </div>
-    
+
     <div class="col-md-3 d-flex align-items-end ">
       <div class="btn-group w-100">
-        <button class="btn btn-outline-primary"  type="submit"><i class="bi bi-funnel"></i> Filtrar</button>
-      
+        <button class="btn btn-outline-primary" type="submit"><i class="bi bi-funnel"></i> Filtrar</button>
+
       </div>
     </div>
-      <a class="btn btn-outline-secondary" href="?"><i class="bi bi-x-circle"></i> Limpar</a>
+    <a class="btn btn-outline-secondary" href="?"><i class="bi bi-x-circle"></i> Limpar</a>
   </form>
 
   <div class="table-responsive d-none d-md-block px-4 pt-4 pb-4">
@@ -119,8 +119,13 @@
             <div class="botoes-listanotas">
               <a class="btn btn-outline-dark" href="/web/{{ slug }}/notas-fiscais/{{ n.id }}/">Detalhes</a>
               {% if n.status != 100 and n.status != 101 and n.status != 102 %}
+              {% if n.chave_acesso or n.status == 539 or n.status == 204 or n.status == 105 %}
+              <button class="btn btn-outline-primary" data-consultar data-id="{{ n.id }}"><span
+                  class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span> Consultar</button>
+              {% else %}
               <button class="btn btn-outline-success" data-emitir data-id="{{ n.id }}"><span
                   class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span> Emitir</button>
+              {% endif %}
               <button class="btn btn-outline-warning" data-inutilizar data-id="{{ n.id }}"><span
                   class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span> Inutilizar</button>
               <a class="btn btn-outline-secondary" href="/web/{{ slug }}/notas-fiscais/{{ n.id }}/editar/">Editar</a>
@@ -162,8 +167,13 @@
         <div class="mt-3 d-flex gap-2">
           <a class="btn btn-sm btn-outline-primary" href="/web/{{ slug }}/notas-fiscais/{{ n.id }}/">Detalhes</a>
           {% if n.status != 100 and n.status != 101 and n.status != 102 %}
+          {% if n.chave_acesso or n.status == 539 or n.status == 204 or n.status == 105 %}
+          <button class="btn btn-sm btn-outline-primary" data-consultar data-id="{{ n.id }}"><span
+              class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span> Consultar</button>
+          {% else %}
           <button class="btn btn-sm btn-outline-success" data-emitir data-id="{{ n.id }}"><span
               class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span> Emitir</button>
+          {% endif %}
           <button class="btn btn-sm btn-outline-warning" data-inutilizar data-id="{{ n.id }}"><span
               class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span> Inutilizar</button>
           <a class="btn btn-sm btn-outline-secondary" href="/web/{{ slug }}/notas-fiscais/{{ n.id }}/editar/">Editar</a>
@@ -279,8 +289,29 @@
       } finally { if (btn) btn.disabled = false; }
     };
 
+    const onConsultar = async (id) => {
+      const btn = document.querySelector(`[data-consultar][data-id="${id}"]`);
+      const sp = btn?.querySelector('.spinner-border');
+      if (btn) { btn.disabled = true; if (sp) sp.classList.remove('d-none'); }
+      try {
+        const resp = await authFetch(`/api/${slug}/notasfiscais/notas-fiscais/notas/${id}/consultar/`, { method: 'POST' });
+        const data = await resp.json();
+        if (resp.ok) {
+          showToast('Consulta realizada com sucesso. Status atualizado.', { variant: 'success' });
+          location.reload();
+        } else {
+          showToast('Falha na consulta: ' + (data?.detail || data?.motivo || data?.error || 'Erro'), { variant: 'danger', delay: 4000 });
+        }
+      } catch (e) {
+        showToast('Erro: ' + e, { variant: 'danger', delay: 4000 });
+      } finally { if (btn) btn.disabled = false; if (sp) sp.classList.add('d-none'); }
+    };
+
     document.querySelectorAll('[data-emitir]')?.forEach(el => {
       el.addEventListener('click', (ev) => { ev.preventDefault(); const id = el.getAttribute('data-id'); onEmitir(id); });
+    });
+    document.querySelectorAll('[data-consultar]')?.forEach(el => {
+      el.addEventListener('click', (ev) => { ev.preventDefault(); const id = el.getAttribute('data-id'); onConsultar(id); });
     });
     document.querySelectorAll('[data-cancelar]')?.forEach(el => {
       el.addEventListener('click', (ev) => { ev.preventDefault(); const id = el.getAttribute('data-id'); onCancelar(id); });

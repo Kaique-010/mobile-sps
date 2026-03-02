@@ -9,7 +9,7 @@ class NotaBuilder:
     def __init__(self, nota: Nota, database: str | None = None):
         self.nota = nota
         self.database = database or nota._state.db
-        self.filial = Filiais.objects.using(self.database).get(empr_empr=nota.empresa, empr_codi=nota.filial)
+        self.filial = Filiais.objects.using(self.database).defer('empr_cert_digi').get(empr_empr=nota.empresa, empr_codi=nota.filial)
         self.dest = nota.destinatario
 
     def _limpar_inscricao_estadual(self, valor):
@@ -223,6 +223,17 @@ class NotaBuilder:
         placa = transporte.placa_veiculo if transporte else None
         uf_veic = transporte.uf_veiculo if transporte else None
 
+        # Ajuste para NFC-e (modelo 65) que exige hora com tolerância de 5 minutos
+        # Como o model Nota usa DateField, a hora é perdida.
+        # Se for NFC-e e a data de emissão for hoje, usamos a hora atual.
+        data_emissao_str = str(n.data_emissao)
+        if str(n.modelo) == '65':
+            from django.utils import timezone
+            agora = timezone.now()
+            # Se a data salva no banco for igual à data de hoje, assume-se que é uma emissão imediata
+            if n.data_emissao == agora.date():
+                data_emissao_str = agora.isoformat()
+
         return NotaFiscalDTO(
             empresa=n.empresa,
             filial=n.filial,
@@ -233,7 +244,7 @@ class NotaBuilder:
             
             responsavel_tecnico=self.build_responsavel_tecnico(),
 
-            data_emissao=str(n.data_emissao),
+            data_emissao=data_emissao_str,
             data_saida=str(n.data_saida) if n.data_saida else None,
             tipo_operacao=n.tipo_operacao,
             finalidade=n.finalidade,

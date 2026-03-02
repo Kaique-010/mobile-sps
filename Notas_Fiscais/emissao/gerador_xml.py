@@ -74,11 +74,19 @@ class GeradorXML:
         etree.SubElement(ide, "tpNF").text = str(dto.get("tipo_operacao", 1))
         etree.SubElement(ide, "idDest").text = id_dest
 
-        # NÃO colocar tpAmb aqui (PROÍBIDO no schema)
-        # Ambiente é no enviNFe, não na tag ide.
+        # cMunFG
+        etree.SubElement(ide, "cMunFG").text = str(dto["emitente"]["cod_municipio"])
 
         etree.SubElement(ide, "tpImp").text = "1"
         etree.SubElement(ide, "tpEmis").text = "1"
+        
+        # cDV (dígito verificador da chave)
+        chave = dto.get("chave")
+        if chave and len(chave) == 44:
+            etree.SubElement(ide, "cDV").text = chave[-1]
+            
+        # tpAmb
+        etree.SubElement(ide, "tpAmb").text = str(dto.get("ambiente", 2))
 
         etree.SubElement(ide, "finNFe").text = str(dto.get("finalidade", 1))
         etree.SubElement(ide, "indFinal").text = "1"

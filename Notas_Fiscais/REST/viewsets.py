@@ -18,6 +18,7 @@ from core.utils import get_licenca_db_config
 from ..services.nota_service import NotaService
 from ..services.calculo_impostos_service import CalculoImpostosService
 from ..dominio.builder import NotaBuilder
+from ..aplicacao.emissao_service import EmissaoService
 
 logger = logging.getLogger(__name__)
 
@@ -282,6 +283,48 @@ class NotaViewSet(viewsets.ModelViewSet):
 
     # --------- CANCELAR ---------
     @action(detail=True, methods=["post"])
+    def consultar(self, request, pk=None, slug=None):
+        banco = get_licenca_db_config(request) or "default"
+        empresa = (
+            request.session.get("empresa_id")
+            or request.query_params.get("empresa")
+            or request.headers.get("X-Empresa")
+        )
+        filial = (
+            request.session.get("filial_id")
+            or request.query_params.get("filial")
+            or request.headers.get("X-Filial")
+        )
+        nota = (
+            Nota.objects.using(banco)
+            .filter(pk=pk, empresa=empresa, filial=filial)
+            .first()
+        )
+        if not nota:
+            return Response({"detail": "Nota não encontrada"}, status=status.HTTP_404_NOT_FOUND)
+        
+        # if not nota.chave_acesso:
+        #      return Response({"detail": "Nota não possui chave de acesso para consulta."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            current_slug = slug or request.parser_context['kwargs'].get('slug') or ''
+            
+            service = EmissaoService(current_slug, banco)
+            resposta = service.consultar_status(nota.id)
+            
+            # Refresh nota to get updated fields
+            nota.refresh_from_db()
+            out = NotaDetailSerializer(nota, context=self.get_serializer_context())
+            data_out = dict(out.data)
+            data_out["sefaz_response"] = resposta
+            
+            return Response(data_out, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"Erro ao consultar nota {pk}: {e}")
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=["post"])
     def cancelar(self, request, pk=None, slug=None):
         banco = get_licenca_db_config(request) or "default"
         empresa = (
@@ -303,18 +346,21 @@ class NotaViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Nota não encontrada"}, status=status.HTTP_404_NOT_FOUND)
 
         descricao = request.data.get("descricao", "Cancelamento solicitado via API")
-        xml = request.data.get("xml")
-        protocolo = request.data.get("protocolo")
-
-        NotaService.cancelar(
-            nota=nota,
-            descricao=descricao,
-            xml=xml,
-            protocolo=protocolo,
-        )
-
-        out = NotaDetailSerializer(nota, context=self.get_serializer_context())
-        return Response(out.data, status=status.HTTP_200_OK)
+        
+        try:
+            current_slug = slug or request.parser_context['kwargs'].get('slug') or ''
+            service = EmissaoService(current_slug, banco)
+            # O metodo cancelar_nota já faz a validação e atualização do banco se sucesso
+            service.cancelar_nota(nota.id, descricao)
+            
+            # Refresh nota to get updated fields (status, motivo, etc)
+            nota.refresh_from_db()
+            out = NotaDetailSerializer(nota, context=self.get_serializer_context())
+            return Response(out.data, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"Erro ao cancelar nota {pk}: {e}")
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=["post"])
     def transmitir(self, request, pk=None, slug=None):
@@ -351,6 +397,7 @@ class NotaViewSet(viewsets.ModelViewSet):
             chave=chave,
             protocolo=protocolo,
             xml=xml,
+            database=banco,
         )
 
         out = NotaDetailSerializer(nota, context=self.get_serializer_context())
@@ -420,7 +467,7 @@ class NotaViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.warning("NotaViewSet.gravar: falha ao montar DTO para nota %s: %s", nota.pk, e)
         descricao = request.data.get("descricao", "Rascunho criado/atualizado via API")        
-        NotaService.gravar(nota, descricao=descricao)
+        NotaService.gravar(nota, descricao=descricao, database=banco)
         out = NotaDetailSerializer(nota, context=self.get_serializer_context())
         data_out = dict(out.data)
         if debug_data:

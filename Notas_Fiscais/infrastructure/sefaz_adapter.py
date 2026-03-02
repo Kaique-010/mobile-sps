@@ -31,7 +31,12 @@ class SefazAdapter:
             
         xml_assinado = self.assinador.assinar(nfe)
 
-        envio = self.comunicacao.autorizacao(modelo='nfe', nota_fiscal=xml_assinado)
+        # Determina se é NF-e ou NFC-e para escolher o endpoint correto
+        modelo_envio = 'nfe'
+        if hasattr(nota_fiscal, 'modelo') and str(nota_fiscal.modelo) == '65':
+            modelo_envio = 'nfce'
+            
+        envio = self.comunicacao.autorizacao(modelo=modelo_envio, nota_fiscal=xml_assinado)
         
         status = None
         motivo = None
@@ -118,6 +123,219 @@ class SefazAdapter:
             "protocolo": protocolo,
             "chave": chave,
             "xml_protocolo": xml_protocolo,
+        }
+
+    def consultar(self, chave):
+        """
+        Consulta o status de uma nota na SEFAZ pela chave de acesso.
+        """
+        try:
+            # Determina o modelo pela chave de acesso (posições 20-21, base 0)
+            # Se for 65, é NFC-e. Se for 55, é NF-e.
+            modelo_envio = 'nfe'
+            if len(chave) == 44:
+                mod = chave[20:22]
+                if mod == '65':
+                    modelo_envio = 'nfce'
+
+            # Consulta pela chave
+            print(f"\n=== CONSULTANDO CHAVE: {chave} (Modelo: {modelo_envio}) ===")
+            resposta = self.comunicacao.consulta_nota(modelo=modelo_envio, chave=chave)
+            
+            # O retorno de consulta_nota é diretamente o objeto Response do requests (ou similar)
+            # Não é uma tupla (status, response) como em outros métodos
+            
+            # DEBUG EXPLICITO
+            if resposta and hasattr(resposta, 'text'):
+                print(f"=== RETORNO CONSULTA SEFAZ ===\n{resposta.text}\n==============================\n")
+
+            status = None
+            motivo = None
+            protocolo = None
+            xml_protocolo = None
+            
+            if resposta and hasattr(resposta, 'content'):
+                from lxml import etree
+                try:
+                    root = etree.fromstring(resposta.content)
+                    ns = {'ns': 'http://www.portalfiscal.inf.br/nfe'}
+                    
+                    # Procura por protNFe (Protocolo de Autorização)
+                    # Na consulta, o retorno é um retConsSitNFe que contém o protNFe
+                    prot_nfe = root.find('.//ns:protNFe', namespaces=ns)
+                    
+                    if prot_nfe is not None:
+                        xml_protocolo = etree.tostring(prot_nfe, encoding='unicode')
+                        
+                        inf_prot = prot_nfe.find('.//ns:infProt', namespaces=ns)
+                        if inf_prot is not None:
+                            c_stat_elem = inf_prot.find('.//ns:cStat', namespaces=ns)
+                            if c_stat_elem is not None:
+                                status = int(c_stat_elem.text)
+                            
+                            n_prot_elem = inf_prot.find('.//ns:nProt', namespaces=ns)
+                            if n_prot_elem is not None:
+                                protocolo = n_prot_elem.text
+                                
+                            x_motivo_elem = inf_prot.find('.//ns:xMotivo', namespaces=ns)
+                            if x_motivo_elem is not None:
+                                motivo = x_motivo_elem.text
+                    
+                    # Se não achou protNFe, verifica o status da consulta em si (cStat do retConsSitNFe)
+                    if status is None:
+                        c_stat_elem = root.find('.//ns:cStat', namespaces=ns)
+                        if c_stat_elem is not None:
+                            status = int(c_stat_elem.text)
+                        
+                        x_motivo_elem = root.find('.//ns:xMotivo', namespaces=ns)
+                        if x_motivo_elem is not None:
+                            motivo = x_motivo_elem.text
+
+                except Exception as e:
+                    motivo = f"Erro ao parsear XML de consulta: {str(e)}"
+            
+            return {
+                "status": status,
+                "motivo": motivo,
+                "protocolo": protocolo,
+                "xml_protocolo": xml_protocolo,
+                "chave": chave
+            }
+
+        except Exception as e:
+            return {
+                "status": None,
+                "motivo": f"Erro na consulta: {str(e)}",
+                "protocolo": None,
+                "xml_protocolo": None,
+                "chave": chave
+            }
+
+    def cancelar(self, chave, protocolo, justificativa, cnpj):
+        from pynfe.entidades.evento import Evento
+        from pynfe.processamento.serializacao import SerializacaoXML
+        from pynfe.entidades.fonte_dados import _fonte_dados
+        from datetime import datetime
+
+        print(f"\n=== CANCELANDO CHAVE: {chave} ===")
+        
+        # O método serializar_evento do PyNFe espera a SIGLA da UF no atributo 'uf'
+        # e converte internamente para código IBGE.
+        # Assume-se que self.uf já é a sigla (ex: 'PR', 'SP').
+        # Se self.uf for numérico, precisamos converter para sigla ou ajustar a lógica.
+        # Pela implementação do projeto, self.uf vem de Filiais.empr_esta que é sigla.
+        
+        # Gera ID do evento: ID + tpEvento + Chave + nSeqEvento (01)
+        # NOTA: O PyNFe calcula a propriedade 'identificador' automaticamente baseada em tp_evento, chave e n_seq_evento.
+        # Não devemos passar 'identificador' no construtor pois é uma property sem setter.
+        tp_evento = '110111'
+        n_seq_evento = 1
+        
+        # Cria o objeto Evento com os atributos esperados pelo serializar_evento
+        evento = Evento(
+            uf=self.uf, # Sigla
+            cnpj=cnpj,
+            chave=chave,
+            data_emissao=datetime.now(),
+            tp_evento=tp_evento,
+            n_seq_evento=n_seq_evento,
+            descricao='Cancelamento', # Obrigatório para ativar a lógica de cancelamento no serializador
+            protocolo=str(protocolo),
+            justificativa=justificativa,
+            versao="1.00"
+        )
+        
+        # Serializa
+        try:
+            serializador = SerializacaoXML(_fonte_dados, homologacao=self.homologacao)
+            # O método exportar é hardcoded para NFe, precisamos usar serializar_evento para eventos
+            xml_evento = serializador.serializar_evento(evento)
+        except Exception as e_ser:
+             # Log detalhado do erro
+             import traceback
+             traceback.print_exc()
+             raise Exception(f"Erro na serialização do evento: {str(e_ser)} (Verifique logs para traceback)")
+        
+        # O método exportar retorna um objeto Element do lxml
+        # O assinador espera um Element ou string XML
+        
+        # Assina
+        # Se xml_evento for None, a serialização falhou
+        if xml_evento is None:
+             raise Exception(f"Falha na serialização do evento de cancelamento (xml_evento is None).")
+             
+        xml_assinado = self.assinador.assinar(xml_evento)
+        
+        # Envia
+        # O método evento espera o XML assinado (Element)
+        
+        # Determina o modelo pela chave de acesso
+        modelo_envio = 'nfe'
+        if len(chave) == 44:
+            mod = chave[20:22]
+            if mod == '65':
+                modelo_envio = 'nfce'
+
+        resposta = self.comunicacao.evento(modelo=modelo_envio, evento=xml_assinado)
+        
+        return self._processar_resposta_evento(resposta, xml_assinado)
+
+    def _processar_resposta_evento(self, resposta, xml_envio):
+        status = None
+        motivo = None
+        protocolo = None
+        xml_retorno = None
+        
+        try:
+            # Tenta extrair XML da resposta
+            if hasattr(resposta, 'content'):
+                xml_retorno = resposta.content
+            elif hasattr(resposta, 'text'):
+                xml_retorno = resposta.text.encode('utf-8')
+            else:
+                xml_retorno = str(resposta).encode('utf-8')
+
+            # Parse XML
+            root = etree.fromstring(xml_retorno)
+            ns = {'ns': 'http://www.portalfiscal.inf.br/nfe'}
+            
+            # Procura retEvento
+            # A estrutura geralmente é <retEnvEvento><retEvento><infEvento>...</infEvento></retEvento></retEnvEvento>
+            ret_evento = root.find('.//ns:retEvento', namespaces=ns)
+            
+            if ret_evento is not None:
+                inf_evento = ret_evento.find('.//ns:infEvento', namespaces=ns)
+                if inf_evento is not None:
+                    c_stat = inf_evento.find('.//ns:cStat', namespaces=ns)
+                    if c_stat is not None:
+                        status = int(c_stat.text)
+                    
+                    x_motivo = inf_evento.find('.//ns:xMotivo', namespaces=ns)
+                    if x_motivo is not None:
+                        motivo = x_motivo.text
+                    
+                    n_prot = inf_evento.find('.//ns:nProt', namespaces=ns)
+                    if n_prot is not None:
+                        protocolo = n_prot.text
+            
+            if status is None:
+                # Tenta pegar cStat do nível superior se falhou (ex: erro de lote)
+                c_stat = root.find('.//ns:cStat', namespaces=ns)
+                if c_stat is not None:
+                    status = int(c_stat.text)
+                x_motivo = root.find('.//ns:xMotivo', namespaces=ns)
+                if x_motivo is not None:
+                    motivo = x_motivo.text
+
+        except Exception as e:
+            motivo = f"Erro ao processar resposta de cancelamento: {str(e)}"
+            
+        return {
+            "status": status,
+            "motivo": motivo,
+            "protocolo": protocolo,
+            "xml_envio": etree.tostring(xml_envio, encoding='unicode') if xml_envio is not None else None,
+            "xml_retorno": xml_retorno.decode('utf-8') if xml_retorno else None
         }
 
     def _injetar_ibs_cbs(self, nfe_elem, itens_extra):

@@ -16,7 +16,7 @@ class NotaDetailView(DetailView):
         ctx = super().get_context_data(**kwargs)
         banco = get_licenca_db_config(self.request) or "default"
         nota: Nota = ctx.get("nota")
-        emitente = Filiais.objects.using(banco).get(empr_empr=nota.empresa, empr_codi=nota.filial)
+        emitente = Filiais.objects.using(banco).defer('empr_cert_digi').get(empr_empr=nota.empresa, empr_codi=nota.filial)
         destinatario = Entidades.objects.using(banco).get(enti_empr=nota.empresa, enti_clie=nota.destinatario_id)
         ctx["emitente"] = emitente
         ctx["destinatario"] = destinatario
