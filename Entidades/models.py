@@ -24,7 +24,7 @@ class Entidades(models.Model):
     enti_insc_esta = models.CharField(max_length=14, blank=True, null=True)    
     enti_cep = models.CharField(max_length=8) 
     enti_ende = models.CharField(max_length=60)
-    enti_nume = models.CharField(max_length=4)  
+    enti_nume = models.CharField(max_length=10)  
     enti_cida = models.CharField(max_length=60)
     enti_esta = models.CharField(max_length=2)
     enti_pais = models.CharField(max_length=60, default='1058')
