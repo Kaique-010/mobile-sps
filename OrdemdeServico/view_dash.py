@@ -9,10 +9,11 @@ from .serializers import OrdensEletroSerializer
 from .filters.os import OrdensEletroFilter
 from core.registry import get_licenca_db_config
 from core.decorator import ModuloRequeridoMixin
+from Entidades.Views.base_cliente import IsCliente
 
 class OrdensEletroViewSet(ModuloRequeridoMixin, viewsets.ReadOnlyModelViewSet):
     modulo_necessario = 'ordemdeservico'
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated | IsCliente]
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_class = OrdensEletroFilter
     search_fields = ['nome_cliente', 'setor_nome', 'nome_responsavel', 'ordem_de_servico', 'pedido_compra', 'nf_entrada']

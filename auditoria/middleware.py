@@ -140,12 +140,30 @@ class AuditoriaMiddleware:
         
         try:
             logger.debug(f'Tentando obter dados antes para {modelo.__name__} ID {objeto_id}')
-            objeto = modelo.objects.get(pk=objeto_id)
+            
+            # Tratamento especial para Entidades duplicadas (forçar empresa 1)
+            if modelo.__name__ == 'Entidades':
+                 # Tenta filtrar com enti_empr=1 primeiro
+                 qs = modelo.objects.filter(pk=objeto_id)
+                 if hasattr(modelo, 'enti_empr'):
+                     qs = qs.filter(enti_empr=1)
+                 objeto = qs.first()
+                 
+                 # Se não achar com filtro de empresa, tenta sem (fallback)
+                 if not objeto:
+                     objeto = modelo.objects.filter(pk=objeto_id).first()
+            else:
+                objeto = modelo.objects.filter(pk=objeto_id).first()
+
+            if not objeto:
+                logger.debug(f'Objeto não encontrado via filter().first(): {modelo.__name__} ID {objeto_id}')
+                return None
+                
             dados = model_to_dict(objeto)
             logger.debug(f'Dados antes capturados com sucesso: {len(dados)} campos')
             return dados
-        except (modelo.DoesNotExist, ValueError) as e:
-            logger.debug(f'Objeto não encontrado: {modelo.__name__} ID {objeto_id} - Erro: {str(e)}')
+        except (ValueError) as e:
+            logger.debug(f'Erro de valor ao obter objeto: {modelo.__name__} ID {objeto_id} - Erro: {str(e)}')
             return None
         except Exception as e:
             logger.error(f'Erro inesperado ao obter dados antes: {modelo.__name__} ID {objeto_id} - Erro: {str(e)}')

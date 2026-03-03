@@ -298,6 +298,42 @@ class OsSerializer(BancoModelSerializer):
             'horas_ids': []
         }
 
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        
+        request = self.context.get('request')
+        ver_preco = True
+        
+        # Verificar permissões do request (injetado pelo middleware/view)
+        if request and hasattr(request, 'permissoes'):
+            ver_preco = request.permissoes.get('ver_preco')
+            # Se for None (não definido no banco ou chave ausente), assumir Falso por segurança
+            if ver_preco is None:
+                ver_preco = False
+
+        # Injetar flag para o front
+        ret['ver_preco'] = ver_preco
+        
+        if not ver_preco:
+            # Ocultar totais gerais
+            ret['os_tota'] = 0
+            ret['total_pecas'] = 0
+            ret['total_servicos'] = 0
+            ret['total_geral'] = 0
+            
+            # Ocultar preços nas listas de itens
+            if 'pecas' in ret and ret['pecas']:
+                for item in ret['pecas']:
+                    item['peca_unit'] = 0
+                    item['peca_tota'] = 0
+            
+            if 'servicos' in ret and ret['servicos']:
+                for item in ret['servicos']:
+                    item['serv_unit'] = 0
+                    item['serv_tota'] = 0
+                    
+        return ret
+
     def get_cliente_nome(self, obj):
         banco = self.context.get("banco")
         if not banco:

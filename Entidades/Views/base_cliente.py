@@ -15,11 +15,56 @@ class IsCliente(BasePermission):
         if not session_id:
             return False
             
-        # Validação básica do formato: cliente_id_banco
+        # Validação básica do formato: cliente_id_banco ou cliente_id_banco_usuario
         try:
-            cliente_id, banco = session_id.split('_', 1)
+            partes = session_id.split('_')
+            
+            # Tenta identificar o usuário logado (se houver)
+            usuario_tipo = None
+            if len(partes) >= 3 and partes[-1] in ['usuario1', 'usuario2']:
+                usuario_tipo = partes[-1]
+                cliente_id = int(partes[0])
+                banco = '_'.join(partes[1:-1])
+            else:
+                # Formato antigo ou sem usuário específico
+                cliente_id, banco = session_id.split('_', 1)
+            
             request.cliente_id = int(cliente_id)
             request.banco = banco
+            request.usuario_tipo = usuario_tipo
+            
+            # Carregar permissões da entidade
+            from Entidades.models import Entidades
+            try:
+                # Usa filtro de empresa 1 para evitar duplicidade
+                entidade = Entidades.objects.using(banco).filter(enti_clie=request.cliente_id, enti_empr=1).first()
+                if not entidade:
+                     # Fallback sem filtro de empresa
+                     entidade = Entidades.objects.using(banco).filter(enti_clie=request.cliente_id).first()
+                     
+                if entidade:
+                    if usuario_tipo == 'usuario1':
+                        request.permissoes = {
+                            'ver_preco': entidade.enti_mobi_prec,
+                            'ver_foto': entidade.enti_mobi_foto
+                        }
+                    elif usuario_tipo == 'usuario2':
+                        request.permissoes = {
+                            'ver_preco': entidade.enti_usua_prec,
+                            'ver_foto': entidade.enti_usua_foto
+                        }
+                    else:
+                        # Fallback para comportamento antigo (AND) ou assumir usuario1?
+                        # Melhor assumir usuario1 (mobi) como padrão se não identificado
+                        request.permissoes = {
+                            'ver_preco': entidade.enti_mobi_prec,
+                            'ver_foto': entidade.enti_mobi_foto
+                        }
+                else:
+                    request.permissoes = {'ver_preco': False, 'ver_foto': False}
+            except Exception:
+                request.permissoes = {'ver_preco': False, 'ver_foto': False}
+                
             return True
         except (ValueError, AttributeError):
             return False

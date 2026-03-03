@@ -35,8 +35,18 @@ class Entidades(models.Model):
     enti_fone = models.CharField(max_length=14, blank=True, null=True)  
     enti_celu = models.CharField(max_length=15, blank=True, null=True)  
     enti_emai = models.CharField(max_length=100, blank=True, null=True)  
+    
+    #usuarios do Login de cliente 
     enti_mobi_usua = models.CharField(max_length=100, blank=True, null=True)  
-    enti_mobi_senh = models.CharField(max_length=100, blank=True, null=True)  
+    enti_mobi_senh = models.CharField(max_length=100, blank=True, null=True)
+    enti_mobi_prec = models.BooleanField(default=True) # Permissão Preço Usuário 1
+    enti_mobi_foto = models.BooleanField(default=True) # Permissão Foto Usuário 1
+    
+    enti_usua_mobi = models.CharField(max_length=100, blank=True, null=True)
+    enti_senh_mobi = models.CharField(max_length=100, blank=True, null=True)
+    enti_usua_prec = models.BooleanField(default=True) # Permissão Preço Usuário 2
+    enti_usua_foto = models.BooleanField(default=True) # Permissão Foto Usuário 2
+    
     enti_vend = models.IntegerField(blank=True, null=True)  
     enti_situ = models.CharField(max_length=100,choices=[('0', 'INATIVO'), ('1', 'ATIVO')], default='1')
 

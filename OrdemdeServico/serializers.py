@@ -436,6 +436,24 @@ class OrdensEletroSerializer(serializers.ModelSerializer):
             'responsavel', 'nome_responsavel', 'potencia', 'ultima_alteracao'   
         ]
 
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        
+        request = self.context.get('request')
+        if request:
+            permissoes = getattr(request, 'permissoes', None)
+            
+            # Se tiver permissões definidas (login de cliente), respeitar
+            if permissoes:
+                ver_preco = permissoes.get('ver_preco', True)
+                if not ver_preco:
+                    # Ocultar campos de preço
+                    campos_preco = ['total_orde', 'total_os']
+                    for campo in campos_preco:
+                        ret.pop(campo, None)
+                        
+        return ret
+
 
 class OrdemServicoSerializer(BancoModelSerializer):
     pecas = OrdemServicoPecasSerializer(many=True, required=False)
@@ -506,6 +524,42 @@ class OrdemServicoSerializer(BancoModelSerializer):
 
         return data
     
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        
+        request = self.context.get('request')
+        ver_preco = False
+        if request:
+            permissoes = getattr(request, 'permissoes', None)
+            
+            # Se tiver permissões definidas (login de cliente), respeitar
+            if permissoes:
+                val = permissoes.get('ver_preco')
+                if val is not None:
+                    ver_preco = val
+
+        ret['ver_preco'] = ver_preco
+        
+        if not ver_preco:
+            # Ocultar campos de preço da ordem
+            campos_preco = ['orde_tota', 'orde_valo', 'orde_desc', 'orde_liqu', 'orde_paga', 'orde_rest', 'orde_entr']
+            for campo in campos_preco:
+                ret.pop(campo, None)
+            
+            # Ocultar preços nas peças
+            if 'pecas' in ret and ret['pecas']:
+                for peca in ret['pecas']:
+                    peca.pop('peca_unit', None)
+                    peca.pop('peca_tota', None)
+                    
+            # Ocultar preços nos serviços
+            if 'servicos' in ret and ret['servicos']:
+                for serv in ret['servicos']:
+                    serv.pop('serv_unit', None)
+                    serv.pop('serv_tota', None)
+                            
+        return ret
+
     def validate_orde_stat(self, value):
         VALID_STATUSES = [0, 1, 2, 3, 4, 5, 20, 21]
         if value not in VALID_STATUSES:

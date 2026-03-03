@@ -93,12 +93,84 @@ class OrdemServicoViewSet(BaseClienteViewSet):
         
         return queryset
     
+    @action(detail=False, methods=['post'], url_path='definir-permissao-preco')
+    def definir_permissao_preco(self, request):
+        try:
+            permitir = request.data.get('permitir')
+            usuario_tipo = request.data.get('usuario') # 'mobi' ou 'usua'
+
+            if permitir is None:
+                return Response({'erro': 'Parâmetro permitir é obrigatório'}, status=400)
+            
+            # Converter para boolean corretamente
+            if isinstance(permitir, str):
+                permitir = permitir.lower() == 'true'
+            else:
+                permitir = bool(permitir)
+            
+            # Atualizar entidade
+            from Entidades.models import Entidades
+            entidade = Entidades.objects.using(request.banco).filter(enti_clie=request.cliente_id).first()
+            if not entidade:
+                return Response({'erro': 'Cliente não encontrado'}, status=404)
+            
+            # Atualizar baseado no tipo de usuário ou ambos
+            if usuario_tipo == 'mobi':
+                entidade.enti_mobi_prec = permitir
+            elif usuario_tipo == 'usua':
+                entidade.enti_usua_prec = permitir
+            else:
+                entidade.enti_mobi_prec = permitir
+                entidade.enti_usua_prec = permitir
+                
+            entidade.save(using=request.banco)
+            
+            return tratar_sucesso({'ver_preco': permitir, 'usuario': usuario_tipo})
+        except Exception as e:
+            return tratar_erro(e)
+
+    @action(detail=False, methods=['post'], url_path='definir-permissao-foto')
+    def definir_permissao_foto(self, request):
+        try:
+            permitir = request.data.get('permitir')
+            usuario_tipo = request.data.get('usuario') # 'mobi' ou 'usua'
+
+            if permitir is None:
+                return Response({'erro': 'Parâmetro permitir é obrigatório'}, status=400)
+            
+            if isinstance(permitir, str):
+                permitir = permitir.lower() == 'true'
+            else:
+                permitir = bool(permitir)
+            
+            # Atualizar entidade
+            from Entidades.models import Entidades
+            entidade = Entidades.objects.using(request.banco).filter(enti_clie=request.cliente_id).first()
+            if not entidade:
+                return Response({'erro': 'Cliente não encontrado'}, status=404)
+            
+            # Atualizar baseado no tipo de usuário ou ambos
+            if usuario_tipo == 'mobi':
+                entidade.enti_mobi_foto = permitir
+            elif usuario_tipo == 'usua':
+                entidade.enti_usua_foto = permitir
+            else:
+                entidade.enti_mobi_foto = permitir
+                entidade.enti_usua_foto = permitir
+
+            entidade.save(using=request.banco)
+            
+            return tratar_sucesso({'ver_foto': permitir, 'usuario': usuario_tipo})
+        except Exception as e:
+            return tratar_erro(e)
+
     @action(detail=False, methods=['get'], url_path='em-estoque')
     def listar_ordem_em_estoque(self, request, *args, **kwargs):
         try:
             queryset = self.get_queryset().filter(orde_stat_orde=22)
             print("ordens em estoque:", queryset)
-            serializer = self.serializer_class(queryset, many=True)
+            # USAR self.get_serializer para injetar o contexto (request, banco, permissoes)
+            serializer = self.get_serializer(queryset, many=True)
             return tratar_sucesso(serializer.data)
         except (ErroDominio, ValueError) as e:
             return tratar_erro(e)
@@ -107,6 +179,11 @@ class OrdemServicoViewSet(BaseClienteViewSet):
     @action(detail=False, methods=['get'], url_path='imagensantes')
     def listar_imagens_antes(self, request, *args, **kwargs):
         try:
+            # Verificar permissão de visualização de foto
+            permissoes = getattr(request, 'permissoes', {})
+            if not permissoes.get('ver_foto', True):
+                 return tratar_sucesso([])
+
             orde_nume = request.query_params.get('orde_nume')
             if not orde_nume:
                 raise ValueError("O parâmetro 'orde_nume' é obrigatório.")
@@ -150,6 +227,11 @@ class OrdemServicoViewSet(BaseClienteViewSet):
     @action(detail=False, methods=['get'], url_path='imagensdepois')
     def listar_imagens_depois(self, request, *args, **kwargs):
         try:
+            # Verificar permissão de visualização de foto
+            permissoes = getattr(request, 'permissoes', {})
+            if not permissoes.get('ver_foto', True):
+                 return tratar_sucesso([])
+
             orde_nume = request.query_params.get('orde_nume')
             if not orde_nume:
                 raise ValueError("O parâmetro 'orde_nume' é obrigatório.")
@@ -189,6 +271,11 @@ class OrdemServicoViewSet(BaseClienteViewSet):
     @action(detail=False, methods=['get'], url_path='imagensdurante')
     def listar_imagens_durante(self, request, *args, **kwargs):
         try:
+            # Verificar permissão de visualização de foto
+            permissoes = getattr(request, 'permissoes', {})
+            if not permissoes.get('ver_foto', True):
+                 return tratar_sucesso([])
+
             orde_nume = request.query_params.get('orde_nume')
             if not orde_nume:
                 raise ValueError("O parâmetro 'orde_nume' é obrigatório.")

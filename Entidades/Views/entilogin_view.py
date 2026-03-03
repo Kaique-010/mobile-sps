@@ -26,17 +26,27 @@ class EntidadesLoginViewSet(viewsets.ViewSet):
     def create(self, request, slug=None):
         data = request.data
         documento = data.get('documento')  
-        usuario = data.get('usuario')     
-        senha = data.get('senha')        
+        usuario1 = data.get('usuario')     
+        senha1 = data.get('senha')    
+        usuario2 = data.get('usuario2')    
+        senha2 = data.get('senha2')    
 
-        if not documento or not usuario or not senha:
+        if not documento:
             return Response({
-                "erro": "Documento, usuário e senha são obrigatórios"
+                "erro": "Documento é obrigatório"
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        if not (usuario1 and senha1) and not (usuario2 and senha2):
+            return Response({
+                "erro": "Informe usuário e senha"
             }, status=status.HTTP_400_BAD_REQUEST)
 
         # Buscar apenas nas licenças permitidas para login de clientes
         licencas = get_licencas_login_clientes()
         logger.warning(f"[LOGIN ENTIDADES] inicio documento={documento} licencas_count={len(licencas)} licencas={licencas}")
+        
+        documento_encontrado = False
+        
         for licenca in licencas:
             try:
                 banco_slug = licenca['slug']
@@ -51,33 +61,88 @@ class EntidadesLoginViewSet(viewsets.ViewSet):
                 
                 # Buscar entidade
                 entidade = Entidades.objects.using(banco_slug).filter(
-                    Q(enti_cpf=documento) | Q(enti_cnpj=documento)
+                    Q(enti_cpf=documento) | Q(enti_cnpj=documento),
+                    enti_empr=1
                 ).first()
 
                 if not entidade:
                     continue
                 
+                documento_encontrado = True
+                
                 # Verificar credenciais
-                if entidade.enti_mobi_usua == usuario and entidade.enti_mobi_senh == senha:
+                login1_ok = False
+                login2_ok = False
+                
+                # Verifica nos campos principais (usuario/senha)
+                if usuario1 and senha1:
+                    # Tenta validar como usuario 1
+                    if entidade.enti_mobi_usua == usuario1 and entidade.enti_mobi_senh == senha1:
+                        login1_ok = True
+                    # Tenta validar como usuario 2 (caso tenha passado no campo principal)
+                    elif entidade.enti_usua_mobi == usuario1 and entidade.enti_senh_mobi == senha1:
+                        login2_ok = True
+                
+                # Verifica nos campos secundários (usuario2/senha2) - caso sejam enviados explicitamente
+                if not (login1_ok or login2_ok) and usuario2 and senha2:
+                    if entidade.enti_usua_mobi == usuario2 and entidade.enti_senh_mobi == senha2:
+                        login2_ok = True
+                
+                if login1_ok or login2_ok:
+                    
                     logger.info(f"[LOGIN SUCCESS] Cliente {entidade.enti_nome} - Banco: {banco_slug}")
                     
+                    # Determinar permissões baseadas no login efetuado
+                    ver_preco = False
+                    ver_foto = False
+                    
+                    if login1_ok:
+                        ver_preco = entidade.enti_mobi_prec
+                        ver_foto = entidade.enti_mobi_foto
+                    elif login2_ok:
+                        ver_preco = entidade.enti_usua_prec
+                        ver_foto = entidade.enti_usua_foto
+                    
                     # Retorno simplificado - sem tokens
+                    usuario_tipo_logado = 'usuario1' if login1_ok else 'usuario2'
+                    
+                    print(f"[LOGIN DEBUG] cliente={entidade.enti_clie} usuario={usuario_tipo_logado} ver_preco={ver_preco} ver_foto={ver_foto}")
+                    
                     return Response({
                         'success': True,
                         'cliente_id': entidade.enti_clie,
                         'cliente_nome': entidade.enti_nome,
                         'documento': entidade.enti_cpf or entidade.enti_cnpj,
                         'banco': banco_slug,
-                        'session_id': f"{entidade.enti_clie}_{banco_slug}"  # ID simples para sessão
+                        'session_id': f"{entidade.enti_clie}_{banco_slug}_{usuario_tipo_logado}",  # ID com usuário para sessão
+                        # Retornar permissões combinadas ou individuais? 
+                        # Aqui vamos retornar as permissões para o front decidir
+                        'permissoes': {
+                            'ver_preco': ver_preco, 
+                            'ver_foto': ver_foto,
+                            'usuario_logado': 'usuario1' if login1_ok else 'usuario2',
+                            'usuario1': {
+                                'ver_preco': entidade.enti_mobi_prec,
+                                'ver_foto': entidade.enti_mobi_foto
+                            },
+                            'usuario2': {
+                                'ver_preco': entidade.enti_usua_prec,
+                                'ver_foto': entidade.enti_usua_foto
+                            }
+                        }
                     })
-                    
-            except Entidades.DoesNotExist:
-                continue
+                else:
+                    logger.warning(f"[LOGIN FAIL] Credenciais inválidas para {documento} no banco {banco_slug}")
+
             except Exception as e:
                 logger.error(f"[ERRO BANCO {banco_slug}] {str(e)}")
                 continue
         
-        logger.error(f"[LOGIN FAILED] Documento {documento} não encontrado")
+        if documento_encontrado:
+             logger.error(f"[LOGIN FAILED] Documento {documento} encontrado, mas credenciais inválidas")
+        else:
+             logger.error(f"[LOGIN FAILED] Documento {documento} não encontrado em nenhuma base")
+             
         return Response({
             "erro": "Credenciais inválidas"
         }, status=status.HTTP_401_UNAUTHORIZED)
