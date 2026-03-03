@@ -20,34 +20,47 @@ class OrdemServicoSerializer(BancoModelSerializer):
     def to_representation(self, instance):
         # Tratar campos de data deferidos/corrompidos para evitar ValueError
         
-        # Lista de campos de data problemáticos
-        date_fields = ['orde_data_repr', 'orde_data_fech', 'orde_nf_data', 'orde_ulti_alte']
+        # Lista completa de campos de data que podem dar problema
+        date_fields = [
+            'orde_data_aber', 'orde_data_fech', 
+            'orde_nf_data', 'orde_data_repr', 'orde_ulti_alte'
+        ]
         
         for field in date_fields:
-            # Se já está no __dict__, pode estar ok ou já ter sido carregado
-            # Se não está, foi deferido. O acesso dispara o refresh.
-            
+            # 1. Tentar usar a versão segura injetada pela ViewSet (safe_field)
+            safe_field = f'safe_{field}'
+            if hasattr(instance, safe_field):
+                safe_value = getattr(instance, safe_field)
+                if safe_value:
+                    try:
+                        # Converter string ISO do banco para objeto Python
+                        # Se for datetime (contém 'T' ou espaço e ':'), usa fromisoformat
+                        # Se for date, usa fromisoformat
+                        if 'T' in str(safe_value) or ' ' in str(safe_value) or ':' in str(safe_value):
+                            if 'orde_ulti_alte' in field: # É datetime
+                                val = datetime.fromisoformat(str(safe_value).replace(' ', 'T'))
+                            else: # É date
+                                val = date.fromisoformat(str(safe_value)[:10])
+                            setattr(instance, field, val)
+                        else:
+                            setattr(instance, field , None)
+                    except (ValueError, TypeError):
+                        setattr(instance, field, None)
+                else:
+                    setattr(instance, field, None)
+                
+                # Previne refresh do campo original
+                if field not in instance.__dict__:
+                    instance.__dict__[field] = getattr(instance, field)
+                continue
+
+            # 2. Fallback: Se não tem safe_field, tenta ler com try/except
             try:
-                # Tenta ler o valor. Se for data inválida no banco, o driver/Django lança erro
-                # Precisamos capturar ANTES que o serializer tente ler
-                
-                # Se o campo foi deferido, ele NÃO está no __dict__
-                # Mas acessar instance.field dispara a query.
-                
-                # O problema é que o erro acontece DENTRO da query do Django quando ele tenta converter
-                # a data inválida vinda do banco.
-                
-                # Uma estratégia mais segura:
-                # Se o campo está deferido, assumimos que pode ser problemático e definimos como None
-                # na instância ANTES de qualquer leitura, SE o objetivo for apenas listar
-                # Mas se precisarmos mostrar a data válida, temos um problema.
-                
-                # Vamos tentar ler. Se der erro, setamos None e evitamos o crash.
+                # O acesso dispara a query se foi deferido.
                 _ = getattr(instance, field)
             except (ValueError, TypeError, OverflowError):
-                # Data inválida detectada (ex: ano -18)
+                # Data inválida detectada
                 setattr(instance, field, None)
-                # Força o valor None no dicionário interno para evitar novas consultas
                 instance.__dict__[field] = None
             except Exception:
                 pass

@@ -275,8 +275,8 @@ class ImagemBase64Serializer(BancoModelSerializer):
     def validate_img_data(self, value):
         """Valida data da imagem para evitar anos inválidos"""
         if value and isinstance(value, datetime):
-            if value.year < 1900 or value.year > 2100:
-                raise ValidationError('Ano da data da imagem deve estar entre 1900 e 2100.')
+            if value.year < 2020 or value.year > 2100:
+                raise ValidationError('Ano da data da imagem deve estar entre 2020 e 2100.')
         return value
 
     def get_imagem_base64(self, obj):
@@ -373,23 +373,6 @@ class ImagemDepoisSerializer(ImagemBase64Serializer):
         ]
 
 
-class OrdensEletroSerializer(serializers.ModelSerializer):
-    # Campos com nomes compatíveis com o frontend
-    total_os = serializers.DecimalField(source='total_orde', max_digits=12, decimal_places=2, read_only=True)
-    status_ordem = serializers.CharField(source='status_orde', max_length=50, read_only=True)
-    tipo_ordem = serializers.CharField(source='tipo_orde', max_length=100, read_only=True)
-    
-    class Meta:
-        model = OrdensEletro
-        fields = [
-            'empresa', 'filial', 'ordem_de_servico', 'cliente', 'nome_cliente',
-            'data_abertura', 'data_fim', 'setor', 'setor_nome', 'pecas', 'servicos',
-            'total_orde', 'total_os', 'status_orde', 'status_ordem', 'tipo_orde', 'tipo_ordem',
-            'nf_entrada', 'pedido_compra',
-            'responsavel', 'nome_responsavel', 'potencia', 'ultima_alteracao'   
-        ]
-
-
 class SafeDateField(serializers.DateField):
     def to_representation(self, value):
         try:
@@ -418,6 +401,42 @@ class SafeDateTimeField(serializers.DateTimeField):
             return None
 
 
+class SafeTimeField(serializers.TimeField):
+    def to_representation(self, value):
+        try:
+            return super().to_representation(value)
+        except Exception:
+            return None
+
+    def get_attribute(self, instance):
+        try:
+            return super().get_attribute(instance)
+        except (ValueError, TypeError, Exception):
+            return None
+
+
+class OrdensEletroSerializer(serializers.ModelSerializer):
+    # Campos com nomes compatíveis com o frontend
+    total_os = serializers.DecimalField(source='total_orde', max_digits=12, decimal_places=2, read_only=True)
+    status_ordem = serializers.CharField(source='status_orde', max_length=50, read_only=True)
+    tipo_ordem = serializers.CharField(source='tipo_orde', max_length=100, read_only=True)
+    
+    # Campos seguros para datas que podem estar corrompidas no banco
+    data_abertura = SafeDateField(required=False, allow_null=True)
+    data_fim = SafeDateField(required=False, allow_null=True)
+    ultima_alteracao = SafeDateTimeField(required=False, allow_null=True)
+    
+    class Meta:
+        model = OrdensEletro
+        fields = [
+            'empresa', 'filial', 'ordem_de_servico', 'cliente', 'nome_cliente',
+            'data_abertura', 'data_fim', 'setor', 'setor_nome', 'pecas', 'servicos',
+            'total_orde', 'total_os', 'status_orde', 'status_ordem', 'tipo_orde', 'tipo_ordem',
+            'nf_entrada', 'pedido_compra',
+            'responsavel', 'nome_responsavel', 'potencia', 'ultima_alteracao'   
+        ]
+
+
 class OrdemServicoSerializer(BancoModelSerializer):
     pecas = OrdemServicoPecasSerializer(many=True, required=False)
     servicos = OrdemServicoServicosSerializer(many=True, required=False)
@@ -427,8 +446,11 @@ class OrdemServicoSerializer(BancoModelSerializer):
     pode_avancar = serializers.SerializerMethodField(read_only=True)
     
     # Campos seguros para datas que podem estar corrompidas no banco
+    orde_data_aber = SafeDateField(required=False, allow_null=True)
+    orde_hora_aber = SafeTimeField(required=False, allow_null=True)
     orde_data_repr = SafeDateField(required=False, allow_null=True)
     orde_data_fech = SafeDateField(required=False, allow_null=True)
+    orde_hora_fech = SafeTimeField(required=False, allow_null=True)
     orde_nf_data = SafeDateField(required=False, allow_null=True)
     orde_ulti_alte = SafeDateTimeField(required=False, allow_null=True)
 
@@ -493,22 +515,22 @@ class OrdemServicoSerializer(BancoModelSerializer):
     def validate_orde_data_aber(self, value):
         """Valida data de abertura para evitar anos inválidos"""
         if value and isinstance(value, date):
-            if value.year < 1900 or value.year > 2100:
-                raise ValidationError('Ano da data de abertura deve estar entre 1900 e 2100.')
+            if value.year < 2020 or value.year > 2100:
+                raise ValidationError('Ano da data de abertura deve estar entre 2020 e 2100.')
         return value
 
     def validate_orde_data_fech(self, value):
         """Valida data de fechamento para evitar anos inválidos"""
         if value and isinstance(value, date):
-            if value.year < 1900 or value.year > 2100:
-                raise ValidationError('Ano da data de fechamento deve estar entre 1900 e 2100.')
+            if value.year < 2020 or value.year > 2100:
+                raise ValidationError('Ano da data de fechamento deve estar entre 2020 e 2100.')
         return value
 
     def validate_orde_ulti_alte(self, value):
         """Valida data de última alteração para evitar anos inválidos"""
         if value and isinstance(value, datetime):
-            if value.year < 1900 or value.year > 2100:
-                raise ValidationError('Ano da data de última alteração deve estar entre 1900 e 2100.')
+            if value.year < 2020 or value.year > 2100:
+                raise ValidationError('Ano da data de última alteração deve estar entre 2020 e 2100.')
         return value
 
     def validate_orde_nume(self, value):

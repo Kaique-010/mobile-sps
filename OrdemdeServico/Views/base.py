@@ -23,6 +23,12 @@ class BaseMultiDBModelViewSet(ModuloRequeridoMixin, ModelViewSet):
         return banco
 
     def get_queryset(self):
+        qs = getattr(self, 'queryset', None)
+        if qs is not None and not qs.query.can_filter():
+            # queryset estático (ex: .none()) — deixa a subclasse resolver
+            return qs
+        if qs is not None:
+            return qs.using(self.get_banco())
         return super().get_queryset().using(self.get_banco())
 
     def get_serializer_context(self):

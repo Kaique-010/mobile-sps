@@ -4,7 +4,7 @@ from rest_framework import status, filters
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db import transaction
-
+from django.db.models.expressions import RawSQL
 from .base import BaseMultiDBModelViewSet
 from ..models import Ordemservico
 from ..serializers import OrdemServicoSerializer
@@ -15,15 +15,26 @@ from Entidades.models import Entidades
 
 from ..services import workflow_service, ordem_service, total_service
 from ..handlers.dominio_handler import tratar_erro
-from django.db.models import Q
+from django.db.models import Q, Case, When, Value, DateField
+
+import logging
+logger = logging.getLogger(__name__)
+
+class SafeOrderingFilter(filters.OrderingFilter):
+    def get_ordering(self, request, queryset, view):
+        ordering = super().get_ordering(request, queryset, view)
+        if ordering:
+            return [o.replace('orde_data_aber', 'safe_data_aber') for o in ordering]
+        return ordering
 
 class OrdemViewSet(BaseMultiDBModelViewSet):
+    queryset = Ordemservico.objects.none() 
     modulo_necessario = 'OrdemdeServico'
     serializer_class = OrdemServicoSerializer
     # queryset removed here as it is overridden by get_queryset
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
+    filter_backends = [DjangoFilterBackend, SafeOrderingFilter, filters.SearchFilter]
     filterset_class = OrdemServicoFilter
-    ordering_fields = ['orde_data_aber', 'orde_data_fech', 'orde_prio']
+    ordering_fields = ['orde_data_aber', 'safe_data_aber', 'orde_data_fech', 'orde_prio']
     search_fields = ['orde_prob', 'orde_defe_desc', 'orde_obse', 'orde_nume']
     permission_classes = [IsAuthenticated, OrdemServicoPermission, PodeVerOrdemDoSetor]
     pagination_class = OrdemServicoPagination
@@ -32,44 +43,48 @@ class OrdemViewSet(BaseMultiDBModelViewSet):
     def get_queryset(self):
         banco = self.get_banco()
         user_setor = getattr(self.request.user, 'setor', None)
+
+        qs = Ordemservico.objects.using(banco).filter(
+            orde_seto__isnull=False,
+            orde_stat_orde__in=[0, 1, 2, 3, 5, 21, 22]
+        ).exclude(orde_seto=0)
         
-        # Deferir campos de data que podem conter valores corrompidos (ano < 1 ou > 9999)
-        # O Django tenta converter datas automaticamente ao carregar o modelo, o que gera o erro ValueError
-        qs = Ordemservico.objects.using(banco).defer(
-            'orde_data_repr', 
-            'orde_data_fech', 
-            'orde_nf_data', 
-            'orde_ulti_alte'
-        ).all()
-
-        # Filtrar por campos válidos
-        qs = qs.filter(orde_seto__isnull=False).exclude(orde_seto=0)
-        qs = qs.filter(orde_stat_orde__in=[0, 1, 2, 3, 5, 21, 22])
-
-        # Garantir que datas inválidas não quebrem
-        qs = qs.filter(orde_data_aber__year__gte=1900, orde_data_aber__year__lte=2100)
-        qs = qs.filter(
-            Q(orde_data_fech__isnull=True) | (Q(orde_data_fech__year__gte=1900) & Q(orde_data_fech__year__lte=2100))
-        )
-        qs = qs.filter(
-            Q(orde_nf_data__isnull=True) | (Q(orde_nf_data__year__gte=1900) & Q(orde_nf_data__year__lte=2100))
-        )
-        # Removido filtro estrito de data de reprovação pois estava causando erro 'year out of range' em datas corrompidas
-        # qs = qs.filter(
-        #    Q(orde_data_repr__isnull=True) | (Q(orde_data_repr__year__gte=1900) & Q(orde_data_repr__year__lte=2100))
-        # )
-        qs = qs.filter(
-            Q(orde_ulti_alte__isnull=True) | (Q(orde_ulti_alte__year__gte=1900) & Q(orde_ulti_alte__year__lte=2100))
+        # Deferir todos os campos de data e hora propensos a erro para impedir leitura direta
+        qs = qs.defer(
+            'orde_data_aber', 'orde_hora_aber', 
+            'orde_data_fech', 'orde_hora_fech',
+            'orde_nf_data', 'orde_ulti_alte', 'orde_data_repr'
         )
 
-        # Filtro por setor do usuário (só se houver)
+        # Blindagem total via SQL puro — sem Case/When que avalia campos inválidos
+        qs = qs.extra(
+            where=[
+                "EXTRACT(YEAR FROM orde_data_aber) BETWEEN 2020 AND 2100",
+                "orde_data_fech IS NULL OR EXTRACT(YEAR FROM orde_data_fech) BETWEEN 2020 AND 2100",
+                "orde_nf_data IS NULL OR EXTRACT(YEAR FROM orde_nf_data) BETWEEN 2020 AND 2100",
+                "orde_ulti_alte IS NULL OR EXTRACT(YEAR FROM orde_ulti_alte) BETWEEN 2020 AND 2100",
+                "orde_data_repr IS NULL OR EXTRACT(YEAR FROM orde_data_repr) BETWEEN 2020 AND 2100",
+            ],
+            select={
+                # CAST para TEXT impede psycopg2 de converter datas inválidas
+                'orde_data_aber': "CASE WHEN EXTRACT(YEAR FROM orde_data_aber) BETWEEN 2020 AND 2100 THEN orde_data_aber::text ELSE NULL END",
+                'orde_hora_aber': "orde_hora_aber::text",
+                'orde_data_fech': "CASE WHEN orde_data_fech IS NULL OR EXTRACT(YEAR FROM orde_data_fech) BETWEEN 2020 AND 2100 THEN orde_data_fech::text ELSE NULL END",
+                'orde_hora_fech': "orde_hora_fech::text",
+                'orde_nf_data':   "CASE WHEN orde_nf_data IS NULL OR EXTRACT(YEAR FROM orde_nf_data) BETWEEN 2020 AND 2100 THEN orde_nf_data::text ELSE NULL END",
+                'orde_ulti_alte': "CASE WHEN orde_ulti_alte IS NULL OR EXTRACT(YEAR FROM orde_ulti_alte) BETWEEN 2020 AND 2100 THEN orde_ulti_alte::text ELSE NULL END",
+                'orde_data_repr': "CASE WHEN orde_data_repr IS NULL OR EXTRACT(YEAR FROM orde_data_repr) BETWEEN 2020 AND 2100 THEN orde_data_repr::text ELSE NULL END",
+                'safe_data_aber': "CASE WHEN EXTRACT(YEAR FROM orde_data_aber) BETWEEN 2020 AND 2100 THEN orde_data_aber::text ELSE NULL END",
+            }
+        )
+
         if user_setor and getattr(user_setor, "osfs_codi", None):
             qs = qs.filter(orde_seto=user_setor.osfs_codi)
-            
+
         orde_nume = self.request.query_params.get('orde_nume')
         if orde_nume:
             qs = qs.filter(orde_nume=orde_nume)
-    
+
         cliente_nome = self.request.query_params.get('cliente_nome')
         if cliente_nome:
             entidades_ids = list(
@@ -79,9 +94,10 @@ class OrdemViewSet(BaseMultiDBModelViewSet):
             )
             if entidades_ids:
                 qs = qs.filter(orde_enti__in=entidades_ids)
+
+        logger.warning(f"[DEBUG COUNT] {qs.count()} registros")
         
-        qs = qs.order_by('-orde_data_aber', '-orde_nume')
-        return qs
+        return qs.order_by('-safe_data_aber', '-orde_nume')
 
     def get_next_ordem_numero(self, empre, fili, data):
         """

@@ -20,5 +20,28 @@ class OrdensEletroViewSet(ModuloRequeridoMixin, viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         banco = get_licenca_db_config(self.request) or 'default'
-        return OrdensEletro.objects.using(banco).all().order_by('-data_abertura', '-ordem_de_servico')
+        qs = OrdensEletro.objects.using(banco).all()
+        
+        # BLINDAGEM CONTRA DATAS CORROMPIDAS
+        # 1. Deferir campos de data originais
+        qs = qs.defer('data_abertura', 'data_fim', 'ultima_alteracao')
+        
+        # 2. Injetar versões seguras como TEXT via SQL puro
+        qs = qs.extra(select={
+            'safe_data_abertura': """
+                CASE WHEN EXTRACT(YEAR FROM data_abertura) BETWEEN 2020 AND 2100 
+                THEN data_abertura::text ELSE NULL END
+            """,
+            'safe_data_fim': """
+                CASE WHEN data_fim IS NOT NULL AND EXTRACT(YEAR FROM data_fim) BETWEEN 2020 AND 2100 
+                THEN data_fim::text ELSE NULL END
+            """,
+            'safe_ultima_alteracao': """
+                CASE WHEN ultima_alteracao IS NOT NULL AND EXTRACT(YEAR FROM ultima_alteracao) BETWEEN 2020 AND 2100 
+                THEN ultima_alteracao::text ELSE NULL END
+            """
+        })
+        
+        # 3. Ordenar pelo campo seguro
+        return qs.order_by('-safe_data_abertura', '-ordem_de_servico')
         

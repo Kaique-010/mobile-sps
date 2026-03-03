@@ -9,6 +9,11 @@ class OrdensEletroSerializer(serializers.ModelSerializer):
     pedido_compra = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     nf_entrada = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
+    # Campos de data blindados
+    data_abertura = serializers.SerializerMethodField()
+    data_fim = serializers.SerializerMethodField()
+    ultima_alteracao = serializers.SerializerMethodField()
+
     class Meta:
         model = OrdensEletro
         fields = [
@@ -17,3 +22,32 @@ class OrdensEletroSerializer(serializers.ModelSerializer):
             'total_orde', 'total_os', 'status_orde', 'status_ordem', 'responsavel', 
             'nome_responsavel', 'potencia', 'ultima_alteracao', 'pedido_compra', 'nf_entrada'
         ]
+
+    def get_data_abertura(self, obj):
+        # Tenta pegar a versão segura (texto) injetada pelo extra()
+        if hasattr(obj, 'safe_data_abertura'):
+            return obj.safe_data_abertura
+        # Fallback: tenta acessar o original (pode falhar se corrompido)
+        try:
+            val = obj.data_abertura
+            return val.isoformat() if val else None
+        except Exception:
+            return None
+
+    def get_data_fim(self, obj):
+        if hasattr(obj, 'safe_data_fim'):
+            return obj.safe_data_fim
+        try:
+            val = obj.data_fim
+            return val.isoformat() if val else None
+        except Exception:
+            return None
+
+    def get_ultima_alteracao(self, obj):
+        if hasattr(obj, 'safe_ultima_alteracao'):
+            return obj.safe_ultima_alteracao
+        try:
+            val = obj.ultima_alteracao
+            return val.isoformat() if val else None
+        except Exception:
+            return None

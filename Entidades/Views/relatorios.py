@@ -58,7 +58,28 @@ class OrdemServicoViewSet(BaseClienteViewSet):
         
         if data_final:
             queryset = queryset.filter(orde_data_aber__lte=data_final)
-            
+
+        # BLINDAGEM CONTRA DATAS CORROMPIDAS (ex: ano -18)
+        # Deferir campos de data que podem quebrar o driver psycopg2
+        date_fields = [
+            'orde_data_aber', 'orde_data_fech', 
+            'orde_nf_data', 'orde_data_repr', 'orde_ulti_alte'
+        ]
+        queryset = queryset.defer(*date_fields)
+        
+        # Injetar campos seguros como texto
+        select_dict = {}
+        for field in date_fields:
+            select_dict[f'safe_{field}'] = f"""
+                CASE 
+                    WHEN {field} IS NOT NULL 
+                         AND EXTRACT(YEAR FROM {field}) BETWEEN 1900 AND 2100 
+                    THEN {field}::text 
+                    ELSE NULL 
+                END
+            """
+        queryset = queryset.extra(select=select_dict)
+        
         return queryset
     
     @action(detail=False, methods=['get'], url_path='em-estoque')
