@@ -2,10 +2,10 @@ from django.views.generic import CreateView
 from django.urls import reverse
 from django.shortcuts import redirect
 from django.contrib import messages
-from core.utils import get_licenca_db_config
+from core.utils import get_licenca_db_config    
 from transportes.models import Veiculos
-from transportes.Forms.VeiculosForm import VeiculosForm
-from transportes.Services.VeiculosService import VeiculosService
+from transportes.forms.VeiculosForm import VeiculosForm
+from transportes.services.VeiculosService import VeiculosService
 
 class VeiculosCreateView(CreateView):
     model = Veiculos

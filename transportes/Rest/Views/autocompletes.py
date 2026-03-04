@@ -2,6 +2,7 @@ from django.http import JsonResponse
 from django.db.models import Q
 from core.utils import get_licenca_db_config
 from Entidades.models import Entidades
+from transportes.models import Veiculos
 from Produtos.models import Marca
 from CentrodeCustos.models import Centrodecustos
 
@@ -109,6 +110,34 @@ def autocomplete_entidades(request, slug=None):
         {
             'id': str(obj.enti_clie),
             'text': f"{obj.enti_clie} - {obj.enti_nome}",
+        }
+        for obj in qs
+    ]
+    return JsonResponse({'results': data})
+
+
+def autocomplete_veiculos(request, slug=None):
+    banco = get_licenca_db_config(request) or 'default'
+    empresa_id = request.session.get('empresa_id')
+    term = (request.GET.get('term') or request.GET.get('q') or '').strip()
+    transportadora_id = request.GET.get('transportadora_id')
+
+    qs = Veiculos.objects.using(banco).filter(veic_empr=str(empresa_id))
+
+    if transportadora_id:
+        qs = qs.filter(veic_tran=transportadora_id)
+
+    if term:
+        if term.isdigit():
+            qs = qs.filter(veic_plac__icontains=term)
+        else:
+            qs = qs.filter(Q(veic_marc__icontains=term))
+
+    qs = qs.order_by('veic_plac')[:20]
+    data = [
+        {
+            'id': str(obj.veic_sequ),
+            'text': f"{obj.veic_plac} - {obj.veic_marc or ''} {obj.veic_espe or ''}",
         }
         for obj in qs
     ]

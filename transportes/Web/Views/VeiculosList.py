@@ -2,6 +2,7 @@ from django.views.generic import ListView
 from django.db.models import Q
 from core.utils import get_licenca_db_config
 from transportes.models import Veiculos
+from Entidades.models import Entidades
 
 class VeiculosListView(ListView):
     model = Veiculos
@@ -31,12 +32,21 @@ class VeiculosListView(ListView):
         veic_plac = self.request.GET.get('veic_plac')
         if veic_plac:
             qs = qs.filter(veic_plac__icontains=veic_plac)
-
-        return qs.order_by('veic_tran', 'veic_sequ')
+        
+        return qs.order_by('veic_tran', 'veic_sequ', 'veic_plac')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        banco = get_licenca_db_config(self.request)
+        
         context['titulo'] = 'Veículos'
-        # Contagem total para exibir no card (opcional, mas bom para UX)
+        # Contagem total para exibir no card
         context['total_veiculos'] = self.get_queryset().count()
+        
+        # Contagem de Transportadoras
+        context['total_transportadoras'] = Entidades.objects.using(banco).filter(enti_tien='T').count()
+        
+        # Lista de transportadoras para o filtro
+        context['transportadoras'] = Entidades.objects.using(banco).filter(enti_tien='T').order_by('enti_clie')
+
         return context

@@ -2,6 +2,54 @@
 {% load static %}
 {% block content %}
 <link rel="stylesheet" href="{% static 'css/ui.css' %}">
+<style>
+    .stat-card {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 16px 20px;
+        border-radius: 12px;
+        height: 100%;
+        color: #fff;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.10);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+
+    .stat-blue       { background: linear-gradient(135deg, #8e9ee9, #1a418a); }
+    .stat-green      { background: linear-gradient(135deg, #71ac98, #145843); }
+    .stat-orange     { background: linear-gradient(135deg, #9acadd, #0d3455); }
+    .stat-red        { background: linear-gradient(135deg, #c08d8d, #c62828); }
+
+    .stat-icon {
+        font-size: 2rem;
+        opacity: 0.85;
+        flex-shrink: 0;
+    }
+
+    .stat-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .stat-label {
+        font-size: 0.78rem;
+        font-weight: 500;
+        opacity: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .stat-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        line-height: 1.1;
+    }
+</style>
 <div class="container py-4">
   <div class="container align-items-center">
     <h2 class="page-title text-center mb-4">
@@ -17,30 +65,42 @@
   </div>
   <div id="caixa-warning" class="alert alert-warning d-none">Necessário estar logado para carregar os dados.</div>
 
-  <div class="kpi-grid mb-4">
-    <div class="card kpi-card">
-      <div class="card-body">
-        <div class="label">Saldo inicial</div>
-        <div class="value" id="kpi-saldo-inicial">R$ 0,00</div>
-      </div>
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-md-3">
+        <div class="stat-card stat-blue">
+            <div class="stat-icon"><i class="bi bi-wallet2"></i></div>
+            <div class="stat-info">
+                <span class="stat-label">Saldo Inicial</span>
+                <span class="stat-value" id="kpi-saldo-inicial">R$ 0,00</span>
+            </div>
+        </div>
     </div>
-    <div class="card kpi-card">
-      <div class="card-body">
-        <div class="label">Entradas</div>
-        <div class="value" id="kpi-entradas">R$ 0,00</div>
-      </div>
+    <div class="col-12 col-md-3">
+        <div class="stat-card stat-green">
+            <div class="stat-icon"><i class="bi bi-arrow-down-circle"></i></div>
+            <div class="stat-info">
+                <span class="stat-label">Entradas</span>
+                <span class="stat-value" id="kpi-entradas">R$ 0,00</span>
+            </div>
+        </div>
     </div>
-    <div class="card kpi-card">
-      <div class="card-body">
-        <div class="label">Saídas</div>
-        <div class="value" id="kpi-saidas">R$ 0,00</div>
-      </div>
+    <div class="col-12 col-md-3">
+        <div class="stat-card stat-red">
+            <div class="stat-icon"><i class="bi bi-arrow-up-circle"></i></div>
+            <div class="stat-info">
+                <span class="stat-label">Saídas</span>
+                <span class="stat-value" id="kpi-saidas">R$ 0,00</span>
+            </div>
+        </div>
     </div>
-    <div class="card kpi-card">
-      <div class="card-body">
-        <div class="label">Saldo atual</div>
-        <div class="value" id="kpi-saldo-atual">R$ 0,00</div>
-      </div>
+    <div class="col-12 col-md-3">
+        <div class="stat-card stat-orange">
+            <div class="stat-icon"><i class="bi bi-cash-coin"></i></div>
+            <div class="stat-info">
+                <span class="stat-label">Saldo Atual</span>
+                <span class="stat-value" id="kpi-saldo-atual">R$ 0,00</span>
+            </div>
+        </div>
     </div>
   </div>
 

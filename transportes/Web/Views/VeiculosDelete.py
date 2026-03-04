@@ -26,8 +26,23 @@ class VeiculosDeleteView(DeleteView):
         )
 
     def delete(self, request, *args, **kwargs):
-        banco = get_licenca_db_config(self.request)
+        # Verifica se o objeto existe (retorna 404 se não existir)
         self.object = self.get_object()
-        self.object.delete(using=banco)
+        
+        banco = get_licenca_db_config(self.request)
+        
+        # Recupera as chaves da URL/Sessão para garantir que estamos deletando o registro correto
+        empresa_id = self.request.session.get('empresa_id')
+        tran = self.kwargs.get('tran')
+        sequ = self.kwargs.get('sequ')
+        
+        # Deleta apenas o registro específico usando a chave composta
+        # Isso evita o problema do Django tentar deletar todos os registros com veic_empr=X
+        Veiculos.objects.using(banco).filter(
+            veic_empr=empresa_id, 
+            veic_tran=tran, 
+            veic_sequ=sequ
+        ).delete()
+        
         messages.success(request, 'Veículo excluído com sucesso!')
         return redirect(self.get_success_url())

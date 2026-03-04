@@ -1,0 +1,353 @@
+{% extends 'transportes/base_cte.html' %}
+
+{% block title %}
+{% if object %}Editar CT-e {{ object.numero|default:object.id }}{% else %}Novo CT-e{% endif %}
+{% endblock %}
+
+{% block cte_content %}
+<div class="card shadow-sm mb-4">
+    <div class="card-header pb-0">
+        <h4 class="mb-3">
+            {% if object %}
+            <i class="fas fa-edit"></i> Editando CT-e #{{ object.id }}
+            <span class="badge bg-secondary ms-2">{{ object.get_status_display }}</span>
+            {% else %}
+            <i class="fas fa-plus-circle"></i> Novo CT-e
+            {% endif %}
+        </h4>
+
+        {% if object %}
+        <!-- Navegação de Abas -->
+        <ul class="nav nav-tabs card-header-tabs">
+            <li class="nav-item">
+                <a class="nav-link {% if active_tab == 'emissao' %}active fw-bold{% endif %}"
+                    href="{% url 'transportes:cte_emissao' slug=slug pk=object.pk %}">
+                    <i class="fas fa-file-alt"></i> Dados Gerais
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if active_tab == 'tipo' %}active fw-bold{% endif %}"
+                    href="{% url 'transportes:cte_tipo' slug=slug pk=object.pk %}">
+                    <i class="fas fa-tags"></i> Tipo
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if active_tab == 'rota' %}active fw-bold{% endif %}"
+                    href="{% url 'transportes:cte_rota' slug=slug pk=object.pk %}">
+                    <i class="fas fa-map-marker-alt"></i> Rota
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if active_tab == 'seguro' %}active fw-bold{% endif %}"
+                    href="{% url 'transportes:cte_seguro' slug=slug pk=object.pk %}">
+                    <i class="fas fa-shield-alt"></i> Seguro
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if active_tab == 'carga' %}active fw-bold{% endif %}"
+                    href="{% url 'transportes:cte_carga' slug=slug pk=object.pk %}">
+                    <i class="fas fa-box"></i> Carga
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if active_tab == 'tributacao' %}active fw-bold{% endif %}"
+                    href="{% url 'transportes:cte_tributacao' slug=slug pk=object.pk %}">
+                    <i class="fas fa-file-invoice-dollar"></i> Tributação
+                </a>
+            </li>
+        </ul>
+        {% endif %}
+    </div>
+
+    <div class="card-body p-4">
+        <form method="post" novalidate id="cteForm">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+
+            {# Campos de Tipo/Emissão em destaque no topo #}
+            <div class="row g-2 mb-4">
+                {% for field in form %}
+                    {% if field.name == 'tomador_servico' or field.name == 'tipo_servico' or field.name == 'tipo_cte' or field.name == 'forma_emissao' or field.name == 'tipo_frete' %}
+                    <div class="col-md">
+                        <div class="card h-100 border-amber shadow-lg">
+                            <div class="card-header  fw-bold small text-uppercase text-muted border-bottom-0 pt-3 pb-1">
+                                {{ field.label }} {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+                            </div>
+                            <div class="card-body pt-1">
+                                <div class="d-flex flex-column gap-2">
+                                    {% for radio in field %}
+                                    <div class="form-check form-switch">
+                                        {{ radio.tag }}
+                                        <label class="form-check-label small" for="{{ radio.id_for_label }}">
+                                            {{ radio.choice_label }}
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% if field.errors %}
+                                <div class="text-danger small mt-2">
+                                    {{ field.errors|striptags }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+            {# Demais campos #}
+            <div class="row g-3">
+                {% for field in form %}
+                    {% if field.name != 'tomador_servico' and field.name != 'tipo_servico' and field.name != 'tipo_cte' and field.name != 'forma_emissao' and field.name != 'tipo_frete' %}
+                    
+                    {% if field.name == 'remetente' %}
+                    <div class="col-md-6 position-relative">
+                        <label class="form-label fw-semibold">{{ field.label }}{% if field.field.required %}<span class="text-danger">*</span>{% endif %}</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="text" id="input_remetente" class="form-control" placeholder="Buscar remetente..." autocomplete="off" value="{{ remetente_nome|default:'' }}">
+                            {{ field }}
+                        </div>
+                        <div id="dropdown_remetente" class="list-group position-absolute w-100 start-0" style="z-index: 1000; top: 100%;"></div>
+                        {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors|striptags }}</div>{% endif %}
+                    </div>
+
+                    {% elif field.name == 'destinatario' %}
+                    <div class="col-md-6 position-relative">
+                        <label class="form-label fw-semibold">{{ field.label }}{% if field.field.required %}<span class="text-danger">*</span>{% endif %}</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="text" id="input_destinatario" class="form-control" placeholder="Buscar destinatário..." autocomplete="off" value="{{ destinatario_nome|default:'' }}">
+                            {{ field }}
+                        </div>
+                        <div id="dropdown_destinatario" class="list-group position-absolute w-100 start-0" style="z-index: 1000; top: 100%;"></div>
+                        {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors|striptags }}</div>{% endif %}
+                    </div>
+
+                    {% elif field.name == 'motorista' %}
+                    <div class="col-md-6 position-relative">
+                        <label class="form-label fw-semibold">{{ field.label }}{% if field.field.required %}<span class="text-danger">*</span>{% endif %}</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="text" id="input_motorista" class="form-control" placeholder="Buscar motorista..." autocomplete="off" value="{{ motorista_nome|default:'' }}">
+                            {{ field }}
+                        </div>
+                        <div id="dropdown_motorista" class="list-group position-absolute w-100 start-0" style="z-index: 1000; top: 100%;"></div>
+                        {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors|striptags }}</div>{% endif %}
+                    </div>
+
+                    {% elif field.name == 'veiculo' %}
+                    <div class="col-md-6 position-relative">
+                        <label class="form-label fw-semibold">{{ field.label }}{% if field.field.required %}<span class="text-danger">*</span>{% endif %}</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-truck"></i></span>
+                            <input type="text" id="input_veiculo" class="form-control" placeholder="Buscar veículo..." autocomplete="off" value="{{ veiculo_nome|default:'' }}">
+                            {{ field }}
+                        </div>
+                        <div id="dropdown_veiculo" class="list-group position-absolute w-100 start-0" style="z-index: 1000; top: 100%;"></div>
+                        {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors|striptags }}</div>{% endif %}
+                        <div class="form-text small text-muted">Selecione o remetente primeiro para filtrar os veículos.</div>
+                    </div>
+
+                    {% else %}
+                    <div class="col-md-6">
+                        <label for="{{ field.id_for_label }}" class="form-label fw-semibold">
+                            {{ field.label }}
+                            {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+                        </label>
+
+                        {{ field }}
+
+                        {% if field.help_text %}
+                        <div class="form-text text-muted small">{{ field.help_text }}</div>
+                        {% endif %}
+
+                        {% if field.errors %}
+                        <div class="text-danger small mt-1">
+                            {{ field.errors|striptags }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+            <hr class="my-4">
+
+            <div class="d-flex justify-content-between align-items-center">
+                <a href="{% url 'transportes:cte_list' slug=slug %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Voltar
+                </a>
+
+                <div>
+                    <button type="submit" class="btn btn-outline-primary px-4">
+                        <i class="fas fa-save"></i> Salvar e Continuar
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <!-- Botão de emitir fora do form principal -->
+        {% if object and object.status == 'RAS' %}
+        <div class="mt-3 text-end border-top pt-3">
+            <form action="{% url 'transportes:cte_emitir' slug=slug pk=object.pk %}" method="post" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success"
+                    onclick="return confirm('Deseja realmente emitir este CT-e?');">
+                    <i class="fas fa-paper-plane"></i> Emitir CT-e Agora
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    // Adiciona classe form-control a todos os inputs para estilização Bootstrap
+    document.addEventListener("DOMContentLoaded", function () {
+        var inputs = document.querySelectorAll('#cteForm input, #cteForm select, #cteForm textarea');
+        inputs.forEach(function (input) {
+            if (input.type !== 'checkbox' && input.type !== 'radio' && input.type !== 'hidden') {
+                input.classList.add('form-control');
+            } else if (input.type === 'checkbox' || input.type === 'radio') {
+                input.classList.add('form-check-input');
+            }
+        });
+
+        // IDs dos campos hidden gerados pelo Django
+        const idRemetente = "{{ form.remetente.auto_id }}";
+        const idDestinatario = "{{ form.destinatario.auto_id }}";
+        const idMotorista = "{{ form.motorista.auto_id }}";
+        const idVeiculo = "{{ form.veiculo.auto_id }}";
+
+        // Função genérica de autocomplete
+        function setupAutocomplete(inputId, hiddenId, dropdownId, url, getExtraParams = null, onSelect = null) {
+            const input = document.getElementById(inputId);
+            const hidden = document.getElementById(hiddenId);
+            const dropdown = document.getElementById(dropdownId);
+            let debounceTimer;
+
+            if (!input || !hidden || !dropdown) return;
+
+            input.addEventListener('input', function () {
+                clearTimeout(debounceTimer);
+                const query = this.value;
+
+                if (query.length < 1) {
+                    dropdown.innerHTML = '';
+                    return;
+                }
+
+                debounceTimer = setTimeout(() => {
+                    let finalUrl = `${url}?term=${encodeURIComponent(query)}`;
+                    
+                    if (getExtraParams) {
+                        const params = getExtraParams();
+                        if (params === false) { // Aborta se retornar false explicitamente
+                            dropdown.innerHTML = '';
+                            return; 
+                        }
+                        if (params) {
+                             const queryString = new URLSearchParams(params).toString();
+                             finalUrl += `&${queryString}`;
+                        }
+                    }
+
+                    fetch(finalUrl)
+                        .then(response => response.json())
+                        .then(data => {
+                            dropdown.innerHTML = '';
+                            if (data.results && data.results.length > 0) {
+                                data.results.forEach(item => {
+                                    const a = document.createElement('a');
+                                    a.className = 'list-group-item list-group-item-action';
+                                    a.href = '#';
+                                    a.textContent = item.text;
+                                    a.onclick = function (e) {
+                                        e.preventDefault();
+                                        input.value = item.text;
+                                        hidden.value = item.id;
+                                        dropdown.innerHTML = '';
+                                        if (onSelect) onSelect(item);
+                                    };
+                                    dropdown.appendChild(a);
+                                });
+                            } else {
+                                const div = document.createElement('div');
+                                div.className = 'list-group-item disabled';
+                                div.textContent = 'Nenhum resultado encontrado';
+                                dropdown.appendChild(div);
+                            }
+                        })
+                        .catch(error => console.error('Erro no autocomplete:', error));
+                }, 300);
+            });
+
+            // Fecha dropdown ao clicar fora
+            document.addEventListener('click', function (e) {
+                if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.innerHTML = '';
+                }
+            });
+        }
+
+        // 1. Remetente (Transportadoras)
+        setupAutocomplete(
+            'input_remetente', 
+            idRemetente, 
+            'dropdown_remetente', 
+            "{% url 'transportes:autocomplete_transportadoras' slug=slug %}",
+            null,
+            function(item) {
+                // Ao mudar o remetente, limpa o veículo pois depende da transportadora
+                const inputVeiculo = document.getElementById('input_veiculo');
+                const hiddenVeiculo = document.getElementById(idVeiculo);
+                if (inputVeiculo) inputVeiculo.value = '';
+                if (hiddenVeiculo) hiddenVeiculo.value = '';
+            }
+        );
+
+        // 2. Destinatário (Entidades)
+        setupAutocomplete(
+            'input_destinatario', 
+            idDestinatario, 
+            'dropdown_destinatario', 
+            "{% url 'transportes:autocomplete_entidades' slug=slug %}"
+        );
+
+        // 3. Motorista (Entidades)
+        setupAutocomplete(
+            'input_motorista', 
+            idMotorista, 
+            'dropdown_motorista', 
+            "{% url 'transportes:autocomplete_entidades' slug=slug %}"
+        );
+
+        // 4. Veículo (Filtrado por Transportadora do Remetente)
+        setupAutocomplete(
+            'input_veiculo', 
+            idVeiculo, 
+            'dropdown_veiculo', 
+            "{% url 'transportes:autocomplete_veiculos' slug=slug %}",
+            function() {
+                const transportadoraId = document.getElementById(idRemetente).value;
+                if (!transportadoraId) {
+                    alert('Por favor, selecione o Remetente (Transportadora) primeiro para buscar veículos.');
+                    document.getElementById('input_remetente').focus();
+                    return false; // Cancela a busca
+                }
+                return { transportadora_id: transportadoraId };
+            }
+        );
+
+    });
+    
+</script>
+{% endblock %}

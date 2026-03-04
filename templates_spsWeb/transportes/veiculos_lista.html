@@ -71,12 +71,21 @@
 
         <div class="container mt-3">
             <div class="row g-3 align-items-stretch">
-                <div class="col-12 col-md-4">
+                <div class="col-12 col-md-2">
                     <div class="stat-card stat-total">
                         <div class="stat-icon"><i class="bi bi-truck"></i></div>
                         <div class="stat-info">
                             <span class="stat-label">Total de Veículos</span>
                             <span class="stat-value">{{ total_veiculos|default:"0" }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-2">
+                    <div class="stat-card stat-ativos">
+                        <div class="stat-icon"><i class="bi bi-building"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Total Transportadoras</span>
+                            <span class="stat-value">{{ total_transportadoras|default:"0" }}</span>
                         </div>
                     </div>
                 </div>
@@ -100,9 +109,15 @@
             <form method="get" class="mb-0">
                 <div class="row g-2">
                     <div class="col-md-4">
-                        <label for="veic_tran" class="form-label">Cód. Transportadora</label>
-                        <input type="text" id="veic_tran" name="veic_tran" class="form-control"
-                            value="{{ request.GET.veic_tran }}" placeholder="Filtrar por código da transportadora">
+                        <label for="veic_tran" class="form-label">Transportadora</label>
+                        <select id="veic_tran" name="veic_tran" class="form-select">
+                            <option value="">Todas</option>
+                            {% for tran in transportadoras %}
+                            <option value="{{ tran.enti_clie }}" {% if request.GET.veic_tran == tran.enti_clie|stringformat:"s" %}selected{% endif %}>
+                                {{ tran.enti_clie }} - {{ tran.enti_nome }}
+                            </option>
+                            {% endfor %}
+                        </select>
                     </div>
                     <div class="col-md-4">
                         <label for="veic_plac" class="form-label">Placa</label>

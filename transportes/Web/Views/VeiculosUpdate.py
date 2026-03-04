@@ -4,7 +4,8 @@ from django.shortcuts import get_object_or_404, redirect
 from django.contrib import messages
 from core.utils import get_licenca_db_config
 from transportes.models import Veiculos
-from transportes.Forms.VeiculosForm import VeiculosForm
+from transportes.forms.VeiculosForm import VeiculosForm
+from transportes.services.VeiculosService import VeiculosService
 from Entidades.models import Entidades
 from Produtos.models import Marca
 from CentrodeCustos.models import Centrodecustos
@@ -32,8 +33,32 @@ class VeiculosUpdateView(UpdateView):
 
     def form_valid(self, form):
         banco = get_licenca_db_config(self.request)
+        
+        # Recupera os dados do form mas não salva ainda
         self.object = form.save(commit=False)
-        self.object.save(using=banco)
+
+        # Chaves originais para garantir que estamos atualizando o registro correto
+        empresa_id = self.request.session.get('empresa_id')
+        tran_orig = self.kwargs.get('tran')
+        sequ_orig = self.kwargs.get('sequ')
+
+        # Campos da chave primária composta que não devem ser alterados no update
+        pk_fields = ['veic_empr', 'veic_tran', 'veic_sequ']
+        
+        # Prepara o dicionário de dados para o update
+        update_data = {}
+        for field_name, value in form.cleaned_data.items():
+            if field_name not in pk_fields:
+                update_data[field_name] = value
+
+        # Realiza o update filtrando pela chave composta completa
+        # Isso evita o problema do Django tentar atualizar todos os registros com veic_empr=X
+        Veiculos.objects.using(banco).filter(
+            veic_empr=empresa_id,
+            veic_tran=tran_orig,
+            veic_sequ=sequ_orig
+        ).update(**update_data)
+
         messages.success(self.request, 'Veículo atualizado com sucesso!')
         return redirect(self.get_success_url())
 

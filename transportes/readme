@@ -1,0 +1,239 @@
+transportes/
+ ├── models.py
+
+
+ ├── forms/
+ │     ├── emissao.py
+ │     ├── tipo.py
+ │     ├── rota.py
+ │     ├── seguro.py
+ │     ├── carga.py
+ │     ├── tributacao.py
+
+ ├── serializers/
+ │     ├── emissao.py
+ │     ├── tipo.py
+ │     ├── rota.py
+ │     ├── seguro.py
+ │     ├── carga.py
+ │     ├── tributacao.py
+ │     ├── completo.py
+
+ ├── services/
+ │     ├── rascunho_service.py
+ │     ├── validacao_service.py
+ │     ├── numeracao_service.py
+ │     ├── emissao_service.py
+ │     ├── cancelamento_service.py
+ │     ├── sefaz_gateway.py
+
+ ├── builders/
+ │     ├── cte_xml_builder.py
+ │     ├── assinatura_service.py
+
+ ├── tasks/
+ │     ├── emitir_cte.py
+ │     ├── consultar_recibo.py
+
+
+
+
+ Responsabilidade de Cada Camada
+🧱 models.py
+
+Estrutura do banco
+
+Status
+
+Campos fiscais
+
+Nada de regra pesada aqui
+
+🧾 forms/
+
+Somente para interface Django tradicional (server-side).
+
+Responsabilidade:
+
+Validação básica
+
+Renderização HTML
+
+Não contém regra fiscal pesada
+
+Exemplo:
+
+class CteEmissaoForm(forms.ModelForm):
+    class Meta:
+        model = Cte
+        fields = [
+            "remetente",
+            "destinatario",
+            "motorista",
+            "veiculo",
+        ]
+
+Form valida campo obrigatório.
+Não valida regra fiscal complexa.
+
+📡 serializers/
+
+Somente para API (React Native / SPA / Integrações).
+
+Responsabilidade:
+
+Validação por aba
+
+Atualização parcial (PATCH)
+
+Conversão JSON ↔ Model
+
+Cada aba tem seu serializer isolado.
+
+🧠 services/
+
+Aqui mora o cérebro.
+
+rascunho_service.py
+
+Criar CT-e
+
+Atualizar partes
+
+Garantir que sempre comece como RASCUNHO
+
+validacao_service.py
+
+Validação completa antes de emitir
+
+Regras cruzadas
+
+Regras fiscais
+
+Consistência geral
+
+Nunca validação pesada dentro do serializer.
+
+numeracao_service.py
+
+Controle de sequência
+
+Lock transacional
+
+Evita buraco de numeração
+
+Isso aqui é crítico.
+
+emissao_service.py
+
+Orquestra tudo:
+
+Valida completo
+
+Gera número
+
+Gera XML
+
+Assina
+
+Envia para SEFAZ
+
+Atualiza status
+
+sefaz_gateway.py
+
+Camada isolada para comunicação externa.
+
+Envio
+
+Consulta recibo
+
+Cancelamento
+
+Não conhece Django
+
+Se amanhã mudar para outro provedor, troca só aqui.
+
+🏗 builders/
+
+Só montagem de estrutura.
+
+cte_xml_builder.py
+
+Transforma model → XML
+
+Sem regra de negócio.
+
+assinatura_service.py
+
+Assina XML com certificado
+
+⚙ tasks/
+
+Se você for profissional mesmo:
+
+Celery ou RQ.
+
+emitir_cte.py
+
+Worker que chama emissao_service
+
+consultar_recibo.py
+
+Retry automático se ficar em processamento
+
+🎯 Fluxo Real
+1️⃣ Criação
+
+React → Serializer Emissão → Rascunho
+
+status = RASCUNHO
+
+2️⃣ Preenchimento por abas
+
+Cada aba:
+
+Serializer específico
+
+Atualiza parcialmente
+
+3️⃣ Usuário clica “Emitir”
+
+API chama:
+
+EmissaoService.emitir(cte_id)
+
+Fluxo interno:
+
+ValidacaoService.validar()
+NumeracaoService.gerar()
+XmlBuilder.build()
+AssinaturaService.assinar()
+SefazGateway.enviar()
+📌 Regra de Ouro
+
+Forms e Serializers NÃO devem:
+
+Gerar número
+
+Gerar XML
+
+Falar com SEFAZ
+
+Validar regra fiscal complexa
+
+Eles só cuidam da borda do sistema.
+
+🧠 Visão de produto
+
+Com essa separação você ganha:
+
+Testabilidade real
+
+Facilidade para adaptar IBS/CBS
+
+Fácil troca de provedor SEFAZ
+
+Escalabilidade para fila
+
+Emissão em massa no futuro
