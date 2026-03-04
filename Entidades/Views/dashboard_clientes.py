@@ -189,6 +189,12 @@ class ClienteDashboardViewSet(viewsets.ViewSet):
         banco = request.banco
         slug = get_licenca_slug()
         
+        # Verificar permissão de ver preço
+        ver_preco = True
+        permissoes = getattr(request, 'permissoes', {})
+        if permissoes:
+             ver_preco = permissoes.get('ver_preco', False)
+        
         # Condicional para cliente 'eletro' (ou banco savexml144)
         # if slug in ['eletro', 'savexml144']:
         if False:
@@ -238,6 +244,14 @@ class ClienteDashboardViewSet(viewsets.ViewSet):
             total_valor_os = 0
         total_valor_total = total_valor_pedidos + total_valor_orcamentos + total_valor_ordens_servico + total_valor_os
         total_valor_total = round(total_valor_total, 2)
+
+        # Se não tiver permissão de ver preço, zera os totais monetários
+        if not ver_preco:
+            total_valor_pedidos = 0
+            total_valor_orcamentos = 0
+            total_valor_ordens_servico = 0
+            total_valor_os = 0
+            total_valor_total = 0
 
         dashboard_data = {
             'total_pedidos': total_pedidos,

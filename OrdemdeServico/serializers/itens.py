@@ -92,6 +92,30 @@ class OrdemServicoPecasSerializer(serializers.ModelSerializer):
         except Exception:
             return ""
 
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        
+        request = self.context.get('request')
+        ver_preco = False
+        
+        # Tenta obter permissões do contexto ou do request
+        permissoes = self.context.get('permissoes')
+        if not permissoes and request:
+            permissoes = getattr(request, 'permissoes', None)
+        
+        # Se tiver permissões definidas (login de cliente), respeitar
+        if permissoes:
+            val = permissoes.get('ver_preco')
+            if val is not None:
+                ver_preco = val
+
+        if not ver_preco:
+            # Ocultar campos de preço
+            for campo in ['peca_unit', 'peca_tota']:
+                ret.pop(campo, None)
+        
+        return ret
+
 class OrdemServicoServicosSerializer(BancoModelSerializer):
     serv_id = serializers.IntegerField(required=False)
     serv_empr = serializers.IntegerField(required=True)
@@ -175,3 +199,27 @@ class OrdemServicoServicosSerializer(BancoModelSerializer):
             return produto.prod_nome if produto else ''
         except Exception:
             return ''
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        
+        request = self.context.get('request')
+        ver_preco = False
+        
+        # Tenta obter permissões do contexto ou do request
+        permissoes = self.context.get('permissoes')
+        if not permissoes and request:
+            permissoes = getattr(request, 'permissoes', None)
+        
+        # Se tiver permissões definidas (login de cliente), respeitar
+        if permissoes:
+            val = permissoes.get('ver_preco')
+            if val is not None:
+                ver_preco = val
+
+        if not ver_preco:
+            # Ocultar campos de preço
+            for campo in ['serv_unit', 'serv_tota']:
+                ret.pop(campo, None)
+        
+        return ret

@@ -7,6 +7,7 @@ from O_S.models import  Os
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
+from Entidades.models import Entidades
 from OrdemdeServico.models import (
     Ordemservico,
     Ordemservicoimgantes,
@@ -92,6 +93,78 @@ class OrdemServicoViewSet(BaseClienteViewSet):
         queryset = queryset.extra(select=select_dict)
         
         return queryset
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        
+        # Tenta recuperar permissões já injetadas no request
+        if getattr(self.request, 'permissoes', None):
+            context['permissoes'] = self.request.permissoes
+            return context
+
+        # Se não tiver, tenta extrair novamente do header (fallback)
+        session_id = self.request.headers.get('X-Session-ID')
+        if session_id:
+            try:
+                parts = session_id.split('_')
+                if len(parts) >= 3:
+                    cliente_id = parts[0]
+                    usuario_tipo = parts[-1]
+                    banco_slug = "_".join(parts[1:-1])
+                    
+                    entidade = Entidades.objects.using(banco_slug).filter(enti_clie=cliente_id).first()
+                    if entidade:
+                        permissoes = {}
+                        if usuario_tipo == 'usuario1':
+                            permissoes['ver_preco'] = entidade.enti_mobi_prec
+                            permissoes['ver_foto'] = entidade.enti_mobi_foto
+                        elif usuario_tipo == 'usuario2':
+                            permissoes['ver_preco'] = entidade.enti_usua_prec
+                            permissoes['ver_foto'] = entidade.enti_usua_foto
+                        
+                        # Injeta no contexto E no request para garantir
+                        context['permissoes'] = permissoes
+                        self.request.permissoes = permissoes
+            except Exception as e:
+                print(f"Erro ao injetar permissões no get_serializer_context: {e}")
+        
+        return context
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        
+        # Garantir que permissões estejam carregadas
+        if not getattr(request, 'permissoes', None):
+            session_id = request.headers.get('X-Session-ID')
+            if session_id:
+                try:
+                    parts = session_id.split('_')
+                    if len(parts) >= 3:
+                        cliente_id = parts[0]
+                        usuario_tipo = parts[-1]
+                        # Reconstrói banco slug caso contenha underscores
+                        banco_slug = "_".join(parts[1:-1])
+                        
+                        entidade = Entidades.objects.using(banco_slug).filter(enti_clie=cliente_id).first()
+                        if entidade:
+                            permissoes = {}
+                            if usuario_tipo == 'usuario1':
+                                permissoes['ver_preco'] = entidade.enti_mobi_prec
+                                permissoes['ver_foto'] = entidade.enti_mobi_foto
+                            elif usuario_tipo == 'usuario2':
+                                permissoes['ver_preco'] = entidade.enti_usua_prec
+                                permissoes['ver_foto'] = entidade.enti_usua_foto
+                            
+                            request.permissoes = permissoes
+                            
+                            # Garantir outros atributos de contexto se necessário
+                            if not getattr(request, 'banco', None):
+                                request.banco = banco_slug
+                            if not getattr(request, 'cliente_id', None):
+                                request.cliente_id = cliente_id
+                                
+                except Exception as e:
+                    print(f"Erro ao injetar permissões no initial: {e}")
     
     @action(detail=False, methods=['post'], url_path='definir-permissao-preco')
     def definir_permissao_preco(self, request):

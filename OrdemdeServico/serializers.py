@@ -382,6 +382,13 @@ class SafeDateField(serializers.DateField):
 
     def get_attribute(self, instance):
         try:
+            # Tenta buscar o campo seguro injetado pela view (ex: safe_orde_data_aber)
+            safe_field = f"safe_{self.source_attrs[-1]}"
+            if hasattr(instance, safe_field):
+                val = getattr(instance, safe_field)
+                if val:
+                    return val
+            
             return super().get_attribute(instance)
         except (ValueError, TypeError, Exception):
             return None
@@ -396,6 +403,13 @@ class SafeDateTimeField(serializers.DateTimeField):
 
     def get_attribute(self, instance):
         try:
+            # Tenta buscar o campo seguro injetado pela view
+            safe_field = f"safe_{self.source_attrs[-1]}"
+            if hasattr(instance, safe_field):
+                val = getattr(instance, safe_field)
+                if val:
+                    return val
+
             return super().get_attribute(instance)
         except (ValueError, TypeError, Exception):
             return None
@@ -410,6 +424,13 @@ class SafeTimeField(serializers.TimeField):
 
     def get_attribute(self, instance):
         try:
+            # Tenta buscar o campo seguro injetado pela view
+            safe_field = f"safe_{self.source_attrs[-1]}"
+            if hasattr(instance, safe_field):
+                val = getattr(instance, safe_field)
+                if val:
+                    return val
+
             return super().get_attribute(instance)
         except (ValueError, TypeError, Exception):
             return None
@@ -456,8 +477,8 @@ class OrdensEletroSerializer(serializers.ModelSerializer):
 
 
 class OrdemServicoSerializer(BancoModelSerializer):
-    pecas = OrdemServicoPecasSerializer(many=True, required=False)
-    servicos = OrdemServicoServicosSerializer(many=True, required=False)
+    pecas = OrdemServicoPecasSerializer(source='itens_lista', many=True, required=False)
+    servicos = OrdemServicoServicosSerializer(source='servicos_lista', many=True, required=False)
     setor_nome = serializers.SerializerMethodField(read_only=True)
     cliente_nome = serializers.SerializerMethodField(read_only=True)
     proximos_setores = serializers.SerializerMethodField(read_only=True)
@@ -529,17 +550,20 @@ class OrdemServicoSerializer(BancoModelSerializer):
         
         request = self.context.get('request')
         ver_preco = False
-        if request:
+                
+        # Tenta obter permissões do contexto ou do request
+        permissoes = self.context.get('permissoes')
+        if not permissoes and request:
             permissoes = getattr(request, 'permissoes', None)
-            
-            # Se tiver permissões definidas (login de cliente), respeitar
-            if permissoes:
-                val = permissoes.get('ver_preco')
-                if val is not None:
-                    ver_preco = val
+        
+        # Se tiver permissões definidas (login de cliente), respeitar
+        if permissoes:
+            val = permissoes.get('ver_preco')
+            if val is not None:
+                ver_preco = val
 
         ret['ver_preco'] = ver_preco
-        
+
         if not ver_preco:
             # Ocultar campos de preço da ordem
             campos_preco = ['orde_tota', 'orde_valo', 'orde_desc', 'orde_liqu', 'orde_paga', 'orde_rest', 'orde_entr']

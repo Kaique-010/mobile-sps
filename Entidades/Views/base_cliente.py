@@ -91,9 +91,20 @@ class BaseClienteViewSet(viewsets.ModelViewSet):
     }
 
     def get_serializer_context(self):
+        # Passa as permissões e banco para o contexto do serializer
         context = super().get_serializer_context()
-        context['banco'] = self.request.banco
+        
+        if hasattr(self.request, 'banco'):
+            context['banco'] = self.request.banco
+            
+        if hasattr(self.request, 'permissoes'):
+            context['permissoes'] = self.request.permissoes
+            
+        if hasattr(self.request, 'cliente_id'):
+            context['cliente_id'] = self.request.cliente_id
+            
         return context
+
 
     def get_queryset(self):
         cliente_id = self.request.cliente_id

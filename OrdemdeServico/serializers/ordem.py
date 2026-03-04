@@ -4,68 +4,66 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from Entidades.models import Entidades
 from ..models import Ordemservico, Ordemservicoservicos, OrdemServicoFaseSetor
-from .base import BancoModelSerializer
+from .base import BancoModelSerializer, SafeDateField, SafeTimeField, SafeDateTimeField
 from .itens import OrdemServicoPecasSerializer, OrdemServicoServicosSerializer
 
 logger = logging.getLogger(__name__)
 
 class OrdemServicoSerializer(BancoModelSerializer):
-    pecas = OrdemServicoPecasSerializer(many=True, required=False)
-    servicos = serializers.SerializerMethodField()
+    pecas = OrdemServicoPecasSerializer(source='itens_lista', many=True, required=False)
+    servicos = OrdemServicoServicosSerializer(source='servicos_lista', many=True, required=False)
     setor_nome = serializers.SerializerMethodField(read_only=True)
     cliente_nome = serializers.SerializerMethodField(read_only=True)
     proximos_setores = serializers.SerializerMethodField(read_only=True)
     pode_avancar = serializers.SerializerMethodField(read_only=True)
+    
+    # Campos seguros para datas que podem estar corrompidas no banco
+    orde_data_aber = SafeDateField(required=False, allow_null=True)
+    orde_hora_aber = SafeTimeField(required=False, allow_null=True)
+    orde_data_repr = SafeDateField(required=False, allow_null=True)
+    orde_data_fech = SafeDateField(required=False, allow_null=True)
+    orde_hora_fech = SafeTimeField(required=False, allow_null=True)
+    orde_nf_data = SafeDateField(required=False, allow_null=True)
+    orde_ulti_alte = SafeDateTimeField(required=False, allow_null=True)
 
     def to_representation(self, instance):
-        # Tratar campos de data deferidos/corrompidos para evitar ValueError
+        ret = super().to_representation(instance)
         
-        # Lista completa de campos de data que podem dar problema
-        date_fields = [
-            'orde_data_aber', 'orde_data_fech', 
-            'orde_nf_data', 'orde_data_repr', 'orde_ulti_alte'
-        ]
+        request = self.context.get('request')
+        ver_preco = False
         
-        for field in date_fields:
-            # 1. Tentar usar a versão segura injetada pela ViewSet (safe_field)
-            safe_field = f'safe_{field}'
-            if hasattr(instance, safe_field):
-                safe_value = getattr(instance, safe_field)
-                if safe_value:
-                    try:
-                        # Converter string ISO do banco para objeto Python
-                        # Se for datetime (contém 'T' ou espaço e ':'), usa fromisoformat
-                        # Se for date, usa fromisoformat
-                        if 'T' in str(safe_value) or ' ' in str(safe_value) or ':' in str(safe_value):
-                            if 'orde_ulti_alte' in field: # É datetime
-                                val = datetime.fromisoformat(str(safe_value).replace(' ', 'T'))
-                            else: # É date
-                                val = date.fromisoformat(str(safe_value)[:10])
-                            setattr(instance, field, val)
-                        else:
-                            setattr(instance, field , None)
-                    except (ValueError, TypeError):
-                        setattr(instance, field, None)
-                else:
-                    setattr(instance, field, None)
-                
-                # Previne refresh do campo original
-                if field not in instance.__dict__:
-                    instance.__dict__[field] = getattr(instance, field)
-                continue
+        # Tenta obter permissões do contexto ou do request
+        permissoes = self.context.get('permissoes')
+        if not permissoes and request:
+            permissoes = getattr(request, 'permissoes', None)
+        
+        # Se tiver permissões definidas (login de cliente), respeitar
+        if permissoes:
+            val = permissoes.get('ver_preco')
+            if val is not None:
+                ver_preco = val
 
-            # 2. Fallback: Se não tem safe_field, tenta ler com try/except
-            try:
-                # O acesso dispara a query se foi deferido.
-                _ = getattr(instance, field)
-            except (ValueError, TypeError, OverflowError):
-                # Data inválida detectada
-                setattr(instance, field, None)
-                instance.__dict__[field] = None
-            except Exception:
-                pass
+        ret['ver_preco'] = ver_preco
 
-        return super().to_representation(instance)
+        if not ver_preco:
+            # Ocultar campos de preço da ordem
+            campos_preco = ['orde_tota', 'orde_valo', 'orde_desc', 'orde_liqu', 'orde_paga', 'orde_rest', 'orde_entr']
+            for campo in campos_preco:
+                ret.pop(campo, None)
+            
+            # Ocultar preços nas peças
+            if 'pecas' in ret and ret['pecas']:
+                for peca in ret['pecas']:
+                    peca.pop('peca_unit', None)
+                    peca.pop('peca_tota', None)
+                    
+            # Ocultar preços nos serviços
+            if 'servicos' in ret and ret['servicos']:
+                for serv in ret['servicos']:
+                    serv.pop('serv_unit', None)
+                    serv.pop('serv_tota', None)
+                            
+        return ret
 
     class Meta:
         model = Ordemservico
@@ -139,21 +137,6 @@ class OrdemServicoSerializer(BancoModelSerializer):
             logger.error(f"Erro ao buscar nome do produto {obj.peca_codi}: {str(e)}")
             return ""
 
-    def get_servicos(self, obj):
-        banco = self.context.get('banco')
-        if not banco:
-            return []
-        try:
-            servicos = Ordemservicoservicos.objects.using(banco).filter(
-                serv_empr=obj.orde_empr,
-                serv_fili=obj.orde_fili,
-                serv_orde=obj.orde_nume
-            )
-            return OrdemServicoServicosSerializer(servicos, many=True, context=self.context).data
-        except Exception as e:
-            logger.error(f"Erro ao buscar serviços da ordem {obj.orde_nume}: {str(e)}")
-            return []
-    
     def get_cliente_nome(self, obj):
         banco = self.context.get('banco')
         if not banco:

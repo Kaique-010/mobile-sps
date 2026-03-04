@@ -312,6 +312,15 @@ class Ordemservico(models.Model):
         peca_fili=self.orde_fili,
         peca_orde=self.orde_nume
     )
+
+    @property
+    def servicos_lista(self):
+        return Ordemservicoservicos.objects.filter(
+        serv_empr=self.orde_empr,
+        serv_fili=self.orde_fili,
+        serv_orde=self.orde_nume
+    )
+
     class Meta:
         managed = False
         db_table = 'ordemservico'

@@ -18,3 +18,66 @@ class BancoModelSerializer(BancoContextMixin, serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save(using=banco)
         return instance
+
+
+class SafeDateField(serializers.DateField):
+    def to_representation(self, value):
+        try:
+            return super().to_representation(value)
+        except Exception:
+            return None
+
+    def get_attribute(self, instance):
+        try:
+            # Tenta buscar o campo seguro injetado pela view (ex: safe_orde_data_aber)
+            safe_field = f"safe_{self.source_attrs[-1]}"
+            if hasattr(instance, safe_field):
+                val = getattr(instance, safe_field)
+                if val:
+                    return val
+            
+            return super().get_attribute(instance)
+        except (ValueError, TypeError, Exception):
+            return None
+
+
+class SafeDateTimeField(serializers.DateTimeField):
+    def to_representation(self, value):
+        try:
+            return super().to_representation(value)
+        except Exception:
+            return None
+
+    def get_attribute(self, instance):
+        try:
+            # Tenta buscar o campo seguro injetado pela view
+            safe_field = f"safe_{self.source_attrs[-1]}"
+            if hasattr(instance, safe_field):
+                val = getattr(instance, safe_field)
+                if val:
+                    return val
+
+            return super().get_attribute(instance)
+        except (ValueError, TypeError, Exception):
+            return None
+
+
+class SafeTimeField(serializers.TimeField):
+    def to_representation(self, value):
+        try:
+            return super().to_representation(value)
+        except Exception:
+            return None
+
+    def get_attribute(self, instance):
+        try:
+            # Tenta buscar o campo seguro injetado pela view
+            safe_field = f"safe_{self.source_attrs[-1]}"
+            if hasattr(instance, safe_field):
+                val = getattr(instance, safe_field)
+                if val:
+                    return val
+
+            return super().get_attribute(instance)
+        except (ValueError, TypeError, Exception):
+            return None
