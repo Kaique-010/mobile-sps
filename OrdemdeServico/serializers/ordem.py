@@ -138,6 +138,9 @@ class OrdemServicoSerializer(BancoModelSerializer):
             return ""
 
     def get_cliente_nome(self, obj):
+        if hasattr(obj, '_prefetched_cliente_nome'):
+            return obj._prefetched_cliente_nome
+
         banco = self.context.get('banco')
         if not banco:
             return None
@@ -152,6 +155,9 @@ class OrdemServicoSerializer(BancoModelSerializer):
             return None
     
     def get_setor_nome(self, obj):
+        if hasattr(obj, '_prefetched_setor_nome'):
+            return obj._prefetched_setor_nome
+
         banco = self.context.get('banco')
         if not banco:
             return None
@@ -165,6 +171,17 @@ class OrdemServicoSerializer(BancoModelSerializer):
             return None
 
     def get_proximos_setores(self, obj):
+        if hasattr(obj, '_prefetched_proximos_setores'):
+            setores = obj._prefetched_proximos_setores
+            return [
+                {
+                    "codigo": setor.wkfl_seto_dest, 
+                    "nome": f"Setor {setor.wkfl_seto_dest}",
+                    "ordem": setor.wkfl_orde
+                }
+                for setor in setores
+            ]
+
         banco = self.context.get('banco')
         if not banco:
             return []

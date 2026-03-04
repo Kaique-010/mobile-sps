@@ -1,6 +1,7 @@
 
 
 from re import T
+from django.db.models import Q
 from Pedidos.models import PedidoVenda, PedidosGeral,Itenspedidovenda
 from Orcamentos.models import Orcamentos,ItensOrcamento
 from O_S.models import  Os
@@ -8,11 +9,16 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
 from Entidades.models import Entidades
+from Produtos.models import Produtos
 from OrdemdeServico.models import (
     Ordemservico,
     Ordemservicoimgantes,
     Ordemservicoimgdurante,
-    Ordemservicoimgdepois
+    Ordemservicoimgdepois,
+    Ordemservicopecas,
+    Ordemservicoservicos,
+    OrdemServicoFaseSetor,
+    WorkflowSetor
 )
 from Pedidos.rest.serializers import PedidoVendaSerializer, PedidosGeralSerializer, ItemPedidoVendaSerializer
 from Orcamentos.rest.serializers import OrcamentosSerializer, ItemOrcamentoSerializer
@@ -49,10 +55,173 @@ class OrcamentosViewSet(BaseClienteViewSet):
     queryset = Orcamentos.objects.all()
     serializer_class = OrcamentosSerializer
 
+from rest_framework.pagination import PageNumberPagination
+
+class StandardResultsSetPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
 class OrdemServicoViewSet(BaseClienteViewSet):
     queryset = Ordemservico.objects.all()
+    pagination_class = StandardResultsSetPagination
     
     serializer_class = OrdemServicoSerializer
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        
+        # DEBUG: Verificar tamanho do queryset
+        count = queryset.count()
+        print(f"DEBUG: OrdemServicoViewSet.list - Total de registros encontrados: {count}")
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            print(f"DEBUG: Paginando {len(page)} registros.")
+            self._prefetch_related_objects(page)
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        print("DEBUG: Sem paginação, retornando tudo (CUIDADO).")
+        self._prefetch_related_objects(queryset)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    def _prefetch_related_objects(self, objects):
+        if not objects:
+            return
+            
+        banco = self.request.banco
+        
+        # Coletar IDs das ordens
+        orde_ids = [obj.orde_nume for obj in objects]
+        
+        # 1. Prefetch Peças
+        try:
+            pecas = Ordemservicopecas.objects.using(banco).filter(peca_orde__in=orde_ids)
+            pecas_map = {}
+            for peca in pecas:
+                if peca.peca_orde not in pecas_map:
+                    pecas_map[peca.peca_orde] = []
+                pecas_map[peca.peca_orde].append(peca)
+        except Exception:
+            pecas_map = {}
+            
+        # 2. Prefetch Serviços
+        try:
+            servicos = Ordemservicoservicos.objects.using(banco).filter(serv_orde__in=orde_ids)
+            servicos_map = {}
+            for serv in servicos:
+                if serv.serv_orde not in servicos_map:
+                    servicos_map[serv.serv_orde] = []
+                servicos_map[serv.serv_orde].append(serv)
+        except Exception:
+            servicos_map = {}
+            
+        # 2.1 Prefetch Nomes de Produtos e Serviços (para evitar queries nos serializers de itens)
+        try:
+            # Coletar códigos de produtos (peças) e serviços
+            codigos_produtos = set()
+            
+            # De peças
+            all_pecas = [p for sublist in pecas_map.values() for p in sublist]
+            for p in all_pecas:
+                if p.peca_codi:
+                    codigos_produtos.add(str(p.peca_codi))
+            
+            # De serviços
+            all_servicos = [s for sublist in servicos_map.values() for s in sublist]
+            for s in all_servicos:
+                if s.serv_codi:
+                    codigos_produtos.add(str(s.serv_codi))
+            
+            produtos_map = {}
+            if codigos_produtos:
+                # Buscar produtos em lote
+                # Nota: Produtos.prod_codi é CharField, e prod_codi_nume também pode ser usado
+                prods = Produtos.objects.using(banco).filter(
+                    Q(prod_codi__in=codigos_produtos) | Q(prod_codi_nume__in=codigos_produtos)
+                )
+                
+                # Mapear por código para acesso rápido
+                for prod in prods:
+                    # Mapeia tanto pelo código string quanto pelo numérico se existir
+                    if prod.prod_codi:
+                        produtos_map[str(prod.prod_codi)] = prod.prod_nome
+                    if prod.prod_codi_nume:
+                        produtos_map[str(prod.prod_codi_nume)] = prod.prod_nome
+            
+            # Atribuir nomes aos objetos de peças
+            for p in all_pecas:
+                nome = produtos_map.get(str(p.peca_codi), "")
+                p._prefetched_produto_nome = nome
+                
+            # Atribuir nomes aos objetos de serviços
+            for s in all_servicos:
+                nome = produtos_map.get(str(s.serv_codi), "")
+                s._prefetched_servico_nome = nome
+                
+        except Exception as e:
+            # Em caso de erro, segue sem nomes pré-carregados (o serializer fará a query individualmente)
+            pass
+
+        # 3. Prefetch Setores (Nomes)
+        try:
+            setor_ids = set(obj.orde_seto for obj in objects if obj.orde_seto)
+            setores_nomes = {}
+            if setor_ids:
+                setores_qs = OrdemServicoFaseSetor.objects.using(banco).filter(osfs_codi__in=setor_ids)
+                setores_nomes = {s.osfs_codi: s.osfs_nome for s in setores_qs}
+        except Exception:
+            setores_nomes = {}
+
+        # 4. Prefetch Próximos Setores (Workflow)
+        try:
+            # Coletar IDs de origem (setor atual da OS)
+            # Se orde_seto for None/0, considera origem 0
+            origem_ids = set()
+            for obj in objects:
+                origem = obj.orde_seto if obj.orde_seto else 0
+                origem_ids.add(origem)
+            
+            workflow_map = {}
+            if origem_ids:
+                workflows = WorkflowSetor.objects.using(banco).filter(
+                    wkfl_seto_orig__in=origem_ids,
+                    wkfl_ativo=True
+                ).order_by('wkfl_orde')
+                
+                for wf in workflows:
+                    if wf.wkfl_seto_orig not in workflow_map:
+                        workflow_map[wf.wkfl_seto_orig] = []
+                    workflow_map[wf.wkfl_seto_orig].append(wf)
+        except Exception:
+            workflow_map = {}
+
+        # 5. Prefetch Cliente (nome)
+        # Como é endpoint do cliente, todos pertencem ao mesmo cliente logado
+        cliente_nome = None
+        try:
+             # Tenta pegar da sessão/permissão se já tiver
+             entidade = Entidades.objects.using(banco).filter(enti_clie=self.request.cliente_id).first()
+             cliente_nome = entidade.enti_nome if entidade else None
+        except:
+             pass
+
+        # Atribuir aos objetos para o Serializer usar
+        for obj in objects:
+            obj._prefetched_pecas = pecas_map.get(obj.orde_nume, [])
+            obj._prefetched_servicos = servicos_map.get(obj.orde_nume, [])
+            
+            if obj.orde_seto in setores_nomes:
+                obj._prefetched_setor_nome = setores_nomes[obj.orde_seto]
+            
+            # Próximos setores
+            origem = obj.orde_seto if obj.orde_seto else 0
+            obj._prefetched_proximos_setores = workflow_map.get(origem, [])
+            
+            if cliente_nome:
+                obj._prefetched_cliente_nome = cliente_nome
 
     def get_queryset(self):
         queryset = super().get_queryset()

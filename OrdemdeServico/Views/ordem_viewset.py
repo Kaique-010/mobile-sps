@@ -6,7 +6,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db import transaction
 from django.db.models.expressions import RawSQL
 from .base import BaseMultiDBModelViewSet
-from ..models import Ordemservico
+from ..models import Ordemservico, Ordemservicopecas, Ordemservicoservicos, OrdemServicoFaseSetor
 from ..serializers import OrdemServicoSerializer
 from ..filters.os import OrdemServicoFilter
 from ..pagination import OrdemServicoPagination
@@ -58,13 +58,6 @@ class OrdemViewSet(BaseMultiDBModelViewSet):
 
         # Blindagem total via SQL puro — sem Case/When que avalia campos inválidos
         qs = qs.extra(
-            where=[
-                "EXTRACT(YEAR FROM orde_data_aber) BETWEEN 2020 AND 2100",
-                "orde_data_fech IS NULL OR EXTRACT(YEAR FROM orde_data_fech) BETWEEN 2020 AND 2100",
-                "orde_nf_data IS NULL OR EXTRACT(YEAR FROM orde_nf_data) BETWEEN 2020 AND 2100",
-                "orde_ulti_alte IS NULL OR EXTRACT(YEAR FROM orde_ulti_alte) BETWEEN 2020 AND 2100",
-                "orde_data_repr IS NULL OR EXTRACT(YEAR FROM orde_data_repr) BETWEEN 2020 AND 2100",
-            ],
             select={
                 # CAST para TEXT impede psycopg2 de converter datas inválidas
                 'orde_data_aber': "CASE WHEN EXTRACT(YEAR FROM orde_data_aber) BETWEEN 2020 AND 2100 THEN orde_data_aber::text ELSE NULL END",
@@ -97,7 +90,65 @@ class OrdemViewSet(BaseMultiDBModelViewSet):
 
         logger.warning(f"[DEBUG COUNT] {qs.count()} registros")
         
+
         return qs.order_by('-safe_data_aber', '-orde_nume')
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            self._prefetch_related_objects(page)
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        self._prefetch_related_objects(queryset)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    def _prefetch_related_objects(self, objects):
+        if not objects:
+            return
+            
+        banco = self.get_banco()
+        # Collect IDs
+        orde_ids = [obj.orde_nume for obj in objects]
+        
+        # Prefetch Pecas
+        pecas = Ordemservicopecas.objects.using(banco).filter(peca_orde__in=orde_ids)
+        pecas_map = {}
+        for peca in pecas:
+            if peca.peca_orde not in pecas_map:
+                pecas_map[peca.peca_orde] = []
+            pecas_map[peca.peca_orde].append(peca)
+            
+        # Prefetch Servicos
+        servicos = Ordemservicoservicos.objects.using(banco).filter(serv_orde__in=orde_ids)
+        servicos_map = {}
+        for serv in servicos:
+            if serv.serv_orde not in servicos_map:
+                servicos_map[serv.serv_orde] = []
+            servicos_map[serv.serv_orde].append(serv)
+
+        # Prefetch Setores
+        setor_ids = set(obj.orde_seto for obj in objects if obj.orde_seto)
+        setores = OrdemServicoFaseSetor.objects.using(banco).filter(osfs_codi__in=setor_ids)
+        setores_map = {s.osfs_codi: s.osfs_nome for s in setores}
+
+        # Prefetch Clientes
+        clie_ids = set(obj.orde_enti for obj in objects if obj.orde_enti)
+        # Assuming Entidades is accessible via orde_enti/enti_clie + orde_empr/enti_empr
+        clientes = Entidades.objects.using(banco).filter(enti_clie__in=clie_ids)
+        clientes_map = {}
+        for c in clientes:
+            clientes_map[(c.enti_empr, c.enti_clie)] = c.enti_nome
+
+        # Assign to objects
+        for obj in objects:
+            obj._prefetched_pecas = pecas_map.get(obj.orde_nume, [])
+            obj._prefetched_servicos = servicos_map.get(obj.orde_nume, [])
+            obj._prefetched_setor_nome = setores_map.get(obj.orde_seto)
+            obj._prefetched_cliente_nome = clientes_map.get((obj.orde_empr, obj.orde_enti))
 
     def get_next_ordem_numero(self, empre, fili, data):
         """

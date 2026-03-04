@@ -76,6 +76,9 @@ class OrdemServicoPecasSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
     def get_produto_nome(self, obj):
+        if hasattr(obj, '_prefetched_produto_nome'):
+            return obj._prefetched_produto_nome
+
         try:
             banco = self.context.get('banco')
             from django.db.models import Q
@@ -190,6 +193,9 @@ class OrdemServicoServicosSerializer(BancoModelSerializer):
         return super().update(instance, validated_data)
 
     def get_servico_nome(self, obj):
+        if hasattr(obj, '_prefetched_servico_nome'):
+            return obj._prefetched_servico_nome
+
         try:
             banco = self.context.get('banco')
             from Produtos.models import Produtos

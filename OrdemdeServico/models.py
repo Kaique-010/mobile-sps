@@ -307,19 +307,23 @@ class Ordemservico(models.Model):
     
     @property
     def itens_lista(self):
+        if hasattr(self, '_prefetched_pecas'):
+            return self._prefetched_pecas
         return Ordemservicopecas.objects.filter(
-        peca_empr=self.orde_empr,
-        peca_fili=self.orde_fili,
-        peca_orde=self.orde_nume
-    )
+            peca_empr=self.orde_empr,
+            peca_fili=self.orde_fili,
+            peca_orde=self.orde_nume
+        )
 
     @property
     def servicos_lista(self):
+        if hasattr(self, '_prefetched_servicos'):
+            return self._prefetched_servicos
         return Ordemservicoservicos.objects.filter(
-        serv_empr=self.orde_empr,
-        serv_fili=self.orde_fili,
-        serv_orde=self.orde_nume
-    )
+            serv_empr=self.orde_empr,
+            serv_fili=self.orde_fili,
+            serv_orde=self.orde_nume
+        )
 
     class Meta:
         managed = False
