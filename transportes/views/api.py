@@ -12,8 +12,7 @@ from transportes.serializers.seguro import CteSeguroSerializer
 from transportes.serializers.carga import CteCargaSerializer
 from transportes.serializers.tributacao import CteTributacaoSerializer
 from transportes.serializers.completo import CteCompletoSerializer
-from transportes.services.emissao_service import EmissaoService
-from transportes.services.rascunho_service import RascunhoService
+
 
 import logging
 
