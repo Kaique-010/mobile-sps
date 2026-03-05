@@ -2,6 +2,7 @@ from transportes.models import Cte
 from transportes.models import CteDocumento
 from Licencas.models import Filiais
 
+
 class ValidacaoService:
     def __init__(self, cte: Cte):
         self.cte = cte
@@ -48,6 +49,7 @@ class ValidacaoService:
         # Validação de Valores
         if not self.cte.total_valor or self.cte.total_valor <= 0:
             self.errors.append("Valor total da prestação deve ser maior que zero.")
+            
             
         # Validação de Documentos
         docs_count = self.cte.documentos.count()

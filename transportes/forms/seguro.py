@@ -17,3 +17,7 @@ class CteSeguroForm(forms.ModelForm):
             'percentual_seguro': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'cte_valor_seguro': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        self.request = kwargs.pop('request', None)
+        super().__init__(*args, **kwargs)

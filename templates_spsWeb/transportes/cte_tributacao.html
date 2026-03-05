@@ -1,0 +1,84 @@
+{% extends 'transportes/base_cte.html' %}
+
+{% block title %}
+{% if object %}Editar CT-e {{ object.numero|default:object.id }} - Tributação{% else %}Novo CT-e - Tributação{% endif %}
+{% endblock %}
+
+{% block cte_content %}
+<div class="card shadow-sm mb-4">
+    <div class="card-header pb-0">
+        <h4 class="mb-3">
+            <i class="fas fa-edit"></i> Editando CT-e #{{ object.id }}
+            <span class="badge bg-secondary ms-2">{{ object.get_status_display }}</span>
+        </h4>
+
+        <!-- Navegação de Abas -->
+        <ul class="nav nav-tabs card-header-tabs">
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'transportes:cte_emissao' slug=slug pk=object.pk %}">
+                    <i class="fas fa-file-alt"></i> Dados Gerais
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'transportes:cte_tipo' slug=slug pk=object.pk %}">
+                    <i class="fas fa-tags"></i> Tipo
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'transportes:cte_rota' slug=slug pk=object.pk %}">
+                    <i class="fas fa-map-marker-alt"></i> Rota
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'transportes:cte_seguro' slug=slug pk=object.pk %}">
+                    <i class="fas fa-shield-alt"></i> Seguro
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'transportes:cte_carga' slug=slug pk=object.pk %}">
+                    <i class="fas fa-box"></i> Carga
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link active fw-bold" href="{% url 'transportes:cte_tributacao' slug=slug pk=object.pk %}">
+                    <i class="fas fa-percentage"></i> Tributação
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="card-body">
+        <form method="post" id="cte_tributacao_form">
+            {% csrf_token %}
+            
+            {% if form.errors %}
+            <div class="alert alert-danger">
+                <ul class="mb-0">
+                    {% for field, errors in form.errors.items %}
+                        {% for error in errors %}
+                            <li>{{ field }}: {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% include 'transportes/cte/components/form_tributacao.html' %}
+
+            <div class="mt-4 d-flex justify-content-end gap-2">
+                <a href="{% url 'transportes:cte_list' slug=slug %}" class="btn btn-outline-danger">
+                    <i class="fas fa-times"></i> Cancelar
+                </a>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="button" class="btn btn-outline-primary w-100" id="btnCalcularImpostos" onclick="triggerCalculo()">
+                        <i class="fas fa-calculator"></i> Calcular
+                    </button>
+                </div>
+                <button type="submit" class="btn btn-outline-success">
+                    <i class="fas fa-save"></i> Salvar Alterações
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

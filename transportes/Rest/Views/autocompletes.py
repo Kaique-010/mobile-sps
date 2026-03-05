@@ -115,23 +115,55 @@ def autocomplete_entidades(request, slug=None):
     ]
     return JsonResponse({'results': data})
 
+def get_entidade_detalhes(request, slug=None):
+    """
+    Retorna detalhes de uma entidade específica.
+    Usado para preenchimento automático de campos (ex: cidade na rota do CTe).
+    """
+    banco = get_licenca_db_config(request) or 'default'
+    entidade_id = request.GET.get('id')
+    
+    if not entidade_id:
+        return JsonResponse({'error': 'ID não informado'}, status=400)
+    
+    entidade = Entidades.objects.using(banco).filter(enti_clie=entidade_id).first()
+    
+    if not entidade:
+        return JsonResponse({'error': 'Entidade não encontrada'}, status=404)
+        
+    return JsonResponse({
+        'id': entidade.enti_clie,
+        'nome': entidade.enti_nome,
+        'cidade_codigo': entidade.enti_codi_cida,
+        'cidade_nome': entidade.enti_cida,
+        'uf': entidade.enti_esta,
+        'cnpj': entidade.enti_cnpj,
+        'cpf': entidade.enti_cpf,
+    })
+
 
 def autocomplete_veiculos(request, slug=None):
     banco = get_licenca_db_config(request) or 'default'
     empresa_id = request.session.get('empresa_id')
+    
+    if not empresa_id:
+        return JsonResponse({'results': []})
+
     term = (request.GET.get('term') or request.GET.get('q') or '').strip()
     transportadora_id = request.GET.get('transportadora_id')
 
-    qs = Veiculos.objects.using(banco).filter(veic_empr=str(empresa_id))
+    qs = Veiculos.objects.using(banco).filter(veic_empr=empresa_id)
 
     if transportadora_id:
         qs = qs.filter(veic_tran=transportadora_id)
 
     if term:
-        if term.isdigit():
-            qs = qs.filter(veic_plac__icontains=term)
-        else:
-            qs = qs.filter(Q(veic_marc__icontains=term))
+        # Busca por placa, marca ou frota, independente de ser dígito ou não
+        qs = qs.filter(
+            Q(veic_plac__icontains=term) | 
+            Q(veic_marc__icontains=term) |
+            Q(veic_frot__icontains=term)
+        )
 
     qs = qs.order_by('veic_plac')[:20]
     data = [

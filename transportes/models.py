@@ -207,6 +207,20 @@ class Cte(models.Model):
     isencao_icms = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True, db_column='cte_isen_icms')
     valor_outros_icms = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True, db_column='cte_voutr_icms')
     diferenca_icms = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True, db_column='cte_dife_icms')
+    
+    # Campos ST (Substituição Tributária) - Adicionados para compatibilidade com Services
+    base_icms_st = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True, db_column='cte_base_st')
+    aliquota_icms_st = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True, db_column='cte_aliq_st')
+    valor_icms_st = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True, db_column='cte_valo_st')
+    margem_valor_adicionado_st = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True, db_column='cte_mva_st')
+    reducao_base_icms_st = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True, db_column='cte_redu_st')
+
+    # Campos DIFAL (Partilha) - Adicionados para compatibilidade com Services
+    valor_bc_uf_dest = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True, db_column='cte_vbc_uf_dest')
+    valor_icms_uf_dest = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True, db_column='cte_vicms_uf_dest')
+    aliquota_interna_dest = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True, db_column='cte_aliq_inte_dest')
+    aliquota_interestadual = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True, db_column='cte_aliq_inter')
+
     cst_pis = models.CharField(max_length=2, blank=True, null=True, db_column='cte_cst_pis')
     aliquota_pis = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True, db_column='cte_aliq_pis')
     base_pis = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True, db_column='cte_base_pis')
@@ -261,3 +275,29 @@ class CteDocumento(models.Model):
     class Meta:
         managed = True
         db_table = 'cte_documento'
+
+
+class RegraICMS(models.Model):
+    uf_origem = models.CharField(max_length=2)
+    uf_destino = models.CharField(max_length=2)
+
+    contribuinte = models.BooleanField()
+    simples_nacional = models.BooleanField()
+
+    cfop = models.CharField(max_length=4, null=True, blank=True)
+    # opcional: regra específica por CFOP
+
+    aliquota = models.DecimalField(max_digits=5, decimal_places=2)
+    aliquota_destino = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name="Alíquota Interna Destino (DIFAL)")
+    reducao_base = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+
+    # Campos ST
+    mva_st = models.DecimalField(max_digits=5, decimal_places=2, default=0, null=True, blank=True)
+    aliquota_st = models.DecimalField(max_digits=5, decimal_places=2, default=0, null=True, blank=True)
+    reducao_base_st = models.DecimalField(max_digits=5, decimal_places=2, default=0, null=True, blank=True)
+
+    cst = models.CharField(max_length=3)
+    csosn = models.CharField(max_length=4, null=True, blank=True)
+
+    diferimento = models.BooleanField(default=False)
+    isento = models.BooleanField(default=False)

@@ -1,0 +1,69 @@
+<div class="row g-3">
+    <div class="col-md-4">
+        <label for="{{ form.produto_predominante.id_for_label }}" class="form-label fw-semibold">
+            {{ form.produto_predominante.label }}
+            {% if form.produto_predominante.field.required %}<span class="text-danger">*</span>{% endif %}
+        </label>
+        {{ form.produto_predominante }}
+        {% if form.produto_predominante.errors %}<div class="text-danger small mt-1">{{ form.produto_predominante.errors|striptags }}</div>{% endif %}
+    </div>
+
+    <div class="col-md-4">
+        <label for="{{ form.total_mercadoria.id_for_label }}" class="form-label fw-semibold">
+            {{ form.total_mercadoria.label }}
+            {% if form.total_mercadoria.field.required %}<span class="text-danger">*</span>{% endif %}
+        </label>
+        {{ form.total_mercadoria }}
+        {% if form.total_mercadoria.errors %}<div class="text-danger small mt-1">{{ form.total_mercadoria.errors|striptags }}</div>{% endif %}
+    </div>
+
+    <div class="col-md-4">
+        <label for="{{ form.total_peso.id_for_label }}" class="form-label fw-semibold">
+            {{ form.total_peso.label }}
+        </label>
+        {{ form.total_peso }}
+        {% if form.total_peso.errors %}<div class="text-danger small mt-1">{{ form.total_peso.errors|striptags }}</div>{% endif %}
+    </div>
+
+    <div class="col-md-3">
+        <label for="{{ form.unidade_medida.id_for_label }}" class="form-label fw-semibold">
+            {{ form.unidade_medida.label }}
+        </label>
+        {{ form.unidade_medida }}
+    </div>
+
+    <div class="col-md-3">
+        <label for="{{ form.tipo_medida.id_for_label }}" class="form-label fw-semibold">
+            {{ form.tipo_medida.label }}
+        </label>
+        {{ form.tipo_medida }}
+    </div>
+
+    <div class="col-md-3">
+        <label for="{{ form.numero_contrato.id_for_label }}" class="form-label fw-semibold">
+            {{ form.numero_contrato.label }}
+        </label>
+        {{ form.numero_contrato }}
+    </div>
+
+    <div class="col-md-3">
+        <label for="{{ form.numero_lacre.id_for_label }}" class="form-label fw-semibold">
+            {{ form.numero_lacre.label }}
+        </label>
+        {{ form.numero_lacre }}
+    </div>
+
+    <div class="col-md-3">
+        <label for="{{ form.ncm.id_for_label }}" class="form-label fw-semibold">
+            {{ form.ncm.label }}
+        </label>
+        {{ form.ncm }}
+    </div>
+
+    <div class="col-md-3">
+        <label for="{{ form.data_previsao_entrega.id_for_label }}" class="form-label fw-semibold">
+            {{ form.data_previsao_entrega.label }}
+        </label>
+        {{ form.data_previsao_entrega }}
+    </div>
+</div>

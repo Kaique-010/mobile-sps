@@ -1,18 +1,21 @@
-from rest_framework import viewsets, status, filters
-from rest_framework.decorators import action
-from rest_framework.response import Response
+from rest_framework import viewsets, filters
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.response import Response
+from rest_framework import status
+from django.shortcuts import get_object_or_404
+from django.http import JsonResponse
+from decimal import Decimal
 
 from core.utils import get_licenca_db_config
 from transportes.models import Cte
-from transportes.serializers.emissao import CteEmissaoSerializer
-from transportes.serializers.tipo import CteTipoSerializer
-from transportes.serializers.rota import CteRotaSerializer
-from transportes.serializers.seguro import CteSeguroSerializer
-from transportes.serializers.carga import CteCargaSerializer
-from transportes.serializers.tributacao import CteTributacaoSerializer
 from transportes.serializers.completo import CteCompletoSerializer
-
+from transportes.services.icms_service import ICMSCalculationService
+from transportes.services.st_service import STService
+from transportes.services.difal_service import DIFALService
+from Entidades.models import Entidades
+from Licencas.models import Filiais
+from CFOP.models import CFOP
 
 import logging
 
@@ -34,114 +37,234 @@ class CteViewSet(viewsets.ModelViewSet):
         return Cte.objects.using(slug).all()
 
     def get_serializer_class(self):
-        if self.action == 'list' or self.action == 'retrieve':
-            return CteCompletoSerializer
-        elif self.action == 'create':
-            return CteEmissaoSerializer # Criação básica
-        elif self.action == 'partial_update':
-            # Se for patch genérico, usa completo ou emissão básica
-            return CteEmissaoSerializer
         return CteCompletoSerializer
 
     def perform_create(self, serializer):
         slug = get_licenca_db_config(self.request)
-        # Usa o serializer para validar, mas o service para criar se necessário
-        # Ou simplesmente salva com o serializer e ajusta status
-        serializer.save(status='RAS')
+        serializer.save(using=slug)
 
-    @action(detail=True, methods=['patch'], url_path='aba-emissao')
-    def aba_emissao(self, request, pk=None):
-        instance = self.get_object()
-        serializer = CteEmissaoSerializer(instance, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def perform_update(self, serializer):
+        slug = get_licenca_db_config(self.request)
+        serializer.save(using=slug)
 
-    @action(detail=True, methods=['patch'], url_path='aba-tipo')
-    def aba_tipo(self, request, pk=None):
-        instance = self.get_object()
-        serializer = CteTipoSerializer(instance, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    @action(detail=True, methods=['patch'], url_path='aba-rota')
-    def aba_rota(self, request, pk=None):
-        instance = self.get_object()
-        serializer = CteRotaSerializer(instance, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    @action(detail=True, methods=['patch'], url_path='aba-seguro')
-    def aba_seguro(self, request, pk=None):
-        instance = self.get_object()
-        serializer = CteSeguroSerializer(instance, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    @action(detail=True, methods=['patch'], url_path='aba-carga')
-    def aba_carga(self, request, pk=None):
-        instance = self.get_object()
-        serializer = CteCargaSerializer(instance, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    @action(detail=True, methods=['patch'], url_path='aba-tributacao')
-    def aba_tributacao(self, request, pk=None):
-        instance = self.get_object()
-        serializer = CteTributacaoSerializer(instance, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def perform_destroy(self, instance):
+        slug = get_licenca_db_config(self.request)
+        instance.delete(using=slug)
 
     @action(detail=True, methods=['post'], url_path='emitir')
     def emitir(self, request, pk=None):
+        """
+        Inicia o processo de emissão do CT-e.
+        """
         slug = get_licenca_db_config(request)
         cte = self.get_object()
         
         try:
-            # Em API REST, geralmente chamamos o service diretamente e retornamos
-            # o status atualizado, ou o ID da task se for assíncrono.
-            # Vamos chamar a task para manter consistência com o web.
             from transportes.tasks.emitir_cte import emitir_cte_task
-            task = emitir_cte_task.delay(cte.id, slug)
-            
-            return Response({
-                "status": "processando",
-                "task_id": task.id,
-                "message": "Emissão de CT-e iniciada."
-            }, status=status.HTTP_202_ACCEPTED)
-            
+            emitir_cte_task.delay(cte.id, slug)
+            return Response({"message": "Emissão iniciada com sucesso."}, status=status.HTTP_200_OK)
         except Exception as e:
-            logger.error(f"Erro ao emitir CTe via API: {e}")
+            logger.error(f"Erro ao iniciar emissão: {e}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    @action(detail=True, methods=['post'], url_path='consultar-recibo')
-    def consultar_recibo(self, request, pk=None):
+    @action(detail=True, methods=['get'], url_path='calcular-impostos')
+    def calcular_impostos(self, request, pk=None):
+        """
+        Calcula impostos (ICMS, ST, DIFAL) baseado no CFOP e dados do CTe.
+        Retorna JSON com os valores calculados.
+        """
+        return calcular_impostos_cte(request, pk)
+
+# Funções auxiliares para uso em AJAX/Web
+
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from core.utils import get_licenca_db_config
+from transportes.models import Cte
+from Entidades.models import Entidades
+import logging
+
+logger = logging.getLogger(__name__)
+
+@login_required
+def get_cte_rota_info(request, pk, slug=None):
+    """
+    Retorna informações de rota (cidade/UF) baseada no remetente ou destinatário do CTe.
+    """
+    if not slug:
         slug = get_licenca_db_config(request)
-        cte = self.get_object()
         
-        if not cte.recibo:
-             return Response({"error": "CT-e não possui recibo."}, status=status.HTTP_400_BAD_REQUEST)
+    logger.info(f"API Rota Info: user={request.user} pk={pk} slug={slug}")
+       
+    cte = get_object_or_404(Cte.objects.using(slug), pk=pk)
+    
+    tipo = request.GET.get('tipo') # remetente ou destinatario
+    entidade_id = None
+    
+    if tipo == 'remetente':
+        entidade_id = cte.remetente
+    elif tipo == 'destinatario':
+        entidade_id = cte.destinatario
+    
+    logger.info(f"API Rota Info: tipo={tipo} entidade_id={entidade_id}")
+        
+    if not entidade_id:
+        return JsonResponse({'error': 'Entidade não vinculada ao CTe.'}, status=400)
+        
+    entidade = Entidades.objects.using(slug).filter(pk=entidade_id).first()
+    
+    if not entidade:
+        logger.warning(f"API Rota Info: Entidade {entidade_id} não encontrada no banco {slug}")
+        return JsonResponse({'error': 'Entidade não encontrada.'}, status=404)
+        
+    return JsonResponse({
+        'cidade_id': entidade.enti_codi_cida,
+        'cidade_nome': entidade.enti_cida,
+        'uf': entidade.enti_esta
+    })
+
+
+def calcular_impostos_cte(request, pk, slug=None):
+    """
+    Calcula impostos do CTe baseado no CFOP informado.
+    """
+    slug = get_licenca_db_config(request)
+    cte = get_object_or_404(Cte.objects.using(slug), pk=pk)
+    
+    cfop_id = request.GET.get('cfop')
+    if not cfop_id:
+        return JsonResponse({'error': 'CFOP não informado.'}, status=400)
+        
+    # Busca CFOP
+    cfop = CFOP.objects.using(slug).filter(pk=cfop_id).first()
+        
+    if not cfop:
+        return JsonResponse({'error': 'CFOP não encontrado.'}, status=404)
+
+    # Prepara dados para cálculo
+    try:
+        # Adapters (Reutilizados do Form/Serializer logic)
+        class ServiceEmpresaAdapter:
+            def __init__(self, simples, db_alias='default'):
+                self.simples_nacional = simples
+                self._state = type('State', (), {'db': db_alias})
+        
+        class ServiceOperacaoAdapter:
+            def __init__(self, uf_orig, uf_dest, contrib):
+                self.uf_origem = uf_orig
+                self.uf_destino = uf_dest
+                self.contribuinte = contrib
+
+        # Busca dados necessários
+        filial = Filiais.objects.using(slug).filter(pk=cte.filial).first()
+        simples_nacional = str(filial.empr_regi_trib) == '1' if filial else False
+        
+        remetente = Entidades.objects.using(slug).filter(pk=cte.remetente).first()
+        destinatario = Entidades.objects.using(slug).filter(pk=cte.destinatario).first()
+        
+        # Mapeamento de Código IBGE para UF
+        CODIGO_UF_PARA_SIGLA = {
+            '11': 'RO', '12': 'AC', '13': 'AM', '14': 'RR', '15': 'PA', '16': 'AP', '17': 'TO',
+            '21': 'MA', '22': 'PI', '23': 'CE', '24': 'RN', '25': 'PB', '26': 'PE', '27': 'AL', '28': 'SE', '29': 'BA',
+            '31': 'MG', '32': 'ES', '33': 'RJ', '35': 'SP',
+            '41': 'PR', '42': 'SC', '43': 'RS',
+            '50': 'MS', '51': 'MT', '52': 'GO', '53': 'DF'
+        }
+
+        def get_uf_from_ibge(ibge_code):
+            if not ibge_code: return None
+            s_code = str(ibge_code).strip()
+            if len(s_code) < 2: return None
+            prefix = s_code[:2]
+            return CODIGO_UF_PARA_SIGLA.get(prefix)
+
+        # Prioriza UFs da rota (Coleta/Entrega) se disponíveis
+        uf_origem = get_uf_from_ibge(cte.cidade_coleta)
+        uf_destino = get_uf_from_ibge(cte.cidade_entrega)
+
+        # Fallback para UFs das entidades se não encontrar na rota
+        if not uf_origem and remetente:
+            uf_origem = remetente.enti_esta
+        
+        if not uf_destino and destinatario:
+            uf_destino = destinatario.enti_esta
+            
+        if not uf_origem or not uf_destino:
+             logger.error(f"Erro cálculo impostos CTE {pk}: UFs não identificadas. Orig: {uf_origem}, Dest: {uf_destino}")
+             return JsonResponse({'error': 'Não foi possível identificar UFs de origem e destino (Rota ou Entidades).'}, status=400)
              
-        try:
-            from transportes.tasks.consultar_recibo import consultar_recibo_task
-            task = consultar_recibo_task.delay(cte.id, cte.recibo, slug)
+        # Verifica se destinatário é contribuinte
+        ie_dest = destinatario.enti_insc_esta if destinatario else None
+        # Normaliza IE para verificação
+        ie_dest_clean = ie_dest.strip().upper() if ie_dest else ''
+        contribuinte = bool(ie_dest and ie_dest_clean not in ['ISENTO', 'ISENTA', '', 'NONE'])
+        
+        # LOGGING PARA DEBUG
+        logger.info(f"=== CÁLCULO IMPOSTOS CTE {pk} ===")
+        logger.info(f"CFOP: {cfop.cfop_codi} (ID: {cfop.pk})")
+        logger.info(f"Origem: {uf_origem} | Destino: {uf_destino}")
+        logger.info(f"Simples Nacional: {simples_nacional}")
+        logger.info(f"Destinatário: {destinatario.enti_nome if destinatario else 'N/A'} (IE: {ie_dest}) -> Contribuinte: {contribuinte}")
+
+        empresa_adapter = ServiceEmpresaAdapter(simples_nacional, slug)
+        operacao_adapter = ServiceOperacaoAdapter(uf_origem, uf_destino, contribuinte)
+        
+        # Base de Cálculo (Total do Serviço)
+        # Prioriza frete_valor, fallback para total_valor
+        base_calculo = cte.frete_valor or cte.total_valor or Decimal('0.00')
+        logger.info(f"Base Cálculo: {base_calculo}")
+        
+        response_data = {}
+        
+        # 1. ICMS
+        icms_calculado_valor = Decimal('0.00')
+        if cfop.cfop_exig_icms:
+            icms_service = ICMSCalculationService(empresa_adapter, operacao_adapter)
+            res_icms = icms_service.calcular(base_calculo, cfop)
             
-            return Response({
-                "status": "processando",
-                "task_id": task.id,
-                "message": "Consulta iniciada."
-            }, status=status.HTTP_202_ACCEPTED)
+            logger.info(f"Resultado ICMS: {res_icms}")
+
+            if res_icms:
+                response_data.update({
+                    'cst_icms': res_icms['cst'],
+                    'aliq_icms': res_icms['aliquota'],
+                    'valor_icms': res_icms['valor'],
+                    'reducao_icms': res_icms['reducao'],
+                    'base_icms': res_icms['base']
+                })
+                icms_calculado_valor = res_icms['valor']
+            else:
+                logger.warning(f"Nenhuma regra de ICMS encontrada para CFOP {cfop.cfop_codi}, UF {uf_origem}->{uf_destino}, Contrib {contribuinte}")
+                
+        # 2. ST
+        if cfop.cfop_gera_st:
+            st_service = STService(empresa_adapter, operacao_adapter)
+            res_st = st_service.calcular(base_calculo, icms_calculado_valor, cfop)
             
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            if res_st:
+                response_data.update({
+                    'base_icms_st': res_st['base_st'],
+                    'valor_icms_st': res_st['valor_st'],
+                    'aliquota_icms_st': res_st['aliquota_st'],
+                    'margem_valor_adicionado_st': res_st['mva_st']
+                })
+
+        # 3. DIFAL
+        if cfop.cfop_gera_difal:
+            difal_service = DIFALService(empresa_adapter, operacao_adapter)
+            res_difal = difal_service.calcular(base_calculo, icms_calculado_valor, cfop)
+            
+            if res_difal:
+                response_data.update({
+                    'valor_bc_uf_dest': res_difal['base_difal'],
+                    'valor_icms_uf_dest': res_difal['valor_difal'],
+                    'aliquota_interestadual': res_difal['aliquota_interestadual'],
+                    'aliquota_interna_dest': res_difal['aliquota_destino']
+                })
+                
+        return JsonResponse(response_data)
+        
+    except Exception as e:
+        logger.error(f"Erro ao calcular impostos via API: {e}")
+        return JsonResponse({'error': f"Erro interno ao calcular impostos: {str(e)}"}, status=500)

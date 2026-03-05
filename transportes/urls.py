@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 
 from transportes.views import web
 from transportes.views import api
+from transportes.views import regras
 
 app_name = 'transportes'
 
@@ -30,4 +31,10 @@ urlpatterns = [
     path('web/ctes/<int:pk>/excluir/', web.CteDeleteView.as_view(), name='cte_delete'),
     path('web/ctes/<int:pk>/emitir/', web.CteEmitirView.as_view(), name='cte_emitir'),
     path('web/ctes/<int:pk>/consultar-recibo/', web.CteConsultarReciboView.as_view(), name='cte_consultar_recibo'),
+
+    # Regras ICMS
+    path('web/regras/', regras.RegraICMSListView.as_view(), name='regra_list'),
+    path('web/regras/nova/', regras.RegraICMSCreateView.as_view(), name='regra_create'),
+    path('web/regras/<int:pk>/editar/', regras.RegraICMSUpdateView.as_view(), name='regra_update'),
+    path('web/regras/<int:pk>/excluir/', regras.RegraICMSDeleteView.as_view(), name='regra_delete'),
 ]

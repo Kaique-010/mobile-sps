@@ -20,3 +20,7 @@ class CteCargaForm(forms.ModelForm):
             'ncm': forms.TextInput(attrs={'class': 'form-control'}),
             'total_peso': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        self.request = kwargs.pop('request', None)
+        super().__init__(*args, **kwargs)

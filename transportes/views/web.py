@@ -1,5 +1,5 @@
+from tkinter import NO
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView, View
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import redirect, get_object_or_404
 from django.urls import reverse_lazy, reverse
 from django.contrib import messages
@@ -16,6 +16,7 @@ from transportes.forms.carga import CteCargaForm
 from transportes.forms.tributacao import CteTributacaoForm
 from transportes.services.rascunho_service import RascunhoService
 from transportes.services.emissao_service import EmissaoService
+from transportes.services.numeracao_service import NumeracaoService
 from Entidades.models import Entidades
 from transportes.models import Veiculos
 
@@ -23,7 +24,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class CteBaseMixin(LoginRequiredMixin):
+class CteBaseMixin():
     def get_queryset(self):
         slug = get_licenca_db_config(self.request)
         # Filtra registros inválidos que possam ter id vazio ou nulo (legado)
@@ -32,8 +33,8 @@ class CteBaseMixin(LoginRequiredMixin):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['slug'] = get_licenca_db_config(self.request)
-        if hasattr(self, 'object') and self.object:
-            context['active_tab'] = self.active_tab if hasattr(self, 'active_tab') else 'emissao'
+        # Garante que active_tab esteja no contexto mesmo para CreateView (onde self.object é None)
+        context['active_tab'] = getattr(self, 'active_tab', 'emissao')
         return context
 
 class CteListView(CteBaseMixin, ListView):
@@ -42,6 +43,45 @@ class CteListView(CteBaseMixin, ListView):
     context_object_name = 'ctes'
     ordering = ['-id']
     paginate_by = 20
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        slug = get_licenca_db_config(self.request)
+        ctes = context['ctes']
+        
+        # Coleta IDs para busca em massa
+        ids_entidades = set()
+        for cte in ctes:
+            if cte.remetente:
+                ids_entidades.add(cte.remetente)
+            if cte.destinatario:
+                ids_entidades.add(cte.destinatario)
+        
+        # Busca nomes das entidades
+        nomes_entidades = {}
+        if ids_entidades:
+            entidades = Entidades.objects.using(slug).filter(enti_clie__in=ids_entidades).values('enti_clie', 'enti_nome')
+            for ent in entidades:
+                nomes_entidades[ent['enti_clie']] = ent['enti_nome']
+        
+        # Classe auxiliar para simular objeto no template
+        class EntidadeDisplay:
+            def __init__(self, nome):
+                self.nome = nome
+            def __str__(self):
+                return self.nome
+
+        # Popula objetos para o template
+        for cte in ctes:
+            if cte.remetente:
+                nome = nomes_entidades.get(cte.remetente, str(cte.remetente))
+                cte.remetente = EntidadeDisplay(nome)
+            
+            if cte.destinatario:
+                nome = nomes_entidades.get(cte.destinatario, str(cte.destinatario))
+                cte.destinatario = EntidadeDisplay(nome)
+                
+        return context
 
 class CteCreateView(CteBaseMixin, CreateView):
     model = Cte
@@ -52,37 +92,55 @@ class CteCreateView(CteBaseMixin, CreateView):
     def form_valid(self, form):
         try:
             slug = get_licenca_db_config(self.request)
-            service = RascunhoService(
-                empresa=None, # Será obtido via contexto ou request
-                filial=None,  # Será obtido via contexto ou request
-                user=self.request.user,
-                slug=slug
-            )
-            # O service cria o rascunho. O form.save() padrão do Django não usa o service diretamente,
-            # mas aqui podemos interceptar para usar o service se quisermos,
-            # ou deixar o form salvar e o service apenas gerenciar regras extras.
-            # Como o RascunhoService encapsula lógica de criação inicial (status, etc),
-            # vamos usar o form para validar e o service para criar se necessário,
-            # mas para simplicidade no Django Forms, vamos deixar o form salvar e ajustar o objeto.
+            
+            # Recupera empresa e filial da sessão
+            empresa_id = self.request.session.get('empresa_id')
+            filial_id = self.request.session.get('filial_id')
+
+            if not empresa_id:
+                raise ValueError("Empresa não encontrada na sessão.")
             
             self.object = form.save(commit=False)
+            
+            # Define campos obrigatórios do sistema
+            self.object.empresa = empresa_id
+            self.object.filial = filial_id or 1  # Default para 1 se não houver filial
             self.object.status = 'RAS' # Garante status rascunho
+            
+            # Campos padrão obrigatórios para CTe
+            self.object.modelo = '57'
+            self.object.serie = '1'
+
+            # Gera número sequencial e define ID igual ao número
+            service = NumeracaoService(empresa_id, self.object.filial, self.object.serie, slug)
+            prox_num = service.proximo_numero()
+            
+            self.object.id = str(prox_num)
+            self.object.numero = prox_num
+            
             # Preencher campos de auditoria/sistema se necessário
             self.object.save(using=slug)
             
             messages.success(self.request, "CT-e criado com sucesso! Continue preenchendo as abas.")
-            return HttpResponseRedirect(self.get_success_url())
+            # Redireciona para a mesma aba (emissao) mas agora editando o objeto criado
+            return HttpResponseRedirect(reverse('transportes:cte_emissao', kwargs={'slug': slug, 'pk': self.object.pk}))
         except Exception as e:
             logger.error(f"Erro ao criar CTe: {e}")
             messages.error(self.request, f"Erro ao criar CT-e: {e}")
             return self.form_invalid(form)
 
     def get_success_url(self):
-        return reverse('transportes:cte_tipo', kwargs={'pk': self.object.pk})
+        slug = get_licenca_db_config(self.request)
+        return reverse('transportes:cte_emissao', kwargs={'slug': slug, 'pk': self.object.pk})
 
 class CteUpdateBaseView(CteBaseMixin, UpdateView):
     model = Cte
     template_name = 'transportes/cte_form.html'
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['request'] = self.request
+        return kwargs
     
     def form_valid(self, form):
         slug = get_licenca_db_config(self.request)
@@ -158,68 +216,85 @@ class CteEmissaoView(CteUpdateBaseView):
         return context
 
     def get_success_url(self):
-        return reverse('transportes:cte_tipo', kwargs={'pk': self.object.pk})
+        slug = get_licenca_db_config(self.request)
+        return reverse('transportes:cte_tipo', kwargs={'slug': slug, 'pk': self.object.pk})
 
 class CteTipoView(CteUpdateBaseView):
     form_class = CteTipoForm
     active_tab = 'tipo'
 
     def get_success_url(self):
-        return reverse('transportes:cte_rota', kwargs={'pk': self.object.pk})
+        slug = get_licenca_db_config(self.request)
+        return reverse('transportes:cte_rota', kwargs={'slug': slug, 'pk': self.object.pk})
 
 class CteRotaView(CteUpdateBaseView):
     form_class = CteRotaForm
     active_tab = 'rota'
 
     def get_success_url(self):
-        return reverse('transportes:cte_seguro', kwargs={'pk': self.object.pk})
+        slug = get_licenca_db_config(self.request)
+        return reverse('transportes:cte_seguro', kwargs={'slug': slug, 'pk': self.object.pk})
 
 class CteSeguroView(CteUpdateBaseView):
     form_class = CteSeguroForm
     active_tab = 'seguro'
 
     def get_success_url(self):
-        return reverse('transportes:cte_carga', kwargs={'pk': self.object.pk})
+        slug = get_licenca_db_config(self.request)
+        return reverse('transportes:cte_carga', kwargs={'slug': slug, 'pk': self.object.pk})
 
 class CteCargaView(CteUpdateBaseView):
     form_class = CteCargaForm
     active_tab = 'carga'
 
     def get_success_url(self):
-        return reverse('transportes:cte_tributacao', kwargs={'pk': self.object.pk})
+        slug = get_licenca_db_config(self.request)
+        return reverse('transportes:cte_tributacao', kwargs={'slug': slug, 'pk': self.object.pk})
 
 class CteTributacaoView(CteUpdateBaseView):
     form_class = CteTributacaoForm
+    template_name = 'transportes/cte_tributacao.html'
     active_tab = 'tributacao'
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['request'] = self.request
+        return kwargs
+
     def get_success_url(self):
-        # Última aba, volta para a mesma ou vai para lista/detalhe
-        return reverse('transportes:cte_list')
+        # Permanece na mesma tela para conferência dos cálculos
+        slug = get_licenca_db_config(self.request)
+        messages.success(self.request, "Tributação salva e calculada com sucesso!")
+        return reverse('transportes:cte_tributacao', kwargs={'slug': slug, 'pk': self.object.pk})
 
 class CteDeleteView(CteBaseMixin, DeleteView):
     model = Cte
     template_name = 'transportes/cte_confirm_delete.html'
-    success_url = reverse_lazy('transportes:cte_list')
+
+    def get_success_url(self):
+        slug = get_licenca_db_config(self.request)
+        return reverse('transportes:cte_list', kwargs={'slug': slug})
 
     def delete(self, request, *args, **kwargs):
         slug = get_licenca_db_config(self.request)
         self.object = self.get_object()
         if self.object.status not in ['RAS', 'REJ', 'ERR']:
             messages.error(request, "Apenas CT-e em Rascunho, Rejeitado ou Erro podem ser excluídos.")
-            return redirect('transportes:cte_list')
+            return HttpResponseRedirect(self.get_success_url())
         
         try:
             self.object.delete(using=slug)
             messages.success(request, "CT-e excluído com sucesso.")
-            return HttpResponseRedirect(self.success_url)
+            return HttpResponseRedirect(self.get_success_url())
         except Exception as e:
             messages.error(request, f"Erro ao excluir: {e}")
-            return redirect('transportes:cte_list')
+            return HttpResponseRedirect(self.get_success_url())
 
 class CteEmitirView(CteBaseMixin, View):
-    def post(self, request, pk):
+    def post(self, request, pk, slug=None):
         slug = get_licenca_db_config(request)
         cte = get_object_or_404(Cte.objects.using(slug), pk=pk)
+        success_url = reverse('transportes:cte_list', kwargs={'slug': slug})
         
         try:
             # Chama task assíncrona ou service direto (dependendo da configuração)
@@ -231,20 +306,21 @@ class CteEmitirView(CteBaseMixin, View):
             task = emitir_cte_task.delay(cte.id, slug)
             
             messages.info(request, "Emissão iniciada! Acompanhe o status na lista.")
-            return redirect('transportes:cte_list')
+            return HttpResponseRedirect(success_url)
             
         except Exception as e:
             messages.error(request, f"Erro ao iniciar emissão: {e}")
-            return redirect('transportes:cte_list')
+            return HttpResponseRedirect(success_url)
 
 class CteConsultarReciboView(CteBaseMixin, View):
     def post(self, request, pk):
         slug = get_licenca_db_config(request)
         cte = get_object_or_404(Cte.objects.using(slug), pk=pk)
+        success_url = reverse('transportes:cte_list', kwargs={'slug': slug})
         
         if not cte.recibo:
             messages.warning(request, "CT-e não possui recibo para consulta.")
-            return redirect('transportes:cte_list')
+            return HttpResponseRedirect(success_url)
 
         try:
             from transportes.tasks.consultar_recibo import consultar_recibo_task
@@ -253,4 +329,4 @@ class CteConsultarReciboView(CteBaseMixin, View):
         except Exception as e:
             messages.error(request, f"Erro ao consultar: {e}")
         
-        return redirect('transportes:cte_list')
+        return HttpResponseRedirect(success_url)

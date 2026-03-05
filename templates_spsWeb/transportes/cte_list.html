@@ -6,9 +6,14 @@
 <div class="card shadow-sm mb-4">
     <div class="card-header  text-white d-flex justify-content-between align-items-center">
         <h5 class="mb-4 text-center">Listagem de CT-e</h5>
-        <a href="{% url 'transportes:cte_create' slug=slug %}" class="btn btn-light btn-sm">
-            <i class="fas fa-plus"></i> Novo CT-e
-        </a>
+        <div>
+            <a href="{% url 'transportes:regra_list' slug=slug %}" class="btn btn-light btn-sm me-2">
+                <i class="fas fa-calculator"></i> Regras ICMS
+            </a>
+            <a href="{% url 'transportes:cte_create' slug=slug %}" class="btn btn-light btn-sm">
+                <i class="fas fa-plus"></i> Novo CT-e
+            </a>
+        </div>
     </div>
     <div class="card-body">
         <div class="table-responsive">
@@ -41,7 +46,7 @@
                         <td>
                             <div class="btn-group" role="group">
                                 <a href="{% url 'transportes:cte_emissao' slug=slug pk=cte.pk %}"
-                                    class="btn btn-sm btn-outline-primary" title="Editar">
+                                    class="btn btn-sm btn-primary" title="Editar (Dados de Emissão)">
                                     <i class="fas fa-edit"></i>
                                 </a>
                                 {% if cte.status == 'RAS' or cte.status == 'REJ' %}

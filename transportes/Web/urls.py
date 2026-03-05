@@ -1,10 +1,11 @@
 from django.urls import path
-from transportes.views import web
+from transportes.views import web, api
+from transportes.views import regras
 from transportes.Web.Views.VeiculosList import VeiculosListView
 from transportes.Web.Views.VeiculosCreate import VeiculosCreateView
 from transportes.Web.Views.VeiculosUpdate import VeiculosUpdateView
 from transportes.Web.Views.VeiculosDelete import VeiculosDeleteView
-from transportes.Rest.Views.autocompletes import autocomplete_transportadoras, autocomplete_marcas, autocomplete_centrodecustos, autocomplete_entidades, autocomplete_veiculos
+from transportes.Rest.Views.autocompletes import autocomplete_transportadoras, autocomplete_marcas, autocomplete_centrodecustos, autocomplete_entidades, autocomplete_veiculos, get_entidade_detalhes
 
 
 
@@ -33,11 +34,22 @@ urlpatterns = [
     path('ctes/<str:pk>/excluir/', web.CteDeleteView.as_view(), name='cte_delete'),
     path('ctes/<str:pk>/emitir/', web.CteEmitirView.as_view(), name='cte_emitir'),
     path('ctes/<str:pk>/consultar-recibo/', web.CteConsultarReciboView.as_view(), name='cte_consultar_recibo'),
+
+    # APIs para AJAX nos Templates
+    path('api/ctes/<str:pk>/rota-info/', api.get_cte_rota_info, name='api_cte_rota_info'),
+    path('api/ctes/<str:pk>/calcular-impostos/', api.calcular_impostos_cte, name='api_cte_calcular_impostos'),
+
+    # Regras ICMS
+    path('regras/', regras.RegraICMSListView.as_view(), name='regra_list'),
+    path('regras/nova/', regras.RegraICMSCreateView.as_view(), name='regra_create'),
+    path('regras/<int:pk>/editar/', regras.RegraICMSUpdateView.as_view(), name='regra_update'),
+    path('regras/<int:pk>/excluir/', regras.RegraICMSDeleteView.as_view(), name='regra_delete'),
     
-        # Autocompletes
+    # Autocompletes
     path('autocomplete/transportadoras/', autocomplete_transportadoras, name='autocomplete_transportadoras'),
     path('autocomplete/marcas/', autocomplete_marcas, name='autocomplete_marcas'),
     path('autocomplete/centrodecustos/', autocomplete_centrodecustos, name='autocomplete_centrodecustos'),
     path('autocomplete/entidades/', autocomplete_entidades, name='autocomplete_entidades'),
     path('autocomplete/veiculos/', autocomplete_veiculos, name='autocomplete_veiculos'),
+    path('api/entidade/detalhes/', get_entidade_detalhes, name='api_entidade_detalhes'),
 ]

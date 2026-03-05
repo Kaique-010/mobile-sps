@@ -1,0 +1,226 @@
+<!-- ICMS -->
+<h5 class="mb-3 border-bottom pb-2"><i class="fas fa-coins"></i> ICMS</h5>
+<div class="row g-3 mb-4">
+    <div class="col-md-2">
+        <label class="form-label">CFOP</label>
+        {{ form.cfop }}
+    </div>
+    
+    <div class="col-md-2">
+        <label class="form-label">CST</label>
+        {{ form.cst_icms }}
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Base Cálculo</label>
+        {{ form.base_icms }}
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Alíquota (%)</label>
+        {{ form.aliq_icms }}
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Redução (%)</label>
+        {{ form.reducao_icms }}
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Valor ICMS</label>
+        {{ form.valor_icms }}
+    </div>
+</div>
+
+<!-- ICMS ST -->
+<h5 class="mb-3 border-bottom pb-2"><i class="fas fa-exchange-alt"></i> Substituição Tributária (ST)</h5>
+<div class="row g-3 mb-4">
+    <div class="col-md-2">
+        <label class="form-label">Base ST</label>
+        {{ form.base_icms_st }}
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">MVA (%)</label>
+        {{ form.margem_valor_adicionado_st }}
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Redução ST (%)</label>
+        {{ form.reducao_base_icms_st }}
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Alíquota ST (%)</label>
+        {{ form.aliquota_icms_st }}
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Valor ST</label>
+        {{ form.valor_icms_st }}
+    </div>
+</div>
+
+<!-- DIFAL -->
+<h5 class="mb-3 border-bottom pb-2"><i class="fas fa-arrows-alt-h"></i> DIFAL (Partilha)</h5>
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <label class="form-label">Base UF Dest.</label>
+        {{ form.valor_bc_uf_dest }}
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Aliq. Interna (%)</label>
+        {{ form.aliquota_interna_dest }}
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Aliq. Inter. (%)</label>
+        {{ form.aliquota_interestadual }}
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Valor ICMS Dest.</label>
+        {{ form.valor_icms_uf_dest }}
+    </div>
+</div>
+
+<!-- PIS / COFINS -->
+<h5 class="mb-3 border-bottom pb-2"><i class="fas fa-hand-holding-usd"></i> PIS / COFINS</h5>
+<div class="row g-3">
+    <!-- PIS -->
+    <div class="col-md-6">
+        <div class="card bg-transparent border-0">
+            <div class="card-body pt-2 ps-0">
+                <h6 class="card-title text-muted mb-3">PIS</h6>
+                <div class="row g-2">
+                    <div class="col-md-3">
+                        <label class="form-label small">CST</label>
+                        {{ form.cst_pis }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">Base</label>
+                        {{ form.base_pis }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">Aliq (%)</label>
+                        {{ form.aliquota_pis }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">Valor</label>
+                        {{ form.valor_pis }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- COFINS -->
+    <div class="col-md-6">
+        <div class="card bg-transparent border-0">
+            <div class="card-body pt-2 ps-0">
+                <h6 class="card-title text-muted mb-3">COFINS</h6>
+                <div class="row g-2">
+                    <div class="col-md-3">
+                        <label class="form-label small">CST</label>
+                        {{ form.cst_cofins }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">Base</label>
+                        {{ form.base_cofins }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">Aliq (%)</label>
+                        {{ form.aliquota_cofins }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">Valor</label>
+                        {{ form.valor_cofins }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const cfopSelect = document.getElementById('{{ form.cfop.auto_id }}');
+        const slug = "{{ slug }}";
+        const cteId = "{{ object.pk }}";
+
+        // Função para formatar valores monetários/decimais para o input
+        function formatValue(value) {
+            if (value === null || value === undefined) return '';
+            return parseFloat(value).toFixed(2);
+        }
+
+        // Trigger manual do cálculo
+        window.triggerCalculo = function () {
+            const cfopSelect = document.getElementById('{{ form.cfop.auto_id }}');
+            const cfopId = cfopSelect.value;
+            if (!cfopId) {
+                alert('Por favor, selecione um CFOP antes de calcular.');
+                return;
+            }
+            calcularImpostos(cfopId);
+        };
+
+        // Função para calcular impostos
+        function calcularImpostos(cfopId) {
+            if (!cfopId) return;
+
+            // Feedback visual - desabilita botão salvar e mostra loading
+            const btnSalvar = document.querySelector('button[type="submit"]');
+            const originalText = btnSalvar ? btnSalvar.innerHTML : '';
+            if (btnSalvar) {
+                btnSalvar.disabled = true;
+                btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Calculando...';
+            }
+
+            fetch(`{% url 'transportes:api_cte_calcular_impostos' slug=slug pk=object.pk %}?cfop=${cfopId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(data.error);
+                        return;
+                    }
+
+                    // Helper para setar valor com formatação
+                    const setVal = (fieldId, val) => {
+                        const el = document.getElementById(fieldId);
+                        if (el) el.value = formatValue(val);
+                    };
+
+                    // ICMS
+                    if (data.cst_icms !== undefined) {
+                        const el = document.getElementById('{{ form.cst_icms.auto_id }}');
+                        if (el) el.value = data.cst_icms; // CST é string/int, não float
+                    }
+                    if (data.base_icms !== undefined) setVal('{{ form.base_icms.auto_id }}', data.base_icms);
+                    if (data.aliq_icms !== undefined) setVal('{{ form.aliq_icms.auto_id }}', data.aliq_icms);
+                    if (data.reducao_icms !== undefined) setVal('{{ form.reducao_icms.auto_id }}', data.reducao_icms);
+                    if (data.valor_icms !== undefined) setVal('{{ form.valor_icms.auto_id }}', data.valor_icms);
+
+                    // ST
+                    if (data.base_icms_st !== undefined) setVal('{{ form.base_icms_st.auto_id }}', data.base_icms_st);
+                    if (data.margem_valor_adicionado_st !== undefined) setVal('{{ form.margem_valor_adicionado_st.auto_id }}', data.margem_valor_adicionado_st);
+                    if (data.reducao_base_icms_st !== undefined) setVal('{{ form.reducao_base_icms_st.auto_id }}', data.reducao_base_icms_st);
+                    if (data.aliquota_icms_st !== undefined) setVal('{{ form.aliquota_icms_st.auto_id }}', data.aliquota_icms_st);
+                    if (data.valor_icms_st !== undefined) setVal('{{ form.valor_icms_st.auto_id }}', data.valor_icms_st);
+
+                    // DIFAL
+                    if (data.valor_bc_uf_dest !== undefined) setVal('{{ form.valor_bc_uf_dest.auto_id }}', data.valor_bc_uf_dest);
+                    if (data.aliquota_interna_dest !== undefined) setVal('{{ form.aliquota_interna_dest.auto_id }}', data.aliquota_interna_dest);
+                    if (data.aliquota_interestadual !== undefined) setVal('{{ form.aliquota_interestadual.auto_id }}', data.aliquota_interestadual);
+                    if (data.valor_icms_uf_dest !== undefined) setVal('{{ form.valor_icms_uf_dest.auto_id }}', data.valor_icms_uf_dest);
+
+                })
+                .catch(error => {
+                    console.error('Error fetching tax rules:', error);
+                    alert('Erro ao calcular impostos. Verifique o console.');
+                })
+                .finally(() => {
+                    if (btnSalvar) {
+                        btnSalvar.disabled = false;
+                        btnSalvar.innerHTML = originalText;
+                    }
+                });
+        }
+
+        if (cfopSelect) {
+            cfopSelect.addEventListener('change', function () {
+                calcularImpostos(this.value);
+            });
+        }
+    });
+</script>

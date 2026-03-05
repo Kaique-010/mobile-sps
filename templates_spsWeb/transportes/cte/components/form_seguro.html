@@ -1,0 +1,66 @@
+<div class="row g-3">
+    <div class="col-md-6">
+        <label for="{{ form.seguro_por_conta.id_for_label }}" class="form-label fw-semibold">
+            {{ form.seguro_por_conta.label }}
+            {% if form.seguro_por_conta.field.required %}<span class="text-danger">*</span>{% endif %}
+        </label>
+        {{ form.seguro_por_conta }}
+        {% if form.seguro_por_conta.errors %}<div class="text-danger small mt-1">{{
+            form.seguro_por_conta.errors|striptags }}</div>{% endif %}
+    </div>
+
+    <div class="col-md-6">
+        <label for="{{ form.seguradora.id_for_label }}" class="form-label fw-semibold">
+            {{ form.seguradora.label }}
+            {% if form.seguradora.field.required %}<span class="text-danger">*</span>{% endif %}
+        </label>
+        {{ form.seguradora }}
+        {% if form.seguradora.errors %}<div class="text-danger small mt-1">{{ form.seguradora.errors|striptags }}</div>
+        {% endif %}
+    </div>
+
+    <div class="col-md-4">
+        <label for="{{ form.valor_base_seguro.id_for_label }}" class="form-label fw-semibold">
+            {{ form.valor_base_seguro.label }}
+        </label>
+        {{ form.valor_base_seguro }}
+        {% if form.valor_base_seguro.errors %}<div class="text-danger small mt-1">{{
+            form.valor_base_seguro.errors|striptags }}</div>{% endif %}
+    </div>
+
+    <div class="col-md-4">
+        <label for="{{ form.numero_apolice.id_for_label }}" class="form-label fw-semibold">
+            {{ form.numero_apolice.label }}
+        </label>
+        {{ form.numero_apolice }}
+        {% if form.numero_apolice.errors %}<div class="text-danger small mt-1">{{ form.numero_apolice.errors|striptags
+            }}</div>{% endif %}
+    </div>
+
+    <div class="col-md-4">
+        <label for="{{ form.numero_averbado.id_for_label }}" class="form-label fw-semibold">
+            {{ form.numero_averbado.label }}
+        </label>
+        {{ form.numero_averbado }}
+        {% if form.numero_averbado.errors %}<div class="text-danger small mt-1">{{ form.numero_averbado.errors|striptags
+            }}</div>{% endif %}
+    </div>
+
+    <div class="col-md-4">
+        <label for="{{ form.percentual_seguro.id_for_label }}" class="form-label fw-semibold">
+            {{ form.percentual_seguro.label }}
+        </label>
+        {{ form.percentual_seguro }}
+        {% if form.percentual_seguro.errors %}<div class="text-danger small mt-1">{{
+            form.percentual_seguro.errors|striptags }}</div>{% endif %}
+    </div>
+
+    <div class="col-md-4">
+        <label for="{{ form.cte_valor_seguro.id_for_label }}" class="form-label fw-semibold">
+            {{ form.cte_valor_seguro.label }}
+        </label>
+        {{ form.cte_valor_seguro }}
+        {% if form.cte_valor_seguro.errors %}<div class="text-danger small mt-1">{{
+            form.cte_valor_seguro.errors|striptags }}</div>{% endif %}
+    </div>
+</div>

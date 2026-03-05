@@ -19,3 +19,7 @@ class CteTipoForm(forms.ModelForm):
             'outro_tomador': forms.NumberInput(attrs={'class': 'form-control'}),
             'transportadora': forms.NumberInput(attrs={'class': 'form-control'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        self.request = kwargs.pop('request', None)
+        super().__init__(*args, **kwargs)

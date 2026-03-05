@@ -7,7 +7,7 @@ import random
 try:
     from pytrustnfe.cte import CTe
     from pytrustnfe.cte.dados import (
-        InfCte, Ide, Emit, Rem, Dest, VPrest, Comp, Imp, ICMS, 
+        InfCte, Ide, Emit, Rem, Dest, VPrest, Comp, Imp, ICMS, ICMSUFDest,
         InfCTeNorm, InfModal, Rodo, Moto, Veic, InfNF, InfOutros, AutXML,
         Exped, Receb, Tomador03, Tomador04, EnderEmit, EnderReme, EnderDest, EnderToma,
         InfCarga, InfDoc, InfQ, InfNFe
@@ -34,6 +34,8 @@ except ImportError:
     class Imp: 
         def __init__(self, **kwargs): pass
     class ICMS: 
+        def __init__(self, **kwargs): pass
+    class ICMSUFDest:
         def __init__(self, **kwargs): pass
     class InfCTeNorm: 
         def __init__(self, **kwargs): pass
@@ -356,16 +358,51 @@ class CteXmlBuilder:
     def _build_imp(self):
         def fmt(v): return "{:.2f}".format(float(v or 0))
         
-        # ICMS00 - Tributado Integralmente
-        icms = ICMS(
-            CST=self.cte.cst_icms or "00",
-            vBC=fmt(self.cte.base_icms),
-            pICMS=fmt(self.cte.aliq_icms),
-            vICMS=fmt(self.cte.valor_icms)
-        )
-        # Poderia ter lógica para outros CSTs (20, 40, 60, 90, SN) aqui
+        cst = self.cte.cst_icms or "00"
         
-        return Imp(ICMS=icms)
+        # Base ICMS args
+        icms_args = {
+            'CST': cst,
+            'vBC': fmt(self.cte.base_icms),
+            'pICMS': fmt(self.cte.aliq_icms),
+            'vICMS': fmt(self.cte.valor_icms)
+        }
+
+        # CST 20 - Redução de Base de Cálculo
+        if cst == '20':
+            icms_args['pRedBC'] = fmt(self.cte.reducao_icms)
+
+        # CST 90 - Outros / CST 10 / CST 70 (Pode ter ST e Redução)
+        if cst in ['10', '70', '90']:
+             if self.cte.base_icms_st and float(self.cte.base_icms_st) > 0:
+                 icms_args['vBCST'] = fmt(self.cte.base_icms_st)
+                 icms_args['pICMSST'] = fmt(self.cte.aliquota_icms_st)
+                 icms_args['vICMSST'] = fmt(self.cte.valor_icms_st)
+                 icms_args['pMVAST'] = fmt(self.cte.margem_valor_adicionado_st)
+                 icms_args['pRedBCST'] = fmt(self.cte.reducao_base_icms_st)
+             
+             if self.cte.reducao_icms and float(self.cte.reducao_icms) > 0:
+                 icms_args['pRedBC'] = fmt(self.cte.reducao_icms)
+
+        icms = ICMS(**icms_args)
+        
+        # DIFAL (Partilha do ICMS)
+        icms_uf_dest = None
+        # Verifica se tem valores de DIFAL
+        if self.cte.valor_icms_uf_dest and float(self.cte.valor_icms_uf_dest) > 0:
+             icms_uf_dest = ICMSUFDest(
+                 vBCUFDest=fmt(self.cte.valor_bc_uf_dest),
+                 vBCFCPUFDest=fmt(self.cte.valor_bc_uf_dest), # Geralmente a mesma base
+                 pFCPUFDest="0.00", 
+                 pICMSUFDest=fmt(self.cte.aliquota_interna_dest),
+                 pICMSInter=fmt(self.cte.aliquota_interestadual),
+                 pICMSInterPart="100.00", # 100% para destino
+                 vFCPUFDest="0.00",
+                 vICMSUFDest=fmt(self.cte.valor_icms_uf_dest),
+                 vICMSUFRemet="0.00" 
+             )
+
+        return Imp(ICMS=icms, ICMSUFDest=icms_uf_dest)
 
     def _build_inf_cte_norm(self):
         rodo = Rodo(

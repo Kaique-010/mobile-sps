@@ -1,0 +1,110 @@
+<div class="row g-3">
+    <div class="col-md-6">
+        <label for="{{ form.cidade_coleta.id_for_label }}" class="form-label fw-semibold">
+            {{ form.cidade_coleta.label }}
+            {% if form.cidade_coleta.field.required %}<span class="text-danger">*</span>{% endif %}
+        </label>
+        <div class="input-group">
+            {{ form.cidade_coleta }}
+            <button type="button" class="btn btn-outline-secondary" id="btnCopiarRemetente" title="Copiar do Remetente">
+                <i class="fas fa-copy"></i>
+            </button>
+        </div>
+        <div id="info_cidade_coleta" class="form-text text-primary"></div>
+        {% if form.cidade_coleta.errors %}<div class="text-danger small mt-1">{{ form.cidade_coleta.errors|striptags }}
+        </div>{% endif %}
+    </div>
+
+    <div class="col-md-6">
+        <label for="{{ form.cidade_entrega.id_for_label }}" class="form-label fw-semibold">
+            {{ form.cidade_entrega.label }}
+            {% if form.cidade_entrega.field.required %}<span class="text-danger">*</span>{% endif %}
+        </label>
+        <div class="input-group">
+            {{ form.cidade_entrega }}
+            <button type="button" class="btn btn-outline-secondary" id="btnCopiarDestinatario"
+                title="Copiar do Destinatário">
+                <i class="fas fa-copy"></i>
+            </button>
+        </div>
+        <div id="info_cidade_entrega" class="form-text text-primary"></div>
+        {% if form.cidade_entrega.errors %}<div class="text-danger small mt-1">{{ form.cidade_entrega.errors|striptags }}</div>{% endif %}
+    </div>
+
+    <div class="col-md-3">
+        <label for="{{ form.peso_total.id_for_label }}" class="form-label fw-semibold">{{ form.peso_total.label }}</label>
+        {{ form.peso_total }}
+    </div>
+    <div class="col-md-3">
+        <label for="{{ form.pedagio.id_for_label }}" class="form-label fw-semibold">{{ form.pedagio.label }}</label>
+        {{ form.pedagio }}
+    </div>
+    <div class="col-md-3">
+        <label for="{{ form.tarifa.id_for_label }}" class="form-label fw-semibold">{{ form.tarifa.label }}</label>
+        {{ form.tarifa }}
+    </div>
+    <div class="col-md-3">
+        <label for="{{ form.frete_peso.id_for_label }}" class="form-label fw-semibold">{{ form.frete_peso.label }}</label>
+        {{ form.frete_peso }}
+    </div>
+    <div class="col-md-3">
+        <label for="{{ form.frete_valor.id_for_label }}" class="form-label fw-semibold">{{ form.frete_valor.label }}</label>
+        {{ form.frete_valor }}
+    </div>
+
+    <div class="col-12">
+        <label for="{{ form.outras_observacoes.id_for_label }}" class="form-label fw-semibold">{{ form.outras_observacoes.label }}</label>
+        {{ form.outras_observacoes }}
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const btnRemetente = document.getElementById('btnCopiarRemetente');
+        const btnDestinatario = document.getElementById('btnCopiarDestinatario');
+
+        // As we are in Rota tab, the CTe object is available in context (object)
+        // But we need the IDs of remetente/destinatario which are on the object, not necessarily in the form.
+        // We can pass them via data attributes or fetch from server.
+        // Better: Fetch details from server using the CTe ID.
+
+
+        if (btnRemetente) {
+            btnRemetente.addEventListener('click', function () {
+                fetch(`{% url 'transportes:api_cte_rota_info' slug=slug pk=object.pk %}?tipo=remetente`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.cidade_id) {
+                            const input = document.getElementById("{{ form.cidade_coleta.auto_id }}");
+                            if (input) input.value = data.cidade_id;
+
+                            const info = document.getElementById("info_cidade_coleta");
+                            if (info && data.cidade_nome) info.textContent = `${data.cidade_nome} - ${data.uf}`;
+                        } else {
+                            alert('Cidade não encontrada para o remetente.');
+                        }
+                    })
+                    .catch(e => console.error(e));
+            });
+        }
+
+        if (btnDestinatario) {
+            btnDestinatario.addEventListener('click', function () {
+                fetch(`{% url 'transportes:api_cte_rota_info' slug=slug pk=object.pk %}?tipo=destinatario`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.cidade_id) {
+                            const input = document.getElementById("{{ form.cidade_entrega.auto_id }}");
+                            if (input) input.value = data.cidade_id;
+
+                            const info = document.getElementById("info_cidade_entrega");
+                            if (info && data.cidade_nome) info.textContent = `${data.cidade_nome} - ${data.uf}`;
+                        } else {
+                            alert('Cidade não encontrada para o destinatário.');
+                        }
+                    })
+                    .catch(e => console.error(e));
+            });
+        }
+    });
+</script>

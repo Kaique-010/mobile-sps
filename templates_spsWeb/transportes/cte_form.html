@@ -16,7 +16,7 @@
             {% endif %}
         </h4>
 
-        {% if object %}
+        {% if object and object.pk %}
         <!-- Navegação de Abas -->
         <ul class="nav nav-tabs card-header-tabs">
             <li class="nav-item">
@@ -69,149 +69,42 @@
             </div>
             {% endif %}
 
-            {# Campos de Tipo/Emissão em destaque no topo #}
-            <div class="row g-2 mb-4">
-                {% for field in form %}
-                    {% if field.name == 'tomador_servico' or field.name == 'tipo_servico' or field.name == 'tipo_cte' or field.name == 'forma_emissao' or field.name == 'tipo_frete' %}
-                    <div class="col-md">
-                        <div class="card h-100 border-amber shadow-lg">
-                            <div class="card-header  fw-bold small text-uppercase text-muted border-bottom-0 pt-3 pb-1">
-                                {{ field.label }} {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
-                            </div>
-                            <div class="card-body pt-1">
-                                <div class="d-flex flex-column gap-2">
-                                    {% for radio in field %}
-                                    <div class="form-check form-switch">
-                                        {{ radio.tag }}
-                                        <label class="form-check-label small" for="{{ radio.id_for_label }}">
-                                            {{ radio.choice_label }}
-                                        </label>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                                {% if field.errors %}
-                                <div class="text-danger small mt-2">
-                                    {{ field.errors|striptags }}
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
-                {% endfor %}
-            </div>
+            {# Carrega o componente do formulário baseado na aba ativa #}
+            {% if active_tab == 'emissao' %}
+            {% include 'transportes/cte/components/form_emissao.html' %}
+            {% elif active_tab == 'tipo' %}
+            {% include 'transportes/cte/components/form_tipo.html' %}
+            {% elif active_tab == 'rota' %}
+            {% include 'transportes/cte/components/form_rota.html' %}
+            {% elif active_tab == 'seguro' %}
+            {% include 'transportes/cte/components/form_seguro.html' %}
+            {% elif active_tab == 'carga' %}
+            {% include 'transportes/cte/components/form_carga.html' %}
+            {% elif active_tab == 'tributacao' %}
+            {% include 'transportes/cte/components/form_tributacao.html' %}
+            {% endif %}
 
-            {# Demais campos #}
-            <div class="row g-3">
-                {% for field in form %}
-                    {% if field.name != 'tomador_servico' and field.name != 'tipo_servico' and field.name != 'tipo_cte' and field.name != 'forma_emissao' and field.name != 'tipo_frete' %}
-                    
-                    {% if field.name == 'remetente' %}
-                    <div class="col-md-6 position-relative">
-                        <label class="form-label fw-semibold">{{ field.label }}{% if field.field.required %}<span class="text-danger">*</span>{% endif %}</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-search"></i></span>
-                            <input type="text" id="input_remetente" class="form-control" placeholder="Buscar remetente..." autocomplete="off" value="{{ remetente_nome|default:'' }}">
-                            {{ field }}
-                        </div>
-                        <div id="dropdown_remetente" class="list-group position-absolute w-100 start-0" style="z-index: 1000; top: 100%;"></div>
-                        {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors|striptags }}</div>{% endif %}
-                    </div>
-
-                    {% elif field.name == 'destinatario' %}
-                    <div class="col-md-6 position-relative">
-                        <label class="form-label fw-semibold">{{ field.label }}{% if field.field.required %}<span class="text-danger">*</span>{% endif %}</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-search"></i></span>
-                            <input type="text" id="input_destinatario" class="form-control" placeholder="Buscar destinatário..." autocomplete="off" value="{{ destinatario_nome|default:'' }}">
-                            {{ field }}
-                        </div>
-                        <div id="dropdown_destinatario" class="list-group position-absolute w-100 start-0" style="z-index: 1000; top: 100%;"></div>
-                        {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors|striptags }}</div>{% endif %}
-                    </div>
-
-                    {% elif field.name == 'motorista' %}
-                    <div class="col-md-6 position-relative">
-                        <label class="form-label fw-semibold">{{ field.label }}{% if field.field.required %}<span class="text-danger">*</span>{% endif %}</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-search"></i></span>
-                            <input type="text" id="input_motorista" class="form-control" placeholder="Buscar motorista..." autocomplete="off" value="{{ motorista_nome|default:'' }}">
-                            {{ field }}
-                        </div>
-                        <div id="dropdown_motorista" class="list-group position-absolute w-100 start-0" style="z-index: 1000; top: 100%;"></div>
-                        {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors|striptags }}</div>{% endif %}
-                    </div>
-
-                    {% elif field.name == 'veiculo' %}
-                    <div class="col-md-6 position-relative">
-                        <label class="form-label fw-semibold">{{ field.label }}{% if field.field.required %}<span class="text-danger">*</span>{% endif %}</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-truck"></i></span>
-                            <input type="text" id="input_veiculo" class="form-control" placeholder="Buscar veículo..." autocomplete="off" value="{{ veiculo_nome|default:'' }}">
-                            {{ field }}
-                        </div>
-                        <div id="dropdown_veiculo" class="list-group position-absolute w-100 start-0" style="z-index: 1000; top: 100%;"></div>
-                        {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors|striptags }}</div>{% endif %}
-                        <div class="form-text small text-muted">Selecione o remetente primeiro para filtrar os veículos.</div>
-                    </div>
-
-                    {% else %}
-                    <div class="col-md-6">
-                        <label for="{{ field.id_for_label }}" class="form-label fw-semibold">
-                            {{ field.label }}
-                            {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
-                        </label>
-
-                        {{ field }}
-
-                        {% if field.help_text %}
-                        <div class="form-text text-muted small">{{ field.help_text }}</div>
-                        {% endif %}
-
-                        {% if field.errors %}
-                        <div class="text-danger small mt-1">
-                            {{ field.errors|striptags }}
-                        </div>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-                    {% endif %}
-                {% endfor %}
-            </div>
-
-            <hr class="my-4">
-
-            <div class="d-flex justify-content-between align-items-center">
+            <div class="mt-4 pt-3 border-top d-flex justify_content-end gap-2">
                 <a href="{% url 'transportes:cte_list' slug=slug %}" class="btn btn-outline-secondary">
                     <i class="fas fa-arrow-left"></i> Voltar
                 </a>
-
-                <div>
-                    <button type="submit" class="btn btn-outline-primary px-4">
-                        <i class="fas fa-save"></i> Salvar e Continuar
-                    </button>
-                </div>
+                <button type="submit" class="btn btn-outline-success">
+                    <i class="fas fa-save"></i> Salvar
+                </button>
+                {% if object and object.pk and active_tab == 'tributacao' %}
+                <button type="submit" formaction="{% url 'transportes:cte_emitir' slug=slug pk=object.pk %}"
+                    class="btn btn-success ms-auto" onclick="return confirm('Confirma a emissão deste CT-e?');">
+                    <i class="fas fa-check"></i> Emitir CT-e
+                </button>
+                {% endif %}
             </div>
         </form>
-
-        <!-- Botão de emitir fora do form principal -->
-        {% if object and object.status == 'RAS' %}
-        <div class="mt-3 text-end border-top pt-3">
-            <form action="{% url 'transportes:cte_emitir' slug=slug pk=object.pk %}" method="post" class="d-inline">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-success"
-                    onclick="return confirm('Deseja realmente emitir este CT-e?');">
-                    <i class="fas fa-paper-plane"></i> Emitir CT-e Agora
-                </button>
-            </form>
-        </div>
-        {% endif %}
     </div>
 </div>
 
 <script>
-    // Adiciona classe form-control a todos os inputs para estilização Bootstrap
     document.addEventListener("DOMContentLoaded", function () {
+        // Adiciona classe form-control a todos os inputs para estilização Bootstrap
         var inputs = document.querySelectorAll('#cteForm input, #cteForm select, #cteForm textarea');
         inputs.forEach(function (input) {
             if (input.type !== 'checkbox' && input.type !== 'radio' && input.type !== 'hidden') {
@@ -221,133 +114,82 @@
             }
         });
 
-        // IDs dos campos hidden gerados pelo Django
-        const idRemetente = "{{ form.remetente.auto_id }}";
-        const idDestinatario = "{{ form.destinatario.auto_id }}";
-        const idMotorista = "{{ form.motorista.auto_id }}";
-        const idVeiculo = "{{ form.veiculo.auto_id }}";
-
-        // Função genérica de autocomplete
-        function setupAutocomplete(inputId, hiddenId, dropdownId, url, getExtraParams = null, onSelect = null) {
+        /**
+         * Função genérica para Autocomplete
+         */
+        window.setupAutocomplete = function (inputId, hiddenId, dropdownId, searchUrl, extraParamsCallback, onSelectCallback) {
             const input = document.getElementById(inputId);
             const hidden = document.getElementById(hiddenId);
             const dropdown = document.getElementById(dropdownId);
-            let debounceTimer;
 
             if (!input || !hidden || !dropdown) return;
 
-            input.addEventListener('input', function () {
-                clearTimeout(debounceTimer);
-                const query = this.value;
+            let timeout = null;
+            let controller = null;
 
-                if (query.length < 1) {
+            input.addEventListener('input', function () {
+                const term = this.value;
+                if (timeout) clearTimeout(timeout);
+                if (controller) controller.abort();
+
+                if (term.length < 3) {
                     dropdown.innerHTML = '';
+                    dropdown.style.display = 'none';
                     return;
                 }
 
-                debounceTimer = setTimeout(() => {
-                    let finalUrl = `${url}?term=${encodeURIComponent(query)}`;
-                    
-                    if (getExtraParams) {
-                        const params = getExtraParams();
-                        if (params === false) { // Aborta se retornar false explicitamente
-                            dropdown.innerHTML = '';
-                            return; 
-                        }
-                        if (params) {
-                             const queryString = new URLSearchParams(params).toString();
-                             finalUrl += `&${queryString}`;
+                timeout = setTimeout(() => {
+                    controller = new AbortController();
+
+                    let url = `${searchUrl}?term=${encodeURIComponent(term)}`;
+                    if (extraParamsCallback) {
+                        const extra = extraParamsCallback();
+                        if (extra === false) return; // Abort
+                        if (extra) {
+                            for (const key in extra) {
+                                url += `&${key}=${encodeURIComponent(extra[key])}`;
+                            }
                         }
                     }
 
-                    fetch(finalUrl)
+                    fetch(url, { signal: controller.signal })
                         .then(response => response.json())
                         .then(data => {
                             dropdown.innerHTML = '';
                             if (data.results && data.results.length > 0) {
+                                dropdown.style.display = 'block';
                                 data.results.forEach(item => {
                                     const a = document.createElement('a');
                                     a.className = 'list-group-item list-group-item-action';
                                     a.href = '#';
-                                    a.textContent = item.text;
-                                    a.onclick = function (e) {
+                                    a.textContent = item.text || item.label || item.nome;
+                                    a.addEventListener('click', function (e) {
                                         e.preventDefault();
-                                        input.value = item.text;
+                                        input.value = a.textContent;
                                         hidden.value = item.id;
                                         dropdown.innerHTML = '';
-                                        if (onSelect) onSelect(item);
-                                    };
+                                        dropdown.style.display = 'none';
+                                        if (onSelectCallback) onSelectCallback(item);
+                                    });
                                     dropdown.appendChild(a);
                                 });
                             } else {
-                                const div = document.createElement('div');
-                                div.className = 'list-group-item disabled';
-                                div.textContent = 'Nenhum resultado encontrado';
-                                dropdown.appendChild(div);
+                                dropdown.style.display = 'none';
                             }
                         })
-                        .catch(error => console.error('Erro no autocomplete:', error));
+                        .catch(err => {
+                            if (err.name !== 'AbortError') console.error(err);
+                        });
                 }, 300);
             });
 
-            // Fecha dropdown ao clicar fora
+            // Hide dropdown when clicking outside
             document.addEventListener('click', function (e) {
                 if (!input.contains(e.target) && !dropdown.contains(e.target)) {
-                    dropdown.innerHTML = '';
+                    dropdown.style.display = 'none';
                 }
             });
-        }
-
-        // 1. Remetente (Transportadoras)
-        setupAutocomplete(
-            'input_remetente', 
-            idRemetente, 
-            'dropdown_remetente', 
-            "{% url 'transportes:autocomplete_transportadoras' slug=slug %}",
-            null,
-            function(item) {
-                // Ao mudar o remetente, limpa o veículo pois depende da transportadora
-                const inputVeiculo = document.getElementById('input_veiculo');
-                const hiddenVeiculo = document.getElementById(idVeiculo);
-                if (inputVeiculo) inputVeiculo.value = '';
-                if (hiddenVeiculo) hiddenVeiculo.value = '';
-            }
-        );
-
-        // 2. Destinatário (Entidades)
-        setupAutocomplete(
-            'input_destinatario', 
-            idDestinatario, 
-            'dropdown_destinatario', 
-            "{% url 'transportes:autocomplete_entidades' slug=slug %}"
-        );
-
-        // 3. Motorista (Entidades)
-        setupAutocomplete(
-            'input_motorista', 
-            idMotorista, 
-            'dropdown_motorista', 
-            "{% url 'transportes:autocomplete_entidades' slug=slug %}"
-        );
-
-        // 4. Veículo (Filtrado por Transportadora do Remetente)
-        setupAutocomplete(
-            'input_veiculo', 
-            idVeiculo, 
-            'dropdown_veiculo', 
-            "{% url 'transportes:autocomplete_veiculos' slug=slug %}",
-            function() {
-                const transportadoraId = document.getElementById(idRemetente).value;
-                if (!transportadoraId) {
-                    alert('Por favor, selecione o Remetente (Transportadora) primeiro para buscar veículos.');
-                    document.getElementById('input_remetente').focus();
-                    return false; // Cancela a busca
-                }
-                return { transportadora_id: transportadoraId };
-            }
-        );
-
+        };
     });
-    
 </script>
 {% endblock %}
