@@ -1,4 +1,3 @@
-from tkinter import NO
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView, View
 from django.shortcuts import redirect, get_object_or_404
 from django.urls import reverse_lazy, reverse
