@@ -28,12 +28,14 @@ urlpatterns = [
     path('ctes/<str:pk>/rota/', web.CteRotaView.as_view(), name='cte_rota'),
     path('ctes/<str:pk>/seguro/', web.CteSeguroView.as_view(), name='cte_seguro'),
     path('ctes/<str:pk>/carga/', web.CteCargaView.as_view(), name='cte_carga'),
+    path('ctes/<str:pk>/documentos/', web.CteDocumentoView.as_view(), name='cte_documento'),
     path('ctes/<str:pk>/tributacao/', web.CteTributacaoView.as_view(), name='cte_tributacao'),
     
     # Ações
     path('ctes/<str:pk>/excluir/', web.CteDeleteView.as_view(), name='cte_delete'),
     path('ctes/<str:pk>/emitir/', web.CteEmitirView.as_view(), name='cte_emitir'),
     path('ctes/<str:pk>/consultar-recibo/', web.CteConsultarReciboView.as_view(), name='cte_consultar_recibo'),
+    path('ctes/<str:pk>/imprimir/', web.CteImprimirDacteView.as_view(), name='cte_imprimir'),
 
     # APIs para AJAX nos Templates
     path('api/ctes/<str:pk>/rota-info/', api.get_cte_rota_info, name='api_cte_rota_info'),

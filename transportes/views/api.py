@@ -13,6 +13,7 @@ from transportes.serializers.completo import CteCompletoSerializer
 from transportes.services.icms_service import ICMSCalculationService
 from transportes.services.st_service import STService
 from transportes.services.difal_service import DIFALService
+from transportes.services.emissao_service import EmissaoService
 from Entidades.models import Entidades
 from Licencas.models import Filiais
 from CFOP.models import CFOP
@@ -60,11 +61,15 @@ class CteViewSet(viewsets.ModelViewSet):
         cte = self.get_object()
         
         try:
-            from transportes.tasks.emitir_cte import emitir_cte_task
-            emitir_cte_task.delay(cte.id, slug)
-            return Response({"message": "Emissão iniciada com sucesso."}, status=status.HTTP_200_OK)
+            # Emissão síncrona
+            service = EmissaoService(cte, slug=slug)
+            resultado = service.emitir()
+            
+            # Retorna 200 independente do status SEFAZ, pois a requisição HTTP foi OK
+            # O status da nota vai no payload
+            return Response(resultado, status=status.HTTP_200_OK)
         except Exception as e:
-            logger.error(f"Erro ao iniciar emissão: {e}")
+            logger.error(f"Erro ao emitir CT-e: {e}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=True, methods=['get'], url_path='calcular-impostos')

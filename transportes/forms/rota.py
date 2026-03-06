@@ -8,7 +8,7 @@ class CteRotaForm(forms.ModelForm):
         model = Cte
         fields = [
             'cidade_coleta', 'cidade_entrega', 'pedagio', 'peso_total',
-            'tarifa', 'frete_peso', 'frete_valor', 'outras_observacoes'
+            'tarifa', 'frete_peso', 'frete_valor', 'total_valor', 'outras_observacoes'
         ]
         widgets = {
             'cidade_coleta': forms.NumberInput(attrs={'class': 'form-control'}),
@@ -18,6 +18,7 @@ class CteRotaForm(forms.ModelForm):
             'tarifa': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'frete_peso': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'frete_valor': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'total_valor': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'outras_observacoes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
 

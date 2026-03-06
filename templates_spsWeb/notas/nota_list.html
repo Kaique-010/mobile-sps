@@ -84,7 +84,6 @@
                 class="bi bi-sort-up"></i>{% endif %}
             </a>
           </th>
-          <th>Emitente</th>
           <th>Destinatário</th>
           <th>
             <a class="text-decoration-none"
@@ -105,7 +104,6 @@
           <td>{{ n.serie }}</td>
           <td>{{ n.numero }}</td>
           <td>{{ n.data_emissao }}</td>
-          <td>{{ n.emitente_nome }}</td>
           <td>{{ n.destinatario_nome }}</td>
           <td>
             <span class="d-inline-block text-truncate" style="max-width: 150px;" data-bs-toggle="tooltip"
@@ -117,7 +115,7 @@
 
           <td>
             <div class="botoes-listanotas">
-              <a class="btn btn-outline-dark" href="/web/{{ slug }}/notas-fiscais/{{ n.id }}/">Detalhes</a>
+              <a class="btn btn-outline-info" href="/web/{{ slug }}/notas-fiscais/{{ n.id }}/">Detalhes</a>
               {% if n.status != 100 and n.status != 101 and n.status != 102 %}
               {% if n.chave_acesso or n.status == 539 or n.status == 204 or n.status == 105 %}
               <button class="btn btn-outline-primary" data-consultar data-id="{{ n.id }}"><span

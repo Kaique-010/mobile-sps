@@ -37,16 +37,26 @@ class AuditoriaMiddleware:
 
     def extrair_modelo_e_id_da_url(self, url):
         """Extrai o nome do modelo e ID do objeto da URL"""
-        # Padrões comuns de URL da API REST
-        # /api/licenca/app/modelo/id/ ou /api/licenca/app/modelo/id
-        padrao = r'/api/([^/]+)/([^/]+)/([^/]+)/?(?:([0-9]+)/?)?'
+        # Padrões comuns de URL da API REST e WEB
+        # /api/licenca/app/modelo/id/ ou /web/licenca/app/action/id
+        # Atualizado para suportar listagens (sem modelo/ação explícito) e ações extras
+        padrao = r'/(?:api|web)/([^/]+)/([^/]+)(?:/([^/]+))?/?(?:([0-9]+))?'
         match = re.search(padrao, url)
         
         if match:
             licenca_slug = match.group(1)  # casaa, por exemplo
             app_name = match.group(2)      # entidades
-            modelo_name = match.group(3)   # entidades
+            modelo_name = match.group(3)   # entidades ou ação
             objeto_id = match.group(4)     # 77
+            
+            # Se não tiver modelo_name (ex: /web/slug/app/), infere do app
+            if not modelo_name:
+                modelo_name = 'infer_from_app'
+            
+            # Se o terceiro segmento for numérico, assume que é o ID e o modelo deve ser inferido do app
+            if modelo_name and modelo_name.isdigit():
+                objeto_id = modelo_name
+                modelo_name = 'infer_from_app'
             
             # Mapear nomes de apps para os nomes reais dos apps Django
             app_mapping = {
@@ -54,24 +64,25 @@ class AuditoriaMiddleware:
                 'assistente_spart': 'Assistente_Spart',
                 'assistente': 'Assistente_Spart',
                 'auditoria': 'auditoria',
-                'boletos': 'Boletos',
+                'boletos': 'boletos',
                 'caixadiario': 'CaixaDiario',
-                'centraldeajuda': 'CentralDeAjuda',
-                'centrodecustos': 'CentroDeCustos',
-                'cfop': 'Cfop',
+                'caixa-diario': 'CaixaDiario',
+                'centraldeajuda': 'centraldeajuda',
+                'centrodecustos': 'CentrodeCustos',
+                'cfop': 'CFOP',
                 'contas_a_pagar': 'contas_a_pagar',
                 'contas_a_receber': 'contas_a_receber',
                 'contratos': 'contratos',
-                'controledevisitas': 'ControleDeVisitas',
+                'controledevisitas': 'controledevisitas',
                 'dashboards': 'dashboards',
                 'entidades': 'Entidades',
                 'entradas_estoque': 'Entradas_Estoque',
-                'enviocobranca': 'Enviocobranca',
+                'enviocobranca': 'EnvioCobranca',
                 'financeiro': 'Financeiro',
-                'importador': 'Importador',
+                'importador': 'importador',
                 'licencas': 'Licencas',
                 'listacasamento': 'listacasamento',
-                'onboarding': 'Onboarding',
+                'onboarding': 'onboarding',
                 'o_s': 'O_S',
                 'ordemdeservico': 'OrdemdeServico',
                 'orcamentos': 'Orcamentos',
@@ -83,7 +94,8 @@ class AuditoriaMiddleware:
                 'saidas_estoque': 'Saidas_Estoque',
                 'notasfiscais': 'Notas_Fiscais',
                 'notas_fiscais': 'Notas_Fiscais',
-                'series': 'Series',     
+                'series': 'series',     
+                'transportes': 'transportes',
 
             }
             
@@ -105,7 +117,38 @@ class AuditoriaMiddleware:
                 'assistente_spart': 'Assistente_Spart',
                 'assistente': 'Assistente_Spart',
                 'notas-fiscais': 'Nota',
-
+                'pedidos-geral': 'PedidoVenda',
+                'pedidos': 'PedidoVenda',
+                'entidades': 'Entidades',
+                'caixa': 'Caixageral',
+                'movicaixa': 'Movicaixa',
+                'ctes': 'Cte',
+                'veiculos': 'Veiculos',
+                'regras': 'RegraICMS',
+                'criar': 'ignore',
+                'novo': 'ignore',
+                'adicionar': 'ignore',
+                'cadastrar': 'ignore',
+                'editar': 'ignore',
+                'visualizar': 'ignore',
+                'excluir': 'ignore',
+                'imprimir': 'ignore',
+                'transformar': 'ignore',
+                'detalhe': 'ignore',
+                'dashboard': 'ignore',
+                'por-cliente': 'ignore',
+                'emitir-nfe': 'ignore',
+                'cancelar': 'ignore',
+                'duplicar': 'ignore',
+                'baixar': 'ignore',
+                'faturar': 'ignore',
+                'preco': 'ignore',
+                'autocomplete': 'ignore',
+                'processamento': 'ignore',
+                'venda': 'ignore',
+                'saldo': 'ignore',
+                'resumo': 'ignore',
+                'abertos': 'ignore',
             }
             
             # Usar o nome real do app
@@ -113,9 +156,33 @@ class AuditoriaMiddleware:
             
             # Usar o nome real do modelo se houver mapeamento
             real_modelo_name = modelo_mapping.get(modelo_name, modelo_name)
+
+            if real_modelo_name == 'ignore' or real_modelo_name == 'infer_from_app':
+                if app_name.lower() == 'orcamentos':
+                    real_modelo_name = 'Orcamentos'
+                elif app_name.lower() == 'pedidos':
+                    real_modelo_name = 'PedidoVenda'
+                elif app_name.lower() in ('caixadiario', 'caixa-diario'):
+                    real_modelo_name = 'Caixageral'
+                elif app_name.lower() == 'entidades':
+                    real_modelo_name = 'Entidades'
+                elif app_name.lower() == 'produtos':
+                    real_modelo_name = 'Produtos'
+                elif app_name.lower() == 'notasfiscais' or app_name.lower() == 'notas_fiscais':
+                    real_modelo_name = 'Nota'
+                elif app_name.lower() == 'financeiro':
+                    # Financeiro é muito genérico, mas pode ser Títulos
+                    pass
+                elif app_name.lower() == 'transportes':
+                    # Transportes não tem um modelo único, melhor ignorar do que tentar carregar
+                    pass
             
             # Tentar obter o modelo real
             try:
+                # Evita tentar carregar modelos "ignore" ou "infer_from_app" que falharam na inferência
+                if real_modelo_name in ('ignore', 'infer_from_app'):
+                    return None, objeto_id
+
                 modelo = apps.get_model(real_app_name, real_modelo_name)
                 logger.debug(f'Modelo encontrado: {real_app_name}.{real_modelo_name}')
                 return modelo, objeto_id
@@ -215,12 +282,11 @@ class AuditoriaMiddleware:
         return None
     #Vamos chamar o middleware apenas para as rotas da api de todos os apps, em todos os metodos http
     def __call__(self, request):
-        if not request.path.startswith('/api/'):
+        if not request.path.startswith('/api/') and not request.path.startswith('/web/'):
             return self.get_response(request)
 
-        # Ignorar logs para rotas de auditoria (exceto a rota principal)
         # Ignorar logs para rotas de auditoria e notificações
-        if '/auditoria/logs/' in request.path or '/notificacoes/' in request.path:
+        if '/auditoria/' in request.path or '/notificacoes/' in request.path:
             pass
             return self.get_response(request)
 
@@ -299,12 +365,21 @@ class AuditoriaMiddleware:
         except Exception:
             pass
 
+        # Determinar método lógico (para tratar POST em Web como DELETE/PUT se URL indicar)
+        logical_method = request.method
+        if request.method == 'POST':
+            path_lower = request.path.lower()
+            if path_lower.endswith('/excluir/') or '/delete/' in path_lower or '/remover/' in path_lower or '/cancelar/' in path_lower or '/deletar/' in path_lower:
+                logical_method = 'DELETE'
+            elif path_lower.endswith('/editar/') or '/update/' in path_lower or '/alterar/' in path_lower or '/modificar/' in path_lower or '/editar/' in path_lower:
+                logical_method = 'PUT'
+
         # Capturar dados antes da alteração (para PUT, PATCH, DELETE)
         dados_antes = None
         modelo = None
         objeto_id = None
         
-        if request.method in ['PUT', 'PATCH', 'DELETE']:
+        if logical_method in ['PUT', 'PATCH', 'DELETE']:
             pass
             modelo, objeto_id = self.extrair_modelo_e_id_da_url(request.path)
             pass
@@ -319,7 +394,7 @@ class AuditoriaMiddleware:
 
         # Tentar obter os dados da requisição ANTES de processar a resposta
         data = None
-        if request.method in ['POST', 'PUT', 'PATCH']:
+        if logical_method in ['POST', 'PUT', 'PATCH']:
             try:
                 if isinstance(request, Request):
                     # Capturar dados antes da view processar
@@ -328,13 +403,22 @@ class AuditoriaMiddleware:
                         data = request.data
                         request._cached_data = data
                 else:
-                    data = request.body.decode('utf-8') if request.body else None
+                    # Tenta capturar dados de formulário POST padrão Django
+                    if hasattr(request, 'POST') and request.POST:
+                        data = request.POST.dict()
+                    else:
+                        data = request.body.decode('utf-8') if request.body else None
 
                 if isinstance(data, str):
-                    data = json.loads(data)
+                    try:
+                        data = json.loads(data)
+                    except:
+                        pass # Mantém como string se não for JSON válido
             except Exception as e:
                 logger.warning(f'Erro ao processar dados da requisição: {str(e)}')
-                data = None
+                # Não sobrescreve data com None se apenas o json.loads falhou (já tratado acima)
+                if 'data' not in locals():
+                    data = None
 
         # Processar a resposta
         response = self.get_response(request)
@@ -342,7 +426,7 @@ class AuditoriaMiddleware:
         try:
             # Capturar informações após o processamento da ação
             user = request.user if hasattr(request, 'user') and request.user.is_authenticated else None
-            method = request.method
+            method = logical_method
             url = request.path
             ip = request.META.get('REMOTE_ADDR')
             user_agent = request.META.get('HTTP_USER_AGENT', '')
@@ -383,16 +467,16 @@ class AuditoriaMiddleware:
             dados_depois = None
             campos_alterados = None
             
-            if request.method in ['POST', 'PUT', 'PATCH']:
+            if logical_method in ['POST', 'PUT', 'PATCH']:
                 dados_depois = self.processar_dados_resposta(response)
                 
                 # Para atualizações, comparar dados antes e depois
-                if request.method in ['PUT', 'PATCH'] and dados_antes and dados_depois:
+                if logical_method in ['PUT', 'PATCH'] and dados_antes and dados_depois:
                     campos_alterados = self.comparar_dados(dados_antes, dados_depois)
                     pass
             
             # Para DELETE, usar dados_antes como dados_depois (o que foi excluído)
-            elif request.method == 'DELETE' and dados_antes:
+            elif logical_method == 'DELETE' and dados_antes:
                 dados_depois = dados_antes
 
             # Extrair informações do modelo se ainda não foram obtidas
@@ -409,17 +493,37 @@ class AuditoriaMiddleware:
             # Converter dados para tipos serializáveis em JSON
             # Serializar objetos Python diretamente (sem json.dumps) para JSONField
             banco = get_licenca_db_config(request)
-            data_serializavel = converter_para_json_serializavel(data) if data else None
-            dados_antes_serializavel = converter_para_json_serializavel(dados_antes) if dados_antes else None
-            dados_depois_serializavel = converter_para_json_serializavel(dados_depois) if dados_depois else None
-            campos_alterados_serializavel = converter_para_json_serializavel(campos_alterados) if campos_alterados else None
             
-            # Ajuste: serializar para string JSON para evitar erros de encoding em bancos não UTF8
-            dados_json = json.dumps(data_serializavel, ensure_ascii=False) if data_serializavel is not None else None
-            dados_antes_json = json.dumps(dados_antes_serializavel, ensure_ascii=False) if dados_antes_serializavel is not None else None
-            dados_depois_json = json.dumps(dados_depois_serializavel, ensure_ascii=False) if dados_depois_serializavel is not None else None
-            campos_alterados_json = json.dumps(campos_alterados_serializavel, ensure_ascii=False) if campos_alterados_serializavel is not None else None
+            dados_json = None
+            dados_antes_json = None
+            dados_depois_json = None
+            campos_alterados_json = None
 
+            try:
+                data_serializavel = converter_para_json_serializavel(data) if data else None
+                dados_json = json.dumps(data_serializavel, ensure_ascii=False) if data_serializavel is not None else None
+            except Exception as e:
+                logger.error(f"Erro ao serializar dados (input): {e}")
+
+            try:
+                dados_antes_serializavel = converter_para_json_serializavel(dados_antes) if dados_antes else None
+                dados_antes_json = json.dumps(dados_antes_serializavel, ensure_ascii=False) if dados_antes_serializavel is not None else None
+            except Exception as e:
+                logger.error(f"Erro ao serializar dados_antes: {e}")
+
+            try:
+                dados_depois_serializavel = converter_para_json_serializavel(dados_depois) if dados_depois else None
+                dados_depois_json = json.dumps(dados_depois_serializavel, ensure_ascii=False) if dados_depois_serializavel is not None else None
+            except Exception as e:
+                logger.error(f"Erro ao serializar dados_depois: {e}")
+
+            try:
+                campos_alterados_serializavel = converter_para_json_serializavel(campos_alterados) if campos_alterados else None
+                campos_alterados_json = json.dumps(campos_alterados_serializavel, ensure_ascii=False) if campos_alterados_serializavel is not None else None
+            except Exception as e:
+                logger.error(f"Erro ao serializar campos_alterados: {e}")
+            
+            # Tratamento especial para Notas Fiscais (logging detalhado)
             try:
                 if '/notasfiscais/notas-fiscais/notas/' in url and method in ['POST', 'PUT', 'PATCH']:
                     base_payload = dados_depois if dados_depois is not None else data
@@ -436,7 +540,7 @@ class AuditoriaMiddleware:
                                     except Exception:
                                         printable = {"raw": printable}
                             printable = converter_para_json_serializavel(printable)
-                            pass
+                            logger.info(f"Nota Fiscal Payload: {json.dumps(printable, ensure_ascii=False)}")
                         except Exception:
                             pass
                         if isinstance(printable, dict):
@@ -465,7 +569,7 @@ class AuditoriaMiddleware:
                                     if tr:
                                         linhas.append(f"Transporte: modalidade={tr.get('modalidade_frete')} placa={tr.get('placa_veiculo')} uf={tr.get('uf_veiculo')} transportadora={tr.get('transportadora')}")
                                     return "\n".join(linhas)
-                                pass
+                                logger.info(fmt_nota(printable))
                             except Exception:
                                 pass
                 if '/notasfiscais/notas-fiscais/emitir/' in url and isinstance(dados_depois_serializavel, dict):
@@ -474,34 +578,37 @@ class AuditoriaMiddleware:
                         try:
                             from xml.dom import minidom
                             parsed = minidom.parseString(xml_str)
-                            pass
+                            logger.info(f"XML NFe: {parsed.toprettyxml(indent='  ')}")
                         except Exception:
                             pass
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"Erro no logging detalhado de NFe: {e}")
             
             # Criar o log no banco da licença
-            log = LogAcao.objects.using(banco).create(
-                usuario=user,
-                data_hora=timezone.now(),
-                tipo_acao=method,
-                url=url,
-                ip=ip,
-                navegador=user_agent,
-                dados=dados_json,
-                dados_antes=dados_antes_json,
-                dados_depois=dados_depois_json,
-                campos_alterados=campos_alterados_json,
-                objeto_id=objeto_id,
-                modelo=modelo.__name__ if modelo else None,
-                empresa=empresa,
-                licenca=licenca_slug
-            )
+            try:
+                log = LogAcao.objects.using(banco).create(
+                    usuario=user,
+                    data_hora=timezone.now(),
+                    tipo_acao=method,
+                    url=url,
+                    ip=ip,
+                    navegador=user_agent,
+                    dados=dados_json,
+                    dados_antes=dados_antes_json,
+                    dados_depois=dados_depois_json,
+                    campos_alterados=campos_alterados_json,
+                    objeto_id=objeto_id,
+                    modelo=modelo.__name__ if modelo else None,
+                    empresa=empresa,
+                    licenca=licenca_slug
+                )
 
-            logger.info(f'Log criado com sucesso: {log.id} - {method} {url}')
-            pass
+                logger.info(f'Log criado com sucesso: {log.id} - {method} {url}')
+            except Exception as e:
+                logger.error(f"FATAL: Erro ao criar registro LogAcao: {e}")
 
         except Exception as e:
+            logger.error(f"Erro não tratado no AuditoriaMiddleware: {e}", exc_info=True)
             logger.error(f'Erro ao criar log de auditoria: {str(e)}')
             logger.error(f'URL que causou o erro: {request.path}')
             logger.error(f'Método que causou o erro: {request.method}')

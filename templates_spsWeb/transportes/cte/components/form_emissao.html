@@ -154,14 +154,15 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                <button type="button" class="btn btn-primary" id="btnSalvarPlacas">Confirmar Placas</button>
+                <button type="button" class="btn btn-primary" id="btnSalvarPlacas" data-bs-dismiss="modal">Confirmar Placas</button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    document.addEventListener("DOMContentLoaded", function () {
+    (function() {
+        function initFormEmissao() {
         // IDs dos campos hidden gerados pelo Django
         const idPlaca1 = "{{ form.placa1.auto_id }}";
         const idPlaca2 = "{{ form.placa2.auto_id }}";
@@ -170,7 +171,7 @@
 
         // Inicializa Modal de Placas
         const modalPlacasEl = document.getElementById('modalPlacas');
-        const modalPlacas = new bootstrap.Modal(modalPlacasEl);
+        const modalPlacas = bootstrap.Modal.getOrCreateInstance(modalPlacasEl);
         const btnSalvarPlacas = document.getElementById('btnSalvarPlacas');
 
         // Carrega valores iniciais para o modal
@@ -196,7 +197,6 @@
                 if (p3) p3.value = document.getElementById('modal_placa3').value;
                 const p4 = document.getElementById(idPlaca4);
                 if (p4) p4.value = document.getElementById('modal_placa4').value;
-                modalPlacas.hide();
             });
         }
 
@@ -257,5 +257,12 @@
                 }
             );
         }
-    });
+        }
+        
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initFormEmissao);
+        } else {
+            initFormEmissao();
+        }
+    })();
 </script>

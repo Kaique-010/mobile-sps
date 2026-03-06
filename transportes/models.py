@@ -173,6 +173,12 @@ class Cte(models.Model):
     diferenca_peso = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True, db_column='cte_dife_peso')
     observacao_chegada = models.TextField(blank=True, null=True, db_column='cte_obse_cheg')
     chave_de_acesso = models.CharField(max_length=44, blank=True, null=True, db_column='cte_doc_chav')
+    recibo = models.CharField(max_length=50, blank=True, null=True, db_column='cte_reci')
+    
+    @property
+    def chave(self):
+        return self.chave_de_acesso
+
     cnpj = models.CharField(max_length=14, blank=True, null=True, db_column='cte_doc_cnpj')
     ie = models.CharField(max_length=20, blank=True, null=True, db_column='cte_doc_ie')
     estado = models.CharField(max_length=2, blank=True, null=True, db_column='cte_doc_esta')
@@ -183,7 +189,18 @@ class Cte(models.Model):
     xml_cte = models.TextField(blank=True, null=True, db_column='cte_xml_cte')
     xml_canc = models.TextField(blank=True, null=True, db_column='cte_xml_canc')
     xml_inut = models.TextField(blank=True, null=True, db_column='cte_xml_inut')
-    status = models.CharField(max_length=3, blank=True, null=True, db_column='cte_stat')
+    
+    STATUS_CTE_CHOICES = [
+        ('RAS', 'Rascunho'),
+        ('AUT', 'Autorizado'),
+        ('REJ', 'Rejeitado'),
+        ('REC', 'Recebido'),
+        ('CAN', 'Cancelado'),
+        ('INU', 'Inutilizado'),
+        ('ERR', 'Erro'),
+        ('PRO', 'Processando'),
+    ]
+    status = models.CharField(max_length=3, blank=True, null=True, db_column='cte_stat', choices=STATUS_CTE_CHOICES)
     protocolo = models.CharField(max_length=50, blank=True, null=True, db_column='cte_prot_cte')
     protocolo_cancelamento = models.CharField(max_length=50, blank=True, null=True, db_column='cte_prot_canc')
     protocolo_inutilizacao = models.CharField(max_length=50, blank=True, null=True, db_column='cte_prot_inut')
@@ -270,7 +287,7 @@ class CteDocumento(models.Model):
     id = models.AutoField(primary_key=True)
     cte = models.ForeignKey(Cte, on_delete=models.CASCADE, db_column='ctdo_cte_id', related_name='documentos', db_constraint=False)
     chave_nfe = models.CharField(max_length=44, blank=True, null=True, db_column='ctdo_chav_nfe', verbose_name='Chave NFe')
-    tipo_doc = models.CharField(max_length=2, default='00', db_column='ctdo_tipo', verbose_name='Tipo Documento') # 00=NFe
+    tipo_doc = models.CharField(max_length=2, default='00', db_column='ctdo_tipo', verbose_name='Tipo Documento', choices=[('00', 'NFe'), ('01', 'CTe'), ('02', 'DANFE TERCEIROS')]) # 00=NFe
 
     class Meta:
         managed = True

@@ -1,4 +1,5 @@
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView, View
+from django import forms
 from django.shortcuts import redirect, get_object_or_404
 from django.urls import reverse_lazy, reverse
 from django.contrib import messages
@@ -13,8 +14,10 @@ from transportes.forms.rota import CteRotaForm
 from transportes.forms.seguro import CteSeguroForm
 from transportes.forms.carga import CteCargaForm
 from transportes.forms.tributacao import CteTributacaoForm
+from transportes.forms.documento import CteDocumentoFormSet
 from transportes.services.rascunho_service import RascunhoService
 from transportes.services.emissao_service import EmissaoService
+from transportes.services.sefaz_gateway import SefazGateway
 from transportes.services.numeracao_service import NumeracaoService
 from Entidades.models import Entidades
 from transportes.models import Veiculos
@@ -47,6 +50,17 @@ class CteListView(CteBaseMixin, ListView):
         context = super().get_context_data(**kwargs)
         slug = get_licenca_db_config(self.request)
         ctes = context['ctes']
+        total_ctes = len(ctes)
+        context['total_ctes'] = total_ctes
+        total_autorizados = sum(1 for cte in ctes if cte.status == 539)
+        context['total_autorizados'] = total_autorizados
+        total_emitidos = sum(1 for cte in ctes if cte.status == 204)
+        context['total_emitidos'] = total_emitidos
+        total_por_remetente = {}
+        for cte in ctes:
+            if cte.remetente:
+                total_por_remetente[cte.remetente] = total_por_remetente.get(cte.remetente, 0) + 1
+        context['total_por_remetente'] = total_por_remetente
         
         # Coleta IDs para busca em massa
         ids_entidades = set()
@@ -79,7 +93,7 @@ class CteListView(CteBaseMixin, ListView):
             if cte.destinatario:
                 nome = nomes_entidades.get(cte.destinatario, str(cte.destinatario))
                 cte.destinatario = EntidadeDisplay(nome)
-                
+        print(context)
         return context
 
 class CteCreateView(CteBaseMixin, CreateView):
@@ -266,6 +280,56 @@ class CteTributacaoView(CteUpdateBaseView):
         messages.success(self.request, "Tributação salva e calculada com sucesso!")
         return reverse('transportes:cte_tributacao', kwargs={'slug': slug, 'pk': self.object.pk})
 
+class CteDocumentoView(CteUpdateBaseView):
+    # Usa um form vazio para o CTE, pois só vamos mexer nos documentos
+    form_class = forms.modelform_factory(Cte, fields=[]) 
+    template_name = 'transportes/cte_form.html'
+    active_tab = 'documentos'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        if 'request' in kwargs:
+            del kwargs['request']
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        slug = get_licenca_db_config(self.request)
+        if self.request.POST:
+            context['documentos_formset'] = CteDocumentoFormSet(self.request.POST, instance=self.object, queryset=self.object.documentos.using(slug).all())
+        else:
+            context['documentos_formset'] = CteDocumentoFormSet(instance=self.object, queryset=self.object.documentos.using(slug).all())
+        return context
+
+    def form_valid(self, form):
+        context = self.get_context_data()
+        formset = context['documentos_formset']
+        slug = get_licenca_db_config(self.request)
+        
+        if formset.is_valid():
+            # Não precisa salvar o form do CTE se estiver vazio, mas mal não faz
+            # self.object = form.save(commit=False)
+            # self.object.save(using=slug)
+            
+            # Save formset with the correct database alias
+            instances = formset.save(commit=False)
+            for instance in instances:
+                instance.cte = self.object
+                instance.save(using=slug)
+            
+            for obj in formset.deleted_objects:
+                obj.delete(using=slug)
+                
+            messages.success(self.request, "Documentos salvos com sucesso!")
+            return HttpResponseRedirect(self.get_success_url())
+        else:
+            messages.error(self.request, "Erro ao salvar documentos. Verifique os campos.")
+            return self.render_to_response(self.get_context_data(form=form))
+
+    def get_success_url(self):
+        slug = get_licenca_db_config(self.request)
+        return reverse('transportes:cte_documento', kwargs={'slug': slug, 'pk': self.object.pk})
+
 class CteDeleteView(CteBaseMixin, DeleteView):
     model = Cte
     template_name = 'transportes/cte_confirm_delete.html'
@@ -296,36 +360,149 @@ class CteEmitirView(CteBaseMixin, View):
         success_url = reverse('transportes:cte_list', kwargs={'slug': slug})
         
         try:
-            # Chama task assíncrona ou service direto (dependendo da configuração)
-            # Para feedback imediato na web, as vezes chama direto se for rápido,
-            # mas o ideal é task. Vamos chamar task.
-            from transportes.tasks.emitir_cte import emitir_cte_task
+            # Chama service direto (síncrono) - Removido Celery/Shared Task
+            service = EmissaoService(cte, slug=slug)
+            resultado = service.emitir()
             
-            # Dispara task
-            task = emitir_cte_task.delay(cte.id, slug)
+            status_emissao = resultado.get('status')
+            mensagem_sefaz = resultado.get('mensagem', '')
             
-            messages.info(request, "Emissão iniciada! Acompanhe o status na lista.")
+            if status_emissao == 'autorizado':
+                messages.success(request, f"CT-e Autorizado! Protocolo: {resultado.get('protocolo')}")
+            elif status_emissao == 'recebido':
+                messages.info(request, f"CT-e Recebido em processamento. Recibo: {resultado.get('recibo')}")
+            elif status_emissao == 'rejeitado':
+                messages.error(request, f"CT-e Rejeitado: {mensagem_sefaz}")
+            else:
+                messages.warning(request, f"Status: {status_emissao}. Msg: {mensagem_sefaz}")
+            
             return HttpResponseRedirect(success_url)
             
         except Exception as e:
-            messages.error(request, f"Erro ao iniciar emissão: {e}")
+            logger.error(f"Erro na emissão do CTe {pk}: {e}")
+            messages.error(request, f"Erro ao emitir: {e}")
             return HttpResponseRedirect(success_url)
 
+from django.http import JsonResponse, HttpResponseRedirect, HttpResponse
+from brazilfiscalreport.dacte.dacte import Dacte
+from lxml import etree
+import io
+
+class CteImprimirDacteView(CteBaseMixin, View):
+    def get(self, request, pk, slug=None):
+        slug = get_licenca_db_config(request)
+        cte = get_object_or_404(Cte.objects.using(slug), pk=pk)
+        
+        if not cte.xml_cte:
+            messages.error(request, "CT-e não possui XML autorizado para impressão.")
+            return HttpResponseRedirect(reverse('transportes:cte_list', kwargs={'slug': slug}))
+            
+        try:
+            # Parse do XML
+            xml_content = cte.xml_cte
+            # Se for string, converte para bytes
+            if isinstance(xml_content, str):
+                xml_content = xml_content.encode('utf-8')
+                
+            # Gera DACTE
+            dacte = Dacte(xml_content)
+            
+            # output(dest='S') retorna string/bytes do PDF
+            # Em versoes mais novas do fpdf/pyfpdf pode retornar bytearray ou string
+            pdf_content = dacte.output(dest='S')
+            
+            if isinstance(pdf_content, str):
+                pdf_content = pdf_content.encode('latin-1') # PDF binary safe encoding
+            
+            response = HttpResponse(pdf_content, content_type='application/pdf')
+            response['Content-Disposition'] = f'inline; filename="cte-{cte.numero}.pdf"'
+            return response
+            
+        except Exception as e:
+            logger.error(f"Erro ao gerar DACTE para CTe {pk}: {e}")
+            messages.error(request, f"Erro ao gerar PDF: {e}")
+            return HttpResponseRedirect(reverse('transportes:cte_list', kwargs={'slug': slug}))
+
 class CteConsultarReciboView(CteBaseMixin, View):
-    def post(self, request, pk):
+    def post(self, request, pk, slug=None): # slug=None para compatibilidade com URL
         slug = get_licenca_db_config(request)
         cte = get_object_or_404(Cte.objects.using(slug), pk=pk)
         success_url = reverse('transportes:cte_list', kwargs={'slug': slug})
         
-        if not cte.recibo:
-            messages.warning(request, "CT-e não possui recibo para consulta.")
-            return HttpResponseRedirect(success_url)
-
         try:
-            from transportes.tasks.consultar_recibo import consultar_recibo_task
-            consultar_recibo_task.delay(cte.id, cte.recibo, slug)
-            messages.info(request, "Consulta de recibo iniciada.")
+            gateway = SefazGateway(cte)
+            resultado = None
+            
+            # Prioriza consulta por recibo se existir
+            if cte.recibo:
+                try:
+                    resultado = gateway.consultar_recibo(cte.recibo)
+                except Exception as e:
+                    logger.warning(f"Falha na consulta por recibo, tentando por chave: {e}")
+                    # Se falhar recibo, tenta chave se disponível
+            
+            # Se não tiver recibo ou falhou, tenta por chave
+            if not resultado and cte.chave:
+                resultado = gateway.consultar_chave(cte.chave)
+            
+            if not resultado:
+                 messages.warning(request, "CT-e não possui recibo nem chave para consulta.")
+                 return HttpResponseRedirect(success_url)
+
+            status_consulta = resultado.get('status')
+            mensagem = resultado.get('mensagem', '')
+            
+            if status_consulta == 'autorizado':
+                cte.protocolo = resultado.get('protocolo')
+                cte.status = 'AUT'
+                # Atualiza XML se veio na consulta
+                if resultado.get('xml_protocolo'):
+                     # Se já tem XML assinado, tenta montar o procCTe
+                     xml_protocolo = resultado.get('xml_protocolo')
+                     
+                     # Verifica se cte.xml_cte existe e se já não é um procCTe
+                     if cte.xml_cte:
+                         # Se for bytes, decode
+                         xml_assinado = cte.xml_cte
+                         if isinstance(xml_assinado, bytes):
+                             xml_assinado = xml_assinado.decode('utf-8')
+                             
+                         # Se ainda não tem protCTe (não é distribuição)
+                         if 'protCTe' not in xml_assinado:
+                             try:
+                                 # Remove declaração XML e limpa string
+                                 if '<?xml' in xml_assinado:
+                                     xml_assinado = xml_assinado.split('?>', 1)[-1].strip()
+                                     
+                                 # Remove declaração do protocolo também se existir
+                                 if '<?xml' in xml_protocolo:
+                                     xml_protocolo = xml_protocolo.split('?>', 1)[-1].strip()
+
+                                 # Monta procCTe manualmente para garantir estrutura de distribuição
+                                 proc_cte = f'<cteProc xmlns="http://www.portalfiscal.inf.br/cte" versao="3.00">{xml_assinado}{xml_protocolo}</cteProc>'
+                                 
+                                 cte.xml_cte = proc_cte
+                             except Exception as e:
+                                 logger.error(f"Erro ao montar procCTe na consulta: {e}")
+                                 # Salva pelo menos o protocolo se falhar a montagem? 
+                                 # Melhor não alterar se falhar para não corromper.
+                     
+                cte.save(using=slug)
+                messages.success(request, f"CT-e Autorizado! Protocolo: {cte.protocolo}")
+            elif status_consulta == 'rejeitado':
+                cte.status = 'REJ'
+                cte.observacoes_fiscais = f"Rejeição: {mensagem}"
+                cte.save(using=slug)
+                messages.error(request, f"CT-e Rejeitado: {mensagem}")
+            elif status_consulta == 'processando':
+                messages.info(request, f"CT-e ainda em processamento: {mensagem}")
+            elif status_consulta == 'recebido':
+                 messages.info(request, f"Lote Recebido. Aguardando processamento. Recibo: {resultado.get('recibo')}")
+            else:
+                messages.warning(request, f"Status: {status_consulta}. Msg: {mensagem}")
+                
         except Exception as e:
+            logger.error(f"Erro ao consultar recibo/chave CTe {pk}: {e}")
             messages.error(request, f"Erro ao consultar: {e}")
         
         return HttpResponseRedirect(success_url)

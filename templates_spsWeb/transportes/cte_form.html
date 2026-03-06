@@ -5,6 +5,84 @@
 {% endblock %}
 
 {% block cte_content %}
+<script>
+    /**
+     * Função genérica para Autocomplete
+     */
+    window.setupAutocomplete = function (inputId, hiddenId, dropdownId, searchUrl, extraParamsCallback, onSelectCallback) {
+        const input = document.getElementById(inputId);
+        const hidden = document.getElementById(hiddenId);
+        const dropdown = document.getElementById(dropdownId);
+
+        if (!input || !hidden || !dropdown) return;
+
+        let timeout = null;
+        let controller = null;
+
+        input.addEventListener('input', function () {
+            const term = this.value;
+            if (timeout) clearTimeout(timeout);
+            if (controller) controller.abort();
+
+            if (term.length < 3) {
+                dropdown.innerHTML = '';
+                dropdown.style.display = 'none';
+                return;
+            }
+
+            timeout = setTimeout(() => {
+                controller = new AbortController();
+
+                let url = `${searchUrl}?term=${encodeURIComponent(term)}`;
+                if (extraParamsCallback) {
+                    const extra = extraParamsCallback();
+                    if (extra === false) return; // Abort
+                    if (extra) {
+                        for (const key in extra) {
+                            url += `&${key}=${encodeURIComponent(extra[key])}`;
+                        }
+                    }
+                }
+
+                fetch(url, { signal: controller.signal })
+                    .then(response => response.json())
+                    .then(data => {
+                        dropdown.innerHTML = '';
+                        if (data.results && data.results.length > 0) {
+                            dropdown.style.display = 'block';
+                            data.results.forEach(item => {
+                                const a = document.createElement('a');
+                                a.className = 'list-group-item list-group-item-action';
+                                a.href = '#';
+                                a.textContent = item.text || item.label || item.nome;
+                                a.addEventListener('click', function (e) {
+                                    e.preventDefault();
+                                    input.value = a.textContent;
+                                    hidden.value = item.id;
+                                    dropdown.innerHTML = '';
+                                    dropdown.style.display = 'none';
+                                    if (onSelectCallback) onSelectCallback(item);
+                                });
+                                dropdown.appendChild(a);
+                            });
+                        } else {
+                            dropdown.style.display = 'none';
+                        }
+                    })
+                    .catch(err => {
+                        if (err.name !== 'AbortError') console.error(err);
+                    });
+            }, 300);
+        });
+
+        // Hide dropdown when clicking outside
+        document.addEventListener('click', function (e) {
+            if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.style.display = 'none';
+            }
+        });
+    };
+</script>
 <div class="card shadow-sm mb-4">
     <div class="card-header pb-0">
         <h4 class="mb-3">
@@ -50,6 +128,12 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link {% if active_tab == 'documentos' %}active fw-bold{% endif %}"
+                    href="{% url 'transportes:cte_documento' slug=slug pk=object.pk %}">
+                    <i class="fas fa-file-alt"></i> Documentos
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link {% if active_tab == 'tributacao' %}active fw-bold{% endif %}"
                     href="{% url 'transportes:cte_tributacao' slug=slug pk=object.pk %}">
                     <i class="fas fa-file-invoice-dollar"></i> Tributação
@@ -80,6 +164,8 @@
             {% include 'transportes/cte/components/form_seguro.html' %}
             {% elif active_tab == 'carga' %}
             {% include 'transportes/cte/components/form_carga.html' %}
+            {% elif active_tab == 'documentos' %}
+            {% include 'transportes/cte/components/form_documentos.html' %}
             {% elif active_tab == 'tributacao' %}
             {% include 'transportes/cte/components/form_tributacao.html' %}
             {% endif %}
@@ -113,83 +199,6 @@
                 input.classList.add('form-check-input');
             }
         });
-
-        /**
-         * Função genérica para Autocomplete
-         */
-        window.setupAutocomplete = function (inputId, hiddenId, dropdownId, searchUrl, extraParamsCallback, onSelectCallback) {
-            const input = document.getElementById(inputId);
-            const hidden = document.getElementById(hiddenId);
-            const dropdown = document.getElementById(dropdownId);
-
-            if (!input || !hidden || !dropdown) return;
-
-            let timeout = null;
-            let controller = null;
-
-            input.addEventListener('input', function () {
-                const term = this.value;
-                if (timeout) clearTimeout(timeout);
-                if (controller) controller.abort();
-
-                if (term.length < 3) {
-                    dropdown.innerHTML = '';
-                    dropdown.style.display = 'none';
-                    return;
-                }
-
-                timeout = setTimeout(() => {
-                    controller = new AbortController();
-
-                    let url = `${searchUrl}?term=${encodeURIComponent(term)}`;
-                    if (extraParamsCallback) {
-                        const extra = extraParamsCallback();
-                        if (extra === false) return; // Abort
-                        if (extra) {
-                            for (const key in extra) {
-                                url += `&${key}=${encodeURIComponent(extra[key])}`;
-                            }
-                        }
-                    }
-
-                    fetch(url, { signal: controller.signal })
-                        .then(response => response.json())
-                        .then(data => {
-                            dropdown.innerHTML = '';
-                            if (data.results && data.results.length > 0) {
-                                dropdown.style.display = 'block';
-                                data.results.forEach(item => {
-                                    const a = document.createElement('a');
-                                    a.className = 'list-group-item list-group-item-action';
-                                    a.href = '#';
-                                    a.textContent = item.text || item.label || item.nome;
-                                    a.addEventListener('click', function (e) {
-                                        e.preventDefault();
-                                        input.value = a.textContent;
-                                        hidden.value = item.id;
-                                        dropdown.innerHTML = '';
-                                        dropdown.style.display = 'none';
-                                        if (onSelectCallback) onSelectCallback(item);
-                                    });
-                                    dropdown.appendChild(a);
-                                });
-                            } else {
-                                dropdown.style.display = 'none';
-                            }
-                        })
-                        .catch(err => {
-                            if (err.name !== 'AbortError') console.error(err);
-                        });
-                }, 300);
-            });
-
-            // Hide dropdown when clicking outside
-            document.addEventListener('click', function (e) {
-                if (!input.contains(e.target) && !dropdown.contains(e.target)) {
-                    dropdown.style.display = 'none';
-                }
-            });
-        };
     });
 </script>
 {% endblock %}

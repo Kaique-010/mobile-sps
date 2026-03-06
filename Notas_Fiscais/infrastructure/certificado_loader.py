@@ -56,10 +56,14 @@ class CertificadoLoader:
 
         try:
             cert_bytes = decrypt_bytes(cert_token)
-        except Exception:
+        except Exception as e:
+            logger.error(f"Falha ao descriptografar certificado da filial {getattr(self.filial, 'id', 'N/A')}: {e}")
             cert_bytes = cert_token
             if hasattr(cert_bytes, "tobytes"):
                 cert_bytes = cert_bytes.tobytes()
+            elif isinstance(cert_bytes, str):
+                logger.warning("Certificado em formato string e falhou na descriptografia. Tentando converter para bytes.")
+                cert_bytes = cert_bytes.encode('utf-8')
 
         if not isinstance(cert_bytes, (bytes, bytearray)):
             raise TypeError(f"Conteúdo do certificado não é bytes. Tipo atual: {type(cert_bytes)}")

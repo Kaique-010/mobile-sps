@@ -26,7 +26,10 @@ class AssinaturaService:
 
     def _carregar_filial(self):
         try:
-            self.filial = Filiais.objects.defer('empr_cert_digi').filter(
+            # Garante o uso do mesmo banco de dados do CTe (multi-tenancy)
+            db_alias = self.cte._state.db or 'default'
+            
+            self.filial = Filiais.objects.using(db_alias).defer('empr_cert_digi').filter(
                 empr_empr=self.cte.empresa,
                 empr_codi=self.cte.filial
             ).first()

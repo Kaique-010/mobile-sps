@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% block title %}Auditoria{% endblock %}
+{% block content %}
+
+
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header d-flex justify-content-center align-items-center">
+            <h3 class="mb-2 mt-2"><i class="bi bi-activity" style="font-size: 1.2rem; text-align: center;"></i> Logs de Auditoria</h3>
+        </div>
+        <div class="card-body">
+            <!-- Filtros -->
+            <form method="get" class="row g-3 mb-4">
+                <div class="col-md-2">
+                    <label for="tipo" class="form-label">Tipo de Ação</label>
+                    <select name="tipo" id="tipo" class="form-select">
+                        <option value="">Todos</option>
+                        {% for valor, label in tipos_acao %}
+                        <option value="{{ valor }}" {% if tipo_selecionado == valor %}selected{% endif %}>{{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="usuario" class="form-label">Usuário</label>
+                    <select name="usuario" id="usuario" class="form-select">
+                        <option value="">Todos</option>
+                        {% for u in usuarios %}
+                        <option value="{{ u.id }}" {% if usuario_selecionado|stringformat:"s" == u.id|stringformat:"s" %}selected{% endif %}>{{ u.usua_nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="modelo" class="form-label">Modelo</label>
+                    <select name="modelo" id="modelo" class="form-select">
+                        <option value="">Todos</option>
+                        {% for valor, label in modelos %}
+                        <option value="{{ valor }}" {% if modelo_selecionado == valor %}selected{% endif %}>{{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="data_inicio" class="form-label">Data Início</label>
+                    <input type="date" name="data_inicio" id="data_inicio" class="form-control" value="{{ data_inicio|default:'' }}">
+                </div>
+                <div class="col-md-2">
+                    <label for="data_fim" class="form-label">Data Fim</label>
+                    <input type="date" name="data_fim" id="data_fim" class="form-control" value="{{ data_fim|default:'' }}">
+                </div>
+                <div class="col-md-1 align-self-end">
+                    <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-filter"></i> Filtrar</button>
+                </div>
+                <div class="col-md-1 align-self-end">
+                    <a href="{% url 'auditoria_list' slug=slug %}" class="btn btn-outline-secondary w-100"><i class="bi bi-x-lg"></i> Limpar</a>
+                </div>
+            </form>
+
+            <!-- Tabela -->
+            <div class="table-responsive">
+                <table class="table table-hover table-striped">
+                    <thead>
+                        <tr>
+                            <th>Data/Hora</th>
+                            <th>Usuário</th>
+                            <th>Ação</th>
+                            <th>Modelo</th>
+                            <th>URL</th>
+                            <th>IP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in auditorias %}
+                        <tr>
+                            <td>{{ log.data_hora|date:"d/m/Y H:i:s" }}</td>
+                            <td>{{ log.usuario.usua_nome|default:"-" }}</td>
+                            <td>
+                                <span
+                                    class="badge {% if log.tipo_acao == 'DELETE' %}bg-danger{% elif log.tipo_acao == 'POST' %}bg-success{% elif log.tipo_acao == 'PUT' or log.tipo_acao == 'PATCH' %}bg-warning{% else %}bg-info{% endif %}">
+                                    {{ log.get_tipo_acao_display }}
+                                </span>
+                            </td>
+                            <td>{{ log.modelo|default:"-" }}</td>
+                            <td class="text-truncate" style="max-width: 200px;" title="{{ log.url }}">{{ log.url }}</td>
+                            <td>{{ log.ip|default:"-" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center">Nenhum registro encontrado.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paginação -->
+            {% if is_paginated %}
+            <nav aria-label="Navegação de página">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link"
+                            href="?page={{ page_obj.previous_page_number }}&tipo={{ tipo_selecionado|default:'' }}&usuario={{ usuario_selecionado|default:'' }}&modelo={{ modelo_selecionado|default:'' }}&data_inicio={{ data_inicio|default:'' }}&data_fim={{ data_fim|default:'' }}">Anterior</a>
+                    </li>
+                    {% endif %}
+
+                    <li class="page-item disabled">
+                        <span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link"
+                            href="?page={{ page_obj.next_page_number }}&tipo={{ tipo_selecionado|default:'' }}&usuario={{ usuario_selecionado|default:'' }}&modelo={{ modelo_selecionado|default:'' }}&data_inicio={{ data_inicio|default:'' }}&data_fim={{ data_fim|default:'' }}">Próximo</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

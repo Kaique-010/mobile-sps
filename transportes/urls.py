@@ -25,6 +25,7 @@ urlpatterns = [
     path('web/ctes/<int:pk>/rota/', web.CteRotaView.as_view(), name='cte_rota'),
     path('web/ctes/<int:pk>/seguro/', web.CteSeguroView.as_view(), name='cte_seguro'),
     path('web/ctes/<int:pk>/carga/', web.CteCargaView.as_view(), name='cte_carga'),
+    path('web/ctes/<int:pk>/documentos/', web.CteDocumentoView.as_view(), name='cte_documento'),
     path('web/ctes/<int:pk>/tributacao/', web.CteTributacaoView.as_view(), name='cte_tributacao'),
     
     # Ações
