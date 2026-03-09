@@ -119,6 +119,7 @@ class EmissaoNotaService:
                 chave=resposta.get("chave"),
                 protocolo=resposta.get("protocolo"),
                 xml=xml_assinado,
+                database=database,
             )
         else:
             NotaService.gravar(
@@ -127,6 +128,7 @@ class EmissaoNotaService:
                     f"Rejeição SEFAZ: {resposta.get('status')} - "
                     f"{resposta.get('motivo')}"
                 ),
+                database=database,
             )
 
         return {

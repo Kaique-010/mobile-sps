@@ -76,7 +76,7 @@ class NotaCreateView(SPSViewMixin, FormView):
 
         CalculoImpostosService(banco).aplicar_impostos(nota)
         if nota:
-            NotaService.gravar(nota, descricao="Rascunho criado via WEB")
+            NotaService.gravar(nota, descricao="Rascunho criado via WEB", database=banco)
 
             try:
                 dto = NotaBuilder(nota, database=banco).build()

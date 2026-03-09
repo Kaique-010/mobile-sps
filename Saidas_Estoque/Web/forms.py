@@ -22,24 +22,28 @@ class SaidasEstoqueForm(forms.ModelForm):
             'said_tota': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Total', 'readonly': True}),
         }
 
-    def clean(self):
-        cleaned = super().clean()
-        quan = cleaned.get('said_quan')
-        unit = cleaned.get('valor_unitario')
-        if quan is not None and unit is not None:
-            total = (quan * unit)
-            try:
-                total = total.quantize(Decimal('0.01'))
-            except Exception:
-                pass
-            cleaned['said_tota'] = total
-        return cleaned
-
     def __init__(self, *args, **kwargs):
         database = kwargs.pop('database', None)
         empresa_id = kwargs.pop('empresa_id', None)
         super().__init__(*args, **kwargs)
         self.fields['said_tota'].widget.attrs['readonly'] = True
+        
+        if database:
+            try:
+                from Entidades.models import Entidades
+                from Produtos.models import Produtos
+                
+                qs_entidades = Entidades.objects.using(database).all()
+                qs_produtos = Produtos.objects.using(database).all()
+                
+                if empresa_id:
+                    qs_entidades = qs_entidades.filter(enti_empr=empresa_id)
+                    qs_produtos = qs_produtos.filter(prod_empr=empresa_id)
+                
+                self.fields['said_enti'].queryset = qs_entidades
+                self.fields['said_prod'].queryset = qs_produtos
+            except Exception:
+                pass
 
     def clean(self):
         cleaned = super().clean()

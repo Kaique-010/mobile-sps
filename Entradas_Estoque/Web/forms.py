@@ -53,14 +53,23 @@ class EntradaEstoqueForm(forms.ModelForm):
         empresa_id = kwargs.pop('empresa_id', None)
         super().__init__(*args, **kwargs)
         self.fields['entr_tota'].widget.attrs['readonly'] = True
-        try:
-            from Entidades.models import Entidades
-            from Produtos.models import Produtos
-            if database:
-                _ = Entidades.objects.using(database).all()[:1]
-                _ = Produtos.objects.using(database).all()[:1]
-        except Exception:
-            pass
+        
+        if database:
+            try:
+                from Entidades.models import Entidades
+                from Produtos.models import Produtos
+                
+                qs_entidades = Entidades.objects.using(database).all()
+                qs_produtos = Produtos.objects.using(database).all()
+                
+                if empresa_id:
+                    qs_entidades = qs_entidades.filter(enti_empr=empresa_id)
+                    qs_produtos = qs_produtos.filter(prod_empr=empresa_id)
+                
+                self.fields['entr_enti'].queryset = qs_entidades
+                self.fields['entr_prod'].queryset = qs_produtos
+            except Exception as e:
+                logger.error(f"Erro ao configurar querysets no form: {e}")
 
     def clean(self):
         cleaned = super().clean()

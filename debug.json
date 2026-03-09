@@ -1,6 +1,6 @@
 {
-  "debug_id": "2144e4ca-ffb3-4b36-888a-9405954172a8",
-  "timestamp_inicio": "2026-03-02T18:53:57.138430Z",
+  "debug_id": "986d8ef2-c337-4023-bd09-7cf5d74dc25d",
+  "timestamp_inicio": "2026-03-09T11:34:57.439438Z",
   "ambiente": {
     "debug": true,
     "database_alias": "saveweb001"
@@ -9,10 +9,10 @@
     "versao": "desconhecida"
   },
   "nota": {
-    "id": 11,
-    "modelo": "65",
+    "id": 13,
+    "modelo": "55",
     "serie": "1",
-    "numero": "8",
+    "numero": "5",
     "empresa": "1",
     "filial": "1",
     "destinatario_id": "5",
@@ -22,18 +22,18 @@
   },
   "itens": [
     {
-      "id": 10,
+      "id": 12,
       "produto_id": "3",
       "descricao_produto": "CANECA DE TESTES",
       "ncm_produto": "8419****",
       "cfop_inicial": "5102",
-      "quantidade": "1.0000",
-      "unitario": "15.6000",
+      "quantidade": "3.0000",
+      "unitario": "16.5000",
       "desconto": "0.0000",
       "logs": [
         {
-          "id": "1d623170-22c9-4a3f-b9fe-105730800d57",
-          "timestamp": "2026-03-02T18:53:57.261819Z",
+          "id": "e43e554b-1357-4092-9189-e7230fda9b4c",
+          "timestamp": "2026-03-09T11:34:57.569302Z",
           "tipo": "antes_calculo_item",
           "mensagem": "Início do cálculo de impostos para o item.",
           "dados": {
@@ -47,18 +47,18 @@
       "fonte_tributacao": null,
       "cfop_resolvido": "5102",
       "cfop_flags": {
-        "exig_icms": false,
+        "exig_icms": true,
         "exig_ipi": false,
         "exig_pis_cofins": false,
         "exig_cbs": false,
         "exig_ibs": false,
-        "gera_st": false
+        "gera_st": true
       },
       "ncm_resolvido": null,
       "bases": {
-        "raiz": "15.60",
-        "icms": "15.60",
-        "st": null
+        "raiz": "49.50",
+        "icms": "49.50",
+        "st": "49.50"
       },
       "aliquotas": {
         "ipi": null,
@@ -88,7 +88,7 @@
         "ibs": null
       },
       "condicionais_aplicadas": {
-        "icms_habilitado_cfop": false,
+        "icms_habilitado_cfop": true,
         "ipi_habilitado_cfop": false,
         "pis_cofins_habilitado_cfop": false,
         "cbs_habilitado_cfop": false,
@@ -98,8 +98,8 @@
   ],
   "logs": [
     {
-      "id": "cd878ddf-3b9b-4866-805a-84a519770d0a",
-      "timestamp": "2026-03-02T18:53:57.226795Z",
+      "id": "e454a1c7-6ffd-4b58-a64d-ca009edc36f9",
+      "timestamp": "2026-03-09T11:34:57.529829Z",
       "tipo": "contexto_nota",
       "mensagem": "Contexto fiscal inicial da nota.",
       "dados": {
@@ -107,5 +107,5 @@
       }
     }
   ],
-  "timestamp_fim": "2026-03-02T18:53:57.457080Z"
+  "timestamp_fim": "2026-03-09T11:34:57.762356Z"
 }

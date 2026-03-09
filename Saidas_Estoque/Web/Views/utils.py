@@ -8,9 +8,13 @@ def autocomplete_clientes(request, slug=None):
     term = (request.GET.get('term') or request.GET.get('q') or '').strip()
 
     from Entidades.models import Entidades
+    from django.db.models import Q
     qs = Entidades.objects.using(banco).filter(
-        enti_empr=str(empresa_id),
-        enti_tipo_enti__icontains='CL'
+        enti_empr=str(empresa_id)
+    ).filter(
+        Q(enti_tipo_enti__icontains='CL') | 
+        Q(enti_tipo_enti__icontains='FO') | 
+        Q(enti_tipo_enti__icontains='AM')
     )
     if term:
         if term.isdigit():

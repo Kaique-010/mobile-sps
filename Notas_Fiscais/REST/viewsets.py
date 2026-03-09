@@ -182,7 +182,7 @@ class NotaViewSet(viewsets.ModelViewSet):
         )
 
         debug_data = CalculoImpostosService(banco).aplicar_impostos(nota, return_debug=True)
-        NotaService.gravar(nota, descricao="Rascunho criado via API")
+        NotaService.gravar(nota, descricao="Rascunho criado via API", database=banco)
 
         out = NotaDetailSerializer(nota, context=self.get_serializer_context())
         data_out = dict(out.data)
@@ -428,6 +428,7 @@ class NotaViewSet(viewsets.ModelViewSet):
             descricao=descricao,
             xml=xml,
             protocolo=protocolo,
+            database=banco,
         )
 
         out = NotaDetailSerializer(nota, context=self.get_serializer_context())

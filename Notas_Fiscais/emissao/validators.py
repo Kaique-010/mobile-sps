@@ -72,6 +72,9 @@ def validar_dados_calculados(nota):
             raise ErroValidacao(f"Item {item.produto.prod_codi}: CST de PIS não definido.")
         if not item.cst_cofins:
             raise ErroValidacao(f"Item {item.produto.prod_codi}: CST de COFINS não definido.")
+        if not item.cst_ipi:
+            raise ErroValidacao(f"Item {item.produto.prod_codi}: CST de IPI não definido.")
+        
 
         # Valida Totais do Item
         if item.total <= 0:
