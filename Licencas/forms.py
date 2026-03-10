@@ -58,6 +58,7 @@ class EmpresaForm(forms.ModelForm):
 class FilialForm(forms.ModelForm):
     certificado = forms.FileField(required=False, widget=forms.ClearableFileInput(attrs={'class': 'form-control-file'}))
     senha_certificado = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control'}), required=False)
+    logo = forms.FileField(required=False, label='Logo da Filial', widget=forms.ClearableFileInput(attrs={'class': 'form-control-file'}))
     class Meta:
         from Licencas.models import Filiais
         model = Filiais

@@ -112,12 +112,21 @@ class EmissaoNotaService:
         logger.debug("Resposta SEFAZ dict:\n%s", resposta)
         logger.debug("cStat: %s", cStat)
 
-        if str(cStat) == "100":
+        if str(cStat) in ["100", "204"]:
+            # 100 = Autorizado
+            # 204 = Duplicidade de NF-e (se tiver protocolo, considera autorizado)
+            prot = resposta.get("protocolo")
+            
+            # Se for 204, assume autorizado mesmo sem protocolo explícito na resposta síncrona
+            msg = "NF-e autorizada pela SEFAZ"
+            if str(cStat) == "204":
+                msg = f"NF-e autorizada (Duplicidade na SEFAZ). Protocolo: {prot or 'Não retornado'}"
+
             NotaService.transmitir(
                 nota,
-                descricao="NF-e autorizada pela SEFAZ",
+                descricao=msg,
                 chave=resposta.get("chave"),
-                protocolo=resposta.get("protocolo"),
+                protocolo=prot,
                 xml=xml_assinado,
                 database=database,
             )

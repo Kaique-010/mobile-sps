@@ -328,6 +328,11 @@ class MotorFiscal:
         if not ncm and ('.' in cod):
             cod_clean = cod.replace('.', '')
             ncm = qs.filter(ncm_codi=cod_clean).first()
+            
+        # Fallback: Tentar formato com pontos (ex: 84193900 -> 8419.39.00)
+        if not ncm and len(cod) == 8 and cod.isdigit():
+            cod_dotted = f"{cod[:4]}.{cod[4:6]}.{cod[6:]}"
+            ncm = qs.filter(ncm_codi=cod_dotted).first()
              
         return ncm
 
@@ -411,6 +416,20 @@ class MotorFiscal:
         )
 
         fiscal_padrao, fonte_fiscal = self.resolver_fiscal_padrao(ctx.produto, ncm, cfop)
+
+        # DEBUG TEMPORÁRIO
+        logger.info(f"DEBUG FISCAL: fiscal_padrao={fiscal_padrao}, fonte_fiscal={fonte_fiscal}, ncm={ncm}, cfop={cfop}")
+
+        # Fallback para fonte de tributação se não houver override fiscal explícito
+        if not fonte_fiscal:
+            if ncm:
+                fonte_fiscal = "NCM"
+            elif cfop:
+                fonte_fiscal = "CFOP"
+            else:
+                fonte_fiscal = "Padrão"
+        
+        logger.info(f"DEBUG FISCAL RESOLVIDO: fonte_fiscal={fonte_fiscal}")
 
         ctx_item = replace(
             ctx,

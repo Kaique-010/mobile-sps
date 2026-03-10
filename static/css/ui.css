@@ -30,6 +30,11 @@
   margin: 0;
   line-height: 1.2;
   color: #212529;
+  text-align: center;
+  width: 100%;
+}
+[data-bs-theme='dark'] .page-header-custom .page-title {
+  color: antiquewhite;
 }
 
 .page-header-custom .page-actions {
@@ -62,7 +67,9 @@
 
 /* Microinterações sutis em botões */
 .btn {
-  transition: transform 0.08s ease, box-shadow 0.12s ease;
+  transition:
+    transform 0.08s ease,
+    box-shadow 0.12s ease;
 }
 .btn:hover {
   transform: translateY(-1px);

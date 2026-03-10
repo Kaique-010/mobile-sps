@@ -6,8 +6,11 @@ from core.utils import get_licenca_db_config
 from ....models import Nota
 from ...forms import NotaForm, NotaItemFormSet, TransporteForm
 from ....services.nota_service import NotaService
+from ....services.calculo_impostos_service import CalculoImpostosService
 from ....dominio.builder import NotaBuilder
 from ..base import SPSViewMixin
+from django.contrib import messages
+from django.http import HttpResponseRedirect
 
 
 logger = logging.getLogger(__name__)
@@ -64,6 +67,16 @@ class NotaUpdateView(SPSViewMixin, UpdateView):
             transporte=transp,
             database=banco,
         )
+
+        # Recalcular impostos se solicitado ou se houver alterações
+        if self.request.POST.get("btn_calcular") == "true":
+            try:
+                CalculoImpostosService(banco).aplicar_impostos(nota)
+                messages.success(self.request, "Impostos calculados com sucesso.")
+                return HttpResponseRedirect(self.request.path_info)
+            except Exception as e:
+                messages.error(self.request, f"Erro ao calcular impostos: {str(e)}")
+                return self.form_invalid(form)
 
         try:
             empresa = self.request.session.get("empresa_id")

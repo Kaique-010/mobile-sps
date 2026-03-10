@@ -2,327 +2,1038 @@
 {% load static notas_tags %}
 {% block content %}
 
+
 <link rel="stylesheet" href="{% static 'css/list.css' %}">
+
+<style>
+  :root {
+    /* Default Dark Theme */
+    --bg: #0d0f14;
+    --surface: #13161e;
+    --surface-2: #1a1e2a;
+    --border: rgba(255, 255, 255, 0.07);
+    --border-hover: rgba(255, 255, 255, 0.15);
+    --text-primary: #f0f2f8;
+    --text-secondary: #7a8099;
+    --text-muted: #454b62;
+    --accent: #5b8ef0;
+    --accent-glow: rgba(91, 142, 240, 0.2);
+    --green: #34d399;
+    --green-dim: rgba(52, 211, 153, 0.1);
+    --red: #f87171;
+    --red-dim: rgba(248, 113, 113, 0.1);
+    --blue: #60a5fa;
+    --blue-dim: rgba(96, 165, 250, 0.1);
+    --gold: #fbbf24;
+    --gold-dim: rgba(251, 191, 36, 0.1);
+    --bg-subtle: rgba(255, 255, 255, 0.05);
+
+    --radius: 14px;
+    --radius-sm: 8px;
+    --font-display: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-body: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  [data-bs-theme="light"] {
+    --bg: #f4f7fa;
+    --surface: #ffffff;
+    --surface-2: #f8f9fa;
+    --border: #e9ecef;
+    --border-hover: #dee2e6;
+    --text-primary: #212529;
+    --text-secondary: #6c757d;
+    --text-muted: #adb5bd;
+    --accent: #0d6efd;
+    --accent-glow: rgba(13, 110, 253, 0.15);
+    --green: #198754;
+    --green-dim: rgba(25, 135, 84, 0.1);
+    --red: #dc3545;
+    --red-dim: rgba(220, 53, 69, 0.1);
+    --blue: #0d6efd;
+    --blue-dim: rgba(13, 110, 253, 0.1);
+    --gold: #ffc107;
+    --gold-dim: rgba(255, 193, 7, 0.1);
+    --bg-subtle: rgba(0, 0, 0, 0.04);
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body,
+  .container {
+    background-color: var(--bg) !important;
+    color: var(--text-primary) !important;
+    font-family: var(--font-body) !important;
+  }
+
+  .nf-page {
+    min-height: 100vh;
+
+    padding: 32px 40px 60px;
+    font-family: var(--font-body);
+
+  }
+
+  /* ─── Header ─── */
+  .nf-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 36px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .nf-title-group {
+    flex: 1;
+    text-align: center;
+  }
+
+  .nf-eyebrow {
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .nf-title {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .nf-title i {
+    color: var(--accent);
+    font-size: 24px;
+  }
+
+  .btn-emitir {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 11px 22px;
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+    box-shadow: 0 0 0 0 var(--accent-glow);
+  }
+
+  .btn-emitir:hover {
+    background: #7aa8f7;
+    box-shadow: 0 0 20px var(--accent-glow);
+    transform: translateY(-1px);
+    color: #fff;
+  }
+
+  /* ─── KPI Cards ─── */
+  .nf-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.25s, transform 0.25s;
+    cursor: default;
+  }
+
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+
+  .kpi-card:hover {
+    border-color: var(--border-hover);
+    transform: translateY(-2px);
+  }
+
+  .kpi-card.green {
+    background: linear-gradient(135deg, var(--surface) 0%, rgba(52, 211, 153, 0.08) 100%);
+  }
+
+  .kpi-card.red {
+    background: linear-gradient(135deg, var(--surface) 0%, rgba(248, 113, 113, 0.08) 100%);
+  }
+
+  .kpi-card.blue {
+    background: linear-gradient(135deg, var(--surface) 0%, rgba(96, 165, 250, 0.08) 100%);
+  }
+
+  .kpi-card.gold {
+    background: linear-gradient(135deg, var(--surface) 0%, rgba(251, 191, 36, 0.08) 100%);
+  }
+
+  .kpi-card.green::before {
+    background: var(--green);
+  }
+
+  .kpi-card.red::before {
+    background: var(--red);
+  }
+
+  .kpi-card.blue::before {
+    background: var(--blue);
+  }
+
+  .kpi-card.gold::before {
+    background: var(--gold);
+  }
+
+  .kpi-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+
+  .kpi-card.green .kpi-icon {
+    background: var(--green-dim);
+    color: var(--green);
+  }
+
+  .kpi-card.red .kpi-icon {
+    background: var(--red-dim);
+    color: var(--red);
+  }
+
+  .kpi-card.blue .kpi-icon {
+    background: var(--blue-dim);
+    color: var(--blue);
+  }
+
+  .kpi-card.gold .kpi-icon {
+    background: var(--gold-dim);
+    color: var(--gold);
+  }
+
+  .kpi-label {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+
+  .kpi-value {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+
+  .kpi-card.green .kpi-value {
+    color: var(--green);
+  }
+
+  .kpi-card.red .kpi-value {
+    color: var(--red);
+  }
+
+  .kpi-card.blue .kpi-value {
+    color: var(--blue);
+  }
+
+  .kpi-card.gold .kpi-value {
+    color: var(--gold);
+  }
+
+  /* ─── Filters ─── */
+  .nf-filters {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: flex-end;
+  }
+
+  .nf-filters .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    min-width: 130px;
+  }
+
+  .nf-filters label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .nf-filters input,
+  .nf-filters select {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    padding: 9px 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .nf-filters input:focus,
+  .nf-filters select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  .nf-filters select option {
+    background: var(--surface-2);
+  }
+
+  .filter-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .btn-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 9px 18px;
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    text-decoration: none;
+  }
+
+  .btn-filter:hover {
+    background: #7aa8f7;
+    color: #fff;
+  }
+
+  .btn-clear {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 9px 16px;
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+    text-decoration: none;
+  }
+
+  .btn-clear:hover {
+    border-color: var(--border-hover);
+    color: var(--text-primary);
+  }
+
+  /* ─── Table ─── */
+  .nf-table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .nf-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+  }
+
+  .nf-table thead tr {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nf-table thead th {
+    padding: 14px 18px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .nf-table thead th a {
+    color: var(--text-muted);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: color 0.15s;
+  }
+
+  .nf-table thead th a:hover {
+    color: var(--text-primary);
+  }
+
+  .nf-table tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+
+  .nf-table tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  .nf-table tbody tr:hover {
+    background: var(--surface-2);
+  }
+
+  .nf-table tbody td {
+    padding: 14px 18px;
+    color: var(--text-secondary);
+    vertical-align: middle;
+  }
+
+  .nf-table tbody td:first-child,
+  .nf-table tbody td:nth-child(2),
+  .nf-table tbody td:nth-child(3) {
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+
+  /* Status badges */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 100px;
+    font-size: 11.5px;
+    font-weight: 500;
+    white-space: nowrap;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .status-badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .status-autorizada {
+    background: var(--green-dim);
+    color: var(--green);
+  }
+
+  .status-autorizada::before {
+    background: var(--green);
+  }
+
+  .status-cancelada {
+    background: var(--red-dim);
+    color: var(--red);
+  }
+
+  .status-cancelada::before {
+    background: var(--red);
+  }
+
+  .status-pendente {
+    background: var(--gold-dim);
+    color: var(--gold);
+  }
+
+  .status-pendente::before {
+    background: var(--gold);
+  }
+
+  .status-default {
+    background: var(--bg-subtle);
+    color: var(--text-secondary);
+  }
+
+  .status-default::before {
+    background: var(--text-muted);
+  }
+
+  /* Action buttons */
+  .action-btns {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .btn-act {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 11px;
+    border-radius: 6px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .btn-act .spinner-border {
+    width: 11px;
+    height: 11px;
+    border-width: 1.5px;
+  }
+
+  .btn-act-info {
+    background: var(--blue-dim);
+    color: var(--blue);
+    border-color: rgba(96, 165, 250, 0.2);
+  }
+
+  .btn-act-success {
+    background: var(--green-dim);
+    color: var(--green);
+    border-color: rgba(52, 211, 153, 0.2);
+  }
+
+  .btn-act-warning {
+    background: var(--gold-dim);
+    color: var(--gold);
+    border-color: rgba(251, 191, 36, 0.2);
+  }
+
+  .btn-act-danger {
+    background: var(--red-dim);
+    color: var(--red);
+    border-color: rgba(248, 113, 113, 0.2);
+  }
+
+  .btn-act-secondary {
+    background: var(--bg-subtle);
+    color: var(--text-secondary);
+    border-color: var(--border);
+  }
+
+  .btn-act-primary {
+    background: var(--accent-glow);
+    color: var(--accent);
+    border-color: rgba(91, 142, 240, 0.25);
+  }
+
+  .btn-act:hover {
+    filter: brightness(1.15);
+    transform: translateY(-1px);
+  }
+
+  /* Empty state */
+  .empty-state {
+    padding: 64px 32px;
+    text-align: center;
+    color: var(--text-muted);
+  }
+
+  .empty-state i {
+    font-size: 40px;
+    margin-bottom: 12px;
+    display: block;
+  }
+
+  .empty-state p {
+    font-size: 14px;
+  }
+
+  /* Mobile cards */
+  .nf-cards {
+    display: none;
+  }
+
+  .nf-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 12px;
+    transition: border-color 0.2s;
+  }
+
+  .nf-card:hover {
+    border-color: var(--border-hover);
+  }
+
+  .nf-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .nf-card-num {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .nf-card-date {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .nf-card-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 12px;
+    margin-bottom: 14px;
+  }
+
+  .nf-card-field label {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .nf-card-field span {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  /* Pagination */
+  .nf-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 24px;
+  }
+
+  .page-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-secondary);
+    font-size: 13px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s;
+  }
+
+  .page-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .page-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .page-current {
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .nf-page {
+      padding: 20px 16px 48px;
+    }
+
+    .nf-kpis {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .nf-table-wrap {
+      display: none;
+    }
+
+    .nf-cards {
+      display: block;
+    }
+  }
+
+  @media (max-width: 500px) {
+    .nf-kpis {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .nf-title {
+      font-size: 24px;
+    }
+  }
+</style>
 <div class="container page-container px-5 pt-4 pb-5">
-  <div class="page-header-custom">
-    <div class="container align-items-center">
-      <h2 class="page-title">
-        <i class="bi bi-building-check"></i> Notas Fiscais
-      </h2>
-    </div>
-    <a class="btn btn-success" href="/web/{{ slug }}/notas-fiscais/emissao/"><i class="bi bi-upload"></i> Emitir
-      Nota</a>
-  </div>
+  <div class="nf-page">
 
-  <form class="row g-2 mb-3 filters" method="get">
-    <div class="col-md-2">
-      <label class="form-label">Status</label>
-      <select name="status" class="form-select">
-        <option value="">Todos</option>
-        {% for code, label in status_choices %}
-        <option value="{{ code }}" {% if preservado.status == code|stringformat:"s" %}selected{% endif %}>{{ label }}
-        </option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="col-md-3">
-      <label class="form-label">Cliente</label>
-      <input type="text" name="cliente" class="form-control" value="{{ preservado.cliente }}"
-        placeholder="Nome, CNPJ ou CPF" />
-    </div>
-    <div class="col-md-2">
-      <label class="form-label">De</label>
-      <input type="date" name="data_ini" class="form-control" value="{{ preservado.data_ini }}" />
-    </div>
-    <div class="col-md-2">
-      <label class="form-label">Até</label>
-      <input type="date" name="data_fim" class="form-control" value="{{ preservado.data_fim }}" />
+    <!-- Header -->
+    <div class="nf-header">
+      <div class="nf-title-group">
+        <div class="nf-eyebrow">Gestão Fiscal</div>
+        <h1 class="nf-title">
+          <i class="bi bi-building-check"></i>
+          Notas Fiscais
+        </h1>
+      </div>
+      <a class="btn-emitir" href="/web/{{ slug }}/notas-fiscais/emissao/">
+        <i class="bi bi-upload"></i> Emitir Nota
+      </a>
     </div>
 
-    <div class="col-md-3 d-flex align-items-end ">
-      <div class="btn-group w-100">
-        <button class="btn btn-outline-primary" type="submit"><i class="bi bi-funnel"></i> Filtrar</button>
-
+    <!-- KPIs -->
+    <div class="nf-kpis">
+      <div class="kpi-card green">
+        <div class="kpi-icon"><i class="bi bi-check-circle-fill"></i></div>
+        <div class="kpi-label">Emitidas</div>
+        <div class="kpi-value">{{ kpis.emitidas }}</div>
+      </div>
+      <div class="kpi-card red">
+        <div class="kpi-icon"><i class="bi bi-x-circle-fill"></i></div>
+        <div class="kpi-label">Canceladas</div>
+        <div class="kpi-value">{{ kpis.canceladas_distintas }}</div>
+      </div>
+      <div class="kpi-card blue">
+        <div class="kpi-icon"><i class="bi bi-currency-dollar"></i></div>
+        <div class="kpi-label">Total Faturado</div>
+        <div class="kpi-value" style="font-size:17px">R$ {{ kpis.total_faturado|floatformat:2 }}</div>
+      </div>
+      <div class="kpi-card gold">
+        <div class="kpi-icon"><i class="bi bi-graph-up-arrow"></i></div>
+        <div class="kpi-label">Ticket Médio</div>
+        <div class="kpi-value" style="font-size:17px">R$ {{ kpis.ticket_medio|floatformat:2 }}</div>
       </div>
     </div>
-    <a class="btn btn-outline-secondary" href="?"><i class="bi bi-x-circle"></i> Limpar</a>
-  </form>
 
-  <div class="table-responsive d-none d-md-block px-4 pt-4 pb-4">
-    <table class="table table-sm table-striped table-hover table-compact">
-      <thead>
-        <tr>
-          <th>
-            <a class="text-decoration-none"
-              href="?status={{ preservado.status }}&cliente={{ preservado.cliente }}&data_ini={{ preservado.data_ini }}&data_fim={{ preservado.data_fim }}&ordering={% if ordering == 'modelo' %}-modelo{% else %}modelo{% endif %}">
-              Modelo
-              {% if ordering == 'modelo' %}<i class="bi bi-sort-down"></i>{% elif ordering == '-modelo' %}<i
-                class="bi bi-sort-up"></i>{% endif %}
-            </a>
-          </th>
-          <th>
-            <a class="text-decoration-none"
-              href="?status={{ preservado.status }}&cliente={{ preservado.cliente }}&data_ini={{ preservado.data_ini }}&data_fim={{ preservado.data_fim }}&ordering={% if ordering == 'serie' %}-serie{% else %}serie{% endif %}">
-              Série
-              {% if ordering == 'serie' %}<i class="bi bi-sort-down"></i>{% elif ordering == '-serie' %}<i
-                class="bi bi-sort-up"></i>{% endif %}
-            </a>
-          </th>
-          <th>
-            <a class="text-decoration-none"
-              href="?status={{ preservado.status }}&cliente={{ preservado.cliente }}&data_ini={{ preservado.data_ini }}&data_fim={{ preservado.data_fim }}&ordering={% if ordering == 'numero' %}-numero{% else %}numero{% endif %}">
-              Número
-              {% if ordering == 'numero' %}<i class="bi bi-sort-down"></i>{% elif ordering == '-numero' %}<i
-                class="bi bi-sort-up"></i>{% endif %}
-            </a>
-          </th>
-          <th>
-            <a class="text-decoration-none"
-              href="?status={{ preservado.status }}&cliente={{ preservado.cliente }}&data_ini={{ preservado.data_ini }}&data_fim={{ preservado.data_fim }}&ordering={% if ordering == 'data_emissao' %}-data_emissao{% else %}data_emissao{% endif %}">
-              Emissão
-              {% if ordering == 'data_emissao' %}<i class="bi bi-sort-down"></i>{% elif ordering == '-data_emissao' %}<i
-                class="bi bi-sort-up"></i>{% endif %}
-            </a>
-          </th>
-          <th>Destinatário</th>
-          <th>
-            <a class="text-decoration-none"
-              href="?status={{ preservado.status }}&cliente={{ preservado.cliente }}&data_ini={{ preservado.data_ini }}&data_fim={{ preservado.data_fim }}&ordering={% if ordering == 'status' %}-status{% else %}status{% endif %}">
-              Status
-              {% if ordering == 'status' %}<i class="bi bi-sort-down"></i>{% elif ordering == '-status' %}<i
-                class="bi bi-sort-up"></i>{% endif %}
-            </a>
-          </th>
+    <!-- Filters -->
+    <form class="nf-filters" method="get">
+      <div class="filter-group" style="min-width:120px; max-width:160px;">
+        <label>Status</label>
+        <select name="status">
+          <option value="">Todos</option>
+          {% for code, label in status_choices %}
+          <option value="{{ code }}" {% if preservado.status == code|stringformat:"s" %}selected{% endif %}>{{ label }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-group" style="max-width:240px;">
+        <label>Cliente</label>
+        <input type="text" name="cliente" value="{{ preservado.cliente }}" placeholder="Nome, CNPJ ou CPF" />
+      </div>
+      <div class="filter-group" style="min-width:140px; max-width:180px;">
+        <label>De</label>
+        <input type="date" name="data_ini" value="{{ preservado.data_ini }}" />
+      </div>
+      <div class="filter-group" style="min-width:140px; max-width:180px;">
+        <label>Até</label>
+        <input type="date" name="data_fim" value="{{ preservado.data_fim }}" />
+      </div>
+      <div class="filter-actions">
+        <button class="btn-filter" type="submit"><i class="bi bi-funnel"></i> Filtrar</button>
+        <a class="btn-clear" href="?"><i class="bi bi-x-circle"></i> Limpar</a>
+      </div>
+    </form>
 
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for n in notas %}
-        <tr>
-          <td>{{ n.modelo }}</td>
-          <td>{{ n.serie }}</td>
-          <td>{{ n.numero }}</td>
-          <td>{{ n.data_emissao }}</td>
-          <td>{{ n.destinatario_nome }}</td>
-          <td>
-            <span class="d-inline-block text-truncate" style="max-width: 150px;" data-bs-toggle="tooltip"
-              data-bs-placement="top" title="{{ n.motivo_status|default:n.status|sefaz_status_label }}">
+    <!-- Table (desktop) -->
+    <div class="nf-table-wrap">
+      <table class="nf-table">
+        <thead>
+          <tr>
+            <th>
+              <a
+                href="?status={{ preservado.status }}&cliente={{ preservado.cliente }}&data_ini={{ preservado.data_ini }}&data_fim={{ preservado.data_fim }}&ordering={% if ordering == 'modelo' %}-modelo{% else %}modelo{% endif %}">
+                Modelo {% if ordering == 'modelo' %}<i class="bi bi-sort-down"></i>{% elif ordering == '-modelo' %}<i
+                  class="bi bi-sort-up"></i>{% endif %}
+              </a>
+            </th>
+            <th>
+              <a
+                href="?status={{ preservado.status }}&cliente={{ preservado.cliente }}&data_ini={{ preservado.data_ini }}&data_fim={{ preservado.data_fim }}&ordering={% if ordering == 'serie' %}-serie{% else %}serie{% endif %}">
+                Série {% if ordering == 'serie' %}<i class="bi bi-sort-down"></i>{% elif ordering == '-serie' %}<i
+                  class="bi bi-sort-up"></i>{% endif %}
+              </a>
+            </th>
+            <th>
+              <a
+                href="?status={{ preservado.status }}&cliente={{ preservado.cliente }}&data_ini={{ preservado.data_ini }}&data_fim={{ preservado.data_fim }}&ordering={% if ordering == 'numero' %}-numero{% else %}numero{% endif %}">
+                Número {% if ordering == 'numero' %}<i class="bi bi-sort-down"></i>{% elif ordering == '-numero' %}<i
+                  class="bi bi-sort-up"></i>{% endif %}
+              </a>
+            </th>
+            <th>
+              <a
+                href="?status={{ preservado.status }}&cliente={{ preservado.cliente }}&data_ini={{ preservado.data_ini }}&data_fim={{ preservado.data_fim }}&ordering={% if ordering == 'data_emissao' %}-data_emissao{% else %}data_emissao{% endif %}">
+                Emissão {% if ordering == 'data_emissao' %}<i class="bi bi-sort-down"></i>{% elif ordering ==
+                '-data_emissao' %}<i class="bi bi-sort-up"></i>{% endif %}
+              </a>
+            </th>
+            <th>Destinatário</th>
+            <th>
+              <a
+                href="?status={{ preservado.status }}&cliente={{ preservado.cliente }}&data_ini={{ preservado.data_ini }}&data_fim={{ preservado.data_fim }}&ordering={% if ordering == 'status' %}-status{% else %}status{% endif %}">
+                Status {% if ordering == 'status' %}<i class="bi bi-sort-down"></i>{% elif ordering == '-status' %}<i
+                  class="bi bi-sort-up"></i>{% endif %}
+              </a>
+            </th>
+            <th>Protocolo</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for n in notas %}
+          <tr>
+            <td>{{ n.modelo }}</td>
+            <td>{{ n.serie }}</td>
+            <td>{{ n.numero }}</td>
+            <td>{{ n.data_emissao }}</td>
+            <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ n.destinatario_nome }}</td>
+            <td>
+              <span
+                class="status-badge {% if n.status == 100 %}status-autorizada{% elif n.status == 101 or n.status == 102 %}status-cancelada{% else %}status-pendente{% endif %}"
+                data-bs-toggle="tooltip" data-bs-placement="top"
+                title="{{ n.motivo_status|default:n.status|sefaz_status_label }}">
+                {{ n.status|sefaz_status_short }}
+              </span>
+            </td>
+            <td style="font-size:12px; color:var(--text-muted);">{{ n.ultimo_protocolo|default:"—" }}</td>
+            <td>
+              <div class="action-btns">
+                <a class="btn-act btn-act-info" href="/web/{{ slug }}/notas-fiscais/{{ n.id }}/">Detalhes</a>
+                {% if n.status != 100 and n.status != 101 and n.status != 102 %}
+                {% if n.chave_acesso or n.status == 539 or n.status == 204 or n.status == 105 %}
+                <button class="btn-act btn-act-primary" data-consultar data-id="{{ n.id }}"><span
+                    class="spinner-border d-none"></span> Consultar</button>
+                {% else %}
+                <button class="btn-act btn-act-success" data-emitir data-id="{{ n.id }}"><span
+                    class="spinner-border d-none"></span> Emitir</button>
+                {% endif %}
+                <button class="btn-act btn-act-warning" data-inutilizar data-id="{{ n.id }}"><span
+                    class="spinner-border d-none"></span> Inutilizar</button>
+                <a class="btn-act btn-act-secondary" href="/web/{{ slug }}/notas-fiscais/{{ n.id }}/editar/">Editar</a>
+                {% endif %}
+                {% if n.status == 100 %}
+                <a class="btn-act btn-act-secondary" href="/api/imprimir/{{ slug }}/{{ n.id }}/" target="_blank"><i
+                    class="bi bi-printer"></i> Imprimir</a>
+                <button class="btn-act btn-act-danger" data-cancelar data-id="{{ n.id }}"><span
+                    class="spinner-border d-none"></span> Cancelar</button>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8">
+              <div class="empty-state">
+                <i class="bi bi-inbox"></i>
+                <p>Nenhuma nota encontrada.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Mobile cards -->
+    <div class="nf-cards">
+      {% for n in notas %}
+      <div class="nf-card">
+        <div class="nf-card-top">
+          <div class="nf-card-num">NF {{ n.numero }}</div>
+          <div class="nf-card-date">{{ n.data_emissao }}</div>
+        </div>
+        <div class="nf-card-fields">
+          <div class="nf-card-field"><label>Modelo</label><span>{{ n.modelo }}</span></div>
+          <div class="nf-card-field"><label>Série</label><span>{{ n.serie }}</span></div>
+          <div class="nf-card-field"><label>Destinatário</label><span>{{ n.destinatario_nome }}</span></div>
+          <div class="nf-card-field"><label>Status</label>
+            <span
+              class="status-badge {% if n.status == 100 %}status-autorizada{% elif n.status == 101 or n.status == 102 %}status-cancelada{% else %}status-pendente{% endif %}">
               {{ n.status|sefaz_status_short }}
             </span>
-          </td>
-          <td>{{ n.ultimo_protocolo|default:"" }}</td>
-
-          <td>
-            <div class="botoes-listanotas">
-              <a class="btn btn-outline-info" href="/web/{{ slug }}/notas-fiscais/{{ n.id }}/">Detalhes</a>
-              {% if n.status != 100 and n.status != 101 and n.status != 102 %}
-              {% if n.chave_acesso or n.status == 539 or n.status == 204 or n.status == 105 %}
-              <button class="btn btn-outline-primary" data-consultar data-id="{{ n.id }}"><span
-                  class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span> Consultar</button>
-              {% else %}
-              <button class="btn btn-outline-success" data-emitir data-id="{{ n.id }}"><span
-                  class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span> Emitir</button>
-              {% endif %}
-              <button class="btn btn-outline-warning" data-inutilizar data-id="{{ n.id }}"><span
-                  class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span> Inutilizar</button>
-              <a class="btn btn-outline-secondary" href="/web/{{ slug }}/notas-fiscais/{{ n.id }}/editar/">Editar</a>
-              {% endif %}
-              {% if n.status == 100 %}
-              <a class="btn btn-outline-info" href="/api/imprimir/{{ slug }}/{{ n.id }}/" target="_blank">
-                <i class="bi bi-printer"></i> Imprimir
-              </a>
-              <button class="btn btn-outline-danger" data-cancelar data-id="{{ n.id }}"><span
-                  class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span> Cancelar</button>
-              {% endif %}
-            </div>
-          </td>
-        </tr>
-        {% empty %}
-        <tr>
-          <td colspan="8" class="text-center">Nenhuma nota encontrada.</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  <div class="card-list d-md-none">
-    {% for n in notas %}
-    <div class="card mb-2">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center">
-          <div class="fw-semibold">NF {{ n.numero }}</div>
-          <div class="text-muted small">{{ n.data_emissao }}</div>
+          </div>
+          <div class="nf-card-field"><label>Protocolo</label><span>{{ n.ultimo_protocolo|default:"—" }}</span></div>
         </div>
-        <div class="mt-2 small">
-          <div><strong>Modelo:</strong> {{ n.modelo }}</div>
-          <div><strong>Série:</strong> {{ n.serie }}</div>
-          <div><strong>Emitente:</strong> {{ n.emitente_nome }}</div>
-          <div><strong>Destinatário:</strong> {{ n.destinatario_nome }}</div>
-          <div><strong>Status:</strong> {{ n.status|sefaz_status_label }}</div>
-          <div><strong>Protocolo:</strong> {{ n.ultimo_protocolo|default:"—" }}</div>
-        </div>
-        <div class="mt-3 d-flex gap-2">
-          <a class="btn btn-sm btn-outline-primary" href="/web/{{ slug }}/notas-fiscais/{{ n.id }}/">Detalhes</a>
+        <div class="action-btns">
+          <a class="btn-act btn-act-info" href="/web/{{ slug }}/notas-fiscais/{{ n.id }}/">Detalhes</a>
           {% if n.status != 100 and n.status != 101 and n.status != 102 %}
           {% if n.chave_acesso or n.status == 539 or n.status == 204 or n.status == 105 %}
-          <button class="btn btn-sm btn-outline-primary" data-consultar data-id="{{ n.id }}"><span
-              class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span> Consultar</button>
+          <button class="btn-act btn-act-primary" data-consultar data-id="{{ n.id }}"><span
+              class="spinner-border d-none"></span> Consultar</button>
           {% else %}
-          <button class="btn btn-sm btn-outline-success" data-emitir data-id="{{ n.id }}"><span
-              class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span> Emitir</button>
+          <button class="btn-act btn-act-success" data-emitir data-id="{{ n.id }}"><span
+              class="spinner-border d-none"></span> Emitir</button>
           {% endif %}
-          <button class="btn btn-sm btn-outline-warning" data-inutilizar data-id="{{ n.id }}"><span
-              class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span> Inutilizar</button>
-          <a class="btn btn-sm btn-outline-secondary" href="/web/{{ slug }}/notas-fiscais/{{ n.id }}/editar/">Editar</a>
+          <button class="btn-act btn-act-warning" data-inutilizar data-id="{{ n.id }}"><span
+              class="spinner-border d-none"></span> Inutilizar</button>
+          <a class="btn-act btn-act-secondary" href="/web/{{ slug }}/notas-fiscais/{{ n.id }}/editar/">Editar</a>
           {% endif %}
           {% if n.status == 100 %}
-          <a class="btn btn-sm btn-outline-info" href="/api/imprimir/{{ slug }}/{{ n.id }}/" target="_blank">
-            <i class="bi bi-printer"></i> Imprimir
-          </a>
-          <button class="btn btn-sm btn-outline-danger" data-cancelar data-id="{{ n.id }}"><span
-              class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span> Cancelar</button>
+          <a class="btn-act btn-act-secondary" href="/api/imprimir/{{ slug }}/{{ n.id }}/" target="_blank"><i
+              class="bi bi-printer"></i> Imprimir</a>
+          <button class="btn-act btn-act-danger" data-cancelar data-id="{{ n.id }}"><span
+              class="spinner-border d-none"></span> Cancelar</button>
           {% endif %}
         </div>
       </div>
+      {% empty %}
+      <div class="empty-state" style="background:var(--surface); border-radius:var(--radius); padding:48px 24px;">
+        <i class="bi bi-inbox"></i>
+        <p>Nenhuma nota encontrada.</p>
+      </div>
+      {% endfor %}
     </div>
-    {% empty %}
-    <div class="alert alert-info">Nenhuma nota encontrada.</div>
-    {% endfor %}
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div class="nf-pagination">
+      {% if page_obj.has_previous %}
+      <a class="page-btn" href="?page={{ page_obj.previous_page_number }}"><i class="bi bi-chevron-left"></i></a>
+      {% endif %}
+      <span class="page-current">{{ page_obj.number }} / {{ paginator.num_pages }}</span>
+      {% if page_obj.has_next %}
+      <a class="page-btn" href="?page={{ page_obj.next_page_number }}"><i class="bi bi-chevron-right"></i></a>
+      {% endif %}
+    </div>
+    {% endif %}
+
   </div>
 
-  {% if is_paginated %}
-  <nav>
-    <ul class="pagination pagination-sm">
-      {% if page_obj.has_previous %}
-      <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Anterior</a></li>
-      {% endif %}
-      <li class="page-item active"><span class="page-link">{{ page_obj.number }} / {{ paginator.num_pages }}</span></li>
-      {% if page_obj.has_next %}
-      <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Próxima</a></li>
-      {% endif %}
-    </ul>
-  </nav>
-  {% endif %}
-</div>
+  <script>
+    (() => {
+      const slug = localStorage.getItem('slug');
+      const empresa = localStorage.getItem('empresa_id') || '1';
+      const filial = localStorage.getItem('filial_id') || '1';
 
-<script>
-  (() => {
-    const slug = localStorage.getItem('slug');
-    const empresa = localStorage.getItem('empresa_id') || '1';
-    const filial = localStorage.getItem('filial_id') || '1';
-    const authFetch = async (url, options = {}) => {
-      const token = localStorage.getItem('access');
-      const headers = { 'Content-Type': 'application/json', 'X-Empresa': empresa, 'X-Filial': filial };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-      return fetch(url, { ...options, headers: { ...headers, ...(options.headers || {}) } });
-    };
+      const authFetch = async (url, options = {}) => {
+        const token = localStorage.getItem('access');
+        const headers = { 'Content-Type': 'application/json', 'X-Empresa': empresa, 'X-Filial': filial };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        return fetch(url, { ...options, headers: { ...headers, ...(options.headers || {}) } });
+      };
 
-    const onEmitir = async (id) => {
-      const btn = document.querySelector(`[data-emitir][data-id="${id}"]`);
-      const sp = btn?.querySelector('.spinner-border');
-      if (btn) { btn.disabled = true; if (sp) sp.classList.remove('d-none'); }
-      try {
-        const resp = await authFetch(`/api/emitir/${slug}/${id}/`, { method: 'GET' });
-        const data = await resp.json();
-        if (resp.ok) {
-          showToast('Emitida com sucesso. Chave: ' + (data?.chave || data?.chave_acesso || ''), { variant: 'success' });
-          location.reload();
-        } else {
-          const rawError =
-            data?.detail ||
-            data?.detalhes ||
-            data?.mensagem ||
-            data?.motivo ||
-            data?.erro ||
-            data?.error ||
-            (typeof data === 'string' ? data : '') ||
-            (data ? JSON.stringify(data) : '');
-          showToast('Falha na emissão: ' + (rawError || 'Erro'), { variant: 'danger', delay: 4000 });
-        }
-      } catch (e) {
-        showToast('Erro: ' + e, { variant: 'danger', delay: 4000 });
-      } finally {
-        if (btn) { btn.disabled = false; if (sp) sp.classList.add('d-none'); }
-      }
-    };
+      const setLoading = (btn, state) => {
+        const sp = btn?.querySelector('.spinner-border');
+        if (btn) btn.disabled = state;
+        if (sp) sp.classList.toggle('d-none', !state);
+      };
 
-    const onCancelar = async (id) => {
-      const btn = document.querySelector(`[data-cancelar][data-id="${id}"]`);
-      if (!confirm('Confirma cancelar a nota?')) return;
-      const sp = btn?.querySelector('.spinner-border');
-      if (btn) { btn.disabled = true; if (sp) sp.classList.remove('d-none'); }
-      const descricao = 'Cancelamento via painel';
-      try {
-        const resp = await authFetch(`/api/${slug}/notasfiscais/notas-fiscais/notas/${id}/cancelar/`, { method: 'POST', body: JSON.stringify({ descricao }) });
-        const data = await resp.json();
-        if (resp.ok) {
-          showToast('Cancelada com sucesso.', { variant: 'success' });
-          location.reload();
-        } else {
-          showToast('Falha no cancelamento: ' + (data?.detail || data?.motivo || data?.error || 'Erro'), { variant: 'danger', delay: 4000 });
-        }
-      } catch (e) {
-        showToast('Erro: ' + e, { variant: 'danger', delay: 4000 });
-      } finally { if (btn) btn.disabled = false; }
-    };
+      const onEmitir = async (id) => {
+        const btn = document.querySelector(`[data-emitir][data-id="${id}"]`);
+        setLoading(btn, true);
+        try {
+          const resp = await authFetch(`/api/emitir/${slug}/${id}/`, { method: 'GET' });
+          const data = await resp.json();
+          if (resp.ok) {
+            showToast('Emitida com sucesso. Chave: ' + (data?.chave || data?.chave_acesso || ''), { variant: 'success' });
+            location.reload();
+          } else {
+            const rawError = data?.detail || data?.detalhes || data?.mensagem || data?.motivo || data?.erro || data?.error || (typeof data === 'string' ? data : '') || (data ? JSON.stringify(data) : '');
+            showToast('Falha na emissão: ' + (rawError || 'Erro'), { variant: 'danger', delay: 4000 });
+          }
+        } catch (e) { showToast('Erro: ' + e, { variant: 'danger', delay: 4000 }); }
+        finally { setLoading(btn, false); }
+      };
 
-    const onInutilizar = async (id) => {
-      const btn = document.querySelector(`[data-inutilizar][data-id="${id}"]`);
-      if (!confirm('Confirma inutilizar a numeração da nota?')) return;
-      const sp = btn?.querySelector('.spinner-border');
-      if (btn) { btn.disabled = true; if (sp) sp.classList.remove('d-none'); }
-      const descricao = 'Inutilização via painel';
-      try {
-        const resp = await authFetch(`/api/${slug}/notasfiscais/notas-fiscais/notas/${id}/inutilizar/`, { method: 'POST', body: JSON.stringify({ descricao }) });
-        const data = await resp.json();
-        if (resp.ok) {
-          showToast('Inutilizada com sucesso.', { variant: 'success' });
-          location.reload();
-        } else {
-          showToast('Falha na inutilização: ' + (data?.detail || data?.motivo || data?.error || 'Erro'), { variant: 'danger', delay: 4000 });
-        }
-      } catch (e) {
-        showToast('Erro: ' + e, { variant: 'danger', delay: 4000 });
-      } finally { if (btn) btn.disabled = false; }
-    };
+      const onCancelar = async (id) => {
+        const btn = document.querySelector(`[data-cancelar][data-id="${id}"]`);
+        if (!confirm('Confirma cancelar a nota?')) return;
+        setLoading(btn, true);
+        try {
+          const resp = await authFetch(`/api/${slug}/notasfiscais/notas-fiscais/notas/${id}/cancelar/`, { method: 'POST', body: JSON.stringify({ descricao: 'Cancelamento via painel' }) });
+          const data = await resp.json();
+          if (resp.ok) { showToast('Cancelada com sucesso.', { variant: 'success' }); location.reload(); }
+          else showToast('Falha no cancelamento: ' + (data?.detail || data?.motivo || data?.error || 'Erro'), { variant: 'danger', delay: 4000 });
+        } catch (e) { showToast('Erro: ' + e, { variant: 'danger', delay: 4000 }); }
+        finally { setLoading(btn, false); }
+      };
 
-    const onConsultar = async (id) => {
-      const btn = document.querySelector(`[data-consultar][data-id="${id}"]`);
-      const sp = btn?.querySelector('.spinner-border');
-      if (btn) { btn.disabled = true; if (sp) sp.classList.remove('d-none'); }
-      try {
-        const resp = await authFetch(`/api/${slug}/notasfiscais/notas-fiscais/notas/${id}/consultar/`, { method: 'POST' });
-        const data = await resp.json();
-        if (resp.ok) {
-          showToast('Consulta realizada com sucesso. Status atualizado.', { variant: 'success' });
-          location.reload();
-        } else {
-          showToast('Falha na consulta: ' + (data?.detail || data?.motivo || data?.error || 'Erro'), { variant: 'danger', delay: 4000 });
-        }
-      } catch (e) {
-        showToast('Erro: ' + e, { variant: 'danger', delay: 4000 });
-      } finally { if (btn) btn.disabled = false; if (sp) sp.classList.add('d-none'); }
-    };
+      const onInutilizar = async (id) => {
+        const btn = document.querySelector(`[data-inutilizar][data-id="${id}"]`);
+        if (!confirm('Confirma inutilizar a numeração da nota?')) return;
+        setLoading(btn, true);
+        try {
+          const resp = await authFetch(`/api/${slug}/notasfiscais/notas-fiscais/notas/${id}/inutilizar/`, { method: 'POST', body: JSON.stringify({ descricao: 'Inutilização via painel' }) });
+          const data = await resp.json();
+          if (resp.ok) { showToast('Inutilizada com sucesso.', { variant: 'success' }); location.reload(); }
+          else showToast('Falha na inutilização: ' + (data?.detail || data?.motivo || data?.error || 'Erro'), { variant: 'danger', delay: 4000 });
+        } catch (e) { showToast('Erro: ' + e, { variant: 'danger', delay: 4000 }); }
+        finally { setLoading(btn, false); }
+      };
 
-    document.querySelectorAll('[data-emitir]')?.forEach(el => {
-      el.addEventListener('click', (ev) => { ev.preventDefault(); const id = el.getAttribute('data-id'); onEmitir(id); });
-    });
-    document.querySelectorAll('[data-consultar]')?.forEach(el => {
-      el.addEventListener('click', (ev) => { ev.preventDefault(); const id = el.getAttribute('data-id'); onConsultar(id); });
-    });
-    document.querySelectorAll('[data-cancelar]')?.forEach(el => {
-      el.addEventListener('click', (ev) => { ev.preventDefault(); const id = el.getAttribute('data-id'); onCancelar(id); });
-    });
-    document.querySelectorAll('[data-inutilizar]')?.forEach(el => {
-      el.addEventListener('click', (ev) => { ev.preventDefault(); const id = el.getAttribute('data-id'); onInutilizar(id); });
-    });
+      const onConsultar = async (id) => {
+        const btn = document.querySelector(`[data-consultar][data-id="${id}"]`);
+        setLoading(btn, true);
+        try {
+          const resp = await authFetch(`/api/${slug}/notasfiscais/notas-fiscais/notas/${id}/consultar/`, { method: 'POST' });
+          const data = await resp.json();
+          if (resp.ok) { showToast('Consulta realizada com sucesso.', { variant: 'success' }); location.reload(); }
+          else showToast('Falha na consulta: ' + (data?.detail || data?.motivo || data?.error || 'Erro'), { variant: 'danger', delay: 4000 });
+        } catch (e) { showToast('Erro: ' + e, { variant: 'danger', delay: 4000 }); }
+        finally { setLoading(btn, false); }
+      };
 
-    // Inicializar tooltips do Bootstrap
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-      return new bootstrap.Tooltip(tooltipTriggerEl)
-    })
-  })();
-</script>
-{% endblock %}
+      document.querySelectorAll('[data-emitir]').forEach(el => el.addEventListener('click', e => { e.preventDefault(); onEmitir(el.dataset.id); }));
+      document.querySelectorAll('[data-consultar]').forEach(el => el.addEventListener('click', e => { e.preventDefault(); onConsultar(el.dataset.id); }));
+      document.querySelectorAll('[data-cancelar]').forEach(el => el.addEventListener('click', e => { e.preventDefault(); onCancelar(el.dataset.id); }));
+      document.querySelectorAll('[data-inutilizar]').forEach(el => el.addEventListener('click', e => { e.preventDefault(); onInutilizar(el.dataset.id); }));
+
+      document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+    })();
+  </script>
+
+  {% endblock %}

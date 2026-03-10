@@ -161,6 +161,16 @@ class CalculoImpostosService:
                 cfop_pacote = pacote.get("cfop")
                 ncm_pacote = pacote.get("ncm")
                 fonte_tributacao = pacote.get("fonte_tributacao")
+                
+                # Fallback de segurança caso o MotorFiscal retorne None
+                if not fonte_tributacao:
+                    if pacote.get("ncm"):
+                        fonte_tributacao = "NCM"
+                    elif pacote.get("cfop"):
+                        fonte_tributacao = "CFOP"
+                    else:
+                        fonte_tributacao = "Padrão"
+
                 bases = pacote.get("bases", {})
                 valores = pacote.get("valores", {})
                 aliquotas = pacote.get("aliquotas", {})

@@ -1,6 +1,6 @@
 {
-  "debug_id": "986d8ef2-c337-4023-bd09-7cf5d74dc25d",
-  "timestamp_inicio": "2026-03-09T11:34:57.439438Z",
+  "debug_id": "46fd5886-82e9-40a6-a643-e78b2f116fe2",
+  "timestamp_inicio": "2026-03-09T20:34:43.522007Z",
   "ambiente": {
     "debug": true,
     "database_alias": "saveweb001"
@@ -9,10 +9,10 @@
     "versao": "desconhecida"
   },
   "nota": {
-    "id": 13,
+    "id": 26,
     "modelo": "55",
     "serie": "1",
-    "numero": "5",
+    "numero": "18",
     "empresa": "1",
     "filial": "1",
     "destinatario_id": "5",
@@ -22,18 +22,18 @@
   },
   "itens": [
     {
-      "id": 12,
+      "id": 25,
       "produto_id": "3",
       "descricao_produto": "CANECA DE TESTES",
       "ncm_produto": "8419****",
       "cfop_inicial": "5102",
-      "quantidade": "3.0000",
+      "quantidade": "1.0000",
       "unitario": "16.5000",
       "desconto": "0.0000",
       "logs": [
         {
-          "id": "e43e554b-1357-4092-9189-e7230fda9b4c",
-          "timestamp": "2026-03-09T11:34:57.569302Z",
+          "id": "98267552-d732-4fb0-8a7c-fcdfe4be30ca",
+          "timestamp": "2026-03-09T20:34:43.630236Z",
           "tipo": "antes_calculo_item",
           "mensagem": "Início do cálculo de impostos para o item.",
           "dados": {
@@ -44,7 +44,7 @@
           }
         }
       ],
-      "fonte_tributacao": null,
+      "fonte_tributacao": "CFOP",
       "cfop_resolvido": "5102",
       "cfop_flags": {
         "exig_icms": true,
@@ -56,9 +56,9 @@
       },
       "ncm_resolvido": null,
       "bases": {
-        "raiz": "49.50",
-        "icms": "49.50",
-        "st": "49.50"
+        "raiz": "16.50",
+        "icms": "16.50",
+        "st": "16.50"
       },
       "aliquotas": {
         "ipi": null,
@@ -98,8 +98,8 @@
   ],
   "logs": [
     {
-      "id": "e454a1c7-6ffd-4b58-a64d-ca009edc36f9",
-      "timestamp": "2026-03-09T11:34:57.529829Z",
+      "id": "b9678c6a-f17b-4fed-80eb-83280315c6f0",
+      "timestamp": "2026-03-09T20:34:43.607417Z",
       "tipo": "contexto_nota",
       "mensagem": "Contexto fiscal inicial da nota.",
       "dados": {
@@ -107,5 +107,5 @@
       }
     }
   ],
-  "timestamp_fim": "2026-03-09T11:34:57.762356Z"
+  "timestamp_fim": "2026-03-09T20:34:43.788739Z"
 }

@@ -12,7 +12,7 @@
     </div>
   </div>
 
-  <form method="post" class="card p-3">
+  <form method="post" class="card p-3 bg-body">
     {% csrf_token %}
     <div class="row g-3">
       <div class="col-md-2">{{ form.modelo.label_tag }} {{ form.modelo }}</div>
@@ -143,7 +143,10 @@
     </div>
 
     <div class="d-flex justify-content-end gap-2 mt-3">
-      <a class="btn btn-secondary" href="/web/{{ slug }}/notas-fiscais/">Voltar</a>
+      <a class="btn btn-outline-secondary" href="/web/{{ slug }}/notas-fiscais/">Voltar</a>
+      <button class="btn btn-outline-info" type="submit" name="btn_calcular" value="true" id="btn-calcular"><i
+          class="bi bi-calculator"></i> Calcular
+        Impostos</button>
       <button class="btn btn-outline-primary" type="button" id="btn-gravar"><span
           class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span> <i class="bi bi-save"></i>
         Gravar</button>
@@ -247,6 +250,10 @@
       } catch { }
     };
     const btnGravar = document.getElementById('btn-gravar');
+    // Botão Calcular agora é submit, tratado no backend
+    // const btnCalcular = document.getElementById('btn-calcular');
+    // if (btnCalcular) { ... } (removido para usar submit padrão)
+
     btnGravar.addEventListener('click', async () => {
       try {
         const sp = btnGravar.querySelector('.spinner-border');
@@ -387,7 +394,7 @@
       mountAutocomplete(transpText, (q) => `/web/${slug}/notas-fiscais/transportadoras-autocomplete/?q=${encodeURIComponent(q)}`, (it) => { transpText.value = it.label; transpField.value = it.value; }, transpList);
     }
     const totalsContainer = document.createElement('div');
-    totalsContainer.className = 'card mt-3 p-3';
+    totalsContainer.className = 'card mt-3 p-3 bg-body';
     totalsContainer.innerHTML = `
       <h5>Totais</h5>
       <div class="row g-3">

@@ -1,72 +1,530 @@
 {% load static %}
-{% block content %}
-<link rel="stylesheet" href="{% static 'css/ui.css' %}">
-<link rel="stylesheet" href="{% static 'css/print.css' %}">
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="pt-br">
 
-<div class="container py-4">
-  <div class="text-center mb-4" role="banner" aria-label="Cabeçalho de impressão do orçamento">
-    <h2 aria-label="Número do Orçamento">Orçamento #{{ object.pedi_nume }}</h2>
-    <div class="meta">Data: {{ object.pedi_data|date:'d/m/Y' }}</div>
-    <div class="meta">Cliente: {{ object.pedi_forn }}</div>
-    <div class="meta">Vendedor: {{ object.pedi_vend }}</div>
-    <div class="no-print mt-3" role="group" aria-label="Ações">
-      <a class="btn btn-outline-secondary" href="{% url 'OrcamentosWeb:orcamentos_listar' slug=slug %}" aria-label="Voltar para lista">Voltar</a>
-      <button class="btn btn-primary" onclick="window.print()" aria-label="Imprimir orçamento">Imprimir</button>
-    </div>
+<head>
+  <meta charset="UTF-8">
+  <title>Orçamento #{{ object.pedi_nume }}</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 10mm;
+    }
+
+    body {
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 12px;
+      color: #333;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .sheet {
+      background: #fff;
+      max-width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      padding: 15mm;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      position: relative;
+      box-sizing: border-box;
+    }
+
+    /* Layout Utilities */
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      margin: 0 -10px;
+    }
+
+    .col {
+      flex: 1;
+      padding: 0 10px;
+    }
+
+    .col-4 {
+      width: 33.333%;
+      padding: 0 10px;
+      box-sizing: border-box;
+    }
+
+    .col-6 {
+      width: 50%;
+      padding: 0 10px;
+      box-sizing: border-box;
+    }
+
+    .col-8 {
+      width: 66.666%;
+      padding: 0 10px;
+      box-sizing: border-box;
+    }
+
+    .text-right {
+      text-align: right;
+    }
+
+    .text-center {
+      text-align: center;
+    }
+
+    .text-bold {
+      font-weight: bold;
+    }
+
+    .mb-2 {
+      margin-bottom: 8px;
+    }
+
+    .mb-4 {
+      margin-bottom: 16px;
+    }
+
+    .mt-4 {
+      margin-top: 16px;
+    }
+
+    /* Header */
+    .header {
+      border-bottom: 2px solid #333;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .company-info h1 {
+      font-size: 20px;
+      margin: 0 0 5px 0;
+      text-transform: uppercase;
+    }
+
+    .company-details {
+      font-size: 11px;
+      line-height: 1.4;
+      color: #555;
+    }
+
+    .order-info {
+      text-align: right;
+    }
+
+    .order-title {
+      font-size: 24px;
+      font-weight: bold;
+      color: #333;
+      margin: 0 0 10px 0;
+    }
+
+    .order-meta {
+      font-size: 13px;
+    }
+
+    .order-meta span {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    /* Section Boxes */
+    .section-box {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 15px;
+      background-color: #fcfcfc;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: bold;
+      text-transform: uppercase;
+      color: #777;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 4px;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 20px;
+    }
+
+    .info-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .info-label {
+      font-size: 10px;
+      color: #888;
+    }
+
+    .info-value {
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    /* Items Table */
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      font-size: 11px;
+    }
+
+    .items-table th {
+      background-color: #eee;
+      color: #333;
+      font-weight: bold;
+      text-align: left;
+      padding: 8px;
+      border-bottom: 2px solid #ddd;
+    }
+
+    .items-table td {
+      padding: 8px;
+      border-bottom: 1px solid #eee;
+      vertical-align: middle;
+    }
+
+    .items-table tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+
+    .items-table .col-num {
+      text-align: right;
+    }
+
+    .items-table .col-center {
+      text-align: center;
+    }
+
+    /* Totals */
+    .totals-section {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 10px;
+    }
+
+    .totals-box {
+      width: 300px;
+      border: 1px solid #ddd;
+      padding: 10px;
+      background: #fcfcfc;
+    }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+      font-size: 12px;
+    }
+
+    .total-row.final {
+      font-size: 16px;
+      font-weight: bold;
+      border-top: 2px solid #333;
+      padding-top: 5px;
+      margin-top: 5px;
+    }
+
+    /* Footer / Signatures */
+    .footer-section {
+      margin-top: 40px;
+      page-break-inside: avoid;
+    }
+
+    .signatures {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 50px;
+    }
+
+    .signature-box {
+      width: 45%;
+      text-align: center;
+      border-top: 1px solid #333;
+      padding-top: 5px;
+      font-size: 11px;
+    }
+
+    /* No Print */
+    @media print {
+      body {
+        background: none;
+        padding: 0;
+      }
+
+      .sheet {
+        box-shadow: none;
+        margin: 0;
+        width: 100%;
+        max-width: none;
+        border: none;
+      }
+
+      .no-print {
+        display: none !important;
+      }
+
+      .header {
+        margin-top: 0;
+      }
+    }
+
+    /* Actions */
+    .actions {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #fff;
+      padding: 10px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .btn-primary {
+      background: #007bff;
+      color: white;
+    }
+
+    .btn-secondary {
+      background: #6c757d;
+      color: white;
+      margin-right: 5px;
+    }
+
+    .btn:hover {
+      opacity: 0.9;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="actions no-print">
+    <a href="javascript:history.back()" class="btn btn-secondary">Voltar</a>
+    <button onclick="window.print()" class="btn btn-primary">Imprimir</button>
   </div>
 
-  <div class="table-responsive">
-    <table class="table table-sm table-bordered" aria-describedby="caption-itens-orc">
-      <caption id="caption-itens-orc">Itens do orçamento com produto, quantidade, preço e total.</caption>
-      <thead>
-        <tr>
-          <th scope="col">Item</th>
-          <th scope="col">Produto</th>
-          <th scope="col" class="text-end">Quantidade</th>
-          <th scope="col" class="text-end">Preço Unitário</th>
-          <th scope="col" class="text-end">Total</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for item in itens_detalhados %}
-        <tr>
-          <td>{{ item.iped_item }}</td>
-          <td>
-            <div style="display:flex; align-items:center; gap:8px;">
-              {% if item.has_foto %}
-                <img src="{% url 'produto_foto_web' slug=slug prod_codi=item.prod_codigo %}"
-                     alt="Foto do produto {{ item.prod_nome }}" width="40" height="40"
-                     style="object-fit:cover;" onerror="this.style.display='none';" />
-              {% endif %}
-              <div>
-                <div style="font-weight:600;">{{ item.prod_nome }}</div>
-                <div style="color:#666; font-size:12px;">{{ item.prod_codigo }}</div>
+  <div class="sheet">
+    <!-- Header -->
+    <header class="header">
+      <div class="company-info" style="display: flex; align-items: center;">
+        {% if logo_b64 %}
+        <div style="margin-right: 15px;">
+          <img src="data:image/png;base64,{{ logo_b64 }}" alt="Logo" style="max-height: 80px; max-width: 150px;">
+        </div>
+        {% endif %}
+        <div>
+          <h1>{{ filial.empr_nome|default:empresa.empr_nome|default:"Empresa" }}</h1>
+          <div class="company-details">
+            {% if filial.empr_docu %}<strong>CNPJ:</strong> {{ filial.empr_docu }}<br>{% endif %}
+            {% if filial.empr_ende %}
+            {{ filial.empr_ende }}, {{ filial.empr_nume|default:"" }} - {{ filial.empr_bair|default:"" }}<br>
+            {{ filial.empr_cida }} - {{ filial.empr_esta }} | CEP: {{ filial.empr_cep|default:"" }}<br>
+            {% endif %}
+            {% if filial.empr_fone %}<strong>Tel:</strong> {{ filial.empr_fone }}{% endif %}
+            {% if filial.empr_emai %} | <strong>Email:</strong> {{ filial.empr_emai }}{% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="order-info">
+        <div class="order-title">ORÇAMENTO #{{ object.pedi_nume }}</div>
+        <div class="order-meta">
+          <span><strong>Data:</strong> {{ object.pedi_data|date:"d/m/Y" }}</span>
+          <span><strong>Status:</strong> {{ object.get_pedi_stat_display|default:object.pedi_stat }}</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Cliente e Dados -->
+    <div class="row">
+      <div class="col-6">
+        <div class="section-box">
+          <div class="section-title">Dados do Cliente</div>
+          <div class="info-details">
+            <div class="mb-2">
+              <span class="info-label">Nome / Razão Social:</span><br>
+              <span class="info-value">{% if cliente %}{{ cliente.enti_nome|default:object.pedi_forn }}{% else %}{{
+                object.pedi_forn }}{% endif %}</span>
+            </div>
+            <div class="mb-2">
+              <span class="info-label">Fantasia:</span><br>
+              <span class="info-value">{% if cliente %}{{ cliente.enti_fant|default:"-" }}{% else %}-{% endif %}</span>
+            </div>
+            <div class="row" style="margin: 0 -5px;">
+              <div class="col" style="padding: 0 5px;">
+                <span class="info-label">CPF/CNPJ:</span><br>
+                <span class="info-value">{% if cliente %}{{ cliente.enti_cnpj|default:cliente.enti_cpf|default:"-" }}{% else %}-{% endif %}</span>
+              </div>
+              <div class="col" style="padding: 0 5px;">
+                <span class="info-label">Inscrição Estadual:</span><br>
+                <span class="info-value">{% if cliente %}{{ cliente.enti_insc_esta|default:"-" }}{% else %}-{% endif %}</span>
               </div>
             </div>
-          </td>
-          <td class="text-end">{{ item.iped_quan }}</td>
-          <td class="text-end">R$ {{ item.iped_unit }}</td>
-          <td class="text-end">R$ {{ item.iped_tota|default:0 }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-      <tfoot>
-        <tr>
-          <th scope="row" colspan="4" class="text-end">Total do Orçamento</th>
-          <th class="text-end">R$ {{ object.pedi_tota }}</th>
-        </tr>
-      </tfoot>
-    </table>
-  </div>
-</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6">
+        <div class="section-box">
+          <div class="section-title">Endereço & Contato</div>
+          <div class="info-details">
+            <div class="mb-2">
+                            <span class="info-label">Endereço:</span><br>
+                            <span class="info-value">
+                                {% if cliente %}
+                                    {{ cliente.enti_ende|default:"-" }}, {{ cliente.enti_nume|default:"" }}
+                                    {% if cliente.enti_comp %} - {{ cliente.enti_comp }}{% endif %}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="mb-2">
+                            <span class="info-label">Bairro / Cidade / UF:</span><br>
+                            <span class="info-value">
+                                {% if cliente %}
+                                    {{ cliente.enti_bair|default:"-" }} - {{ cliente.enti_cida|default:"-" }} / {{ cliente.enti_esta|default:"-" }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="row" style="margin: 0 -5px;">
+                            <div class="col" style="padding: 0 5px;">
+                                <span class="info-label">Telefone:</span><br>
+                                <span class="info-value">{% if cliente %}{{ cliente.enti_fone|default:cliente.enti_celu|default:"-" }}{% else %}-{% endif %}</span>
+                            </div>
+                            <div class="col" style="padding: 0 5px;">
+                                <span class="info-label">Vendedor:</span><br>
+                                <span class="info-value">{% if vendedor %}{{ vendedor.enti_nome|default:object.pedi_vend }}{% else %}{{ object.pedi_vend|default:"-" }}{% endif %}</span>
+                            </div>
+                        </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-<script>
-  // Atalho acessível para imprimir (tecla P)
-  (function(){
-    document.addEventListener('keydown', function(e){
-      if (e.altKey || e.ctrlKey || e.metaKey) return;
-      if (e.key.toLowerCase() === 'p') { e.preventDefault(); window.print(); }
+    <!-- Itens -->
+    <div class="mt-4">
+      <div class="section-title" style="border:none; margin-bottom: 5px;">Itens do Orçamento</div>
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th style="width: 40px;">#</th>
+            <th style="width: 80px;">Código</th>
+            <th>Descrição do Produto</th>
+            <th style="width: 40px;" class="col-center">UN</th>
+            <th style="width: 70px;" class="col-num">Qtd</th>
+            <th style="width: 90px;" class="col-num">Vlr. Unit</th>
+            <th style="width: 80px;" class="col-num">Desc.</th>
+            <th style="width: 100px;" class="col-num">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in itens_detalhados %}
+          <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ item.prod_codigo }}</td>
+            <td>
+              <div style="font-weight: 600;">{{ item.prod_nome }}</div>
+            </td>
+            <td class="col-center">{{ item.prod_unidade|default:"UN" }}</td>
+            <td class="col-num">{{ item.iped_quan|floatformat:2 }}</td>
+            <td class="col-num">R$ {{ item.iped_unit|floatformat:2 }}</td>
+            <td class="col-num">
+              {% if item.iped_desc and item.iped_desc > 0 %}
+              R$ {{ item.iped_desc|floatformat:2 }}
+              {% else %}
+              -
+              {% endif %}
+            </td>
+            <td class="col-num text-bold">R$ {{ item.iped_tota|floatformat:2 }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center" style="padding: 20px;">Nenhum item encontrado.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Totals & Observations -->
+    <div class="row">
+      <div class="col-8">
+        {% if object.pedi_obse %}
+        <div class="section-box" style="min-height: 100px;">
+          <div class="section-title">Observações</div>
+          <div style="font-size: 11px; white-space: pre-line;">{{ object.pedi_obse }}</div>
+        </div>
+        {% endif %}
+      </div>
+      <div class="col-4">
+        <div class="totals-section" style="display: block;">
+          <div class="totals-box" style="width: 100%; box-sizing: border-box;">
+            <div class="total-row">
+              <span>Subtotal:</span>
+              <span>R$ {{ object.pedi_topr|default:object.pedi_tota|floatformat:2 }}</span>
+            </div>
+            {% if object.pedi_desc and object.pedi_desc > 0 %}
+            <div class="total-row" style="color: #d9534f;">
+              <span>Desconto:</span>
+              <span>- R$ {{ object.pedi_desc|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+            <div class="total-row final">
+              <span>TOTAL:</span>
+              <span>R$ {{ object.pedi_tota|floatformat:2 }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Signatures -->
+    <div class="footer-section">
+      <div class="signatures">
+        <div class="signature-box">
+          <br>
+          <strong>{{ filial.empr_nome|default:"Empresa" }}</strong>
+        </div>
+        <div class="signature-box">
+                    <br>
+                    <strong>{% if cliente %}{{ cliente.enti_nome|default:"Cliente" }}{% else %}Cliente{% endif %}</strong>
+                </div>
+      </div>
+      <div style="text-align: center; font-size: 10px; color: #999; margin-top: 20px;">
+        Impresso em {% now "d/m/Y H:i" %} pelo usuário {{ request.user.username|default:"Sistema" }}
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Atalho para impressão
+    document.addEventListener('keydown', function (e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+        e.preventDefault();
+        window.print();
+      }
     });
-  })();
-</script>
-{% endblock %}
+  </script>
+</body>
+
+</html>

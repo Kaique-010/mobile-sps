@@ -213,29 +213,49 @@ class EmissaoService:
         chave_consulta = nota.chave_acesso
 
         if not chave_consulta:
-            # 1. Tenta recuperar chave de evento de erro anterior (539 ou outros com chNFe)
-            from ..models import NotaEvento
-            eventos_erro = NotaEvento.objects.using(self.db).filter(
-                nota=nota, 
-                descricao__contains="chNFe"
-            ).order_by("-id")
-            
-            for ev in eventos_erro:
-                # Tenta capturar qualquer sequência de 44 dígitos
-                match = re.search(r"(\d{44})", ev.descricao)
-                if match:
-                    chave_consulta = match.group(1)
-                    print(f"=== CHAVE RECUPERADA DE EVENTO {ev.id}: {chave_consulta} ===")
-                    logger.info(f"Recuperada chave {chave_consulta} do histórico de erros (Evento {ev.id}) para consulta.")
-                    break
-            
-            # 2. Se ainda não achou, tenta no motivo_status da própria nota
+            # 1. Tenta no motivo_status da própria nota (Alta prioridade: se for erro de duplicidade, a chave real está aqui)
             if not chave_consulta and nota.motivo_status:
                 match = re.search(r"(\d{44})", nota.motivo_status)
                 if match:
                     chave_consulta = match.group(1)
                     print(f"=== CHAVE RECUPERADA DE MOTIVO_STATUS: {chave_consulta} ===")
                     logger.info(f"Recuperada chave {chave_consulta} do motivo_status da nota.")
+
+            # 2. Tenta recuperar chave de evento de erro anterior (539 ou outros com chNFe)
+            if not chave_consulta:
+                from ..models import NotaEvento
+                eventos_erro = NotaEvento.objects.using(self.db).filter(
+                    nota=nota, 
+                    descricao__contains="chNFe"
+                ).order_by("-id")
+                
+                for ev in eventos_erro:
+                    # Tenta capturar qualquer sequência de 44 dígitos na descrição
+                    match = re.search(r"(\d{44})", ev.descricao or "")
+                    
+                    # Se não achou na descrição, tenta no XML do evento se existir
+                    if not match and ev.xml:
+                        match = re.search(r'(?:Id="NFe|chNFe>|chave:?\s?)(\d{44})', ev.xml)
+
+                    if match:
+                        chave_consulta = match.group(1)
+                        print(f"=== CHAVE RECUPERADA DE EVENTO {ev.id}: {chave_consulta} ===")
+                        logger.info(f"Recuperada chave {chave_consulta} do histórico de erros (Evento {ev.id}) para consulta.")
+                        break
+            
+            # 3. Tenta extrair do XML armazenado na própria nota
+            # Prioriza XML Autorizado (se existir, é a chave correta)
+            # XML Assinado é a última opção (pode conter chave que gerou erro de duplicidade)
+            if not chave_consulta:
+                for xml_field in [nota.xml_autorizado, nota.xml_assinado]:
+                    if xml_field:
+                        # Procura por Id="NFe..." (atributo) ou <chNFe>...</chNFe> (tag)
+                        match = re.search(r'(?:Id="NFe|chNFe>|chave:?\s?)(\d{44})', xml_field)
+                        if match:
+                            chave_consulta = match.group(1)
+                            print(f"=== CHAVE RECUPERADA DE XML DA NOTA: {chave_consulta} ===")
+                            logger.info(f"Recuperada chave {chave_consulta} do XML armazenado na nota.")
+                            break
 
         if not chave_consulta:
             print("=== NENHUMA CHAVE DE 44 DÍGITOS ENCONTRADA PARA CONSULTA ===")
@@ -274,6 +294,31 @@ class EmissaoService:
             motivo_sefaz = resposta.get("motivo")
             protocolo_sefaz = resposta.get("protocolo")
             xml_prot_sefaz = resposta.get("xml_protocolo")
+
+            # Tratamento de Duplicidade (539/204) com Chave Diferente na Consulta
+            # Se consultamos uma chave e a SEFAZ diz que é duplicata de OUTRA, usamos a outra.
+            if str(status_sefaz) in ["539", "204"] and motivo_sefaz:
+                 # Tenta extrair a chave correta do motivo
+                 # Padrão esperado: "Duplicidade... [CHAVE]"
+                 match = re.search(r"\[(\d{44})\]", motivo_sefaz)
+                 if match:
+                     chave_correta = match.group(1)
+                     # Só faz sentido se a chave retornada for diferente da que usamos
+                     if chave_correta != chave_consulta:
+                         print(f"=== DUPLICIDADE DETECTADA NA CONSULTA. Chave correta na SEFAZ: {chave_correta} ===")
+                         logger.info(f"Corrigindo chave de acesso de {chave_consulta} para {chave_correta} devido a duplicidade na SEFAZ.")
+                         
+                         # Atualiza a chave localmente para a correta e refaz a consulta IMEDIATAMENTE
+                         chave_consulta = chave_correta
+                         
+                         # Refaz a consulta com a chave correta para pegar o protocolo e status 100
+                         resposta = adapter.consultar(chave_consulta)
+                         
+                         # Atualiza as variáveis com o resultado da nova consulta
+                         status_sefaz = resposta.get("status")
+                         motivo_sefaz = resposta.get("motivo")
+                         protocolo_sefaz = resposta.get("protocolo")
+                         xml_prot_sefaz = resposta.get("xml_protocolo")
 
             with transaction.atomic(using=self.db):
                 # Se achamos a chave (seja na nota ou recuperada), salvamos ela

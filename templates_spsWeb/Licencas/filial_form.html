@@ -63,6 +63,9 @@
           <li class="nav-item">
             <a class="nav-link" id="nfe-tab" data-bs-toggle="tab" href="#nfe">NF-e/CT-e/NFS-e</a>
           </li>
+          <li class="nav-item">
+            <a class="nav-link" id="logo-tab" data-bs-toggle="tab" href="#logo">Logo</a>
+          </li>
 
         </ul>
 
@@ -93,20 +96,25 @@
             {% include 'Licencas/abas/filial_nfe.html' %}
           </div>
 
+          <div class="tab-pane fade" id="logo">
+            {% include 'Licencas/abas/filial_logo.html' %}
+          </div>
+
           <div class="tab-pane fade" id="outras">
             {% include 'Licencas/abas/filial_outras.html' %}
           </div>
         </div>
 
-      <div class="mt-3 form-actions">
-        <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> Salvar</button>
-        <a href="{% url 'filiais_web' slug=slug %}" class="btn btn-secondary">Cancelar</a>
-      </div>
+        <div class="mt-3 form-actions">
+          <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> Salvar</button>
+          <a href="{% url 'filiais_web' slug=slug %}" class="btn btn-secondary">Cancelar</a>
+        </div>
       </form>
     </div>
   </div>
 
-  <form id="certificadoUploadForm" action="{% url 'web_licencas_certificado' slug=slug %}" method="post" enctype="multipart/form-data" style="display:none;">
+  <form id="certificadoUploadForm" action="{% url 'web_licencas_certificado' slug=slug %}" method="post"
+    enctype="multipart/form-data" style="display:none;">
     {% csrf_token %}
   </form>
 

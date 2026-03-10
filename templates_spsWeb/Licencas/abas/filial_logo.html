@@ -1,0 +1,29 @@
+<div class="row">
+    <div class="col-md-12">
+        <div class="card mb-3">
+            <div class="card-header">Logo da Filial</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label for="id_logo" class="form-label">Selecione o arquivo de imagem (PNG, JPG)</label>
+                        {{ form.logo }}
+                        <small class="text-muted d-block mt-2">A imagem será exibida em documentos impressos e
+                            notas.</small>
+                    </div>
+                    <div class="col-md-6 text-center">
+                        <label class="form-label">Logo Atual</label>
+                        <div class="border p-3 d-flex justify-content-center align-items-center"
+                            style="min-height: 150px; background-color: #f8f9fa;">
+                            {% if logo_b64 %}
+                            <img src="data:image/png;base64,{{ logo_b64 }}" alt="Logo Filial"
+                                style="max-width: 100%; max-height: 200px;">
+                            {% else %}
+                            <span class="text-muted">Nenhum logo cadastrado</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

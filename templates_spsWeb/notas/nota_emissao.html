@@ -36,7 +36,7 @@
     </li>
   </ul>
 
-  <form id="emit-form" class="tab-content border border-top-0 p-3">
+  <form id="emit-form" class="tab-content border border-top-0 p-3 bg-body">
     <div class="tab-pane fade show active" id="tab-principal" role="tabpanel">
       <div class="row g-3">
         <div class="col-md-2">
@@ -291,6 +291,8 @@
 
     <div class="d-flex justify-content-end gap-2 mt-3">
       <a class="btn btn-secondary" href="/web/{{ slug }}/notas-fiscais/">Voltar</a>
+      <button class="btn btn-outline-info" type="button" id="btn-calcular"><i class="bi bi-calculator"></i> Calcular
+        Impostos</button>
       <button class="btn btn-outline-primary" type="button" id="btn-salvar"><span
           class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span> <i class="bi bi-save"></i>
         Salvar</button>
@@ -736,10 +738,18 @@
       }
     });
 
+    let currentNotaId = null;
+
     const criarNota = async (body) => {
       const resp = await authFetch(`/api/${slug}/notasfiscais/notas-fiscais/notas/`, { method: 'POST', body: JSON.stringify(body) });
       const created = await resp.json();
       return { ok: resp.ok, data: created };
+    };
+
+    const atualizarNota = async (id, body) => {
+      const resp = await authFetch(`/api/${slug}/notasfiscais/notas-fiscais/notas/${id}/`, { method: 'PATCH', body: JSON.stringify(body) });
+      const updated = await resp.json();
+      return { ok: resp.ok, data: updated };
     };
 
     const gravarNota = async (id) => {
@@ -796,13 +806,25 @@
       if (!destinatarioId) { showToast('Selecione o cliente na aba Cliente.', { variant: 'warning' }); return; }
       if (!items.length) { showToast('Adicione ao menos um item.', { variant: 'warning' }); return; }
       const sp = btnSalvar.querySelector('.spinner-border'); btnSalvar.disabled = true; if (sp) sp.classList.remove('d-none');
+
       const payload = montarPayload(fd);
-      const created = await criarNota(payload);
-      if (!created.ok) { showToast('Falha ao salvar: ' + (created.data?.detail || created.data?.motivo || 'Erro'), { variant: 'danger', delay: 4000 }); btnSalvar.disabled = false; if (sp) sp.classList.add('d-none'); return; }
-      const notaId = created.data?.id || created.data?.pk || created.data?.nota?.id;
-      if (!notaId) { showToast('Nota criada, porém ID não retornado.', { variant: 'warning' }); btnSalvar.disabled = false; if (sp) sp.classList.add('d-none'); return; }
+      let result;
+
+      if (currentNotaId) {
+        result = await atualizarNota(currentNotaId, payload);
+      } else {
+        result = await criarNota(payload);
+      }
+
+      if (!result.ok) { showToast('Falha ao salvar: ' + (result.data?.detail || result.data?.motivo || 'Erro'), { variant: 'danger', delay: 4000 }); btnSalvar.disabled = false; if (sp) sp.classList.add('d-none'); return; }
+
+      const notaId = result.data?.id || result.data?.pk || result.data?.nota?.id;
+      if (!notaId) { showToast('Nota salva, porém ID não retornado.', { variant: 'warning' }); btnSalvar.disabled = false; if (sp) sp.classList.add('d-none'); return; }
+
+      currentNotaId = notaId; // Update current ID
+
       try {
-        preencherBackendDaNota(created.data);
+        preencherBackendDaNota(result.data);
         renderItems();
       } catch (e) { }
       const grav = await gravarNota(notaId);
@@ -810,6 +832,69 @@
       window.location.href = `/web/${slug}/notas-fiscais/`;
       btnSalvar.disabled = false; if (sp) sp.classList.add('d-none');
     });
+
+    const btnCalcular = document.getElementById('btn-calcular');
+    if (btnCalcular) {
+      btnCalcular.addEventListener('click', async () => {
+        const fd = new FormData(document.getElementById('emit-form'));
+        const destinatarioId = document.getElementById('destinatario-id').value;
+        if (!destinatarioId) { showToast('Selecione o cliente na aba Cliente.', { variant: 'warning' }); return; }
+        if (!items.length) { showToast('Adicione ao menos um item.', { variant: 'warning' }); return; }
+
+        const sp = document.createElement('span');
+        sp.className = 'spinner-border spinner-border-sm me-1';
+        btnCalcular.prepend(sp);
+        btnCalcular.disabled = true;
+
+        try {
+          const payload = montarPayload(fd);
+          let result;
+
+          if (currentNotaId) {
+            result = await atualizarNota(currentNotaId, payload);
+          } else {
+            result = await criarNota(payload);
+          }
+
+          if (!result.ok) {
+            throw new Error('Falha ao salvar rascunho: ' + (result.data?.detail || 'Erro'));
+          }
+
+          const notaId = result.data?.id || result.data?.pk || result.data?.nota?.id;
+          if (!notaId) throw new Error('ID da nota não retornado.');
+
+          currentNotaId = notaId; // Update current ID
+
+          // Corrected URL: /api/calcular/<slug>/<id>/
+          const respCalc = await authFetch(`/api/calcular/${slug}/${notaId}/`, { method: 'POST' });
+          if (!respCalc.ok) {
+            let errorMsg = 'Erro desconhecido';
+            try {
+              const dataCalc = await respCalc.json();
+              errorMsg = dataCalc.erro || dataCalc.detail || 'Falha no cálculo';
+            } catch (e) {
+              errorMsg = `Erro ${respCalc.status}: ${respCalc.statusText}`;
+            }
+            throw new Error(errorMsg);
+          }
+
+          showToast('Cálculo realizado com sucesso.', { variant: 'success' });
+
+          const respGet = await authFetch(`/api/${slug}/notasfiscais/notas-fiscais/notas/${notaId}/`);
+          if (respGet.ok) {
+            const dataGet = await respGet.json();
+            preencherBackendDaNota(dataGet);
+            renderItems();
+          }
+
+        } catch (e) {
+          showToast(e.message || String(e), { variant: 'danger' });
+        } finally {
+          btnCalcular.disabled = false;
+          if (sp && sp.parentNode) sp.remove();
+        }
+      });
+    }
 
     const formEl = document.getElementById('emit-form');
     formEl.addEventListener('submit', async (ev) => {

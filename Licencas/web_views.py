@@ -21,6 +21,7 @@ from  .utils import proximo_usuario, atualizar_senha
 
 
 import logging
+import base64
 logger = logging.getLogger(__name__)
 
 class FilialCertificadoUploadView(FormView):
@@ -193,6 +194,15 @@ class FilialCreateView(DBSlugMixin, CreateView):
             obj.empr_cert_digi = encrypt_bytes(content)
         # Salva garantindo unicidade composta (empr_empr, empr_codi)
         from django.db import IntegrityError
+        
+        # Processar Logo
+        logo = form.cleaned_data.get('logo')
+        if logo:
+            try:
+                obj.empr_logo = logo.read()
+            except Exception as e:
+                logger.error(f"Erro ao ler logo: {e}")
+                
         while True:
             try:
                 obj.save(using=self.db_alias, force_insert=True)
@@ -274,6 +284,14 @@ class FilialUpdateView(DBSlugMixin, UpdateView):
             "empresa_id": self.object.empr_empr,
             "filial_id": self.object.empr_codi,
         })
+        
+        # Logo para exibição
+        if self.object.empr_logo:
+            try:
+                logo_bytes = bytes(self.object.empr_logo)
+                ctx['logo_b64'] = base64.b64encode(logo_bytes).decode('utf-8')
+            except Exception as e:
+                logger.error(f"Erro ao converter logo para base64: {e}")
 
         return ctx
 
@@ -294,6 +312,14 @@ class FilialUpdateView(DBSlugMixin, UpdateView):
         # Lógica de Upload de Certificado (similar ao CreateView)
         arquivo = form.cleaned_data.get('certificado')
         senha = form.cleaned_data.get('senha_certificado')
+
+        # Processar Logo
+        logo = form.cleaned_data.get('logo')
+        if logo:
+            try:
+                update_data['empr_logo'] = logo.read()
+            except Exception as e:
+                logger.error(f"Erro ao ler logo na atualização: {e}")
 
         if arquivo:
             content = arquivo.read()

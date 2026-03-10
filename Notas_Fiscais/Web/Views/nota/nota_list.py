@@ -1,7 +1,7 @@
 # notas_fiscais/views/nota/nota_list.py
 
 from django.views.generic import ListView
-from django.db.models import Q, OuterRef, Subquery
+from django.db.models import Q, OuterRef, Subquery, Count, Sum
 from core.utils import get_licenca_db_config
 from ....models import Nota, NotaEvento
 from Licencas.models import Filiais
@@ -81,6 +81,25 @@ class NotaListView(ListView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+
+        # KPIs baseados no queryset filtrado (self.object_list)
+        qs_full = self.object_list
+        
+        emitidas = qs_full.filter(status=100).count()
+        canceladas_distintas = qs_full.filter(status=101).values("destinatario").distinct().count()
+        total_faturado = qs_full.filter(status=100).aggregate(t=Sum("itens__total_item"))["t"] or 0
+        
+        ticket_medio = 0
+        if emitidas > 0:
+            ticket_medio = total_faturado / emitidas
+
+        ctx["kpis"] = {
+            "emitidas": emitidas,
+            "canceladas_distintas": canceladas_distintas,
+            "total_faturado": total_faturado,
+            "ticket_medio": ticket_medio,
+        }
+
         ctx["slug"] = self.kwargs.get("slug")
         ctx["status_choices"] = Nota._meta.get_field("status").choices
         ctx["preservado"] = {
