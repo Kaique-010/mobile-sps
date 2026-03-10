@@ -53,7 +53,8 @@
         </div>
       </div>
       <div class="card mt-3">
-        <div class="card-header">Resumo do caixa aberto</div>
+        <div class="card-header" id="resumoCaixaHeader">{% if caixa_aberto %}Resumo do caixa {{ caixa_aberto.caixa }}
+          aberto em {{ caixa_aberto.data|date:"d/m/Y" }}{% else %}Resumo do caixa aberto{% endif %}</div>
         <div class="card-body">
           <div class="row g-2">
             <div class="col-6">
@@ -111,7 +112,20 @@
   function getCSRFToken() { try { const name = 'csrftoken='; for (let c of document.cookie.split(';')) { c = c.trim(); if (c.startsWith(name)) return c.substring(name.length) } } catch (e) { } return '' }
   function headersForm() { const h = { 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' }; const t = localStorage.getItem('access') || sessionStorage.getItem('access'); if (t) h['Authorization'] = `Bearer ${t}`; if (empresa) h['X-Empresa'] = empresa; if (filial) h['X-Filial'] = filial; h['X-CSRFToken'] = getCSRFToken(); return h }
   function headersGet() { const h = { 'Accept': 'application/json' }; const t = localStorage.getItem('access') || sessionStorage.getItem('access'); if (t) h['Authorization'] = `Bearer ${t}`; if (empresa) h['X-Empresa'] = empresa; if (filial) h['X-Filial'] = filial; return h }
-  async function carregarCaixas() { const r = await fetch(`/web/${slug}/caixa-diario/caixas/abertos/?empresa=${empresa}&filial=${filial}`, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } }); const d = await r.json(); const sel = document.getElementById('selCaixa'); sel.innerHTML = ''; (d.results || []).forEach(it => { const o = document.createElement('option'); o.value = it.caixa; o.textContent = `${it.caixa} - ${it.operador || ''}`; sel.appendChild(o) }); atualizarResumoCaixa(); }
+  function formatarDataPtBR(iso) { try { const s = String(iso || '').slice(0, 10); if (s.length !== 10 || s.indexOf('-') < 0) return String(iso || ''); const [y, m, d] = s.split('-'); if (!y || !m || !d) return String(iso || ''); return `${d}/${m}/${y}` } catch (e) { return String(iso || '') } }
+  function atualizarTituloResumo() {
+    const sel = document.getElementById('selCaixa');
+    const cx = sel ? (sel.value || '') : '';
+    const opt = sel && sel.selectedOptions ? sel.selectedOptions[0] : null;
+    const dataIso = opt ? (opt.dataset?.data || '') : '';
+    const dataPt = formatarDataPtBR(dataIso);
+    const header = document.getElementById('resumoCaixaHeader');
+    if (!header) return;
+    if (!cx) { header.textContent = 'Resumo do caixa aberto'; return; }
+    if (dataPt) { header.textContent = `Resumo do caixa ${cx} aberto em ${dataPt}`; return; }
+    header.textContent = `Resumo do caixa ${cx} aberto`;
+  }
+  async function carregarCaixas() { const r = await fetch(`/web/${slug}/caixa-diario/caixas/abertos/?empresa=${empresa}&filial=${filial}`, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } }); const d = await r.json(); const sel = document.getElementById('selCaixa'); sel.innerHTML = ''; (d.results || []).forEach(it => { const o = document.createElement('option'); o.value = it.caixa; o.textContent = `${it.caixa} - ${it.operador || ''}`; o.dataset.data = String(it.data || ''); sel.appendChild(o) }); atualizarTituloResumo(); atualizarResumoCaixa(); }
   function brl(v) { try { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v || 0)) } catch (e) { return `R$ ${v}` } }
   async function atualizarResumoCaixa() { try { const sel = document.getElementById('selCaixa'); const cx = sel ? sel.value : ''; const params = new URLSearchParams(); if (empresa) params.append('empresa', empresa); if (filial) params.append('filial', filial); if (cx) params.append('caixa', cx); const url = `/web/${slug}/caixa-diario/caixa/resumo/?${params.toString()}`; const r = await fetch(url, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } }); if (!r.ok) return; const d = await r.json(); document.getElementById('res-saldo-inicial').textContent = brl(d.saldo_inicial || 0); document.getElementById('res-saldo-atual').textContent = brl(d.saldo_atual || 0); document.getElementById('res-entradas').textContent = brl(d.entradas || 0); document.getElementById('res-saidas').textContent = brl(d.saidas || 0); const lista = document.getElementById('res-por-forma'); if (lista) { lista.innerHTML = ''; (d.por_forma || []).forEach(it => { const row = document.createElement('div'); row.className = 'list-group-item d-flex justify-content-between align-items-center'; row.innerHTML = `<div>${it.descricao}</div><div>${brl(it.total)}</div>`; lista.appendChild(row) }); } } catch (e) { } }
   async function retomarPorNumero(ev) { if (ev && ev.key && ev.key !== 'Enter') return; const num = (document.getElementById('numeroVenda').value || '').trim(); if (!num) return; const params = new URLSearchParams({ numero_venda: num }); if (empresa) params.append('empresa', empresa); if (filial) params.append('filial', filial); const url = `/web/${slug}/caixa-diario/venda/status/?${params.toString()}`; try { const r = await fetch(url, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' }); if (!r.ok) { alert('Venda não encontrada'); return; } const d = await r.json(); if (!d.exists && Number(d.total_venda || 0) === 0 && Number(d.total_pagamentos || 0) === 0) { alert('Venda não encontrada'); return; } const linkProd = document.getElementById('linkProdutos'); const linkProc = document.getElementById('linkProcessamento'); if (linkProd) linkProd.href = `/web/${slug}/caixa-diario/produtos/?numero_venda=${encodeURIComponent(num)}`; if (linkProc) linkProc.href = `/web/${slug}/caixa-diario/processamento/?numero_venda=${encodeURIComponent(num)}`; window.location.href = linkProc ? linkProc.href : `/web/${slug}/caixa-diario/processamento/?numero_venda=${encodeURIComponent(num)}`; } catch (e) { alert('Falha ao verificar venda'); } }
@@ -211,7 +225,7 @@
     document.getElementById('btnIniciar')?.addEventListener('click', iniciar);
     document.getElementById('cliente')?.addEventListener('input', onClienteInput);
     document.getElementById('vendedor')?.addEventListener('input', onVendedorInput);
-    document.getElementById('selCaixa')?.addEventListener('change', () => { atualizarResumoCaixa(); atualizarLinkExtrato(); });
+    document.getElementById('selCaixa')?.addEventListener('change', () => { atualizarTituloResumo(); atualizarResumoCaixa(); atualizarLinkExtrato(); });
     document.getElementById('numeroVenda')?.addEventListener('keyup', retomarPorNumero);
     document.getElementById('numeroVenda')?.addEventListener('blur', retomarPorNumero);
     document.getElementById('btnNovoCliente')?.addEventListener('click', abrirModalClienteRapido);

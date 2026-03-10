@@ -14,15 +14,20 @@ def calcular_impostos(request, slug, nota_id):
         nota = Nota.objects.using(db).get(pk=nota_id)
         
         service = CalculoImpostosService(db)
-        # Apply taxes (updates items in DB)
-        service.aplicar_impostos(nota)
+
+        debug_data = service.aplicar_impostos(nota, return_debug=True)
         
-        # Update totals in Nota object (DB)
         NotaService.atualizar_totais(nota)
+        
+        print("Nota calculada e atualizado o total:", nota.total)
+        
+        # Print debug data
+        print("Debug Calculo Impostos:", debug_data)
         
         return JsonResponse({
             "mensagem": "Cálculo realizado com sucesso",
             "total_nota": str(nota.total) if hasattr(nota, 'total') else "0.00",
+            "debug_calculo": debug_data,
         })
     except Exception as e:
         return JsonResponse({"erro": str(e)}, status=400)

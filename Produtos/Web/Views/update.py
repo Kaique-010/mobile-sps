@@ -79,7 +79,22 @@ class NcmFiscalPadraoUpdateView(DBAndSlugMixin, UpdateView):
         return super().form_invalid(form)
 
     def get_queryset(self):
-        return NcmFiscalPadrao.objects.using(self.db_alias).select_related('ncm').all()
+        return NcmFiscalPadrao.objects.using(self.db_alias).all()
+
+    def get_object(self, queryset=None):
+        obj = super().get_object(queryset=queryset)
+        try:
+            from core.utils import get_db_from_slug
+            ncm_db = get_db_from_slug('savexml1') or 'save1'
+            ncm_obj = Ncm.objects.using(ncm_db).filter(pk=getattr(obj, "ncm_id", None)).first()
+            if ncm_obj is not None:
+                try:
+                    obj._state.fields_cache["ncm"] = ncm_obj
+                except Exception:
+                    obj.ncm = ncm_obj
+        except Exception:
+            pass
+        return obj
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)

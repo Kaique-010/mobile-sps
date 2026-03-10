@@ -1,4 +1,6 @@
 from django import forms
+from django.core.exceptions import ValidationError
+from django.forms.models import construct_instance
 from Produtos.models import Ncm
 from ..models import CFOP, NcmFiscalPadrao
 class CFOPForm(forms.ModelForm):
@@ -38,6 +40,18 @@ class CFOPForm(forms.ModelForm):
 
 
 class NCMFiscalPadraoForm(forms.ModelForm):
+    ncm = forms.CharField(
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Digite o código ou descrição",
+                "autocomplete": "off",
+                "list": "ncm-codes",
+            }
+        ),
+        required=True,
+    )
+
     class Meta:
         model = NcmFiscalPadrao
         fields = [
@@ -64,63 +78,26 @@ class NCMFiscalPadraoForm(forms.ModelForm):
             'cst_ibs': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'CST IBS'}),
             'aliq_ibs': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Aliq IBS'}),
         }
-    
-    def clean_ncm(self):
-        ncm_input = self.cleaned_data.get('ncm')
-        if not ncm_input:
-            return None
-            
-        if isinstance(ncm_input, Ncm):
-            return ncm_input
-            
-        # Remove formatting and description if present
-        # Format expectation: "12345678" or "12345678 - Description"
-        code = str(ncm_input).split(' - ')[0].strip()
-        
-        # Primeiro tenta buscar no banco de NCMs (prioridade)
-        obj = Ncm.objects.using(self.ncm_database).filter(ncm_codi=code).first()
-        
-        # Se não encontrar, tenta no banco local (fallback)
-        if not obj:
-            obj = Ncm.objects.using(self.database).filter(ncm_codi=code).first()
-            
-        if not obj:
-            raise forms.ValidationError(f"NCM '{code}' não encontrado.")
-            
-        # Valida se já existe regra para este NCM
-        # A validação de unicidade deve ser feita no banco onde a regra será salva (self.database)
-        qs = NcmFiscalPadrao.objects.using(self.database).filter(ncm_id=obj.ncm_codi)
-        if self.instance and self.instance.pk:
-            qs = qs.exclude(pk=self.instance.pk)
-            
-        if qs.exists():
-            raise forms.ValidationError(f"Já existe uma regra fiscal padrão para o NCM {code}. Edite a regra existente.")
-
-        return obj
 
     def __init__(self, *args, **kwargs):
         cst_choices = kwargs.pop('cst_choices', None)
         self.database = kwargs.pop('database', 'default')
         self.ncm_database = kwargs.pop('ncm_database', self.database)
         super().__init__(*args, **kwargs)
-
-        # Force ncm to be a CharField to allow custom cleaning of "CODE - DESC" format
-        self.fields['ncm'] = forms.CharField(
-            widget=forms.TextInput(attrs={
-                'class': 'form-control', 
-                'placeholder': 'Digite o código ou descrição',
-                'autocomplete': 'off'
-            }),
-            required=True
-        )
         
         if self.instance and getattr(self.instance, 'ncm_id', None):
              # Pre-fill with code if editing
              try:
-                 # Ensure we have the ncm object loaded
-                 ncm_obj = self.instance.ncm
-                 self.initial['ncm'] = f"{ncm_obj.ncm_codi} - {ncm_obj.ncm_desc}"
-             except:
+                 ncm_obj = (
+                     Ncm.objects.using(self.ncm_database)
+                     .filter(pk=self.instance.ncm_id)
+                     .first()
+                 )
+                 if ncm_obj:
+                     self.initial['ncm'] = f"{ncm_obj.ncm_codi} - {ncm_obj.ncm_desc}"
+                 else:
+                     self.initial['ncm'] = self.instance.ncm_id
+             except Exception:
                  self.initial['ncm'] = self.instance.ncm_id
 
         if cst_choices:
@@ -166,29 +143,67 @@ class NCMFiscalPadraoForm(forms.ModelForm):
             return None
             
         if isinstance(ncm_input, Ncm):
-            return ncm_input
+            return ncm_input.pk
             
-        # Remove formatting and description if present
-        # Format expectation: "12345678" or "12345678 - Description"
-        code = str(ncm_input).split(' - ')[0].strip()
-        
-        # Primeiro tenta buscar no banco de NCMs (prioridade)
-        obj = Ncm.objects.using(self.ncm_database).filter(ncm_codi=code).first()
-        
-        # Se não encontrar, tenta no banco local (fallback)
+        raw = str(ncm_input).split(' - ')[0].strip()
+        digits = ''.join(ch for ch in raw if ch.isdigit())
+
+        candidates = []
+        for c in (raw, digits):
+            c = (c or '').strip()
+            if c and c not in candidates:
+                candidates.append(c)
+        if digits and len(digits) == 8:
+            dotted = f"{digits[:4]}.{digits[4:6]}.{digits[6:]}"
+            if dotted not in candidates:
+                candidates.insert(1, dotted)
+        if raw and '.' in raw:
+            no_dots = raw.replace('.', '').strip()
+            if no_dots and no_dots not in candidates:
+                candidates.append(no_dots)
+
+        obj = None
+        search_dbs = [self.ncm_database]
+        if self.database and self.database != self.ncm_database:
+            search_dbs.append(self.database)
+
+        for db_alias in search_dbs:
+            for code in candidates:
+                obj = Ncm.objects.using(db_alias).filter(ncm_codi=code).first()
+                if obj:
+                    break
+            if obj:
+                break
+
         if not obj:
-            obj = Ncm.objects.using(self.database).filter(ncm_codi=code).first()
-            
-        if not obj:
-            raise forms.ValidationError(f"NCM '{code}' não encontrado.")
+            raise forms.ValidationError(f"NCM '{raw}' não encontrado.")
             
         # Valida se já existe regra para este NCM
         # A validação de unicidade deve ser feita no banco onde a regra será salva (self.database)
-        qs = NcmFiscalPadrao.objects.using(self.database).filter(ncm_id=obj.ncm_codi)
+        qs = NcmFiscalPadrao.objects.using(self.database).filter(ncm_id=obj.pk)
         if self.instance and self.instance.pk:
             qs = qs.exclude(pk=self.instance.pk)
             
         if qs.exists():
-            raise forms.ValidationError(f"Já existe uma regra fiscal padrão para o NCM {code}. Edite a regra existente.")
+            raise forms.ValidationError(f"Já existe uma regra fiscal padrão para o NCM {obj.pk}. Edite a regra existente.")
 
-        return obj
+        return obj.pk
+
+    def _post_clean(self):
+        opts = self._meta
+        try:
+            self.instance = construct_instance(self, self.instance, opts.fields, opts.exclude)
+        except ValidationError as e:
+            self._update_errors(e)
+
+        exclude = self._get_validation_exclusions()
+        if "ncm" not in exclude:
+            exclude.append("ncm")
+
+        try:
+            self.instance.full_clean(exclude=exclude, validate_unique=False)
+        except ValidationError as e:
+            self._update_errors(e)
+
+        if getattr(self, "_validate_unique", False):
+            self.validate_unique()

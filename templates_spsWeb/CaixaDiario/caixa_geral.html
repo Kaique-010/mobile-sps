@@ -68,12 +68,16 @@
           <div class="d-flex align-items-center gap-2">
             <div id="statusIndicator" style="width:12px;height:12px;border-radius:50%;background-color:transparent;">
             </div>
-            <div id="statusCaixa" class="text-success if (statusCaixa.textContent === 'caixa abert')" style="font-size: 18px;">Verificando...</div>
+            <div id="statusCaixa" class="{% if caixa_aberto %}text-success{% else %}text-muted{% endif %}"
+              data-bs-toggle="tooltip" data-bs-html="true"
+              title="{% if caixa_aberto %}Caixa {{ caixa_aberto.caixa }} aberto em {{ caixa_aberto.data }}{% else %}Nenhum caixa aberto{% endif %}">
+              {% if caixa_aberto %}Caixa {{ caixa_aberto.caixa }} aberto em {{ caixa_aberto.data }}{% else
+              %}Verificando...{% endif %}</div>
           </div>
           <div class="mt-3 d-grid"><a
               class="btn btn-outline-success btn-lg d-flex justify-content-center align-items-center gap-2 w-100"
               id="btnMovimentacoes" href="#"><i class="bi bi-cash-stack"></i>
-              
+
               <span>Movimentações</span></a>
           </div>
         </div>
@@ -90,35 +94,81 @@
     async function checarAberto() {
       const statusEl = document.getElementById('statusCaixa');
       const indicator = document.getElementById('statusIndicator');
+      const resetTooltip = (el) => {
+        try {
+          if (!el || !window.bootstrap || !bootstrap.Tooltip) return;
+          const inst = bootstrap.Tooltip.getInstance(el);
+          if (inst) inst.dispose();
+          if (el.getAttribute('title')) new bootstrap.Tooltip(el);
+        } catch (e) { }
+      };
       if (!empresa || !filial) {
-        if (statusEl) statusEl.textContent = 'Informe empresa/filial (login/contexto)';
+        if (statusEl) {
+          statusEl.textContent = 'Informe empresa/filial (login/contexto)';
+          statusEl.classList.remove('text-success', 'text-danger');
+          statusEl.classList.add('text-muted');
+          statusEl.setAttribute('title', 'Informe empresa/filial (login/contexto)');
+          resetTooltip(statusEl);
+        }
         if (indicator) { indicator.style.backgroundColor = 'transparent'; indicator.style.animation = 'none'; }
         return;
       }
       const url = `/web/${slug}/caixa-diario/caixas/abertos/`;
       const r = await fetch(url, { credentials: 'same-origin', headers: headersJSON() });
       if (!r.ok) {
-        if (statusEl) statusEl.textContent = 'Erro ao verificar';
+        if (statusEl) {
+          statusEl.textContent = 'Erro ao verificar';
+          statusEl.classList.remove('text-success', 'text-muted');
+          statusEl.classList.add('text-danger');
+          statusEl.setAttribute('title', 'Erro ao verificar');
+          resetTooltip(statusEl);
+        }
         if (indicator) { indicator.style.backgroundColor = 'transparent'; indicator.style.animation = 'none'; }
         return;
       }
       const d = await r.json();
       const arr = (d.results || []);
       if (arr.length > 0) {
-        if (statusEl) statusEl.textContent = 'Caixa aberto';
         const c = arr[0];
-        const caixNum = (c?.caixa || c?.caix_caix || '');
+        const caixNum = String((c?.caixa ?? c?.caix_caix ?? '') || '');
+        const dataAbertura = String((c?.data ?? c?.caix_data ?? '') || '');
+        const texto = dataAbertura ? `Caixa ${caixNum} aberto em ${dataAbertura}` : `Caixa ${caixNum} aberto`;
+        if (statusEl) {
+          statusEl.textContent = texto;
+          statusEl.classList.remove('text-danger', 'text-muted');
+          statusEl.classList.add('text-success');
+          statusEl.setAttribute('title', texto);
+          resetTooltip(statusEl);
+        }
         document.getElementById('btnMovimentacoes').href = `/web/${slug}/caixa-diario/venda/?caixa=${caixNum}`;
         if (indicator) {
           indicator.style.backgroundColor = '#28a745';
           indicator.style.animation = 'pulse-green 1s infinite';
         }
       } else {
-        if (statusEl) statusEl.textContent = 'Nenhum caixa aberto';
+        if (statusEl) {
+          statusEl.textContent = 'Nenhum caixa aberto';
+          statusEl.classList.remove('text-success', 'text-muted');
+          statusEl.classList.add('text-danger');
+          statusEl.setAttribute('title', 'Nenhum caixa aberto');
+          resetTooltip(statusEl);
+        }
         if (indicator) { indicator.style.backgroundColor = 'transparent'; indicator.style.animation = 'none'; }
       }
     }
     function showSucessoToast() { try { const el = document.getElementById('toastSucesso'); if (window.bootstrap && window.bootstrap.Toast) { const t = new window.bootstrap.Toast(el); t.show(); } else { el.classList.add('show'); setTimeout(() => { el.classList.remove('show'); }, 3000); } } catch (e) { alert('Caixa aberto com sucesso'); } }
+    async function reabrirCaixa(caixa, data) {
+      const payload = { caixa: Number(caixa || 0), data: String(data || '') };
+      const r = await fetch(`/web/${slug}/caixa-diario/caixa/reabrir/`, { method: 'POST', credentials: 'same-origin', headers: headersJSON(), body: JSON.stringify(payload) });
+      const txt = await r.text();
+      let d = null;
+      try { d = JSON.parse(txt); } catch (e) { d = null; }
+      if (!r.ok) {
+        const msg = (d && (d.detail || d.message)) ? (d.detail || d.message) : txt;
+        throw new Error(msg || 'Falha ao reabrir caixa');
+      }
+      return d || { ok: true };
+    }
     async function abrirCaixa() {
       const usuarioRaw = localStorage.getItem('usuario') || sessionStorage.getItem('usuario');
       let operador = document.getElementById('caix_oper').value || '';
@@ -141,13 +191,38 @@
         caix_orig: Number(origemBase || 0),
       };
       const r = await fetch(`/api/${slug}/caixadiario/caixageral/`, { method: 'POST', credentials: 'same-origin', headers: headersJSON(), body: JSON.stringify(payload) });
-      if (!r.ok) { const txt = await r.text(); alert('Falha na abertura: ' + txt); return; }
+      if (!r.ok) {
+        const txt = await r.text();
+        const msg = String(txt || '');
+        const jaExiste = msg.toLowerCase().includes('já existe') || msg.toLowerCase().includes('ja existe') || msg.toLowerCase().includes('already exists');
+        if (jaExiste) {
+          const ok = confirm('Este caixa já existe para esta data e está fechado. Deseja reabrir?');
+          if (ok) {
+            try {
+              await reabrirCaixa(payload.caix_caix, payload.caix_data);
+              await checarAberto();
+              showSucessoToast();
+              return;
+            } catch (e) {
+              alert('Falha ao reabrir: ' + (e?.message || msg));
+              return;
+            }
+          }
+        }
+        alert('Falha na abertura: ' + txt);
+        return;
+      }
       await checarAberto(); showSucessoToast();
     }
     async function buscarOrigens() { if (!empresa || !filial) return; const termo = (document.getElementById('origemBusca').value || '').trim(); const url = `/web/${slug}/caixa-diario/origens/?q=${encodeURIComponent(termo)}`; const r = await fetch(url, { credentials: 'same-origin', headers: headersJSON() }); if (!r.ok) return; const d = await r.json(); const lis = document.getElementById('origemSugestoes'); lis.innerHTML = ''; (d.results || []).forEach(v => { const id = typeof v === 'object' && v !== null ? (v.id ?? v.caix_caix ?? '') : v; const label = typeof v === 'object' && v !== null ? (v.text ?? `${v.caix_caix} - ${v.caix_oper ?? ''}`) : String(v); const a = document.createElement('a'); a.href = '#'; a.className = 'list-group-item list-group-item-action'; a.textContent = label; a.addEventListener('click', (ev) => { ev.preventDefault(); document.getElementById('origemBusca').value = label; document.getElementById('caix_orig').value = String(id); lis.innerHTML = ''; }); lis.appendChild(a); }); }
     async function buscarOperadores() { const termo = (document.getElementById('operadorBusca').value || '').trim(); const url = `/web/${slug}/caixa-diario/autocomplete/vendedores/?q=${encodeURIComponent(termo)}`; const r = await fetch(url, { credentials: 'same-origin', headers: headersJSON() }); if (!r.ok) return; const d = await r.json(); const lis = document.getElementById('operadorSugestoes'); lis.innerHTML = ''; (d.results || []).forEach(v => { const a = document.createElement('a'); a.href = '#'; a.className = 'list-group-item list-group-item-action'; a.textContent = String(v.text || v.id); a.addEventListener('click', (ev) => { ev.preventDefault(); document.getElementById('operadorBusca').value = String(v.text || v.id); document.getElementById('caix_oper').value = String(v.id); lis.innerHTML = ''; }); lis.appendChild(a); }); }
     async function buscarCaixa() { if (!empresa || !filial) return; const termo = (document.getElementById('caix_caix').value || '').trim(); const url = `/web/${slug}/caixa-diario/origens/?q=${encodeURIComponent(termo)}`; const r = await fetch(url, { credentials: 'same-origin', headers: headersJSON() }); if (!r.ok) return; const d = await r.json(); const lis = document.getElementById('caixaSugestoes'); lis.innerHTML = ''; (d.results || []).forEach(v => { const id = typeof v === 'object' && v !== null ? (v.id ?? v.caix_caix ?? '') : v; const label = typeof v === 'object' && v !== null ? (v.text ?? `${v.caix_caix} - ${v.caix_oper ?? ''}`) : String(v); const a = document.createElement('a'); a.href = '#'; a.className = 'list-group-item list-group-item-action'; a.textContent = label; a.addEventListener('click', (ev) => { ev.preventDefault(); document.getElementById('caix_caix').value = String(id); lis.innerHTML = ''; }); lis.appendChild(a); }); }
     document.addEventListener('DOMContentLoaded', () => {
+      try {
+        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((el) => {
+          if (window.bootstrap && bootstrap.Tooltip) new bootstrap.Tooltip(el);
+        });
+      } catch (e) { }
       const style = document.createElement('style');
       style.textContent = `
       @keyframes pulse-green {

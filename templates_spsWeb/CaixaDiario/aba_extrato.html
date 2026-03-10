@@ -60,6 +60,29 @@
     font-weight: 700;
     line-height: 1.1;
   }
+
+  #resumoTotais {
+    margin-top: 2px;
+    padding: 16px 20px;
+    border-radius: 12px;
+    height: 100%;
+    color: #ffffff;
+    background: linear-gradient(135deg, #929bc2, #1a418a);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.10);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  small.text-muted {
+    font-size: 0.78rem;
+    font-weight: 500;
+    opacity: 0.9;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-top: 4px;
+    display: block;
+    text-align: right;
+    color: #6c757d;
+  }
 </style>
 <div class="container py-4">
   <div class="container align-items-center">
@@ -110,7 +133,7 @@
           </div>
 
           <div class="d-grid">
-            <button class="btn btn-primary" id="btnAplicarFiltros">Aplicar filtros</button>
+            <button class="btn btn-outline-primary" id="btnAplicarFiltros">Aplicar filtros</button>
           </div>
         </div>
       </div>
@@ -118,8 +141,7 @@
     <div class="col-md-8">
       <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
-          <span>Resultados</span>
-          <span id="resumoTotais" class="small text-muted"></span>
+          <span id="resumoTotais" class="small"></span>
         </div>
         <div class="card-body">
           <div id="listaExtrato" class="accordion"></div>
@@ -135,6 +157,7 @@
   const caixaInicial = '{{ caixa|default:"" }}';
   function headersGet() { const h = { 'Accept': 'application/json' }; const t = localStorage.getItem('access') || sessionStorage.getItem('access'); if (t) h['Authorization'] = `Bearer ${t}`; if (empresa) h['X-Empresa'] = empresa; if (filial) h['X-Filial'] = filial; return h }
   function brl(v) { try { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v || 0)) } catch (e) { return `R$ ${v}` } }
+  function dataPtBR(iso) { try { const s = String(iso || '').slice(0, 10); if (s.length !== 10 || s.indexOf('-') < 0) return String(iso || ''); const [y, m, d] = s.split('-'); if (!y || !m || !d) return String(iso || ''); return `${d}/${m}/${y}` } catch (e) { return String(iso || '') } }
   function todayISO() { try { return new Date().toISOString().slice(0, 10) } catch (e) { return '' } }
   function renderSugVendedor(items) { const el = document.getElementById('sugVendedorExtrato'); if (!el) return; el.innerHTML = ''; (items || []).forEach(it => { const a = document.createElement('a'); a.href = '#'; a.className = 'list-group-item list-group-item-action'; a.textContent = `${it.id} - ${it.text}`; a.addEventListener('click', ev => { ev.preventDefault(); document.getElementById('filtroVendedor').value = `${it.id} - ${it.text}`; document.getElementById('filtroVendedorId').value = it.id; el.innerHTML = ''; }); el.appendChild(a); }); }
   async function buscarVendedoresExtrato(q) { if (!q || q.length < 2) { renderSugVendedor([]); return; } const url = `/web/${slug}/caixa-diario/autocomplete/vendedores/?q=${encodeURIComponent(q)}`; const r = await fetch(url, { credentials: 'same-origin', headers: headersGet() }); if (!r.ok) return; const d = await r.json(); renderSugVendedor(d.results); }
@@ -178,7 +201,7 @@
     });
   }
 
-  async function carregarExtrato() { const params = new URLSearchParams(); if (empresa) params.append('empresa', empresa); if (filial) params.append('filial', filial); const data = document.getElementById('filtroData').value || ''; const vendId = document.getElementById('filtroVendedorId').value || ''; const forma = document.getElementById('filtroForma').value || ''; const caixaVal = document.getElementById('filtroCaixa').value || ''; if (data) params.append('data', data); if (vendId) params.append('vendedor', vendId); if (forma) params.append('forma', forma); if (caixaVal) params.append('caixa', caixaVal); const url = `/web/${slug}/caixa-diario/venda/extrato/?${params.toString()}`; const r = await fetch(url, { credentials: 'same-origin', headers: headersGet() }); const lista = document.getElementById('listaExtrato'); if (!r.ok) { if (lista) lista.innerHTML = '<div class="text-danger">Erro ao carregar extrato</div>'; renderCardsTotais([]); return; } const d = await r.json(); renderCardsTotais(d.totais || []); const arr = d.results || []; if (!lista) return; lista.innerHTML = ''; let totalGeral = 0, totalPago = 0, totalSaldo = 0; arr.forEach((venda, idx) => { totalGeral += Number(venda.total_venda || 0); totalPago += Number(venda.total_pagamentos || 0); totalSaldo += Number(venda.saldo || 0); const item = document.createElement('div'); item.className = 'accordion-item'; const headId = `extrato-head-${idx}`; const bodyId = `extrato-body-${idx}`; const titulo = `Venda ${venda.numero_venda} — Data: ${venda.data || ''} — Vendedor: ${venda.vendedor || ''} — Total: ${brl(venda.total_venda)}`; const pagamentosTxt = (venda.pagamentos || []).map(pg => `${pg.descricao}: ${brl(pg.total)}`).join(' | ') || 'Nenhum'; const linhas = (venda.itens || []).map(it => `<tr><td>${it.produto}</td><td>${it.descricao}</td><td class="text-end">${Number(it.quantidade || 0).toFixed(2)}</td><td class="text-end">${brl(it.unitario)}</td><td class="text-end">${brl(it.total)}</td></tr>`).join(''); item.innerHTML = `<h2 class="accordion-header" id="${headId}"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${bodyId}" aria-expanded="false" aria-controls="${bodyId}">${titulo}</button></h2><div id="${bodyId}" class="accordion-collapse collapse" aria-labelledby="${headId}"><div class="accordion-body"><div class="mb-2"><strong>Cliente:</strong> ${venda.cliente || ''}</div><div class="mb-2"><strong>Pagamentos:</strong> ${pagamentosTxt}</div><div class="mb-2"><strong>Total pago:</strong> ${brl(venda.total_pagamentos || 0)} — <strong>Saldo:</strong> ${brl(venda.saldo || 0)}</div><div class="table-responsive"><table class="table table-sm table-dark mb-0"><thead><tr><th>Código</th><th>Descrição</th><th class="text-end">Qtd</th><th class="text-end">Unitário</th><th class="text-end">Total</th></tr></thead><tbody>${linhas}</tbody></table></div></div></div>`; lista.appendChild(item); }); const resumo = document.getElementById('resumoTotais'); if (resumo) resumo.textContent = `Vendas: ${arr.length} | Total: ${brl(totalGeral)} | Pago: ${brl(totalPago)} | Saldo: ${brl(totalSaldo)}`; }
+  async function carregarExtrato() { const params = new URLSearchParams(); if (empresa) params.append('empresa', empresa); if (filial) params.append('filial', filial); const data = document.getElementById('filtroData').value || ''; const vendId = document.getElementById('filtroVendedorId').value || ''; const forma = document.getElementById('filtroForma').value || ''; const caixaVal = document.getElementById('filtroCaixa').value || ''; if (data) params.append('data', data); if (vendId) params.append('vendedor', vendId); if (forma) params.append('forma', forma); if (caixaVal) params.append('caixa', caixaVal); const url = `/web/${slug}/caixa-diario/venda/extrato/?${params.toString()}`; const r = await fetch(url, { credentials: 'same-origin', headers: headersGet() }); const lista = document.getElementById('listaExtrato'); if (!r.ok) { if (lista) lista.innerHTML = '<div class="text-danger">Erro ao carregar extrato</div>'; renderCardsTotais([]); return; } const d = await r.json(); renderCardsTotais(d.totais || []); const arr = d.results || []; if (!lista) return; lista.innerHTML = ''; let totalGeral = 0, totalPago = 0, totalSaldo = 0; arr.forEach((venda, idx) => { totalGeral += Number(venda.total_venda || 0); totalPago += Number(venda.total_pagamentos || 0); totalSaldo += Number(venda.saldo || 0); const item = document.createElement('div'); item.className = 'accordion-item'; const headId = `extrato-head-${idx}`; const bodyId = `extrato-body-${idx}`; const dataTxt = venda.data ? dataPtBR(venda.data) : ''; const titulo = `Venda ${venda.numero_venda} — Data: ${dataTxt} — Vendedor: ${venda.vendedor || ''} — Total: ${brl(venda.total_venda)}`; const pagamentosTxt = (venda.pagamentos || []).map(pg => `${pg.descricao}: ${brl(pg.total)}`).join(' | ') || 'Nenhum'; const linhas = (venda.itens || []).map(it => `<tr><td>${it.produto}</td><td>${it.descricao}</td><td class="text-end">${Number(it.quantidade || 0).toFixed(2)}</td><td class="text-end">${brl(it.unitario)}</td><td class="text-end">${brl(it.total)}</td></tr>`).join(''); item.innerHTML = `<h2 class="accordion-header" id="${headId}"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${bodyId}" aria-expanded="false" aria-controls="${bodyId}">${titulo}</button></h2><div id="${bodyId}" class="accordion-collapse collapse" aria-labelledby="${headId}"><div class="accordion-body"><div class="mb-2"><strong>Cliente:</strong> ${venda.cliente || ''}</div><div class="mb-2"><strong>Pagamentos:</strong> ${pagamentosTxt}</div><div class="mb-2"><strong>Total pago:</strong> ${brl(venda.total_pagamentos || 0)} — <strong>Saldo:</strong> ${brl(venda.saldo || 0)}</div><div class="table-responsive"><table class="table table-sm table-dark mb-0"><thead><tr><th>Código</th><th>Descrição</th><th class="text-end">Qtd</th><th class="text-end">Unitário</th><th class="text-end">Total</th></tr></thead><tbody>${linhas}</tbody></table></div></div></div>`; lista.appendChild(item); }); const resumo = document.getElementById('resumoTotais'); if (resumo) { const bruto = Number(d?.resumo?.bruto || 0); const troco = Number(d?.resumo?.troco || 0); const pago = Number(d?.resumo?.liquido || 0) || (bruto - troco); const saldoReceber = Number(totalGeral) - Number(pago); const saldoInicial = Number(d?.kpi?.saldo_inicial || 0); const entradas = Number(d?.kpi?.entradas || 0); const saidas = Number(d?.kpi?.saidas || 0); const saldoCaixa = (typeof d?.kpi?.saldo_atual !== 'undefined') ? Number(d.kpi.saldo_atual || 0) : (saldoInicial + entradas - saidas); resumo.textContent = `Vendas: ${arr.length} | Total: ${brl(totalGeral)} | Recebido: ${brl(bruto)} | Troco/saídas: ${brl(troco)} | Pago: ${brl(pago)} | Saldo a receber: ${brl(saldoReceber)} | Caixa: ${brl(saldoInicial)} + ${brl(entradas)} - ${brl(saidas)} = ${brl(saldoCaixa)}`; } }
   document.addEventListener('DOMContentLoaded', () => { const dataEl = document.getElementById('filtroData'); if (dataEl && !dataEl.value) dataEl.value = todayISO(); const urlCaixa = new URLSearchParams(window.location.search || '').get('caixa') || ''; const cxEl = document.getElementById('filtroCaixa'); if (cxEl) cxEl.value = caixaInicial || urlCaixa || ''; const vendInput = document.getElementById('filtroVendedor'); if (vendInput) { let tid = null; vendInput.addEventListener('input', () => { clearTimeout(tid); document.getElementById('filtroVendedorId').value = ''; const v = vendInput.value || ''; tid = setTimeout(() => buscarVendedoresExtrato(v), 300); }); } document.getElementById('btnAplicarFiltros')?.addEventListener('click', carregarExtrato); carregarExtrato(); });
 </script>
 {% endblock %}

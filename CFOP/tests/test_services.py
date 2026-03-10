@@ -118,19 +118,22 @@ class FiscalServiceTest(SimpleTestCase):
     @patch.object(MotorFiscal, 'obter_aliquotas_base')
     @patch.object(MotorFiscal, 'obter_icms_data')
     @patch.object(MotorFiscal, 'aplicar_overrides_dif')
-    def test_motor_fiscal_integration(self, mock_dif, mock_icms, mock_aliq, mock_ncm, mock_cfop):
+    @patch.object(MotorFiscal, 'resolver_fiscal_padrao')
+    def test_motor_fiscal_integration(self, mock_resolver_fiscal, mock_dif, mock_icms, mock_aliq, mock_ncm, mock_cfop):
         # Setup mocks
         mock_cfop.return_value = self.cfop
         mock_ncm.return_value = self.ncm
         mock_aliq.return_value = self.ctx.aliquotas_base
         mock_icms.return_value = self.ctx.icms_data
+        mock_resolver_fiscal.return_value = (None, None)
         
         # Mock overrides dif to return unchanged data
         mock_dif.return_value = (self.ctx.aliquotas_base, self.ctx.icms_data)
 
         item = MagicMock()
-        item.iped_quan = Decimal("1")
-        item.iped_unit = Decimal("100.00")
+        item.quantidade = Decimal("1")
+        item.unitario = Decimal("100.00")
+        item.desconto = Decimal("0")
         item.cfop = None # Ensure it uses resolver
 
         # Run Motor

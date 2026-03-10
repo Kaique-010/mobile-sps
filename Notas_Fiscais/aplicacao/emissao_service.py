@@ -81,6 +81,25 @@ class EmissaoService:
                 detalhes=detalhes,
             )
 
+        if str(getattr(nota, "modelo", "")) == "65":
+            id_token = str(getattr(filial_obj, "empr_id_toke", "") or "").strip()
+            csc = str(getattr(filial_obj, "empr_csn_toke", "") or "").strip()
+            if not id_token or not csc:
+                raise ErroDominio(
+                    "Filial sem CSC/ID Token configurado para NFC-e (modelo 65).",
+                    codigo="nfce_csc_nao_configurado",
+                    detalhes={
+                        "empresa": nota.empresa,
+                        "filial": nota.filial,
+                    },
+                )
+            nfe_obj._nfce_csc = {
+                "id_token": id_token,
+                "csc": csc,
+                "uf": dto.emitente.uf,
+                "ambiente": str(dto.ambiente),
+            }
+
         try:
             resposta = adapter.emitir(nfe_obj)
         except Exception as e:

@@ -14,132 +14,162 @@
 
   <form method="post" class="card p-3 bg-body">
     {% csrf_token %}
-    <div class="row g-3">
-      <div class="col-md-2">{{ form.modelo.label_tag }} {{ form.modelo }}</div>
-      <div class="col-md-2">{{ form.serie.label_tag }} {{ form.serie }}</div>
-      <div class="col-md-2">{{ form.numero.label_tag }} {{ form.numero }}</div>
-      <div class="col-md-3">{{ form.data_emissao.label_tag }} {{ form.data_emissao }}</div>
-      <div class="col-md-3">{{ form.data_saida.label_tag }} {{ form.data_saida }}</div>
-      <div class="col-md-6">
-        {{ form.destinatario.label_tag }}
-        <div class="position-relative">
-          <input type="text" id="destinatario-ac" class="form-control" autocomplete="off"
-            placeholder="Nome/CNPJ/CPF do cliente"
-            value="{% if nota and nota.destinatario %}{{ nota.destinatario.enti_nome }}{% endif %}">
-          <div class="d-none">{{ form.destinatario }}</div>
-          <div id="destinatario-ac-list" class="list-group position-absolute w-100" style="z-index:20"></div>
+    <ul class="nav nav-tabs" id="nota-tabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="tab-dados-btn" data-bs-toggle="tab" data-bs-target="#tab-dados"
+          type="button" role="tab" aria-controls="tab-dados" aria-selected="true">Dados</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-itens-btn" data-bs-toggle="tab" data-bs-target="#tab-itens" type="button"
+          role="tab" aria-controls="tab-itens" aria-selected="false">Itens</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-transporte-btn" data-bs-toggle="tab" data-bs-target="#tab-transporte"
+          type="button" role="tab" aria-controls="tab-transporte" aria-selected="false">Transporte</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-totais-btn" data-bs-toggle="tab" data-bs-target="#tab-totais" type="button"
+          role="tab" aria-controls="tab-totais" aria-selected="false">Totais</button>
+      </li>
+    </ul>
+
+    <div class="tab-content pt-3">
+      <div class="tab-pane fade show active" id="tab-dados" role="tabpanel" aria-labelledby="tab-dados-btn">
+        <div class="row g-3">
+          <div class="col-md-2">{{ form.modelo.label_tag }} {{ form.modelo }}</div>
+          <div class="col-md-2">{{ form.serie.label_tag }} {{ form.serie }}</div>
+          <div class="col-md-2">{{ form.numero.label_tag }} {{ form.numero }}</div>
+          <div class="col-md-3">{{ form.data_emissao.label_tag }} {{ form.data_emissao }}</div>
+          <div class="col-md-3">{{ form.data_saida.label_tag }} {{ form.data_saida }}</div>
+          <div class="col-md-6">
+            {{ form.destinatario.label_tag }}
+            <div class="position-relative">
+              <input type="text" id="destinatario-ac" class="form-control" autocomplete="off"
+                placeholder="Nome/CNPJ/CPF do cliente"
+                value="{% if nota and nota.destinatario %}{{ nota.destinatario.enti_nome }}{% endif %}">
+              <div class="d-none">{{ form.destinatario }}</div>
+              <div id="destinatario-ac-list" class="list-group position-absolute w-100" style="z-index:20"></div>
+            </div>
+          </div>
+          <div class="col-md-3">{{ form.tipo_operacao.label_tag }} {{ form.tipo_operacao }}</div>
+          <div class="col-md-3">{{ form.finalidade.label_tag }} {{ form.finalidade }}</div>
         </div>
       </div>
-      <div class="col-md-3">{{ form.tipo_operacao.label_tag }} {{ form.tipo_operacao }}</div>
-      <div class="col-md-3">{{ form.finalidade.label_tag }} {{ form.finalidade }}</div>
-    </div>
 
-    <hr />
-    <div class="d-flex justify-content-between align-items-center">
-      <h5 class="mb-0">Itens</h5>
-      <button type="button" id="btn-add-item" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus"></i>
-        Adicionar Item</button>
-    </div>
-    {{ itens_formset.management_form }}
-    <div class="table-responsive">
-      <table class="table table-sm table-hover table-compact">
-        <thead>
-          <tr>
-            <th>Produto</th>
-            <th>Qtd</th>
-            <th>Unit</th>
-            <th>Desc</th>
-            <th>CFOP</th>
-            <th>NCM</th>
-            <th>CST ICMS</th>
-            <th>CST PIS</th>
-            <th>CST COFINS</th>
-            <th>CST IBS</th>
-            <th>CST CBS</th>
-            <th>Total</th>
-            <th>Fonte</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for i in itens_formset %}
-          <tr>
-            <td>
-              <div class="position-relative">
-                <input type="text" class="form-control item-prod-ac" value="{{ i.produto.value }}" autocomplete="off"
-                  placeholder="Buscar produto">
-                <div class="d-none">{{ i.produto }}</div>
-                <div class="list-group position-absolute w-100 item-prod-list" style="z-index:20"></div>
-              </div>
-            </td>
-            <td>{{ i.quantidade }}</td>
-            <td>{{ i.unitario }}</td>
-            <td>{{ i.desconto }}</td>
-            <td>{{ i.cfop }}</td>
-            <td>{{ i.ncm }}</td>
-            <td>{{ i.cst_icms }}</td>
-            <td>{{ i.cst_pis }}</td>
-            <td>{{ i.cst_cofins }}</td>
-            <td>{{ i.cst_ibs }}</td>
-            <td>{{ i.cst_cbs }}</td>
-            <td>{{ i.total }}</td>
-            <td>{{ i.instance.fonte_tributacao|default:"-" }}</td>
-            <td>
-              <div class="d-none">{{ i.DELETE }}</div>
-              <button type="button" class="btn btn-sm btn-outline-danger btn-remove-item"><i
-                  class="bi bi-trash"></i></button>
-            </td>
-          </tr>
-          {% endfor %}
-          {% with ef=itens_formset.empty_form %}
-          <tr id="itens-empty-row" class="d-none">
-            <td>
-              <div class="position-relative">
-                <input type="text" class="form-control item-prod-ac" autocomplete="off" placeholder="Buscar produto">
-                <div class="d-none">{{ ef.produto }}</div>
-                <div class="list-group position-absolute w-100 item-prod-list" style="z-index:20"></div>
-              </div>
-            </td>
-            <td>{{ ef.quantidade }}</td>
-            <td>{{ ef.unitario }}</td>
-            <td>{{ ef.desconto }}</td>
-            <td>{{ ef.cfop }}</td>
-            <td>{{ ef.ncm }}</td>
-            <td>{{ ef.cst_icms }}</td>
-            <td>{{ ef.cst_pis }}</td>
-            <td>{{ ef.cst_cofins }}</td>
-            <td>{{ ef.cst_ibs }}</td>
-            <td>{{ ef.cst_cbs }}</td>
-            <td>{{ ef.total }}</td>
-            <td>-</td>
-            <td>
-              <div class="d-none">{{ ef.DELETE }}</div>
-              <button type="button" class="btn btn-sm btn-outline-danger btn-remove-item"><i
-                  class="bi bi-trash"></i></button>
-            </td>
-          </tr>
-          {% endwith %}
-        </tbody>
-      </table>
-    </div>
-
-    <hr />
-    <h5>Transporte</h5>
-    <div class="row g-3">
-      <div class="col-md-3">{{ transporte_form.modalidade_frete.label_tag }} {{ transporte_form.modalidade_frete }}
-      </div>
-      <div class="col-md-5">
-        {{ transporte_form.transportadora.label_tag }}
-        <div class="position-relative">
-          <input type="text" id="transportadora-ac" class="form-control" autocomplete="off"
-            placeholder="Nome da transportadora"
-            value="{% if nota and nota.transporte and nota.transporte.transportadora %}{{ nota.transporte.transportadora.enti_nome }}{% endif %}">
-          <div class="d-none">{{ transporte_form.transportadora }}</div>
-          <div id="transportadora-ac-list" class="list-group position-absolute w-100" style="z-index:20"></div>
+      <div class="tab-pane fade" id="tab-itens" role="tabpanel" aria-labelledby="tab-itens-btn">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">Itens</h5>
+          <button type="button" id="btn-add-item" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus"></i>
+            Adicionar Item</button>
+        </div>
+        {{ itens_formset.management_form }}
+        <div class="table-responsive mt-2">
+          <table class="table table-sm table-hover table-compact">
+            <thead>
+              <tr>
+                <th>Produto</th>
+                <th>Qtd</th>
+                <th>Unit</th>
+                <th>Desc</th>
+                <th>CFOP</th>
+                <th>NCM</th>
+                <th>CST ICMS</th>
+                <th>CST PIS</th>
+                <th>CST COFINS</th>
+                <th>CST IBS</th>
+                <th>CST CBS</th>
+                <th>Total</th>
+                <th>Fonte</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for i in itens_formset %}
+              <tr>
+                <td>
+                  <div class="position-relative">
+                    <input type="text" class="form-control item-prod-ac" value="{{ i.produto.value }}"
+                      autocomplete="off" placeholder="Buscar produto">
+                    <div class="d-none">{{ i.produto }}</div>
+                    <div class="list-group position-absolute w-100 item-prod-list" style="z-index:20"></div>
+                  </div>
+                </td>
+                <td>{{ i.quantidade }}</td>
+                <td>{{ i.unitario }}</td>
+                <td>{{ i.desconto }}</td>
+                <td>{{ i.cfop }}</td>
+                <td>{{ i.ncm }}</td>
+                <td>{{ i.cst_icms }}</td>
+                <td>{{ i.cst_pis }}</td>
+                <td>{{ i.cst_cofins }}</td>
+                <td>{{ i.cst_ibs }}</td>
+                <td>{{ i.cst_cbs }}</td>
+                <td>{{ i.total }}</td>
+                <td>{{ i.instance.fonte_tributacao|default:"-" }}</td>
+                <td>
+                  <div class="d-none">{{ i.DELETE }}</div>
+                  <button type="button" class="btn btn-sm btn-outline-danger btn-remove-item"><i
+                      class="bi bi-trash"></i></button>
+                </td>
+              </tr>
+              {% endfor %}
+              {% with ef=itens_formset.empty_form %}
+              <tr id="itens-empty-row" class="d-none">
+                <td>
+                  <div class="position-relative">
+                    <input type="text" class="form-control item-prod-ac" autocomplete="off"
+                      placeholder="Buscar produto">
+                    <div class="d-none">{{ ef.produto }}</div>
+                    <div class="list-group position-absolute w-100 item-prod-list" style="z-index:20"></div>
+                  </div>
+                </td>
+                <td>{{ ef.quantidade }}</td>
+                <td>{{ ef.unitario }}</td>
+                <td>{{ ef.desconto }}</td>
+                <td>{{ ef.cfop }}</td>
+                <td>{{ ef.ncm }}</td>
+                <td>{{ ef.cst_icms }}</td>
+                <td>{{ ef.cst_pis }}</td>
+                <td>{{ ef.cst_cofins }}</td>
+                <td>{{ ef.cst_ibs }}</td>
+                <td>{{ ef.cst_cbs }}</td>
+                <td>{{ ef.total }}</td>
+                <td>-</td>
+                <td>
+                  <div class="d-none">{{ ef.DELETE }}</div>
+                  <button type="button" class="btn btn-sm btn-outline-danger btn-remove-item"><i
+                      class="bi bi-trash"></i></button>
+                </td>
+              </tr>
+              {% endwith %}
+            </tbody>
+          </table>
         </div>
       </div>
-      <div class="col-md-2">{{ transporte_form.placa_veiculo.label_tag }} {{ transporte_form.placa_veiculo }}</div>
-      <div class="col-md-2">{{ transporte_form.uf_veiculo.label_tag }} {{ transporte_form.uf_veiculo }}</div>
+
+      <div class="tab-pane fade" id="tab-transporte" role="tabpanel" aria-labelledby="tab-transporte-btn">
+        <h5>Transporte</h5>
+        <div class="row g-3 mt-1">
+          <div class="col-md-3">{{ transporte_form.modalidade_frete.label_tag }} {{ transporte_form.modalidade_frete }}
+          </div>
+          <div class="col-md-5">
+            {{ transporte_form.transportadora.label_tag }}
+            <div class="position-relative">
+              <input type="text" id="transportadora-ac" class="form-control" autocomplete="off"
+                placeholder="Nome da transportadora"
+                value="{% if nota and nota.transporte and nota.transporte.transportadora %}{{ nota.transporte.transportadora.enti_nome }}{% endif %}">
+              <div class="d-none">{{ transporte_form.transportadora }}</div>
+              <div id="transportadora-ac-list" class="list-group position-absolute w-100" style="z-index:20"></div>
+            </div>
+          </div>
+          <div class="col-md-2">{{ transporte_form.placa_veiculo.label_tag }} {{ transporte_form.placa_veiculo }}</div>
+          <div class="col-md-2">{{ transporte_form.uf_veiculo.label_tag }} {{ transporte_form.uf_veiculo }}</div>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="tab-totais" role="tabpanel" aria-labelledby="tab-totais-btn">
+        <div id="totais-container-host"></div>
+      </div>
     </div>
 
     <div class="d-flex justify-content-end gap-2 mt-3">
@@ -181,17 +211,19 @@
         if (!resp.ok) return;
         const itens = Array.isArray(data?.itens) ? data.itens : [];
         const somaProdutos = itens.reduce((acc, it) => acc + Number(it.total || (Number(it.quantidade || 0) * Number(it.unitario || 0) - Number(it.desconto || 0))), 0);
-        let totIcms = 0, totIpi = 0, totPis = 0, totCofins = 0, totCbs = 0, totIbs = 0;
+        let totIcms = 0, totSt = 0, totIpi = 0, totPis = 0, totCofins = 0, totCbs = 0, totIbs = 0, totFcp = 0;
         itens.forEach(it => {
           const imp = it.impostos || {};
           totIcms += Number(imp.icms_valor || 0);
+          totSt += Number(imp.icms_st_valor || 0);
           totIpi += Number(imp.ipi_valor || 0);
           totPis += Number(imp.pis_valor || 0);
           totCofins += Number(imp.cofins_valor || 0);
           totCbs += Number(imp.cbs_valor || 0);
           totIbs += Number(imp.ibs_valor || 0);
+          totFcp += Number(imp.fcp_valor || 0);
         });
-        const somaImpostos = totIcms + totIpi + totPis + totCofins + totCbs + totIbs;
+        const somaImpostos = totIcms + totSt + totIpi + totPis + totCofins + totCbs + totIbs + totFcp;
         const somaDescontos = itens.reduce((acc, it) => acc + Number(it.desconto || 0), 0);
         const totalNota = somaProdutos + somaImpostos;
         const totProdEl = document.getElementById('total');
@@ -199,6 +231,7 @@
         const totTribEl = document.getElementById('total-tributos');
         const totNotaEl = document.getElementById('total-nota');
         const totIcmsEl = document.getElementById('total-icms');
+        const totStEl = document.getElementById('total-icms-st');
         const totIpiEl = document.getElementById('total-ipi');
         const totPisEl = document.getElementById('total-pis');
         const totCofinsEl = document.getElementById('total-cofins');
@@ -209,6 +242,7 @@
         if (totTribEl) totTribEl.value = somaImpostos.toFixed(2);
         if (totNotaEl) totNotaEl.value = totalNota.toFixed(2);
         if (totIcmsEl) totIcmsEl.value = totIcms.toFixed(2);
+        if (totStEl) totStEl.value = totSt.toFixed(2);
         if (totIpiEl) totIpiEl.value = totIpi.toFixed(2);
         if (totPisEl) totPisEl.value = totPis.toFixed(2);
         if (totCofinsEl) totCofinsEl.value = totCofins.toFixed(2);
@@ -421,6 +455,10 @@
           <input type="text" class="form-control" id="total-icms" readonly />
         </div>
         <div class="col-md-2">
+          <label class="form-label">ICMS ST</label>
+          <input type="text" class="form-control" id="total-icms-st" readonly />
+        </div>
+        <div class="col-md-2">
           <label class="form-label">IPI</label>
           <input type="text" class="form-control" id="total-ipi" readonly />
         </div>
@@ -441,8 +479,12 @@
           <input type="text" class="form-control" id="total-ibs" readonly />
         </div>
       </div>`;
-    const formEl = document.querySelector('form.card.p-3');
-    if (formEl) formEl.appendChild(totalsContainer);
+    const hostTotais = document.getElementById('totais-container-host');
+    if (hostTotais) hostTotais.appendChild(totalsContainer);
+    else {
+      const formEl = document.querySelector('form.card.p-3');
+      if (formEl) formEl.appendChild(totalsContainer);
+    }
     montarTotais();
   })();
 </script>

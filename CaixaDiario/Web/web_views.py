@@ -29,6 +29,8 @@ class CaixaDashboardView(TemplateView):
         kpi = {'saldo_inicial': 0.0, 'entradas': 0.0, 'saidas': 0.0, 'saldo_atual': 0.0}
         caixas_data = []
         caixa_aberto_ctx = None
+        mov_entradas = []
+        mov_saidas = []
         try:
             if empresa and filial:
                 qs = Caixageral.objects.using(banco).filter(caix_empr=empresa, caix_fili=filial, caix_aber='A').order_by('-caix_data', '-caix_hora')
@@ -55,6 +57,15 @@ class CaixaDashboardView(TemplateView):
                         movi_caix=caixa_aberto.caix_caix,
                         movi_data=caixa_aberto.caix_data
                     )
+                    for m in movs.order_by('movi_ctrl'):
+                        entr = float(getattr(m, 'movi_entr', 0) or 0)
+                        said = float(getattr(m, 'movi_said', 0) or 0)
+                        desc = str(getattr(m, 'movi_obse', '') or '')
+                        ctrl = int(getattr(m, 'movi_ctrl', 0) or 0)
+                        if entr > 0:
+                            mov_entradas.append({'ctrl': ctrl, 'descricao': desc, 'valor': entr})
+                        if said > 0:
+                            mov_saidas.append({'ctrl': ctrl, 'descricao': desc, 'valor': said})
                     entradas = float(movs.aggregate(Sum('movi_entr'))['movi_entr__sum'] or 0)
                     saidas = float(movs.aggregate(Sum('movi_said'))['movi_said__sum'] or 0)
                     kpi = {
@@ -75,6 +86,8 @@ class CaixaDashboardView(TemplateView):
             'kpi': kpi,
             'caixas_abertos': caixas_data,
             'caixa_aberto': caixa_aberto_ctx,
+            'mov_entradas': mov_entradas,
+            'mov_saidas': mov_saidas,
         })
         return ctx
 
@@ -88,7 +101,31 @@ class CaixaGeralPageView(TemplateView):
             slug_val = self.kwargs.get('slug')
         empresa = self.request.session.get('empresa_id') or self.request.headers.get('X-Empresa') or self.request.GET.get('empresa')
         filial = self.request.session.get('filial_id') or self.request.headers.get('X-Filial') or self.request.GET.get('filial')
-        ctx.update({'slug': slug_val, 'empresa': empresa, 'filial': filial})
+        banco = get_licenca_db_config(self.request) or 'default'
+        caixa_aberto_ctx = None
+        try:
+            if empresa and filial:
+                caixa_aberto = Caixageral.objects.using(banco).filter(
+                    caix_empr=empresa,
+                    caix_fili=filial,
+                    caix_aber='A'
+                ).order_by('-caix_data', '-caix_hora').first()
+                if caixa_aberto:
+                    caixa_aberto_ctx = {
+                        'caixa': int(caixa_aberto.caix_caix),
+                        'data': str(caixa_aberto.caix_data),
+                        'hora': str(caixa_aberto.caix_hora),
+                        'operador': str(caixa_aberto.caix_oper),
+                    }
+        except Exception:
+            pass
+
+        ctx.update({
+            'slug': slug_val,
+            'empresa': empresa,
+            'filial': filial,
+            'caixa_aberto': caixa_aberto_ctx,
+        })
         return ctx
 
 class CaixaAbaVendaPageView(TemplateView):
@@ -101,7 +138,31 @@ class CaixaAbaVendaPageView(TemplateView):
             slug_val = self.kwargs.get('slug')
         empresa = self.request.session.get('empresa_id') or self.request.headers.get('X-Empresa') or self.request.GET.get('empresa')
         filial = self.request.session.get('filial_id') or self.request.headers.get('X-Filial') or self.request.GET.get('filial')
-        ctx.update({'slug': slug_val, 'empresa': empresa, 'filial': filial})
+        banco = get_licenca_db_config(self.request) or 'default'
+        caixa_aberto_ctx = None
+        try:
+            if empresa and filial:
+                caixa_aberto = Caixageral.objects.using(banco).filter(
+                    caix_empr=empresa,
+                    caix_fili=filial,
+                    caix_aber='A'
+                ).order_by('-caix_data', '-caix_hora').first()
+                if caixa_aberto:
+                    caixa_aberto_ctx = {
+                        'caixa': int(caixa_aberto.caix_caix),
+                        'data': caixa_aberto.caix_data,
+                        'hora': caixa_aberto.caix_hora,
+                        'operador': str(caixa_aberto.caix_oper),
+                    }
+        except Exception:
+            pass
+
+        ctx.update({
+            'slug': slug_val,
+            'empresa': empresa,
+            'filial': filial,
+            'caixa_aberto': caixa_aberto_ctx,
+        })
         return ctx
 
 class CaixaAbaProdutosPageView(TemplateView):
@@ -593,6 +654,7 @@ def venda_emitir(request, slug=None):
         or request.GET.get('filial')
     )
     
+    
     # Validações iniciais
     if not empresa_id or not filial_id:
         return JsonResponse({
@@ -636,6 +698,38 @@ def venda_emitir(request, slug=None):
     ).filter(
         empr_codi=empresa_id
     ).first()
+
+    qs_venda_base = Movicaixa.objects.using(banco).filter(
+        movi_empr=empresa_id,
+        movi_fili=filial_id,
+    ).filter(
+        Q(movi_nume_vend=numero_venda) | Q(movi_obse__icontains=f"Venda {numero_venda}")
+    )
+    coo_numero = None
+    if tipo == 'cupom':
+        try:
+            data_ref = qs_venda_base.values_list('movi_data', flat=True).first() or datetime.today().date()
+            coo_existente = qs_venda_base.exclude(movi_coo__isnull=True).values_list('movi_coo', flat=True).first()
+            if coo_existente is not None:
+                coo_numero = int(coo_existente)
+            else:
+                max_coo = Movicaixa.objects.using(banco).filter(
+                    movi_empr=empresa_id,
+                    movi_fili=filial_id,
+                    movi_data=data_ref,
+                ).aggregate(Max('movi_coo'))['movi_coo__max'] or 0
+                try:
+                    coo_numero = int(max_coo) + 1
+                except Exception:
+                    coo_numero = 1
+            qs_venda_base.filter(Q(movi_entr__gt=0) | Q(movi_said__gt=0)).update(
+                movi_coo=coo_numero,
+                movi_docu_fisc=None,
+                movi_seri_nota=None,
+                movi_nume_nota=None,
+            )
+        except Exception:
+            pass
     
     # ------------------------------------------------------------
     # EMISSÃO NFC-e (Modelo 65)
@@ -647,6 +741,11 @@ def venda_emitir(request, slug=None):
             from Notas_Fiscais.aplicacao.emissao_service import EmissaoService
             from Notas_Fiscais.builders.pedido import PedidoNFeBuilder
             from django.utils import timezone
+            from series.models import Series
+            
+            
+            series = Series.objects.using(banco).filter(seri_empr=empresa_id, seri_fili=filial_id, seri_nome='NC').first()
+            print(f"series: {series}")
             
             # Verifica se já existe nota para este pedido
             nota = Nota.objects.using(banco).filter(
@@ -658,11 +757,20 @@ def venda_emitir(request, slug=None):
             
             if not nota:
                 # Contexto para o builder
+                
+                serie_consumidor = getattr(series, 'seri_codi', None) or '1'
+                try:
+                    serie_consumidor_int = int(str(serie_consumidor).strip())
+                    if 900 <= serie_consumidor_int <= 999:
+                        serie_consumidor_int = 1
+                    serie_consumidor = str(serie_consumidor_int)
+                except Exception:
+                    serie_consumidor = '1'
                 context = {
                     "empresa": int(empresa_id),
                     "filial": int(filial_id),
                     "modelo": "65",
-                    "serie": "1", # TODO: Pegar de config da filial se houver
+                    "serie": serie_consumidor,
                     "numero": 0,
                     "ambiente": int(getattr(filial, 'empr_ambi_nfec', 2) or 2),
                     "tipo_operacao": 1,
@@ -741,6 +849,15 @@ def venda_emitir(request, slug=None):
             
             # Se já autorizada
             if nota.status == 100:
+                try:
+                    qs_venda_base.filter(Q(movi_entr__gt=0) | Q(movi_said__gt=0)).update(
+                        movi_docu_fisc=65,
+                        movi_seri_nota=str(getattr(nota, 'serie', '') or ''),
+                        movi_nume_nota=getattr(nota, 'numero', None),
+                        movi_coo=None,
+                    )
+                except Exception:
+                    pass
                 chave = nota.chave_acesso
                 url = f"https://www.sefaz.rs.gov.br/NFCE/NFCE-COM.aspx?p={chave}" # Placeholder RS
                 return JsonResponse({
@@ -758,6 +875,16 @@ def venda_emitir(request, slug=None):
             resp = service.emitir(nota.id)
             
             if resp.get('status') == 100:
+                try:
+                    nota = Nota.objects.using(banco).filter(id=nota.id).first() or nota
+                    qs_venda_base.filter(Q(movi_entr__gt=0) | Q(movi_said__gt=0)).update(
+                        movi_docu_fisc=65,
+                        movi_seri_nota=str(getattr(nota, 'serie', '') or ''),
+                        movi_nume_nota=getattr(nota, 'numero', None),
+                        movi_coo=None,
+                    )
+                except Exception:
+                    pass
                 chave = resp.get('chave')
                 url = f"https://www.sefaz.rs.gov.br/NFCE/NFCE-COM.aspx?p={chave}" # Placeholder RS
                 return JsonResponse({
@@ -823,7 +950,7 @@ def venda_emitir(request, slug=None):
         movi_empr=empresa_id,
         movi_fili=filial_id,
         movi_nume_vend=numero_venda
-    ).exclude(movi_tipo='1')
+    )
     
     pagamentos = pagamentos_qs.values(
         'movi_tipo'
@@ -879,6 +1006,8 @@ def venda_emitir(request, slug=None):
         else 'NFC-e'
     )
     linhas.append(centralizar(tipo_doc))
+    if tipo == 'cupom' and coo_numero:
+        linhas.append(centralizar(f"COO: {int(coo_numero)}"))
     linhas.append(linha_separadora())
     
     # Dados da venda
@@ -997,12 +1126,13 @@ def venda_emitir(request, slug=None):
         f"{cupom_texto}"
         f"</body></html>"
     )
-    
+
     return JsonResponse({
         'ok': True,
         'tipo': tipo,
         'html': html,
-        'texto': cupom_texto
+        'texto': cupom_texto,
+        'coo': int(coo_numero) if (tipo == 'cupom' and coo_numero) else None,
     })
 
 @require_http_methods(["GET"])
@@ -1137,39 +1267,120 @@ def venda_extrato(request, slug=None):
             })
         total_venda = float(itens_qs.aggregate(Sum('iped_tota'))['iped_tota__sum'] or 0)
         movs_venda = movimentos.filter(movi_nume_vend=num)
-        total_pagamentos = float(movs_venda.exclude(movi_tipo='1').aggregate(total=Sum('movi_entr'))['total'] or 0)
-        saldo = float(total_venda) - total_pagamentos
+        mov_first = movs_venda.first()
+        data_movimento = str(mov_first.movi_data) if mov_first and getattr(mov_first, 'movi_data', None) else ''
+        aggs_pg = movs_venda.aggregate(entr=Sum('movi_entr'), said=Sum('movi_said'))
+        total_pagamentos_bruto = float(aggs_pg.get('entr') or 0)
+        total_troco = float(aggs_pg.get('said') or 0)
+        total_pagamentos = float(total_pagamentos_bruto) - float(total_troco)
+        saldo = float(total_venda) - float(total_pagamentos)
         pagamentos = []
-        for row in movs_venda.exclude(movi_tipo='1').values('movi_tipo').annotate(total=Sum('movi_entr')).order_by('-total'):
+        for row in movs_venda.values('movi_tipo').annotate(entr=Sum('movi_entr'), said=Sum('movi_said')).order_by('-entr'):
             tipo = str(row.get('movi_tipo'))
+            total = float(row.get('entr') or 0) - float(row.get('said') or 0)
+            if not total:
+                continue
             pagamentos.append({
                 'tipo': tipo,
                 'descricao': tipos_map.get(tipo, tipo),
-                'total': float(row.get('total') or 0),
+                'total': total,
             })
         resultados.append({
             'numero_venda': int(num),
-            'data': str(pedido.pedi_data) if pedido and pedido.pedi_data else '',
-            'caixa': int(movs_venda.first().movi_caix) if movs_venda.first() else None,
+            'data': data_movimento or (str(pedido.pedi_data) if pedido and pedido.pedi_data else ''),
+            'caixa': int(mov_first.movi_caix) if mov_first else None,
             'vendedor': str(pedido.pedi_vend) if pedido else '',
             'cliente': cliente_display,
             'cliente_codigo': cliente_codigo,
             'cliente_nome': cliente_nome,
             'total_venda': total_venda,
+            'total_pagamentos_bruto': total_pagamentos_bruto,
+            'troco': total_troco,
             'total_pagamentos': total_pagamentos,
             'saldo': saldo,
             'pagamentos': pagamentos,
             'itens': itens,
         })
     totais = []
-    for row in movimentos.exclude(movi_tipo='1').values('movi_tipo').annotate(total=Sum('movi_entr')).order_by('-total'):
+    resumo_pg = movimentos.aggregate(entr=Sum('movi_entr'), said=Sum('movi_said'))
+    resumo_bruto = float(resumo_pg.get('entr') or 0)
+    resumo_troco = float(resumo_pg.get('said') or 0)
+    resumo_liquido = float(resumo_bruto) - float(resumo_troco)
+    for row in movimentos.values('movi_tipo').annotate(entr=Sum('movi_entr'), said=Sum('movi_said')).order_by('-entr'):
         t = str(row.get('movi_tipo'))
+        total_entr = float(row.get('entr') or 0)
+        total_troco = float(row.get('said') or 0)
+        total_liquido = float(total_entr) - float(total_troco)
+        if not total_entr and not total_troco:
+            continue
         totais.append({
             'tipo': t,
             'descricao': tipos_map.get(t, t),
-            'total': float(row.get('total') or 0),
+            'total': total_entr,
+            'troco': total_troco,
+            'liquido': total_liquido,
         })
-    return JsonResponse({'results': resultados, 'totais': totais})
+
+    data_kpi = data_ref
+    if not data_kpi and caixa:
+        try:
+            cx = Caixageral.objects.using(banco).filter(
+                caix_empr=empresa_id,
+                caix_fili=filial_id,
+                caix_caix=caixa,
+                caix_aber='A'
+            ).order_by('-caix_data', '-caix_hora').first()
+            if cx:
+                data_kpi = cx.caix_data
+        except Exception:
+            data_kpi = None
+
+    saldo_inicial = 0.0
+    if caixa and data_kpi:
+        try:
+            cx_ref = Caixageral.objects.using(banco).filter(
+                caix_empr=empresa_id,
+                caix_fili=filial_id,
+                caix_caix=caixa,
+                caix_data=data_kpi,
+            ).order_by('-caix_hora').first()
+            if cx_ref:
+                saldo_inicial = float(getattr(cx_ref, 'caix_valo', 0) or getattr(cx_ref, 'caix_sald_ini', 0) or 0)
+        except Exception:
+            saldo_inicial = 0.0
+
+    entradas_caixa = 0.0
+    saidas_caixa = 0.0
+    saldo_atual = float(saldo_inicial)
+    if caixa and data_kpi:
+        movs_kpi = Movicaixa.objects.using(banco).filter(
+            movi_empr=empresa_id,
+            movi_fili=filial_id,
+            movi_caix=caixa,
+            movi_data=data_kpi,
+        )
+        aggs_kpi = movs_kpi.aggregate(entr=Sum('movi_entr'), said=Sum('movi_said'))
+        entradas_caixa = float(aggs_kpi.get('entr') or 0)
+        saidas_caixa = float(aggs_kpi.get('said') or 0)
+        saldo_atual = float(saldo_inicial) + float(entradas_caixa) - float(saidas_caixa)
+    return JsonResponse({
+        'results': resultados,
+        'totais': totais,
+        'resumo': {
+            'bruto': resumo_bruto,
+            'troco': resumo_troco,
+            'liquido': resumo_liquido,
+        }
+        ,
+        'kpi': {
+            'caixa': int(caixa) if caixa else None,
+            'data': str(data_kpi) if data_kpi else '',
+            'saldo_inicial': float(saldo_inicial),
+            'entradas': float(entradas_caixa),
+            'saidas': float(saidas_caixa),
+            'saldo_atual': float(saldo_atual),
+        }
+    })
 
 @require_http_methods(["GET"])
 def caixa_fechado(request, slug=None):
@@ -1191,6 +1402,125 @@ def caixa_fechado(request, slug=None):
         for c in s
     ]
     return JsonResponse({'results': data})  
+
+@require_http_methods(["GET"])
+def caixa_movimentos(request, slug=None):
+    banco = get_licenca_db_config(request)
+    empresa_id = request.session.get('empresa_id') or request.headers.get('X-Empresa') or request.GET.get('empresa')
+    filial_id = request.session.get('filial_id') or request.headers.get('X-Filial') or request.GET.get('filial')
+    if not empresa_id or not filial_id:
+        return JsonResponse({'detail': 'Empresa e Filial são obrigatórios'}, status=400)
+
+    caixa = request.GET.get('caixa')
+    data_str = request.GET.get('data') or request.GET.get('data_ref')
+    data_ref = None
+    if data_str:
+        try:
+            from datetime import datetime
+            data_ref = datetime.strptime(data_str, '%Y-%m-%d').date()
+        except Exception:
+            data_ref = None
+
+    if not caixa or not data_ref:
+        try:
+            cx = Caixageral.objects.using(banco).filter(
+                caix_empr=empresa_id,
+                caix_fili=filial_id,
+                caix_aber='A'
+            ).order_by('-caix_data', '-caix_hora').first()
+            if cx:
+                if not caixa:
+                    caixa = cx.caix_caix
+                if not data_ref:
+                    data_ref = cx.caix_data
+        except Exception:
+            caixa = caixa
+            data_ref = data_ref
+
+    if not caixa or not data_ref:
+        return JsonResponse({'caixa': None, 'data': '', 'results': []})
+
+    qs = Movicaixa.objects.using(banco).filter(
+        movi_empr=empresa_id,
+        movi_fili=filial_id,
+        movi_caix=caixa,
+        movi_data=data_ref,
+    ).order_by('movi_ctrl')
+
+    results = []
+    for m in qs:
+        results.append({
+            'ctrl': int(getattr(m, 'movi_ctrl', 0) or 0),
+            'descricao': str(getattr(m, 'movi_obse', '') or ''),
+            'entr': float(getattr(m, 'movi_entr', 0) or 0),
+            'said': float(getattr(m, 'movi_said', 0) or 0),
+        })
+    return JsonResponse({'caixa': int(caixa), 'data': str(data_ref), 'results': results})
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def caixa_reabrir(request, slug=None):
+    banco = get_licenca_db_config(request)
+    empresa_id = request.session.get('empresa_id') or request.headers.get('X-Empresa') or request.GET.get('empresa')
+    filial_id = request.session.get('filial_id') or request.headers.get('X-Filial') or request.GET.get('filial')
+    if not empresa_id or not filial_id:
+        return JsonResponse({'detail': 'Empresa e Filial são obrigatórios'}, status=400)
+
+    data = request.POST or request.GET
+    if not data:
+        try:
+            import json
+            data = json.loads((request.body or b'').decode('utf-8') or '{}') or {}
+        except Exception:
+            data = {}
+
+    caixa = data.get('caixa') or data.get('caix_caix')
+    data_str = data.get('data') or data.get('caix_data')
+    if not caixa or not data_str:
+        return JsonResponse({'detail': 'Caixa e data são obrigatórios'}, status=400)
+
+    try:
+        data_ref = datetime.strptime(str(data_str)[:10], '%Y-%m-%d').date()
+    except Exception:
+        return JsonResponse({'detail': 'Data inválida'}, status=400)
+
+    caixa = int(caixa)
+
+    outro_aberto = Caixageral.objects.using(banco).filter(
+        caix_empr=empresa_id,
+        caix_fili=filial_id,
+        caix_aber='A',
+    ).exclude(caix_caix=caixa, caix_data=data_ref).order_by('-caix_data', '-caix_hora').first()
+    if outro_aberto:
+        return JsonResponse({'detail': 'Já existe outro caixa aberto. Feche antes de reabrir.'}, status=409)
+
+    cx = Caixageral.objects.using(banco).filter(
+        caix_empr=empresa_id,
+        caix_fili=filial_id,
+        caix_caix=caixa,
+        caix_data=data_ref,
+    ).order_by('-caix_hora').first()
+    if not cx:
+        return JsonResponse({'detail': 'Caixa não encontrado para esta data'}, status=404)
+
+    if getattr(cx, 'caix_aber', None) == 'A':
+        return JsonResponse({'ok': True, 'status': 'ja_aberto', 'caixa': caixa, 'data': str(data_ref)})
+
+    if getattr(cx, 'caix_aber', None) != 'F':
+        return JsonResponse({'detail': 'Status do caixa inválido para reabertura'}, status=400)
+
+    cx.caix_aber = 'A'
+    try:
+        if hasattr(cx, 'caix_fech_data'):
+            cx.caix_fech_data = None
+        if hasattr(cx, 'caix_fech_hora'):
+            cx.caix_fech_hora = None
+        if hasattr(cx, 'caix_obse_fech'):
+            cx.caix_obse_fech = ''
+    except Exception:
+        pass
+    cx.save(using=banco)
+    return JsonResponse({'ok': True, 'status': 'reaberto', 'caixa': caixa, 'data': str(data_ref)})
 
 
 @csrf_exempt

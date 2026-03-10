@@ -125,6 +125,8 @@ class AuditoriaMiddleware:
                 'ctes': 'Cte',
                 'veiculos': 'Veiculos',
                 'regras': 'RegraICMS',
+                'ncm-fiscal-padrao': 'NcmFiscalPadrao',
+                'ncmfiscalpadrao': 'NcmFiscalPadrao',
                 'criar': 'ignore',
                 'novo': 'ignore',
                 'adicionar': 'ignore',
@@ -156,6 +158,9 @@ class AuditoriaMiddleware:
             
             # Usar o nome real do modelo se houver mapeamento
             real_modelo_name = modelo_mapping.get(modelo_name, modelo_name)
+
+            if app_name.lower() == 'produtos' and real_modelo_name == 'NcmFiscalPadrao':
+                real_app_name = 'CFOP'
 
             if real_modelo_name == 'ignore' or real_modelo_name == 'infer_from_app':
                 if app_name.lower() == 'orcamentos':
@@ -312,8 +317,8 @@ class AuditoriaMiddleware:
                 else:
                     app_candidate = parts[2]
                     # Rotas especiais cujo app real é notas_fiscais
-                    # /api/emitir/<slug>/<id>/ e /api/imprimir/<slug>/<id>/
-                    if parts[1] in ('emitir', 'imprimir') and len(parts) >= 3:
+                    # /api/emitir/<slug>/<id>/, /api/imprimir/<slug>/<id>/ e /api/calcular/<slug>/<id>/
+                    if parts[1] in ('emitir', 'imprimir', 'calcular') and len(parts) >= 3:
                         app_candidate = 'notas_fiscais'
                     modulos = getattr(request, 'modulos_disponiveis', []) or get_modulos_disponiveis()
                     modulos_lower = {str(m).lower() for m in modulos}
@@ -485,7 +490,9 @@ class AuditoriaMiddleware:
             
             # Extrair o nome da empresa da URL (licença)
             path_parts = request.path.strip('/').split('/')
-            empresa = path_parts[1] if len(path_parts) > 1 else None  # casaa, por exemplo
+            empresa = path_parts[1] if len(path_parts) > 1 else None  # /api/<slug>/...
+            if len(path_parts) > 2 and path_parts[0] == 'api' and path_parts[1] in ('emitir', 'imprimir', 'calcular'):
+                empresa = path_parts[2]
 
             # Debug dos dados que serão salvos
             pass

@@ -29,6 +29,7 @@ class TestResolvers(SimpleTestCase):
         ctx = MagicMock(spec=FiscalContexto)
         ctx.regime = "1"
         ctx.fiscal_padrao = None
+        ctx.cfop = None
         
         cst_icms = ResolverCST.resolver_icms(ctx)
         self.assertEqual(cst_icms, "101") # Default CSOSN
@@ -41,6 +42,7 @@ class TestResolvers(SimpleTestCase):
         ctx = MagicMock(spec=FiscalContexto)
         ctx.regime = "3"
         ctx.fiscal_padrao = None
+        ctx.cfop = None
         
         cst_icms = ResolverCST.resolver_icms(ctx)
         self.assertEqual(cst_icms, "00")
@@ -54,6 +56,7 @@ class TestResolvers(SimpleTestCase):
         ctx.regime = "3"
         ctx.fiscal_padrao = MagicMock()
         ctx.fiscal_padrao.cst_icms = "60"
+        ctx.cfop = None
         
         cst_icms = ResolverCST.resolver_icms(ctx)
         self.assertEqual(cst_icms, "60")

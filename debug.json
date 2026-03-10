@@ -1,6 +1,6 @@
 {
-  "debug_id": "46fd5886-82e9-40a6-a643-e78b2f116fe2",
-  "timestamp_inicio": "2026-03-09T20:34:43.522007Z",
+  "debug_id": "2c13091a-9a25-4646-94a9-2abd0deb9533",
+  "timestamp_inicio": "2026-03-10T20:59:30.564490Z",
   "ambiente": {
     "debug": true,
     "database_alias": "saveweb001"
@@ -9,10 +9,10 @@
     "versao": "desconhecida"
   },
   "nota": {
-    "id": 26,
-    "modelo": "55",
-    "serie": "1",
-    "numero": "18",
+    "id": 53,
+    "modelo": "65",
+    "serie": "5",
+    "numero": "19",
     "empresa": "1",
     "filial": "1",
     "destinatario_id": "5",
@@ -22,18 +22,18 @@
   },
   "itens": [
     {
-      "id": 25,
+      "id": 53,
       "produto_id": "3",
       "descricao_produto": "CANECA DE TESTES",
       "ncm_produto": "8419****",
       "cfop_inicial": "5102",
       "quantidade": "1.0000",
-      "unitario": "16.5000",
+      "unitario": "2.5000",
       "desconto": "0.0000",
       "logs": [
         {
-          "id": "98267552-d732-4fb0-8a7c-fcdfe4be30ca",
-          "timestamp": "2026-03-09T20:34:43.630236Z",
+          "id": "a08f6077-594a-486b-9b4c-84d2395e5598",
+          "timestamp": "2026-03-10T20:59:30.692914Z",
           "tipo": "antes_calculo_item",
           "mensagem": "Início do cálculo de impostos para o item.",
           "dados": {
@@ -44,7 +44,7 @@
           }
         }
       ],
-      "fonte_tributacao": "CFOP",
+      "fonte_tributacao": "NCM",
       "cfop_resolvido": "5102",
       "cfop_flags": {
         "exig_icms": true,
@@ -56,13 +56,13 @@
       },
       "ncm_resolvido": null,
       "bases": {
-        "raiz": "16.50",
-        "icms": "16.50",
-        "st": "16.50"
+        "raiz": "2.50",
+        "icms": "2.50",
+        "st": null
       },
       "aliquotas": {
         "ipi": null,
-        "icms": null,
+        "icms": "0.00",
         "st": null,
         "pis": null,
         "cofins": null,
@@ -71,16 +71,19 @@
       },
       "valores_calculados": {
         "ipi": null,
-        "icms": null,
+        "icms": "0.00",
         "st": null,
         "pis": null,
         "cofins": null,
         "cbs": null,
         "ibs": null
       },
+      "extras": {
+        "mva_st": null
+      },
       "csts": {
         "ipi": null,
-        "icms": null,
+        "icms": "102",
         "st": null,
         "pis": null,
         "cofins": null,
@@ -98,8 +101,8 @@
   ],
   "logs": [
     {
-      "id": "b9678c6a-f17b-4fed-80eb-83280315c6f0",
-      "timestamp": "2026-03-09T20:34:43.607417Z",
+      "id": "c9f53b11-ca6e-4d0e-905b-f59d1eef8a21",
+      "timestamp": "2026-03-10T20:59:30.665220Z",
       "tipo": "contexto_nota",
       "mensagem": "Contexto fiscal inicial da nota.",
       "dados": {
@@ -107,5 +110,5 @@
       }
     }
   ],
-  "timestamp_fim": "2026-03-09T20:34:43.788739Z"
+  "timestamp_fim": "2026-03-10T20:59:30.876283Z"
 }

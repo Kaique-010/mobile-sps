@@ -4,11 +4,12 @@ from django.db import transaction
 from django.core.exceptions import ValidationError
 from Licencas.models import Filiais
 from Entidades.models import Entidades
-from ..models import Nota
+from ..models import Nota, NotaItem
 from ..handlers.nota_handler import NotaHandler
 from .itens_service import ItensService
 from .transporte_service import TransporteService
 from .evento_service import EventoService
+from .calculo_impostos_service import CalculoImpostosService
 
 
 class NotaService:
@@ -138,23 +139,28 @@ class NotaService:
     @staticmethod
     def atualizar_totais(nota: Nota):
         """Recalcula totais da nota após cálculo de impostos"""
-        itens = NotaItem.objects.filter(nota=nota).select_related('imposto')
+        db_alias = getattr(getattr(nota, "_state", None), "db", None) or "default"
+        itens = NotaItem.objects.using(db_alias).filter(nota=nota).select_related("impostos")
         
         total_produtos = sum(
-            (item.quantidade * item.unitario - (item.desconto or 0))
+            (item.total_item if item.total_item is not None else (item.quantidade * item.unitario - (item.desconto or 0)))
             for item in itens
         )
         
         total_tributos = sum(
-            (item.imposto.icms_valor or 0) +
-            (item.imposto.ipi_valor or 0) +
-            (item.imposto.pis_valor or 0) +
-            (item.imposto.cofins_valor or 0)
-            for item in itens if hasattr(item, 'imposto')
+            (getattr(getattr(item, "impostos", None), "icms_valor", None) or 0) +
+            (getattr(getattr(item, "impostos", None), "icms_st_valor", None) or 0) +
+            (getattr(getattr(item, "impostos", None), "ipi_valor", None) or 0) +
+            (getattr(getattr(item, "impostos", None), "pis_valor", None) or 0) +
+            (getattr(getattr(item, "impostos", None), "cofins_valor", None) or 0) +
+            (getattr(getattr(item, "impostos", None), "cbs_valor", None) or 0) +
+            (getattr(getattr(item, "impostos", None), "ibs_valor", None) or 0) +
+            (getattr(getattr(item, "impostos", None), "fcp_valor", None) or 0)
+            for item in itens
         )
         
         nota.total = total_produtos + total_tributos
-        nota.save()
+        nota.save(using=db_alias, update_fields=["total"])
         return nota
 
     @staticmethod

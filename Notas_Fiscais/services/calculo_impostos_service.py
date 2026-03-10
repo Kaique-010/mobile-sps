@@ -218,6 +218,7 @@ class CalculoImpostosService:
                     "cbs": self._to_str(valores.get("cbs")),
                     "ibs": self._to_str(valores.get("ibs")),
                 }
+                item_debug["extras"] = pacote.get("extras") or {}
                 item_debug["csts"] = csts
                 item_debug["condicionais_aplicadas"] = {
                     "icms_habilitado_cfop": None if cfop_flags is None else bool(cfop_flags.get("exig_icms")),
@@ -226,7 +227,6 @@ class CalculoImpostosService:
                     "cbs_habilitado_cfop": None if cfop_flags is None else bool(cfop_flags.get("exig_cbs")),
                     "ibs_habilitado_cfop": None if cfop_flags is None else bool(cfop_flags.get("exig_ibs")),
                 }
-
                 debug_data["itens"].append(item_debug)
 
                 self._aplicar_no_item_nota(item, pacote, regime)
@@ -367,6 +367,12 @@ class CalculoImpostosService:
         imposto.icms_base = bases.get("icms")
         imposto.icms_valor = vals.get("icms")
         imposto.icms_aliquota = aliqs.get("icms")
+
+        # ICMS ST
+        imposto.icms_st_base = bases.get("st")
+        imposto.icms_st_valor = vals.get("st")
+        imposto.icms_st_aliquota = aliqs.get("st")
+        imposto.icms_mva_st = (pacote.get("extras") or {}).get("mva_st")
 
         # IPI
         imposto.ipi_base = bases.get("ipi")

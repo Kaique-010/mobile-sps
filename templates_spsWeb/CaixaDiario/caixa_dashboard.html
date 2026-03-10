@@ -53,7 +53,7 @@
 <div class="container py-4">
   <div class="container align-items-center">
     <h2 class="page-title text-center mb-4">
-      <i class="bi bi-cash-coin"></i> Caixa Diário
+      <i class="bi bi-cash-coin"></i> Caixa Diário (Dashboard de Fechamento)
     </h2>
   </div>
   <div class="mb-4 text-end">
@@ -167,6 +167,63 @@
               </button>
             </div>
           </div>
+
+          <div class="mt-3">
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="fw-semibold">Movimentações do caixa</span>
+              <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#movimentosCollapse" aria-expanded="false" aria-controls="movimentosCollapse">
+                <i class="bi bi-plus-lg"></i>
+              </button>
+            </div>
+            <div class="collapse mt-2" id="movimentosCollapse">
+              <div class="row g-2">
+                <div class="col-md-6">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold">Entradas</span>
+                    <button class="btn btn-outline-success btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#movEntradasCollapse" aria-expanded="false" aria-controls="movEntradasCollapse">
+                      <i class="bi bi-plus-lg"></i>
+                    </button>
+                  </div>
+                  <div class="collapse mt-2" id="movEntradasCollapse">
+                    <div id="listaMovEntradas" class="list-group">
+                      {% if mov_entradas %}
+                        {% for m in mov_entradas %}
+                          <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><strong>#{{ m.ctrl }}</strong> — {{ m.descricao }}</span>
+                            <span class="text-success fw-semibold">{{ m.valor|floatformat:2 }}</span>
+                          </div>
+                        {% endfor %}
+                      {% else %}
+                        <div class="list-group-item text-muted">Nenhuma entrada</div>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold">Saídas</span>
+                    <button class="btn btn-outline-warning btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#movSaidasCollapse" aria-expanded="false" aria-controls="movSaidasCollapse">
+                      <i class="bi bi-plus-lg"></i>
+                    </button>
+                  </div>
+                  <div class="collapse mt-2" id="movSaidasCollapse">
+                    <div id="listaMovSaidas" class="list-group">
+                      {% if mov_saidas %}
+                        {% for m in mov_saidas %}
+                          <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><strong>#{{ m.ctrl }}</strong> — {{ m.descricao }}</span>
+                            <span class="text-warning fw-semibold">-{{ m.valor|floatformat:2 }}</span>
+                          </div>
+                        {% endfor %}
+                      {% else %}
+                        <div class="list-group-item text-muted">Nenhuma saída</div>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -202,6 +259,8 @@
       const empresa = '{{ filtros.empresa|default:"" }}';
       const filial = '{{ filtros.filial|default:"" }}';
       const kpiInicial = { saldo_inicial: {{ kpi.saldo_inicial|default:"0" }}, entradas: {{ kpi.entradas|default:"0" }}, saidas: {{ kpi.saidas|default:"0" }}, saldo_atual: {{ kpi.saldo_atual|default:"0" }} };
+      const caixaAbertoNumero = '{{ caixa_aberto.numero|default:"" }}';
+      const caixaAbertoData = '{{ caixa_aberto.data|default:"" }}';
 
       function brl(v) { try { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v || 0)); } catch (e) { return `R$ ${v}`; } }
 
@@ -233,6 +292,62 @@
         document.getElementById('kpi-entradas').textContent = brl(s.entradas);
         document.getElementById('kpi-saidas').textContent = brl(s.saidas);
         document.getElementById('kpi-saldo-atual').textContent = brl(s.saldo_atual);
+      }
+
+      function renderMovimentos(items) {
+        const elEntradas = document.getElementById('listaMovEntradas');
+        const elSaidas = document.getElementById('listaMovSaidas');
+        if (!elEntradas || !elSaidas) return;
+        elEntradas.innerHTML = '';
+        elSaidas.innerHTML = '';
+
+        const arr = Array.isArray(items) ? items : [];
+        const entradas = arr.filter(m => Number(m.entr || 0) > 0);
+        const saidas = arr.filter(m => Number(m.said || 0) > 0);
+
+        if (!entradas.length) {
+          const i = document.createElement('div');
+          i.className = 'list-group-item text-muted';
+          i.textContent = 'Nenhuma entrada';
+          elEntradas.appendChild(i);
+        } else {
+          entradas.forEach(m => {
+            const li = document.createElement('div');
+            li.className = 'list-group-item d-flex justify-content-between align-items-center';
+            li.innerHTML = `<span><strong>#${m.ctrl}</strong> — ${m.descricao || ''}</span><span class="text-success fw-semibold">${brl(m.entr || 0)}</span>`;
+            elEntradas.appendChild(li);
+          });
+        }
+
+        if (!saidas.length) {
+          const i = document.createElement('div');
+          i.className = 'list-group-item text-muted';
+          i.textContent = 'Nenhuma saída';
+          elSaidas.appendChild(i);
+        } else {
+          saidas.forEach(m => {
+            const li = document.createElement('div');
+            li.className = 'list-group-item d-flex justify-content-between align-items-center';
+            li.innerHTML = `<span><strong>#${m.ctrl}</strong> — ${m.descricao || ''}</span><span class="text-warning fw-semibold">-${brl(m.said || 0)}</span>`;
+            elSaidas.appendChild(li);
+          });
+        }
+      }
+
+      async function fetchMovimentos() {
+        const headers = { 'Accept': 'application/json' };
+        const token = localStorage.getItem('access') || sessionStorage.getItem('access');
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        if (empresa) headers['X-Empresa'] = empresa;
+        if (filial) headers['X-Filial'] = filial;
+        const params = new URLSearchParams();
+        if (empresa) params.append('empresa', empresa);
+        if (filial) params.append('filial', filial);
+        if (caixaAbertoNumero) params.append('caixa', caixaAbertoNumero);
+        if (caixaAbertoData) params.append('data', caixaAbertoData);
+        const r = await fetch(`/web/${slug}/caixa-diario/caixa/movimentos/?${params.toString()}`, { headers, credentials: 'same-origin' });
+        if (!r.ok) throw new Error('Falha movimentos caixa');
+        return r.json();
       }
 
       async function fetchCaixasAbertos() {
@@ -282,6 +397,7 @@
       document.addEventListener('DOMContentLoaded', async () => {
         try { updateKPIs(kpiInicial); } catch (e) { }
         try { const s = await fetchSaldo(); updateKPIs(s); } catch (e) { console.error(e); }
+        try { const m = await fetchMovimentos(); renderMovimentos(m.results); } catch (e) { console.error(e); }
         try { await fetchCaixasAbertos(); } catch (e) { console.error(e); }
         document.getElementById('btnFechar')?.addEventListener('click', async () => {
           const obs = document.getElementById('obsFechar')?.value || '';
@@ -289,6 +405,7 @@
             const r = await postA(`/api/${slug}/caixadiario/caixa/fechar/`, { observacao: obs });
             if (r && r.ok) { alert(r.message || 'Caixa fechado com sucesso'); }
             const s = await fetchSaldo(); updateKPIs(s);
+            const m = await fetchMovimentos(); renderMovimentos(m.results);
           } catch (e) { console.error(e); }
         });
         document.getElementById('btnEntrada')?.addEventListener('click', async () => {
@@ -296,7 +413,7 @@
           const forma = document.getElementById('formaEntrada')?.value || 'dinheiro';
           const observacao = document.getElementById('obsEntrada')?.value || '';
           if (valor > 0) {
-            try { await postW(`/web/${slug}/caixa-diario/caixa/lancamento/`, { tipo: 'entrada', valor, forma, observacao }); const s = await fetchSaldo(); updateKPIs(s); } catch (e) { console.error(e); }
+            try { await postW(`/web/${slug}/caixa-diario/caixa/lancamento/`, { tipo: 'entrada', valor, forma, observacao }); const s = await fetchSaldo(); updateKPIs(s); const m = await fetchMovimentos(); renderMovimentos(m.results); } catch (e) { console.error(e); }
           }
         });
         document.getElementById('btnSaida')?.addEventListener('click', async () => {
@@ -304,7 +421,7 @@
           const forma = document.getElementById('formaSaida')?.value || 'dinheiro';
           const observacao = document.getElementById('obsSaida')?.value || '';
           if (valor > 0) {
-            try { await postW(`/web/${slug}/caixa-diario/caixa/lancamento/`, { tipo: 'saida', valor, forma, observacao }); const s = await fetchSaldo(); updateKPIs(s); } catch (e) { console.error(e); }
+            try { await postW(`/web/${slug}/caixa-diario/caixa/lancamento/`, { tipo: 'saida', valor, forma, observacao }); const s = await fetchSaldo(); updateKPIs(s); const m = await fetchMovimentos(); renderMovimentos(m.results); } catch (e) { console.error(e); }
           }
         });
         document.getElementById('btnIniciarVenda')?.addEventListener('click', async () => {
@@ -336,6 +453,7 @@
           try {
             await postW(`/web/${slug}/caixa-diario/venda/processar-pagamento/`, { numero_venda, valor, forma_pagamento, valor_pago, troco, parcelas });
             const s = await fetchSaldo(); updateKPIs(s);
+            const m = await fetchMovimentos(); renderMovimentos(m.results);
           } catch (e) { console.error(e); }
         });
         document.getElementById('btnFinalizarVenda')?.addEventListener('click', async () => {

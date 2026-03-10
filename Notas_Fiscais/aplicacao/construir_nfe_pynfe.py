@@ -117,8 +117,8 @@ def construir_nfe_pynfe(dto):
             icms_modalidade=_obter_modalidade_csosn(item.cst_icms) if str(dto.emitente.regime_trib) == "1" else None,
             icms_origem=0,
             icms_csosn=item.cst_icms if str(dto.emitente.regime_trib) == "1" else None,
-            pis_modalidade="07",
-            cofins_modalidade="07",
+            pis_modalidade=str(getattr(item, "cst_pis", None) or "07"),
+            cofins_modalidade=str(getattr(item, "cst_cofins", None) or "07"),
             valor_tributos_aprox=None,
         )
         

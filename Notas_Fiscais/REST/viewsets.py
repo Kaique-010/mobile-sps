@@ -106,6 +106,7 @@ class NotaViewSet(viewsets.ModelViewSet):
         tot_prod = Decimal("0")
         tot_desc = Decimal("0")
         tot_icms = Decimal("0")
+        tot_st = Decimal("0")
         tot_ipi = Decimal("0")
         tot_pis = Decimal("0")
         tot_cof = Decimal("0")
@@ -118,6 +119,7 @@ class NotaViewSet(viewsets.ModelViewSet):
             imp = getattr(it, "impostos", None)
             if imp:
                 tot_icms += Decimal(str(imp.icms_valor or 0))
+                tot_st += Decimal(str(imp.icms_st_valor or 0))
                 tot_ipi += Decimal(str(imp.ipi_valor or 0))
                 tot_pis += Decimal(str(imp.pis_valor or 0))
                 tot_cof += Decimal(str(imp.cofins_valor or 0))
@@ -138,12 +140,13 @@ class NotaViewSet(viewsets.ModelViewSet):
             )
             if cf:
                 cfop_flags[str(it.id)] = cf
-        tot_trib = tot_icms + tot_ipi + tot_pis + tot_cof + tot_cbs + tot_ibs
+        tot_trib = tot_icms + tot_st + tot_ipi + tot_pis + tot_cof + tot_cbs + tot_ibs
         total_nota = tot_prod + tot_trib
         data_out["totais"] = {
             "produtos": str(tot_prod.quantize(Decimal("0.01"))),
             "desconto": str(tot_desc.quantize(Decimal("0.01"))),
             "icms": str(tot_icms.quantize(Decimal("0.01"))),
+            "st": str(tot_st.quantize(Decimal("0.01"))),
             "ipi": str(tot_ipi.quantize(Decimal("0.01"))),
             "pis": str(tot_pis.quantize(Decimal("0.01"))),
             "cofins": str(tot_cof.quantize(Decimal("0.01"))),

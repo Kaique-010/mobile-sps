@@ -6,6 +6,7 @@ from rest_framework.response import Response as DRFResponse
 from ..models import Nota
 from ..utils.sefaz_messages import get_sefaz_message
 
+
 try:
     from brazilfiscalreport.danfe import Danfe
 except ImportError:

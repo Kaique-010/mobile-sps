@@ -63,6 +63,8 @@ def get_licenca_db_config(request):
         slug = None
         if parts and parts[0] == 'api':
             slug = parts[1] if len(parts) > 1 else None
+            if slug in ("emitir", "imprimir", "calcular") and len(parts) > 2:
+                slug = parts[2]
         elif parts and parts[0] == 'web':
             if len(parts) > 2:
                 slug_candidate = parts[1]

@@ -3,7 +3,7 @@ import logging
 from django.views.generic import FormView
 from datetime import date
 from core.utils import get_licenca_db_config
-from ....models import Nota
+from ....models import Nota, NotaItem
 from ...forms import NotaForm, NotaItemFormSet, TransporteForm
 from ....services.nota_service import NotaService
 from ....services.calculo_impostos_service import CalculoImpostosService

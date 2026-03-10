@@ -5,7 +5,15 @@ from django.core.exceptions import ObjectDoesNotExist
 from dataclasses import replace
 from typing import Optional, Dict, Any
 from .bases import BasesFiscal, FiscalContexto
-from ..models import CFOP, MapaCFOP, TabelaICMS, NCM_CFOP_DIF
+from ..models import (
+    CFOP,
+    MapaCFOP,
+    TabelaICMS,
+    NCM_CFOP_DIF,
+    NcmFiscalPadrao,
+    ProdutoFiscalPadrao,
+    CFOPFiscalPadrao,
+)
 from Produtos.models import Produtos, Ncm, NcmAliquota
 from .auxiliares import get_empresa_uf_origem, get_regime, ResolverAliquotaPorRegime
 
@@ -104,8 +112,9 @@ class ResolverBases:
         if ctx.cfop and ctx.cfop.cfop_icms_base_inclui_ipi and valor_ipi:
             base_icms += valor_ipi
 
-        # Base ST = Base ICMS (que já pode ter IPI incluído)
-        base_st = base_icms
+        base_st = base_raiz
+        if ctx.cfop and ctx.cfop.cfop_st_base_inclui_ipi and valor_ipi:
+            base_st += valor_ipi
         
         # Se não gera ST, não há base ST
         if not (ctx.cfop and ctx.cfop.cfop_gera_st):
@@ -250,12 +259,11 @@ class IBSCBSCalculador(CalculadoraImpostos):
         # CBS
         cbs_data = {"base": None, "aliquota": None, "valor": None, "cst": None}
         
-        has_override_cbs = ctx.fiscal_padrao and getattr(ctx.fiscal_padrao, "aliq_cbs", None) is not None
         exige_cbs = ctx.cfop and ctx.cfop.cfop_exig_cbs
 
-        if exige_cbs or has_override_cbs:
+        if exige_cbs:
             aliq = ctx.aliquotas_base.get("cbs") or Decimal("0")
-            if has_override_cbs:
+            if ctx.fiscal_padrao and getattr(ctx.fiscal_padrao, "aliq_cbs", None) is not None:
                 aliq = ctx.fiscal_padrao.aliq_cbs
             
             val = self._d(base * (aliq / Decimal("100"))) if aliq else Decimal("0")
@@ -265,12 +273,11 @@ class IBSCBSCalculador(CalculadoraImpostos):
         # IBS
         ibs_data = {"base": None, "aliquota": None, "valor": None, "cst": None}
         
-        has_override_ibs = ctx.fiscal_padrao and getattr(ctx.fiscal_padrao, "aliq_ibs", None) is not None
         exige_ibs = ctx.cfop and ctx.cfop.cfop_exig_ibs
 
-        if exige_ibs or has_override_ibs:
+        if exige_ibs:
             aliq = ctx.aliquotas_base.get("ibs") or Decimal("0")
-            if has_override_ibs:
+            if ctx.fiscal_padrao and getattr(ctx.fiscal_padrao, "aliq_ibs", None) is not None:
                 aliq = ctx.fiscal_padrao.aliq_ibs
             
             val = self._d(base * (aliq / Decimal("100"))) if aliq else Decimal("0")
@@ -336,10 +343,13 @@ class MotorFiscal:
              
         return ncm
 
-    def obter_icms_data(self, uf_origem, uf_destino):
+    def obter_icms_data(self, uf_origem, uf_destino, empresa_id: int | None = None):
         qs = TabelaICMS.objects
         if self.banco: qs = qs.using(self.banco)
-        tab = qs.filter(uf_origem=uf_origem, uf_destino=uf_destino).first()
+        flt = {"uf_origem": uf_origem, "uf_destino": uf_destino}
+        if empresa_id is not None:
+            flt["empresa"] = int(empresa_id)
+        tab = qs.filter(**flt).first()
         
         if not tab: return {"icms": None, "mva_st": None, "st_aliq": None}
         
@@ -356,27 +366,50 @@ class MotorFiscal:
             regime
         )
 
+    def _normalizar_codigos_ncm(self, codigo: str | None) -> list[str]:
+        cod = (codigo or "").strip()
+        if not cod:
+            return []
+        out = [cod]
+        digits = "".join(ch for ch in cod if ch.isdigit())
+        if digits and digits != cod:
+            out.append(digits)
+        if digits and len(digits) == 8:
+            dotted = f"{digits[:4]}.{digits[4:6]}.{digits[6:]}"
+            if dotted not in out:
+                out.append(dotted)
+        return list(dict.fromkeys(out))
+
     def resolver_fiscal_padrao(self, produto, ncm, cfop):
         if produto is not None:
-            try:
-                if produto.fiscal:
-                    return produto.fiscal, "PRODUTO"
-            except ObjectDoesNotExist:
-                pass
+            qs = ProdutoFiscalPadrao.objects
+            if self.banco:
+                qs = qs.using(self.banco)
+            fiscal = qs.filter(produto_id=getattr(produto, "pk", None)).first()
+            if fiscal:
+                return fiscal, "PRODUTO"
+
+        ncm_codigo = None
+        if ncm is not None:
+            ncm_codigo = getattr(ncm, "ncm_codi", None)
+        if not ncm_codigo and produto is not None:
+            ncm_codigo = getattr(produto, "prod_ncm", None)
+
+        for cod in self._normalizar_codigos_ncm(ncm_codigo):
+            qs = NcmFiscalPadrao.objects
+            if self.banco:
+                qs = qs.using(self.banco)
+            fiscal = qs.filter(ncm_id=cod).first()
+            if fiscal:
+                return fiscal, "NCM"
 
         if cfop is not None:
-            try:
-                if cfop.fiscal:
-                    return cfop.fiscal, "CFOP"
-            except ObjectDoesNotExist:
-                pass
-
-        if ncm is not None:
-            try:
-                if ncm.fiscal:
-                    return ncm.fiscal, "NCM"
-            except ObjectDoesNotExist:
-                pass
+            qs = CFOPFiscalPadrao.objects
+            if self.banco:
+                qs = qs.using(self.banco)
+            fiscal = qs.filter(cfop_id=getattr(cfop, "pk", None)).first()
+            if fiscal:
+                return fiscal, "CFOP"
 
         return None, None
 
@@ -409,16 +442,13 @@ class MotorFiscal:
         ncm = ctx.ncm or self.obter_ncm(ctx.produto)
 
         aliquotas = self.obter_aliquotas_base(ncm, ctx.regime)
-        icms_data = self.obter_icms_data(ctx.uf_origem, ctx.uf_destino)
+        icms_data = self.obter_icms_data(ctx.uf_origem, ctx.uf_destino, empresa_id=ctx.empresa_id)
 
         aliquotas, icms_data = self.aplicar_overrides_dif(
             ncm, cfop, aliquotas, icms_data
         )
 
         fiscal_padrao, fonte_fiscal = self.resolver_fiscal_padrao(ctx.produto, ncm, cfop)
-
-        # DEBUG TEMPORÁRIO
-        logger.info(f"DEBUG FISCAL: fiscal_padrao={fiscal_padrao}, fonte_fiscal={fonte_fiscal}, ncm={ncm}, cfop={cfop}")
 
         # Fallback para fonte de tributação se não houver override fiscal explícito
         if not fonte_fiscal:
@@ -428,8 +458,6 @@ class MotorFiscal:
                 fonte_fiscal = "CFOP"
             else:
                 fonte_fiscal = "Padrão"
-        
-        logger.info(f"DEBUG FISCAL RESOLVIDO: fonte_fiscal={fonte_fiscal}")
 
         ctx_item = replace(
             ctx,
@@ -462,9 +490,8 @@ class MotorFiscal:
         # 5. ICMS
         icms_res = self.icms_calc.calcular_impostos(ctx_item, bases.icms)
         
-        # 6. ICMS ST (✅ CORREÇÃO: passar valor do ICMS próprio)
         st_res = {"base": None, "aliquota": None, "valor": None, "cst": None}
-        if ctx_item.cfop and ctx_item.cfop.cfop_gera_st and bases.st:
+        if ctx_item.cfop and ctx_item.cfop.cfop_gera_st and bases.st is not None:
             st_res = self.icms_st_calc.calcular_impostos(
                 ctx_item,
                 bases.st,
@@ -483,8 +510,13 @@ class MotorFiscal:
             "fonte_tributacao": fonte_fiscal,
             "bases": {
                 "raiz": base_raiz,
-                "icms": bases.icms,
-                "st": bases.st,
+                "icms": icms_res["base"],
+                "st": st_res["base"],
+                "ipi": ipi_res["base"],
+                "pis": piscofins_res["pis"]["base"],
+                "cofins": piscofins_res["cofins"]["base"],
+                "cbs": ibscbs_res["cbs"]["base"],
+                "ibs": ibscbs_res["ibs"]["base"],
             },
             "valores": {
                 "ipi": ipi_res["valor"],
@@ -512,7 +544,10 @@ class MotorFiscal:
                 "cofins": piscofins_res["cofins"]["cst"],
                 "cbs": ibscbs_res["cbs"]["cst"],
                 "ibs": ibscbs_res["ibs"]["cst"],
-            }
+            },
+            "extras": {
+                "mva_st": ctx_item.icms_data.get("mva_st") if ctx_item.icms_data else None,
+            },
         }
         
     def aplicar_no_item(self, item, pacote):

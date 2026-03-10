@@ -71,7 +71,16 @@ def autocomplete_ncms(request, slug=None):
     term = (request.GET.get('term') or request.GET.get('q') or '').strip()
     qs = Ncm.objects.using(banco).all()
     if term:
-        qs = qs.filter(Q(ncm_codi__icontains=term) | Q(ncm_desc__icontains=term))
+        digits = ''.join(ch for ch in term if ch.isdigit())
+        dotted = None
+        if digits and len(digits) == 8:
+            dotted = f"{digits[:4]}.{digits[4:6]}.{digits[6:]}"
+        q = Q(ncm_codi__icontains=term) | Q(ncm_desc__icontains=term)
+        if dotted:
+            q = q | Q(ncm_codi__icontains=dotted)
+        if digits and digits != term:
+            q = q | Q(ncm_codi__icontains=digits)
+        qs = qs.filter(q)
     qs = qs.order_by('ncm_codi')[:30]
     data = [{'value': obj.ncm_codi, 'label': f"{obj.ncm_codi} - {obj.ncm_desc}"} for obj in qs]
     return JsonResponse({'results': data})

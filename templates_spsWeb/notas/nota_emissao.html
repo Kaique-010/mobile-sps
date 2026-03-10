@@ -206,6 +206,10 @@
               <input type="text" class="form-control" id="cfop-total-icms" readonly />
             </div>
             <div class="col-2">
+              <label class="form-label">ICMS ST R$</label>
+              <input type="text" class="form-control" id="cfop-total-icms-st" readonly />
+            </div>
+            <div class="col-2">
               <label class="form-label">IPI R$</label>
               <input type="text" class="form-control" id="cfop-total-ipi" readonly />
             </div>
@@ -265,6 +269,10 @@
         <div class="col-md-2">
           <label class="form-label">ICMS</label>
           <input type="text" class="form-control" id="total-icms" value="" />
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">ICMS ST</label>
+          <input type="text" class="form-control" id="total-icms-st" value="" />
         </div>
         <div class="col-md-2">
           <label class="form-label">IPI</label>
@@ -526,6 +534,7 @@
       let totProd = 0;
       let totDesc = 0;
       let totIcms = 0;
+      let totSt = 0;
       let totIpi = 0;
       let totPis = 0;
       let totCof = 0;
@@ -540,6 +549,7 @@
         totDesc += desc;
         const imp = itBackend.impostos || {};
         totIcms += Number(imp.icms_valor || 0);
+        totSt += Number(imp.icms_st_valor || 0);
         totIpi += Number(imp.ipi_valor || 0);
         totPis += Number(imp.pis_valor || 0);
         totCof += Number(imp.cofins_valor || 0);
@@ -557,6 +567,7 @@
         produtos: totProd,
         desconto: totDesc,
         icms: totIcms,
+        st: totSt,
         ipi: totIpi,
         pis: totPis,
         cofins: totCof,
@@ -565,28 +576,32 @@
       };
       if (totalProdutos) totalProdutos.value = totProd.toFixed(2);
       if (totalDesconto) totalDesconto.value = totDesc.toFixed(2);
-      const trib = totIcms + totIpi + totPis + totCof + totCbs + totIbs;
+      const trib = totIcms + totSt + totIpi + totPis + totCof + totCbs + totIbs;
       if (totalTributos) totalTributos.value = trib.toFixed(2);
       if (totalNota) totalNota.value = (totProd + trib).toFixed(2);
       const totIcmsEl = document.getElementById('total-icms');
+      const totStEl = document.getElementById('total-icms-st');
       const totIpiEl = document.getElementById('total-ipi');
       const totPisEl = document.getElementById('total-pis');
       const totCofEl = document.getElementById('total-cofins');
       const totIbsEl = document.getElementById('total-ibs');
       const totCbsEl = document.getElementById('total-cbs');
       const cfIcmsEl = document.getElementById('cfop-total-icms');
+      const cfStEl = document.getElementById('cfop-total-icms-st');
       const cfIpiEl = document.getElementById('cfop-total-ipi');
       const cfPisEl = document.getElementById('cfop-total-pis');
       const cfCofEl = document.getElementById('cfop-total-cofins');
       const cfIbsEl = document.getElementById('cfop-total-ibs');
       const cfCbsEl = document.getElementById('cfop-total-cbs');
       if (totIcmsEl) totIcmsEl.value = totIcms.toFixed(2);
+      if (totStEl) totStEl.value = totSt.toFixed(2);
       if (totIpiEl) totIpiEl.value = totIpi.toFixed(2);
       if (totPisEl) totPisEl.value = totPis.toFixed(2);
       if (totCofEl) totCofEl.value = totCof.toFixed(2);
       if (totIbsEl) totIbsEl.value = totIbs.toFixed(2);
       if (totCbsEl) totCbsEl.value = totCbs.toFixed(2);
       if (cfIcmsEl) cfIcmsEl.value = totIcms.toFixed(2);
+      if (cfStEl) cfStEl.value = totSt.toFixed(2);
       if (cfIpiEl) cfIpiEl.value = totIpi.toFixed(2);
       if (cfPisEl) cfPisEl.value = totPis.toFixed(2);
       if (cfCofEl) cfCofEl.value = totCof.toFixed(2);
@@ -649,6 +664,7 @@
       const aliq = debugItem && debugItem.aliquotas ? debugItem.aliquotas : {};
       const vals = debugItem && debugItem.valores_calculados ? debugItem.valores_calculados : {};
       const csts = debugItem && debugItem.csts ? debugItem.csts : {};
+      const extras = debugItem && debugItem.extras ? debugItem.extras : {};
       const cond = debugItem && debugItem.condicionais_aplicadas ? debugItem.condicionais_aplicadas : {};
       modalItemCalculoBody.innerHTML = `
         <div class="mb-2"><strong>Produto:</strong> ${it.descricao || ''}</div>
@@ -670,6 +686,8 @@
         <h6>Alíquotas</h6>
         <div class="row g-2 mb-2">
           <div class="col-4"><strong>ICMS %:</strong> ${aliq.icms || '-'}</div>
+          <div class="col-4"><strong>ICMS ST %:</strong> ${aliq.st || '-'}</div>
+          <div class="col-4"><strong>MVA ST %:</strong> ${extras.mva_st || '-'}</div>
           <div class="col-4"><strong>IPI %:</strong> ${aliq.ipi || '-'}</div>
           <div class="col-4"><strong>PIS %:</strong> ${aliq.pis || '-'}</div>
           <div class="col-4"><strong>COFINS %:</strong> ${aliq.cofins || '-'}</div>
@@ -679,6 +697,7 @@
         <h6>Valores calculados</h6>
         <div class="row g-2 mb-2">
           <div class="col-4"><strong>ICMS R$:</strong> ${vals.icms || '0.00'}</div>
+          <div class="col-4"><strong>ICMS ST R$:</strong> ${vals.st || '0.00'}</div>
           <div class="col-4"><strong>IPI R$:</strong> ${vals.ipi || '0.00'}</div>
           <div class="col-4"><strong>PIS R$:</strong> ${vals.pis || '0.00'}</div>
           <div class="col-4"><strong>COFINS R$:</strong> ${vals.cofins || '0.00'}</div>
@@ -688,6 +707,7 @@
         <h6>CSTs</h6>
         <div class="row g-2 mb-2">
           <div class="col-4"><strong>CST ICMS:</strong> ${csts.icms || '-'}</div>
+          <div class="col-4"><strong>CST ST:</strong> ${csts.st || '-'}</div>
           <div class="col-4"><strong>CST PIS:</strong> ${csts.pis || '-'}</div>
           <div class="col-4"><strong>CST COFINS:</strong> ${csts.cofins || '-'}</div>
           <div class="col-4"><strong>CST IBS:</strong> ${csts.ibs || '-'}</div>
@@ -836,10 +856,10 @@
     const btnCalcular = document.getElementById('btn-calcular');
     if (btnCalcular) {
       btnCalcular.addEventListener('click', async () => {
-        const fd = new FormData(document.getElementById('emit-form'));
         const destinatarioId = document.getElementById('destinatario-id').value;
         if (!destinatarioId) { showToast('Selecione o cliente na aba Cliente.', { variant: 'warning' }); return; }
         if (!items.length) { showToast('Adicione ao menos um item.', { variant: 'warning' }); return; }
+        if (!currentNotaId) { showToast('Salve a nota antes de calcular.', { variant: 'warning' }); return; }
 
         const sp = document.createElement('span');
         sp.className = 'spinner-border spinner-border-sm me-1';
@@ -847,26 +867,8 @@
         btnCalcular.disabled = true;
 
         try {
-          const payload = montarPayload(fd);
-          let result;
-
-          if (currentNotaId) {
-            result = await atualizarNota(currentNotaId, payload);
-          } else {
-            result = await criarNota(payload);
-          }
-
-          if (!result.ok) {
-            throw new Error('Falha ao salvar rascunho: ' + (result.data?.detail || 'Erro'));
-          }
-
-          const notaId = result.data?.id || result.data?.pk || result.data?.nota?.id;
-          if (!notaId) throw new Error('ID da nota não retornado.');
-
-          currentNotaId = notaId; // Update current ID
-
           // Corrected URL: /api/calcular/<slug>/<id>/
-          const respCalc = await authFetch(`/api/calcular/${slug}/${notaId}/`, { method: 'POST' });
+          const respCalc = await authFetch(`/api/calcular/${slug}/${currentNotaId}/`, { method: 'POST' });
           if (!respCalc.ok) {
             let errorMsg = 'Erro desconhecido';
             try {
@@ -880,7 +882,7 @@
 
           showToast('Cálculo realizado com sucesso.', { variant: 'success' });
 
-          const respGet = await authFetch(`/api/${slug}/notasfiscais/notas-fiscais/notas/${notaId}/`);
+          const respGet = await authFetch(`/api/${slug}/notasfiscais/notas-fiscais/notas/${currentNotaId}/`);
           if (respGet.ok) {
             const dataGet = await respGet.json();
             preencherBackendDaNota(dataGet);

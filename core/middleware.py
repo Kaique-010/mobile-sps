@@ -102,8 +102,8 @@ class LicencaMiddleware:
         slug = parts[1]
 
         # Rotas especiais de API que recebem o slug depois da ação,
-        # por exemplo: /api/emitir/<slug>/<id>/ ou /api/imprimir/<slug>/<id>/
-        if slug in ("emitir", "imprimir") and len(parts) >= 3:
+        # por exemplo: /api/emitir/<slug>/<id>/, /api/imprimir/<slug>/<id>/, /api/calcular/<slug>/<id>/
+        if slug in ("emitir", "imprimir", "calcular") and len(parts) >= 3:
             slug = parts[2]
 
         if slug in ("null", "undefined"):
