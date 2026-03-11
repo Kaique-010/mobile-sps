@@ -1,18 +1,18 @@
 {
-  "debug_id": "2c13091a-9a25-4646-94a9-2abd0deb9533",
-  "timestamp_inicio": "2026-03-10T20:59:30.564490Z",
+  "debug_id": "e7552caa-8d65-4f53-b449-945d967f4326",
+  "timestamp_inicio": "2026-03-11T00:51:09.484136Z",
   "ambiente": {
-    "debug": true,
+    "debug": false,
     "database_alias": "saveweb001"
   },
   "tabelas_tributacao": {
     "versao": "desconhecida"
   },
   "nota": {
-    "id": 53,
+    "id": 64,
     "modelo": "65",
     "serie": "5",
-    "numero": "19",
+    "numero": "30",
     "empresa": "1",
     "filial": "1",
     "destinatario_id": "5",
@@ -22,18 +22,18 @@
   },
   "itens": [
     {
-      "id": 53,
-      "produto_id": "3",
-      "descricao_produto": "CANECA DE TESTES",
-      "ncm_produto": "8419****",
+      "id": 64,
+      "produto_id": "5",
+      "descricao_produto": "TECLADO LOGITECH",
+      "ncm_produto": "8471****",
       "cfop_inicial": "5102",
       "quantidade": "1.0000",
-      "unitario": "2.5000",
+      "unitario": "2.1500",
       "desconto": "0.0000",
       "logs": [
         {
-          "id": "a08f6077-594a-486b-9b4c-84d2395e5598",
-          "timestamp": "2026-03-10T20:59:30.692914Z",
+          "id": "6585fbf4-4f61-4bb3-bf93-9face5364bc0",
+          "timestamp": "2026-03-11T00:51:09.774285Z",
           "tipo": "antes_calculo_item",
           "mensagem": "Início do cálculo de impostos para o item.",
           "dados": {
@@ -50,33 +50,33 @@
         "exig_icms": true,
         "exig_ipi": false,
         "exig_pis_cofins": false,
-        "exig_cbs": false,
-        "exig_ibs": false,
+        "exig_cbs": true,
+        "exig_ibs": true,
         "gera_st": true
       },
       "ncm_resolvido": null,
       "bases": {
-        "raiz": "2.50",
-        "icms": "2.50",
+        "raiz": "2.15",
+        "icms": "2.15",
         "st": null
       },
       "aliquotas": {
         "ipi": null,
-        "icms": "0.00",
+        "icms": "12.00",
         "st": null,
         "pis": null,
         "cofins": null,
-        "cbs": null,
-        "ibs": null
+        "cbs": "0.90",
+        "ibs": "0.60"
       },
       "valores_calculados": {
         "ipi": null,
-        "icms": "0.00",
+        "icms": "0.26",
         "st": null,
         "pis": null,
         "cofins": null,
-        "cbs": null,
-        "ibs": null
+        "cbs": "0.02",
+        "ibs": "0.01"
       },
       "extras": {
         "mva_st": null
@@ -87,22 +87,22 @@
         "st": null,
         "pis": null,
         "cofins": null,
-        "cbs": null,
-        "ibs": null
+        "cbs": "1",
+        "ibs": "1"
       },
       "condicionais_aplicadas": {
         "icms_habilitado_cfop": true,
         "ipi_habilitado_cfop": false,
         "pis_cofins_habilitado_cfop": false,
-        "cbs_habilitado_cfop": false,
-        "ibs_habilitado_cfop": false
+        "cbs_habilitado_cfop": true,
+        "ibs_habilitado_cfop": true
       }
     }
   ],
   "logs": [
     {
-      "id": "c9f53b11-ca6e-4d0e-905b-f59d1eef8a21",
-      "timestamp": "2026-03-10T20:59:30.665220Z",
+      "id": "23a1124e-3f5f-4a37-b300-577ae513040d",
+      "timestamp": "2026-03-11T00:51:09.705572Z",
       "tipo": "contexto_nota",
       "mensagem": "Contexto fiscal inicial da nota.",
       "dados": {
@@ -110,5 +110,5 @@
       }
     }
   ],
-  "timestamp_fim": "2026-03-10T20:59:30.876283Z"
+  "timestamp_fim": "2026-03-11T00:51:10.220201Z"
 }

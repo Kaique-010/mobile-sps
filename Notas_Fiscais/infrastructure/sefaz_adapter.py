@@ -388,6 +388,11 @@ class SefazAdapter:
         ns_uri = 'http://www.portalfiscal.inf.br/nfe'
         ns = {'ns': ns_uri}
 
+        dh_emi = nfe_elem.findtext('.//ns:ide/ns:dhEmi', namespaces=ns) or nfe_elem.findtext('.//ide/dhEmi') or ""
+        ano_emi = None
+        if dh_emi and len(dh_emi) >= 4 and dh_emi[:4].isdigit():
+            ano_emi = int(dh_emi[:4])
+
         dets = nfe_elem.findall('.//ns:det', namespaces=ns)
 
         if not dets:
@@ -398,6 +403,11 @@ class SefazAdapter:
         if len(dets) != len(itens_extra):
             print("DEBUG: _injetar_ibs_cbs: Contagem incompatível. Abortando injeção.")
             return
+        
+        total_vbc = 0.0
+        total_vcbs = 0.0
+        total_vibs_uf = 0.0
+        total_vibs_mun = 0.0
 
         for i, det in enumerate(dets):
             dados = itens_extra[i]
@@ -422,28 +432,100 @@ class SefazAdapter:
                 return elem
 
             ibs_data = dados.get('ibs')
-            if ibs_data:
-                valor_ibs = float(ibs_data.get('valor') or 0)
-                if valor_ibs > 0:
-                    ibs = sub(imposto, "IBS")
-                    sub(ibs, "vBCIBS", fmt(ibs_data.get('base')))
-                    sub(ibs, "pIBS", fmt(ibs_data.get('aliq')))
-                    sub(ibs, "vIBS", fmt(ibs_data.get('valor')))
-                else:
-                    print(f"DEBUG: IBS zerado ({valor_ibs}), ignorando injeção para evitar erro 225.")
-
             cbs_data = dados.get('cbs')
-            if cbs_data:
-                valor_cbs = float(cbs_data.get('valor') or 0)
-                if valor_cbs > 0:
-                    cbs = sub(imposto, "CBS")
-                    sub(cbs, "vBCCBS", fmt(cbs_data.get('base')))
-                    sub(cbs, "pCBS", fmt(cbs_data.get('aliq')))
-                    sub(cbs, "vCBS", fmt(cbs_data.get('valor')))
-                else:
+            
+            valor_ibs = float((ibs_data or {}).get('valor') or 0)
+            valor_cbs = float((cbs_data or {}).get('valor') or 0)
+            base_ibs = float((ibs_data or {}).get('base') or 0)
+            base_cbs = float((cbs_data or {}).get('base') or 0)
+            aliq_ibs = float((ibs_data or {}).get('aliq') or 0)
+            aliq_cbs = float((cbs_data or {}).get('aliq') or 0)
+
+            if valor_ibs <= 0 and valor_cbs <= 0:
+                if ibs_data:
+                    print(f"DEBUG: IBS zerado ({valor_ibs}), ignorando injeção para evitar erro 225.")
+                if cbs_data:
                     print(f"DEBUG: CBS zerado ({valor_cbs}), ignorando injeção para evitar erro 225.")
+                continue
+            
+            for node in list(imposto):
+                if node.tag in ("IBS", "CBS", "IBSCBS", f"{{{ns_uri}}}IBS", f"{{{ns_uri}}}CBS", f"{{{ns_uri}}}IBSCBS"):
+                    imposto.remove(node)
+            
+            vbc = base_cbs or base_ibs
+            if not vbc:
+                vprod = det.findtext('.//ns:prod/ns:vProd', namespaces=ns) or det.findtext('.//prod/vProd') or "0"
+                vbc = float(vprod or 0)
+            
+            valor_ibs_mun = 0.0
+            aliq_ibs_mun = 0.0
+            aliq_ibs_uf = float(aliq_ibs or 0)
+            if ano_emi in (2025, 2026):
+                if aliq_ibs_uf > 0:
+                    aliq_ibs_uf = 0.10
+            elif ano_emi in (2027, 2028):
+                if aliq_ibs_uf > 0:
+                    aliq_ibs_uf = 0.05
+
+            valor_ibs_uf = float(valor_ibs or 0)
+            if aliq_ibs_uf != float(aliq_ibs or 0):
+                valor_ibs_uf = round(float(vbc or 0) * (aliq_ibs_uf / 100.0), 2)
+
+            vibs = float(valor_ibs or 0) + float(valor_ibs_mun or 0)
+
+            ibscbs = sub(imposto, "IBSCBS")
+            sub(ibscbs, "CST", "000")
+            sub(ibscbs, "cClassTrib", "000001")
+            gibscbs = sub(ibscbs, "gIBSCBS")
+            sub(gibscbs, "vBC", fmt(vbc))
+            gibuf = sub(gibscbs, "gIBSUF")
+            sub(gibuf, "pIBSUF", fmt(aliq_ibs_uf))
+            sub(gibuf, "vIBSUF", fmt(valor_ibs_uf))
+            gibmun = sub(gibscbs, "gIBSMun")
+            sub(gibmun, "pIBSMun", fmt(aliq_ibs_mun))
+            sub(gibmun, "vIBSMun", fmt(valor_ibs_mun))
+            sub(gibscbs, "vIBS", fmt(float(valor_ibs_uf or 0) + float(valor_ibs_mun or 0)))
+            gcbs = sub(gibscbs, "gCBS")
+            sub(gcbs, "pCBS", fmt(aliq_cbs))
+            sub(gcbs, "vCBS", fmt(valor_cbs))
+            
+            total_vbc += float(vbc or 0)
+            total_vcbs += float(valor_cbs or 0)
+            total_vibs_uf += float(valor_ibs_uf or 0)
+            total_vibs_mun += float(valor_ibs_mun or 0)
 
             print(f"DEBUG: Injetado IBS/CBS no item {i}")
+        
+        total = nfe_elem.find('.//ns:total', namespaces=ns) or nfe_elem.find('.//total')
+        if total is None:
+            return
+        
+        for node in list(total):
+            if node.tag in ("IBSCBSTot", f"{{{ns_uri}}}IBSCBSTot"):
+                total.remove(node)
+        
+        if total_vbc > 0 or total_vcbs > 0 or total_vibs_uf > 0 or total_vibs_mun > 0:
+            tot = sub(total, "IBSCBSTot")
+            sub(tot, "vBCIBSCBS", fmt(total_vbc))
+            gibs = sub(tot, "gIBS")
+            gibsuf = sub(gibs, "gIBSUF")
+            sub(gibsuf, "vDif", fmt(0))
+            sub(gibsuf, "vDevTrib", fmt(0))
+            sub(gibsuf, "vIBSUF", fmt(total_vibs_uf))
+            gibsmun = sub(gibs, "gIBSMun")
+            sub(gibsmun, "vDif", fmt(0))
+            sub(gibsmun, "vDevTrib", fmt(0))
+            sub(gibsmun, "vIBSMun", fmt(total_vibs_mun))
+            sub(gibs, "vIBS", fmt(total_vibs_uf + total_vibs_mun))
+            sub(gibs, "vCredPres", fmt(0))
+            sub(gibs, "vCredPresCondSus", fmt(0))
+
+            gcbs = sub(tot, "gCBS")
+            sub(gcbs, "vDif", fmt(0))
+            sub(gcbs, "vDevTrib", fmt(0))
+            sub(gcbs, "vCBS", fmt(total_vcbs))
+            sub(gcbs, "vCredPres", fmt(0))
+            sub(gcbs, "vCredPresCondSus", fmt(0))
 
     def _injetar_responsavel_tecnico(self, nfe_elem, resp_dto):
         def sub(parent, tag, text=None):
@@ -495,13 +577,14 @@ class SefazAdapter:
             return
 
         id_token = str(id_token).strip()
-        if id_token.isdigit() and len(id_token) < 6:
-            id_token = id_token.zfill(6)
+        csc = str(csc).strip()
+        if id_token.isdigit():
+            id_token = str(int(id_token))
 
         uf = (uf or "").strip().upper()
         if uf == "PR":
-            base_qr = "http://www.fazenda.pr.gov.br/nfce/qrcode/?p="
-            url_chave = "http://www.fazenda.pr.gov.br"
+            base_qr = "http://www.fazenda.pr.gov.br/nfce/qrcode?"
+            url_chave = "http://www.fazenda.pr.gov.br/nfce/consulta"
         else:
             raise Exception(f"UF sem URL de QRCode configurada: {uf}")
 
@@ -550,17 +633,15 @@ class SefazAdapter:
             raise Exception("DigestValue não encontrado")
 
         n_versao = "2"
+        # cDest para NFC-e: "1" se destinatário identificado, "0" se anônimo
+        # Baseado em exemplos reais do PR: o campo é apenas 1 dígito
+        c_dest_qr = "1" if c_dest else "0"
 
-        # Hash calculado com valores literais, sem qualquer encoding (NT 2015/002)
-        hash_input = f"{chave}|{n_versao}|{tp_amb}|{c_dest}|{v_nf}|{dig_val}|{id_token}|{csc}"
-        hash_hex   = hashlib.sha1(hash_input.encode("utf-8")).hexdigest().upper()
+        url_core = f"{chave}|{n_versao}|{tp_amb}|{id_token}"
+        hash_bytes = hashlib.sha1((url_core + csc).encode("utf-8")).digest()
+        hash_hex = base64.b16encode(hash_bytes).decode("utf-8")
 
-        # URL totalmente literal — sem encoding, sem CDATA
-        # O lxml serializa o texto XML fazendo escape apenas de < > & automaticamente
-        # | = + / são caracteres válidos em conteúdo de elemento XML
-        qr_url = f"{base_qr}{chave}|{n_versao}|{tp_amb}|{c_dest}|{v_nf}|{dig_val}|{id_token}|{hash_hex}"
-
-        print(f"DEBUG: DigestValue: {dig_val}")
+        qr_url = f"{base_qr}p={url_core}|{hash_hex}"
         print(f"DEBUG: QRCode URL COMPLETA: {qr_url}")
 
         # Helper local com nome único para evitar conflito com funções 'sub' de outros métodos
