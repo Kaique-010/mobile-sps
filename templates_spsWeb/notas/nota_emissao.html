@@ -64,7 +64,11 @@
         </div>
         <div class="col-md-12">
           <label class="form-label">Natureza da Operação</label>
-          <input type="text" class="form-control" name="natureza_operacao" value="Venda de mercadoria" />
+          <select class="form-select" name="natureza_operacao">
+            {% for opt in natureza_operacao_opcoes %}
+              <option value="{{ opt.value }}" {% if opt.value == natureza_operacao_default %}selected{% endif %}>{{ opt.label }}</option>
+            {% endfor %}
+          </select>
         </div>
       </div>
     </div>

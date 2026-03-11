@@ -1,18 +1,18 @@
 {
-  "debug_id": "e7552caa-8d65-4f53-b449-945d967f4326",
-  "timestamp_inicio": "2026-03-11T00:51:09.484136Z",
+  "debug_id": "cc1bcc20-dcb6-4db2-a5e6-926e4006225d",
+  "timestamp_inicio": "2026-03-11T19:03:42.276644Z",
   "ambiente": {
-    "debug": false,
+    "debug": true,
     "database_alias": "saveweb001"
   },
   "tabelas_tributacao": {
     "versao": "desconhecida"
   },
   "nota": {
-    "id": 64,
-    "modelo": "65",
-    "serie": "5",
-    "numero": "30",
+    "id": 69,
+    "modelo": "55",
+    "serie": "005",
+    "numero": "4",
     "empresa": "1",
     "filial": "1",
     "destinatario_id": "5",
@@ -22,18 +22,18 @@
   },
   "itens": [
     {
-      "id": 64,
+      "id": 68,
       "produto_id": "5",
       "descricao_produto": "TECLADO LOGITECH",
       "ncm_produto": "8471****",
       "cfop_inicial": "5102",
       "quantidade": "1.0000",
-      "unitario": "2.1500",
+      "unitario": "13.5000",
       "desconto": "0.0000",
       "logs": [
         {
-          "id": "6585fbf4-4f61-4bb3-bf93-9face5364bc0",
-          "timestamp": "2026-03-11T00:51:09.774285Z",
+          "id": "49fd3303-17cb-4f44-b895-08e218b7bffd",
+          "timestamp": "2026-03-11T19:03:42.391475Z",
           "tipo": "antes_calculo_item",
           "mensagem": "Início do cálculo de impostos para o item.",
           "dados": {
@@ -56,8 +56,8 @@
       },
       "ncm_resolvido": null,
       "bases": {
-        "raiz": "2.15",
-        "icms": "2.15",
+        "raiz": "13.50",
+        "icms": "13.50",
         "st": null
       },
       "aliquotas": {
@@ -71,12 +71,12 @@
       },
       "valores_calculados": {
         "ipi": null,
-        "icms": "0.26",
+        "icms": "1.62",
         "st": null,
         "pis": null,
         "cofins": null,
-        "cbs": "0.02",
-        "ibs": "0.01"
+        "cbs": "0.12",
+        "ibs": "0.08"
       },
       "extras": {
         "mva_st": null
@@ -101,8 +101,8 @@
   ],
   "logs": [
     {
-      "id": "23a1124e-3f5f-4a37-b300-577ae513040d",
-      "timestamp": "2026-03-11T00:51:09.705572Z",
+      "id": "726f3cd7-dc6c-4101-947b-8bba352b8484",
+      "timestamp": "2026-03-11T19:03:42.369563Z",
       "tipo": "contexto_nota",
       "mensagem": "Contexto fiscal inicial da nota.",
       "dados": {
@@ -110,5 +110,5 @@
       }
     }
   ],
-  "timestamp_fim": "2026-03-11T00:51:10.220201Z"
+  "timestamp_fim": "2026-03-11T19:03:42.549968Z"
 }

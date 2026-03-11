@@ -76,7 +76,7 @@
                 <th>Total</th>
                 <th>CFOP</th>
                 <th>NCM</th>
-                <th>CST ICMS/PIS/COFINS</th>
+                <th>CST ICMS/PIS/COFINS/IBS/CBS/FCP</th>
               </tr>
             </thead>
             <tbody>
@@ -89,15 +89,16 @@
                 <td>{{ it.total }}</td>
                 <td>{{ it.cfop }}</td>
                 <td>{{ it.ncm }}</td>
-                <td>{{ it.cst_icms }} / {{ it.cst_pis|default:"--" }} / {{ it.cst_cofins|default:"--" }}</td>
+                <td>{{ it.cst_icms }} / {{ it.cst_pis|default:"--" }} / {{ it.cst_cofins|default:"--" }} / {{ it.cst_ibs|default:"--" }} / {{ it.cst_cbs|default:"--" }} / {{ it.cst_fcp|default:"--" }}</td>
               </tr>
               {% if it.impostos %}
-              <tr class="table-light">
+              <tr class="table">
                 <td colspan="8" class="text-break">
                   <strong>Impostos:</strong>
                   ICMS Base {{ it.impostos.icms_base|default:"0.00" }} Aliq {{it.impostos.icms_aliquota|default:"0.00"}} Valor {{ it.impostos.icms_valor|default:"0.00" }} |
                   IPI {{ it.impostos.ipi_valor|default:"0.00" }} | PIS {{ it.impostos.pis_valor|default:"0.00" }} |
                   COFINS {{ it.impostos.cofins_valor|default:"0.00" }}
+                  | IBS {{ it.impostos.ibs_valor|default:"0.00" }} | CBS {{ it.impostos.cbs_valor|default:"0.00" }}
                   | FCP {{ it.impostos.fcp_valor|default:"0.00" }}
                 </td>
               </tr>

@@ -69,7 +69,7 @@ class CalculoImpostosService:
                 "database_alias": self.banco,
             },
             "tabelas_tributacao": {
-                "versao": getattr(settings, "TRIBUTACAO_VERSAO", "desconhecida"),
+                "versao": getattr(settings, "TRIBUTACAO_VERSAO", "Padrão"),
             },
             "nota": {
                 "id": nota.pk,

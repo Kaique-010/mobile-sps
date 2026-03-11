@@ -1,6 +1,11 @@
 # notas_fiscais/services/nota_service.py
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
+from django.db.models import Max
+import logging
+
+logger = logging.getLogger(__name__)
+
 from django.core.exceptions import ValidationError
 from Licencas.models import Filiais
 from Entidades.models import Entidades
@@ -10,74 +15,100 @@ from .itens_service import ItensService
 from .transporte_service import TransporteService
 from .evento_service import EventoService
 from .calculo_impostos_service import CalculoImpostosService
+from series.models import Series
 
 
 class NotaService:
 
     @staticmethod
-    @transaction.atomic
     def criar(data, itens, impostos_map, transporte, empresa, filial, database="default"):
+        with transaction.atomic(using=database):
+            dest_id = data.get("destinatario")
+            try:
+                destinatario = Entidades.objects.using(database).get(enti_clie=dest_id)
+            except Entidades.DoesNotExist:
+                raise ValidationError("Destinatário inválido.")
 
-        # 1. Validar destinatário existe
-        dest_id = data.get("destinatario")
-        try:
-            destinatario = Entidades.objects.using(database).get(enti_clie=dest_id)
-        except Entidades.DoesNotExist:
-            raise ValidationError("Destinatário inválido.")
+            emitente = Filiais.objects.using(database).get(empr_empr=empresa, empr_codi=filial)
 
-        # 2. Emitente = filial específica (empresa + filial)
-        emitente = Filiais.objects.using(database).get(empr_empr=empresa, empr_codi=filial)
-
-        # 3. Prepara payload
-        payload = NotaHandler.preparar_criacao(data, empresa, filial)
-        payload["emitente"] = emitente
-        payload["destinatario"] = destinatario
-        
-        # Define ambiente (Produção/Homologação) conforme configuração da filial
-        payload["ambiente"] = int(emitente.empr_ambi_nfe or 2)
-
-        # 3.1. Número automático
-        modelo = str(payload.get("modelo") or "55")
-        serie = str(payload.get("serie") or "1")
-        numero = int(payload.get("numero") or 0)
-        if numero <= 0:
-            numero = NotaService.next_numero(empresa, filial, modelo, serie, database)
-            payload["numero"] = numero
-        else:
-            exists = (
-                Nota.objects.using(database)
-                .filter(empresa=empresa, filial=filial, modelo=modelo, serie=serie, numero=numero)
-                .exists()
+            series = (
+                Series.objects.using(database)
+                .filter(seri_empr=empresa, seri_fili=filial, seri_nome="SA")
+                .first()
             )
-            if exists:
-                numero = NotaService.next_numero(empresa, filial, modelo, serie, database)
-                payload["numero"] = numero
+            if not series:
+                raise ValidationError("Nenhuma série encontrada para o modelo 55.")
 
-        # 4. Cria a nota
-        nota = Nota.objects.using(database).create(**payload)
+            serie_saida = str(getattr(series, "seri_codi", None) or "1").strip()
 
-        # 5. Itens
-        ItensService.inserir_itens(nota, itens, impostos_map)
+            payload = NotaHandler.preparar_criacao(data, empresa, filial)
+            payload["emitente"] = emitente
+            payload["destinatario"] = destinatario
+            payload["ambiente"] = int(emitente.empr_ambi_nfe or 2)
 
-        # 6. Transporte
-        if transporte:
-            TransporteService.definir(nota, transporte)
+            modelo = str(payload.get("modelo") or "55").strip()
+            payload["modelo"] = modelo
 
-        return nota
+            serie = str(serie_saida or "1").strip()
+            payload["serie"] = serie
+
+            numero = int(payload.get("numero") or 0)
+            if numero > 0:
+                existe = (
+                    Nota.objects.using(database)
+                    .filter(
+                        empresa=empresa,
+                        filial=filial,
+                        modelo=modelo,
+                        serie=serie,
+                        numero=numero,
+                    )
+                    .exists()
+                )
+                if existe:
+                    numero = 0
+
+            if numero <= 0:
+                payload["numero"] = NotaService.next_numero(empresa, filial, modelo, serie, database)
+
+            nota = None
+            for _ in range(5):
+                try:
+                    nota = Nota.objects.using(database).create(**payload)
+                    break
+                except IntegrityError as e:
+                    msg = str(e).lower()
+                    if ("duplicate key" not in msg) and ("unique" not in msg):
+                        raise
+                    payload["numero"] = NotaService.next_numero(empresa, filial, modelo, serie, database)
+
+            if nota is None:
+                raise ValidationError("Não foi possível obter numeração disponível para a nota.")
+
+            logger.info(
+                "Nota criada id=%s empresa=%s filial=%s modelo=%s serie=%s numero=%s",
+                getattr(nota, "pk", None),
+                empresa,
+                filial,
+                modelo,
+                serie,
+                payload.get("numero"),
+            )
+
+            ItensService.inserir_itens(nota, itens, impostos_map)
+
+            if transporte:
+                TransporteService.definir(nota, transporte)
+
+            return nota
 
     @staticmethod
     def next_numero(empresa: int, filial: int, modelo: str, serie: str, database: str = "default") -> int:
-        qs = (
-            Nota.objects.using(database)
-            .filter(empresa=empresa, filial=filial, modelo=modelo, serie=serie)
+        qs = Nota.objects.using(database).filter(
+            empresa=empresa, filial=filial, modelo=str(modelo).strip(), serie=str(serie).strip()
         )
-        last_aut = qs.filter(status=100).order_by("-numero").values_list("numero", flat=True).first()
-        if last_aut:
-            return int(last_aut) + 1
-        last_any = qs.order_by("-numero").values_list("numero", flat=True).first()
-        if last_any:
-            return int(last_any) + 1
-        return 1
+        max_num = qs.aggregate(max_num=Max("numero")).get("max_num") or 0
+        return int(max_num) + 1
 
     @staticmethod
     @transaction.atomic

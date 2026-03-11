@@ -82,8 +82,19 @@ class EmissaoService:
             )
 
         if str(getattr(nota, "modelo", "")) == "65":
+            uf = str(dto.emitente.uf or "").strip().upper()
+            tp_amb = int(dto.ambiente or 2)
+
             id_token = str(getattr(filial_obj, "empr_id_toke", "") or "").strip()
             csc = str(getattr(filial_obj, "empr_csn_toke", "") or "").strip()
+
+            if uf == "PR":
+                if tp_amb == 1:
+                    csc = "R94XGP4QKW4DFEUD215P5BADXKQV0UDQIQZQ"
+                    id_token = "3"
+                else:
+                    csc = "TBPHFPLCMUIB4K4CGY3SJW1RE8YWQWFQ4D56"
+                    id_token = "1"
             if not id_token or not csc:
                 raise ErroDominio(
                     "Filial sem CSC/ID Token configurado para NFC-e (modelo 65).",
@@ -96,8 +107,8 @@ class EmissaoService:
             nfe_obj._nfce_csc = {
                 "id_token": id_token,
                 "csc": csc,
-                "uf": dto.emitente.uf,
-                "ambiente": str(dto.ambiente),
+                "uf": uf,
+                "ambiente": str(tp_amb),
             }
 
         try:

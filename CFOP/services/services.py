@@ -157,6 +157,11 @@ class IPICalculador(CalculadoraImpostos):
 
 
 class ICMSCalculador(CalculadoraImpostos):
+    """
+    Calcula ICMS conforme:
+    - Base ICMS = Base ICMS × (1 + MVA)
+    - ICMS = (Base ICMS × Alíq ICMS) - ICMS Próprio
+    """
     def calcular_impostos(self, ctx: FiscalContexto, base: Decimal) -> Dict[str, Any]:
         if not ctx.cfop or not ctx.cfop.cfop_exig_icms:
             return {"base": None, "aliquota": None, "valor": None, "cst": None}
@@ -225,6 +230,11 @@ class IcmsStCalculador(CalculadoraImpostos):
 
 
 class PISCOFINSCalculador(CalculadoraImpostos):
+    """
+    Calcula PIS e COFINS conforme:
+    - Base PIS/COFINS = Base ICMS × (1 + MVA)
+    - PIS/COFINS = (Base PIS/COFINS × Alíq PIS/COFINS) - PIS/COFINS Próprio
+    """
     def calcular_impostos(self, ctx: FiscalContexto, base: Decimal) -> Dict[str, Any]:
         if not ctx.cfop or not ctx.cfop.cfop_exig_pis_cofins:
             return {
@@ -255,6 +265,11 @@ class PISCOFINSCalculador(CalculadoraImpostos):
 
 
 class IBSCBSCalculador(CalculadoraImpostos):
+    """
+    Calcula IBS e CBS conforme:
+    - Base IBS/CBS = Base ICMS × (1 + MVA)
+    - IBS/CBS = (Base IBS/CBS × Alíq IBS/CBS) - IBS/CBS Próprio
+    """
     def calcular_impostos(self, ctx: FiscalContexto, base: Decimal) -> Dict[str, Any]:
         # CBS
         cbs_data = {"base": None, "aliquota": None, "valor": None, "cst": None}
@@ -578,5 +593,7 @@ class MotorFiscal:
         if pacote["csts"]["icms"]: item.iped_cst_icms = pacote["csts"]["icms"]
         if pacote["csts"]["pis"]: item.iped_cst_pis = pacote["csts"]["pis"]
         if pacote["csts"]["cofins"]: item.iped_cst_cofi = pacote["csts"]["cofins"]
-        
+        if pacote["csts"]["ibs"]: item.iped_cst_ibs = pacote["csts"]["ibs"]
+        if pacote["csts"]["cbs"]: item.iped_cst_cbs = pacote["csts"]["cbs"]
+
         return item

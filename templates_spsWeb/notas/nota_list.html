@@ -854,7 +854,7 @@
               <div class="action-btns">
                 <a class="btn-act btn-act-info" href="/web/{{ slug }}/notas-fiscais/{{ n.id }}/">Detalhes</a>
                 {% if n.status != 100 and n.status != 101 and n.status != 102 %}
-                {% if n.chave_acesso or n.status == 539 or n.status == 204 or n.status == 105 %}
+                {% if n.chave_acesso or n.xml_assinado or n.status == 539 or n.status == 204 or n.status == 105 %}
                 <button class="btn-act btn-act-primary" data-consultar data-id="{{ n.id }}"><span
                     class="spinner-border d-none"></span> Consultar</button>
                 {% else %}
@@ -911,7 +911,7 @@
         <div class="action-btns">
           <a class="btn-act btn-act-info" href="/web/{{ slug }}/notas-fiscais/{{ n.id }}/">Detalhes</a>
           {% if n.status != 100 and n.status != 101 and n.status != 102 %}
-          {% if n.chave_acesso or n.status == 539 or n.status == 204 or n.status == 105 %}
+          {% if n.chave_acesso or n.xml_assinado or n.status == 539 or n.status == 204 or n.status == 105 %}
           <button class="btn-act btn-act-primary" data-consultar data-id="{{ n.id }}"><span
               class="spinner-border d-none"></span> Consultar</button>
           {% else %}

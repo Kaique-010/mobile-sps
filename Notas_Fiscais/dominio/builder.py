@@ -194,6 +194,31 @@ class NotaBuilder:
         # Tenta ler do .env (Configuração global da Software House)
         id_csrt = config('CSRT_ID', default=None)
         csrt_key = config('CSRT_KEY', default=None) 
+
+        uf_emit = str(getattr(f, "empr_esta", "") or "").strip().upper()
+        tp_amb = int(getattr(self.nota, "ambiente", None) or 2)
+        if not id_csrt:
+            if tp_amb == 1:
+                id_csrt = config("CSRT_ID_PRODUCAO", default=None)
+            else:
+                id_csrt = config("CSRT_ID_HOMOLOGACAO", default=None)
+        if not csrt_key:
+            if tp_amb == 1:
+                csrt_key = config("CSRT_KEY_PRODUCAO", default=None)
+            else:
+                csrt_key = config("CSRT_KEY_HOMOLOGACAO", default=None)
+
+        if uf_emit == "PR":
+            if tp_amb == 1:
+                if not csrt_key:
+                    csrt_key = "R94XGP4QKW4DFEUD215P5BADXKQV0UDQIQZQ"
+                if not id_csrt:
+                    id_csrt = "3"
+            else:
+                if not csrt_key:
+                    csrt_key = "TBPHFPLCMUIB4K4CGY3SJW1RE8YWQWFQ4D56"
+                if not id_csrt:
+                    id_csrt = "1"
         
         # Se não tiver no .env, tenta verificar se existe no model Filiais (futuro)
         if not id_csrt and hasattr(f, 'empr_csrt_id'):

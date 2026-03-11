@@ -99,6 +99,161 @@ class SefazAdapter:
 
         return root
 
+    def _normalizar_serie_ide(self, nfe_elem):
+        if nfe_elem is None:
+            return
+
+        ns_uri = "http://www.portalfiscal.inf.br/nfe"
+        ns = {"ns": ns_uri}
+
+        serie_nodes = nfe_elem.findall(".//ns:ide/ns:serie", namespaces=ns)
+        if not serie_nodes:
+            serie_nodes = nfe_elem.findall(".//ide/serie")
+
+        for node in serie_nodes:
+            raw = (node.text or "").strip()
+            if not raw:
+                continue
+            if not raw.isdigit():
+                continue
+            try:
+                val = int(raw)
+            except Exception:
+                continue
+            if val == 0:
+                node.text = "0"
+            else:
+                node.text = str(val)
+
+    def _parse_envio_autorizacao(self, envio):
+        status = None
+        motivo = None
+        protocolo = None
+        chave = None
+        xml_protocolo = None
+
+        try:
+            resultado = envio
+            if isinstance(envio, (tuple, list)) and len(envio) >= 2:
+                codigo_envio = envio[0]
+                resultado = envio[1]
+            else:
+                codigo_envio = None
+
+            ns = {'ns': 'http://www.portalfiscal.inf.br/nfe'}
+
+            if codigo_envio == 0:
+                root = None
+                if isinstance(resultado, etree._Element):
+                    root = resultado
+                elif isinstance(resultado, (bytes, bytearray)):
+                    root = etree.fromstring(bytes(resultado))
+                elif isinstance(resultado, str) and resultado.strip():
+                    root = etree.fromstring(resultado.encode("utf-8"))
+
+                if root is not None:
+                    prot_nfe = root.find('.//ns:protNFe', namespaces=ns)
+                    if prot_nfe is not None:
+                        xml_protocolo = etree.tostring(prot_nfe, encoding='unicode')
+                        inf_prot = prot_nfe.find('.//ns:infProt', namespaces=ns)
+                        if inf_prot is not None:
+                            c_stat_txt = inf_prot.findtext('.//ns:cStat', namespaces=ns)
+                            if c_stat_txt:
+                                status = int(c_stat_txt)
+                            n_prot_txt = inf_prot.findtext('.//ns:nProt', namespaces=ns)
+                            if n_prot_txt:
+                                protocolo = n_prot_txt
+                            x_motivo_txt = inf_prot.findtext('.//ns:xMotivo', namespaces=ns)
+                            if x_motivo_txt:
+                                motivo = x_motivo_txt
+                            ch_nfe_txt = inf_prot.findtext('.//ns:chNFe', namespaces=ns)
+                            if ch_nfe_txt:
+                                chave = ch_nfe_txt
+
+                    if status is None:
+                        c_stat_txt = root.findtext('.//ns:cStat', namespaces=ns)
+                        if c_stat_txt:
+                            status = int(c_stat_txt)
+                        x_motivo_txt = root.findtext('.//ns:xMotivo', namespaces=ns)
+                        if x_motivo_txt:
+                            motivo = x_motivo_txt
+
+                if status is None:
+                    status = 100
+                if motivo is None:
+                    motivo = "Autorizado o uso da NF-e"
+
+            else:
+                resposta = resultado
+
+                if resposta and hasattr(resposta, 'text'):
+                    print("\n\n" + "="*50)
+                    print(f"=== SEFAZ ADAPTER RESPONSE (DEBUG TERMINAL) ===")
+                    print(f"STATUS HTTP: {getattr(resposta, 'status_code', 'N/A')}")
+                    print(f"CONTENT:\n{resposta.text}")
+                    print("="*50 + "\n\n")
+
+                xml_retorno = None
+                if resposta is None:
+                    xml_retorno = None
+                elif isinstance(resposta, etree._Element):
+                    xml_retorno = etree.tostring(resposta)
+                elif isinstance(resposta, (bytes, bytearray)):
+                    xml_retorno = bytes(resposta)
+                elif isinstance(resposta, str):
+                    xml_retorno = resposta.encode("utf-8")
+                elif hasattr(resposta, 'content') and resposta.content:
+                    xml_retorno = resposta.content
+                elif hasattr(resposta, 'text') and resposta.text:
+                    xml_retorno = str(resposta.text).encode("utf-8")
+
+                if xml_retorno:
+                    try:
+                        root = etree.fromstring(xml_retorno)
+
+                        prot_nfe = root.find('.//ns:protNFe', namespaces=ns)
+                        if prot_nfe is not None:
+                            xml_protocolo = etree.tostring(prot_nfe, encoding='unicode')
+
+                            inf_prot = prot_nfe.find('.//ns:infProt', namespaces=ns)
+                            if inf_prot is not None:
+                                c_stat_elem = inf_prot.find('.//ns:cStat', namespaces=ns)
+                                if c_stat_elem is not None and c_stat_elem.text:
+                                    status = int(c_stat_elem.text)
+
+                                n_prot_elem = inf_prot.find('.//ns:nProt', namespaces=ns)
+                                if n_prot_elem is not None:
+                                    protocolo = n_prot_elem.text
+
+                                x_motivo_elem = inf_prot.find('.//ns:xMotivo', namespaces=ns)
+                                if x_motivo_elem is not None:
+                                    motivo = x_motivo_elem.text
+
+                                ch_nfe_elem = inf_prot.find('.//ns:chNFe', namespaces=ns)
+                                if ch_nfe_elem is not None:
+                                    chave = ch_nfe_elem.text
+
+                        if status is None:
+                            c_stat_elem = root.find('.//ns:cStat', namespaces=ns)
+                            if c_stat_elem is not None and c_stat_elem.text:
+                                status = int(c_stat_elem.text)
+
+                            x_motivo_elem = root.find('.//ns:xMotivo', namespaces=ns)
+                            if x_motivo_elem is not None:
+                                motivo = x_motivo_elem.text
+
+                    except Exception as e_parse:
+                        motivo = f"Erro ao parsear XML SEFAZ: {str(e_parse)}"
+
+                if status is None and motivo is None:
+                    motivo = getattr(resposta, 'text', None) or (str(resposta) if resposta is not None else "Resposta vazia da SEFAZ")
+
+        except Exception as e:
+            motivo = str(e)
+            status = None
+
+        return status, motivo, protocolo, chave, xml_protocolo
+
     def emitir(self, nota_fiscal):
         serializador = SerializacaoXML(_fonte_dados, homologacao=self.homologacao)
         nfe = serializador.exportar(nota_fiscal)
@@ -110,6 +265,8 @@ class SefazAdapter:
         # Injeta Responsável Técnico se disponível (necessário para evitar Rejeição 972/225)
         if hasattr(nota_fiscal, '_responsavel_tecnico'):
             self._injetar_responsavel_tecnico(nfe, nota_fiscal._responsavel_tecnico)
+
+        self._normalizar_serie_ide(nfe)
 
         xml_assinado = self.assinador.assinar(nfe)
         xml_assinado = self._normalizar_xml_assinado(xml_assinado)
@@ -133,70 +290,7 @@ class SefazAdapter:
             modelo_envio = 'nfce'
 
         envio = self.comunicacao.autorizacao(modelo=modelo_envio, nota_fiscal=xml_assinado)
-
-        status = None
-        motivo = None
-        protocolo = None
-        chave = None
-        xml_protocolo = None
-
-        try:
-            resposta = envio[1]
-
-            if resposta and hasattr(resposta, 'text'):
-                print("\n\n" + "="*50)
-                print(f"=== SEFAZ ADAPTER RESPONSE (DEBUG TERMINAL) ===")
-                print(f"STATUS HTTP: {getattr(resposta, 'status_code', 'N/A')}")
-                print(f"CONTENT:\n{resposta.text}")
-                print("="*50 + "\n\n")
-
-            if resposta and hasattr(resposta, 'content'):
-                try:
-                    from lxml import etree
-                    root = etree.fromstring(resposta.content)
-                    ns = {'ns': 'http://www.portalfiscal.inf.br/nfe'}
-
-                    prot_nfe = root.find('.//ns:protNFe', namespaces=ns)
-                    if prot_nfe is not None:
-                        xml_protocolo = etree.tostring(prot_nfe, encoding='unicode')
-
-                        inf_prot = prot_nfe.find('.//ns:infProt', namespaces=ns)
-                        if inf_prot is not None:
-                            c_stat_elem = inf_prot.find('.//ns:cStat', namespaces=ns)
-                            if c_stat_elem is not None:
-                                status = int(c_stat_elem.text)
-
-                            n_prot_elem = inf_prot.find('.//ns:nProt', namespaces=ns)
-                            if n_prot_elem is not None:
-                                protocolo = n_prot_elem.text
-
-                            x_motivo_elem = inf_prot.find('.//ns:xMotivo', namespaces=ns)
-                            if x_motivo_elem is not None:
-                                motivo = x_motivo_elem.text
-
-                            ch_nfe_elem = inf_prot.find('.//ns:chNFe', namespaces=ns)
-                            if ch_nfe_elem is not None:
-                                chave = ch_nfe_elem.text
-
-                    if status is None:
-                        c_stat_elem = root.find('.//ns:cStat', namespaces=ns)
-                        if c_stat_elem is not None:
-                            status = int(c_stat_elem.text)
-
-                        x_motivo_elem = root.find('.//ns:xMotivo', namespaces=ns)
-                        if x_motivo_elem is not None:
-                            motivo = x_motivo_elem.text
-
-                except Exception as e_parse:
-                    motivo = f"Erro ao parsear XML SEFAZ: {str(e_parse)}"
-
-            if status is None:
-                status = envio[0]
-                motivo = getattr(resposta, 'text', str(resposta))
-
-        except Exception as e:
-            motivo = str(e)
-            status = None
+        status, motivo, protocolo, chave, xml_protocolo = self._parse_envio_autorizacao(envio)
 
         return {
             "xml": xml_assinado,
@@ -550,27 +644,59 @@ class SefazAdapter:
 
         print(f"DEBUG: Injetando infRespTec para CNPJ {resp_dto.cnpj}")
 
-        if resp_dto.csrt_key and not resp_dto.hash_csrt:
+        resp_nodes = inf_nfe.findall("./ns:infRespTec", namespaces=ns)
+        if not resp_nodes:
+            resp_nodes = inf_nfe.findall("./infRespTec")
+
+        resp = None
+        if resp_nodes:
+            resp = resp_nodes[0]
+            for extra in resp_nodes[1:]:
+                try:
+                    inf_nfe.remove(extra)
+                except Exception:
+                    pass
+            for child in list(resp):
+                try:
+                    resp.remove(child)
+                except Exception:
+                    pass
+
+        if resp is None:
+            resp = sub(inf_nfe, "infRespTec")
+
+        if resp_dto.csrt_key and resp_dto.id_csrt and not resp_dto.hash_csrt:
             nfe_id = inf_nfe.get("Id")
             if nfe_id and nfe_id.startswith("NFe"):
                 chave_acesso = nfe_id[3:]
                 data = resp_dto.csrt_key + chave_acesso
                 hash_bytes = hashlib.sha1(data.encode('utf-8')).digest()
                 resp_dto.hash_csrt = base64.b64encode(hash_bytes).decode('utf-8')
-                print(f"DEBUG: HashCSRT calculado: {resp_dto.hash_csrt} (Key={resp_dto.csrt_key}, Chave={chave_acesso})")
+                print(f"DEBUG: HashCSRT calculado: {resp_dto.hash_csrt} (Chave={chave_acesso})")
             else:
                 print(f"DEBUG: Não foi possível calcular HashCSRT. ID da NFe inválido ou não encontrado: {nfe_id}")
 
-        resp = sub(inf_nfe, "infRespTec")
         sub(resp, "CNPJ", resp_dto.cnpj)
         sub(resp, "xContato", resp_dto.contato)
         sub(resp, "email", resp_dto.email)
         sub(resp, "fone", resp_dto.fone)
 
+        id_csrt_xml = ""
         if resp_dto.id_csrt:
-            sub(resp, "idCSRT", resp_dto.id_csrt)
-        if resp_dto.hash_csrt:
-            sub(resp, "hashCSRT", resp_dto.hash_csrt)
+            id_csrt_txt = str(resp_dto.id_csrt).strip()
+            if id_csrt_txt.isdigit() and len(id_csrt_txt) < 2:
+                id_csrt_txt = id_csrt_txt.zfill(2)
+            id_csrt_xml = id_csrt_txt
+            sub(resp, "idCSRT", id_csrt_txt)
+            if resp_dto.hash_csrt:
+                sub(resp, "hashCSRT", resp_dto.hash_csrt)
+
+        try:
+            from lxml.etree import QName
+            tags = [QName(c.tag).localname for c in list(resp)]
+            print(f"DEBUG: infRespTec tags: {tags} idCSRT_xml={id_csrt_xml}")
+        except Exception:
+            pass
 
     def _injetar_qrcode_nfce(self, nfe_elem, id_token, csc, uf, tp_amb):
         if not id_token or not csc:

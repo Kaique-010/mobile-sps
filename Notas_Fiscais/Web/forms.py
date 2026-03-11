@@ -6,7 +6,21 @@ from ..models import Nota, NotaItem, NotaItemImposto, Transporte
 from Entidades.models import Entidades
 
 
+NATUREZA_OPERACAO_CHOICES = [
+    ("Venda de mercadoria", "Venda de mercadoria"),
+    ("Venda de produção do estabelecimento", "Venda de produção do estabelecimento"),
+    ("Devolução de venda", "Devolução de venda"),
+    ("Remessa", "Remessa"),
+]
+
+
 class NotaForm(forms.ModelForm):
+    natureza_operacao = forms.ChoiceField(
+        choices=NATUREZA_OPERACAO_CHOICES,
+        widget=forms.Select(attrs={"class": "form-control"}),
+        initial="Venda de mercadoria",
+        required=False,
+    )
     destinatario = forms.ModelChoiceField(
         queryset=Entidades.objects.none(),
         widget=forms.Select(attrs={"class": "form-control select2"}),

@@ -18,6 +18,8 @@ def _import_from_path(name, path):
     return mod
 
 _root = os.getcwd()
+if _root not in sys.path:
+    sys.path.insert(0, _root)
 _gerador = _import_from_path("gerador_xml", os.path.join(_root, "Notas_Fiscais", "emissao", "gerador_xml.py"))
 GeradorXML = _gerador.GeradorXML
 
@@ -29,15 +31,7 @@ def montar_envi_nfe(xml_assinado: str, id_lote: str) -> str:
     if "<ds:Signature" in xml_assinado and "xmlns:ds=\"http://www.w3.org/2000/09/xmldsig#\"" not in xml_assinado:
         xml_assinado = re.sub(
             r"<ds:Signature(\s|>)",
-            r"<ds:Signature xmlns:ds=\"http://www.w3.org/2000/09/xmldsig#\" ",
-            xml_assinado,
-            count=1,
-        )
-    # garantir xmlns padrão na tag NFe
-    if not re.search(r"<NFe[^>]*\sxmlns=([\"'])http://www\\.portalfiscal\\.inf\\.br/nfe\1", xml_assinado):
-        xml_assinado = re.sub(
-            r"<NFe(\s[^>]*)?>",
-            r"<NFe\1 xmlns=\"http://www.portalfiscal.inf.br/nfe\">",
+            r'<ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#"\1',
             xml_assinado,
             count=1,
         )
@@ -80,6 +74,8 @@ def _gen_key_cert():
 
 def build_dto():
     return {
+        "chave": "00000000000000000000000000000000000000000000",
+        "cNF": "12345678",
         "modelo": 55,
         "serie": 1,
         "numero": 1,
@@ -90,10 +86,11 @@ def build_dto():
             "cnpj": "00000000000191",
             "razao": "Empresa Teste",
             "ie": "1234567890",
+            "cUF": "41",
             "logradouro": "Rua",
             "numero": "1",
             "bairro": "Centro",
-            "cod_municipio": 4119905,
+            "cod_municipio": "4119905",
             "municipio": "Ponta Grossa",
             "uf": "PR",
             "cep": "84015265",
@@ -104,7 +101,7 @@ def build_dto():
             "logradouro": "Rua",
             "numero": "2",
             "bairro": "Bairro",
-            "cod_municipio": 4119905,
+            "cod_municipio": "4119905",
             "municipio": "PONTA GROSSA",
             "uf": "PR",
             "cep": "84026020",
@@ -115,6 +112,9 @@ def build_dto():
                 "descricao": "Item",
                 "ncm": "85176239",
                 "cfop": "5102",
+                "cst_icms": "00",
+                "cst_pis": "01",
+                "cst_cofins": "01",
                 "unidade": "PCT",
                 "quantidade": 1,
                 "valor_unit": 100.0,
@@ -124,8 +124,116 @@ def build_dto():
         "tpag": "01",
     }
 
+def test_normalizar_serie_ide():
+    from Notas_Fiscais.infrastructure.sefaz_adapter import SefazAdapter
+    xml = "<NFe xmlns='http://www.portalfiscal.inf.br/nfe'><infNFe><ide><serie>005</serie></ide></infNFe></NFe>"
+    root = etree.fromstring(xml.encode("utf-8"))
+    adapter = SefazAdapter.__new__(SefazAdapter)
+    adapter._normalizar_serie_ide(root)
+    ns = {"nfe": "http://www.portalfiscal.inf.br/nfe"}
+    assert root.findtext(".//nfe:ide/nfe:serie", namespaces=ns) == "5"
+
+def test_csrt_sem_id_nao_injeta_hash():
+    from Notas_Fiscais.infrastructure.sefaz_adapter import SefazAdapter
+
+    class RespTec:
+        cnpj = "20702018000142"
+        contato = "TESTE"
+        email = "teste@teste.com"
+        fone = "41999999999"
+        id_csrt = None
+        csrt_key = "CHAVE_FAKE"
+        hash_csrt = None
+
+    xml = "<NFe xmlns='http://www.portalfiscal.inf.br/nfe'><infNFe Id='NFe00000000000000000000000000000000000000000000'></infNFe></NFe>"
+    root = etree.fromstring(xml.encode("utf-8"))
+    adapter = SefazAdapter.__new__(SefazAdapter)
+    adapter._injetar_responsavel_tecnico(root, RespTec())
+    out = etree.tostring(root, encoding="unicode")
+    assert "<hashCSRT>" not in out
+
+def test_csrt_com_id_injeta_hash():
+    from Notas_Fiscais.infrastructure.sefaz_adapter import SefazAdapter
+
+    class RespTec:
+        cnpj = "20702018000142"
+        contato = "TESTE"
+        email = "teste@teste.com"
+        fone = "41999999999"
+        id_csrt = "1"
+        csrt_key = "CHAVE_FAKE"
+        hash_csrt = None
+
+    xml = "<NFe xmlns='http://www.portalfiscal.inf.br/nfe'><infNFe Id='NFe00000000000000000000000000000000000000000000'></infNFe></NFe>"
+    root = etree.fromstring(xml.encode("utf-8"))
+    adapter = SefazAdapter.__new__(SefazAdapter)
+    adapter._injetar_responsavel_tecnico(root, RespTec())
+    out = etree.tostring(root, encoding="unicode")
+    assert "<idCSRT>" in out
+    assert "<hashCSRT>" in out
+    assert out.index("<idCSRT>") < out.index("<hashCSRT>")
+    assert "<idCSRT>01</idCSRT>" in out
+
+def test_csrt_limpa_infresptec_invalido_existente():
+    from Notas_Fiscais.infrastructure.sefaz_adapter import SefazAdapter
+
+    class RespTec:
+        cnpj = "20702018000142"
+        contato = "TESTE"
+        email = "teste@teste.com"
+        fone = "41999999999"
+        id_csrt = "1"
+        csrt_key = "CHAVE_FAKE"
+        hash_csrt = None
+
+    xml = (
+        "<NFe xmlns='http://www.portalfiscal.inf.br/nfe'>"
+        "<infNFe Id='NFe00000000000000000000000000000000000000000000'>"
+        "<infRespTec><hashCSRT>AAA</hashCSRT></infRespTec>"
+        "</infNFe>"
+        "</NFe>"
+    )
+    root = etree.fromstring(xml.encode("utf-8"))
+    adapter = SefazAdapter.__new__(SefazAdapter)
+    adapter._injetar_responsavel_tecnico(root, RespTec())
+    out = etree.tostring(root, encoding="unicode")
+    assert out.count("<infRespTec>") == 1
+    assert out.index("<idCSRT>") < out.index("<hashCSRT>")
+    assert "<idCSRT>01</idCSRT>" in out
+
+def test_parse_envio_autorizacao_nfeproc():
+    from Notas_Fiscais.infrastructure.sefaz_adapter import SefazAdapter
+
+    xml = (
+        "<nfeProc xmlns='http://www.portalfiscal.inf.br/nfe' versao='4.00'>"
+        "<NFe><infNFe Id='NFe41260362377583000121550050000000031532212883'/></NFe>"
+        "<protNFe><infProt>"
+        "<tpAmb>2</tpAmb>"
+        "<verAplic>PR-v4_9_69</verAplic>"
+        "<chNFe>41260362377583000121550050000000031532212883</chNFe>"
+        "<dhRecbto>2026-03-11T15:45:18-03:00</dhRecbto>"
+        "<nProt>141260000000000</nProt>"
+        "<digVal>AAA=</digVal>"
+        "<cStat>100</cStat>"
+        "<xMotivo>Autorizado o uso da NF-e</xMotivo>"
+        "</infProt></protNFe>"
+        "</nfeProc>"
+    )
+    root = etree.fromstring(xml.encode("utf-8"))
+    adapter = SefazAdapter.__new__(SefazAdapter)
+    status, motivo, protocolo, chave, xml_protocolo = adapter._parse_envio_autorizacao((0, root))
+    assert status == 100
+    assert protocolo == "141260000000000"
+    assert chave == "41260362377583000121550050000000031532212883"
+    assert "protNFe" in (xml_protocolo or "")
+
 
 def main():
+    test_normalizar_serie_ide()
+    test_csrt_sem_id_nao_injeta_hash()
+    test_csrt_com_id_injeta_hash()
+    test_csrt_limpa_infresptec_invalido_existente()
+    test_parse_envio_autorizacao_nfeproc()
     dto = build_dto()
     xml = GeradorXML().gerar(dto)
     root = etree.fromstring(xml.encode("utf-8"))
