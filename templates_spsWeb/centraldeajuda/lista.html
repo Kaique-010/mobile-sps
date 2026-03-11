@@ -27,24 +27,34 @@
   }
 
   /* Cores para cada card por linha */
-  .module-card .col-12:nth-child(4n+1) .card {
+  .module-card .col-12:nth-child(6n+1) .card {
     border-color: #3498db !important;
     background: linear-gradient(135deg, rgba(52, 152, 219, 0.05), rgba(52, 152, 219, 0.02));
   }
 
-  .module-card .col-12:nth-child(4n+2) .card {
+  .module-card .col-12:nth-child(6n+2) .card {
     border-color: #9b59b6 !important;
     background: linear-gradient(135deg, rgba(155, 89, 182, 0.05), rgba(155, 89, 182, 0.02));
   }
 
-  .module-card .col-12:nth-child(4n+3) .card {
+  .module-card .col-12:nth-child(6n+3) .card {
     border-color: #e74c3c !important;
     background: linear-gradient(135deg, rgba(231, 76, 60, 0.05), rgba(231, 76, 60, 0.02));
   }
 
-  .module-card .col-12:nth-child(4n+4) .card {
+  .module-card .col-12:nth-child(6n+4) .card {
     border-color: #f39c12 !important;
     background: linear-gradient(135deg, rgba(243, 156, 18, 0.05), rgba(243, 156, 18, 0.02));
+  }
+
+  .module-card .col-12:nth-child(6n+5) .card {
+    border-color: #16a085 !important;
+    background: linear-gradient(135deg, rgba(22, 160, 133, 0.05), rgba(22, 160, 133, 0.02));
+  }
+
+  .module-card .col-12:nth-child(6n+6) .card {
+    border-color: #2c3e50 !important;
+    background: linear-gradient(135deg, rgba(44, 62, 80, 0.05), rgba(44, 62, 80, 0.02));
   }
 
   .module-card .card-body {
@@ -138,24 +148,34 @@
   }
 
   /* Cores para os cards de grupo (lista de manuais) */
-  .cards-grupos .col-12:nth-child(4n+1) .card {
+  .cards-grupos .col-12:nth-child(6n+1) .card {
     border: 2px solid #3498db !important;
     background: linear-gradient(135deg, rgba(52, 152, 219, 0.05), rgba(52, 152, 219, 0.02));
   }
 
-  .cards-grupos .col-12:nth-child(4n+2) .card {
+  .cards-grupos .col-12:nth-child(6n+2) .card {
     border: 2px solid #9b59b6 !important;
     background: linear-gradient(135deg, rgba(155, 89, 182, 0.05), rgba(155, 89, 182, 0.02));
   }
 
-  .cards-grupos .col-12:nth-child(4n+3) .card {
+  .cards-grupos .col-12:nth-child(6n+3) .card {
     border: 2px solid #e74c3c !important;
     background: linear-gradient(135deg, rgba(231, 76, 60, 0.05), rgba(231, 76, 60, 0.02));
   }
 
-  .cards-grupos .col-12:nth-child(4n+4) .card {
+  .cards-grupos .col-12:nth-child(6n+4) .card {
     border: 2px solid #f39c12 !important;
     background: linear-gradient(135deg, rgba(243, 156, 18, 0.05), rgba(243, 156, 18, 0.02));
+  }
+
+  .cards-grupos .col-12:nth-child(6n+5) .card {
+    border: 2px solid #16a085 !important;
+    background: linear-gradient(135deg, rgba(22, 160, 133, 0.05), rgba(22, 160, 133, 0.02));
+  }
+
+  .cards-grupos .col-12:nth-child(6n+6) .card {
+    border: 2px solid #2c3e50 !important;
+    background: linear-gradient(135deg, rgba(44, 62, 80, 0.05), rgba(44, 62, 80, 0.02));
   }
 
   .cards-grupos .card:hover {
@@ -179,9 +199,14 @@
           <option value="{{ card.code }}">{{ card.name }}</option>
           {% endfor %}
         </select>
-        <a class="btn btn-outline-success btn-sm" href="{% url 'central_criar' slug=slug %}">
-          <i class="bi bi-plus-lg"></i> Novo
-        </a>
+        <div class="d-flex align-items-center gap-2">
+          <button id="toggleAll" type="button" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrows-collapse"></i> Recolher todos
+          </button>
+          <a class="btn btn-outline-success btn-sm" href="{% url 'central_criar' slug=slug %}">
+            <i class="bi bi-plus-lg"></i> Novo
+          </a>
+        </div>
       </div>
     </div>
   </div>
@@ -189,7 +214,7 @@
   {% if module_cards %}
   <div class="row g-4 mb-4 module-card mt-4">
     {% for card in module_cards %}
-    <div class="col-12 col-sm-6 col-lg-3">
+    <div class="col-12 col-sm-6 col-lg-2">
       <div class="card border-primary h-100">
         <div class="card-body">
           <div class="module-header mb-2">
@@ -213,7 +238,7 @@
   {% if grupos %}
   <div class="row g-4 cards-grupos">
     {% for grupo in grupos %}
-    <div class="col-12 col-sm-6 col-lg-3" data-module="{{ grupo.grouper }}">
+    <div class="col-12 col-sm-6 col-lg-2" data-module="{{ grupo.grouper }}">
       <div class="card h-100">
         <div class="card-header fw-semibold d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
           data-bs-target="#collapse{{ forloop.counter }}" aria-expanded="true"
@@ -268,6 +293,33 @@
         cols.forEach(function (el) {
           el.style.display = (!val || el.getAttribute('data-module') === val) ? '' : 'none';
         });
+      });
+    }
+
+    // Expandir/Recolher todos
+    var toggleAllBtn = document.getElementById('toggleAll');
+    if (toggleAllBtn && window.bootstrap && window.bootstrap.Collapse) {
+      toggleAllBtn.addEventListener('click', function () {
+        var collapses = document.querySelectorAll('.cards-grupos .collapse');
+        var anyShown = false;
+        collapses.forEach(function (el) {
+          if (el.classList.contains('show')) anyShown = true;
+        });
+
+        collapses.forEach(function (el) {
+          var inst = window.bootstrap.Collapse.getOrCreateInstance(el, { toggle: false });
+          if (anyShown) {
+            inst.hide();
+          } else {
+            inst.show();
+          }
+        });
+
+        if (anyShown) {
+          toggleAllBtn.innerHTML = '<i class="bi bi-arrows-expand"></i> Expandir todos';
+        } else {
+          toggleAllBtn.innerHTML = '<i class="bi bi-arrows-collapse"></i> Recolher todos';
+        }
       });
     }
 

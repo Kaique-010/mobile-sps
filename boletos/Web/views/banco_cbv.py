@@ -30,7 +30,7 @@ class ListaBancosView(TemplateView):
                         'variation': variation,
                     }
                     # Filtro por tipo: exemplo 'caixa' => apenas 104
-                    if tipo == 'caixa' and codigo != '104':
+                    if (tipo == 'caixa' and codigo != '104') or (tipo == 'banco' and codigo == '104'):
                         continue
                     bancos.append(item)
         except Exception:
@@ -42,7 +42,7 @@ class ListaBancosView(TemplateView):
         return ctx
     
     def get_queryset(self):
-        bancos = Entidades.objects.filter(enti_tipo_enti__isnull=False, enti_tien = 'B')
+        bancos = Entidades.objects.filter(enti_tipo_enti__isnull=False, enti_tien__in=['B', 'C'])
         
         return bancos
        
@@ -95,7 +95,7 @@ class BancoConfigListView(ListView):
     def get_queryset(self):
         banco = get_licenca_db_config(self.request) or 'default'
         empresa = self.request.session.get('empresa_id')
-        qs = Entidades.objects.using(banco).filter(enti_empr=empresa, enti_tien__in=['B']).order_by('enti_nome')        
+        qs = Entidades.objects.using(banco).filter(enti_empr=empresa, enti_tien__in=['B', 'C']).order_by('enti_nome')        
         return qs
 
     def get_context_data(self, **kwargs):

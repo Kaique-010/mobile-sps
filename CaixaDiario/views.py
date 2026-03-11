@@ -1,4 +1,5 @@
 from rest_framework import viewsets, status, filters
+from CaixaDiario.services import CaixaService
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q, Sum, Max
 from Pedidos.models import PedidoVenda, Itenspedidovenda
@@ -11,7 +12,7 @@ from rest_framework.permissions import IsAuthenticated
 import logging
 from datetime import datetime
 
-from .models import Caixageral, Movicaixa
+from .models import Caixageral, Movicaixa, TIPO_MOVIMENTO
 from .REST.serializers import CaixageralSerializer, MovicaixaSerializer  
 
 logger = logging.getLogger(__name__)
@@ -487,112 +488,44 @@ class MovicaixaViewSet(viewsets.ModelViewSet):
         valor_pago = request.data.get('valor_pago')
         troco = request.data.get('troco')
         parcelas = request.data.get('parcelas', 1)
-        
-        
-        MAPEAMENTO_FORMAS = {
-            '51': '3',  # CARTÃO DE CRÉDITO
-            '52': '4',  # CARTÃO DE DÉBITO  
-            '54': '1',  # DINHEIRO
-            '60': '6',  # PIX
-        }
-        
-        TIPO_MOVIMENTO = [
-            ('1', 'DINHEIRO'),
-            ('2', 'CHEQUE'),
-            ('3', 'CARTÃO DE CREDITO'),
-            ('4', 'CARTÃO DE DEBITO'),
-            ('5', 'CREDIÁRIO'),
-            ('6', 'PIX'),
-        ]
-      
-        tipo_movimento = None
-        if movi_tipo:
-            tipo_movimento = str(movi_tipo)
-        elif forma_pagamento:
-            tipo_movimento = MAPEAMENTO_FORMAS.get(str(forma_pagamento))
-        
-        if not all([numero_venda, valor]):
-            return Response(
-                {'detail': 'Número da venda e valor são obrigatórios'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        if not tipo_movimento:
-            return Response(
-                {'detail': 'Forma de pagamento inválida'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-
-        tipos_validos = [choice[0] for choice in TIPO_MOVIMENTO]
-        if tipo_movimento not in tipos_validos:
-            return Response(
-                {'detail': f'Tipo de movimento inválido. Opções válidas: {tipos_validos}'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        tipo_movimento = CaixaService.resolver_tipo_movimento(movi_tipo=movi_tipo, forma_pagamento=forma_pagamento)
 
         try:
-            # Buscar o caixa aberto
-            caixa_aberto = Caixageral.objects.using(banco).filter(
-                caix_empr=empresa_id,
-                caix_fili=filial_id,
-                caix_aber='A'
-            ).first()
-
-            if not caixa_aberto:
-                return Response(
-                    {'detail': 'Nenhum caixa aberto encontrado'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            # Buscar último controle
-            ultimo_ctrl = Movicaixa.objects.using(banco).filter(
-                movi_empr=empresa_id,
-                movi_fili=filial_id,
-                movi_data=caixa_aberto.caix_data
-            ).aggregate(Max('movi_ctrl'))['movi_ctrl__max'] or 0
-
-            # Criar movimento do pagamento
-            movimento = Movicaixa.objects.using(banco).create(
-                movi_empr=empresa_id,
-                movi_fili=filial_id,
-                movi_caix=caixa_aberto.caix_caix,
-                movi_nume_vend=numero_venda,
-                movi_tipo=tipo_movimento,  # Campo obrigatório (1-6)
-                movi_tipo_movi=forma_pagamento,
-                movi_vend=vendedor,
-                movi_clie=cliente,
-                movi_entr=valor_pago or valor,
-                movi_said=troco if troco and float(troco) > 0 else 0,
-                movi_obse=f'Venda {numero_venda}, Pagamento {dict(TIPO_MOVIMENTO).get(tipo_movimento)} - Parcelas: {parcelas}',
-                movi_data=caixa_aberto.caix_data,
-                movi_hora=datetime.now().time(),
-                movi_ctrl=ultimo_ctrl + 1,
-                movi_oper=operador, 
-                movi_parc=str(parcelas) if parcelas else '1'
+            movimento, _ = CaixaService.processar_pagamento_venda(
+                banco=banco,
+                empresa_id=empresa_id,
+                filial_id=filial_id,
+                numero_venda=numero_venda,
+                valor=valor,
+                cliente=cliente,
+                vendedor=vendedor,
+                forma_pagamento=forma_pagamento,
+                movi_tipo=movi_tipo,
+                valor_pago=valor_pago,
+                troco=troco,
+                parcelas=parcelas,
+                operador=operador,
             )
-            
-            return Response({
-                'success': True,
-                'movimento_id': movimento.movi_ctrl,
-                'movi_tipo': tipo_movimento,
-                'movi_tipo_movi': forma_pagamento,
-                'descricao_tipo': dict(TIPO_MOVIMENTO).get(tipo_movimento),
-                'valor_pago': float(valor_pago or valor),
-                'troco': movimento.movi_said,
-                'parcelas': parcelas,
-                'movi_entr': movimento.movi_entr,
-                'movi_said': movimento.movi_said,
-                'movi_oper': movimento.movi_oper,  
-                'operador_usado': operador  
-            })
-
+        except ValueError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             logger.error(f'Erro ao processar pagamento: {str(e)}')
-            return Response(
-                {'detail': f'Erro ao processar pagamento: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({'detail': f'Erro ao processar pagamento: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({
+            'success': True,
+            'movimento_id': movimento.movi_ctrl,
+            'movi_tipo': tipo_movimento,
+            'movi_tipo_movi': forma_pagamento,
+            'descricao_tipo': dict(TIPO_MOVIMENTO).get(str(tipo_movimento)),
+            'valor_pago': float(valor_pago or valor),
+            'troco': movimento.movi_said,
+            'parcelas': parcelas,
+            'movi_entr': movimento.movi_entr,
+            'movi_said': movimento.movi_said,
+            'movi_oper': movimento.movi_oper,
+            'operador_usado': operador
+        })
 
     @action(detail=False, methods=['post'])
     def finalizar_venda(self, request, slug=None):

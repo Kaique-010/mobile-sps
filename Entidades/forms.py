@@ -165,4 +165,4 @@ class EntidadesForm(forms.ModelForm):
                 instance.save(using=db_alias)
                 logger.debug(f"Registro salvo com sucesso: {instance.enti_clie}")
 
-        return instance
+        return instance 

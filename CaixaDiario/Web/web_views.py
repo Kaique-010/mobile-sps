@@ -9,8 +9,13 @@ from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Sum, Max, Q
 from django.db import transaction
 from datetime import datetime
-from ..models import Caixageral, Movicaixa
+import logging
+from ..models import Caixageral, Movicaixa, TIPO_MOVIMENTO
 from Pedidos.models import PedidoVenda, Itenspedidovenda
+from ..services import CaixaService
+
+
+logger = logging.getLogger(__name__)
 
 
 class CaixaDashboardView(TemplateView):
@@ -347,7 +352,6 @@ def caixa_resumo(request, slug=None):
     if not caixa_aberto:
         return JsonResponse({'detail': 'Nenhum caixa aberto encontrado'}, status=404)
     data_ref = caixa_aberto.caix_data
-    print("data_ref:", data_ref)
     saldo_inicial = float(getattr(caixa_aberto, 'caix_valo', 0) or getattr(caixa_aberto, 'caix_sald_ini', 0) or 0)
     movs = Movicaixa.objects.using(banco).filter(
         movi_empr=empresa_id,
@@ -356,11 +360,8 @@ def caixa_resumo(request, slug=None):
         movi_data=data_ref
     )
     entradas = float(movs.aggregate(Sum('movi_entr'))['movi_entr__sum'] or 0)
-    print("entradas:", entradas)
     saidas = float(movs.aggregate(Sum('movi_said'))['movi_said__sum'] or 0)
-    print("saidas:", saidas)
     saldo_atual = float(saldo_inicial) + entradas - saidas
-    print("saldo_atual:", saldo_atual)
     qtd_movimentos = movs.count()
     tipos_map = {'1': 'DINHEIRO', '2': 'CHEQUE', '3': 'CARTÃO DE CREDITO', '4': 'CARTÃO DE DEBITO', '5': 'CREDIÁRIO', '6': 'PIX'}
     por_forma = []
@@ -571,43 +572,50 @@ def venda_processar_pagamento(request, slug=None):
     valor_pago = data.get('valor_pago')
     troco = data.get('troco')
     parcelas = data.get('parcelas') or 1
-    MAPEAMENTO_FORMAS = {'51': '3', '52': '4', '54': '1', '60': '6'}
-    TIPO_MOVIMENTO = [('1', 'DINHEIRO'), ('2', 'CHEQUE'), ('3', 'CARTÃO DE CREDITO'), ('4', 'CARTÃO DE DEBITO'), ('5', 'CREDIÁRIO'), ('6', 'PIX')]
-    tipo_movimento = None
-    if movi_tipo:
-        tipo_movimento = str(movi_tipo)
-    elif forma_pagamento:
-        tipo_movimento = MAPEAMENTO_FORMAS.get(str(forma_pagamento))
-    if not all([numero_venda, valor]):
-        return JsonResponse({'detail': 'Número da venda e valor são obrigatórios'}, status=400)
-    if not tipo_movimento:
-        return JsonResponse({'detail': 'Forma de pagamento inválida'}, status=400)
-    tipos_validos = [choice[0] for choice in TIPO_MOVIMENTO]
-    if tipo_movimento not in tipos_validos:
-        return JsonResponse({'detail': f'Tipo de movimento inválido. Opções válidas: {tipos_validos}'}, status=400)
-    caixa_aberto = Caixageral.objects.using(banco).filter(caix_empr=empresa_id, caix_fili=filial_id, caix_aber='A').first()
-    if not caixa_aberto:
-        return JsonResponse({'detail': 'Nenhum caixa aberto encontrado'}, status=400)
-    ultimo_ctrl = Movicaixa.objects.using(banco).filter(movi_empr=empresa_id, movi_fili=filial_id, movi_data=caixa_aberto.caix_data).aggregate(Max('movi_ctrl'))['movi_ctrl__max'] or 0
-    movimento = Movicaixa.objects.using(banco).create(
-        movi_empr=empresa_id,
-        movi_fili=filial_id,
-        movi_caix=caixa_aberto.caix_caix,
-        movi_nume_vend=numero_venda,
-        movi_tipo=tipo_movimento,
-        movi_tipo_movi=forma_pagamento,
-        movi_vend=vendedor,
-        movi_clie=cliente,
-        movi_entr=valor_pago or valor,
-        movi_said=troco if troco and float(troco) > 0 else 0,
-        movi_obse=f"Venda {numero_venda}, Pagamento {dict(TIPO_MOVIMENTO).get(tipo_movimento)} - Parcelas: {parcelas}",
-        movi_data=caixa_aberto.caix_data,
-        movi_hora=datetime.now().time(),
-        movi_ctrl=ultimo_ctrl + 1,
-        movi_oper=request.headers.get('usuario_id') or request.headers.get('X-Usuario'),
-        movi_parc=str(parcelas) if parcelas else '1'
-    )
-    return JsonResponse({'success': True, 'movimento_id': movimento.movi_ctrl, 'movi_tipo': tipo_movimento, 'movi_tipo_movi': forma_pagamento, 'descricao_tipo': dict(TIPO_MOVIMENTO).get(tipo_movimento), 'valor_pago': float(valor_pago or valor), 'troco': movimento.movi_said, 'parcelas': parcelas, 'movi_entr': movimento.movi_entr, 'movi_said': movimento.movi_said})
+    tipo_movimento = CaixaService.resolver_tipo_movimento(movi_tipo=movi_tipo, forma_pagamento=forma_pagamento)
+    operador = request.headers.get('usuario_id') or request.headers.get('X-Usuario')
+
+    try:
+        logger.info(
+            "WEB venda_processar_pagamento chamando CaixaService banco=%s empr=%s fili=%s venda=%s tipo=%s forma=%s parcelas=%s",
+            banco,
+            empresa_id,
+            filial_id,
+            numero_venda,
+            tipo_movimento,
+            forma_pagamento,
+            parcelas,
+        )
+        movimento, _ = CaixaService.processar_pagamento_venda(
+            banco=banco,
+            empresa_id=empresa_id,
+            filial_id=filial_id,
+            numero_venda=numero_venda,
+            valor=valor,
+            cliente=cliente,
+            vendedor=vendedor,
+            forma_pagamento=forma_pagamento,
+            movi_tipo=movi_tipo,
+            valor_pago=valor_pago,
+            troco=troco,
+            parcelas=parcelas,
+            operador=operador,
+        )
+    except Exception as e:
+        return JsonResponse({'detail': str(e)}, status=400)
+
+    return JsonResponse({
+        'success': True,
+        'movimento_id': movimento.movi_ctrl,
+        'movi_tipo': tipo_movimento,
+        'movi_tipo_movi': forma_pagamento,
+        'descricao_tipo': dict(TIPO_MOVIMENTO).get(str(tipo_movimento)),
+        'valor_pago': float(valor_pago or valor),
+        'troco': movimento.movi_said,
+        'parcelas': parcelas,
+        'movi_entr': movimento.movi_entr,
+        'movi_said': movimento.movi_said
+    })
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -745,7 +753,6 @@ def venda_emitir(request, slug=None):
             
             
             series = Series.objects.using(banco).filter(seri_empr=empresa_id, seri_fili=filial_id, seri_nome='NC').first()
-            print(f"series: {series}")
             
             # Verifica se já existe nota para este pedido
             nota = Nota.objects.using(banco).filter(
@@ -1589,55 +1596,36 @@ def lancamento(request, slug=None):
     observacao = data.get('observacao') or ''
     if not valor:
         return JsonResponse({'detail': 'Valor é obrigatório'}, status=400)
+    operador = request.headers.get('usuario_id') or request.headers.get('X-Usuario')
+    cliente = data.get('cliente')
+    vendedor = data.get('vendedor')
+    titulo = data.get('titulo') or data.get('movi_titu')
+    serie = data.get('serie') or data.get('movi_seri')
+    parcelas = data.get('parcelas') or data.get('movi_parc') or 1
+
     try:
-        valor = float(valor)
-    except Exception:
-        return JsonResponse({'detail': 'Valor inválido'}, status=400)
-    if valor <= 0:
-        return JsonResponse({'detail': 'Valor deve ser maior que zero'}, status=400)
-    mapa = {
-        'dinheiro': '1',
-        'cheque': '2',
-        'credito': '3',
-        'crédito': '3',
-        'debito': '4',
-        'débito': '4',
-        'crediario': '5',
-        'crediário': '5',
-        'pix': '6',
-        '1': '1',
-        '2': '2',
-        '3': '3',
-        '4': '4',
-        '5': '5',
-        '6': '6',
-    }
-    tipo_movimento = mapa.get(forma or 'dinheiro')
-    tipos_validos = ['1', '2', '3', '4', '5', '6']
-    if not tipo_movimento or tipo_movimento not in tipos_validos:
-        return JsonResponse({'detail': 'Forma de pagamento inválida'}, status=400)
-    caixa_aberto = Caixageral.objects.using(banco).filter(caix_empr=empresa_id, caix_fili=filial_id, caix_aber='A').first()
-    if not caixa_aberto:
-        return JsonResponse({'detail': 'Nenhum caixa aberto encontrado'}, status=400)
-    ultimo_ctrl = Movicaixa.objects.using(banco).filter(movi_empr=empresa_id, movi_fili=filial_id, movi_data=caixa_aberto.caix_data).aggregate(Max('movi_ctrl'))['movi_ctrl__max'] or 0
-    mov = Movicaixa.objects.using(banco).create(
-        movi_empr=empresa_id,
-        movi_fili=filial_id,
-        movi_caix=caixa_aberto.caix_caix,
-        movi_data=caixa_aberto.caix_data,
-        movi_ctrl=ultimo_ctrl + 1,
-        movi_tipo=tipo_movimento,
-        movi_tipo_movi=tipo_movimento,
-        movi_entr=valor if tipo == 'entrada' else 0,
-        movi_said=valor if tipo == 'saida' else 0,
-        movi_obse=observacao or f"Lancamento {tipo}",
-        movi_hora=datetime.now().time(),
-        movi_oper=request.headers.get('usuario_id') or request.headers.get('X-Usuario')
-    )
+        mov, _ = CaixaService.criar_lancamento_caixa(
+            banco=banco,
+            empresa_id=empresa_id,
+            filial_id=filial_id,
+            tipo=tipo,
+            valor=valor,
+            forma=forma,
+            observacao=observacao,
+            operador=operador,
+            cliente=cliente,
+            vendedor=vendedor,
+            titulo=titulo,
+            serie=serie,
+            parcelas=parcelas,
+        )
+    except Exception as e:
+        return JsonResponse({'detail': str(e)}, status=400)
+
     return JsonResponse({
         'ok': True,
         'tipo': tipo,
         'valor': float(valor),
-        'forma': tipo_movimento,
+        'forma': str(mov.movi_tipo),
         'movi_ctrl': int(mov.movi_ctrl)
     })
