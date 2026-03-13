@@ -3,11 +3,10 @@
 {% block title %}{% if nota_existente %}Editar Nota Manual{% else %}Nova Nota Manual{% endif %}{% endblock %}
 {% block content %}
 <link rel="stylesheet" href="{% static 'css/form.css' %}">
-<div class="container page-container">
-    <div class="page-header-custom">
+<div class="container page-container" style="padding:7rem;">
+    <div class="page-header-custom justify-content-center">
         <h2 class="page-title">
-            <i class="bi bi-pencil-square fs-4 me-2" style="text-align: center;"></i>{% if nota_existente %}Editar Nota
-            Manual{% else %}Nova Nota Manual{% endif %}
+            <i class="bi bi-pencil-square fs-4 me-2"></i>{% if nota_existente %}Editar Nota  Manual{% else %}Nova Nota Manual{% endif %}
         </h2>
     </div>
 
@@ -37,6 +36,7 @@
                         <label for="{{ form.data_entrada.id_for_label }}" class="form-label">{{form.data_entrada.label}}</label>
                         {{ form.data_entrada }}
                     </div>
+                    <div class="col-md-3"></div>
                     <div class="col-md-3">
                         <label for="{{ form.valor_total.id_for_label }}" class="form-label">{{form.valor_total.label}}</label>
                         {{ form.valor_total }}
@@ -46,7 +46,7 @@
                 <hr class="my-4">
 
                 <!-- Produtos -->
-                <h4 class="mb-3">Produtos</h4>
+                <h4 class="mb-3 text-center m-5" >Produtos</h4>
                 <div class="row g-3 align-items-end mb-3">
                     <div class="col-md-6">
                         <label class="form-label">Produto</label>
@@ -69,15 +69,15 @@
                         <input type="number" id="produto-valor" class="form-control" step="0.01" min="0.01">
                     </div>
                     <div class="col-md-2">
-                        <button type="button" class="btn btn-success w-100" id="btn-add-item">
+                        <button type="button" class="btn btn-outline-success w-100" id="btn-add-item">
                             <i class="bi bi-plus-lg"></i> Adicionar
                         </button>
                     </div>
                 </div>
 
-                <div class="table-responsive mb-4">
-                    <table class="table table-bordered table-hover" id="tabela-itens">
-                        <thead class="table-light text-center">
+                <div class="table-responsive mb-4 mt-5">
+                    <table class="table table-hover" id="tabela-itens">
+                        <thead class="table-responsive text-center">
                             <tr>
                                 <th>Código</th>
                                 <th>Descrição</th>
@@ -102,7 +102,7 @@
                 <hr class="my-4">
 
                 <!-- Parcelas -->
-                <h4 class="mb-3">Parcelas</h4>
+                <h4 class="mb-3 text-center m-5" >Parcelas</h4>
                 <div class="row g-3 align-items-end mb-3">
                     <div class="col-md-3">
                         <label class="form-label">Vencimento</label>
@@ -113,20 +113,20 @@
                         <input type="number" id="parcela-valor" class="form-control" step="0.01">
                     </div>
                     <div class="col-md-2">
-                        <button type="button" class="btn btn-info w-100" id="btn-add-parcela">
+                        <button type="button" class="btn btn-outline-info w-100" id="btn-add-parcela">
                             <i class="bi bi-plus-lg"></i> Incluir
                         </button>
                     </div>
                     <div class="col-md-2">
-                        <button type="button" class="btn btn-secondary w-100" id="btn-gerar-parcelas">
+                        <button type="button" class="btn btn-outline-secondary w-120" id="btn-gerar-parcelas">
                             Gerar Autom.
                         </button>
                     </div>
                 </div>
 
                 <div class="table-responsive mb-4">
-                    <table class="table table-bordered table-hover" id="tabela-parcelas">
-                        <thead class="table-light text-center">
+                    <table class="table table-hover" id="tabela-parcelas">
+                        <thead class="table-responsive text-center">
                             <tr>
                                 <th>Número</th>
                                 <th>Vencimento</th>
@@ -149,7 +149,7 @@
                 <div class="d-flex justify-content-end gap-2">
                     <a href="{% url 'notas-manuais-lista' slug=view.kwargs.slug %}"
                         class="btn btn-outline-secondary">Cancelar</a>
-                    <button type="submit" class="btn btn-primary">Salvar Nota</button>
+                    <button type="submit" class="btn btn-outline-primary">Salvar Nota</button>
                 </div>
             </form>
         </div>

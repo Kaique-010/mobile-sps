@@ -3,11 +3,11 @@
 {% block content %}
 <link rel="stylesheet" href="{% static 'css/ui.css' %}">
 <div class="container page-container px-5 pt-4 pb-5">
-  <div class="page-header-custom">
-    <h2 style="font-size: 30px; justify-content: center; text-align: center;">Detalhes Nota Fiscal</h2>
-    <h4 style="font-size: 20px; justify-content: center; text-align: center;">Modelo {{ nota.modelo }}-{{ nota.serie }}
+  <div class="page-header-custom" style="position: relative; flex-direction: column; justify-content: center;">
+    <h2 class="page-title" style="font-size: 30px;">Detalhes Nota Fiscal</h2>
+    <h4 class="mb-0" style="font-size: 20px; text-align: center;">Modelo {{ nota.modelo }}-{{ nota.serie }}
       / Nº {{ nota.numero }}</h4>
-    <div class="page-actions btn-group">
+    <div class="page-actions btn-group" style="position: absolute; right: 0; top: 50%; transform: translateY(-50%);">
       {% if nota.status == 0 %}
       <a class="btn btn-outline-primary" href="/web/{{ slug }}/notas-fiscais/{{ nota.id }}/editar/">Editar</a>
       <button class="btn btn-success" id="btn-emitir"><span class="spinner-border spinner-border-sm me-1 d-none"

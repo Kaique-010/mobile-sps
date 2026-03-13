@@ -6,10 +6,12 @@ class NotaManualForm(forms.Form):
     fornecedor = forms.ModelChoiceField(
         queryset=Entidades.objects.none(), 
         label='Fornecedor',
-        widget=forms.Select(attrs={'class': 'form-select select2'})
+        widget=forms.Select(attrs={'class': 'form-select'})
     )
     numero = forms.IntegerField(
-        label='Número',
+        label='Número do Documento',
+        min_value=1,
+        max_value=999999,
         widget=forms.NumberInput(attrs={'class': 'form-control'})
     )
     serie = forms.CharField(

@@ -55,11 +55,13 @@ class NotasManuaisListView(NotasDestinadasListView):
     template_name = 'NotasDestinadas/manuais_lista.html'
 
     def get_queryset(self):
-        # Override to filter only manual notes (no XML)
-        qs = NotaFiscalEntrada.objects.using(self.db_alias).filter(
-            empresa=self.empresa_id,
-            filial=self.filial_id
-        ).filter(Q(xml_nfe__isnull=True) | Q(xml_nfe=''))
+    
+        qs = NotaFiscalEntrada.objects.using(self.db_alias).all()
+        if self.empresa_id is not None:
+            qs = qs.filter(empresa=self.empresa_id)
+        if self.filial_id is not None:
+            qs = qs.filter(filial=self.filial_id)
+        qs = qs.filter(Q(xml_nfe__isnull=True) | Q(xml_nfe=''))
         
         return qs.order_by('-data_emissao', '-numero_nota_fiscal')
 
@@ -85,10 +87,12 @@ class NotaManualDetailView(DetailView):
         return super().dispatch(request, *args, **kwargs)
         
     def get_queryset(self):
-        return NotaFiscalEntrada.objects.using(self.db_alias).filter(
-            empresa=self.empresa_id,
-            filial=self.filial_id
-        )
+        qs = NotaFiscalEntrada.objects.using(self.db_alias).all()
+        if self.empresa_id is not None:
+            qs = qs.filter(empresa=self.empresa_id)
+        if self.filial_id is not None:
+            qs = qs.filter(filial=self.filial_id)
+        return qs
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
