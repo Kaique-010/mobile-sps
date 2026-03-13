@@ -1,8 +1,12 @@
+
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Enviar XML para Contabilidade{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="{% static 'css/ui.css' %}">
+<link rel="stylesheet" href="{% static 'css/form.css' %}?v=20260313">
 <div class="container py-4">
     <div class="text-center mb-3">
         <h1 class="h3 mb-0">Enviar XML para Contabilidade</h1>
