@@ -11,6 +11,7 @@ from .Views.nota.autocomplete import (
     cfop_autocomplete,
     transportadoras_autocomplete,
 )
+from .Views.enviar_contabilidade import EnviarXmlContabilidadeView
 
 
 urlpatterns = [
@@ -18,6 +19,7 @@ urlpatterns = [
     path('<int:pk>/', NotaDetailView.as_view(), name='nota_detail_web'),
     path('<int:pk>/editar/', NotaUpdateView.as_view(), name='nota_update_web'),
     path('emissao/', NotaEmissaoView.as_view(), name='nota_emissao_web'),
+    path('enviar-contabilidade/', EnviarXmlContabilidadeView.as_view(), name='notas_enviar_contabilidade_web'),
     path('entidades-autocomplete/', entidades_autocomplete, name='entidades_autocomplete_web'),
     path('produtos-autocomplete/', produtos_autocomplete, name='produtos_autocomplete_web'),
     path('produto-detalhe/<str:codigo>/', produto_detalhe, name='produto_detalhe_web'),

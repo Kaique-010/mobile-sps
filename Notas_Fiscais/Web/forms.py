@@ -140,3 +140,12 @@ class TransporteForm(forms.ModelForm):
             "placa_veiculo": forms.TextInput(attrs={"class": "form-control"}),
             "uf_veiculo": forms.TextInput(attrs={"class": "form-control"}),
         }
+
+
+class EnviarXmlContabilidadeForm(forms.Form):
+    data_inicio = forms.DateField(widget=forms.DateInput(attrs={"type": "date", "class": "form-control"}))
+    data_fim = forms.DateField(widget=forms.DateInput(attrs={"type": "date", "class": "form-control"}))
+    emails = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "email@dominio.com; outro@dominio.com"}),
+        required=True,
+    )

@@ -12,6 +12,7 @@ from CFOP.models import CFOP
 from .serializers import (
     NotaDetailSerializer,
     NotaCreateUpdateSerializer,
+    EnviarXmlContabilidadeSerializer,
 )
 from ..services.evento_service import EventoService
 from core.utils import get_licenca_db_config 
@@ -19,6 +20,7 @@ from ..services.nota_service import NotaService
 from ..services.calculo_impostos_service import CalculoImpostosService
 from ..dominio.builder import NotaBuilder
 from ..aplicacao.emissao_service import EmissaoService
+from ..services.gerar_xml_notas import gerar_e_enviar_xml_contabilidade
 
 logger = logging.getLogger(__name__)
 
@@ -477,6 +479,44 @@ class NotaViewSet(viewsets.ModelViewSet):
         if debug_data:
             data_out["debug_calculo"] = debug_data
         return Response(data_out, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["post"], url_path="enviar-xml-contabilidade")
+    def enviar_xml_contabilidade(self, request, slug=None):
+        banco = get_licenca_db_config(request) or "default"
+        empresa = (
+            request.session.get("empresa_id")
+            or request.query_params.get("empresa")
+            or request.headers.get("X-Empresa")
+        )
+        filial = (
+            request.session.get("filial_id")
+            or request.query_params.get("filial")
+            or request.headers.get("X-Filial")
+        )
+
+        if not empresa or not filial:
+            return Response({"detail": "Empresa e filial são obrigatórias"}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = EnviarXmlContabilidadeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        try:
+            current_slug = slug or request.parser_context["kwargs"].get("slug") or ""
+            info = gerar_e_enviar_xml_contabilidade(
+                empresa=int(empresa),
+                filial=int(filial),
+                periodo=(data["data_inicio"], data["data_fim"]),
+                slug=current_slug,
+                destinatarios=data["emails"],
+                incluir_pastas=bool(data.get("incluir_pastas", True)),
+                status_list=data.get("status_list"),
+            )
+            info["db_alias"] = banco
+            return Response(info, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error("Erro ao enviar XMLs para contabilidade: %s", e)
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class NotaEventoViewSet(viewsets.ReadOnlyModelViewSet):

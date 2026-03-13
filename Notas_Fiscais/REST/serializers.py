@@ -190,3 +190,27 @@ class NotaCreateUpdateSerializer(serializers.Serializer):
             raise serializers.ValidationError("Se enviados, impostos devem ter o mesmo tamanho da lista de itens.")
 
         return attrs
+
+
+class EnviarXmlContabilidadeSerializer(serializers.Serializer):
+    data_inicio = serializers.DateField()
+    data_fim = serializers.DateField()
+    emails = serializers.ListField(child=serializers.EmailField(), required=False)
+    email = serializers.EmailField(required=False)
+    incluir_pastas = serializers.BooleanField(required=False, default=True)
+    status_list = serializers.ListField(child=serializers.IntegerField(), required=False)
+
+    def validate(self, attrs):
+        data_inicio = attrs.get("data_inicio")
+        data_fim = attrs.get("data_fim")
+        if data_inicio and data_fim and data_inicio > data_fim:
+            raise serializers.ValidationError("Data início não pode ser maior que data fim.")
+
+        emails = attrs.get("emails") or []
+        email = attrs.get("email")
+        if email:
+            emails = list(emails) + [email]
+        if not emails:
+            raise serializers.ValidationError("Informe ao menos um e-mail de destino.")
+        attrs["emails"] = emails
+        return attrs
