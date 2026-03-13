@@ -50,6 +50,7 @@ urlpatterns = [
     path("<slug>/notasdestinadas/", include("NotasDestinadas.urls")),
     path("<slug>/notasdestinadas/", include("NotasDestinadas.urls")),
     path("<slug>/cfop/", include("CFOP.REST.urls")),
+    path("<slug>/sped/", include("sped.urls")),
     path("<slug>/assistente/", include("Assistente_Spart.urls")),
     path("<slug>/ParametrosSps/", include("ParametrosSps.urls")),
     path("<slug>/boletos/", include("boletos.REST.urls")),

@@ -49,51 +49,65 @@ class CteListView(CteBaseMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         slug = get_licenca_db_config(self.request)
-        ctes = context['ctes']
-        total_ctes = len(ctes)
-        context['total_ctes'] = total_ctes
-        total_autorizados = sum(1 for cte in ctes if cte.status == 539)
-        context['total_autorizados'] = total_autorizados
-        total_emitidos = sum(1 for cte in ctes if cte.status == 204)
-        context['total_emitidos'] = total_emitidos
-        total_por_remetente = {}
-        for cte in ctes:
-            if cte.remetente:
-                total_por_remetente[cte.remetente] = total_por_remetente.get(cte.remetente, 0) + 1
-        context['total_por_remetente'] = total_por_remetente
-        
-        # Coleta IDs para busca em massa
-        ids_entidades = set()
-        for cte in ctes:
-            if cte.remetente:
-                ids_entidades.add(cte.remetente)
-            if cte.destinatario:
-                ids_entidades.add(cte.destinatario)
-        
-        # Busca nomes das entidades
-        nomes_entidades = {}
-        if ids_entidades:
-            entidades = Entidades.objects.using(slug).filter(enti_clie__in=ids_entidades).values('enti_clie', 'enti_nome')
-            for ent in entidades:
-                nomes_entidades[ent['enti_clie']] = ent['enti_nome']
-        
-        # Classe auxiliar para simular objeto no template
+        ctes_pagina = context['ctes']
+        qs_total = self.get_queryset()
+
+        context['total_ctes'] = qs_total.count()
+        context['total_autorizados'] = qs_total.filter(status='AUT').count()
+        context['total_emitidos'] = (
+            qs_total.exclude(status='RAS')
+            .exclude(status__isnull=True)
+            .exclude(status='')
+            .count()
+        )
+
         class EntidadeDisplay:
             def __init__(self, nome):
                 self.nome = nome
             def __str__(self):
                 return self.nome
 
-        # Popula objetos para o template
-        for cte in ctes:
-            if cte.remetente:
+        remetentes_ids = list(
+            qs_total.exclude(remetente__isnull=True).values_list('remetente', flat=True)
+        )
+        destinatarios_ids = [
+            cte.destinatario for cte in ctes_pagina
+            if getattr(cte, 'destinatario', None)
+        ]
+
+        ids_entidades = set(remetentes_ids) | set(
+            cte.remetente for cte in ctes_pagina
+            if getattr(cte, 'remetente', None)
+        ) | set(destinatarios_ids)
+
+        nomes_entidades = {}
+        if ids_entidades:
+            entidades = (
+                Entidades.objects.using(slug)
+                .filter(enti_clie__in=ids_entidades)
+                .values('enti_clie', 'enti_nome')
+            )
+            for ent in entidades:
+                nomes_entidades[ent['enti_clie']] = ent['enti_nome']
+
+        total_por_remetente = {}
+        for remetente_id in remetentes_ids:
+            total_por_remetente[remetente_id] = total_por_remetente.get(remetente_id, 0) + 1
+
+        total_por_remetente_display = {}
+        for remetente_id, total in total_por_remetente.items():
+            nome = nomes_entidades.get(remetente_id, str(remetente_id))
+            total_por_remetente_display[EntidadeDisplay(nome)] = total
+        context['total_por_remetente'] = total_por_remetente_display
+
+        for cte in ctes_pagina:
+            if getattr(cte, 'remetente', None):
                 nome = nomes_entidades.get(cte.remetente, str(cte.remetente))
                 cte.remetente = EntidadeDisplay(nome)
-            
-            if cte.destinatario:
+            if getattr(cte, 'destinatario', None):
                 nome = nomes_entidades.get(cte.destinatario, str(cte.destinatario))
                 cte.destinatario = EntidadeDisplay(nome)
-        print(context)
+
         return context
 
 class CteCreateView(CteBaseMixin, CreateView):
@@ -495,10 +509,23 @@ class CteConsultarReciboView(CteBaseMixin, View):
                 cte.save(using=slug)
                 messages.error(request, f"CT-e Rejeitado: {mensagem}")
             elif status_consulta == 'processando':
+                cte.status = 'PRO'
+                if mensagem:
+                    cte.observacoes_fiscais = mensagem
+                cte.save(using=slug)
                 messages.info(request, f"CT-e ainda em processamento: {mensagem}")
             elif status_consulta == 'recebido':
-                 messages.info(request, f"Lote Recebido. Aguardando processamento. Recibo: {resultado.get('recibo')}")
+                cte.status = 'REC'
+                if resultado.get('recibo'):
+                    cte.recibo = resultado.get('recibo')
+                if mensagem:
+                    cte.observacoes_fiscais = mensagem
+                cte.save(using=slug)
+                messages.info(request, f"Lote Recebido. Aguardando processamento. Recibo: {resultado.get('recibo')}")
             else:
+                if mensagem:
+                    cte.observacoes_fiscais = mensagem
+                    cte.save(using=slug)
                 messages.warning(request, f"Status: {status_consulta}. Msg: {mensagem}")
                 
         except Exception as e:

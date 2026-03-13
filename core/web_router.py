@@ -41,6 +41,7 @@ urlpatterns = [
     path("<slug:slug>/notas-fiscais/", include("Notas_Fiscais.Web.web_urls")),
     path("<slug:slug>/cfop/", include("CFOP.Web.urls")),
     path("<slug:slug>/boletos/", include("boletos.Web.urls")),
+    path("<slug:slug>/sped/", include("sped.Web.web_urls")),
     path("<slug:slug>/importador/", include("importador.urls")),
     path("<slug:slug>/notificacoes/", include("notificacoes.Web.web_urls")),
     path("<slug:slug>/coleta-estoque/", include("coletaestoque.Web.web_urls")),

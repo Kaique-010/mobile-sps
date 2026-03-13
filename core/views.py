@@ -239,6 +239,7 @@ def home(request, slug=None, empresa=None, filial=None):
         itens_por_pedido = (float(itens_contagem) / float(qtd_pedidos)) if qtd_pedidos else 0.0
         valor_medio_item = (float(total_valor) / float(itens_contagem)) if itens_contagem else 0.0
         pedidos_por_dia = (float(qtd_pedidos) / float(dias_periodo)) if dias_periodo else 0.0
+
         template_name = 'Home/home_pisos.html'
     elif dashboard_tipo == 'os':
         pedidos_qs = Ordemservico.objects.using(banco).filter(orde_data_aber__gte=ini, orde_data_aber__lte=fim)
@@ -296,6 +297,7 @@ def home(request, slug=None, empresa=None, filial=None):
         itens_por_pedido = (float(itens_contagem) / float(qtd_pedidos)) if qtd_pedidos else 0.0
         valor_medio_item = (float(total_valor) / float(itens_contagem)) if itens_contagem else 0.0
         pedidos_por_dia = (float(qtd_pedidos) / float(dias_periodo)) if dias_periodo else 0.0
+        logger.debug(f"[home] pedidos_por_dia: {pedidos_por_dia}")
 
     context = {
         'vendedores': vendedores_qs,
@@ -616,7 +618,7 @@ def complete_onboarding_step(request, step, slug=None):
             elif ns == 'cfop':
                 next_url = reverse('cfop_list_web', kwargs={'slug': slug}) if slug else reverse('empresas_web_default')
             elif ns == 'series':
-                next_url = reverse('series_list_web', kwargs={'slug': slug}) if slug else reverse('empresas_web_default')
+                next_url = reverse('series-list', kwargs={'slug': slug}) if slug else reverse('empresas_web_default')
     except Exception:
         pass
     return redirect(next_url)

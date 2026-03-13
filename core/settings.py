@@ -128,6 +128,7 @@ INSTALLED_APPS = [
     'Lancamentos_Bancarios',
     'Notas_Fiscais',
     'NotasDestinadas',
+    'sped',
     'Assistente_Spart',
     'ParametrosSps',
     'Financeiro',

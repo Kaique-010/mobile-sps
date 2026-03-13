@@ -61,54 +61,72 @@ class EmissaoService:
             raise Exception(f"Erro ao enviar para SEFAZ: {str(e)}")
         
         # 6. Atualizar Status com base no retorno
-        if resultado_envio.get('status') == 'autorizado':
-             self._processar_autorizacao(resultado_envio)
-        elif resultado_envio.get('status') == 'recebido':
-             self.cte.status = 'REC' # Recebido/Em processamento
-             self.cte.save()
-             
-             # Loop de consulta do recibo
-             recibo = resultado_envio.get('recibo')
-             if recibo:
-                 import time
-                 import logging
-                 logger = logging.getLogger(__name__)
-                 
-                 # Tenta consultar até 5 vezes (aprox. 10-15s)
-                 for i in range(5):
-                     time.sleep(2) # Espera 2s entre tentativas
-                     try:
-                         logger.info(f"Consultando recibo {recibo} (tentativa {i+1}/5)...")
-                         retorno_consulta = self.gateway.consultar_recibo(recibo)
-                         
-                         # Processar autorização se encontrada
-                         status_consulta = retorno_consulta.get('status')
-                         if status_consulta == 'autorizado':
-                             self._processar_autorizacao(retorno_consulta)
-                             resultado_envio = retorno_consulta # Atualiza retorno final
-                             break
-                         elif status_consulta == 'rejeitado':
-                             self.cte.status = 'REJ'
-                             # Salvar motivo se possível (hoje não temos campo específico além de log/retorno)
-                             self.cte.save()
-                             resultado_envio = retorno_consulta
-                             break
-                         elif status_consulta == 'processando':
-                             continue # Tenta novamente
-                         else:
-                             # Status desconhecido, mantém REC
-                             logger.warning(f"Status desconhecido na consulta: {status_consulta}")
-                             
-                     except Exception as e:
-                         logger.error(f"Erro ao consultar recibo {recibo}: {e}")
-                         # Continua tentando em caso de erro de rede temporário
-                         continue
+        status_envio = resultado_envio.get('status')
+        mensagem_envio = resultado_envio.get('mensagem') or ''
 
-        elif resultado_envio.get('status') == 'rejeitado':
-             self.cte.status = 'REJ'
-             # Salvar motivo da rejeição se houver campo
-             # self.cte.motivo_rejeicao = resultado_envio.get('mensagem')
-             self.cte.save()
+        if mensagem_envio:
+            self.cte.observacoes_fiscais = mensagem_envio
+
+        if status_envio == 'autorizado':
+            self._processar_autorizacao(resultado_envio)
+        elif status_envio == 'recebido':
+            self.cte.status = 'REC'
+            if resultado_envio.get('recibo'):
+                self.cte.recibo = resultado_envio.get('recibo')
+            self.cte.save()
+
+            recibo = self.cte.recibo
+            if recibo:
+                import time
+                import logging
+                logger = logging.getLogger(__name__)
+
+                for i in range(5):
+                    time.sleep(2)
+                    try:
+                        logger.info(f"Consultando recibo {recibo} (tentativa {i+1}/5)...")
+                        retorno_consulta = self.gateway.consultar_recibo(recibo)
+
+                        status_consulta = retorno_consulta.get('status')
+                        mensagem_consulta = retorno_consulta.get('mensagem') or ''
+                        if mensagem_consulta:
+                            self.cte.observacoes_fiscais = mensagem_consulta
+
+                        if retorno_consulta.get('recibo'):
+                            self.cte.recibo = retorno_consulta.get('recibo')
+
+                        if status_consulta == 'autorizado':
+                            self._processar_autorizacao(retorno_consulta)
+                            resultado_envio = retorno_consulta
+                            break
+                        elif status_consulta == 'rejeitado':
+                            self.cte.status = 'REJ'
+                            self.cte.save()
+                            resultado_envio = retorno_consulta
+                            break
+                        elif status_consulta == 'processando':
+                            self.cte.status = 'PRO'
+                            self.cte.save()
+                            continue
+                        elif status_consulta == 'recebido':
+                            self.cte.status = 'REC'
+                            self.cte.save()
+                            continue
+                        else:
+                            logger.warning(f"Status desconhecido na consulta: {status_consulta}")
+                            self.cte.save()
+                            continue
+
+                    except Exception as e:
+                        logger.error(f"Erro ao consultar recibo {recibo}: {e}")
+                        continue
+
+        elif status_envio == 'processando':
+            self.cte.status = 'PRO'
+            self.cte.save()
+        elif status_envio == 'rejeitado':
+            self.cte.status = 'REJ'
+            self.cte.save()
         
         return resultado_envio
 

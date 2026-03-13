@@ -1,3 +1,4 @@
+{% if onboarding_state and not onboarding_state.all_done %}
 <div id="assistant-bubble" class="assistant-bubble" style="display:none;">
   <div class="assistant-header">
     <strong>Assistente de Configuração</strong>
@@ -14,6 +15,8 @@
     <a data-slug-route="/web/{slug}/licencas/filiais/" class="btn btn-sm btn-primary">Configurar agora</a>
     {% elif onboarding_state.next_step.slug == 'cfop' %}
     <a data-slug-route="/web/{slug}/cfop/" class="btn btn-sm btn-primary">Configurar agora</a>
+    {% elif onboarding_state.next_step.slug == 'series' %}
+    <a data-slug-route="/web/{slug}/series/" class="btn btn-sm btn-primary">Configurar agora</a>
     {% else %}
     <a href="#" class="btn btn-sm btn-secondary disabled" aria-disabled="true">Indisponível</a>
     {% endif %}
@@ -82,3 +85,4 @@
     margin-top: 8px;
   }
 </style>
+{% endif %}

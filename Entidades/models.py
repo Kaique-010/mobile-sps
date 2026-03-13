@@ -1,8 +1,67 @@
-from django.db import models, transaction
-from django.db.models import Max
+from django.db import connections, models
+from django.db.utils import OperationalError, ProgrammingError
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+_TABLE_COLUMNS_CACHE = {}
+
+
+def _get_table_columns(*, using: str, table_name: str):
+    cache_key = (using or "default", table_name)
+    if cache_key in _TABLE_COLUMNS_CACHE:
+        return _TABLE_COLUMNS_CACHE[cache_key]
+    try:
+        connection = connections[using or "default"]
+        with connection.cursor() as cursor:
+            description = connection.introspection.get_table_description(cursor, table_name)
+        columns = {getattr(col, "name", col[0]) for col in description}
+    except Exception:
+        columns = set()
+    _TABLE_COLUMNS_CACHE[cache_key] = columns
+    return columns
+
+
+def _missing_model_field_names_for_db(*, model, using: str):
+    table_name = model._meta.db_table
+    columns = _get_table_columns(using=using, table_name=table_name)
+    if not columns:
+        return []
+    missing = []
+    for field in model._meta.concrete_fields:
+        try:
+            column_name = field.column
+        except Exception:
+            continue
+        if column_name not in columns:
+            missing.append(field.name)
+    return missing
+
+
+class SafeMissingColumnsQuerySet(models.QuerySet):
+    def _apply_missing_columns_deferral(self):
+        using = self.db or "default"
+        missing_field_names = _missing_model_field_names_for_db(model=self.model, using=using)
+        if missing_field_names:
+            return self.defer(*missing_field_names)
+        return self
+
+    def iterator(self, *args, **kwargs):
+        try:
+            return super(SafeMissingColumnsQuerySet, self._apply_missing_columns_deferral()).iterator(*args, **kwargs)
+        except (ProgrammingError, OperationalError):
+            return super().iterator(*args, **kwargs)
+
+
+class SafeMissingColumnsManager(models.Manager.from_queryset(SafeMissingColumnsQuerySet)):
+    def get_queryset(self):
+        qs = super().get_queryset()
+        try:
+            return qs._apply_missing_columns_deferral()
+        except Exception:
+            return qs
+
 
 class Entidades(models.Model):
     TIPO_ENTIDADES = [
@@ -62,10 +121,10 @@ class Entidades(models.Model):
     
     
 
+    objects = SafeMissingColumnsManager()
+
 
     def __str__(self):
         return self.enti_nome
     class Meta:
         db_table = 'entidades'
-        managed = 'false'
-

@@ -3,7 +3,6 @@ from decimal import Decimal
 from unittest.mock import MagicMock, patch
 from django.test import SimpleTestCase
 from ..services.services import MotorFiscal, FiscalContexto
-from ..models import MapaCFOP, CFOP
 
 class SimulationFailureTest(SimpleTestCase):
     def setUp(self):
@@ -18,16 +17,28 @@ class SimulationFailureTest(SimpleTestCase):
             produto=MagicMock()
         )
         self.ctx.produto.prod_ncm = "36988552"
-        self.ctx.produto.fiscal = None # Ensure no fiscal override by default
+        fiscal_default = MagicMock()
+        fiscal_default.cst_icms = None
+        fiscal_default.aliq_icms = None
+        fiscal_default.cst_ipi = None
+        fiscal_default.aliq_ipi = None
+        fiscal_default.cst_pis = None
+        fiscal_default.aliq_pis = None
+        fiscal_default.cst_cofins = None
+        fiscal_default.aliq_cofins = None
+        fiscal_default.cst_cbs = None
+        fiscal_default.aliq_cbs = None
+        fiscal_default.cst_ibs = None
+        fiscal_default.aliq_ibs = None
+        self.ctx.produto.fiscal = fiscal_default
 
-    @patch("CFOP.services.services.CFOP.objects")
-    @patch("CFOP.services.services.MapaCFOP.objects")
+    @patch("CFOP.auxiliares.cfop_resolver.CFOP.objects")
+    @patch("CFOP.auxiliares.cfop_resolver.MapaCFOP.objects")
     def test_simulation_fallback_when_mapa_missing(self, mock_mapa_objects, mock_cfop_objects):
         """
         Verifies that missing MapaCFOP triggers fallback to default CFOP (5102/6102).
         """
-        # Simulate DoesNotExist on MapaCFOP
-        mock_mapa_objects.select_related.return_value.get.side_effect = MapaCFOP.DoesNotExist
+        mock_mapa_objects.select_related.return_value.filter.return_value.first.return_value = None
         
         # Mock Fallback CFOP (5102)
         mock_fallback_cfop = MagicMock()
@@ -62,7 +73,7 @@ class SimulationFailureTest(SimpleTestCase):
             self.assertEqual(result["valores"]["icms"], Decimal("18.00"))
             self.assertEqual(result["valores"]["ipi"], Decimal("10.00"))
 
-    @patch("CFOP.services.services.MapaCFOP.objects")
+    @patch("CFOP.auxiliares.cfop_resolver.MapaCFOP.objects")
     def test_simulation_succeeds_with_mapa_cfop(self, mock_mapa_objects):
         """
         Verifies that having a mapping results in calculated taxes.
@@ -79,8 +90,7 @@ class SimulationFailureTest(SimpleTestCase):
         mock_mapa.cfop.cfop_gera_st = False
         mock_mapa.cfop.fiscal = None
         
-        # Mock success on the manager directly
-        mock_mapa_objects.select_related.return_value.get.return_value = mock_mapa
+        mock_mapa_objects.select_related.return_value.filter.return_value.first.return_value = mock_mapa
 
         # Mock NCM with no fiscal override
         mock_ncm = MagicMock()
@@ -100,7 +110,7 @@ class SimulationFailureTest(SimpleTestCase):
             self.assertEqual(result["valores"]["icms"], Decimal("18.00"))
             self.assertEqual(result["valores"]["ipi"], Decimal("10.00"))
 
-    @patch("CFOP.services.services.MapaCFOP.objects")
+    @patch("CFOP.auxiliares.cfop_resolver.MapaCFOP.objects")
     def test_ibs_cbs_override(self, mock_mapa_objects):
         """
         Verifies that IBS/CBS are calculated when overridden, even if CFOP doesn't require them.
@@ -117,7 +127,7 @@ class SimulationFailureTest(SimpleTestCase):
         mock_mapa.cfop.cfop_gera_st = False
         mock_mapa.cfop.fiscal = None
         
-        mock_mapa_objects.select_related.return_value.get.return_value = mock_mapa
+        mock_mapa_objects.select_related.return_value.filter.return_value.first.return_value = mock_mapa
 
         # Override Fiscal with IBS/CBS
         fiscal_override = MagicMock()

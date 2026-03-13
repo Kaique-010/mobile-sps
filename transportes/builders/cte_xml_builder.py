@@ -2,8 +2,6 @@ import logging
 from datetime import datetime
 import re
 import random
-
-# Tenta importar pytrustnfe, mas não quebra se não estiver instalado (para testes)
 try:
     from pytrustnfe.cte import CTe
     from pytrustnfe.cte.dados import (
@@ -13,7 +11,6 @@ try:
         InfCarga, InfDoc, InfQ, InfNFe
     )
 except ImportError:
-    # Classes Mock para permitir execução sem a lib instalada
     class CTe: 
         def __init__(self, **kwargs): pass
         def xml(self): return "<CTe>XML Mock</CTe>"
@@ -98,9 +95,10 @@ class CteXmlBuilder:
 
     def _carregar_dados(self):
         """Carrega os dados relacionados necessários para o XML"""
+        db_alias = self.cte._state.db or 'default'
         # Carregar dados da filial emitente
         try:
-            self.filial = Filiais.objects.defer('empr_cert_digi').filter(
+            self.filial = Filiais.objects.using(db_alias).defer('empr_cert_digi').filter(
                 empr_empr=self.cte.empresa,
                 empr_codi=self.cte.filial
             ).first()
@@ -112,14 +110,14 @@ class CteXmlBuilder:
 
         # Carregar dados das entidades envolvidas
         if self.cte.remetente:
-            self.remetente = Entidades.objects.filter(enti_clie=self.cte.remetente).first()
+            self.remetente = Entidades.objects.using(db_alias).filter(enti_clie=self.cte.remetente).first()
         
         if self.cte.destinatario:
-            self.destinatario = Entidades.objects.filter(enti_clie=self.cte.destinatario).first()
+            self.destinatario = Entidades.objects.using(db_alias).filter(enti_clie=self.cte.destinatario).first()
             
         # Carregar outros envolvidos se houver (expedidor, recebedor, tomador se for outro)
         if self.cte.tomador_servico == 4 and self.cte.outro_tomador:
-            self.tomador = Entidades.objects.filter(enti_clie=self.cte.outro_tomador).first()
+            self.tomador = Entidades.objects.using(db_alias).filter(enti_clie=self.cte.outro_tomador).first()
 
     def build(self) -> str:
         """Constrói o objeto CTe e retorna o XML assinado (ou apenas gerado)"""

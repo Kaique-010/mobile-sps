@@ -18,6 +18,8 @@ class TestResolvers(SimpleTestCase):
         ncm_aliq.aliq_cofins = None
         ncm_aliq.aliq_cbs = None
         ncm_aliq.aliq_ibs = None
+        ncm_aliq.pis_sn = None
+        ncm_aliq.cofins_sn = None
         
         # Regime Simples (1)
         res = resolver.resolver(ncm_aliq, "1")

@@ -1,66 +1,47 @@
-from django.test import TestCase
+from django.test import SimpleTestCase
 from unittest.mock import MagicMock, patch
 from decimal import Decimal
-from CFOP.models import CFOP, MapaCFOP, TabelaICMS
 from CFOP.services.services import MotorFiscal
 from CFOP.services.bases import FiscalContexto
-from Produtos.models import Produtos, Ncm, UnidadeMedida, NcmAliquota
 
-class CFOPFlowIntegrationTest(TestCase):
-    databases = {'default'}
-
+class CFOPFlowIntegrationTest(SimpleTestCase):
     def setUp(self):
-        # 1. Create CFOP with specific flags
-        self.cfop = CFOP.objects.create(
-            cfop_empr=1,
-            cfop_codi="5102",
-            cfop_desc="Venda de Mercadoria",
-            cfop_exig_icms=True,
-            cfop_exig_ipi=True, # Let's test IPI
-            cfop_exig_pis_cofins=False,
-            cfop_exig_cbs=False,
-            cfop_exig_ibs=False,
-            cfop_gera_st=False,
-            cfop_icms_base_inclui_ipi=True # Test base calculation
-        )
+        self.banco = "saveweb001"
 
-        # 2. Create NCM and Product
-        self.ncm = Ncm.objects.create(ncm_codi="12345678", ncm_desc="Teste")
-        
-        # Create NcmAliquota (required by MotorFiscal)
-        NcmAliquota.objects.create(
-            nali_ncm=self.ncm,
-            nali_empr=1,
-            nali_aliq_ipi=Decimal("10.00"),
-            nali_aliq_pis=Decimal("1.65"),
-            nali_aliq_cofins=Decimal("7.60"),
-            nali_aliq_cbs=Decimal("0.00"),
-            nali_aliq_ibs=Decimal("0.00")
-        )
-        
-        self.unidade = UnidadeMedida.objects.create(
-            unid_codi="UN",
-            unid_desc="UNIDADE"
-        )
-        
-        self.produto = Produtos.objects.create(
-            prod_codi="PROD01",
-            prod_nome="Produto Teste",
-            prod_ncm="12345678",
-            prod_unme=self.unidade
-        )
+        self.cfop = MagicMock()
+        self.cfop.cfop_codi = "5102"
+        self.cfop.cfop_exig_icms = True
+        self.cfop.cfop_exig_ipi = True
+        self.cfop.cfop_exig_pis_cofins = False
+        self.cfop.cfop_exig_cbs = False
+        self.cfop.cfop_exig_ibs = False
+        self.cfop.cfop_gera_st = False
+        self.cfop.cfop_icms_base_inclui_ipi = True
+        self.cfop.cfop_st_base_inclui_ipi = False
+        self.cfop.fiscal = None
 
-        # 3. Setup ICMS Table
-        TabelaICMS.objects.create(
-            empresa=1,
-            uf_origem="SP",
-            uf_destino="RJ",
-            aliq_interna=Decimal("18.00"),
-            aliq_inter=Decimal("12.00"),
-            mva_st=Decimal("50.00")
-        )
+        self.ncm = MagicMock()
+        self.ncm.ncmaliquota = MagicMock()
+        self.ncm.fiscal = None
 
-    @patch("CFOP.services.services.ResolverAliquotaPorRegime.resolver")
+        self.produto = MagicMock()
+        self.produto.prod_ncm = "12345678"
+        fiscal_default = MagicMock()
+        fiscal_default.cst_icms = None
+        fiscal_default.aliq_icms = None
+        fiscal_default.cst_ipi = None
+        fiscal_default.aliq_ipi = None
+        fiscal_default.cst_pis = None
+        fiscal_default.aliq_pis = None
+        fiscal_default.cst_cofins = None
+        fiscal_default.aliq_cofins = None
+        fiscal_default.cst_cbs = None
+        fiscal_default.aliq_cbs = None
+        fiscal_default.cst_ibs = None
+        fiscal_default.aliq_ibs = None
+        self.produto.fiscal = fiscal_default
+
+    @patch("CFOP.auxiliares.aliquota_resolver.AliquotaResolver.resolver")
     def test_cfop_influences_tax_calculation(self, mock_resolver):
         # Setup Mock Aliquotas (IPI 10%)
         mock_resolver.return_value = {
@@ -71,25 +52,26 @@ class CFOPFlowIntegrationTest(TestCase):
             "ibs": None
         }
 
-        # Initialize MotorFiscal
-        motor = MotorFiscal(banco="default")
+        motor = MotorFiscal(banco=self.banco)
 
         # Context
         ctx = FiscalContexto(
             empresa_id=1,
             filial_id=1,
-            banco="default",
+            banco=self.banco,
             regime="3", # Normal
             uf_origem="SP",
             uf_destino="RJ",
             produto=self.produto,
             cfop=self.cfop, # Explicitly passing our CFOP
-            ncm=self.ncm
+            ncm=None
         )
 
-        # Calculate Item (Base = 100.00)
-        base_manual = Decimal("100.00")
-        resultado = motor.calcular_item(ctx, item=None, tipo_oper="VENDA", base_manual=base_manual)
+        with patch.object(motor, "obter_icms_data", return_value={"icms": Decimal("12.00"), "mva_st": None, "st_aliq": None}), \
+             patch.object(motor, "obter_ncm", return_value=None):
+            # Calculate Item (Base = 100.00)
+            base_manual = Decimal("100.00")
+            resultado = motor.calcular_item(ctx, item=None, tipo_oper="VENDA", base_manual=base_manual)
 
         # Assertions
         
@@ -109,31 +91,31 @@ class CFOPFlowIntegrationTest(TestCase):
         self.assertIsNone(resultado["valores"]["pis"])
         self.assertIsNone(resultado["valores"]["cofins"])
 
-    @patch("CFOP.services.services.ResolverAliquotaPorRegime.resolver")
+    @patch("CFOP.auxiliares.aliquota_resolver.AliquotaResolver.resolver")
     def test_cfop_disable_ipi(self, mock_resolver):
-        # Update CFOP to disable IPI
         self.cfop.cfop_exig_ipi = False
-        self.cfop.save()
 
         mock_resolver.return_value = {
             "ipi": Decimal("10.00"),
             "pis": None, "cofins": None, "cbs": None, "ibs": None
         }
 
-        motor = MotorFiscal(banco="default")
+        motor = MotorFiscal(banco=self.banco)
         ctx = FiscalContexto(
             empresa_id=1,
             filial_id=1,
-            banco="default",
+            banco=self.banco,
             regime="3",
             uf_origem="SP",
             uf_destino="RJ",
             produto=self.produto,
             cfop=self.cfop,
-            ncm=self.ncm
+            ncm=None
         )
 
-        resultado = motor.calcular_item(ctx, item=None, tipo_oper="VENDA", base_manual=Decimal("100.00"))
+        with patch.object(motor, "obter_icms_data", return_value={"icms": Decimal("12.00"), "mva_st": None, "st_aliq": None}), \
+             patch.object(motor, "obter_ncm", return_value=None):
+            resultado = motor.calcular_item(ctx, item=None, tipo_oper="VENDA", base_manual=Decimal("100.00"))
 
         # IPI should be None
         self.assertIsNone(resultado["valores"]["ipi"])
@@ -141,4 +123,3 @@ class CFOPFlowIntegrationTest(TestCase):
         # ICMS Base should NOT include IPI (since IPI is 0/None)
         # Base ICMS = 100.00
         self.assertEqual(resultado["bases"]["icms"], Decimal("100.00"))
-

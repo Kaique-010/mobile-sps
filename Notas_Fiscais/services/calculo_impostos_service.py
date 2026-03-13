@@ -11,6 +11,7 @@ from Licencas.models import Filiais
 from Entidades.models import Entidades
 from Produtos.models import Produtos
 from CFOP.services.services import MotorFiscal, FiscalContexto, get_empresa_uf_origem, get_regime
+from core.utils import get_db_from_slug
 
 class ResolverIncidencia:
     """
@@ -41,7 +42,10 @@ class CalculoImpostosService:
     """
 
     def __init__(self, database: str = "default"):
-        self.banco = database
+        db_alias = database or "default"
+        if db_alias != "default" and db_alias not in settings.DATABASES:
+            db_alias = get_db_from_slug(db_alias)
+        self.banco = db_alias
 
     def _mask_ncm(self, ncm_code):
         if not ncm_code:

@@ -1,8 +1,7 @@
-from django.test import TestCase
-from decimal import Decimal
+from django.test import SimpleTestCase
 from Notas_Fiscais.emissao.gerador_xml import GeradorXML
 
-class XmlGenerationTest(TestCase):
+class XmlGenerationTest(SimpleTestCase):
     def test_gerar_e_imprimir_xml(self):
         print("\n\n=== INÍCIO GERAÇÃO XML ===")
         

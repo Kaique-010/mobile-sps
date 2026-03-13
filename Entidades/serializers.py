@@ -2,8 +2,28 @@ from rest_framework.response import Response
 from rest_framework import serializers
 from rest_framework import status
 from django.db.models import Max
+from django.db import connections
 from .models import Entidades
 from Licencas.models  import Empresas
+
+_ENTIDADES_COLUMNS_CACHE = {}
+
+
+def _get_entidades_table_columns(banco):
+    if not banco:
+        return set()
+    if banco in _ENTIDADES_COLUMNS_CACHE:
+        return _ENTIDADES_COLUMNS_CACHE[banco]
+    try:
+        connection = connections[banco]
+        with connection.cursor() as cursor:
+            description = connection.introspection.get_table_description(cursor, Entidades._meta.db_table)
+        cols = {getattr(col, "name", col[0]) for col in description}
+    except Exception:
+        cols = set()
+    _ENTIDADES_COLUMNS_CACHE[banco] = cols
+    return cols
+
 
 class EntidadesSerializer(serializers.ModelSerializer):
     
@@ -14,6 +34,17 @@ class EntidadesSerializer(serializers.ModelSerializer):
         model = Entidades
         fields = '__all__'
         read_only_fields = ['enti_clie']
+
+    def get_fields(self):
+        fields = super().get_fields()
+        banco = self.context.get("banco")
+        cols = _get_entidades_table_columns(banco)
+        if not cols:
+            return fields
+        for f in Entidades._meta.concrete_fields:
+            if f.column not in cols and f.name in fields:
+                fields.pop(f.name, None)
+        return fields
 
     def validate(self, data):
         

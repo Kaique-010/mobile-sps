@@ -7,7 +7,7 @@ from django.db import connections
 
 
 def get_onboarding_state(user, empresa_id, db_alias: str | None = None):
-    if not user.is_authenticated or not empresa_id:
+    if not empresa_id:
         steps_with_status = []
         for step in sorted(ONBOARDING_STEPS, key=lambda s: s["ordem"]):
             steps_with_status.append({
@@ -63,12 +63,11 @@ def get_onboarding_state(user, empresa_id, db_alias: str | None = None):
 def mark_step_done(user, empresa_id, step_slug, db_alias: str | None = None):
     print("=== DEBUG ONBOARDING ===")
     print("User:", user, type(user))
-    print("Authenticated:", user.is_authenticated)
     print("empresa_id:", empresa_id)
     print("step_slug:", step_slug)
     print("db_alias:", db_alias)
 
-    if not user.is_authenticated or not empresa_id:
+    if not empresa_id:
         return
 
     qs = OnboardingStepProgress.objects

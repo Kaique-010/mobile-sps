@@ -116,10 +116,12 @@
             <a href="#" data-bs-toggle="modal" data-bs-target="#modalAtualizacoes">Clique aqui</a>
         </p>
     </div>
+    {% if not onboarding_state or not onboarding_state.all_done %}
     <div id="mascot-container" class="mascot-container" onclick="toggleAssistant()">
         <img src="{% static 'assis.png' %}" class="mascot-img" style="border-radius: 65%;"><span
             id="mascot-text">Configure aqui sua Empresa</span>
     </div>
+    {% endif %}
 
 </footer>
 {% include 'parciais/modaldeataualizacoes.html' %}

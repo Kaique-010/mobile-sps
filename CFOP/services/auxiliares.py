@@ -1,7 +1,6 @@
-from decimal import Decimal
-from typing import Dict, Optional
 import logging
 from Licencas.models import Filiais
+from ..auxiliares.aliquota_resolver import AliquotaResolver
 
 logger = logging.getLogger(__name__)
 
@@ -20,50 +19,7 @@ def get_regime(empresa_id, filial_id=None, banco=None):
     return getattr(f, "empr_regi_trib", "") if f else ""
 
 class ResolverAliquotaPorRegime:
-    """
-    Responsável por resolver as alíquotas base considerando o regime tributário.
-    Prepara o terreno para a reforma tributária (IBS/CBS).
-    """
-    
-    REGIME_SIMPLES = ["1", "2"] # 1=Simples, 2=Simples Excesso
-    REGIME_NORMAL = ["3"]
-    
-    def resolver(self, ncm_aliquota: object, regime: str) -> Dict[str, Optional[Decimal]]:
-        """
-        Retorna dicionário de alíquotas base ajustado pelo regime.
-        """
-        defaults = {
-            "ipi": None, "pis": None, "cofins": None, 
-            "cbs": None, "ibs": None
-        }
-        
-        # Helper para decimal
-        def _d(v):
-            if v is None: return None
-            return Decimal(str(v))
+    REGIME_SIMPLES = AliquotaResolver.REGIME_SIMPLES
 
-        if not ncm_aliquota:
-            return defaults
-
-        # Alíquotas base do NCM (IBPT/Tabela TiPi)
-        aliqs = {
-            "ipi": _d(getattr(ncm_aliquota, "aliq_ipi", None)),
-            "pis": _d(getattr(ncm_aliquota, "aliq_pis", None)),
-            "cofins": _d(getattr(ncm_aliquota, "aliq_cofins", None)),
-            "cbs": _d(getattr(ncm_aliquota, "aliq_cbs", None)),
-            "ibs": _d(getattr(ncm_aliquota, "aliq_ibs", None)),
-        }
-        
-        # Log de Auditoria
-        logger.debug(
-            f"Resolvendo alíquotas para Regime={regime}. "
-            f"Base NCM: IPI={aliqs['ipi']}, PIS={aliqs['pis']}, COFINS={aliqs['cofins']}"
-        )
-        
-        # Lógica Específica por Regime
-        if str(regime) in self.REGIME_SIMPLES:
-            # Futuramente: lógica de transição para IBS/CBS no Simples
-            # Por enquanto mantém as alíquotas base do cadastro (que podem ser usadas para cálculo de crédito ou info complementar)
-            pass
-            
-        return aliqs
+    def resolver(self, ncm_aliquota, regime):
+        return AliquotaResolver().resolver(ncm_aliquota, regime)

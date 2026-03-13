@@ -1,10 +1,11 @@
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 from django.test import SimpleTestCase
-from ..services.services import (
-    MotorFiscal, FiscalContexto, 
-    IPICalculador, ICMSCalculador, PISCOFINSCalculador
-)
+from ..services.services import MotorFiscal, FiscalContexto
+from ..calculadores.ipi_calculator import IPICalculator
+from ..calculadores.icms_calculator import ICMSCalculator
+from ..calculadores.icms_st_calculator import ICMSSTCalculator
+from ..calculadores.pis_cofins_calculator import PISCOFINSCalculator
 
 class FiscalServiceTest(SimpleTestCase):
     def setUp(self):
@@ -59,9 +60,9 @@ class FiscalServiceTest(SimpleTestCase):
         }
 
     def test_ipi_calculator(self):
-        calc = IPICalculador()
+        calc = IPICalculator()
         base = Decimal("100.00")
-        res = calc.calcular_impostos(self.ctx, base)
+        res = calc.calcular(self.ctx, base)
         
         self.assertEqual(res["base"], Decimal("100.00"))
         self.assertEqual(res["valor"], Decimal("10.00"))
@@ -69,14 +70,14 @@ class FiscalServiceTest(SimpleTestCase):
 
     def test_ipi_calculator_sem_exigencia(self):
         self.ctx.cfop.cfop_exig_ipi = False
-        calc = IPICalculador()
-        res = calc.calcular_impostos(self.ctx, Decimal("100.00"))
+        calc = IPICalculator()
+        res = calc.calcular(self.ctx, Decimal("100.00"))
         self.assertIsNone(res["valor"])
 
     def test_icms_calculator_intra(self):
-        calc = ICMSCalculador()
+        calc = ICMSCalculator()
         base = Decimal("100.00")
-        res = calc.calcular_impostos(self.ctx, base)
+        res = calc.calcular(self.ctx, base)
         
         self.assertEqual(res["base"], Decimal("100.00"))
         self.assertEqual(res["aliquota"], Decimal("18.00"))
@@ -90,25 +91,19 @@ class FiscalServiceTest(SimpleTestCase):
         self.ctx.icms_data["mva_st"] = Decimal("50.00")
         self.ctx.icms_data["st_aliq"] = Decimal("18.00") # Interna destino
         
-        calc = ICMSCalculador()
+        calc_icms = ICMSCalculator()
+        calc_st = ICMSSTCalculator()
         base = Decimal("100.00")
-        res = calc.calcular_impostos(self.ctx, base)
+        res_icms = calc_icms.calcular(self.ctx, base)
+        res_st = calc_st.calcular(self.ctx, base, res_icms["valor"])
         
-        # Base ST = 100 * 1.5 = 150
-        # ICMS ST Total = 150 * 0.18 = 27
-        # Valor ICMS Proprio = 18
-        # Valor ST a pagar = 27 - 18 = 9
-        
-        # Note: ICMSCalculador doesn't calculate ST directly anymore? 
-        # Wait, looking at services.py, ICMSCalculador returns "st": None.
-        # ST is calculated by IcmsStCalculador separately in MotorFiscal?
-        # Let's check services.py again.
-        pass
+        self.assertEqual(res_st["base"], Decimal("150.00"))
+        self.assertEqual(res_st["valor"], Decimal("9.00"))
 
     def test_pis_cofins_calculator(self):
-        calc = PISCOFINSCalculador()
+        calc = PISCOFINSCalculator()
         base = Decimal("100.00")
-        res = calc.calcular_impostos(self.ctx, base)
+        res = calc.calcular(self.ctx, base)
         
         self.assertEqual(res["pis"]["valor"], Decimal("1.65"))
         self.assertEqual(res["cofins"]["valor"], Decimal("7.60"))

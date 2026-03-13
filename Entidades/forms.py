@@ -55,7 +55,10 @@ class EntidadesForm(forms.ModelForm):
         }
 
     def clean_enti_situ(self):
-        return '1' if self.cleaned_data.get('enti_situ') else '0'
+        val = self.cleaned_data.get('enti_situ')
+        if isinstance(val, str):
+            return '1' if val.strip().lower() in {'1', 'true', 'on', 'yes', 'sim'} else '0'
+        return '1' if val else '0'
 
     def __init__(self, *args, db_name=None, request=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -64,7 +67,7 @@ class EntidadesForm(forms.ModelForm):
 
         # Ajusta o valor inicial do campo booleano com base no valor '0'/'1' do model
         if self.instance and self.instance.pk:
-            self.fields['enti_situ'].initial = (self.instance.enti_situ == '1')
+            self.fields['enti_situ'].initial = (str(self.instance.enti_situ) == '1')
             self.fields['is_transportadora'].initial = (self.instance.enti_tien == 'T')
 
         # Tornar certos campos não obrigatórios
@@ -107,6 +110,8 @@ class EntidadesForm(forms.ModelForm):
             raise ValueError("Erro: banco de dados não definido no formulário. Verifique se a sessão contém 'banco'.")
 
         instance = super().save(commit=False)
+        if 'enti_situ' in self.cleaned_data:
+            instance.enti_situ = '1' if str(self.cleaned_data.get('enti_situ')) == '1' else '0'
 
         if self.cleaned_data.get('is_transportadora'):
             instance.enti_tien = 'T'
