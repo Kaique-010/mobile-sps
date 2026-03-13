@@ -5,10 +5,90 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
 <link rel="stylesheet" href="{% static 'css/form.css' %}">
 
+<style>
+  .reneg-card {
+    border: 0;
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .reneg-card .card-header {
+    border: 0;
+    background: linear-gradient(135deg, rgb(169, 197, 226) 0%, rgb(31, 41, 71) 100%);
+    color: var(--bs-light);
+  }
+
+  .reneg-card .card-body {
+    background: color-mix(in srgb, var(--bs-body-bg) 90%, transparent);
+  }
+
+  .reneg-label {
+    font-size: 0.82rem;
+    color: var(--bs-secondary-color);
+    margin-bottom: 0.35rem;
+  }
+
+  .reneg-control {
+    border-radius: 12px;
+    padding: 14px 16px;
+    border-top: 1px solid var(--bs-border-color);
+    border-left: 1px solid var(--bs-border-color);
+    border-right: 0;
+    border-bottom: 0;
+    background: color-mix(in srgb, var(--bs-body-bg) 92%, var(--bs-tertiary-bg));
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .08);
+    transition: box-shadow .15s ease, background-color .15s ease;
+  }
+
+  .reneg-control:focus {
+    box-shadow: 0 0 0 .25rem rgba(var(--bs-primary-rgb), .15);
+    background: var(--bs-body-bg);
+  }
+
+  .reneg-addon {
+    border-top: 1px solid var(--bs-border-color);
+    border-left: 1px solid var(--bs-border-color);
+    border-right: 0;
+    border-bottom: 0;
+    border-radius: 12px 0 0 12px;
+    background: color-mix(in srgb, var(--bs-body-bg) 92%, var(--bs-tertiary-bg));
+  }
+
+  .input-group .reneg-control {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+  }
+
+  .reneg-control[readonly] {
+    background: color-mix(in srgb, var(--bs-body-bg) 85%, var(--bs-tertiary-bg));
+    opacity: 0.95;
+  }
+
+  .reneg-sugestoes .list-group-item {
+    border: 0;
+    border-radius: 10px;
+    margin-bottom: 6px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, .08);
+  }
+
+  .reneg-box {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 14px;
+    padding: 12px;
+    background: color-mix(in srgb, var(--bs-body-bg) 90%, var(--bs-tertiary-bg));
+  }
+
+  .reneg-kpi .card {
+    border: 0;
+    border-radius: 14px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .08);
+  }
+</style>
+
 <div class="container py-4">
-  <div class="card shadow-sm">
+  <div class="card reneg-card shadow-sm">
     <div class="card-header">
-      <h3 class="mb-0">Nova Renegociação</h3>
+      <h3 class="mb-0 text-center"><i class="bi bi-chevron-expand fs-4"></i> Nova Renegociação</h3>
     </div>
     <div class="card-body">
       {% if erro %}
@@ -17,27 +97,32 @@
       <form method="post" id="form-renegociacao">
         {% csrf_token %}
         <input type="hidden" name="titulos_ids" id="titulos_ids">
-        <div class="row g-3">
-          <div class="col-md-8">
-            <label class="form-label">Cliente</label>
-            <input type="text" id="cliente_nome" class="form-control" placeholder="Digite nome ou ID do cliente">
+        <div class="row g-3 align-items-end">
+          <div class="col-7 col-md-8">
+            <label class="reneg-label">Cliente</label>
+            <div class="input-group">
+              <span class="input-group-text reneg-addon"><i class="bi bi-search"></i></span>
+              <input type="text" id="cliente_nome" class="form-control reneg-control"
+                placeholder="Digite nome ou ID do cliente">
+            </div>
             <input type="hidden" id="cliente_id" name="rene_clie">
-            <div id="cliente_sugestoes" class="list-group mt-1" style="max-height: 240px; overflow-y: auto;"></div>
+            <div id="cliente_sugestoes" class="list-group mt-2 reneg-sugestoes"
+              style="max-height: 240px; overflow-y: auto;"></div>
           </div>
-          <div class="col-md-4">
-            <label class="form-label">Cliente Selecionado</label>
-            <input type="text" id="cliente_selecionado" class="form-control" readonly>
+          <div class="col-5 col-md-4">
+            <label class="reneg-label">Cliente Selecionado</label>
+            <input type="text" id="cliente_selecionado" class="form-control reneg-control" readonly>
           </div>
         </div>
 
         <div class="mt-4">
-          <label class="form-label">Títulos do cliente (abertos)</label>
-          <div id="lista_titulos" class="border rounded p-2" style="max-height: 260px; overflow-y: auto;">
+          <label class="reneg-label">Títulos do cliente (abertos)</label>
+          <div id="lista_titulos" class="reneg-box" style="max-height: 260px; overflow-y: auto;">
             <small class="text-muted">Selecione um cliente para carregar os títulos...</small>
           </div>
         </div>
 
-        <div class="mt-4">
+        <div class="mt-4 reneg-kpi">
           <div class="row g-3">
             <div class="col-md-3">
               <div class="card">
@@ -67,30 +152,30 @@
 
         <div class="row g-3">
           <div class="col-md-3">
-            <label class="form-label">Juros</label>
-            <input type="number" step="0.01" name="juros" class="form-control" value="0">
+            <label class="reneg-label">Juros</label>
+            <input type="number" step="0.01" name="juros" class="form-control reneg-control" value="0">
           </div>
           <div class="col-md-3">
-            <label class="form-label">Multa</label>
-            <input type="number" step="0.01" name="multa" class="form-control" value="0">
+            <label class="reneg-label">Multa</label>
+            <input type="number" step="0.01" name="multa" class="form-control reneg-control" value="0">
           </div>
           <div class="col-md-3">
-            <label class="form-label">Desconto</label>
-            <input type="number" step="0.01" name="desconto" class="form-control" value="0">
+            <label class="reneg-label">Desconto</label>
+            <input type="number" step="0.01" name="desconto" class="form-control reneg-control" value="0">
           </div>
           <div class="col-md-3">
-            <label class="form-label">Quantidade de parcelas</label>
-            <input type="number" name="parcelas" min="1" class="form-control" value="1">
+            <label class="reneg-label">Quantidade de parcelas</label>
+            <input type="number" name="parcelas" min="1" class="form-control reneg-control" value="1">
           </div>
         </div>
         <div class="row g-3 mt-2">
           <div class="col-md-3">
-            <label class="form-label">Base de vencimento</label>
-            <input type="date" name="venc_base" id="venc_base" class="form-control">
+            <label class="reneg-label">Base de vencimento</label>
+            <input type="date" name="venc_base" id="venc_base" class="form-control reneg-control">
           </div>
           <div class="col-md-6">
-            <label class="form-label">Regra de parcelamento</label>
-            <input type="text" name="regra_parc" id="regra_parc" class="form-control"
+            <label class="reneg-label">Regra de parcelamento</label>
+            <input type="text" name="regra_parc" id="regra_parc" class="form-control reneg-control"
               placeholder="Ex.: 30,30 ou 15+15 ou 30+15+15">
           </div>
           <div class="col-md-3 d-flex align-items-end">
@@ -99,8 +184,8 @@
           </div>
         </div>
         <div class="mt-4 d-flex justify-content-between">
-          <a href="{% url 'renegociacao_list' slug=slug %}" class="btn btn-secondary">Voltar</a>
-          <button type="submit" class="btn btn-success">Criar renegociação</button>
+          <a href="{% url 'renegociacao_list' slug=slug %}" class="btn btn-outline-secondary">Voltar</a>
+          <button type="submit" class="btn btn-outline-success">Criar renegociação</button>
         </div>
       </form>
     </div>

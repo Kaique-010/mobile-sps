@@ -62,7 +62,7 @@ class RenegociacaoCreateView(DBAndSlugMixin, TemplateView):
             or self.filial_id
             or 1, 1
         )
-        usuario_id = int(request.user.id or 0) if hasattr(request, "user") else 0
+        usuario_id = int(request.usua_codi or 0) if hasattr(request, "user") else 0
 
         titulos_raw = request.POST.get("titulos_ids", "")
         titulos_ids = [t.strip() for t in titulos_raw.split(",") if t.strip()]

@@ -2,8 +2,8 @@
 {% load static %}
 {% block title %}{% if nota_existente %}Editar Nota Manual{% else %}Nova Nota Manual{% endif %}{% endblock %}
 {% block content %}
-<link rel="stylesheet" href="{% static 'css/form.css' %}">
-<div class="container page-container" style="padding:7rem;">
+<link rel="stylesheet" href="{% static 'css/form.css' %}?v=20260313">
+<div class="container page-container">
     <div class="page-header-custom justify-content-center">
         <h2 class="page-title">
             <i class="bi bi-pencil-square fs-4 me-2"></i>{% if nota_existente %}Editar Nota  Manual{% else %}Nova Nota Manual{% endif %}

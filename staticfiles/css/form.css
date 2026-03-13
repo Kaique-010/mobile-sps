@@ -77,12 +77,16 @@
   border: 0.5px solid #aaaaaa;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
+  border-right: 0 !important;
+  border-bottom: 0 !important;
 }
 
 .form-control:focus,
 .form-select:focus {
   border-color: #6c87b1;
   box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+  border-right: 0 !important;
+  border-bottom: 0 !important;
 }
 
 .autocomplete-dropdown {
@@ -113,6 +117,8 @@
 .input-group .form-control {
   border-left: none;
   border-radius: 0 8px 8px 0;
+  border-right: 0 !important;
+  border-bottom: 0 !important;
 }
 
 /* Adicione estilos específicos para o formulário de título a pagar aqui */
