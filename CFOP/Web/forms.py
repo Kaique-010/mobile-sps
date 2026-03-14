@@ -56,6 +56,8 @@ class NCMFiscalPadraoForm(forms.ModelForm):
         model = NcmFiscalPadrao
         fields = [
             'ncm',
+            'cfop',
+            'uf_origem', 'uf_destino', 'tipo_entidade',
             'cst_icms', 'aliq_icms',
             'cst_ipi', 'aliq_ipi',
             'cst_pis', 'aliq_pis',
@@ -65,6 +67,10 @@ class NCMFiscalPadraoForm(forms.ModelForm):
         ]
         widgets = {
             'ncm': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Código NCM', 'list': 'ncm-codes'}),
+            'cfop': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'CFOP (ex: 5102)', 'maxlength': 4}),
+            'uf_origem': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'UF Origem (ex: SP)', 'maxlength': 2}),
+            'uf_destino': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'UF Destino (ex: RJ)', 'maxlength': 2}),
+            'tipo_entidade': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Tipo Entidade (ex: CL/FO/AM)', 'maxlength': 2}),
             'cst_icms': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'CST ICMS'}),
             'aliq_icms': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Aliq ICMS'}),
             'cst_ipi': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'CST IPI'}),
@@ -78,6 +84,16 @@ class NCMFiscalPadraoForm(forms.ModelForm):
             'cst_ibs': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'CST IBS'}),
             'aliq_ibs': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Aliq IBS'}),
         }
+
+    def clean_cfop(self):
+        v = self.cleaned_data.get("cfop")
+        if not v:
+            return None
+        raw = str(v).split(" - ")[0].strip()
+        digits = "".join(ch for ch in raw if ch.isdigit())
+        if len(digits) != 4:
+            raise ValidationError("CFOP deve conter 4 dígitos.")
+        return digits
 
     def __init__(self, *args, **kwargs):
         cst_choices = kwargs.pop('cst_choices', None)

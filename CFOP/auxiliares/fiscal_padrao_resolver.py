@@ -11,8 +11,58 @@ class FiscalPadraoResolver:
         if self.banco:
             qs = qs.using(self.banco)
         return qs
+    
+    def _match_contexto(self, fiscal, uf_origem=None, uf_destino=None, tipo_entidade=None):
+        if not fiscal:
+            return False
+        
+        fiscal_uf_origem = (getattr(fiscal, "uf_origem", None) or "").strip().upper()
+        fiscal_uf_destino = (getattr(fiscal, "uf_destino", None) or "").strip().upper()
+        fiscal_tipo_entidade = (getattr(fiscal, "tipo_entidade", None) or "").strip().upper()
 
-    def resolver(self, produto, ncm, cfop):
+        ctx_uf_origem = (uf_origem or "").strip().upper()
+        ctx_uf_destino = (uf_destino or "").strip().upper()
+        ctx_tipo_entidade = (tipo_entidade or "").strip().upper()
+
+        if fiscal_uf_origem:
+            if not ctx_uf_origem or fiscal_uf_origem != ctx_uf_origem:
+                return False
+
+        if fiscal_uf_destino:
+            if not ctx_uf_destino or fiscal_uf_destino != ctx_uf_destino:
+                return False
+
+        if fiscal_tipo_entidade:
+            if not ctx_tipo_entidade:
+                return False
+            if ctx_tipo_entidade == "AM":
+                return True
+            if fiscal_tipo_entidade == "AM":
+                return True
+            if fiscal_tipo_entidade != ctx_tipo_entidade:
+                return False
+
+        return True
+    
+    def _pick_best(self, fiscals, uf_origem=None, uf_destino=None, tipo_entidade=None):
+        best = None
+        best_score = -1
+        for fiscal in fiscals:
+            if not self._match_contexto(fiscal, uf_origem=uf_origem, uf_destino=uf_destino, tipo_entidade=tipo_entidade):
+                continue
+            score = 0
+            if (getattr(fiscal, "uf_origem", None) or "").strip():
+                score += 1
+            if (getattr(fiscal, "uf_destino", None) or "").strip():
+                score += 1
+            if (getattr(fiscal, "tipo_entidade", None) or "").strip():
+                score += 1
+            if score > best_score:
+                best = fiscal
+                best_score = score
+        return best
+
+    def resolver(self, produto, ncm, cfop, uf_origem=None, uf_destino=None, tipo_entidade=None):
 
         if produto:
             try:
@@ -20,14 +70,14 @@ class FiscalPadraoResolver:
             except Exception:
                 fiscal = None
 
-            if fiscal:
+            if fiscal and self._match_contexto(fiscal, uf_origem=uf_origem, uf_destino=uf_destino, tipo_entidade=tipo_entidade):
                 return fiscal, "PRODUTO"
 
             fiscal = self._qs(
                 ProdutoFiscalPadrao
             ).filter(produto_id=produto.pk).first()
 
-            if fiscal:
+            if fiscal and self._match_contexto(fiscal, uf_origem=uf_origem, uf_destino=uf_destino, tipo_entidade=tipo_entidade):
                 return fiscal, "PRODUTO"
 
         if cfop:
@@ -36,29 +86,19 @@ class FiscalPadraoResolver:
             except Exception:
                 fiscal = None
 
-            if fiscal:
+            if fiscal and self._match_contexto(fiscal, uf_origem=uf_origem, uf_destino=uf_destino, tipo_entidade=tipo_entidade):
                 return fiscal, "CFOP"
 
             fiscal = self._qs(
                 CFOPFiscalPadrao
             ).filter(cfop_id=cfop.pk).first()
 
-            if fiscal:
+            if fiscal and self._match_contexto(fiscal, uf_origem=uf_origem, uf_destino=uf_destino, tipo_entidade=tipo_entidade):
                 return fiscal, "CFOP"
 
         if ncm:
-            try:
-                fiscal = getattr(ncm, "fiscal", None)
-            except Exception:
-                fiscal = None
-
-            if fiscal:
-                return fiscal, "NCM"
-
-            fiscal = self._qs(
-                NcmFiscalPadrao
-            ).filter(ncm_id=ncm.pk).first()
-
+            fiscals = self._qs(NcmFiscalPadrao).filter(ncm_id=ncm.pk)
+            fiscal = self._pick_best(fiscals, uf_origem=uf_origem, uf_destino=uf_destino, tipo_entidade=tipo_entidade)
             if fiscal:
                 return fiscal, "NCM"
 

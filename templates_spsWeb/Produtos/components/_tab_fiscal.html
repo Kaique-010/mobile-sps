@@ -18,6 +18,21 @@
     </div>
   </div>
 
+  <div class="row mb-4">
+    <div class="col-md-4">
+      <label for="{{ fiscal_form.uf_origem.id_for_label }}">UF Origem</label>
+      {{ fiscal_form.uf_origem }}
+    </div>
+    <div class="col-md-4">
+      <label for="{{ fiscal_form.uf_destino.id_for_label }}">UF Destino</label>
+      {{ fiscal_form.uf_destino }}
+    </div>
+    <div class="col-md-4">
+      <label for="{{ fiscal_form.tipo_entidade.id_for_label }}">Tipo Entidade</label>
+      {{ fiscal_form.tipo_entidade }}
+    </div>
+  </div>
+
   <div class="row">
     <div class="col-md-6">
       <h6 class="text-primary border-bottom pb-2">ICMS</h6>

@@ -182,11 +182,13 @@ class NCM_CFOP_DIF(models.Model):
         return f"Diferencial {self.ncm.ncm_codi} / {self.cfop.cfop_codi}"
 
 
-
-
 class FiscalPadraoBase(models.Model):
     class Meta:
         abstract = True
+
+    uf_origem = models.CharField(max_length=2, null=True, blank=True)
+    uf_destino = models.CharField(max_length=2, null=True, blank=True)
+    tipo_entidade = models.CharField(max_length=2, null=True, blank=True)
 
     # CSTs
     cst_icms = models.CharField(max_length=3, null=True, blank=True)
@@ -212,7 +214,8 @@ class FiscalPadraoBase(models.Model):
                 resultado.aliquotas[tributo] = v
 
 class NcmFiscalPadrao(FiscalPadraoBase):
-    ncm = models.OneToOneField(Ncm, on_delete=models.CASCADE, related_name="fiscal", db_constraint=False)
+    ncm = models.ForeignKey(Ncm, on_delete=models.CASCADE, related_name="fiscal", db_constraint=False)
+    cfop = models.CharField(max_length=4, null=True, blank=True)
 
 
     class Meta:

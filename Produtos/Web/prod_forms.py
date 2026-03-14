@@ -9,6 +9,7 @@ class ProdutoFiscalPadraoForm(forms.ModelForm):
     class Meta:
         model = ProdutoFiscalPadrao
         fields = [
+            'uf_origem', 'uf_destino', 'tipo_entidade',
             'cst_icms', 'aliq_icms',
             'cst_ipi', 'aliq_ipi',
             'cst_pis', 'aliq_pis',
@@ -17,6 +18,9 @@ class ProdutoFiscalPadraoForm(forms.ModelForm):
             'cst_ibs', 'aliq_ibs',
         ]
         widgets = {
+            'uf_origem': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'UF Origem (ex: SP)', 'maxlength': 2}),
+            'uf_destino': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'UF Destino (ex: RJ)', 'maxlength': 2}),
+            'tipo_entidade': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Tipo Entidade (ex: CL/FO/AM)', 'maxlength': 2}),
             'cst_icms': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'CST ICMS'}),
             'aliq_icms': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Aliq ICMS'}),
             'cst_ipi': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'CST IPI'}),

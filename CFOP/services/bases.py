@@ -26,8 +26,8 @@ class FiscalContexto:
     regime: str
     uf_origem: str
     uf_destino: str
-
     produto: Produtos
+    tipo_entidade: Optional[str] = None
 
     cfop: Optional[CFOP] = None
     ncm: Optional[Ncm] = None

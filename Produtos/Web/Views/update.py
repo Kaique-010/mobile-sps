@@ -85,7 +85,7 @@ class NcmFiscalPadraoUpdateView(DBAndSlugMixin, UpdateView):
         obj = super().get_object(queryset=queryset)
         try:
             from core.utils import get_db_from_slug
-            ncm_db = get_db_from_slug('savexml1') or 'save1'
+            ncm_db = get_db_from_slug(self.slug) or self.db_alias
             ncm_obj = Ncm.objects.using(ncm_db).filter(pk=getattr(obj, "ncm_id", None)).first()
             if ncm_obj is not None:
                 try:
@@ -106,5 +106,5 @@ class NcmFiscalPadraoUpdateView(DBAndSlugMixin, UpdateView):
         kwargs['cst_choices'] = self._get_cst_choices()
         kwargs['database'] = self.db_alias
         from core.utils import get_db_from_slug
-        kwargs['ncm_database'] = get_db_from_slug('savexml1') or 'save1'
+        kwargs['ncm_database'] = get_db_from_slug(self.slug) or self.db_alias
         return kwargs

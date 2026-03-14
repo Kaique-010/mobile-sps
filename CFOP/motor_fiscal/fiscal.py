@@ -61,8 +61,15 @@ class FiscalEngine:
     def obter_icms_data(self, uf_origem, uf_destino, empresa_id=None):
         return self.icms_resolver.resolver(uf_origem, uf_destino, empresa_id)
     
-    def resolver_fiscal_padrao(self, produto, ncm, cfop):
-        return self.fiscal_padrao_resolver.resolver(produto, ncm, cfop)
+    def resolver_fiscal_padrao(self, produto, ncm, cfop, uf_origem=None, uf_destino=None, tipo_entidade=None):
+        return self.fiscal_padrao_resolver.resolver(
+            produto,
+            ncm,
+            cfop,
+            uf_origem=uf_origem,
+            uf_destino=uf_destino,
+            tipo_entidade=tipo_entidade,
+        )
     
     def aplicar_overrides_dif(self, ncm, cfop, aliquotas, icms_data):
         if not ncm or not cfop:
@@ -137,7 +144,14 @@ class FiscalEngine:
 
         aliquotas, icms_data = self.aplicar_overrides_dif(ncm, cfop, aliquotas, icms_data)
 
-        fiscal_padrao, fonte = self.resolver_fiscal_padrao(ctx.produto, ncm, cfop)
+        fiscal_padrao, fonte = self.resolver_fiscal_padrao(
+            ctx.produto,
+            ncm,
+            cfop,
+            uf_origem=ctx.uf_origem,
+            uf_destino=ctx.uf_destino,
+            tipo_entidade=getattr(ctx, "tipo_entidade", None),
+        )
         if not fonte:
             if ncm:
                 fonte = "NCM"

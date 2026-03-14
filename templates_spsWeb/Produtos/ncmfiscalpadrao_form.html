@@ -34,6 +34,25 @@
             <datalist id="ncm-codes"></datalist>
             <div id="ncm-suggest" class="list-group mt-1" style="max-height:200px; overflow:auto;"></div>
           </div>
+          <div class="col-md-6">
+            <label for="{{ form.cfop.id_for_label }}">CFOP (Opcional)</label>
+            {{ form.cfop }}
+          </div>
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-md-4">
+            <label for="{{ form.uf_origem.id_for_label }}">UF Origem</label>
+            {{ form.uf_origem }}
+          </div>
+          <div class="col-md-4">
+            <label for="{{ form.uf_destino.id_for_label }}">UF Destino</label>
+            {{ form.uf_destino }}
+          </div>
+          <div class="col-md-4">
+            <label for="{{ form.tipo_entidade.id_for_label }}">Tipo Entidade</label>
+            {{ form.tipo_entidade }}
+          </div>
         </div>
 
         <div class="row">

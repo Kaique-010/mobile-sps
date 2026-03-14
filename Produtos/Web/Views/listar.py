@@ -12,8 +12,8 @@ class NcmListView(DBAndSlugMixin, ListView):
     context_object_name = "itens"
 
     def get_queryset(self):
-        db_alias = get_db_from_slug('savexml1') or 'save1'
-        qs = Ncm.objects.using(db_alias).all()
+        ncm_db = get_db_from_slug(self.slug) or self.db_alias
+        qs = Ncm.objects.using(ncm_db).all()
         q = (self.request.GET.get("q") or "").strip()
         if q:
             from django.db.models import Q
@@ -49,7 +49,7 @@ class NcmFiscalPadraoListView(DBAndSlugMixin, ListView):
         
         if itens:
             ncm_ids = [item.ncm_id for item in itens]
-            ncm_db = get_db_from_slug('savexml1') or 'save1'
+            ncm_db = get_db_from_slug(self.slug) or self.db_alias
             # Fetch NCMs
             ncms = Ncm.objects.using(ncm_db).filter(pk__in=ncm_ids)
             ncm_map = {ncm.pk: ncm for ncm in ncms}
