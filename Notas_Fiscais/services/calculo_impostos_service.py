@@ -93,6 +93,7 @@ class CalculoImpostosService:
             filial_id=nota.filial,
             banco=self.banco,
         )
+        uf_origem = (uf_origem or "").strip().upper()
         
         regime = get_regime(
             empresa_id=nota.empresa,
@@ -100,7 +101,9 @@ class CalculoImpostosService:
             banco=self.banco,
         )
 
-        uf_destino = (nota.destinatario.enti_esta or "").strip()
+        uf_destino = (getattr(nota.destinatario, "enti_esta", None) or "").strip().upper()
+        if not uf_destino:
+            uf_destino = uf_origem
 
         debug_data["nota"]["uf_origem"] = uf_origem
         debug_data["nota"]["uf_destino"] = uf_destino
@@ -305,47 +308,51 @@ class CalculoImpostosService:
 
         ncm_obj = motor.obter_ncm(item.produto)
         
-        # Resolve CFOP (Override ou Automático)
-        cfop_obj = None
-        if item.cfop:
-             cfop_obj = CFOP.objects.using(self.banco).select_related("fiscal").filter(
-                 cfop_codi=item.cfop, cfop_empr=nota.empresa
-             ).first()
-        else:
-            cfop_por_ncm = None
-            if ncm_obj:
-                fiscals_ncm = NcmFiscalPadrao.objects.using(self.banco).filter(ncm_id=ncm_obj.pk)
-                best = None
-                best_score = -1
-                for fiscal in fiscals_ncm:
-                    if not _match_padrao(fiscal):
-                        continue
-                    if not getattr(fiscal, "cfop", None):
-                        continue
-                    score = 0
-                    if (getattr(fiscal, "uf_origem", None) or "").strip():
-                        score += 1
-                    if (getattr(fiscal, "uf_destino", None) or "").strip():
-                        score += 1
-                    if (getattr(fiscal, "tipo_entidade", None) or "").strip():
-                        score += 1
-                    if score > best_score:
-                        best = fiscal
-                        best_score = score
+        cfop_por_ncm = None
+        if ncm_obj:
+            fiscals_ncm = NcmFiscalPadrao.objects.using(self.banco).filter(ncm_id=ncm_obj.pk)
+            best = None
+            best_score = -1
+            for fiscal in fiscals_ncm:
+                if not _match_padrao(fiscal):
+                    continue
+                if not getattr(fiscal, "cfop", None):
+                    continue
+                score = 0
+                if (getattr(fiscal, "uf_origem", None) or "").strip():
+                    score += 1
+                if (getattr(fiscal, "uf_destino", None) or "").strip():
+                    score += 1
+                if (getattr(fiscal, "tipo_entidade", None) or "").strip():
+                    score += 1
+                if score > best_score:
+                    best = fiscal
+                    best_score = score
 
-                if best and getattr(best, "cfop", None):
-                    cfop_code = str(getattr(best, "cfop") or "").split(" - ")[0].strip()
-                    cfop_code = "".join(ch for ch in cfop_code if ch.isdigit())
-                    if len(cfop_code) == 4:
-                        cfop_por_ncm = CFOP.objects.using(self.banco).select_related("fiscal").filter(
-                            cfop_codi=cfop_code, cfop_empr=nota.empresa
-                        ).first()
-                        if cfop_por_ncm is None:
-                            cfop_por_ncm = CFOP.objects.using(self.banco).select_related("fiscal").filter(
-                                cfop_codi=cfop_code
-                            ).first()
+            if best and getattr(best, "cfop", None):
+                cfop_code = str(getattr(best, "cfop") or "").strip()
+                cfop_code = "".join(ch for ch in cfop_code if ch.isdigit())
+                if len(cfop_code) == 4:
+                    cfop_por_ncm = CFOP.objects.using(self.banco).select_related("fiscal").filter(
+                        cfop_codi=cfop_code, cfop_empr=nota.empresa
+                    ).first() or CFOP.objects.using(self.banco).select_related("fiscal").filter(
+                        cfop_codi=cfop_code
+                    ).first()
 
-            cfop_obj = cfop_por_ncm or motor.resolver_cfop(tipo_oper, uf_origem, uf_destino)
+        cfop_obj = cfop_por_ncm
+        if not cfop_obj:
+            cfop_codigo_item = str(getattr(item, "cfop", "") or "").strip()
+            if cfop_codigo_item:
+                cfop_obj = CFOP.objects.using(self.banco).select_related("fiscal").filter(
+                    cfop_codi=cfop_codigo_item, cfop_empr=nota.empresa
+                ).first()
+                if cfop_obj is None:
+                    cfop_obj = CFOP.objects.using(self.banco).select_related("fiscal").filter(
+                        cfop_codi=cfop_codigo_item
+                    ).first()
+
+        if not cfop_obj:
+            cfop_obj = motor.resolver_cfop(tipo_oper, uf_origem, uf_destino)
              
         # Aplica Regras de Incidência (Suframa, Isenções, etc)
         cfop_obj = ResolverIncidencia.aplicar_regras_nota(nota, cfop_obj)

@@ -361,14 +361,28 @@
         mountAutocomplete(prodText, (q) => `/web/${slug}/notas-fiscais/produtos-autocomplete/?q=${encodeURIComponent(q)}`, async (item) => {
           prodText.value = item.label; prodField.value = item.value;
           try {
-            const resp = await authFetch(`/web/${slug}/notas-fiscais/produto-detalhe/${item.value}/`);
+            const destField = document.querySelector('[name="destinatario"]');
+            const destId = (destField?.value || '').trim();
+            const resp = await authFetch(`/web/${slug}/notas-fiscais/produto-detalhe/${item.value}/?destinatario=${encodeURIComponent(destId)}`);
             const data = await resp.json();
             const ncm = row.querySelector('[name$="-ncm"]');
             const un = row.querySelector('[name$="-quantidade"]');
             const unit = row.querySelector('[name$="-unitario"]');
+            const cfop = row.querySelector('[name$="-cfop"]');
+            const cstIcms = row.querySelector('[name$="-cst_icms"]');
+            const cstPis = row.querySelector('[name$="-cst_pis"]');
+            const cstCofins = row.querySelector('[name$="-cst_cofins"]');
+            const cstCbs = row.querySelector('[name$="-cst_cbs"]');
+            const cstIbs = row.querySelector('[name$="-cst_ibs"]');
             if (ncm && data?.prod_ncm) ncm.value = data.prod_ncm;
             const preco = data?.prod_preco_vista || data?.prod_preco_normal || 0;
             if (unit && Number(preco) > 0) unit.value = Number(preco).toFixed(2);
+            if (cfop && !String(cfop.value || '').trim() && data?.cfop_sugerido) cfop.value = String(data.cfop_sugerido);
+            if (cstIcms && !String(cstIcms.value || '').trim() && data?.cst_icms_sugerido != null) cstIcms.value = String(data.cst_icms_sugerido);
+            if (cstPis && !String(cstPis.value || '').trim() && data?.cst_pis_sugerido != null) cstPis.value = String(data.cst_pis_sugerido);
+            if (cstCofins && !String(cstCofins.value || '').trim() && data?.cst_cofins_sugerido != null) cstCofins.value = String(data.cst_cofins_sugerido);
+            if (cstCbs && !String(cstCbs.value || '').trim() && data?.cst_cbs_sugerido != null) cstCbs.value = String(data.cst_cbs_sugerido);
+            if (cstIbs && !String(cstIbs.value || '').trim() && data?.cst_ibs_sugerido != null) cstIbs.value = String(data.cst_ibs_sugerido);
           } catch { }
         }, listEl);
       }

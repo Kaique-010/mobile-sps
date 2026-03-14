@@ -14,6 +14,10 @@ class IBSCBSCalculator(BaseCalculator):
                 exige_cbs = True
             if getattr(ctx.fiscal_padrao, "aliq_ibs", None) is not None:
                 exige_ibs = True
+            if getattr(ctx.fiscal_padrao, "cst_cbs", None):
+                exige_cbs = True
+            if getattr(ctx.fiscal_padrao, "cst_ibs", None):
+                exige_ibs = True
 
         aliq_cbs = ctx.aliquotas_base.get("cbs") or Decimal("0")
         aliq_ibs = ctx.aliquotas_base.get("ibs") or Decimal("0")

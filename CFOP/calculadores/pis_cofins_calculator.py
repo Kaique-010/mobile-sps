@@ -7,7 +7,16 @@ class PISCOFINSCalculator(BaseCalculator):
 
     def calcular(self, ctx, base):
 
-        if not ctx.cfop or not ctx.cfop.cfop_exig_pis_cofins:
+        exige_pis_cofins = bool(ctx.cfop and getattr(ctx.cfop, "cfop_exig_pis_cofins", False))
+        if getattr(ctx, "fiscal_padrao", None):
+            if getattr(ctx.fiscal_padrao, "aliq_pis", None) is not None:
+                exige_pis_cofins = True
+            if getattr(ctx.fiscal_padrao, "aliq_cofins", None) is not None:
+                exige_pis_cofins = True
+            if getattr(ctx.fiscal_padrao, "cst_pis", None) or getattr(ctx.fiscal_padrao, "cst_cofins", None):
+                exige_pis_cofins = True
+
+        if not exige_pis_cofins:
 
             return {
                 "pis": {"base": None, "aliquota": None, "valor": None, "cst": None},

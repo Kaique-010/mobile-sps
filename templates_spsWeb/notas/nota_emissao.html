@@ -121,7 +121,7 @@
         </div>
         <div class="col-md-3">
           <label class="form-label">CFOP</label>
-          <input type="text" class="form-control" name="item_cfop" id="item-cfop" value="5102" />
+          <input type="text" class="form-control" name="item_cfop" id="item-cfop" value="" />
         </div>
       </div>
       <div class="d-flex justify-content-end gap-2 mt-2">
@@ -387,16 +387,29 @@
     const ncmInput = document.getElementById('item-ncm');
     const unInput = document.getElementById('item-unidade');
     const unitInput = document.getElementById('item-unitario');
+    const itemCfop = document.getElementById('item-cfop');
     mountAutocomplete(prodInput, (q) => `/web/${slug}/notas-fiscais/produtos-autocomplete/?q=${encodeURIComponent(q)}`, async (item) => {
       prodInput.value = item.label;
       prodCodigoHidden.value = item.value;
       try {
-        const resp = await authFetch(`/web/${slug}/notas-fiscais/produto-detalhe/${item.value}/`);
+        const destId = (document.getElementById('destinatario-id')?.value || '').trim();
+        const resp = await authFetch(`/web/${slug}/notas-fiscais/produto-detalhe/${item.value}/?destinatario=${encodeURIComponent(destId)}`);
         const data = await resp.json();
         ncmInput.value = data?.prod_ncm || ncmInput.value;
         unInput.value = data?.prod_unid || unInput.value;
         const preco = data?.prod_preco_vista || data?.prod_preco_normal || 0;
         if (Number(preco) > 0) unitInput.value = Number(preco).toFixed(2);
+        if (itemCfop && !String(itemCfop.value || '').trim() && data?.cfop_sugerido) itemCfop.value = String(data.cfop_sugerido);
+        const cstIcms = document.getElementById('cst-icms');
+        const cstPis = document.getElementById('cst-pis');
+        const cstCof = document.getElementById('cst-cofins');
+        const cstIbs = document.getElementById('cst-ibs');
+        const cstCbs = document.getElementById('cst-cbs');
+        if (cstIcms && !String(cstIcms.value || '').trim() && data?.cst_icms_sugerido != null) cstIcms.value = String(data.cst_icms_sugerido);
+        if (cstPis && !String(cstPis.value || '').trim() && data?.cst_pis_sugerido != null) cstPis.value = String(data.cst_pis_sugerido);
+        if (cstCof && !String(cstCof.value || '').trim() && data?.cst_cofins_sugerido != null) cstCof.value = String(data.cst_cofins_sugerido);
+        if (cstCbs && !String(cstCbs.value || '').trim() && data?.cst_cbs_sugerido != null) cstCbs.value = String(data.cst_cbs_sugerido);
+        if (cstIbs && !String(cstIbs.value || '').trim() && data?.cst_ibs_sugerido != null) cstIbs.value = String(data.cst_ibs_sugerido);
       } catch { }
     });
 
@@ -563,6 +576,8 @@
         if (items[idx]) {
           items[idx] = {
             ...items[idx],
+            cfop: (itBackend.cfop || items[idx].cfop || '').trim(),
+            ncm: (itBackend.ncm || items[idx].ncm || '').trim(),
             fonte_tributacao: itBackend.fonte_tributacao || items[idx].fonte_tributacao,
             debug_calculo: debugMap[String(itBackend.id)] || items[idx].debug_calculo,
           };
@@ -642,7 +657,7 @@
       const codigo = document.getElementById('produto-codigo').value || '';
       const descricao = document.getElementById('prod-autocomplete').value || '';
       const ncm = document.getElementById('item-ncm').value || '00000000';
-      const cfop = document.getElementById('item-cfop').value || '5102';
+      const cfop = (document.getElementById('item-cfop').value || '').trim();
       const unidade = document.getElementById('item-unidade').value || 'UN';
       const quantidade = Number(document.getElementById('item-quantidade').value || 0);
       const unitario = Number(document.getElementById('item-unitario').value || 0);
@@ -799,12 +814,12 @@
           quantidade: Number(it.quantidade || 0),
           unitario: Number(it.unitario || 0),
           desconto: Number(it.desconto || 0),
-          cfop: it.cfop || '5102',
+          cfop: (it.cfop || '').trim(),
           ncm: it.ncm || '00000000',
           cest: '',
-          cst_icms: document.getElementById('cst-icms').value || '102',
-          cst_pis: document.getElementById('cst-pis').value || '49',
-          cst_cofins: document.getElementById('cst-cofins').value || '49',
+          cst_icms: (document.getElementById('cst-icms').value || '').trim(),
+          cst_pis: (document.getElementById('cst-pis').value || '').trim(),
+          cst_cofins: (document.getElementById('cst-cofins').value || '').trim(),
           cst_ibs: document.getElementById('cst-ibs').value || '',
           cst_cbs: document.getElementById('cst-cbs').value || '',
         })),

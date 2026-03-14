@@ -7,7 +7,14 @@ class IPICalculator(BaseCalculator):
 
     def calcular(self, ctx, base):
 
-        if not ctx.cfop or not ctx.cfop.cfop_exig_ipi:
+        exige_ipi = bool(ctx.cfop and getattr(ctx.cfop, "cfop_exig_ipi", False))
+        if getattr(ctx, "fiscal_padrao", None):
+            if getattr(ctx.fiscal_padrao, "aliq_ipi", None) is not None:
+                exige_ipi = True
+            if getattr(ctx.fiscal_padrao, "cst_ipi", None):
+                exige_ipi = True
+
+        if not exige_ipi:
 
             return {
                 "base": None,
@@ -21,7 +28,7 @@ class IPICalculator(BaseCalculator):
         if ctx.fiscal_padrao and ctx.fiscal_padrao.aliq_ipi is not None:
             aliq = ctx.fiscal_padrao.aliq_ipi
 
-        if not aliq:
+        if aliq is None:
 
             return {
                 "base": base,
@@ -30,7 +37,7 @@ class IPICalculator(BaseCalculator):
                 "cst": CSTResolver.ipi(ctx)
             }
 
-        valor = self._d(base * aliq / self.D100)
+        valor = self._d(base * aliq / self.D100) if aliq else Decimal("0")
 
         return {
             "base": base,

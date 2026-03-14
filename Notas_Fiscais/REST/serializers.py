@@ -130,12 +130,12 @@ class NotaItemCreateSerializer(serializers.Serializer):
     quantidade = serializers.DecimalField(max_digits=15, decimal_places=4)
     unitario = serializers.DecimalField(max_digits=15, decimal_places=4)
     desconto = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=0)
-    cfop = serializers.CharField()
-    ncm = serializers.CharField()
+    cfop = serializers.CharField(required=False, allow_blank=True, default="")
+    ncm = serializers.CharField(required=False, allow_blank=True, default="")
     cest = serializers.CharField(required=False, allow_null=True, allow_blank=True)
-    cst_icms = serializers.CharField()
-    cst_pis = serializers.CharField()
-    cst_cofins = serializers.CharField()
+    cst_icms = serializers.CharField(required=False, allow_blank=True, default="")
+    cst_pis = serializers.CharField(required=False, allow_blank=True, default="")
+    cst_cofins = serializers.CharField(required=False, allow_blank=True, default="")
 
 
 class NotaItemImpostoCreateSerializer(serializers.Serializer):
