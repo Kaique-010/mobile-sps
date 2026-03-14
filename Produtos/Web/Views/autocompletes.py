@@ -1,6 +1,6 @@
 from django.http import JsonResponse
 from django.db.models import Q
-from core.utils import get_licenca_db_config, get_db_from_slug
+from core.utils import get_licenca_db_config, get_ncm_master_db
 
 from CFOP.models import CFOP as CFOPModel, NCM_CFOP_DIF
 from ...models import (
@@ -67,7 +67,8 @@ def autocomplete_marcas(request, slug=None):
 
 
 def autocomplete_ncms(request, slug=None):
-    banco = get_db_from_slug('savexml1') or 'save1'
+    banco_tenant = get_licenca_db_config(request) or "default"
+    banco = get_ncm_master_db(banco_tenant)
     term = (request.GET.get('term') or request.GET.get('q') or '').strip()
     qs = Ncm.objects.using(banco).all()
     if term:
@@ -94,7 +95,38 @@ def ncm_fiscal_padrao(request, slug=None):
     resp = {'ncm': ncm_code, 'empresa': empresa_id, 'aliquotas': {}, 'override': {}}
     if not ncm_code:
         return JsonResponse(resp)
-    ncm = Ncm.objects.using(banco).filter(ncm_codi=ncm_code).first()
+    ncm_db = get_ncm_master_db(banco)
+    raw = str(ncm_code).strip()
+    digits = ''.join(ch for ch in raw if ch.isdigit())
+    candidates = []
+    for c in (raw, digits):
+        c = (c or '').strip()
+        if c and c not in candidates:
+            candidates.append(c)
+    if digits and len(digits) == 8:
+        dotted = f"{digits[:4]}.{digits[4:6]}.{digits[6:]}"
+        if dotted not in candidates:
+            candidates.insert(1, dotted)
+    ncm = None
+    for code in candidates:
+        ncm = Ncm.objects.using(ncm_db).filter(ncm_codi=code).first()
+        if ncm:
+            break
+    if not ncm and digits:
+        from django.db.models import F, Value
+        from django.db.models.functions import Replace
+        ncm = (
+            Ncm.objects.using(ncm_db)
+            .annotate(
+                _ncm_norm=Replace(
+                    Replace(F("ncm_codi"), Value("."), Value("")),
+                    Value(" "),
+                    Value(""),
+                )
+            )
+            .filter(_ncm_norm=digits)
+            .first()
+        )
     if ncm:
         from Produtos.models import NcmFiscalPadrao as NcmFiscalPadraoModel
         qs = NcmFiscalPadraoModel.objects.using(banco).filter(nfiscalpadrao_ncm=ncm)

@@ -1,6 +1,6 @@
 from django.views.generic import ListView
 from django.contrib import messages
-from core.utils import get_db_from_slug
+from core.utils import get_ncm_master_db
 from Produtos.models import Ncm
 from CFOP.models import NcmFiscalPadrao
 from .web_views import DBAndSlugMixin
@@ -12,7 +12,7 @@ class NcmListView(DBAndSlugMixin, ListView):
     context_object_name = "itens"
 
     def get_queryset(self):
-        ncm_db = get_db_from_slug(self.slug) or self.db_alias
+        ncm_db = get_ncm_master_db(self.db_alias)
         qs = Ncm.objects.using(ncm_db).all()
         q = (self.request.GET.get("q") or "").strip()
         if q:
@@ -49,7 +49,7 @@ class NcmFiscalPadraoListView(DBAndSlugMixin, ListView):
         
         if itens:
             ncm_ids = [item.ncm_id for item in itens]
-            ncm_db = get_db_from_slug(self.slug) or self.db_alias
+            ncm_db = get_ncm_master_db(self.db_alias)
             # Fetch NCMs
             ncms = Ncm.objects.using(ncm_db).filter(pk__in=ncm_ids)
             ncm_map = {ncm.pk: ncm for ncm in ncms}

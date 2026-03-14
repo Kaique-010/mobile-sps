@@ -159,7 +159,7 @@ class NCMFiscalPadraoForm(forms.ModelForm):
             return None
             
         if isinstance(ncm_input, Ncm):
-            return ncm_input.pk
+            return ncm_input
             
         raw = str(ncm_input).split(' - ')[0].strip()
         digits = ''.join(ch for ch in raw if ch.isdigit())
@@ -191,19 +191,29 @@ class NCMFiscalPadraoForm(forms.ModelForm):
             if obj:
                 break
 
+        if not obj and digits:
+            from django.db.models import F, Value
+            from django.db.models.functions import Replace
+            for db_alias in search_dbs:
+                obj = (
+                    Ncm.objects.using(db_alias)
+                    .annotate(
+                        _ncm_norm=Replace(
+                            Replace(F("ncm_codi"), Value("."), Value("")),
+                            Value(" "),
+                            Value(""),
+                        )
+                    )
+                    .filter(_ncm_norm=digits)
+                    .first()
+                )
+                if obj:
+                    break
+
         if not obj:
             raise forms.ValidationError(f"NCM '{raw}' não encontrado.")
             
-        # Valida se já existe regra para este NCM
-        # A validação de unicidade deve ser feita no banco onde a regra será salva (self.database)
-        qs = NcmFiscalPadrao.objects.using(self.database).filter(ncm_id=obj.pk)
-        if self.instance and self.instance.pk:
-            qs = qs.exclude(pk=self.instance.pk)
-            
-        if qs.exists():
-            raise forms.ValidationError(f"Já existe uma regra fiscal padrão para o NCM {obj.pk}. Edite a regra existente.")
-
-        return obj.pk
+        return obj
 
     def _post_clean(self):
         opts = self._meta

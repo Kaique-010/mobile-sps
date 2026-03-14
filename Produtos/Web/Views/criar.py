@@ -84,8 +84,8 @@ class NcmFiscalPadraoCreateView(DBAndSlugMixin, CreateView):
         kwargs = super().get_form_kwargs()
         kwargs['cst_choices'] = self._get_cst_choices()
         kwargs['database'] = self.db_alias
-        from core.utils import get_db_from_slug
-        kwargs['ncm_database'] = get_db_from_slug(self.slug) or self.db_alias
+        from core.utils import get_ncm_master_db
+        kwargs['ncm_database'] = get_ncm_master_db(self.db_alias)
         return kwargs
 
 

@@ -57,6 +57,16 @@ def get_db_from_slug(slug):
 
     return slug
 
+
+def get_ncm_master_db(default_db: str = "default") -> str:
+    try:
+        return get_db_from_slug("save1")
+    except Exception:
+        try:
+            return get_db_from_slug("savexml1")
+        except Exception:
+            return default_db
+
 def get_licenca_db_config(request):
     try:
         parts = request.path.strip('/').split('/')
