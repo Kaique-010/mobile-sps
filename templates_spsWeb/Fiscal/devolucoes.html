@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Devoluções{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+            <h3 class="mb-1">Devoluções</h3>
+            <div class="text-body-secondary">Importar XML e gerar nota de devolução</div>
+        </div>
+        <button id="btn-recarregar" class="btn btn-outline-secondary" type="button">
+            <i class="bi bi-arrow-clockwise"></i> Recarregar
+        </button>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-12 col-lg-6">
+            <div class="card">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <div class="fw-semibold">Importar XML (NFe)</div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <label for="chave-input" class="form-label">Chave de acesso (44 dígitos)</label>
+                        <div class="input-group">
+                            <input id="chave-input" class="form-control"
+                                placeholder="00000000000000000000000000000000000000000000" />
+                            <button id="btn-buscar-chave" class="btn btn-outline-primary" type="button">
+                                <i class="bi bi-cloud-download"></i> Buscar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label for="xml-input" class="form-label">Cole aqui o XML completo</label>
+                        <textarea id="xml-input" class="form-control" rows="10"
+                            placeholder="&lt;nfeProc&gt;...&lt;/nfeProc&gt;"></textarea>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button id="btn-importar" class="btn btn-primary" type="button">
+                            <i class="bi bi-upload"></i> Importar
+                        </button>
+                        <button id="btn-limpar" class="btn btn-outline-secondary" type="button">Limpar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-6">
+            <div class="card">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <div class="fw-semibold">Documentos importados</div>
+                    <div class="text-body-secondary small" id="docs-count"></div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 80px;">ID</th>
+                                    <th>Chave</th>
+                                    <th style="width: 110px;">Tipo</th>
+                                    <th style="width: 150px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="docs-tbody">
+                                <tr>
+                                    <td colspan="4" class="text-center text-body-secondary py-4">Carregando...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-info mt-3 mb-0">
+                <div class="fw-semibold mb-1">Exemplo de fluxo</div>
+                <div class="small">
+                    1) Cole o XML e clique em Importar<br />
+                    2) Na lista, clique em Gerar devolução para criar a nota (finalidade 4)
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const slug = localStorage.getItem('slug') || '';
+        const access = localStorage.getItem('access') || '';
+        const empresa = localStorage.getItem('empresa_id') || '1';
+        const filial = localStorage.getItem('filial_id') || '1';
+
+        const $chave = document.getElementById('chave-input');
+        const $xml = document.getElementById('xml-input');
+        const $btnBuscarChave = document.getElementById('btn-buscar-chave');
+        const $btnImportar = document.getElementById('btn-importar');
+        const $btnLimpar = document.getElementById('btn-limpar');
+        const $btnRecarregar = document.getElementById('btn-recarregar');
+        const $tbody = document.getElementById('docs-tbody');
+        const $count = document.getElementById('docs-count');
+
+        const apiBase = slug ? `/api/${slug}/fiscal/nfe/` : '';
+
+        const authHeaders = () => ({
+            'Authorization': access ? `Bearer ${access}` : '',
+            'Content-Type': 'application/json',
+            'X-Empresa': empresa,
+            'X-Filial': filial
+        });
+
+        const toast = (msg, variant) => {
+            try {
+                window.showToast(msg, { variant: variant || 'success', delay: 3500 });
+            } catch (e) { }
+        };
+
+        const renderEmpty = (text) => {
+            $tbody.innerHTML = `<tr><td colspan="4" class="text-center text-body-secondary py-4">${text}</td></tr>`;
+        };
+
+        const fetchDocs = async () => {
+            if (!apiBase) {
+                renderEmpty('Necessário estar logado.');
+                return;
+            }
+            renderEmpty('Carregando...');
+            try {
+                const url = `${apiBase}documentos/?empresa=${encodeURIComponent(empresa)}&filial=${encodeURIComponent(filial)}`;
+                const resp = await fetch(url, { headers: authHeaders() });
+                if (!resp.ok) {
+                    const txt = await resp.text();
+                    renderEmpty('Falha ao carregar.');
+                    toast(`Erro ao listar documentos: ${txt}`, 'danger');
+                    return;
+                }
+                const data = await resp.json();
+                const docs = Array.isArray(data) ? data : [];
+                $count.textContent = `${docs.length} itens`;
+                if (!docs.length) {
+                    renderEmpty('Nenhum documento importado.');
+                    return;
+                }
+                $tbody.innerHTML = docs.map(d => `
+                    <tr>
+                        <td class="text-body-secondary">${d.id}</td>
+                        <td><div class="text-truncate" style="max-width: 320px;" title="${d.chave || ''}">${d.chave || '-'}</div></td>
+                        <td><span class="badge text-bg-secondary">${(d.tipo || '-')}</span></td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-primary btn-gerar" data-doc-id="${d.id}">
+                                <i class="bi bi-reply-all"></i> Gerar devolução
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                renderEmpty('Falha ao carregar.');
+                toast(`Erro ao listar documentos: ${e}`, 'danger');
+            }
+        };
+
+        const buscarPorChave = async () => {
+            const chave = String(($chave && $chave.value) || '').trim();
+            if (!chave) {
+                toast('Informe a chave de acesso.', 'warning');
+                return;
+            }
+            try {
+                if ($btnBuscarChave) $btnBuscarChave.disabled = true;
+                const resp = await fetch(`${apiBase}importar/`, {
+                    method: 'POST',
+                    headers: authHeaders(),
+                    body: JSON.stringify({ empresa: Number(empresa), filial: Number(filial), chave })
+                });
+                const data = await resp.json().catch(() => null);
+                if (!resp.ok) {
+                    toast(data?.detail || 'Falha ao buscar XML pela chave.', 'danger');
+                    return;
+                }
+                toast(`Importado: ${data?.chave || ''}`, 'success');
+                await fetchDocs();
+            } finally {
+                if ($btnBuscarChave) $btnBuscarChave.disabled = false;
+            }
+        };
+
+        const importar = async () => {
+            const xml = String(($xml && $xml.value) || '').trim();
+            if (!xml) {
+                toast('Informe um XML.', 'warning');
+                return;
+            }
+            try {
+                $btnImportar.disabled = true;
+                const resp = await fetch(`${apiBase}importar/`, {
+                    method: 'POST',
+                    headers: authHeaders(),
+                    body: JSON.stringify({ empresa: Number(empresa), filial: Number(filial), xml })
+                });
+                const data = await resp.json().catch(() => null);
+                if (!resp.ok) {
+                    toast(data?.detail || 'Falha ao importar XML.', 'danger');
+                    return;
+                }
+                toast(`Importado: ${data?.chave || ''}`, 'success');
+                await fetchDocs();
+            } finally {
+                $btnImportar.disabled = false;
+            }
+        };
+
+        const gerarDevolucao = async (documentoId) => {
+            try {
+                const resp = await fetch(`${apiBase}devolucao/`, {
+                    method: 'POST',
+                    headers: authHeaders(),
+                    body: JSON.stringify({
+                        empresa: Number(empresa),
+                        filial: Number(filial),
+                        documento_id: Number(documentoId),
+                        emitir: false
+                    })
+                });
+                const data = await resp.json().catch(() => null);
+                if (!resp.ok) {
+                    toast(data?.detail || 'Falha ao gerar devolução.', 'danger');
+                    return;
+                }
+                toast(`Devolução criada. Nota ID: ${data?.nota_id}`, 'success');
+            } catch (e) {
+                toast(`Falha ao gerar devolução: ${e}`, 'danger');
+            }
+        };
+
+        document.addEventListener('click', (ev) => {
+            const btn = ev.target && ev.target.closest && ev.target.closest('.btn-gerar');
+            if (!btn) return;
+            const docId = btn.getAttribute('data-doc-id');
+            if (!docId) return;
+            btn.disabled = true;
+            gerarDevolucao(docId).finally(() => { btn.disabled = false; });
+        });
+
+        if ($btnBuscarChave) $btnBuscarChave.addEventListener('click', buscarPorChave);
+        if ($btnImportar) $btnImportar.addEventListener('click', importar);
+        if ($btnLimpar) $btnLimpar.addEventListener('click', () => { if ($xml) $xml.value = ''; });
+        if ($btnRecarregar) $btnRecarregar.addEventListener('click', fetchDocs);
+
+        fetchDocs();
+    })();
+</script>
+{% endblock %}

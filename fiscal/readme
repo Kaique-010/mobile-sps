@@ -1,0 +1,160 @@
+fiscal/
+
+├── models/
+│   └── nfe_documento.py
+│
+├── parser/
+│   └── nfe_xml_parser.py
+│
+├── normalizers/
+│   └── nfe_normalizer.py
+│
+├── engines/
+│   ├── devolucao_engine.py
+│   └── impostos_engine.py
+│
+├── rules/
+│   ├── cfop_rules.py
+│   ├── icms_rules.py
+│   └── ipi_rules.py
+│
+├── services/
+│   ├── importar_xml_service.py
+│   └── gerar_devolucao_service.py
+│
+├── repositories/
+│   └── nfe_repository.py
+│
+└── utils/
+    └── xml_utils.py
+
+
+
+
+Camada de API.
+
+api/
+
+├── views/
+│   └── nfe_views.py
+│
+├── serializers/
+│   └── nfe_serializers.py
+│
+└── urls.py
+
+Modelo principal.
+
+models/
+
+└── NFeDocumento
+
+Fluxo técnico.
+
+XML recebido
+     ↓
+importar_xml_service
+     ↓
+nfe_xml_parser
+     ↓
+nfe_normalizer
+     ↓
+NFeDocumento(xml + json)
+
+Devolução.
+
+usuario clica devolver
+        ↓
+gerar_devolucao_service
+        ↓
+devolucao_engine
+        ↓
+impostos_engine
+        ↓
+gerar nova NF
+
+Estrutura do banco.
+
+NFeDocumento
+ ├─ chave
+ ├─ tipo (entrada/saida)
+ ├─ xml_original
+ ├─ json_normalizado
+ └─ created_at
+
+Resultado.
+
+XML guardado para auditoria.
+
+JSON pronto para regra fiscal.
+
+Motor fiscal reutilizável.
+
+Parser isolado.
+
+Escala bem para:
+
+importação automática
+devolução
+estorno
+auditoria fiscal
+análise de impostos
+
+
+models
+
+class NFeDocumento(models.Model):
+
+    chave = models.CharField(max_length=44, unique=True)
+
+    tipo = models.CharField(
+        max_length=10,
+        choices=[
+            ("entrada", "Entrada"),
+            ("saida", "Saída")
+        ]
+    )
+
+    xml_original = models.TextField()
+
+    xml_normalizado = models.JSONField()
+
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+
+
+
+XML bruto
+↓
+parser
+↓
+normalização
+↓
+salvar JSON
+
+
+
+{
+  "emitente": {
+    "cnpj": "...",
+    "nome": "..."
+  },
+  "destinatario": {
+    "cnpj": "...",
+    "nome": "..."
+  },
+  "itens": [
+    {
+      "produto": "123",
+      "descricao": "Produto A",
+      "cfop": "5102",
+      "quantidade": 10,
+      "valor_unit": 100,
+      "impostos": {
+        "icms": {...},
+        "ipi": {...},
+        "st": {...}
+      }
+    }
+  ]
+}

@@ -8,7 +8,7 @@ from ..models import (
     MovimentacaoEstoque,
 )
 from .parametros import ParametroAgricolaService
-from service.lote_service import LoteService
+from .lote_service import LoteService
 
 
 class EstoqueDomainService:

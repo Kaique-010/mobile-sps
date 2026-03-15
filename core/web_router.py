@@ -39,6 +39,7 @@ urlpatterns = [
     path("<slug:slug>/onboarding/complete/<str:step>/", views.complete_onboarding_step, name="onboarding_complete_slug"),
     path("<slug:slug>/notas-destinadas/", include("NotasDestinadas.web_urls")),
     path("<slug:slug>/notas-fiscais/", include("Notas_Fiscais.Web.web_urls")),
+    path("<slug:slug>/fiscal/", include("fiscal.web_urls")),
     path("<slug:slug>/cfop/", include("CFOP.Web.urls")),
     path("<slug:slug>/boletos/", include("boletos.Web.urls")),
     path("<slug:slug>/sped/", include("sped.Web.web_urls")),

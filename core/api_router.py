@@ -49,6 +49,7 @@ urlpatterns = [
     path("<slug>/notasfiscais/", include("Notas_Fiscais.urls")),
     path("<slug>/notasdestinadas/", include("NotasDestinadas.urls")),
     path("<slug>/notasdestinadas/", include("NotasDestinadas.urls")),
+    path("<slug>/fiscal/", include("fiscal.api.urls")),
     path("<slug>/cfop/", include("CFOP.REST.urls")),
     path("<slug>/sped/", include("sped.urls")),
     path("<slug>/assistente/", include("Assistente_Spart.urls")),
