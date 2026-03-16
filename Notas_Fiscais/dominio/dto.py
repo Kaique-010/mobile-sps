@@ -106,6 +106,7 @@ class NotaFiscalDTO(BaseModel):
     tipo_operacao: int
     finalidade: int
     ambiente: int
+    chave_referenciada: Optional[str] = None
 
     emitente: EmitenteDTO
     destinatario: DestinatarioDTO

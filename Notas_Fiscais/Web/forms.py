@@ -4,6 +4,7 @@ from django import forms
 from django.forms import inlineformset_factory
 from ..models import Nota, NotaItem, NotaItemImposto, Transporte
 from Entidades.models import Entidades
+from Produtos.models import Produtos
 
 
 NATUREZA_OPERACAO_CHOICES = [
@@ -61,7 +62,11 @@ class NotaForm(forms.ModelForm):
 
 
 class NotaItemForm(forms.ModelForm):
-    produto = forms.CharField(widget=forms.TextInput(attrs={"class": "form-control item-prod-ac"}))
+    produto = forms.ModelChoiceField(
+        queryset=Produtos.objects.none(),
+        required=False,
+        widget=forms.HiddenInput(attrs={"class": "form-control"}),
+    )
     class Meta:
         model = NotaItem
         fields = [
@@ -72,7 +77,6 @@ class NotaItemForm(forms.ModelForm):
             "cst_ibs", "cst_cbs",
         ]
         widgets = {
-            "produto": forms.TextInput(attrs={"class": "form-control item-prod-ac"}),
             "quantidade": forms.NumberInput(attrs={"step": "0.0001", "class": "form-control"}),
             "unitario": forms.NumberInput(attrs={"step": "0.0001", "class": "form-control"}),
             "desconto": forms.NumberInput(attrs={"step": "0.0001", "class": "form-control"}),
@@ -87,12 +91,21 @@ class NotaItemForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        database = kwargs.pop("database", "default")
+        empresa_id = kwargs.pop("empresa_id", None)
         super().__init__(*args, **kwargs)
+
+        for f in ["cfop", "ncm", "cst_icms", "cst_pis", "cst_cofins", "cst_ibs", "cst_cbs", "cest"]:
+            if f in self.fields:
+                self.fields[f].required = False
+
+        qs = Produtos.objects.using(database)
+        if empresa_id is not None:
+            qs = qs.filter(prod_empr=str(empresa_id))
+        self.fields["produto"].queryset = qs
+
         if self.instance and self.instance.pk:
-            # Evita acessar self.instance.produto (FK) que dispara query sem filtro de empresa
-            # e causa MultipleObjectsReturned se houver produtos com mesmo código em empresas diferentes.
-            # Usamos o produto_id (raw value) diretamente.
-            self.fields['produto'].initial = self.instance.produto_id
+            self.fields["produto"].initial = self.instance.produto_id
 
 
 # Formset de itens
@@ -100,7 +113,7 @@ NotaItemFormSet = inlineformset_factory(
     Nota,
     NotaItem,
     form=NotaItemForm,
-    extra=1,
+    extra=0,
     can_delete=True
 )
 
@@ -126,6 +139,11 @@ class NotaItemImpostoForm(forms.ModelForm):
 
 
 class TransporteForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if "transportadora" in self.fields:
+            self.fields["transportadora"].required = False
+
     class Meta:
         model = Transporte
         fields = [

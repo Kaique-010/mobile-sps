@@ -11,8 +11,13 @@ from fiscal.utils.xml_utils import (
 
 def parse_nfe(xml_content: str) -> dict:
     root = parse_xml(xml_content)
-    nfe_node = find_nfe_node(root) or root
-    inf_node = find_inf_nfe_node(nfe_node) or nfe_node
+    nfe_node = find_nfe_node(root)
+    if nfe_node is None:
+        nfe_node = root
+
+    inf_node = find_inf_nfe_node(nfe_node)
+    if inf_node is None:
+        inf_node = nfe_node
     nsmap = nsmap_for(inf_node)
 
     chave = extract_chave_from_inf(inf_node)

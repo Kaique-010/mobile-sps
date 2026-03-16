@@ -79,6 +79,8 @@ class ItensService:
                 item_data["produto"] = produto_obj
             
             model_fields = {f.name for f in NotaItem._meta.get_fields()}
+            model_fields.discard("nota")
+            model_fields.discard("id")
             clean_data = {k: v for k, v in item_data.items() if k in model_fields}
 
             produto_obj = item_data.get("produto")
@@ -177,6 +179,7 @@ class ItensService:
         Mais simples e consistente para notas fiscais.
         """
 
-        NotaItem.objects.filter(nota=nota).delete()
+        db_alias = getattr(getattr(nota, "_state", None), "db", None) or "default"
+        NotaItem.objects.using(db_alias).filter(nota=nota).delete()
 
         ItensService.inserir_itens(nota, itens, impostos_map)

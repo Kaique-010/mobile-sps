@@ -12,7 +12,7 @@ class NotaListView(ListView):
     model = Nota
     template_name = "notas/nota_list.html"
     context_object_name = "notas"
-    paginate_by = 50
+    paginate_by = 20
 
     def get_queryset(self):
         banco = get_licenca_db_config(self.request) or "default"
@@ -86,7 +86,7 @@ class NotaListView(ListView):
         qs_full = self.object_list
         
         emitidas = qs_full.filter(status=100).count()
-        canceladas_distintas = qs_full.filter(status=101).values("destinatario").distinct().count()
+        canceladas_distintas = qs_full.filter(status=101).count()
         total_faturado = qs_full.filter(status=100).aggregate(t=Sum("itens__total_item"))["t"] or 0
         
         ticket_medio = 0

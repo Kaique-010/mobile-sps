@@ -218,6 +218,7 @@ class NotaViewSet(viewsets.ModelViewSet):
             impostos_map=impostos_map,
             transporte=transporte,
             database=banco,
+            usuario_id=getattr(getattr(request, "user", None), "id", None),
         )
 
         debug_data = CalculoImpostosService(banco).aplicar_impostos(nota, return_debug=True)

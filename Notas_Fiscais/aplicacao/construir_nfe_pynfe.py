@@ -93,6 +93,9 @@ def construir_nfe_pynfe(dto):
     # Armazena dados do responsável técnico para injeção posterior no XML (SefazAdapter)
     if dto.responsavel_tecnico:
         nota_fiscal._responsavel_tecnico = dto.responsavel_tecnico
+    chave_ref = str(getattr(dto, "chave_referenciada", "") or "").strip()
+    if chave_ref and len(chave_ref) == 44 and chave_ref.isdigit():
+        nota_fiscal._chave_referenciada = chave_ref
 
     for item in dto.itens:
         qtd = Decimal(str(item.quantidade))

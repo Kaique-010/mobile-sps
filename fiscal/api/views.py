@@ -9,6 +9,7 @@ from fiscal.api.serializers import (
     GerarDevolucaoSerializer,
     ImportarXMLSerializer,
     NFeDocumentoSerializer,
+    NFeDocumentoDetailSerializer,
 )
 from fiscal.models import NFeDocumento
 from fiscal.services.gerar_devolucao_service import GerarDevolucaoService
@@ -68,6 +69,27 @@ class DocumentosView(APIView):
         return Response(data)
 
 
+class DocumentoDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, documento_id: int, *args, **kwargs):
+        banco = get_licenca_db_config(request) or "default"
+
+        qs = NFeDocumento.objects.using(banco).filter(pk=int(documento_id))
+        empresa = request.query_params.get("empresa")
+        filial = request.query_params.get("filial")
+        if empresa is not None:
+            qs = qs.filter(empresa=int(empresa))
+        if filial is not None:
+            qs = qs.filter(filial=int(filial))
+
+        doc = qs.first()
+        if not doc:
+            return Response({"detail": "Documento não encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(NFeDocumentoDetailSerializer(doc).data)
+
+
 class GerarDevolucaoView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -84,6 +106,7 @@ class GerarDevolucaoView(APIView):
                 empresa=serializer.validated_data["empresa"],
                 filial=serializer.validated_data["filial"],
                 emitir=serializer.validated_data.get("emitir") or False,
+                usuario_id=getattr(getattr(request, "user", None), "id", None),
             )
         except ValidationError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)

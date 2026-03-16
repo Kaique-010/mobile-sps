@@ -23,7 +23,7 @@ class TransporteService:
             data['transportadora'] = ent
 
         # update_or_create para simplicidade
-        Transporte.objects.update_or_create(
+        Transporte.objects.using(banco).update_or_create(
             nota=nota,
             defaults=data
         )

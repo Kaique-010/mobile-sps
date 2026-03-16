@@ -11,7 +11,7 @@
     <div class="page-actions btn-group" style="position: absolute; right: 0; top: 50%; transform: translateY(-50%);">
       {% if nota.status == 0 %}
       <a class="btn btn-outline-primary" href="/web/{{ slug }}/notas-fiscais/{{ nota.id }}/editar/">Editar</a>
-      <button class="btn btn-success" id="btn-emitir"><span class="spinner-border spinner-border-sm me-1 d-none"
+      <button class="btn btn-outline-success" id="btn-emitir"><span class="spinner-border spinner-border-sm me-1 d-none"
           aria-hidden="true"></span> <i class="bi bi-upload"></i> Emitir</button>
       {% endif %}
       {% if nota.status == 100 %}
@@ -39,7 +39,7 @@
         <div class="card-header">Destinatário</div>
         <div class="card-body">
           <div><strong>Nome:</strong> {{ destinatario.enti_nome }}</div>
-          <div><strong>Documento:</strong> {{ destinatario.enti_cnpj }} {{ destinatario.enti_cpf }}</div>
+          <div><strong>Documento:</strong> {% if destinatario.enti_cnpj %}{{ destinatario.enti_cnpj }}{% else %}{{ destinatario.enti_cpf }}{% endif %}</div>
           <div><strong>Município/UF:</strong> {{ destinatario.enti_cida }}/{{ destinatario.enti_esta }}</div>
           <div><strong>Endereço:</strong> {{ destinatario.enti_ende }} {{ destinatario.enti_nume }} {{ destinatario.enti_comp }}</div>
         </div>
@@ -60,6 +60,18 @@
           <div><strong>Chave:</strong> {{ nota.chave_acesso|default:"—" }} | <strong>Protocolo:</strong> {{ nota.protocolo_autorizacao|default:"—" }}</div>
         </div>
       </div>
+    </div>
+  </div>
+  
+  <div class="card mb-3">
+    <div class="card-header">Dados Gerais do Documento</div>
+    <div class="card-body">
+      <div><strong>Finalidade:</strong> {{ nota.get_finalidade_display }}</div>
+      <div><strong>Natureza:</strong> {{ nota.get_natureza_operacao_display }}</div>
+      <div><strong>Total da Nota:</strong> {{ total_nota|default:"0.00"|floatformat:2 }}</div>
+      <div><strong>Total Tributos:</strong> {{ total_tributos|default:"0.00"|floatformat:2 }}</div>
+      <div><strong>Total Descontos:</strong> {{ total_descontos|default:"0.00"|floatformat:2 }}</div>
+      <div><strong>Chave de Referência:</strong> {{ nota_referencia|default:"—" }}</div>
     </div>
   </div>
   <div class="container px-3 pt-3 pb-5">
@@ -112,6 +124,7 @@
     </div>
   </div>
 
+
   <div class="card mb-3">
     <div class="card-header">Transporte</div>
     <div class="card-body">
@@ -125,7 +138,7 @@
     </div>
   </div>
 
-  <a class="btn btn-secondary" href="/web/{{ slug }}/notas-fiscais/">Voltar</a>
+  <a class="btn btn-outline-secondary" href="/web/{{ slug }}/notas-fiscais/">Voltar</a>
   <script>
     (() => {
       const slug = localStorage.getItem('slug');

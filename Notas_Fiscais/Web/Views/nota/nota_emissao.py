@@ -1,6 +1,8 @@
 from django.views.generic import TemplateView
 from datetime import date
 
+from ....models import FINALIDADE_CHOICES, MODALIDADE_FRETE
+
 
 class NotaEmissaoView(TemplateView):
     template_name = "notas/nota_emissao.html"
@@ -18,4 +20,8 @@ class NotaEmissaoView(TemplateView):
             {"value": "Devolução de venda", "label": "Devolução de venda"},
             {"value": "Remessa", "label": "Remessa"},
         ]
+        ctx["tipo_documento_default"] = 1
+        ctx["tipo_documento_opcoes"] = [{"value": v, "label": l} for v, l in FINALIDADE_CHOICES]
+        ctx["modalidade_frete_default"] = 9
+        ctx["modalidade_frete_opcoes"] = [{"value": v, "label": l} for v, l in MODALIDADE_FRETE]
         return ctx

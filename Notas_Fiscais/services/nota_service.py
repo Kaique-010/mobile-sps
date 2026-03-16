@@ -1,12 +1,15 @@
 # notas_fiscais/services/nota_service.py
 
 from django.db import IntegrityError, transaction
-from django.db.models import Max
+from django.db.models import Max, Sum
 import logging
+from decimal import Decimal, ROUND_HALF_UP
+from datetime import date
 
 logger = logging.getLogger(__name__)
 
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from Licencas.models import Filiais
 from Entidades.models import Entidades
 from ..models import Nota, NotaItem
@@ -16,16 +19,211 @@ from .transporte_service import TransporteService
 from .evento_service import EventoService
 from .calculo_impostos_service import CalculoImpostosService
 from series.models import Series
+from Produtos.models import SaldoProduto
+from Entradas_Estoque.models import EntradaEstoque
+from Saidas_Estoque.models import SaidasEstoque
 
 
 class NotaService:
+    @staticmethod
+    def _to_qty(valor) -> Decimal:
+        try:
+            return Decimal(str(valor or 0)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        except Exception:
+            return Decimal("0.00")
+
+    @staticmethod
+    def _to_money(valor) -> Decimal:
+        try:
+            return Decimal(str(valor or 0)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        except Exception:
+            return Decimal("0.00")
+
+    @staticmethod
+    def _itens_por_produto(*, itens_qs) -> dict:
+        agg = {}
+        for it in itens_qs:
+            prod = getattr(it, "produto_id", None)
+            prod = str(prod or "").strip()
+            if not prod:
+                continue
+            q = NotaService._to_qty(getattr(it, "quantidade", None))
+            unit = Decimal(str(getattr(it, "unitario", None) or 0))
+            desc = Decimal(str(getattr(it, "desconto", None) or 0))
+            total = NotaService._to_money((q * unit) - desc)
+            atual = agg.get(prod) or {"q": Decimal("0.00"), "t": Decimal("0.00")}
+            atual["q"] = NotaService._to_qty(atual["q"] + q)
+            atual["t"] = NotaService._to_money(atual["t"] + total)
+            agg[prod] = atual
+        return agg
+
+    @staticmethod
+    def _obter_saldo_produto(*, produto: str, empresa: int, filial: int, database: str) -> Decimal:
+        sp = (
+            SaldoProduto.objects.using(database)
+            .filter(produto_codigo_id=str(produto), empresa=str(empresa), filial=str(filial))
+            .first()
+        )
+        if sp is not None:
+            try:
+                return Decimal(str(getattr(sp, "saldo_estoque", 0) or 0))
+            except Exception:
+                return Decimal("0")
+
+        total_entradas = (
+            EntradaEstoque.objects.using(database)
+            .filter(entr_empr=int(empresa), entr_fili=int(filial), entr_prod=str(produto))
+            .aggregate(total=Sum("entr_quan"))
+            .get("total")
+            or 0
+        )
+        total_saidas = (
+            SaidasEstoque.objects.using(database)
+            .filter(said_empr=int(empresa), said_fili=int(filial), said_prod=str(produto))
+            .aggregate(total=Sum("said_quan"))
+            .get("total")
+            or 0
+        )
+        return Decimal(str(total_entradas or 0)) - Decimal(str(total_saidas or 0))
+
+    @staticmethod
+    def _validar_delta_estoque(*, empresa: int, filial: int, database: str, delta_impact_por_prod: dict):
+        for prod, delta_impact in (delta_impact_por_prod or {}).items():
+            delta = Decimal(str(delta_impact or 0))
+            if delta >= 0:
+                continue
+            saldo = NotaService._obter_saldo_produto(produto=str(prod), empresa=empresa, filial=filial, database=database)
+            if saldo < (-delta):
+                raise ValidationError(
+                    f"Estoque insuficiente para ajustar devolução do produto {prod}. "
+                    f"Saldo: {saldo} / Necessário: {-delta}."
+                )
+
+    @staticmethod
+    def _ajustar_saida(
+        *,
+        empresa: int,
+        filial: int,
+        produto: str,
+        data_mov: date,
+        delta_q: Decimal,
+        delta_t: Decimal,
+        entidade_id: int,
+        usuario_id: int,
+        database: str,
+    ):
+        delta_q = NotaService._to_qty(delta_q)
+        delta_t = NotaService._to_money(delta_t)
+        if delta_q == 0 and delta_t == 0:
+            return
+
+        rec = (
+            SaidasEstoque.objects.using(database)
+            .filter(said_empr=int(empresa), said_fili=int(filial), said_prod=str(produto), said_data=data_mov)
+            .first()
+        )
+        if rec is None:
+            if delta_q < 0:
+                raise ValidationError("Movimentação de estoque inválida: tentativa de reduzir saída inexistente.")
+            seq = int(SaidasEstoque.objects.using(database).aggregate(max_sequ=Max("said_sequ")).get("max_sequ") or 0) + 1
+            SaidasEstoque.objects.using(database).create(
+                said_sequ=seq,
+                said_empr=int(empresa),
+                said_fili=int(filial),
+                said_prod=str(produto),
+                said_enti=str(entidade_id or ""),
+                said_data=data_mov,
+                said_quan=delta_q,
+                said_tota=delta_t,
+                said_obse="Devolução",
+                said_usua=int(usuario_id or 1),
+            )
+            return
+
+        novo_q = NotaService._to_qty(Decimal(str(rec.said_quan or 0)) + delta_q)
+        novo_t = NotaService._to_money(Decimal(str(rec.said_tota or 0)) + delta_t)
+        if novo_q < 0:
+            raise ValidationError("Movimentação de estoque inválida: saída ficaria negativa.")
+        if novo_q == 0:
+            rec.delete(using=database)
+            return
+        rec.said_quan = novo_q
+        rec.said_tota = novo_t
+        if not rec.said_enti and entidade_id:
+            rec.said_enti = str(entidade_id)
+        if not rec.said_obse:
+            rec.said_obse = "Devolução"
+        if usuario_id:
+            rec.said_usua = int(usuario_id)
+        rec.save(using=database)
+
+    @staticmethod
+    def _ajustar_entrada(
+        *,
+        empresa: int,
+        filial: int,
+        produto: str,
+        data_mov: date,
+        delta_q: Decimal,
+        delta_t: Decimal,
+        entidade_id: int,
+        usuario_id: int,
+        database: str,
+    ):
+        delta_q = NotaService._to_qty(delta_q)
+        delta_t = NotaService._to_money(delta_t)
+        if delta_q == 0 and delta_t == 0:
+            return
+
+        rec = (
+            EntradaEstoque.objects.using(database)
+            .filter(entr_empr=int(empresa), entr_fili=int(filial), entr_prod=str(produto), entr_data=data_mov)
+            .first()
+        )
+        if rec is None:
+            if delta_q < 0:
+                raise ValidationError("Movimentação de estoque inválida: tentativa de reduzir entrada inexistente.")
+            seq = int(EntradaEstoque.objects.using(database).aggregate(max_sequ=Max("entr_sequ")).get("max_sequ") or 0) + 1
+            EntradaEstoque.objects.using(database).create(
+                entr_sequ=seq,
+                entr_empr=int(empresa),
+                entr_fili=int(filial),
+                entr_prod=str(produto),
+                entr_enti=str(entidade_id or ""),
+                entr_data=data_mov,
+                entr_quan=delta_q,
+                entr_tota=delta_t,
+                entr_obse="Devolução",
+                entr_usua=int(usuario_id or 1),
+            )
+            return
+
+        novo_q = NotaService._to_qty(Decimal(str(rec.entr_quan or 0)) + delta_q)
+        novo_t = NotaService._to_money(Decimal(str(rec.entr_tota or 0)) + delta_t)
+        if novo_q < 0:
+            raise ValidationError("Movimentação de estoque inválida: entrada ficaria negativa.")
+        if novo_q == 0:
+            rec.delete(using=database)
+            return
+        rec.entr_quan = novo_q
+        rec.entr_tota = novo_t
+        if not rec.entr_enti and entidade_id:
+            rec.entr_enti = str(entidade_id)
+        if not rec.entr_obse:
+            rec.entr_obse = "Devolução"
+        if usuario_id:
+            rec.entr_usua = int(usuario_id)
+        rec.save(using=database)
 
     @staticmethod
     def criar(data, itens, impostos_map, transporte, empresa, filial, database="default"):
         with transaction.atomic(using=database):
             dest_id = data.get("destinatario")
             try:
-                destinatario = Entidades.objects.using(database).get(enti_clie=dest_id)
+                if isinstance(dest_id, Entidades):
+                    destinatario = dest_id
+                else:
+                    destinatario = Entidades.objects.using(database).get(enti_clie=dest_id)
             except Entidades.DoesNotExist:
                 raise ValidationError("Destinatário inválido.")
 
@@ -111,42 +309,142 @@ class NotaService:
         return int(max_num) + 1
 
     @staticmethod
-    @transaction.atomic
-    def atualizar(nota, data, itens, impostos_map, transporte, database="default"):
+    def atualizar(nota, data, itens, impostos_map, transporte, database="default", usuario_id=None):
+        with transaction.atomic(using=database):
+            empresa = int(getattr(nota, "empresa", 0) or 0)
+            filial = int(getattr(nota, "filial", 0) or 0)
+            entidade_id = int(getattr(nota, "destinatario_id", 0) or 0)
+            usuario_mov = int(usuario_id or 1)
 
-        dest_id = data.get("destinatario")
+            old_finalidade = int(getattr(nota, "finalidade", 0) or 0)
+            old_tipo = int(getattr(nota, "tipo_operacao", 0) or 0)
+            old_data_emissao = getattr(nota, "data_emissao", None) or timezone.now().date()
+            if not isinstance(old_data_emissao, date):
+                old_data_emissao = timezone.now().date()
+            old_itens_qs = NotaItem.objects.using(database).filter(nota=nota)
+            old_map = NotaService._itens_por_produto(itens_qs=old_itens_qs)
 
-        try:
-            destinatario = Entidades.objects.using(database).get(enti_clie=dest_id)
-        except Entidades.DoesNotExist:
-            raise ValidationError("Destinatário inválido.")
+            dest_id = data.get("destinatario")
 
-        # Atualiza apenas campos editáveis
-        campos_editaveis = [
-            "modelo", "serie", "numero",
-            "data_emissao", "data_saida",
-            "tipo_operacao", "finalidade",
-        ]
+            try:
+                if isinstance(dest_id, Entidades):
+                    destinatario = dest_id
+                else:
+                    destinatario = Entidades.objects.using(database).get(enti_clie=dest_id)
+            except Entidades.DoesNotExist:
+                raise ValidationError("Destinatário inválido.")
 
-        for campo in campos_editaveis:
-            if campo in data:
-                setattr(nota, campo, data[campo])
+            # Atualiza apenas campos editáveis
+            campos_editaveis = [
+                "modelo", "serie", "numero",
+                "data_emissao", "data_saida",
+                "tipo_operacao", "finalidade",
+            ]
 
-        nota.destinatario = destinatario
-        nota.save()
+            for campo in campos_editaveis:
+                if campo in data:
+                    setattr(nota, campo, data[campo])
 
-        # Itens
-        ItensService.atualizar_itens(nota, itens, impostos_map)
+            nota.destinatario = destinatario
+            nota.save(using=database)
 
-        # Calcular Impostos
-        if not impostos_map:
-            CalculoImpostosService(database).aplicar_impostos(nota)
+            # Itens
+            ItensService.atualizar_itens(nota, itens, impostos_map)
+            new_itens_qs = NotaItem.objects.using(database).filter(nota=nota)
+            new_map = NotaService._itens_por_produto(itens_qs=new_itens_qs)
 
-        # Transporte
-        if transporte:
-            TransporteService.definir(nota, transporte)
+            new_finalidade = int(getattr(nota, "finalidade", 0) or 0)
+            new_tipo = int(getattr(nota, "tipo_operacao", 0) or 0)
+            new_data_emissao = getattr(nota, "data_emissao", None) or timezone.now().date()
+            if not isinstance(new_data_emissao, date):
+                new_data_emissao = timezone.now().date()
 
-        return nota
+            if old_finalidade == 4 or new_finalidade == 4:
+                delta_impact = {}
+                for prod, vals in old_map.items():
+                    q_old = NotaService._to_qty(vals.get("q"))
+                    if old_finalidade == 4:
+                        old_imp = q_old if old_tipo == 0 else -q_old
+                        delta_impact[prod] = delta_impact.get(prod, Decimal("0")) - old_imp
+                for prod, vals in new_map.items():
+                    q_new = NotaService._to_qty(vals.get("q"))
+                    if new_finalidade == 4:
+                        new_imp = q_new if new_tipo == 0 else -q_new
+                        delta_impact[prod] = delta_impact.get(prod, Decimal("0")) + new_imp
+                NotaService._validar_delta_estoque(
+                    empresa=empresa,
+                    filial=filial,
+                    database=database,
+                    delta_impact_por_prod=delta_impact,
+                )
+
+                if old_finalidade == 4:
+                    for prod, vals in old_map.items():
+                        dq = NotaService._to_qty(vals.get("q"))
+                        dt = NotaService._to_money(vals.get("t"))
+                        if old_tipo == 1:
+                            NotaService._ajustar_saida(
+                                empresa=empresa,
+                                filial=filial,
+                                produto=str(prod),
+                                data_mov=old_data_emissao,
+                                delta_q=-dq,
+                                delta_t=-dt,
+                                entidade_id=entidade_id,
+                                usuario_id=usuario_mov,
+                                database=database,
+                            )
+                        else:
+                            NotaService._ajustar_entrada(
+                                empresa=empresa,
+                                filial=filial,
+                                produto=str(prod),
+                                data_mov=old_data_emissao,
+                                delta_q=-dq,
+                                delta_t=-dt,
+                                entidade_id=entidade_id,
+                                usuario_id=usuario_mov,
+                                database=database,
+                            )
+
+                if new_finalidade == 4:
+                    for prod, vals in new_map.items():
+                        dq = NotaService._to_qty(vals.get("q"))
+                        dt = NotaService._to_money(vals.get("t"))
+                        if new_tipo == 1:
+                            NotaService._ajustar_saida(
+                                empresa=empresa,
+                                filial=filial,
+                                produto=str(prod),
+                                data_mov=new_data_emissao,
+                                delta_q=dq,
+                                delta_t=dt,
+                                entidade_id=entidade_id,
+                                usuario_id=usuario_mov,
+                                database=database,
+                            )
+                        else:
+                            NotaService._ajustar_entrada(
+                                empresa=empresa,
+                                filial=filial,
+                                produto=str(prod),
+                                data_mov=new_data_emissao,
+                                delta_q=dq,
+                                delta_t=dt,
+                                entidade_id=entidade_id,
+                                usuario_id=usuario_mov,
+                                database=database,
+                            )
+
+            # Calcular Impostos
+            if not impostos_map:
+                CalculoImpostosService(database).aplicar_impostos(nota)
+
+            # Transporte
+            if transporte:
+                TransporteService.definir(nota, transporte)
+
+            return nota
 
     @staticmethod
     @transaction.atomic

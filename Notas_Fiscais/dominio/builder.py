@@ -274,6 +274,7 @@ class NotaBuilder:
             tipo_operacao=n.tipo_operacao,
             finalidade=n.finalidade,
             ambiente=n.ambiente,
+            chave_referenciada=str(getattr(n, "chave_referenciada", "") or "").strip() or None,
 
             emitente=self.build_emitente(),
             destinatario=self.build_destinatario(),

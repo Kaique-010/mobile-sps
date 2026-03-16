@@ -1,0 +1,152 @@
+
+<div class="tab-pane fade" id="tab-itens" role="tabpanel" aria-labelledby="tab-itens-btn">
+  <div class="d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">Itens</h5>
+    <button type="button" id="btn-add-item" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus"></i>
+      Adicionar Item</button>
+  </div>
+  {{ itens_formset.management_form }}
+  <div class="table-responsive mt-2 nf-table-wrap">
+    <table class="table table-sm table-hover table-compact nf-itens-table">
+      <thead class="table-responsive">
+        <tr>
+          <th style="min-width: 200px;">Produto</th>
+          <th class="text-end" style="width: 100px;">Qtd</th>
+          <th class="text-end" style="width: 120px;">Unit</th>
+          <th class="text-end" style="width: 120px;">Desc</th>
+          <th style="min-width: 220px;">CFOP / NCM </th>
+          <th style="min-width: 260px;">Tributos</th>
+          <th class="text-end" style="width: 120px;">Total</th>
+          <th style="min-width: 110px;">Fonte</th>
+          <th style="width: 96px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in itens_formset %}
+        <tr>
+          <td>
+            <div class="position-relative">
+              <input type="text" class="form-control item-prod-ac" value="{{ i.produto.value|default_if_none:'' }}"
+                autocomplete="off" placeholder="Buscar produto">
+              <div class="d-none">{{ i.id }}{{ i.produto }}</div>
+              <div class="list-group position-absolute w-100 item-prod-list" style="z-index:20"></div>
+            </div>
+          </td>
+          <td class="nf-num">{{ i.quantidade }}</td>
+          <td class="nf-num">{{ i.unitario }}</td>
+          <td class="nf-num">{{ i.desconto }}</td>
+          <td>
+            <div class="nf-stack">
+              <div>
+                <div class="nf-field-label">CFOP</div>
+                {{ i.cfop }}
+              </div>
+              <div>
+                <div class="nf-field-label">NCM</div>
+                {{ i.ncm }}
+              </div>
+
+            </div>
+          </td>
+          <td>
+            <div class="nf-cst-grid">
+              <div>
+                <div class="nf-field-label">ICMS</div>
+                {{ i.cst_icms }}
+              </div>
+              <div>
+                <div class="nf-field-label">PIS</div>
+                {{ i.cst_pis }}
+              </div>
+              <div>
+                <div class="nf-field-label">COFINS</div>
+                {{ i.cst_cofins }}
+              </div>
+              <div>
+                <div class="nf-field-label">IBS</div>
+                {{ i.cst_ibs }}
+              </div>
+              <div>
+                <div class="nf-field-label">CBS</div>
+                {{ i.cst_cbs }}
+              </div>
+            </div>
+          </td>
+          <td class="nf-num">
+            <div class="d-none">{{ i.total }}</div>
+            <input type="text" class="form-control item-total-display" readonly value="{{ i.instance.total|default_if_none:'' }}" />
+          </td>
+          <td><span class="badge text-bg-light border">{{ i.instance.fonte_tributacao|default:"-" }}</span></td>
+          <td>
+            <div class="d-none">{{ i.DELETE }}</div>
+            <button type="button" class="btn btn-sm btn-outline-danger btn-remove-item"><i class="bi bi-trash"></i></button>
+          </td>
+        </tr>
+        {% endfor %}
+        {% with ef=itens_formset.empty_form %}
+        <tr id="itens-empty-row" class="d-none">
+          <td>
+            <div class="position-relative">
+              <input type="text" class="form-control item-prod-ac" autocomplete="off" placeholder="Buscar produto">
+              <div class="d-none">{{ ef.id }}{{ ef.produto }}</div>
+              <div class="list-group position-absolute w-100 item-prod-list" style="z-index:20"></div>
+            </div>
+          </td>
+          <td class="nf-num">{{ ef.quantidade }}</td>
+          <td class="nf-num">{{ ef.unitario }}</td>
+          <td class="nf-num">{{ ef.desconto }}</td>
+          <td>
+            <div class="nf-stack">
+              <div>
+                <div class="nf-field-label">CFOP</div>
+                {{ ef.cfop }}
+              </div>
+              <div>
+                <div class="nf-field-label">NCM</div>
+                {{ ef.ncm }}
+              </div>
+              <div>
+                <div class="nf-field-label">CEST</div>
+                {{ ef.cest }}
+              </div>
+            </div>
+          </td>
+          <td>
+            <div class="nf-cst-grid">
+              <div>
+                <div class="nf-field-label">ICMS</div>
+                {{ ef.cst_icms }}
+              </div>
+              <div>
+                <div class="nf-field-label">PIS</div>
+                {{ ef.cst_pis }}
+              </div>
+              <div>
+                <div class="nf-field-label">COFINS</div>
+                {{ ef.cst_cofins }}
+              </div>
+              <div>
+                <div class="nf-field-label">IBS</div>
+                {{ ef.cst_ibs }}
+              </div>
+              <div>
+                <div class="nf-field-label">CBS</div>
+                {{ ef.cst_cbs }}
+              </div>
+            </div>
+          </td>
+          <td class="nf-num">
+            <div class="d-none">{{ ef.total }}</div>
+            <input type="text" class="form-control item-total-display" readonly value="" />
+          </td>
+          <td><span class="badge text-bg-light border">-</span></td>
+          <td>
+            <div class="d-none">{{ ef.DELETE }}</div>
+            <button type="button" class="btn btn-sm btn-outline-danger btn-remove-item"><i class="bi bi-trash"></i></button>
+          </td>
+        </tr>
+        {% endwith %}
+      </tbody>
+    </table>
+  </div>
+</div>

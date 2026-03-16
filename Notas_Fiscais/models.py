@@ -80,6 +80,7 @@ class Nota(models.Model):
     motivo_status = models.TextField(blank=True, null=True, help_text="Motivo do status retornado pela SEFAZ")
 
     pedido_origem = models.CharField(max_length=20, blank=True, null=True, db_index=True, help_text="Número do Pedido de Venda de origem")
+    chave_referenciada = models.CharField(max_length=44, blank=True, null=True, db_index=True, help_text="Chave (44 dígitos) da NF-e referenciada")
 
     xml_assinado = models.TextField(blank=True, null=True)
     xml_autorizado = models.TextField(blank=True, null=True)

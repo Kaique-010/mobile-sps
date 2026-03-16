@@ -53,11 +53,18 @@ def xpath_text(node, xpath_expr: str, nsmap=None, default: str = ""):
         found = node.xpath(xpath_expr, namespaces=nsmap or {})
     except Exception:
         return default
-    if not found:
+    if found is None:
         return default
-    if isinstance(found[0], etree._Element):
-        return (found[0].text or "").strip() or default
-    value = str(found[0]).strip()
+
+    if isinstance(found, (list, tuple)):
+        if not found:
+            return default
+        if isinstance(found[0], etree._Element):
+            return (found[0].text or "").strip() or default
+        value = str(found[0]).strip()
+        return value or default
+
+    value = str(found).strip()
     return value or default
 
 

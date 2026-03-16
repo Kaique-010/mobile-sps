@@ -1,6 +1,7 @@
 import logging
 
 from django.views.generic import FormView
+from django.urls import reverse
 from datetime import date
 from core.utils import get_licenca_db_config
 from ....models import Nota, NotaItem
@@ -17,8 +18,11 @@ logger = logging.getLogger(__name__)
 class NotaCreateView(SPSViewMixin, FormView):
     template_name = "notas/nota_form.html"
     form_class = NotaForm
-    success_url_name = "nota_list"
     success_message = "Nota criada com sucesso."
+
+    def get_success_url(self):
+        slug = self.kwargs.get("slug")
+        return reverse("notas_list_web", kwargs={"slug": slug})
 
     def get_initial(self):
         initial = super().get_initial()
@@ -30,11 +34,19 @@ class NotaCreateView(SPSViewMixin, FormView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
+        banco = get_licenca_db_config(self.request) or "default"
+        empresa = self.request.session.get("empresa_id")
+
         if self.request.POST:
-            context["itens_formset"] = NotaItemFormSet(self.request.POST)
+            context["itens_formset"] = NotaItemFormSet(
+                self.request.POST,
+                form_kwargs={"database": banco, "empresa_id": empresa},
+            )
             context["transporte_form"] = TransporteForm(self.request.POST)
         else:
-            context["itens_formset"] = NotaItemFormSet()
+            context["itens_formset"] = NotaItemFormSet(
+                form_kwargs={"database": banco, "empresa_id": empresa},
+            )
             context["transporte_form"] = TransporteForm()
 
         return context

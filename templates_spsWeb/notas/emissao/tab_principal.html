@@ -1,0 +1,46 @@
+<div class="tab-pane fade show active" id="tab-principal" role="tabpanel">
+      <div class="row g-3">
+        <div class="col-md-2">
+          <label class="form-label">Modelo</label>
+          <select class="form-select" name="modelo">
+            <option value="55">NF-e</option>
+            <option value="65">NFC-e</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Série</label>
+          <input type="number" class="form-control" name="serie" value="1" />
+        </div>
+        <div class="col-md-3"></div>
+        <div class="col-md-3"></div>
+        <div class="col-md-2 mb-5">
+          <label class="form-label">Número</label>
+          <input type="number" class="form-control" name="numero" />
+        </div>
+        <div class="col-md-6"></div>
+        <div class="col-md-3">
+          <label class="form-label">Data de Emissão</label>
+          <input type="date" class="form-control" name="data_emissao" value="{{ data_emissao_default }}" />
+        </div>
+        <div class="col-md-3 mb-5">
+          <label class="form-label">Data de Saída</label>
+          <input type="date" class="form-control" name="data_saida" value="{{ data_saida_default }}" />
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Natureza da Operação</label>
+          <select class="form-select" name="natureza_operacao">
+            {% for opt in natureza_operacao_opcoes %}
+            <option value="{{ opt.value }}" {% if opt.value == natureza_operacao_default %}selected{% endif %}>{{ opt.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Tipo de Documento</label>
+          <select class="form-select" name="tipo_documento">
+            {% for opt in tipo_documento_opcoes %}
+            <option value="{{ opt.value }}" {% if opt.value == tipo_documento_default %}selected{% endif %}>{{ opt.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>

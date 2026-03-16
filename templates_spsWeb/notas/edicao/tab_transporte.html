@@ -1,0 +1,17 @@
+<div class="tab-pane fade" id="tab-transporte" role="tabpanel" aria-labelledby="tab-transporte-btn">
+  <h5>Transporte</h5>
+  <div class="row g-3 mt-1">
+    <div class="col-md-3">{{ transporte_form.modalidade_frete.label_tag }} {{ transporte_form.modalidade_frete }}</div>
+    <div class="col-md-5">
+      {{ transporte_form.transportadora.label_tag }}
+      <div class="position-relative">
+        <input type="text" id="transportadora-ac" class="form-control" autocomplete="off" placeholder="Nome da transportadora"
+          value="{% if nota and nota.transporte and nota.transporte.transportadora %}{{ nota.transporte.transportadora.enti_nome }}{% endif %}">
+        <div class="d-none">{{ transporte_form.transportadora }}</div>
+        <div id="transportadora-ac-list" class="list-group position-absolute w-100" style="z-index:20"></div>
+      </div>
+    </div>
+    <div class="col-md-2">{{ transporte_form.placa_veiculo.label_tag }} {{ transporte_form.placa_veiculo }}</div>
+    <div class="col-md-2">{{ transporte_form.uf_veiculo.label_tag }} {{ transporte_form.uf_veiculo }}</div>
+  </div>
+</div>

@@ -170,6 +170,69 @@
   padding: 0.35rem 0.5rem;
 }
 
+.nf-itens-table {
+  border-radius: 10px;
+}
+.nf-table-wrap {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+.nf-itens-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.nf-itens-table td,
+.nf-itens-table th {
+  vertical-align: top;
+}
+.nf-itens-table th,
+.nf-itens-table td {
+  padding: 0.75rem 0.55rem;
+}
+.nf-itens-table .form-control,
+.nf-itens-table .form-select {
+  font-size: 0.875rem;
+  padding: 0.35rem 0.6rem;
+}
+.nf-itens-table .nf-field-label {
+  font-size: 0.7rem;
+  line-height: 1;
+  color: #6c757d;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  margin-bottom: 0.2rem;
+}
+.nf-itens-table .nf-stack {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 0.35rem 0.5rem;
+}
+.nf-itens-table .nf-cst-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(78px, 1fr));
+  gap: 0.35rem 0.5rem;
+}
+.nf-itens-table td.nf-num .form-control {
+  min-width: 88px;
+}
+.nf-itens-table td.nf-num {
+  white-space: nowrap;
+}
+.nf-itens-table td.nf-num input,
+.nf-itens-table .item-total-display {
+  text-align: right;
+}
+.nf-itens-table td.nf-num input {
+  white-space: nowrap;
+}
+.nf-itens-table .badge.text-bg-light {
+  font-weight: 600;
+}
+
 /* Utilitário de acessibilidade */
 .visually-hidden {
   position: absolute !important;

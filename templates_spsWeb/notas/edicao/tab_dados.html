@@ -1,0 +1,23 @@
+  <div class="tab-pane fade show active" id="tab-dados" role="tabpanel" aria-labelledby="tab-dados-btn">
+    <div class="row g-3">
+      <div class="col-md-2">{{ form.modelo.label_tag }} {{ form.modelo }}</div>
+      <div class="col-md-2">{{ form.serie.label_tag }} {{ form.serie }}</div>
+      <div class="col-md-6"></div>
+      <div class="col-md-2">{{ form.numero.label_tag }} {{ form.numero }}</div>
+      <div class="col-md-6"></div>
+      <div class="col-md-3">{{ form.data_emissao.label_tag }} {{ form.data_emissao }}</div>
+      <div class="col-md-3">{{ form.data_saida.label_tag }} {{ form.data_saida }}</div>
+      <div class="col-md12">{{ form.natureza_operacao.label_tag }} {{ form.natureza_operacao }}</div>
+      <div class="col-md-6">
+        {{ form.destinatario.label_tag }}
+        <div class="position-relative">
+          <input type="text" id="destinatario-ac" class="form-control" autocomplete="off" placeholder="Nome/CNPJ/CPF do cliente"
+            value="{% if nota and nota.destinatario %}{{ nota.destinatario.enti_nome }}{% endif %}">
+          <div class="d-none">{{ form.destinatario }}</div>
+          <div id="destinatario-ac-list" class="list-group position-absolute w-100" style="z-index:20"></div>
+        </div>
+      </div>
+      <div class="col-md-3">{{ form.tipo_operacao.label_tag }} {{ form.tipo_operacao }}</div>
+      <div class="col-md-3">{{ form.finalidade.label_tag }} {{ form.finalidade }}</div>
+    </div>
+  </div>

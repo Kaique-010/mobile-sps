@@ -265,6 +265,8 @@ class SefazAdapter:
         # Injeta Responsável Técnico se disponível (necessário para evitar Rejeição 972/225)
         if hasattr(nota_fiscal, '_responsavel_tecnico'):
             self._injetar_responsavel_tecnico(nfe, nota_fiscal._responsavel_tecnico)
+        if hasattr(nota_fiscal, '_chave_referenciada'):
+            self._injetar_nf_referenciada(nfe, nota_fiscal._chave_referenciada)
 
         self._normalizar_serie_ide(nfe)
 
@@ -697,6 +699,46 @@ class SefazAdapter:
             print(f"DEBUG: infRespTec tags: {tags} idCSRT_xml={id_csrt_xml}")
         except Exception:
             pass
+
+    def _injetar_nf_referenciada(self, nfe_elem, chave):
+        chave = str(chave or "").strip()
+        if not chave or len(chave) != 44 or not chave.isdigit():
+            return
+
+        ns_uri = 'http://www.portalfiscal.inf.br/nfe'
+        ns = {'ns': ns_uri}
+
+        ide = nfe_elem.find('.//ns:ide', namespaces=ns)
+        if ide is None:
+            ide = nfe_elem.find('.//ide')
+        if ide is None:
+            return
+
+        nfrefs = ide.findall('./ns:NFref', namespaces=ns)
+        if not nfrefs:
+            nfrefs = ide.findall('./NFref')
+        for node in nfrefs:
+            try:
+                ide.remove(node)
+            except Exception:
+                pass
+
+        ns_prefix = ide.tag.split('}')[0] + '}' if ide.tag.startswith('{') else ''
+        nfref = etree.Element(f"{ns_prefix}NFref" if ns_prefix else "NFref")
+        refnfe = etree.SubElement(nfref, f"{ns_prefix}refNFe" if ns_prefix else "refNFe")
+        refnfe.text = chave
+
+        fin = ide.find('./ns:finNFe', namespaces=ns)
+        if fin is None:
+            fin = ide.find('./finNFe')
+        if fin is not None:
+            try:
+                idx = list(ide).index(fin) + 1
+                ide.insert(idx, nfref)
+                return
+            except Exception:
+                pass
+        ide.append(nfref)
 
     def _injetar_qrcode_nfce(self, nfe_elem, id_token, csc, uf, tp_amb):
         if not id_token or not csc:
