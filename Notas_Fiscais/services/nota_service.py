@@ -229,13 +229,39 @@ class NotaService:
 
             emitente = Filiais.objects.using(database).get(empr_empr=empresa, empr_codi=filial)
 
-            series = (
-                Series.objects.using(database)
-                .filter(seri_empr=empresa, seri_fili=filial, seri_nome="SA")
-                .first()
-            )
-            if not series:
-                raise ValidationError("Nenhuma série encontrada para o modelo 55.")
+            serie_in = str(data.get("serie") or "").strip()
+            serie_candidates = []
+            if serie_in:
+                serie_candidates.append(serie_in)
+                if serie_in.isdigit():
+                    serie_candidates.append(serie_in.zfill(3))
+            serie_candidates = [s for s in serie_candidates if s]
+            serie_candidates = list(dict.fromkeys(serie_candidates))
+
+            series = None
+            if serie_candidates:
+                series = (
+                    Series.objects.using(database)
+                    .filter(seri_empr=empresa, seri_fili=filial, seri_nome="SA", seri_codi__in=serie_candidates)
+                    .first()
+                )
+                if not series:
+                    if serie_in in ("1", "001"):
+                        series = (
+                            Series.objects.using(database)
+                            .filter(seri_empr=empresa, seri_fili=filial, seri_nome="SA")
+                            .first()
+                        )
+                    if not series:
+                        raise ValidationError("Série inválida para Nota de Saída.")
+            else:
+                series = (
+                    Series.objects.using(database)
+                    .filter(seri_empr=empresa, seri_fili=filial, seri_nome="SA")
+                    .first()
+                )
+                if not series:
+                    raise ValidationError("Nenhuma série cadastrada para Nota de Saída.")
 
             serie_saida = str(getattr(series, "seri_codi", None) or "1").strip()
 

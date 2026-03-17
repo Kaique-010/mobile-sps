@@ -1,6 +1,6 @@
 {
-  "debug_id": "881beea1-deb8-4871-a3fc-eba11b46a7f9",
-  "timestamp_inicio": "2026-03-16T18:45:02.163906Z",
+  "debug_id": "27136ed6-fdc4-434a-9de4-4138dd4271e4",
+  "timestamp_inicio": "2026-03-17T16:09:12.386329Z",
   "ambiente": {
     "debug": true,
     "database_alias": "saveweb001"
@@ -9,100 +9,100 @@
     "versao": "Padrão"
   },
   "nota": {
-    "id": 80,
+    "id": 83,
     "modelo": "55",
     "serie": "005",
-    "numero": "15",
+    "numero": "18",
     "empresa": "1",
     "filial": "1",
-    "destinatario_id": "5",
+    "destinatario_id": "14",
     "uf_origem": "PR",
-    "uf_destino": "PR",
+    "uf_destino": "SP",
     "regime": "1"
   },
   "itens": [
     {
-      "id": 94,
-      "produto_id": "4",
-      "descricao_produto": "NIKE SHOX",
-      "ncm_produto": "6404****",
-      "cfop_inicial": "5102",
+      "id": 98,
+      "produto_id": "3",
+      "descricao_produto": "CANECA DE TESTES",
+      "ncm_produto": "8419****",
+      "cfop_inicial": "5405",
       "quantidade": "1.0000",
-      "unitario": "320.0000",
+      "unitario": "16.5000",
       "desconto": "0.0000",
       "logs": [
         {
-          "id": "8c6e048d-7e36-4700-b0f3-866ea7c45e76",
-          "timestamp": "2026-03-16T18:45:02.275383Z",
+          "id": "0217ec84-6c75-476f-bb0a-baa3f4ad85cc",
+          "timestamp": "2026-03-17T16:09:12.478977Z",
           "tipo": "antes_calculo_item",
           "mensagem": "Início do cálculo de impostos para o item.",
           "dados": {
             "uf_origem": "PR",
-            "uf_destino": "PR",
+            "uf_destino": "SP",
             "regime": "1",
             "tipo_operacao": "VENDA"
           }
         }
       ],
-      "fonte_tributacao": "NCM",
-      "cfop_resolvido": "5102",
+      "fonte_tributacao": "PRODUTO",
+      "cfop_resolvido": "5405",
       "cfop_flags": {
         "exig_icms": true,
         "exig_ipi": false,
         "exig_pis_cofins": false,
-        "exig_cbs": true,
-        "exig_ibs": true,
+        "exig_cbs": false,
+        "exig_ibs": false,
         "gera_st": true
       },
-      "ncm_resolvido": "6404****",
+      "ncm_resolvido": "8419****",
       "bases": {
-        "raiz": "320.00",
-        "icms": null,
+        "raiz": "16.50",
+        "icms": "16.50",
         "st": null
       },
       "aliquotas": {
         "ipi": null,
-        "icms": null,
+        "icms": "0.00",
         "st": null,
         "pis": null,
         "cofins": null,
-        "cbs": "0",
-        "ibs": "0"
+        "cbs": null,
+        "ibs": null
       },
       "valores_calculados": {
         "ipi": null,
-        "icms": null,
+        "icms": "0",
         "st": null,
         "pis": null,
         "cofins": null,
-        "cbs": "0",
-        "ibs": "0"
+        "cbs": null,
+        "ibs": null
       },
       "extras": {
         "mva_st": null
       },
       "csts": {
         "ipi": null,
-        "icms": null,
+        "icms": "500",
         "st": null,
         "pis": null,
         "cofins": null,
-        "cbs": "01",
-        "ibs": "01"
+        "cbs": null,
+        "ibs": null
       },
       "condicionais_aplicadas": {
         "icms_habilitado_cfop": true,
         "ipi_habilitado_cfop": false,
         "pis_cofins_habilitado_cfop": false,
-        "cbs_habilitado_cfop": true,
-        "ibs_habilitado_cfop": true
+        "cbs_habilitado_cfop": false,
+        "ibs_habilitado_cfop": false
       }
     }
   ],
   "logs": [
     {
-      "id": "f84e448e-546f-43cd-be77-0a0dc5c09a09",
-      "timestamp": "2026-03-16T18:45:02.243438Z",
+      "id": "afca4d20-cbe3-44db-a7a0-3372a4b8d3b6",
+      "timestamp": "2026-03-17T16:09:12.456037Z",
       "tipo": "contexto_nota",
       "mensagem": "Contexto fiscal inicial da nota.",
       "dados": {
@@ -110,5 +110,5 @@
       }
     }
   ],
-  "timestamp_fim": "2026-03-16T18:45:02.724456Z"
+  "timestamp_fim": "2026-03-17T16:09:12.865391Z"
 }

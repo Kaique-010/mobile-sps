@@ -23,12 +23,17 @@ class EntidadeAutocompleteSerializer(serializers.ModelSerializer):
 
 class ProdutoAutocompleteSerializer(serializers.ModelSerializer):
     label = serializers.SerializerMethodField()
-    value = serializers.IntegerField(source="prod_codi")
+    value = serializers.CharField(source="prod_codi")
+    prod_desc = serializers.CharField(source="prod_nome")
 
     class Meta:
         model = Produtos
-        fields = ["value", "label", "prod_desc", "prod_codi", "prod_refe"]
+        fields = ["value", "label", "prod_desc", "prod_codi", "prod_coba"]
 
     def get_label(self, obj):
-        ref = f" • REF: {obj.prod_refe}" if obj.prod_refe else ""
-        return f"{obj.prod_desc}{ref}"
+        ref = getattr(obj, "prod_coba", None)
+        if ref:
+            return f"{obj.prod_nome} • COD: {obj.prod_codi} • REF: {ref}"
+        return f"{obj.prod_nome} • COD: {obj.prod_codi}"
+
+    

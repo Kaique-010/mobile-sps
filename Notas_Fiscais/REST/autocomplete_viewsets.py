@@ -19,7 +19,9 @@ class EntidadeAutocompleteViewSet(viewsets.ViewSet):
 
     def list(self, request, *args, **kwargs):
         banco = get_licenca_db_config(request) or "default"
-        empresa = request.session.get("empresa_id")
+        empresa = request.session.get("empresa_id") or request.headers.get("X-Empresa") or request.query_params.get("empresa")
+        if not empresa:
+            return Response([])
 
         q = request.query_params.get("q", "").strip()
 
@@ -44,7 +46,9 @@ class ProdutoAutocompleteViewSet(viewsets.ViewSet):
 
     def list(self, request, *args, **kwargs):
         banco = get_licenca_db_config(request) or "default"
-        empresa = request.session.get("empresa_id")
+        empresa = request.session.get("empresa_id") or request.headers.get("X-Empresa") or request.query_params.get("empresa")
+        if not empresa:
+            return Response([])
 
         q = request.query_params.get("q", "").strip()
 
@@ -52,14 +56,15 @@ class ProdutoAutocompleteViewSet(viewsets.ViewSet):
 
         if q:
             qs = qs.filter(
-                Q(prod_desc__iregex=q) |
-                Q(prod_refe__iregex=q) |
-                Q(prod_codi__iexact=q)
+                Q(prod_nome__iregex=q) |
+                Q(prod_codi__iexact=q) |
+                Q(prod_codi_nume__iexact=q) |
+                Q(prod_coba__iexact=q)
             )
 
         qs = qs.only(
-            "prod_codi", "prod_desc", "prod_refe"
-        ).order_by("prod_desc")[:20]
+            "prod_codi", "prod_nome", "prod_coba"
+        ).order_by("prod_nome")[:20]
 
         data = ProdutoAutocompleteSerializer(qs, many=True).data
         return Response(data)

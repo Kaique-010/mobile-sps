@@ -9,7 +9,15 @@
         </div>
         <div class="col-md-2">
           <label class="form-label">Série</label>
+          {% if serie_opcoes %}
+          <select class="form-select" name="serie">
+            {% for opt in serie_opcoes %}
+            <option value="{{ opt.value }}" {% if opt.value == serie_default %}selected{% endif %}>{{ opt.label }}</option>
+            {% endfor %}
+          </select>
+          {% else %}
           <input type="number" class="form-control" name="serie" value="1" />
+          {% endif %}
         </div>
         <div class="col-md-3"></div>
         <div class="col-md-3"></div>

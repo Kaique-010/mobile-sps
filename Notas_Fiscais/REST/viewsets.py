@@ -70,6 +70,7 @@ class NotaViewSet(viewsets.ModelViewSet):
             qs = qs.filter(empresa=empresa)
         if filial:
             qs = qs.filter(filial=filial)
+        
 
         return qs
 
@@ -160,7 +161,6 @@ class NotaViewSet(viewsets.ModelViewSet):
         data_out["cfop_flags"] = cfop_flags
         return Response(data_out, status=status.HTTP_200_OK)
 
-    # --------- CREATE ---------
     def create(self, request, *args, **kwargs):
         banco = get_licenca_db_config(request) or "default"
         empresa = request.session.get("empresa_id") or request.headers.get("X-Empresa")
@@ -188,6 +188,7 @@ class NotaViewSet(viewsets.ModelViewSet):
 
         debug_data = CalculoImpostosService(banco).aplicar_impostos(nota, return_debug=True)
         NotaService.gravar(nota, descricao="Rascunho criado via API", database=banco)
+        logger.info(f"Nota criada com sucesso: {nota.id}")
 
         out = NotaDetailSerializer(nota, context=self.get_serializer_context())
         data_out = dict(out.data)

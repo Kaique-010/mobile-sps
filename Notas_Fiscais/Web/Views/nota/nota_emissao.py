@@ -2,6 +2,22 @@ from django.views.generic import TemplateView
 from datetime import date
 
 from ....models import FINALIDADE_CHOICES, MODALIDADE_FRETE
+from core.utils import get_licenca_db_config
+from series.models import Series
+
+
+def _to_int(v, default=None):
+    try:
+        return int(v)
+    except Exception:
+        return default
+
+
+def _fmt_serie(v):
+    s = str(v or "").strip()
+    if s.isdigit() and len(s) < 3:
+        return s.zfill(3)
+    return s
 
 
 class NotaEmissaoView(TemplateView):
@@ -10,6 +26,32 @@ class NotaEmissaoView(TemplateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["slug"] = self.kwargs.get("slug")
+
+        banco = get_licenca_db_config(self.request) or "default"
+        empresa = (
+            self.request.session.get("empresa_id")
+            or self.request.GET.get("empresa")
+            or self.request.headers.get("X-Empresa")
+        )
+        filial = (
+            self.request.session.get("filial_id")
+            or self.request.GET.get("filial")
+            or self.request.headers.get("X-Filial")
+        )
+        empresa_id = _to_int(empresa, 1)
+        filial_id = _to_int(filial, 1)
+
+        series_qs = (
+            Series.objects.using(banco)
+            .filter(seri_empr=empresa_id, seri_fili=filial_id, seri_nome="SA")
+            .order_by("seri_codi")
+            .values_list("seri_codi", flat=True)
+        )
+        serie_opcoes = [{"value": _fmt_serie(c), "label": _fmt_serie(c)} for c in list(series_qs)]
+        serie_opcoes = [o for o in serie_opcoes if o.get("value")]
+        ctx["serie_opcoes"] = serie_opcoes
+        ctx["serie_default"] = serie_opcoes[0]["value"] if serie_opcoes else "1"
+
         hoje = date.today().isoformat()
         ctx["data_emissao_default"] = hoje
         ctx["data_saida_default"] = hoje

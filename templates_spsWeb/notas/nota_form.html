@@ -33,6 +33,10 @@
         <button class="nav-link" id="tab-totais-btn" data-bs-toggle="tab" data-bs-target="#tab-totais" type="button"
           role="tab" aria-controls="tab-totais" aria-selected="false">Totais</button>
       </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-financeiro-btn" data-bs-toggle="tab" data-bs-target="#tab-financeiro"
+          type="button" role="tab" aria-controls="tab-financeiro" aria-selected="false">Financeiro</button>
+      </li>
     </ul>
 
     <div class="tab-content pt-3 gap-3">
@@ -40,6 +44,7 @@
       {% include 'notas/edicao/tab_itens.html' %}
       {% include 'notas/edicao/tab_transporte.html' %}
       {% include 'notas/edicao/tab_totais.html' %}
+      {% include 'notas/financeiroAba.html' %}
     </div>
 
     <div class="d-flex justify-content-between align-items-center gap-5 m-5 flex-wrap">

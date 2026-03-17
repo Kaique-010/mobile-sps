@@ -162,9 +162,9 @@ class TransporteCreateSerializer(serializers.Serializer):
 
 
 class NotaCreateUpdateSerializer(serializers.Serializer):
-    modelo = serializers.CharField()
-    serie = serializers.CharField()
-    numero = serializers.IntegerField()
+    modelo = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    serie = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    numero = serializers.IntegerField(required=False, allow_null=True)
 
     data_emissao = serializers.DateField(required=False)
     data_saida = serializers.DateField(required=False, allow_null=True)
