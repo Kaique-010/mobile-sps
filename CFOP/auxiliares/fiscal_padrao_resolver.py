@@ -15,16 +15,20 @@ class FiscalPadraoResolver:
     def _match_contexto(self, fiscal, uf_origem=None, uf_destino=None, tipo_entidade=None, cfop=None):
         if not fiscal:
             return False
-        
-        fiscal_uf_origem = (getattr(fiscal, "uf_origem", None) or "").strip().upper()
-        fiscal_uf_destino = (getattr(fiscal, "uf_destino", None) or "").strip().upper()
-        fiscal_tipo_entidade = (getattr(fiscal, "tipo_entidade", None) or "").strip().upper()
+
+        def _norm_upper(v):
+            return v.strip().upper() if isinstance(v, str) else ""
+
+        fiscal_uf_origem = _norm_upper(getattr(fiscal, "uf_origem", None))
+        fiscal_uf_destino = _norm_upper(getattr(fiscal, "uf_destino", None))
+        fiscal_tipo_entidade = _norm_upper(getattr(fiscal, "tipo_entidade", None))
         fiscal_cfop = getattr(fiscal, "cfop", None)
 
-        ctx_uf_origem = (uf_origem or "").strip().upper()
-        ctx_uf_destino = (uf_destino or "").strip().upper()
-        ctx_tipo_entidade = (tipo_entidade or "").strip().upper()
-        ctx_cfop = (getattr(cfop, "cfop_codi", None) or "").strip()
+        ctx_uf_origem = _norm_upper(uf_origem)
+        ctx_uf_destino = _norm_upper(uf_destino)
+        ctx_tipo_entidade = _norm_upper(tipo_entidade)
+        ctx_cfop = getattr(cfop, "cfop_codi", None)
+        ctx_cfop = ctx_cfop.strip() if isinstance(ctx_cfop, str) else ""
 
         if isinstance(fiscal_cfop, str):
             fiscal_cfop = fiscal_cfop.strip()

@@ -63,7 +63,8 @@ class SimulationFailureTest(SimpleTestCase):
         with patch.object(self.motor, 'obter_ncm', return_value=mock_ncm), \
              patch.object(self.motor, 'obter_icms_data', return_value={"icms": Decimal("18.00")}), \
              patch.object(self.motor, 'obter_aliquotas_base', return_value={"ipi": Decimal("10.00"), "pis": None, "cofins": None}), \
-             patch.object(self.motor, 'aplicar_overrides_dif', side_effect=lambda n, c, a, i: (a, i)):
+             patch.object(self.motor, 'aplicar_overrides_dif', side_effect=lambda n, c, a, i: (a, i)), \
+             patch.object(self.motor, 'resolver_fiscal_padrao', return_value=(None, None)):
             
             result = self.motor.calcular_item(self.ctx, item=None, tipo_oper="VENDA", base_manual=Decimal("100.00"))
             
@@ -100,7 +101,8 @@ class SimulationFailureTest(SimpleTestCase):
         with patch.object(self.motor, 'obter_ncm', return_value=mock_ncm), \
              patch.object(self.motor, 'obter_icms_data', return_value={"icms": Decimal("18.00")}), \
              patch.object(self.motor, 'obter_aliquotas_base', return_value={"ipi": Decimal("10.00"), "pis": Decimal("1.65"), "cofins": Decimal("7.60")}), \
-             patch.object(self.motor, 'aplicar_overrides_dif', side_effect=lambda n, c, a, i: (a, i)):
+             patch.object(self.motor, 'aplicar_overrides_dif', side_effect=lambda n, c, a, i: (a, i)), \
+             patch.object(self.motor, 'resolver_fiscal_padrao', return_value=(None, None)):
             
             result = self.motor.calcular_item(self.ctx, item=None, tipo_oper="VENDA", base_manual=Decimal("100.00"))
             

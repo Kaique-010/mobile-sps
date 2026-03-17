@@ -70,6 +70,7 @@ class AuditoriaMiddleware:
                 'centraldeajuda': 'centraldeajuda',
                 'centrodecustos': 'CentrodeCustos',
                 'cfop': 'CFOP',
+                'cfops': 'CFOP',
                 'contas_a_pagar': 'contas_a_pagar',
                 'contas_a_receber': 'contas_a_receber',
                 'contratos': 'contratos',
@@ -334,6 +335,7 @@ class AuditoriaMiddleware:
                         'notas-fiscais': ['notasfiscais', 'notas_fiscais', 'notas fiscais'],
                          'assistente': ['assistente_spart'],
                          'assistente_spart': ['assistente'],
+                         'cfops': ['cfop'],
                     }
                     candidates = {app_slug}
                     for alt in aliases.get(app_slug, []):

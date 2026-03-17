@@ -33,6 +33,11 @@ class HierarquiaFiscalTests(SimpleTestCase):
 
             def first(self):
                 return self._result
+            
+            def __iter__(self):
+                if self._result is None:
+                    return iter([])
+                return iter([self._result])
 
         self.FakeQS = FakeQS
         

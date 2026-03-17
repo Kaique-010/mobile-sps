@@ -85,11 +85,25 @@ CST_IPI = [
 ]
 
 CST_IBS_CBS = [
-    ("1", "1 - Tributável"),
-    ("2", "2 - Isento"),
-    ("3", "3 - Imune"),
-    ("4", "4 - Suspensão"),
-    ("9", "9 - Outros"),
+    ("000", "Tributação normal"),
+    ("010", "Alíquota uniforme"),
+    ("011", "Alíquota reduzida"),
+    ("012", "Alíquota reduzida específica"),
+    ("200", "Alíquota zero"),
+    ("210", "Redução de alíquota e base"),
+    ("220", "Alíquota fixa"),
+    ("221", "Alíquota fixa específica"),
+    ("222", "Redução de base de cálculo"),
+    ("400", "Isenção"),
+    ("410", "Imunidade / não incidência"),
+    ("510", "Diferimento"),
+    ("515", "Diferimento parcial"),
+    ("550", "Suspensão"),
+    ("620", "Monofásico"),
+    ("800", "Crédito presumido"),
+    ("810", "Operação Zona Franca / específica"),
+    ("820", "Regime específico Simples Nacional"),
+    ("900", "Outros"),
 ]
 
 # --- SERVICES ---
