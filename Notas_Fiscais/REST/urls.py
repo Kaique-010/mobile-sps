@@ -25,6 +25,11 @@ router.register(r"entidades-autocomplete", EntidadeAutocompleteViewSet, basename
 router.register(r"produtos-autocomplete", ProdutoAutocompleteViewSet, basename="produto-autocomplete")
 
 urlpatterns = router.urls + [
+    path(
+        "notas/<int:empresa>/<int:filial>/<int:numero>/xml/",
+        NotaViewSet.as_view({"get": "xml_por_numero"}),
+        name="nota-xml-por-numero",
+    ),
     path("financeiro/<int:nota_id>/", ConsultarTitulosNotaView.as_view(), name="nota-financeiro-consultar"),
     path("financeiro/<int:nota_id>/gerar/", GerarTitulosNotaView.as_view(), name="nota-financeiro-gerar"),
     path("financeiro/<int:nota_id>/remover/", RemoverTitulosNotaView.as_view(), name="nota-financeiro-remover"),

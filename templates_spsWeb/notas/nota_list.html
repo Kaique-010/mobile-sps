@@ -972,6 +972,55 @@
         if (sp) sp.classList.toggle('d-none', !state);
       };
 
+      const showToast = (message, { variant = 'success', delay = 2500 } = {}) => {
+        try {
+          const safeVariant = ['success', 'danger', 'warning', 'info'].includes(variant) ? variant : 'info';
+          let container = document.getElementById('nf-toast-container');
+          if (!container) {
+            container = document.createElement('div');
+            container.id = 'nf-toast-container';
+            container.className = 'toast-container position-fixed top-0 end-0 p-3';
+            container.style.zIndex = 1080;
+            document.body.appendChild(container);
+          }
+
+          const toastEl = document.createElement('div');
+          toastEl.className = `toast align-items-center text-bg-${safeVariant} border-0`;
+          toastEl.setAttribute('role', 'alert');
+          toastEl.setAttribute('aria-live', 'assertive');
+          toastEl.setAttribute('aria-atomic', 'true');
+
+          const body = document.createElement('div');
+          body.className = 'd-flex';
+
+          const toastBody = document.createElement('div');
+          toastBody.className = 'toast-body';
+          toastBody.textContent = String(message ?? '');
+
+          const closeBtn = document.createElement('button');
+          closeBtn.type = 'button';
+          closeBtn.className = 'btn-close btn-close-white me-2 m-auto';
+          closeBtn.setAttribute('data-bs-dismiss', 'toast');
+          closeBtn.setAttribute('aria-label', 'Close');
+
+          body.appendChild(toastBody);
+          body.appendChild(closeBtn);
+          toastEl.appendChild(body);
+          container.appendChild(toastEl);
+
+          if (window.bootstrap?.Toast) {
+            const t = bootstrap.Toast.getOrCreateInstance(toastEl, { delay });
+            toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove(), { once: true });
+            t.show();
+          } else {
+            alert(String(message ?? ''));
+            toastEl.remove();
+          }
+        } catch (e) {
+          alert(String(message ?? ''));
+        }
+      };
+
       const onEmitir = async (id) => {
         const btn = document.querySelector(`[data-emitir][data-id="${id}"]`);
         setLoading(btn, true);
@@ -979,7 +1028,19 @@
           const resp = await authFetch(`/api/emitir/${slug}/${id}/`, { method: 'GET' });
           const data = await resp.json();
           if (resp.ok) {
-            showToast('Emitida com sucesso. Chave: ' + (data?.chave || data?.chave_acesso || ''), { variant: 'success' });
+            const status = Number(data?.status);
+            const chave = data?.chave || data?.chave_acesso || '';
+            const protocolo = data?.protocolo || '';
+            const motivo = data?.mensagem || data?.motivo || '';
+            if (status === 100) {
+              showToast(`Autorizada com sucesso. Chave: ${chave}${protocolo ? ` | Protocolo: ${protocolo}` : ''}`, { variant: 'success' });
+            } else if ([103, 105].includes(status)) {
+              showToast(motivo || 'Enviado para SEFAZ. Aguardando processamento. Consulte em seguida.', { variant: 'warning', delay: 4000 });
+            } else if (status === 204) {
+              showToast(motivo || `Duplicidade detectada. Chave: ${chave}`, { variant: 'warning', delay: 4000 });
+            } else {
+              showToast(motivo || `Transmissão executada. Status: ${status}`, { variant: 'info', delay: 4000 });
+            }
             location.reload();
           } else {
             const rawError = data?.detail || data?.detalhes || data?.mensagem || data?.motivo || data?.erro || data?.error || (typeof data === 'string' ? data : '') || (data ? JSON.stringify(data) : '');
@@ -1021,7 +1082,22 @@
         try {
           const resp = await authFetch(`/api/${slug}/notasfiscais/notas-fiscais/notas/${id}/consultar/`, { method: 'POST' });
           const data = await resp.json();
-          if (resp.ok) { showToast('Consulta realizada com sucesso.', { variant: 'success' }); location.reload(); }
+          if (resp.ok) {
+            const status = Number(data?.status ?? data?.status_nfe ?? data?.sefaz_response?.status);
+            const chave = data?.chave_acesso || data?.sefaz_response?.chave || '';
+            const protocolo = data?.protocolo_autorizacao || data?.sefaz_response?.protocolo || '';
+            const motivo = data?.motivo_status || data?.sefaz_response?.motivo || data?.sefaz_response?.mensagem || '';
+            if (status === 100) {
+              showToast(`Autorizada. Chave: ${chave}${protocolo ? ` | Protocolo: ${protocolo}` : ''}`, { variant: 'success' });
+            } else if ([103, 105].includes(status)) {
+              showToast(motivo || 'Consulta retornou processamento. Tente novamente em instantes.', { variant: 'warning', delay: 4000 });
+            } else if ([101, 102, 110, 301, 302].includes(status)) {
+              showToast(motivo || `Status atualizado: ${status}`, { variant: 'info', delay: 4000 });
+            } else {
+              showToast(motivo || `Consulta realizada. Status: ${status}`, { variant: 'warning', delay: 4000 });
+            }
+            location.reload();
+          }
           else showToast('Falha na consulta: ' + (data?.detail || data?.motivo || data?.error || 'Erro'), { variant: 'danger', delay: 4000 });
         } catch (e) { showToast('Erro: ' + e, { variant: 'danger', delay: 4000 }); }
         finally { setLoading(btn, false); }

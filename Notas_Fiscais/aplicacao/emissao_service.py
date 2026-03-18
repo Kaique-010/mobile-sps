@@ -379,6 +379,8 @@ class EmissaoService:
                      nota.motivo_status = motivo_sefaz
                      nota.save(using=self.db, update_fields=["motivo_status", "chave_acesso"])
 
+            return resposta
+
         except Exception as e:
             logger.error(f"Erro ao consultar status na SEFAZ: {e}")
             raise ErroDominio(f"Erro ao consultar status: {str(e)}")

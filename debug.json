@@ -1,6 +1,6 @@
 {
-  "debug_id": "27136ed6-fdc4-434a-9de4-4138dd4271e4",
-  "timestamp_inicio": "2026-03-17T16:09:12.386329Z",
+  "debug_id": "6e85d9bf-1d54-497a-bea7-7198d8084677",
+  "timestamp_inicio": "2026-03-18T17:59:40.344730Z",
   "ambiente": {
     "debug": true,
     "database_alias": "saveweb001"
@@ -9,42 +9,42 @@
     "versao": "Padrão"
   },
   "nota": {
-    "id": 83,
+    "id": 85,
     "modelo": "55",
     "serie": "005",
-    "numero": "18",
+    "numero": "20",
     "empresa": "1",
     "filial": "1",
-    "destinatario_id": "14",
+    "destinatario_id": "5",
     "uf_origem": "PR",
-    "uf_destino": "SP",
+    "uf_destino": "PR",
     "regime": "1"
   },
   "itens": [
     {
-      "id": 98,
-      "produto_id": "3",
-      "descricao_produto": "CANECA DE TESTES",
-      "ncm_produto": "8419****",
+      "id": 100,
+      "produto_id": "7",
+      "descricao_produto": "Anel de outro",
+      "ncm_produto": "7113****",
       "cfop_inicial": "5405",
       "quantidade": "1.0000",
-      "unitario": "16.5000",
+      "unitario": "341.2500",
       "desconto": "0.0000",
       "logs": [
         {
-          "id": "0217ec84-6c75-476f-bb0a-baa3f4ad85cc",
-          "timestamp": "2026-03-17T16:09:12.478977Z",
+          "id": "48b224a4-aa62-4e79-a50e-84dd61bac1d3",
+          "timestamp": "2026-03-18T17:59:40.466034Z",
           "tipo": "antes_calculo_item",
           "mensagem": "Início do cálculo de impostos para o item.",
           "dados": {
             "uf_origem": "PR",
-            "uf_destino": "SP",
+            "uf_destino": "PR",
             "regime": "1",
             "tipo_operacao": "VENDA"
           }
         }
       ],
-      "fonte_tributacao": "PRODUTO",
+      "fonte_tributacao": "NCM",
       "cfop_resolvido": "5405",
       "cfop_flags": {
         "exig_icms": true,
@@ -54,41 +54,41 @@
         "exig_ibs": false,
         "gera_st": true
       },
-      "ncm_resolvido": "8419****",
+      "ncm_resolvido": "7113****",
       "bases": {
-        "raiz": "16.50",
-        "icms": "16.50",
+        "raiz": "341.25",
+        "icms": "341.25",
         "st": null
       },
       "aliquotas": {
-        "ipi": null,
+        "ipi": "0.00",
         "icms": "0.00",
         "st": null,
-        "pis": null,
-        "cofins": null,
-        "cbs": null,
-        "ibs": null
+        "pis": "0.00",
+        "cofins": "0.00",
+        "cbs": "0.00",
+        "ibs": "0.00"
       },
       "valores_calculados": {
-        "ipi": null,
+        "ipi": "0",
         "icms": "0",
         "st": null,
-        "pis": null,
-        "cofins": null,
-        "cbs": null,
-        "ibs": null
+        "pis": "0",
+        "cofins": "0",
+        "cbs": "0",
+        "ibs": "0"
       },
       "extras": {
         "mva_st": null
       },
       "csts": {
-        "ipi": null,
-        "icms": "500",
+        "ipi": "99",
+        "icms": "102",
         "st": null,
-        "pis": null,
-        "cofins": null,
-        "cbs": null,
-        "ibs": null
+        "pis": "49",
+        "cofins": "49",
+        "cbs": "400",
+        "ibs": "400"
       },
       "condicionais_aplicadas": {
         "icms_habilitado_cfop": true,
@@ -101,8 +101,8 @@
   ],
   "logs": [
     {
-      "id": "afca4d20-cbe3-44db-a7a0-3372a4b8d3b6",
-      "timestamp": "2026-03-17T16:09:12.456037Z",
+      "id": "27fdc537-7bbc-4c74-9cfb-38a4985f6439",
+      "timestamp": "2026-03-18T17:59:40.441836Z",
       "tipo": "contexto_nota",
       "mensagem": "Contexto fiscal inicial da nota.",
       "dados": {
@@ -110,5 +110,5 @@
       }
     }
   ],
-  "timestamp_fim": "2026-03-17T16:09:12.865391Z"
+  "timestamp_fim": "2026-03-18T17:59:40.983333Z"
 }

@@ -1,5 +1,6 @@
 import logging
 
+from django.http import HttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, status
 from rest_framework.response import Response
@@ -160,6 +161,28 @@ class NotaViewSet(viewsets.ModelViewSet):
         }
         data_out["cfop_flags"] = cfop_flags
         return Response(data_out, status=status.HTTP_200_OK)
+
+    def xml_por_numero(self, request, empresa=None, filial=None, numero=None, slug=None):
+        banco = get_licenca_db_config(request) or "default"
+        nota = (
+            Nota.objects.using(banco)
+            .filter(empresa=empresa, filial=filial, numero=numero)
+            .order_by("-id")
+            .first()
+        )
+        if not nota:
+            return Response({"detail": "Nota não encontrada"}, status=status.HTTP_404_NOT_FOUND)
+
+        xml_content = nota.xml_autorizado or nota.xml_assinado or ""
+        if isinstance(xml_content, (bytes, bytearray)):
+            xml_content = xml_content.decode("utf-8", errors="ignore")
+        xml_content = str(xml_content or "").strip()
+        if not xml_content:
+            return Response({"detail": "Nota não possui XML gerado"}, status=status.HTTP_404_NOT_FOUND)
+
+        response = HttpResponse(xml_content, content_type="application/xml; charset=utf-8")
+        response["Content-Disposition"] = f'inline; filename="NFe_{empresa}_{filial}_{numero}.xml"'
+        return response
 
     def create(self, request, *args, **kwargs):
         banco = get_licenca_db_config(request) or "default"
@@ -337,18 +360,21 @@ class NotaViewSet(viewsets.ModelViewSet):
         empresa = (
             request.session.get("empresa_id")
             or request.query_params.get("empresa")
+            or request.query_params.get("empresa_id")
             or request.headers.get("X-Empresa")
         )
         filial = (
             request.session.get("filial_id")
             or request.query_params.get("filial")
+            or request.query_params.get("filial_id")
             or request.headers.get("X-Filial")
         )
-        nota = (
-            Nota.objects.using(banco)
-            .filter(pk=pk, empresa=empresa, filial=filial)
-            .first()
-        )
+        qs = Nota.objects.using(banco).filter(pk=pk)
+        if empresa:
+            qs = qs.filter(empresa=empresa)
+        if filial:
+            qs = qs.filter(filial=filial)
+        nota = qs.first()
         if not nota:
             return Response({"detail": "Nota não encontrada"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -393,33 +419,56 @@ class NotaViewSet(viewsets.ModelViewSet):
         if nota.status == 100:
             return Response({"detail": "Nota já autorizada"}, status=status.HTTP_400_BAD_REQUEST)
 
-        chave = request.data.get("chave_acesso")
-        protocolo = request.data.get("protocolo")
-        xml = request.data.get("xml")
-        descricao = request.data.get("descricao") or "Transmitida via painel"
+        try:
+            current_slug = slug or request.parser_context["kwargs"].get("slug") or ""
+            service = EmissaoService(current_slug, banco)
+            resposta = service.emitir(nota.id)
 
-        NotaService.transmitir(
-            nota=nota,
-            descricao=descricao,
-            chave=chave,
-            protocolo=protocolo,
-            xml=xml,
-            database=banco,
-        )
+            nota.refresh_from_db()
+            out = NotaDetailSerializer(nota, context=self.get_serializer_context())
+            data_out = dict(out.data)
+            data_out["sefaz_response"] = resposta
 
-        out = NotaDetailSerializer(nota, context=self.get_serializer_context())
-        return Response(out.data, status=status.HTTP_200_OK)
+            status_sefaz = (resposta or {}).get("status")
+            if status_sefaz in [100, 101, 102, 103, 104, 105, 204]:
+                return Response(data_out, status=status.HTTP_200_OK)
+
+            try:
+                from ..utils.sefaz_messages import get_sefaz_message
+
+                motivo = (resposta or {}).get("motivo")
+                msg_amigavel = get_sefaz_message(status_sefaz, motivo)
+                if msg_amigavel:
+                    data_out["detail"] = msg_amigavel
+            except Exception:
+                pass
+
+            return Response(data_out, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"Erro ao transmitir nota {pk}: {e}")
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=["post"])
     def inutilizar(self, request, pk=None, slug=None):
         banco = get_licenca_db_config(request) or "default"
-        empresa = request.session.get("empresa_id") or request.query_params.get("empresa")
-        filial = request.session.get("filial_id") or request.query_params.get("filial")
-        nota = (
-            Nota.objects.using(banco)
-            .filter(pk=pk, empresa=empresa, filial=filial)
-            .first()
+        empresa = (
+            request.session.get("empresa_id")
+            or request.query_params.get("empresa")
+            or request.query_params.get("empresa_id")
+            or request.headers.get("X-Empresa")
         )
+        filial = (
+            request.session.get("filial_id")
+            or request.query_params.get("filial")
+            or request.query_params.get("filial_id")
+            or request.headers.get("X-Filial")
+        )
+        qs = Nota.objects.using(banco).filter(pk=pk)
+        if empresa:
+            qs = qs.filter(empresa=empresa)
+        if filial:
+            qs = qs.filter(filial=filial)
+        nota = qs.first()
         if not nota:
             return Response({"detail": "Nota não encontrada"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -438,6 +487,7 @@ class NotaViewSet(viewsets.ModelViewSet):
             database=banco,
         )
 
+        nota.refresh_from_db()
         out = NotaDetailSerializer(nota, context=self.get_serializer_context())
         return Response(out.data, status=status.HTTP_200_OK)
 
