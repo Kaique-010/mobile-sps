@@ -125,12 +125,12 @@ class Ordemservico(models.Model):
     orde_foco = models.CharField(max_length=20, blank=True, null=True, verbose_name="Forma Construtiva")
     orde_esta_chap = models.CharField(max_length=50, blank=True, null=True, verbose_name="Chapas")
     orde_esta_comp = models.CharField(max_length=50, blank=True, null=True, verbose_name="Componentes")
-    orde_esta_cabo = models.CharField(max_length=50, blank=True, null=True, verbose_name="Cabos")
+    orde_esta_cabo = models.CharField(max_length=50, blank=True, null=True, verbose_name="Saída dos Cabos")
     orde_esta_quan_cabo = models.CharField(max_length=50, blank=True, null=True, verbose_name="Quantidade de Cabos")
     orde_esta_fio = models.CharField(max_length=50, blank=True, null=True, verbose_name="Fios")
     orde_esta_quan_fio = models.CharField(max_length=50, blank=True, null=True, verbose_name="Quantidade de Fios")
     orde_esta_larg = models.CharField(max_length=50, blank=True, null=True, verbose_name="Largura")
-    orde_esta_liga = models.CharField(max_length=50, blank=True, null=True, verbose_name="Ligação")
+    orde_esta_liga = models.CharField(max_length=50, blank=True, null=True, verbose_name="Status Caixa")
     orde_esta_mate = models.CharField(max_length=50, blank=True, null=True, verbose_name="Materiais")
     orde_esta_quan_mate = models.CharField(max_length=50, blank=True, null=True, verbose_name="Quantidade de Materiais")
     orde_obse = models.TextField(blank=True, null=True, verbose_name="Observações")
@@ -139,7 +139,7 @@ class Ordemservico(models.Model):
     orde_corr_arma = models.CharField(max_length=50, blank=True, null=True, verbose_name="Corrente do Armadura")
     orde_corr_camp = models.CharField(max_length=50, blank=True, null=True, verbose_name="Corrente do Campo")
     orde_grau_ip = models.CharField(max_length=50, blank=True, null=True, verbose_name="Grau IP")
-    orde_isol = models.CharField(max_length=50, blank=True, null=True, verbose_name="Isolamento")
+    orde_isol = models.CharField(max_length=50, blank=True, null=True, verbose_name="Isolação")
     
     
     orde_data_aber = models.DateField(auto_now_add=True) 

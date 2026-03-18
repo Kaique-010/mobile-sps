@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(__name__)
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -36,7 +38,7 @@ class ProdutoListView(ModuloRequeridoMixin, APIView):
         # Parâmetros de contexto
         empresa_id = request.headers.get('X-Empresa') or request.session.get('empresa_id')
         filial_id = request.headers.get('X-Filial') or request.session.get('filial_id')
-
+       
         queryset = listar_produtos(
             banco=banco,
             empresa_id=empresa_id,
@@ -46,7 +48,7 @@ class ProdutoListView(ModuloRequeridoMixin, APIView):
             saldo_filter=saldo_filter,
             limit=limit
         )
-
+        logger.info(f"Listar produtos com filtro: q={q}, marca={marca_nome}, saldo={saldo_filter}, limit={limit}")
         serializer = ProdutoSerializer(queryset, many=True, context={'banco': banco})
         return Response(serializer.data)
 
@@ -77,6 +79,7 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         )
         
         # Reutiliza a consulta otimizada, mas sem limite padrão do ListView
+        
         return listar_produtos(
             banco=banco,
             empresa_id=empresa_id,
@@ -97,7 +100,8 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             request.session.get('empresa_id') or
             request.headers.get('Empresa_id')
         )
-        
+        logger.info(f"Busca produto com filtro: q={termo}, hash={hash_busca}, empresa={empresa_id}")
+
         # 1. Busca por Hash (QR Code)
         hash_busca = request.query_params.get('hash')
         if hash_busca:
