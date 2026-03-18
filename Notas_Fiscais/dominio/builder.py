@@ -41,31 +41,26 @@ class NotaBuilder:
     # -------------------------------
     def build_emitente(self):
         f = self.filial
-        cnpj = self._somente_digitos(f.empr_docu)
-        if len(cnpj) <= 14:
-            cnpj = cnpj.zfill(14)
-    
-    def build_emitente_produtor_rural_pessoa_fisica_ou_juridica(self):
-        f = self.filial
-        produtor_rural_pessoa_fisica = f.empr_regi_trib == 5
-        produtor_rural_pessoa_juridica = f.empr_regi_trib == 4
-        if produtor_rural_pessoa_juridica:
-            cnpj = self._somente_digitos(f.empr_docu)
-            if len(cnpj) <= 14:
-                cnpj = cnpj.zfill(14)
-        if produtor_rural_pessoa_fisica:
-            cpf = self._somente_digitos(f.empr_docu)
-            if len(cpf) <= 11:
+        regime = str(getattr(f, "empr_regi_trib", "") or "1").strip()
+
+        cpf = None
+        if regime == "5":
+            cpf = self._somente_digitos(f.empr_docu, 11)
+            if cpf:
                 cpf = cpf.zfill(11)
-        
-            
+            cnpj = (cpf or "").zfill(14)
+        else:
+            cnpj = self._somente_digitos(f.empr_docu, 14)
+            if cnpj:
+                cnpj = cnpj.zfill(14)
+
         return EmitenteDTO(
-            cnpj=cnpj if produtor_rural_pessoa_juridica else None,
-            cpf=cpf if produtor_rural_pessoa_fisica else None,
+            cnpj=cnpj or "",
+            cpf=cpf,
             razao=f.empr_nome,
             fantasia=f.empr_fant or f.empr_nome,
             ie=self._limpar_inscricao_estadual(f.empr_insc_esta),
-            regime_trib=f.empr_regi_trib,
+            regime_trib=regime,
             cnae=self._somente_digitos(f.empr_cnae),
             inscricao_municipal=self._somente_digitos(f.empr_insc_muni),
 
@@ -77,6 +72,9 @@ class NotaBuilder:
             uf=f.empr_esta,
             cep=f.empr_cep,
         )
+    
+    def build_emitente_produtor_rural_pessoa_fisica_ou_juridica(self):
+        return self.build_emitente()
 
     # -------------------------------
     # DESTINATÁRIO

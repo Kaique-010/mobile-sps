@@ -262,6 +262,9 @@ class SefazAdapter:
         if hasattr(nota_fiscal, '_itens_extra'):
             self._injetar_ibs_cbs(nfe, nota_fiscal._itens_extra)
 
+        if hasattr(nota_fiscal, '_emitente_cpf'):
+            self._injetar_emitente_cpf(nfe, nota_fiscal._emitente_cpf)
+
         # Injeta Responsável Técnico se disponível (necessário para evitar Rejeição 972/225)
         if hasattr(nota_fiscal, '_responsavel_tecnico'):
             self._injetar_responsavel_tecnico(nfe, nota_fiscal._responsavel_tecnico)
@@ -303,6 +306,35 @@ class SefazAdapter:
             "chave": chave,
             "xml_protocolo": xml_protocolo,
         }
+
+    def _injetar_emitente_cpf(self, nfe_elem, cpf):
+        cpf_digits = "".join([c for c in str(cpf or "") if c.isdigit()])[:11]
+        if not cpf_digits:
+            return
+        cpf_digits = cpf_digits.zfill(11)
+
+        ns_uri = 'http://www.portalfiscal.inf.br/nfe'
+        ns = {'ns': ns_uri}
+
+        emit = nfe_elem.find('.//ns:emit', namespaces=ns)
+        if emit is None:
+            emit = nfe_elem.find('.//emit')
+        if emit is None:
+            return
+
+        for tag in ("CNPJ", "CPF"):
+            node = emit.find(f'ns:{tag}', namespaces=ns)
+            if node is None:
+                node = emit.find(tag)
+            if node is not None:
+                emit.remove(node)
+
+        if emit.tag.startswith('{'):
+            cpf_node = etree.Element(f'{{{ns_uri}}}CPF')
+        else:
+            cpf_node = etree.Element('CPF')
+        cpf_node.text = cpf_digits
+        emit.insert(0, cpf_node)
 
     def consultar(self, chave):
         """

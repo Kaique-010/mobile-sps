@@ -89,6 +89,9 @@ def construir_nfe_pynfe(dto):
         totais_tributos_aproximado=None,
         codigo_numerico=str(random.randint(10000000, 99999999)), # Gera cNF aleatório para evitar Rejeição 656 (Consumo Indevido)
     )
+    emitente_cpf = str(getattr(dto.emitente, "cpf", "") or "").strip()
+    if emitente_cpf:
+        nota_fiscal._emitente_cpf = emitente_cpf
     
     # Armazena dados do responsável técnico para injeção posterior no XML (SefazAdapter)
     if dto.responsavel_tecnico:

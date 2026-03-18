@@ -5,6 +5,7 @@ from typing import List, Optional
 
 class EmitenteDTO(BaseModel):
     cnpj: str
+    cpf: Optional[str] = None
     razao: str
     fantasia: str
     ie: str

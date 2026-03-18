@@ -30,6 +30,17 @@ class EmissaoService:
 
         # 2) Montar DTO
         dto = NotaBuilder(nota, database=self.db).build()
+        if getattr(dto.emitente, "cpf", None):
+            try:
+                serie_int = int(str(dto.serie or "0"))
+            except Exception:
+                serie_int = 0
+            if not (920 <= serie_int <= 969):
+                raise ErroDominio(
+                    "Para Produtor Rural (CPF) use série entre 920 e 969.",
+                    codigo="serie_produtor_rural_invalida",
+                    detalhes={"serie": dto.serie},
+                )
 
         # 3) Montar objeto NFe (PyNFe)
         nfe_obj = construir_nfe_pynfe(dto)
