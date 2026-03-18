@@ -4,9 +4,9 @@ from rest_framework import status
 from decimal import Decimal
 from datetime import datetime, timedelta
 from django.db.models import Sum, Count
-from django.db import transaction, connections
+from django.db import transaction
 
-from ..models import Nota, NotaItem
+from ..models import Nota
 from contas_a_receber.models import FORMA_RECEBIMENTO, Titulosreceber, Baretitulos
 from core.registry import get_licenca_db_config
 
@@ -52,54 +52,11 @@ def _calcular_total_nota(nota):
     return (total_produtos + total_tributos).quantize(Decimal("0.01"))
 
 
-def _parcelas_existem(banco, empresa, filial, nota_numero):
-    with connections[banco].cursor() as cursor:
-        cursor.execute(
-            "SELECT 1 FROM parcelasnotafiscal WHERE parc_empr = %s AND parc_fili = %s AND parc_nota = %s LIMIT 1",
-            [int(empresa), int(filial), int(nota_numero)],
-        )
-        return cursor.fetchone() is not None
-
-
-def _insert_parcelas_notafiscal(banco, rows):
-    if not rows:
-        return
-    with connections[banco].cursor() as cursor:
-        desc = connections[banco].introspection.get_table_description(cursor, "parcelasnotafiscal")
-        cols = {c.name for c in desc}
-        ordered = [
-            "parc_empr",
-            "parc_fili",
-            "parc_nota",
-            "parc_parc",
-            "parc_clie",
-            "parc_forn",
-            "parc_emis",
-            "parc_venc",
-            "parc_valo",
-            "parc_port",
-            "parc_situ",
-            "parc_form",
-            "parc_avis",
-            "parc_vend",
-            "parc_cecu",
-        ]
-        insert_cols = [c for c in ordered if c in cols]
-        if not insert_cols:
-            raise ValueError("Tabela parcelasnotafiscal não possui colunas esperadas para inserção.")
-        placeholders = ", ".join(["%s"] * len(insert_cols))
-        sql = f"INSERT INTO parcelasnotafiscal ({', '.join(insert_cols)}) VALUES ({placeholders})"
-        params = []
-        for r in rows:
-            params.append([r.get(c) for c in insert_cols])
-        cursor.executemany(sql, params)
-
-
 class GerarTitulosNotaView(APIView):
-    def post(self, request, slug=None):
+    def post(self, request, nota_id=None, nota_numero=None, slug=None, **kwargs):
         banco = get_licenca_db_config(self.request) or "default"
         data = request.data or {}
-        nota_numero = data.get("nota_numero")
+        nota_numero = nota_numero or nota_id or data.get("nota_numero") or data.get("nota_id")
         entrada = _parse_decimal(data.get("entrada", 0), default="0")
         forma_pagamento = (data.get("forma_pagamento") or "").strip()
         parcelas = int(data.get("parcelas") or 1)
@@ -138,7 +95,7 @@ class GerarTitulosNotaView(APIView):
             titu_titu=str(nota.numero),
             titu_clie=cliente_id,
         ).exists()
-        if titulos_existem or _parcelas_existem(banco, nota.empresa, nota.filial, nota.numero):
+        if titulos_existem:
             return Response(
                 {"detail": "Já existe título/parcela para esta nota. Use Consultar ou Remover."},
                 status=409,
@@ -148,27 +105,27 @@ class GerarTitulosNotaView(APIView):
         valor_parcela = (total_restante / Decimal(str(parcelas))).quantize(Decimal("0.01"))
         diferenca = total_restante - (valor_parcela * Decimal(str(parcelas)))
 
-        rows = []
+        titulos = []
         parc_num = 1
+        data_emissao = datetime.now().date()
         if entrada > 0:
-            rows.append(
-                {
-                    "parc_empr": int(nota.empresa),
-                    "parc_fili": int(nota.filial),
-                    "parc_nota": int(nota.numero),
-                    "parc_parc": int(parc_num),
-                    "parc_clie": cliente_id,
-                    "parc_forn": cliente_id,
-                    "parc_emis": datetime.now().date(),
-                    "parc_venc": data_base,
-                    "parc_valo": entrada,
-                    "parc_port": 0,
-                    "parc_situ": 0,
-                    "parc_form": forma_pagamento or "",
-                    "parc_avis": False,
-                    "parc_vend": 0,
-                    "parc_cecu": 0,
-                }
+            titulos.append(
+                Titulosreceber(
+                    titu_empr=int(nota.empresa),
+                    titu_fili=int(nota.filial),
+                    titu_clie=cliente_id,
+                    titu_seri="NFE",
+                    titu_titu=str(nota.numero),
+                    titu_parc=str(parc_num),
+                    titu_emis=data_emissao,
+                    titu_venc=data_base,
+                    titu_valo=entrada,
+                    titu_hist=f"Título gerado da NF {nota.numero}",
+                    titu_form_reci=forma_pagamento or "",
+                    titu_situ=0,
+                    titu_aber="A",
+                    titu_tipo="Receber",
+                )
             )
             parc_num += 1
 
@@ -177,36 +134,35 @@ class GerarTitulosNotaView(APIView):
             valor_atual = valor_parcela
             if i == 0:
                 valor_atual += diferenca
-            rows.append(
-                {
-                    "parc_empr": int(nota.empresa),
-                    "parc_fili": int(nota.filial),
-                    "parc_nota": int(nota.numero),
-                    "parc_parc": int(parc_num),
-                    "parc_clie": cliente_id,
-                    "parc_forn": cliente_id,
-                    "parc_emis": datetime.now().date(),
-                    "parc_venc": vencimento,
-                    "parc_valo": valor_atual,
-                    "parc_port": 0,
-                    "parc_situ": 0,
-                    "parc_form": forma_pagamento or "",
-                    "parc_avis": False,
-                    "parc_vend": 0,
-                    "parc_cecu": 0,
-                }
+            titulos.append(
+                Titulosreceber(
+                    titu_empr=int(nota.empresa),
+                    titu_fili=int(nota.filial),
+                    titu_clie=cliente_id,
+                    titu_seri="NFE",
+                    titu_titu=str(nota.numero),
+                    titu_parc=str(parc_num),
+                    titu_emis=data_emissao,
+                    titu_venc=vencimento,
+                    titu_valo=valor_atual,
+                    titu_hist=f"Título gerado da NF {nota.numero}",
+                    titu_form_reci=forma_pagamento or "",
+                    titu_situ=0,
+                    titu_aber="A",
+                    titu_tipo="Receber",
+                )
             )
             parc_num += 1
 
         try:
             with transaction.atomic(using=banco):
-                _insert_parcelas_notafiscal(banco, rows)
+                Titulosreceber.objects.using(banco).bulk_create(titulos)
         except Exception as e:
-            return Response({"detail": f"Erro ao gerar parcelas: {e}"}, status=409)
+            return Response({"detail": f"Erro ao gerar títulos: {e}"}, status=409)
 
         return Response(
             {
-                "detail": f"{len(rows)} parcela(s) gerada(s) com sucesso.",
+                "detail": f"{len(titulos)} título(s) gerado(s) com sucesso.",
                 "total_nota": float(total_nota),
                 "total_parcelado": float(total_restante),
             },
@@ -215,8 +171,9 @@ class GerarTitulosNotaView(APIView):
 
 
 class RemoverTitulosNotaView(APIView):
-    def post(self, request, nota_numero, slug=None):
+    def post(self, request, nota_id=None, nota_numero=None, slug=None, **kwargs):
         banco = get_licenca_db_config(self.request) or "default"
+        nota_numero = nota_numero or nota_id
         if not nota_numero:
             return Response({"detail": "nota_numero é obrigatório."}, status=400)
 
@@ -245,12 +202,6 @@ class RemoverTitulosNotaView(APIView):
                     titu_titu=str(nota_numero),
                     titu_clie=cliente_id,
                 ).delete()[0]
-
-                with connections[banco].cursor() as cursor:
-                    cursor.execute(
-                        "DELETE FROM parcelasnotafiscal WHERE parc_empr = %s AND parc_fili = %s AND parc_nota = %s",
-                        [int(nota.empresa), int(nota.filial), int(nota_numero)],
-                    )
         except Exception as e:
             return Response({"detail": f"Erro ao remover financeiro: {e}"}, status=409)
 
@@ -258,8 +209,9 @@ class RemoverTitulosNotaView(APIView):
 
 
 class ConsultarTitulosNotaView(APIView):
-    def get(self, request, nota_numero, slug=None):
+    def get(self, request, nota_id=None, nota_numero=None, slug=None, **kwargs):
         banco = get_licenca_db_config(self.request) or "default"
+        nota_numero = nota_numero or nota_id
         if not nota_numero:
             return Response({"detail": "nota_numero é obrigatório."}, status=400)
 
@@ -284,7 +236,8 @@ class ConsultarTitulosNotaView(APIView):
                 "valor": float(t.titu_valo or 0),
                 "vencimento": (t.titu_venc.isoformat() if t.titu_venc else ""),
                 "forma_pagamento": t.titu_form_reci,
-                "status": t.titu_situ,
+                "status": t.titu_aber,
+                "situacao": t.titu_situ,
                 "aberto": t.titu_aber,
             }
             for t in titulos
@@ -299,8 +252,9 @@ class ConsultarTitulosNotaView(APIView):
 
 
 class AtualizarTituloNotaView(APIView):
-    def post(self, request, nota_numero, slug=None):
+    def post(self, request, nota_id=None, nota_numero=None, slug=None, **kwargs):
         banco = get_licenca_db_config(self.request) or "default"
+        nota_numero = nota_numero or nota_id
         if not nota_numero:
             return Response({"detail": "nota_numero é obrigatório."}, status=400)
 
@@ -380,6 +334,7 @@ class AtualizarTituloNotaView(APIView):
                 titu_valo=novo_valor,
                 titu_venc=venc,
                 titu_form_reci=forma_pagamento,
+                titu_tipo="Receber",
             )
             titulo = Titulosreceber.objects.using(banco).get(
                 titu_empr=int(nota.empresa),
@@ -398,7 +353,8 @@ class AtualizarTituloNotaView(APIView):
                     "valor": float(titulo.titu_valo or 0),
                     "vencimento": (titulo.titu_venc.isoformat() if titulo.titu_venc else ""),
                     "forma_pagamento": titulo.titu_form_reci,
-                    "status": titulo.titu_situ,
+                    "status": titulo.titu_aber,
+                    "situacao": titulo.titu_situ,
                 },
             },
             status=200,

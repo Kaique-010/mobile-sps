@@ -36,21 +36,21 @@
           <input type="date" class="form-control" id="fin-data-base">
         </div>
         <div class="col-md-3">
-          <label class="form-label">Forma pagamento</label>
+          <label class="form-label">Forma do Recebimento</label>
           <select class="form-select" id="fin-forma">
             <option value="" selected>Selecione...</option>
-            <option value="00">DUPLICATA</option>
-            <option value="01">CHEQUE</option>
-            <option value="02">PROMISSÓRIA</option>
-            <option value="03">RECIBO</option>
-            <option value="50">CHEQUE PRÉ</option>
-            <option value="51">CARTAO DE CRÉDITO</option>
-            <option value="52">CARTAO DE DÉBITO</option>
-            <option value="53">BOLETO BANCÁRIO</option>
-            <option value="54">DINHEIRO</option>
-            <option value="55">DEPÓSITO EM CONTA</option>
-            <option value="56">VENDA À VISTA</option>
-            <option value="60">PIX</option>
+            <option value="00">00 - DUPLICATA</option>
+            <option value="01">01 - CHEQUE</option>
+            <option value="02">02 - PROMISSÓRIA</option>
+            <option value="03">03 - RECIBO</option>
+            <option value="50">50 - CHEQUE PRÉ</option>
+            <option value="51">51 - CARTAO DE CRÉDITO</option>
+            <option value="52">52 - CARTAO DE DÉBITO</option>
+            <option value="53">53 - BOLETO BANCÁRIO</option>
+            <option value="54">54 - DINHEIRO</option>
+            <option value="55">55 - DEPÓSITO EM CONTA</option>
+            <option value="56">56 - VENDA À VISTA</option>
+            <option value="60">60 - PIX</option>
           </select>
         </div>
         <div class="col-md-3 d-flex gap-2 flex-wrap">
@@ -62,12 +62,12 @@
       </div>
       <div class="table-responsive">
         <table class="table table-sm table-hover align-middle">
-          <thead class="table-light">
+          <thead class="table-responsive">
             <tr>
               <th>Parcela</th>
               <th class="text-end">Valor</th>
               <th>Vencimento</th>
-              <th>Forma</th>
+              <th>Forma do Recebimento</th>
               <th>Status</th>
             </tr>
           </thead>
@@ -85,7 +85,7 @@
 </div>
 
 <script>
-  ;(() => {
+  ; (() => {
     const byId = (id) => document.getElementById(id)
     const getSlug = () => {
       try {
@@ -156,6 +156,30 @@
         { v: '56', l: 'À VISTA' },
         { v: '60', l: 'PIX' },
       ]
+      const formaMap = new Map(formaOpts.map((o) => [o.v, o]))
+      const normalizeForma = (v) => {
+        const s = String(v || '').trim()
+        if (!s) return ''
+        const m = s.match(/^(\d{2})/)
+        return m ? m[1] : s
+      }
+      const formatForma = (v) => {
+        const code = normalizeForma(v)
+        const o = formaMap.get(code)
+        return o ? `${o.v} - ${o.l}` : String(v || '')
+      }
+      const statusMap = new Map([
+        ['A', 'A - Aberto'],
+        ['P', 'P - Pago parcialmente'],
+        ['T', 'T - Pago total'],
+        ['B', 'BAIXADO'],
+      ])
+      const formatStatus = (status, aberto) => {
+        const raw = String(status || aberto || '').trim()
+        if (!raw) return ''
+        const code = raw.length ? raw[0].toUpperCase() : ''
+        return statusMap.get(code) || raw
+      }
 
       if (dataBaseEl && !dataBaseEl.value) {
         const d = new Date()
@@ -225,11 +249,11 @@
         }, 300)
       }
       startAutoSync()
-      ;['total', 'total-desconto', 'total-tributos', 'total-nota'].forEach((id) => {
-        const el = document.getElementById(id)
-        el?.addEventListener('input', syncResumo)
-        el?.addEventListener('change', syncResumo)
-      })
+        ;['total', 'total-desconto', 'total-tributos', 'total-nota'].forEach((id) => {
+          const el = document.getElementById(id)
+          el?.addEventListener('input', syncResumo)
+          el?.addEventListener('change', syncResumo)
+        })
       entradaEl?.addEventListener('input', syncResumo)
       entradaEl?.addEventListener('change', syncResumo)
       document.getElementById('tab-financeiro-btn')?.addEventListener('shown.bs.tab', async () => {
@@ -246,15 +270,23 @@
           if (elNota && !parseNumber(elNota.value)) elNota.value = Number(apiTotais.totalNota).toFixed(2)
           syncResumo()
         }
+        await consultar({ silent: true })
       })
 
-      const consultar = async () => {
+      const consultar = async ({ silent = false } = {}) => {
         if (!notaId) {
-          alert('Salve a nota para consultar os títulos.')
+          if (!silent) alert('Salve a nota para consultar os títulos.')
           return
         }
         const url = `/api/${slug}/notasfiscais/notas-fiscais/financeiro/${encodeURIComponent(notaId)}/`
         const resp = await authFetch(url, { method: 'GET' })
+        if (!resp.ok) {
+          if (!silent) {
+            const txt = await resp.text()
+            alert(txt || 'Erro ao consultar títulos')
+          }
+          return
+        }
         const data = await resp.json()
         const titulos = data.titulos || []
         body.innerHTML = ''
@@ -264,17 +296,19 @@
             String(t.aberto || '').toUpperCase() === 'A'
               ? `<button type="button" class="btn btn-sm btn-outline-secondary fin-edit" data-parcela="${t.parcela}"><i class="bi bi-pencil"></i></button>`
               : ''
+          const formaCode = normalizeForma(t.forma_pagamento || '')
+          const statusTxt = formatStatus(t.status, t.aberto)
           tr.innerHTML = `
             <td>${t.parcela} ${editBtn}</td>
             <td class="text-end">R$ ${Number(t.valor || 0).toFixed(2)}</td>
             <td>${t.vencimento || ''}</td>
-            <td data-forma="${t.forma_pagamento || ''}">${t.forma_pagamento || ''}</td>
-            <td>${String(t.status || '').toUpperCase()}</td>
+            <td data-forma="${formaCode}">${formatForma(t.forma_pagamento || '')}</td>
+            <td>${statusTxt}</td>
           `
           tr.dataset.aberto = t.aberto || ''
           tr.dataset.valor = t.valor || ''
           tr.dataset.vencimento = t.vencimento || ''
-          tr.dataset.forma = t.forma_pagamento || ''
+          tr.dataset.forma = formaCode
           body.appendChild(tr)
         })
         const total = Number(data.total || 0)
@@ -365,7 +399,7 @@
         totalEl.textContent = ''
       }
 
-      btnConsultar?.addEventListener('click', consultar)
+      btnConsultar?.addEventListener('click', () => consultar())
       btnGerar?.addEventListener('click', gerar)
       btnRemover?.addEventListener('click', remover)
 
@@ -384,6 +418,7 @@
         const valorAtual = Number(tr.dataset.valor || 0)
         const vencAtual = tr.dataset.vencimento || tdVenc.textContent || ''
         const formaAtual = tr.dataset.forma || tdForma.dataset.forma || tdForma.textContent || ''
+        const formaAtualCode = normalizeForma(formaAtual)
         tdValor.innerHTML = `<input type="number" step="0.01" class="form-control form-control-sm text-end" value="${String(
           valorAtual
         )}">`
@@ -393,7 +428,7 @@
         tdForma.innerHTML = `<select class="form-select form-select-sm">${formaOpts
           .map(
             (o) =>
-              `<option value="${o.v}" ${o.v === formaAtual ? 'selected' : ''}>${o.v}</option>`
+              `<option value="${o.v}" ${o.v === formaAtualCode ? 'selected' : ''}>${o.v} - ${o.l}</option>`
           )
           .join('')}</select>`
         btnAtualizar?.classList.remove('d-none')
@@ -403,7 +438,7 @@
         const storeEdit = () => {
           const v = Number(inputValor.value || 0)
           const d = inputVenc.value || vencAtual
-          const f = inputForma.value || formaAtual
+          const f = inputForma.value || formaAtualCode
           edits.set(parcela, { valor: v, vencimento: d, forma_pagamento: f })
           btnAtualizar?.classList.remove('d-none')
           if (btnAtualizar) btnAtualizar.disabled = false

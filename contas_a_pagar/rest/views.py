@@ -94,15 +94,14 @@ class TitulospagarViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                 titu_aber__in=['A', 'P']  
             )
             
-            if queryset.count() == 0:
+            obj = queryset.first()
+            if obj is None:
                 raise Http404("Título não encontrado ou já baixado")
-            elif queryset.count() > 1:
+            if queryset.count() > 1:
                 import logging
                 logger = logging.getLogger(__name__)
-                logger.warning(f"Múltiplos títulos encontrados para os critérios: {self.kwargs}")
-                return queryset.first()
-            else:
-                return queryset.get()
+                logger.warning(f"Múltiplos títulos encontrados para os critérios: {self.kwargs}, usando o primeiro")
+            return obj
         except KeyError as e:
             import logging
             logger = logging.getLogger(__name__)
@@ -151,15 +150,14 @@ class TitulospagarViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
               
             )
             
-            if queryset.count() == 0:
+            obj = queryset.first()
+            if obj is None:
                 raise Http404("Título não encontrado")
-            elif queryset.count() > 1:
+            if queryset.count() > 1:
                 import logging
                 logger = logging.getLogger(__name__)
-                logger.warning(f"Múltiplos títulos encontrados para os critérios: {self.kwargs}")
-                return queryset.first()
-            else:
-                return queryset.get()
+                logger.warning(f"Múltiplos títulos encontrados para os critérios: {self.kwargs}, usando o primeiro")
+            return obj
         except KeyError as e:
             import logging
             logger = logging.getLogger(__name__)

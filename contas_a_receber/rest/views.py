@@ -89,11 +89,7 @@ class TitulosreceberViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
     def get_object(self):
         banco = get_licenca_db_config(self.request)
         try:
-            queryset = Titulosreceber.objects.using(banco).only(
-                'titu_empr','titu_fili','titu_titu','titu_seri','titu_parc',
-                'titu_clie','titu_valo','titu_emis','titu_venc','titu_situ',
-                'titu_form_reci','titu_aber'
-            ).filter(
+            queryset = Titulosreceber.objects.using(banco).filter(
                 titu_empr=self.kwargs["titu_empr"],
                 titu_fili=self.kwargs["titu_fili"],
                 titu_clie=self.kwargs["titu_clie"],
@@ -313,7 +309,7 @@ class TitulosreceberViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
                     'message': 'Título baixado com sucesso',
                     'baixa_id': baixa.bare_sequ,
                     'valor_recebido': valor_total_recebido,
-                    'status_titulo': titulo.titu_aber
+                    'status_titulo': tipo_baixa_final
                 }, status=status.HTTP_200_OK)
                 
         except Exception as e:
