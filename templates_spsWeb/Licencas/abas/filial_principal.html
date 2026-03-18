@@ -11,7 +11,7 @@
 </div>
 
 <div class="row mt-2">
-  <div class="col-md-4"><label for="{{ form.empr_docu.id_for_label }}">CNPJ da Filial</label>{{ form.empr_docu }}</div>
+  <div class="col-md-4"><label for="{{ form.empr_docu.id_for_label }}">Documento da Filial(CPF/CNPJ)</label>{{ form.empr_docu }}</div>
   {% if form.empr_docu.errors %}
   <div class="alert alert-danger mt-1">{{ form.empr_docu.errors|striptags }}</div>
   {% endif %}

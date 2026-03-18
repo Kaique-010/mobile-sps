@@ -144,7 +144,7 @@ class Filiais(models.Model):
     empr_data_regi = models.DateField(blank=True, null=True)
     empr_regi_junt = models.CharField(max_length=30, blank=True, null=True)
     empr_regi_outr = models.CharField(max_length=30, blank=True, null=True)
-    empr_regi_trib = models.CharField(max_length=1, blank=True, null=True, choices= (('1', 'Simples Nacional'), ('2', 'Simples com Excesso de Limite'), ('3', 'Regime Normal')), default='1')
+    empr_regi_trib = models.CharField(max_length=1, blank=True, null=True, choices= (('1', 'Simples Nacional'), ('2', 'Simples com Excesso de Limite'), ('3', 'Regime Normal'), ('4', 'Produtor Rural - Pessoa Jurídica'), ('5', 'Produtor Rural - Pessoa Física')), default='1')
     empr_cep = models.CharField(max_length=8, blank=True, null=True)
     empr_ende = models.CharField(max_length=60, blank=True, null=True)
     empr_nume = models.CharField(max_length=10, blank=True, null=True)

@@ -44,9 +44,24 @@ class NotaBuilder:
         cnpj = self._somente_digitos(f.empr_docu)
         if len(cnpj) <= 14:
             cnpj = cnpj.zfill(14)
+    
+    def build_emitente_produtor_rural_pessoa_fisica_ou_juridica(self):
+        f = self.filial
+        produtor_rural_pessoa_fisica = f.empr_regi_trib == 5
+        produtor_rural_pessoa_juridica = f.empr_regi_trib == 4
+        if produtor_rural_pessoa_juridica:
+            cnpj = self._somente_digitos(f.empr_docu)
+            if len(cnpj) <= 14:
+                cnpj = cnpj.zfill(14)
+        if produtor_rural_pessoa_fisica:
+            cpf = self._somente_digitos(f.empr_docu)
+            if len(cpf) <= 11:
+                cpf = cpf.zfill(11)
+        
             
         return EmitenteDTO(
-            cnpj=cnpj,
+            cnpj=cnpj if produtor_rural_pessoa_juridica else None,
+            cpf=cpf if produtor_rural_pessoa_fisica else None,
             razao=f.empr_nome,
             fantasia=f.empr_fant or f.empr_nome,
             ie=self._limpar_inscricao_estadual(f.empr_insc_esta),
