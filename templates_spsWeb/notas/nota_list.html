@@ -72,7 +72,7 @@
   .nf-page {
     min-height: 100vh;
 
-    padding: 32px 40px 60px;
+    padding: 10px 16px 25px;
     font-family: var(--font-body);
 
   }
@@ -691,7 +691,7 @@
   /* Responsive */
   @media (max-width: 900px) {
     .nf-page {
-      padding: 20px 16px 48px;
+      padding: 5px 10px 15px;
     }
 
     .nf-kpis {
@@ -705,6 +705,10 @@
     .nf-cards {
       display: block;
     }
+    .btn-emitir {
+      font-size: 10px;
+      padding: 3px 6px;
+    }
   }
 
   @media (max-width: 500px) {
@@ -713,8 +717,28 @@
     }
 
     .nf-title {
-      font-size: 24px;
+      font-size: 16px;
+      align-items: center;
     }
+    .nf-page {
+      padding: 5px 10px 15px;
+    }
+    .nf-kpis {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .nf-table-wrap {
+      display: none;
+    }
+
+    .nf-cards {
+      display: block;
+    }
+    .btn-emitir {
+      font-size: 10px;
+      padding: 3px 6px;
+    }
+  
   }
 </style>
 <div class="container page-container px-5 pt-4 pb-5">

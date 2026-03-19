@@ -76,3 +76,43 @@ h2.page-title {
 .chart-card { border: 1px solid rgba(0,0,0,.08); box-shadow: 0 4px 16px rgba(0,0,0,.06); }
 .chart-wrapper { position: relative; height: 320px; }
 .table-compact th, .table-compact td { padding: .35rem .5rem; }
+
+
+ @media (max-width: 576px) {
+        .container.page-container {
+            padding-top: 12px;
+            padding-bottom: 12px;
+        }
+
+        .page-header-custom {
+            align-items: center;
+            text-align: center;
+            padding: 12px;
+            margin-top: 16px;
+        }
+
+        .page-header-custom .page-actions {
+            align-self: center;
+            justify-content: center !important;
+            margin-top: 10px;
+        }
+
+        .page-title {
+            font-size: 22px;
+            margin: 0;
+        }
+
+        .page-title .bi.bi-coin {
+            font-size: 1.25rem;
+        }
+
+        .table {
+            font-size: 12px;
+        }
+
+        .page-actions .btn {
+            padding: 4px 10px;
+            font-size: 12px;
+            margin-bottom: 0;
+        }
+    }

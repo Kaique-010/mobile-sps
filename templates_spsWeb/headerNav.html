@@ -68,10 +68,99 @@
 
     .offcanvas-footer {
         border-top: 1px solid var(--bs-border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: nowrap;
+    }
+
+    .offcanvas-footer a.btn,
+    .offcanvas-footer button.btn {
+        margin-bottom: 0 !important;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        white-space: nowrap;
+    }
+
+    .offcanvas-footer a.btn,
+    .offcanvas-footer #logout-jwt {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+
+    .offcanvas-footer #theme-toggle {
+        flex: 0 0 auto;
+        width: 44px;
     }
 
     .offcanvas-backdrop.show {
         backdrop-filter: blur(2px);
+    }
+
+    body.offcanvas-open #mascot-container,
+    body.offcanvas-open #assistant-bubble,
+    body.offcanvas-open #abrirKronos {
+        display: none !important;
+    }
+
+    @media (max-width: 576px) {
+        .offcanvas.offcanvas-end {
+            width: min(74vw, 280px);
+        }
+
+        #main-navbar .container-fluid {
+            padding-left: .5rem;
+            padding-right: .5rem;
+        }
+
+        .navbar-brand,
+        .offcanvas-title {
+            font-size: 1rem;
+        }
+
+        #main-navbar img {
+            height: 22px !important;
+            margin-right: 8px !important;
+        }
+
+        .navbar-toggler {
+            padding: .25rem .5rem;
+        }
+
+        .navbar-toggler .bi {
+            font-size: 1.5rem !important;
+        }
+
+        .offcanvas .nav-link {
+            padding: .4rem .6rem;
+            font-size: .95rem;
+        }
+
+        .offcanvas .nav-link .bi {
+            font-size: 1.2rem !important;
+        }
+
+        .offcanvas-footer {
+            padding-top: 10px !important;
+            padding-bottom: 10px !important;
+        }
+
+        .offcanvas-footer .btn {
+            padding: 6px 10px;
+            font-size: 12px;
+        }
+
+        .offcanvas-footer #theme-toggle {
+            width: 40px;
+        }
+
+        #theme-toggle {
+            padding-left: 10px;
+            padding-right: 10px;
+        }
     }
 </style>
 <header class="bg-body">
@@ -86,7 +175,8 @@
             <div class="offcanvas offcanvas-end bg-body" tabindex="-1" id="offcanvasDarkNavbar"
                 aria-labelledby="offcanvasDarkNavbarLabel">
                 <div class="offcanvas-header">
-                    <h5 class="offcanvas-title" id="offcanvasDarkNavbarLabel">SPS WEB</h5>
+                    <h5 class="offcanvas-title" id="offcanvasDarkNavbarLabel"><img
+                                        src="{% static 'logo.png' %}" style="height:24px" margin-right="50px" margin-left="10px" />SPS WEB</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Fechar"></button>
                 </div>
                 <div class="offcanvas-body">
@@ -94,7 +184,7 @@
                         <div id="login-warning" class="alert alert-warning d-none">Necessário Estar Logado</div>
                         <ul class="navbar-nav justify-content-end flex-grow-1 pe-3">
                             <li class="nav-item">
-                                <a class="nav-link active" aria-current="page" href="/web/login/"
+                                <a class="nav-link" aria-current="page" href="/web/login/"
                                     data-slug-route="/web/{slug}/home/">
                                     <i class="bi bi-house fs-3"></i> Home
                                 </a>
@@ -125,21 +215,23 @@
                             {% include 'parciais/navpatrimonio.html' %}
                             {% include 'parciais/navnotificacoes.html' %}
                             {% include 'parciais/navcentraldeajuda.html' %}
-                            
+
                             {% include 'parciais/navutilitarios.html' %}
 
                         </ul>
                     </div>
                 </div>
-                <div class="offcanvas-footer bg-body px-3 py-3 d-flex gap-2">
+                <div class="offcanvas-footer bg-body px-3 py-2 d-flex w-100">
 
-                    <a href="/web/selecionar-empresa/" class="btn btn-outline-primary">
-                        <i class="bi bi-building"></i> Trocar Empresa/Filial
+                    <a href="/web/selecionar-empresa/" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-building"></i>
+                        <span class="d-inline d-sm-none">Trocar</span>
+                        <span class="d-none d-sm-inline">Trocar Empr/Fili</span>
                     </a>
-                    <button id="logout-jwt" class="btn btn-outline-danger" type="button">
+                    <button id="logout-jwt" class="btn btn-sm btn-outline-danger" type="button">
                         <i class="bi bi-box-arrow-right"></i> Sair
                     </button>
-                    <button id="theme-toggle" type="button" class="btn btn-outline-dark" title="Alternar tema">
+                    <button id="theme-toggle" type="button" class="btn btn-sm btn-outline-dark" title="Alternar tema">
                         <i class="bi bi-moon"></i>
                     </button>
                 </div>
@@ -151,6 +243,12 @@
 <script>
     // Controla visibilidade do menu conforme módulos liberados para empresa/filial
     (() => {
+        const offcanvasEl = document.getElementById('offcanvasDarkNavbar');
+        if (offcanvasEl) {
+            offcanvasEl.addEventListener('show.bs.offcanvas', () => document.body.classList.add('offcanvas-open'));
+            offcanvasEl.addEventListener('hidden.bs.offcanvas', () => document.body.classList.remove('offcanvas-open'));
+        }
+
         const access = localStorage.getItem('access');
         const slug = localStorage.getItem('slug');
         const empresaId = localStorage.getItem('empresa_id');

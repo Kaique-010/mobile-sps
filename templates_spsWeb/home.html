@@ -40,6 +40,17 @@
         color: var(--bs-body-color);
     }
 
+    @media (max-width: 576px) {
+        .chart-canvas {
+            width: 100% !important;
+            height: clamp(170px, 28vh, 230px) !important;
+        }
+
+        .chart-card .card-body {
+            padding: 10px;
+        }
+    }
+
 
     .btn-outline-custom2 {
         border-color: #8ec4d4;
@@ -49,7 +60,7 @@
         right: 10px;
         bottom: 10px;
         font-size: 10px;
-        z-index: 1050;
+        z-index: 2;
         background-color: var(--bs-card-bg);
     }
 
@@ -250,20 +261,20 @@
     </div>
 
     <form id="filtroDashboard" class="filter-panel mb-4 mt-4" method="get" action="">
-        <div class="row g-3 align-items-end">
-            <div class="col-12 col-md-3">
-                <label for="vendedor" class="form-label">Vendedor</label>
+        <div class="row g-2 align-items-end">
+            <div class="col-4 col-md-3">
+                <label for="vendedor" class="form-label mb-1 small">Vendedor</label>
                 <select id="vendedor" name="vendedor" class="form-select"
                     data-selected-vendedor="{{ vendedor_selecionado }}">
                     <option value="">Todos os Vendedores</option>
                 </select>
             </div>
-            <div class="col-12 col-md-3">
-                <label for="data_inicio" class="form-label">Data Início</label>
+            <div class="col-4 col-md-3">
+                <label for="data_inicio" class="form-label mb-1 small">Data Início</label>
                 <input type="date" id="data_inicio" name="data_inicio" class="form-control" value="{{ data_inicio }}">
             </div>
-            <div class="col-12 col-md-3">
-                <label for="data_fim" class="form-label">Data Fim</label>
+            <div class="col-4 col-md-3">
+                <label for="data_fim" class="form-label mb-1 small">Data Fim</label>
                 <input type="date" id="data_fim" name="data_fim" class="form-control" value="{{ data_fim }}">
             </div>
             <div class="col-12 col-md-3 d-flex align-items-end justify-content-end">
@@ -413,7 +424,7 @@
     let chartItensVendidos = null;
 
     function createBarGradient(ctx) {
-        const g = ctx.createLinearGradient(0, ctx.canvas.height, 0, 0); g.addColorStop(0, '#4a6cf7'); g.addColorStop(1, '#82a0ff'); return g
+        const g = ctx.createLinearGradient(0, ctx.canvas.height, 0, 0); g.addColorStop(0, '#274c55'); g.addColorStop(1, '#9cceff'); return g
     }
     const shadowPlugin = { id: 'barShadow', beforeDatasetsDraw(chart) { const c = chart.ctx; c.save(); c.shadowColor = 'rgba(142, 196, 212, 0.733)'; c.shadowBlur = 8; c.shadowOffsetY = 4 }, afterDatasetsDraw(chart) { chart.ctx.restore() } };
     function isDarkTheme() { const t = (document.documentElement.getAttribute('data-bs-theme') || document.body.getAttribute('data-bs-theme') || '').toLowerCase(); if (t) return t === 'dark'; return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches }
@@ -428,7 +439,7 @@
                 label: 'Pedidos',
                 data: valoresCount,
                 backgroundColor: ctx ? createBarGradient(ctx) : '#82a0ff',
-                borderColor: '#4a6cf7',
+                borderColor: '#fff',
                 borderWidth: 1,
                 borderRadius: 6
             }]

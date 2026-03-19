@@ -313,3 +313,59 @@ h2.page-title {
     min-width: 160px;
   }
 }
+
+@media (max-width: 576px) {
+  .container.page-container {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .page-header-custom {
+    align-items: center;
+    text-align: center;
+    padding: 12px;
+    margin-top: 16px;
+  }
+
+  .page-header-custom .page-actions {
+    align-self: center;
+    justify-content: center !important;
+    margin-top: 10px;
+  }
+
+  .page-title {
+    font-size: 22px;
+    margin: 0;
+  }
+
+  .page-title .bi.bi-coin {
+    font-size: 1.25rem;
+  }
+
+  .table {
+    font-size: 12px;
+  }
+
+  .page-actions .btn {
+    padding: 4px 10px;
+    font-size: 12px;
+    margin-bottom: 0;
+  }
+
+  .cards-resumo-grid .card-body {
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+  }
+
+  .cards-resumo-grid .fw-semibold {
+    font-size: 12px;
+  }
+
+  .cards-resumo-grid .badge {
+    font-size: 10px;
+  }
+
+  .cards-resumo-grid .small {
+    font-size: 11px;
+  }
+}

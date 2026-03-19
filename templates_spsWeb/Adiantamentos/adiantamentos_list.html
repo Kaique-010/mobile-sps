@@ -1,59 +1,107 @@
 {% extends "base.html" %}
 {% load static %}
 {% block content %}
+<style>
+    @media (max-width: 576px) {
+        .container.page-container {
+            padding-top: 12px;
+            padding-bottom: 12px;
+        }
+
+        .page-header-custom {
+            align-items: center;
+            text-align: center;
+            padding: 12px;
+            margin-top: 16px;
+        }
+
+        .page-header-custom .page-actions {
+            align-self: center;
+            justify-content: center !important;
+            margin-top: 10px;
+        }
+
+        .page-title {
+            font-size: 22px;
+            margin: 0;
+        }
+
+        .page-title .bi.bi-coin {
+            font-size: 1.25rem;
+        }
+
+        .table {
+            font-size: 12px;
+        }
+
+        .page-actions .btn {
+            padding: 4px 10px;
+            font-size: 12px;
+            margin-bottom: 0;
+        }
+    }
+</style>
 <link rel="stylesheet" href="{% static 'css/list.css' %}">
 <div class="container page-container">
-    <div class="page-header-custom">
-        <div class="container align-items-center">
-            <h2 class="page-title">
-                <i class="bi bi-coin"></i> Adiantamentos
-            </h2>
-        </div>
-        <div class="container d-flex justify-content-end">
+  <div class="page-header-custom">
+    <div class="container align-items-center">
+      <h2 class="page-title">
+        <i class="bi bi-coin"></i> Adiantamentos
+      </h2>
+    </div>
+        <div class="page-actions w-100 d-flex justify-content-end">
             <a href="{% url 'adiantamentos_web:adiantamento_criar' slug=request.resolver_match.kwargs.slug %}"
                 class="btn btn-outline-primary">
                 Novo Adiantamento
             </a>
         </div>
+    </div>
 
-        <table class="table table-striped table-sm">
+    <div class="table-responsive">
+        <table class="table table-striped table-sm align-middle mb-0">
             <thead>
                 <tr>
-                    <th>Empresa</th>
+                    <th class="d-none d-md-table-cell">Empresa</th>
                     <th>Entidade</th>
-                    <th>Nome Entidade</th>
+                    <th class="d-none d-lg-table-cell">Nome Entidade</th>
                     <th>Documento</th>
-                    <th>Série</th>
-                    <th>Tipo</th>
-                    <th>Valor</th>
-                    <th>Saldo</th>
-                    <th>Ações</th>
+                    <th class="d-none d-md-table-cell">Série</th>
+                    <th class="d-none d-md-table-cell">Tipo</th>
+                    <th class="text-end">Valor</th>
+                    <th class="text-end">Saldo</th>
+                    <th class="text-end">Ações</th>
                 </tr>
             </thead>
             <tbody>
                 {% for ad in adiantamentos %}
                 <tr>
-                    <td>{{ ad.adia_empr }}</td>
-                    <td>{{ ad.adia_enti }}</td>
-                    <td>{{ ad.entidade_nome }}</td>
-                    <td>{{ ad.adia_docu }}</td>
-                    <td>{{ ad.adia_seri }}</td>
-                    <td>{{ ad.get_adia_tipo_display }}</td>
-                    <td>{{ ad.adia_valo }}</td>
-                    <td>{{ ad.adia_sald }}</td>
+                    <td class="d-none d-md-table-cell">{{ ad.adia_empr }}</td>
                     <td>
-                        <a href="{% url 'adiantamentos_web:adiantamento_editar' slug=request.resolver_match.kwargs.slug adia_enti=ad.adia_enti adia_docu=ad.adia_docu adia_seri=ad.adia_seri %}"
-                            class="btn btn-sm btn-outline-secondary">Editar</a>
-                        <a href="{% url 'adiantamentos_web:adiantamento_excluir' slug=request.resolver_match.kwargs.slug adia_enti=ad.adia_enti adia_docu=ad.adia_docu adia_seri=ad.adia_seri %}"
-                            class="btn btn-sm btn-outline-danger">Excluir</a>
+                        <div class="fw-semibold">{{ ad.adia_enti }}</div>
+                        <div class="small text-muted d-lg-none">{{ ad.entidade_nome }}</div>
+                    </td>
+                    <td class="d-none d-lg-table-cell">{{ ad.entidade_nome }}</td>
+                    <td>{{ ad.adia_docu }}</td>
+                    <td class="d-none d-md-table-cell">{{ ad.adia_seri }}</td>
+                    <td class="d-none d-md-table-cell">{{ ad.get_adia_tipo_display }}</td>
+                    <td class="text-end">{{ ad.adia_valo }}</td>
+                    <td class="text-end">{{ ad.adia_sald }}</td>
+                    <td class="text-end">
+                        <div class="d-grid gap-1 d-md-flex justify-content-md-end">
+                            <a href="{% url 'adiantamentos_web:adiantamento_editar' slug=request.resolver_match.kwargs.slug adia_enti=ad.adia_enti adia_docu=ad.adia_docu adia_seri=ad.adia_seri %}"
+                                class="btn btn-sm btn-outline-secondary">Editar</a>
+                            <a href="{% url 'adiantamentos_web:adiantamento_excluir' slug=request.resolver_match.kwargs.slug adia_enti=ad.adia_enti adia_docu=ad.adia_docu adia_seri=ad.adia_seri %}"
+                                class="btn btn-sm btn-outline-danger">Excluir</a>
+                        </div>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="8" class="text-center">Nenhum adiantamento encontrado.</td>
+                    <td colspan="9" class="text-center">Nenhum adiantamento encontrado.</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
-    {% endblock %}
+</div>
+{% endblock %}
