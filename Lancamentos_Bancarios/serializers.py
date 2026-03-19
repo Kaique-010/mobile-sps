@@ -1,11 +1,13 @@
 from rest_framework import serializers
 from .models import Lctobancario
 from rest_framework.exceptions import ValidationError
-from django.db import models
-from django.db.models import Max
-from .utils import get_next_lcto_number
 from Licencas.models import Empresas
 from core.serializers import BancoContextMixin
+import logging
+
+from .services import criar_lancamento
+
+logger = logging.getLogger(__name__)
 
 
 class LctobancarioSerializer(BancoContextMixin, serializers.ModelSerializer):
@@ -18,13 +20,14 @@ class LctobancarioSerializer(BancoContextMixin, serializers.ModelSerializer):
 
     def create(self, validated_data):
         banco = self.context.get('banco')
-        lcto_ctrl = get_next_lcto_number(
-            validated_data['laba_empr'],
-            validated_data['laba_fili'],
-            banco
-        )
-        validated_data['laba_ctrl'] = lcto_ctrl
-        return Lctobancario.objects.using(banco).create(**validated_data)
+        return criar_lancamento(banco=banco, dados=validated_data)
+
+    def update(self, instance, validated_data):
+        banco = self.context.get('banco')
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save(using=banco)
+        return instance
     
     def get_empresa_nome(self, obj):
         """Retorna o nome da empresa"""

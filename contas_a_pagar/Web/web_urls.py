@@ -3,7 +3,7 @@ from .Views.listView import TitulosPagarListView, TitulosPagarParcelasListView, 
 from .Views.createView import TitulosPagarCreateView, TitulosPagarParcelasCreateView
 from .Views.updateView import TitulosPagarUpdateView
 from .Views.deleteView import TitulosPagarDeleteView
-from .Views.autocompletes import autocomplete_cc
+from .Views.autocompletes import autocomplete_cc, autocomplete_bancos
 
 
 
@@ -19,4 +19,5 @@ urlpatterns = [
     path('excluir/<str:titu_titu>/', TitulosPagarDeleteView.as_view(), name='excluir'),
     path('autocomplete/fornecedores/', autocomplete_fornecedores, name='autocomplete_fornecedores'),
     path('autocomplete/centrodecustos/', autocomplete_cc, name='autocomplete_centrodecustos'),
+    path('autocomplete/bancos/', autocomplete_bancos, name='autocomplete_bancos'),
 ]

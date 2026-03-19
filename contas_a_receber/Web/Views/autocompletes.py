@@ -18,12 +18,22 @@ def autocomplete_cc(request, slug=None):
 
 def autocomplete_bancos(request, slug=None):
     banco = get_licenca_db_config(request) or 'default'
-    empresa_id = request.session.get('empresa_id')
+    empresa_id = (
+        request.session.get('empresa_id')
+        or request.headers.get('X-Empresa')
+        or request.GET.get('empresa')
+        or request.GET.get('empr')
+    )
     term = (request.GET.get('term') or request.GET.get('q') or '').strip()
 
+    try:
+        empresa_id = int(empresa_id)
+    except (TypeError, ValueError):
+        return JsonResponse({'results': []})
+
     qs = Entidades.objects.using(banco).filter(
-        enti_empr=str(empresa_id),
-        enti_tien='B',
+        enti_empr=empresa_id,
+        enti_tien__in=['B', 'C'],
         enti_tipo_enti__isnull=False,
     )
 

@@ -298,7 +298,27 @@
           });
           const historico = await hr.json();
           if (!Array.isArray(historico) || historico.length === 0) {
-            alert('Nenhuma baixa encontrada para reabrir.');
+            const confirmar = confirm('Nenhuma baixa encontrada para reabrir. Deseja reabrir o título mesmo assim?');
+            if (!confirmar) return;
+            const reabrirUrl = `/api/{{ slug }}/contas_a_receber/titulos-receber/${empr}/${fili}/${clie}/${titu}/${seri}/${parc}/${emis}/${venc}/reabrir_sem_baixa/`;
+            const rr = await fetch(reabrirUrl, {
+              method: 'POST',
+              credentials: 'same-origin',
+              headers: {
+                'X-CSRFToken': getCSRFToken(),
+                'X-Empresa': getEmpresaFilial().empresa,
+                'X-Filial': getEmpresaFilial().filial,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+              },
+              body: JSON.stringify({}),
+            });
+            if (!rr.ok) {
+              const text = await rr.text();
+              alert('Erro ao reabrir: ' + text);
+              return;
+            }
+            window.location.reload();
             return;
           }
           let totalRecebido = 0;
@@ -359,6 +379,13 @@
           };
           if (form) form.reset();
           document.getElementById('historico-rec').value = `Baixa do título ${contextoBaixa.titu}`;
+          const dataRecebimento = document.getElementById('data_recebimento');
+            if (dataRecebimento) dataRecebimento.value =  new Date().toISOString().slice(0, 10);
+          const valorRecebido = document.getElementById('valor_recebido');
+          if (valorRecebido) valorRecebido.value = (parseFloat(contextoBaixa.valo || '0') || 0).toFixed(2);
+          modal.style.display = 'block';
+
+
           modal.style.display = 'block';
         }
 
@@ -457,6 +484,7 @@
           const historico = document.getElementById('historico-rec').value || '';
           const banco = document.getElementById('banco-rec').value || '';
           const cheque = document.getElementById('cheque-rec').value || '';
+          const centroCusto = document.getElementById('centro_custo_rec')?.value || '';
           const formaPagamento = formaPagamentoRecSelect ? formaPagamentoRecSelect.value || 'B' : 'B';
           const tipoBaixa = 'N';
 
@@ -475,6 +503,7 @@
             historico: historico,
             banco: banco ? parseInt(banco) : null,
             cheque: cheque ? parseInt(cheque) : null,
+            centro_custo: centroCusto ? parseInt(centroCusto) : null,
             tipo_baixa: tipoBaixa,
             forma_pagamento: formaPagamento,
           };

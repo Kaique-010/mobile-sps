@@ -1,0 +1,173 @@
+{% extends 'Lancamentos_Bancarios/base_lancamentos.html' %}
+{% load static %}
+
+{% block title %}Lançamento - {{ tipo_label }}{% endblock %}
+
+{% block lancamentos_content %}
+<link rel="stylesheet" href="{% static 'css/ui.css' %}">
+<link rel="stylesheet" href="{% static 'css/form.css' %}?v=20260313">
+<div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold text-secondary">
+            <i class="fas fa-pen-to-square me-2"></i>{{ tipo_label }} - Lançamento Bancário
+        </h5>
+        <a class="btn btn-sm btn-outline-secondary" href="{% url 'lancamentos_bancarios_web:lancamentos_list' slug=slug %}">
+            <i class="fas fa-arrow-left me-1"></i> Voltar
+        </a>
+    </div>
+    <div class="card-body">
+        <form method="post" class="row g-3">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                <div class="col-12">
+                    <div class="alert alert-danger mb-0">{{ form.non_field_errors }}</div>
+                </div>
+            {% endif %}
+
+            <div class="col-6 col-md-2">
+                <label class="form-label">Empresa</label>
+                {{ form.laba_empr }}
+                {% if form.laba_empr.errors %}<div class="text-danger small">{{ form.laba_empr.errors }}</div>{% endif %}
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label">Filial</label>
+                {{ form.laba_fili }}
+                {% if form.laba_fili.errors %}<div class="text-danger small">{{ form.laba_fili.errors }}</div>{% endif %}
+            </div>
+            <div class="col-12 col-md-4">
+                <label class="form-label">Banco/Caixa</label>
+                {{ form.laba_banc }}
+                <div class="position-relative">
+                    {{ form.banco_display }}
+                    <div id="banco-dropdown" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
+                </div>
+                {% if form.laba_banc.errors %}<div class="text-danger small">{{ form.laba_banc.errors }}</div>{% endif %}
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label">Data</label>
+                {{ form.laba_data }}
+                {% if form.laba_data.errors %}<div class="text-danger small">{{ form.laba_data.errors }}</div>{% endif %}
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label">Valor</label>
+                {{ form.laba_valo }}
+                {% if form.laba_valo.errors %}<div class="text-danger small">{{ form.laba_valo.errors }}</div>{% endif %}
+            </div>
+
+            <div class="col-12 col-md-4">
+                <label class="form-label">Centro de custo</label>
+                {{ form.laba_cecu }}
+                <div class="position-relative">
+                    {{ form.centro_custo_display }}
+                    <div id="centro-custo-dropdown" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
+                </div>
+                {% if form.laba_cecu.errors %}<div class="text-danger small">{{ form.laba_cecu.errors }}</div>{% endif %}
+            </div>
+            <div class="col-12 col-md-4">
+                <label class="form-label">Entidade</label>
+                {{ form.laba_enti }}
+                <div class="position-relative">
+                    {{ form.entidade_display }}
+                    <div id="entidade-dropdown" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
+                </div>
+                {% if form.laba_enti.errors %}<div class="text-danger small">{{ form.laba_enti.errors }}</div>{% endif %}
+            </div>
+            <div class="col-12">
+                <label class="form-label">Histórico</label>
+                {{ form.laba_hist }}
+                {% if form.laba_hist.errors %}<div class="text-danger small">{{ form.laba_hist.errors }}</div>{% endif %}
+            </div>
+
+            <div class="col-12 d-flex justify-content-end gap-2">
+                <button class="btn btn-outline-primary" type="submit">Salvar</button>
+                <a class="btn btn-outline-danger" href="{% url 'lancamentos_bancarios_web:lancamentos_list' slug=slug %}">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function setupAutocomplete({ inputId, hiddenId, dropdownId, url }) {
+        const input = document.getElementById(inputId);
+        const hidden = document.getElementById(hiddenId);
+        const dropdown = document.getElementById(dropdownId);
+        if (!input || !hidden || !dropdown) return;
+
+        let debounce = null;
+        let controller = null;
+
+        function clearDropdown() {
+            dropdown.innerHTML = '';
+        }
+
+        input.addEventListener('input', function () {
+            const term = (this.value || '').trim();
+            if (!term) {
+                hidden.value = '';
+                clearDropdown();
+                return;
+            }
+
+            clearTimeout(debounce);
+            if (controller) controller.abort();
+
+            debounce = setTimeout(async () => {
+                try {
+                    controller = new AbortController();
+                    const resp = await fetch(`${url}?term=${encodeURIComponent(term)}`, { signal: controller.signal });
+                    const data = await resp.json();
+                    const results = data.results || [];
+                    clearDropdown();
+
+                    if (!results.length) return;
+                    results.forEach(item => {
+                        const a = document.createElement('a');
+                        a.href = '#';
+                        a.className = 'list-group-item list-group-item-action';
+                        a.textContent = item.text;
+                        a.addEventListener('click', (ev) => {
+                            ev.preventDefault();
+                            hidden.value = item.id;
+                            input.value = item.text;
+                            clearDropdown();
+                        });
+                        dropdown.appendChild(a);
+                    });
+                } catch (e) {
+                    if (e.name !== 'AbortError') clearDropdown();
+                }
+            }, 250);
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+                clearDropdown();
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        setupAutocomplete({
+            inputId: "{{ form.banco_display.id_for_label }}",
+            hiddenId: "{{ form.laba_banc.id_for_label }}",
+            dropdownId: "banco-dropdown",
+            url: "{% url 'lancamentos_bancarios_web:autocomplete_bancos' slug=slug %}",
+        });
+        setupAutocomplete({
+            inputId: "{{ form.centro_custo_display.id_for_label }}",
+            hiddenId: "{{ form.laba_cecu.id_for_label }}",
+            dropdownId: "centro-custo-dropdown",
+            url: "{% url 'lancamentos_bancarios_web:autocomplete_centrosdecustos' slug=slug %}",
+        });
+        setupAutocomplete({
+            inputId: "{{ form.entidade_display.id_for_label }}",
+            hiddenId: "{{ form.laba_enti.id_for_label }}",
+            dropdownId: "entidade-dropdown",
+            url: "{% url 'lancamentos_bancarios_web:autocomplete_entidades' slug=slug %}",
+        });
+    });
+</script>
+{% endblock %}
+

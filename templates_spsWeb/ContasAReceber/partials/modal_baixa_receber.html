@@ -52,6 +52,14 @@
           <input id="cheque-rec" type="number" />
         </div>
         <div class="full">
+          <label>Centro de Custo</label>
+          <div class="position-relative">
+            <input id="centro_custo_rec-display" type="text" autocomplete="off"
+              placeholder="Digite o código ou nome..." />
+          </div>
+          <input id="centro_custo_rec" type="hidden" />
+        </div>
+        <div class="full">
           <label>Forma de Recebimento</label>
           <select id="forma_pagamento_rec">
             <option value="B">Banco</option>
@@ -80,6 +88,14 @@
     let ddBanco = null;
     let controllerBanco = null;
 
+    function parseCodigo(value) {
+      const s = (value || '').toString().trim();
+      const m = s.match(/^(\d+)/);
+      if (!m) return null;
+      const n = parseInt(m[1], 10);
+      return isNaN(n) ? null : n;
+    }
+
     function dropdownBanco() {
       if (ddBanco) return ddBanco;
       ddBanco = document.createElement('div');
@@ -95,6 +111,7 @@
       bancoDebounceId = setTimeout(async () => {
         const term = inputBanco.value.trim();
         if (term.length < 2) {
+          if (!term) hiddenBanco.value = '';
           if (ddBanco) ddBanco.innerHTML = '';
           return;
         }
@@ -139,9 +156,109 @@
       }, 250);
     });
 
+    inputBanco.addEventListener('change', () => {
+      const code = parseCodigo(inputBanco.value);
+      hiddenBanco.value = code !== null ? String(code) : '';
+    });
+
     document.addEventListener('click', (ev) => {
       if (ddBanco && !inputBanco.parentElement.contains(ev.target)) {
         ddBanco.innerHTML = '';
+      }
+    });
+  })();
+</script>
+
+<script>
+  (function () {
+    const inputCC = document.getElementById('centro_custo_rec-display');
+    const hiddenCC = document.getElementById('centro_custo_rec');
+
+    if (!inputCC || !hiddenCC) return;
+
+    let ddCC = null;
+    let controllerCC = null;
+
+    function parseCodigo(value) {
+      const s = (value || '').toString().trim();
+      const m = s.match(/^(\d+)/);
+      if (!m) return null;
+      const n = parseInt(m[1], 10);
+      return isNaN(n) ? null : n;
+    }
+
+    function dropdownCC() {
+      if (ddCC) return ddCC;
+      ddCC = document.createElement('div');
+      ddCC.className = 'list-group position-absolute w-100';
+      ddCC.style.marginTop = '4px';
+      inputCC.parentElement.appendChild(ddCC);
+      return ddCC;
+    }
+
+    let ccDebounceId = null;
+    inputCC.addEventListener('input', function () {
+      clearTimeout(ccDebounceId);
+      ccDebounceId = setTimeout(async () => {
+        const term = inputCC.value.trim();
+        if (!term) {
+          hiddenCC.value = '';
+          if (ddCC) ddCC.innerHTML = '';
+          return;
+        }
+        if (term.length < 1) {
+          if (ddCC) ddCC.innerHTML = '';
+          return;
+        }
+
+        try {
+          if (controllerCC) controllerCC.abort();
+          controllerCC = new AbortController();
+
+          const url = `/web/{{ slug }}/contas-a-receber/autocomplete/centrodecustos/?q=${encodeURIComponent(term)}`;
+          const resp = await fetch(url, { signal: controllerCC.signal });
+          const data = await resp.json();
+          const results = data.results || [];
+          const d = dropdownCC();
+          d.innerHTML = '';
+
+          if (results.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'list-group-item text-muted';
+            empty.textContent = 'Nenhum centro de custo encontrado';
+            d.appendChild(empty);
+            return;
+          }
+
+          results.forEach(it => {
+            const a = document.createElement('a');
+            a.href = '#';
+            a.className = 'list-group-item list-group-item-action';
+            a.textContent = it.label || it.value || '';
+            a.addEventListener('click', ev => {
+              ev.preventDefault();
+              hiddenCC.value = it.value || '';
+              inputCC.value = it.label || it.value || '';
+              d.innerHTML = '';
+            });
+            d.appendChild(a);
+          });
+        } catch (e) {
+          if (e.name !== 'AbortError') {
+            console.error('Erro ao buscar centro de custo (receber):', e);
+          }
+        }
+      }, 250);
+    });
+
+    inputCC.addEventListener('change', () => {
+      const code = parseCodigo(inputCC.value);
+      hiddenCC.value = code !== null ? String(code) : '';
+    });
+
+    document.addEventListener('click', (ev) => {
+      if (ddCC && !inputCC.parentElement.contains(ev.target)) {
+        ddCC.innerHTML = '';
       }
     });
   })();

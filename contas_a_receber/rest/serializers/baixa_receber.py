@@ -10,6 +10,7 @@ class BaixaTitulosReceberSerializer(serializers.Serializer):
     historico = serializers.CharField(max_length=500, required=False, allow_blank=True)
     banco = serializers.IntegerField(required=False, allow_null=True)
     cheque = serializers.IntegerField(required=False, allow_null=True)
+    centro_custo = serializers.IntegerField(required=False, allow_null=True)
     tipo_baixa = serializers.CharField(max_length=1, default='T')
     forma_pagamento = serializers.CharField(max_length=1, default='D', required=False)
     

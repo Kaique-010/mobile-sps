@@ -1,0 +1,101 @@
+{% load finance_tags %}
+<div class="tab-pane fade show active" id="pane-entidade" role="tabpanel">
+    <ul class="nav nav-pills mb-3" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#ent-entradas" type="button"
+                role="tab">Entradas</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#ent-saidas" type="button"
+                role="tab">Saídas</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#ent-saldo" type="button"
+                role="tab">Saldo</button>
+        </li>
+    </ul>
+    <div class="tab-content">
+        <div class="tab-pane fade show active" id="ent-entradas" role="tabpanel">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Entidade</th>
+                            <th>Nome Entidade</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in entradas_por_entidade %}
+                        <tr>
+                            <td>{{ row.laba_enti|default:"-" }}</td>
+                            <td>{{ row.nome_entidade|default:"-" }}</td>
+                            <td class="text-end">{{ row.total|brl }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center text-muted py-3">Sem dados</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="tab-pane fade" id="ent-saidas" role="tabpanel">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Entidade</th>
+                            <th>Nome Entidade</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in saidas_por_entidade %}
+                        <tr>
+                            <td>{{ row.laba_enti|default:"-" }}</td>
+                            <td>{{ row.nome_entidade|default:"-" }}</td>
+                            <td class="text-end">{{ row.total|brl }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center text-muted py-3">Sem dados</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="tab-pane fade" id="ent-saldo" role="tabpanel">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Entidade</th>
+                            <th>Nome Entidade</th>
+                            <th class="text-end">Entradas</th>
+                            <th class="text-end">Saídas</th>
+                            <th class="text-end">Saldo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in saldo_por_entidade %}
+                        <tr>
+                            <td>{{ row.laba_enti|default:"-" }}</td>
+                            <td>{{ row.nome_entidade|default:"-" }}</td>
+                            <td class="text-end">{{ row.entradas|brl }}</td>
+                            <td class="text-end">{{ row.saidas|brl }}</td>
+                            <td class="text-end">{{ row.saldo|brl }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-3">Sem dados</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

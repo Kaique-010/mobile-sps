@@ -24,13 +24,12 @@ urlpatterns = [
     path("<slug:slug>/osexterna/", include("osexterna.Web.web_urls")),
     path("<slug:slug>/entradas/", include("Entradas_Estoque.Web.web_urls")),
     path("<slug:slug>/saidas/", include("Saidas_Estoque.Web.web_urls")),
-    path(
-        "<slug:slug>/centrosdecustos/",
-        include(("CentrodeCustos.web_urls", "centrosdecustos"), namespace="centrosdecustos"),
+    path("<slug:slug>/centrosdecustos/",include(("CentrodeCustos.web_urls", "centrosdecustos"), namespace="centrosdecustos"),
     ),
     # Financeiro
     path("<slug:slug>/contas-a-pagar/", include("contas_a_pagar.Web.web_urls")),
     path("<slug:slug>/contas-a-receber/", include("contas_a_receber.Web.web_urls")),
+    path("<slug:slug>/lancamentos-bancarios/", include("Lancamentos_Bancarios.Web.web_urls")),
     path("<slug:slug>/fluxo-de-caixa/", include("Financeiro.web_urls")),
     path("<slug:slug>/gerencial/", include("Gerencial.web_urls")),
     path("<slug:slug>/dre/", include("DRE.web_urls")),

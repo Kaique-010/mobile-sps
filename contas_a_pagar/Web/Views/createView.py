@@ -6,6 +6,7 @@ from ..forms import TitulosPagarForm
 from ...models import Titulospagar
 
 
+
 class TitulosPagarCreateView(DBAndSlugMixin, CreateView):
     model = Titulospagar
     form_class = TitulosPagarForm
@@ -72,4 +73,5 @@ class TitulosPagarParcelasCreateView(DBAndSlugMixin, CreateView):
             titulo=self.object,
             banco=banco,
         )
+        _gerar_lancamento(self.object, banco=banco)
         return redirect('contas_a_pagar_web:parcelas_a_pagar_list', slug=self.slug)

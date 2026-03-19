@@ -2,6 +2,7 @@ from django.http import JsonResponse
 from django.db.models import Q
 from core.utils import get_licenca_db_config
 from CentrodeCustos.models import Centrodecustos
+from Entidades.models import Entidades
 
 
 
@@ -13,5 +14,43 @@ def autocomplete_cc(request, slug=None):
         qs = qs.filter(Q(cecu_redu__icontains=term) | Q(cecu_nome__icontains=term))
     qs = qs.order_by('cecu_redu')[:30]
     data = [{'value': obj.cecu_redu, 'label': f"{obj.cecu_redu} - {obj.cecu_nome}"} for obj in qs]
+    return JsonResponse({'results': data})
+
+
+def autocomplete_bancos(request, slug=None):
+    banco = get_licenca_db_config(request) or 'default'
+    empresa_id = (
+        request.session.get('empresa_id')
+        or request.headers.get('X-Empresa')
+        or request.GET.get('empresa')
+        or request.GET.get('empr')
+    )
+    term = (request.GET.get('term') or request.GET.get('q') or '').strip()
+
+    try:
+        empresa_id = int(empresa_id)
+    except (TypeError, ValueError):
+        return JsonResponse({'results': []})
+
+    qs = Entidades.objects.using(banco).filter(
+        enti_empr=empresa_id,
+        enti_tien__in=['B', 'C'],
+        enti_tipo_enti__isnull=False,
+    )
+
+    if term:
+        if term.isdigit():
+            qs = qs.filter(enti_clie__icontains=term)
+        else:
+            qs = qs.filter(Q(enti_nome__icontains=term) | Q(enti_fant__icontains=term))
+
+    qs = qs.order_by('enti_nome')[:20]
+    data = [
+        {
+            'id': str(obj.enti_clie),
+            'text': f"{obj.enti_clie} - {obj.enti_nome}",
+        }
+        for obj in qs
+    ]
     return JsonResponse({'results': data})
 

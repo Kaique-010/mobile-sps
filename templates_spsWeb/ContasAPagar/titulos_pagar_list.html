@@ -358,6 +358,10 @@
           // reset
           if (form) form.reset();
           document.getElementById('historico').value = `Baixa do título ${contextoBaixa.titu}`;
+          const dp = document.getElementById('data_pagamento');
+          if (dp) dp.value = new Date().toISOString().slice(0, 10);
+          const vp = document.getElementById('valor_pago');
+          if (vp) vp.value = (parseFloat(contextoBaixa.valo || '0') || 0).toFixed(2);
           modal.style.display = 'block';
         }
 
@@ -441,6 +445,7 @@
           const historico = document.getElementById('historico').value || '';
           const banco = document.getElementById('banco').value || '';
           const cheque = document.getElementById('cheque').value || '';
+          const centroCusto = document.getElementById('centro_custo')?.value || '';
           const formaPagamento = formaPagamentoSelect ? formaPagamentoSelect.value || 'B' : 'B';
           const tipoBaixa = 'N';
 
@@ -459,10 +464,10 @@
             historico: historico,
             banco: banco ? parseInt(banco) : null,
             cheque: cheque ? parseInt(cheque) : null,
+            centro_custo: centroCusto ? parseInt(centroCusto) : null,
             tipo_baixa: tipoBaixa,
             forma_pagamento: formaPagamento,
           };
-          console.log("Payload:", payload);
 
           try {
             const resp = await fetch(url, {
@@ -634,9 +639,9 @@
       }
 
       .modal-content {
-        background: #fff;
+        background-color: #000000;
         margin: 10% auto;
-        padding: 20px;
+        padding: 24px;
         border-radius: 8px;
         max-width: 520px;
       }
@@ -664,7 +669,4 @@
         padding: 6px;
       }
     </style>
-
-    {% include 'ContasAPagar/partials/modal_baixa_pagar.html' %}
-    {% include 'ContasAPagar/partials/modal_reabrir_pagar.html' %}
     {% endblock %}
