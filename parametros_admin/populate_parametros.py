@@ -135,6 +135,12 @@ class PopulateParametros:
                         'descricao': 'Calcular frete automaticamente',
                         'valor_padrao': False,
                         'ativo': True
+                    },
+                    {
+                        'nome': 'baixa_estoque_pedido',
+                        'descricao': 'Baixar estoque ao criar pedido',
+                        'valor_padrao': False,
+                        'ativo': True
                     }
                 ]
             },
@@ -144,12 +150,7 @@ class PopulateParametros:
                 'icone': 'fas fa-file-invoice-dollar',
                 'ordem': 3,
                 'parametros': [
-                    {
-                        'nome': 'baixa_estoque_pedido',
-                        'descricao': 'Baixar estoque ao criar pedido',
-                        'valor_padrao': False,
-                        'ativo': True
-                    },
+                    
                     {
                         'nome': 'usar_preco_prazo',
                         'descricao': 'Usar preço a prazo nos orçamentos',

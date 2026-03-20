@@ -3,10 +3,33 @@ from django.db import transaction
 from ParametrosSps.models import Parametros
 from core.utils import get_licenca_db_config
 from Produtos.models import SaldoProduto, Movimentoestoque
+from Pedidos.models import PedidoVenda
 from django.db.models import Max
 
 
 class PedidosService:
+    @staticmethod
+    def pedido_tem_baixa(banco: str, pedido) -> bool:
+        return Movimentoestoque.objects.using(banco).filter(
+            moes_empr=pedido.pedi_empr,
+            moes_fili=pedido.pedi_fili,
+            moes_tipo="S",
+            moes_seri="PEV",
+            moes_mode="PV",
+            moes_docu=int(pedido.pedi_nume),
+        ).exists()
+
+    @staticmethod
+    def pedido_tem_estorno(banco: str, pedido) -> bool:
+        return Movimentoestoque.objects.using(banco).filter(
+            moes_empr=pedido.pedi_empr,
+            moes_fili=pedido.pedi_fili,
+            moes_tipo="E",
+            moes_seri="PEV",
+            moes_mode="PV",
+            moes_docu=int(pedido.pedi_nume),
+        ).exists()
+
     @staticmethod
     def pedido_movimenta_estoque(banco: str, empresa: int = 1, filial: int = 1) -> bool:
         """
@@ -60,13 +83,16 @@ class PedidosService:
                 }
             
             # Processar cada item
-            for item_data in itens_data:
+            for idx, item_data in enumerate(itens_data, start=1):
                 produto_codigo = item_data.get('iped_prod')
                 quantidade = Decimal(str(item_data.get('iped_quan', 0)))
                 
                 if quantidade <= 0:
                     continue
                     
+                if 'iped_item' not in item_data or not item_data.get('iped_item'):
+                    item_data = {**item_data, 'iped_item': idx}
+
                 resultado_item = PedidosService._baixar_item_data(
                     pedido, item_data, banco
                 )
@@ -97,8 +123,22 @@ class PedidosService:
         from Produtos.models import Produtos
         
         produto_codigo = item_data.get('iped_prod')
+        item_numero = int(item_data.get('iped_item') or 1)
         quantidade = Decimal(str(item_data.get('iped_quan', 0)))
         valor_unitario = Decimal(str(item_data.get('iped_unit', 0)))
+
+        ja_baixado = Movimentoestoque.objects.using(banco).filter(
+            moes_empr=pedido.pedi_empr,
+            moes_fili=pedido.pedi_fili,
+            moes_tipo="S",
+            moes_seri="PEV",
+            moes_mode="PV",
+            moes_docu=int(pedido.pedi_nume),
+            moes_item=item_numero,
+            moes_prod=str(produto_codigo),
+        ).exists()
+        if ja_baixado:
+            return {'sucesso': True, 'processado': False, 'motivo': 'Item já baixado para este pedido'}
         
         produto = Produtos.objects.using(banco).filter(
             prod_codi=produto_codigo,
@@ -139,7 +179,7 @@ class PedidosService:
             moes_seri="PEV",  # Série do pedido
             moes_docu=pedido.pedi_nume,  # Usa o número do pedido gerado
             moes_mode="PV",  # Modo de operação
-            moes_item=1,  # Número do item
+            moes_item=item_numero,  # Número do item
            
         )
 
@@ -163,15 +203,16 @@ class PedidosService:
     # ============================================================
     @staticmethod
     @transaction.atomic
-    def estornar_estoque_pedido(pedido, request):
+    def estornar_estoque_pedido(pedido, request=None, banco: str | None = None):
         """
         Reverte a movimentação de estoque feita no pedido.
         Cria movimento de entrada e devolve quantidade ao saldo.
         """
-        banco = get_licenca_db_config(request)
-        
-        # Obter empresa e filial dos headers
-        empresa = int(request.headers.get('X-Empresa', 1))
+        if banco is None:
+            if request is None:
+                raise ValueError("Informe request ou banco para estornar_estoque_pedido")
+            banco = get_licenca_db_config(request)
+        empresa = int(getattr(request, "headers", {}).get('X-Empresa', getattr(pedido, 'pedi_empr', 1)) if request is not None else getattr(pedido, 'pedi_empr', 1))
         
         try:
             if not PedidosService.pedido_movimenta_estoque(banco, empresa):
@@ -182,8 +223,22 @@ class PedidosService:
                     'motivo': 'Movimentação de estoque desativada para esta empresa'
                 }
 
+            if not PedidosService.pedido_tem_baixa(banco, pedido):
+                return {
+                    'sucesso': True,
+                    'processado': False,
+                    'motivo': 'Pedido sem baixa de estoque para estornar'
+                }
+
+            from Pedidos.models import Itenspedidovenda
+            itens = Itenspedidovenda.objects.using(banco).filter(
+                iped_empr=pedido.pedi_empr,
+                iped_fili=pedido.pedi_fili,
+                iped_pedi=str(pedido.pedi_nume),
+            ).order_by('iped_item')
+
             # Processar cada item
-            for item in pedido.itens.all():
+            for item in itens:
                 resultado_item = PedidosService._estornar_item(pedido, item, banco)
                 
                 if not resultado_item.get('sucesso', True):
@@ -210,16 +265,33 @@ class PedidosService:
         Estorna um item específico do pedido
         """
         try:
+            teve_baixa = Movimentoestoque.objects.using(banco).filter(
+                moes_empr=pedido.pedi_empr,
+                moes_fili=pedido.pedi_fili,
+                moes_tipo="S",
+                moes_seri="PEV",
+                moes_mode="PV",
+                moes_docu=int(pedido.pedi_nume),
+                moes_item=int(getattr(item, 'iped_item', 1) or 1),
+                moes_prod=str(item.iped_prod),
+            ).exists()
+            if not teve_baixa:
+                return {'sucesso': True, 'processado': False, 'motivo': 'Item sem baixa para estornar'}
+
+            ja_estornado = Movimentoestoque.objects.using(banco).filter(
+                moes_empr=pedido.pedi_empr,
+                moes_fili=pedido.pedi_fili,
+                moes_tipo="E",
+                moes_seri="PEV",
+                moes_mode="PV",
+                moes_docu=int(pedido.pedi_nume),
+                moes_item=int(getattr(item, 'iped_item', 1) or 1),
+                moes_prod=str(item.iped_prod),
+            ).exists()
+            if ja_estornado:
+                return {'sucesso': True, 'processado': False, 'motivo': 'Item já estornado para este pedido'}
+
             total_movimentacao = item.iped_unit * abs(Decimal(item.iped_quan))
-            
-            # Gerar número sequencial do documento para estorno
-            next_doc_number = PedidosService._get_next_document_number(
-                empresa=pedido.pedi_empr,
-                filial=pedido.pedi_fili,
-                entidade=pedido.pedi_forn,
-                tipo="E",
-                banco=banco
-            )
             
             # Criar movimentação de estoque (ENTRADA para estorno)
             Movimentoestoque.objects.using(banco).create(
@@ -233,9 +305,9 @@ class PedidosService:
                 moes_enti=pedido.pedi_forn,   
                 moes_data=pedido.pedi_data,
                 moes_seri="PEV",  # Série do pedido
-                moes_docu=next_doc_number,  # Número sequencial do documento
+                moes_docu=int(pedido.pedi_nume),
                 moes_mode="PV",  # Modo de operação
-                moes_item=1,  # Número do item
+                moes_item=int(getattr(item, 'iped_item', 1) or 1),
              
             )
 
@@ -273,4 +345,22 @@ class PedidosService:
             )
             return parametro.pedido_cancelamento_habilitado == True
         except Parametros.DoesNotExist:
+            return False
+
+
+    @staticmethod
+    def pedido_status_4_retorna_estoque(banco: str, empresa: int = 1, pedido: PedidoVenda = None):
+        """
+        Verifica se o Status do pedido está em 4 para retornar o estoque ao cancelar.
+        """
+        try:
+            cancelado = PedidoVenda.objects.using(banco).get(
+                pedi_nume=pedido.pedi_nume,
+                pedi_empr=empresa,
+                pedi_fili=pedido.pedi_fili,
+                pedi_stat=4
+            )
+            if cancelado:
+                return PedidosService.estornar_estoque_pedido(pedido, banco=banco)
+        except PedidoVenda.DoesNotExist:
             return False

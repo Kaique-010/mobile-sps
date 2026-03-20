@@ -125,13 +125,16 @@ class EmissaoService:
         try:
             resposta = adapter.emitir(nfe_obj)
         except Exception as e:
-            detalhes = {"erro_original": str(e)}
-            logger.error(
-                "Erro ao emitir nota na SEFAZ para empresa=%s filial=%s nota_id=%s: %s",
+            detalhes = {
+                "erro_original": str(e),
+                "erro_tipo": e.__class__.__name__,
+                "erro_repr": repr(e),
+            }
+            logger.exception(
+                "Erro ao emitir nota na SEFAZ para empresa=%s filial=%s nota_id=%s",
                 nota.empresa,
                 nota.filial,
                 nota.id,
-                e,
             )
             raise ErroDominio(
                 "Falha ao enviar a nota para a SEFAZ.",

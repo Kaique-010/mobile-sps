@@ -181,9 +181,23 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
             pedido.save(using=banco)
 
         try:
-            resultado_estoque = PedidosService.baixa_estoque_pedido(
-                pedido, itens_data, self.context.get('request')
-            )
+            request = self.context.get('request')
+            try:
+                status_pedido = int(getattr(pedido, 'pedi_stat', 0))
+            except Exception:
+                status_pedido = None
+
+            if status_pedido == 4:
+                resultado_estoque = PedidosService.estornar_estoque_pedido(
+                    pedido, request=request, banco=banco
+                )
+            elif not PedidosService.pedido_tem_baixa(banco, pedido):
+                resultado_estoque = PedidosService.baixa_estoque_pedido(
+                    pedido, itens_data, request
+                )
+            else:
+                resultado_estoque = {'sucesso': True, 'processado': False, 'motivo': 'Pedido já teve baixa de estoque'}
+
             if not resultado_estoque.get('sucesso', True):
                 logger.warning(f"Erro ao processar estoque: {resultado_estoque.get('erro')}")
         except Exception as e:
@@ -302,9 +316,23 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
             instance.save(using=banco)
 
         try:
-            resultado_estoque = PedidosService.baixa_estoque_pedido(
-                instance, itens_data, self.context.get('request')
-            )
+            request = self.context.get('request')
+            try:
+                status_pedido = int(getattr(instance, 'pedi_stat', 0))
+            except Exception:
+                status_pedido = None
+
+            if status_pedido == 4:
+                resultado_estoque = PedidosService.estornar_estoque_pedido(
+                    instance, request=request, banco=banco
+                )
+            elif not PedidosService.pedido_tem_baixa(banco, instance):
+                resultado_estoque = PedidosService.baixa_estoque_pedido(
+                    instance, itens_data, request
+                )
+            else:
+                resultado_estoque = {'sucesso': True, 'processado': False, 'motivo': 'Pedido já teve baixa de estoque'}
+
             if not resultado_estoque.get('sucesso', True):
                 logger.warning(f"Erro ao processar estoque: {resultado_estoque.get('erro')}")
         except Exception as e:

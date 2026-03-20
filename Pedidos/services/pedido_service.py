@@ -7,7 +7,11 @@ from core.utils import (
     calcular_subtotal_item_bruto,
     calcular_total_item_com_desconto,
 )
-
+from CFOP.services.bases import FiscalContexto
+from parametros_admin.utils_pedidos import obter_parametros_pedidos,cancelar_pedido_com_volta_estoque, verificar_baixa_estoque_pedido
+from parametros_admin.utils_pedidos import verificar_baixa_estoque_pedido
+from parametros_admin.utils_estoque import processar_saida_estoque
+from ParametrosSps.services.pedidos_service import PedidosService
 class PedidoVendaService:
     logger = logging.getLogger(__name__)
 
@@ -42,7 +46,7 @@ class PedidoVendaService:
 
     @transaction.atomic
     @staticmethod
-    def create_pedido_venda(banco: str, pedido_data: dict, itens_data: list, pedi_tipo_oper: str = 'VENDA'):
+    def create_pedido_venda(banco: str, pedido_data: dict, itens_data: list, pedi_tipo_oper: str = 'VENDA', request=None):
         pedi_empr = int(pedido_data.get('pedi_empr'))
         pedi_fili = int(pedido_data.get('pedi_fili'))
 
@@ -110,57 +114,35 @@ class PedidoVendaService:
             )
             try:
                 uf_origem = pedido.get_uf_origem(banco)
-                uf_destino = getattr(pedido.cliente, 'enti_uf', None) or ''
-                motor = MotorFiscal(uf_origem=uf_origem or '')
-                pacote = motor.calcular_item(
-                    pedido=pedido,
+                uf_destino = getattr(pedido.cliente, 'enti_esta', None) or ''
+                
+                motor = MotorFiscal(banco=banco)
+                
+                ctx = FiscalContexto(
+                uf_origem=uf_origem or '',
+                uf_destino=uf_destino or '',
+                produto=item.produto,
+                empresa_id=pedido.pedi_empr,
+                filial_id=pedido.pedi_fili,   # <-- adicionar
+                banco=banco,                   # <-- adicionar
+                regime=None,                   # <-- adicionar (None usa o padrão do engine)
+)
+                
+                pacote = motor.calcular_item(       # <-- apenas ctx, item e tipo_oper
+                    ctx=ctx,
                     item=item,
-                    produto=item.produto,
-                    uf_destino=uf_destino or '',
-                    pedi_tipo_oper=pedi_tipo_oper or 'VENDA'
+                    tipo_oper=pedi_tipo_oper or 'VENDA',
                 )
-                base = pacote.get('base_calculo')
-                aliq = pacote.get('aliquotas', {})
-                vals = pacote.get('valores', {})
-                if hasattr(item, 'iped_base_icms'):
-                    item.iped_base_icms = base
-                if hasattr(item, 'iped_pipi'):
-                    item.iped_pipi = aliq.get('ipi')
-                if hasattr(item, 'iped_aliq_icms'):
-                    item.iped_aliq_icms = aliq.get('icms')
-                if hasattr(item, 'iped_aliq_icms_st'):
-                    item.iped_aliq_icms_st = aliq.get('st_aliq')
-                if hasattr(item, 'iped_aliq_pis'):
-                    item.iped_aliq_pis = aliq.get('pis')
-                if hasattr(item, 'iped_aliq_cofi'):
-                    item.iped_aliq_cofi = aliq.get('cofins')
-                if hasattr(item, 'iped_vipi'):
-                    item.iped_vipi = vals.get('ipi')
-                if hasattr(item, 'iped_valo_icms'):
-                    item.iped_valo_icms = vals.get('icms')
-                if hasattr(item, 'iped_valo_icms_st'):
-                    item.iped_valo_icms_st = vals.get('st')
-                if hasattr(item, 'iped_valo_pis'):
-                    item.iped_valo_pis = vals.get('pis')
-                if hasattr(item, 'iped_valo_cofi'):
-                    item.iped_valo_cofi = vals.get('cofins')
-                if hasattr(item, 'iped_base_pis'):
-                    item.iped_base_pis = base
-                if hasattr(item, 'iped_base_cofi'):
-                    item.iped_base_cofi = base
-                if hasattr(item, 'iped_cst_icms') and aliq.get('icms'):
-                    item.iped_cst_icms = '000'
-                if hasattr(item, 'iped_cst_pis') and aliq.get('pis'):
-                    item.iped_cst_pis = '01'
-                if hasattr(item, 'iped_cst_cofi') and aliq.get('cofins'):
-                    item.iped_cst_cofi = '01'
+                
+                motor.aplicar_no_item(item, pacote)  # <-- substitui todos os hasattr manuais
                 item.save(using=banco)
+
             except Exception as e:
                 PedidoVendaService.logger.exception(
                     "[PedidoService.create] erro fiscal item=%s tipo=%s uf_origem=%s uf_destino=%s err=%s",
                     idx, pedi_tipo_oper, uf_origem, uf_destino, e
                 )
-                itens_criados.append(item)
+            itens_criados.append(item)
 
         # Cálculo dos totais do pedido (alinhado ao serializer)
         pedido_desc_val = PedidoVendaService._to_decimal(pedido_data.get('pedi_desc', 0))
@@ -183,7 +165,32 @@ class PedidoVendaService:
 
         # Liquido (opcional): igual ao total final
         pedido.pedi_liqu = pedido.pedi_tota
-        pedido.save(using=banco)
+        if request is not None:
+            resultado = verificar_baixa_estoque_pedido(pedi_empr, pedi_fili, banco=banco)
+            PedidoVendaService.logger.debug(
+                "[PedidoService] verificar_baixa_estoque_pedido empr=%s fili=%s resultado=%s",
+                pedi_empr, pedi_fili, resultado
+            )
+            if resultado:
+                PedidoVendaService.logger.debug(
+                        "[PedidoService.create] Iniciando baixa de %d itens", len(itens_criados)
+                    )
+                for item in itens_criados:
+                    try:
+                        item_data_dict = {
+                            'iped_prod': item.iped_prod,
+                            'iped_quan': item.iped_quan,
+                            'iped_unit': item.iped_unit,
+                            'iped_item': getattr(item, 'iped_item', None),
+                        }
+                        PedidosService._baixar_item_data(pedido, item_data_dict, banco)
+                    except Exception as e:
+                        PedidoVendaService.logger.exception(
+                            "[PedidoService.create] erro ao baixar item=%s err=%s",
+                            getattr(item, 'iped_prod', None), e
+                        )
+
+            
 
         PedidoVendaService.logger.debug(
             "[PedidoService.create] Fim: pedi_nume=%s subtotal=%s desc=%s total=%s",
@@ -192,9 +199,25 @@ class PedidoVendaService:
 
         return pedido
 
+    
     @transaction.atomic
     @staticmethod
-    def update_pedido_venda(banco: str, pedido: PedidoVenda, pedido_updates: dict, itens_data: list, pedi_tipo_oper: str | None = None):
+    def update_pedido_venda(banco: str, pedido: PedidoVenda, pedido_updates: dict, itens_data: list, pedi_tipo_oper: str | None = None, request=None):
+    
+        pedi_empr = pedido.pedi_empr
+        pedi_fili = pedido.pedi_fili
+        try:
+            status_novo = int(pedido_updates.get('pedi_stat', getattr(pedido, 'pedi_stat', 0)))
+        except Exception:
+            status_novo = None
+
+        # Verificar parâmetro de baixa ANTES de qualquer alteração
+        deve_baixar = verificar_baixa_estoque_pedido(pedi_empr, pedi_fili, banco=banco)
+        PedidoVendaService.logger.debug(
+            "[PedidoService.update] deve_baixar=%s empr=%s fili=%s",
+            deve_baixar, pedi_empr, pedi_fili
+        )
+
         # Atualiza campos do pedido
         pedido_updates.pop('tipo_oper', None)
         for attr, value in pedido_updates.items():
@@ -209,13 +232,16 @@ class PedidoVendaService:
         ).delete()
 
         # Recria itens
+        itens_criados = []
         subtotal_sum = Decimal('0.00')
         total_items_sum = Decimal('0.00')
         any_item_discount = False
+
         PedidoVendaService.logger.debug(
             "[PedidoService.update] Início: pedi_nume=%s pedi_desc_update=%s",
             getattr(pedido, 'pedi_nume', None), pedido_updates.get('pedi_desc')
         )
+
         for idx, item_data in enumerate(itens_data, start=1):
             iped_quan = PedidoVendaService._to_decimal(item_data.get('iped_quan', 0))
             iped_unit = PedidoVendaService._to_decimal(item_data.get('iped_unit', 0))
@@ -251,66 +277,34 @@ class PedidoVendaService:
                 iped_tota=total_item,
                 **item_data_clean,
             )
+
             try:
                 uf_origem = pedido.get_uf_origem(banco)
-                uf_destino = getattr(pedido.cliente, 'enti_uf', None) or ''
-                motor = MotorFiscal(uf_origem=uf_origem or '')
-                pacote = motor.calcular_item(
-                    pedido=pedido,
-                    item=item,
-                    produto=item.produto,
+                uf_destino = getattr(pedido.cliente, 'enti_esta', None) or ''
+                motor = MotorFiscal(banco=banco)
+                ctx = FiscalContexto(
+                    uf_origem=uf_origem or '',
                     uf_destino=uf_destino or '',
-                    pedi_tipo_oper=pedi_tipo_oper or 'VENDA'
+                    produto=item.produto,
+                    empresa_id=pedido.pedi_empr,
+                    filial_id=pedido.pedi_fili,
+                    banco=banco,
+                    regime=None,
                 )
-                base = pacote.get('base_calculo')
-                aliq = pacote.get('aliquotas', {})
-                vals = pacote.get('valores', {})
-                if hasattr(item, 'iped_base_icms'):
-                    item.iped_base_icms = base
-                if hasattr(item, 'iped_pipi'):
-                    item.iped_pipi = aliq.get('ipi')
-                if hasattr(item, 'iped_aliq_icms'):
-                    item.iped_aliq_icms = aliq.get('icms')
-                if hasattr(item, 'iped_aliq_icms_st'):
-                    item.iped_aliq_icms_st = aliq.get('st_aliq')
-                if hasattr(item, 'iped_aliq_pis'):
-                    item.iped_aliq_pis = aliq.get('pis')
-                if hasattr(item, 'iped_aliq_cofi'):
-                    item.iped_aliq_cofi = aliq.get('cofins')
-                if hasattr(item, 'iped_vipi'):
-                    item.iped_vipi = vals.get('ipi')
-                if hasattr(item, 'iped_valo_icms'):
-                    item.iped_valo_icms = vals.get('icms')
-                if hasattr(item, 'iped_valo_icms_st'):
-                    item.iped_valo_icms_st = vals.get('st')
-                if hasattr(item, 'iped_valo_pis'):
-                    item.iped_valo_pis = vals.get('pis')
-                if hasattr(item, 'iped_valo_cofi'):
-                    item.iped_valo_cofi = vals.get('cofins')
-                if hasattr(item, 'iped_base_pis'):
-                    item.iped_base_pis = base
-                if hasattr(item, 'iped_base_cofi'):
-                    item.iped_base_cofi = base
-                if hasattr(item, 'iped_cst_icms') and aliq.get('icms'):
-                    item.iped_cst_icms = '000'
-                if hasattr(item, 'iped_cst_pis') and aliq.get('pis'):
-                    item.iped_cst_pis = '01'
-                if hasattr(item, 'iped_cst_cofi') and aliq.get('cofins'):
-                    item.iped_cst_cofi = '01'
+                pacote = motor.calcular_item(ctx=ctx, item=item, tipo_oper=pedi_tipo_oper or 'VENDA')
+                motor.aplicar_no_item(item, pacote)
                 item.save(using=banco)
             except Exception as e:
                 PedidoVendaService.logger.exception(
-                    "[PedidoService.update] erro fiscal item=%s tipo=%s uf_origem=%s uf_destino=%s err=%s",
-                    idx, pedi_tipo_oper, uf_origem, uf_destino, e
+                    "[PedidoService.update] erro fiscal item=%s tipo=%s err=%s",
+                    idx, pedi_tipo_oper, e
                 )
 
-        # Cálculo dos totais do pedido (alinhado ao serializer)
+            itens_criados.append(item)
+
+        # Cálculo dos totais
         pedido_desc_val = PedidoVendaService._to_decimal(pedido_updates.get('pedi_desc', 0))
         if pedido_desc_val > 0 and any_item_discount:
-            PedidoVendaService.logger.error(
-                "[PedidoService.update] Conflito de descontos: desconto_total=%s e desconto_por_item presente",
-                pedido_desc_val
-            )
             raise ValueError("Não é possível aplicar desconto por item e desconto no total simultaneamente.")
 
         pedido.pedi_topr = subtotal_sum
@@ -322,6 +316,32 @@ class PedidoVendaService:
             pedido.pedi_tota = subtotal_sum - pedido_desc_val
 
         pedido.pedi_liqu = pedido.pedi_tota
+
+        if status_novo == 4:
+            try:
+                PedidosService.estornar_estoque_pedido(pedido, request=request, banco=banco)
+            except Exception as e:
+                PedidoVendaService.logger.exception(
+                    "[PedidoService.update] erro ao estornar estoque pedido=%s err=%s",
+                    getattr(pedido, 'pedi_nume', None), e
+                )
+        elif deve_baixar:
+            if not PedidosService.pedido_tem_baixa(banco, pedido):
+                for item in itens_criados:
+                    try:
+                        item_dict = {
+                            'iped_prod': item.iped_prod,
+                            'iped_quan': item.iped_quan,
+                            'iped_unit': item.iped_unit,
+                            'iped_item': getattr(item, 'iped_item', None),
+                        }
+                        PedidosService._baixar_item_data(pedido, item_dict, banco)
+                    except Exception as e:
+                        PedidoVendaService.logger.exception(
+                            "[PedidoService.update] erro ao baixar item=%s err=%s",
+                            getattr(item, 'iped_prod', None), e
+                        )
+
         pedido.save(using=banco)
 
         PedidoVendaService.logger.debug(
@@ -330,7 +350,6 @@ class PedidoVendaService:
         )
 
         return pedido
-
 
 class proximo_pedido_numero:
     @staticmethod

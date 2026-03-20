@@ -229,6 +229,19 @@ class NotaService:
 
             emitente = Filiais.objects.using(database).get(empr_empr=empresa, empr_codi=filial)
 
+            modelo_in = str(data.get("modelo") or "55").strip()
+            try:
+                regime_emitente = str(getattr(emitente, "empr_regi_trib", "") or "").strip()
+            except Exception:
+                regime_emitente = ""
+            is_produtor_rural = regime_emitente == "5"
+            if is_produtor_rural:
+                serie_tipos = ["PR"]
+            elif modelo_in == "65":
+                serie_tipos = ["NC"]
+            else:
+                serie_tipos = ["SA"]
+
             serie_in = str(data.get("serie") or "").strip()
             serie_candidates = []
             if serie_in:
@@ -240,26 +253,36 @@ class NotaService:
 
             series = None
             if serie_candidates:
-                series = (
-                    Series.objects.using(database)
-                    .filter(seri_empr=empresa, seri_fili=filial, seri_nome="SA", seri_codi__in=serie_candidates)
-                    .first()
+                qs_series = Series.objects.using(database).filter(
+                    seri_empr=empresa,
+                    seri_fili=filial,
+                    seri_nome__in=serie_tipos,
+                    seri_codi__in=serie_candidates,
                 )
+                if is_produtor_rural:
+                    qs_series = qs_series.filter(seri_codi__gte="920", seri_codi__lte="969")
+                series = qs_series.first()
                 if not series:
                     if serie_in in ("1", "001"):
-                        series = (
-                            Series.objects.using(database)
-                            .filter(seri_empr=empresa, seri_fili=filial, seri_nome="SA")
-                            .first()
+                        qs_series = Series.objects.using(database).filter(
+                            seri_empr=empresa,
+                            seri_fili=filial,
+                            seri_nome__in=serie_tipos,
                         )
+                        if is_produtor_rural:
+                            qs_series = qs_series.filter(seri_codi__gte="920", seri_codi__lte="969")
+                        series = qs_series.first()
                     if not series:
                         raise ValidationError("Série inválida para Nota de Saída.")
             else:
-                series = (
-                    Series.objects.using(database)
-                    .filter(seri_empr=empresa, seri_fili=filial, seri_nome="SA")
-                    .first()
+                qs_series = Series.objects.using(database).filter(
+                    seri_empr=empresa,
+                    seri_fili=filial,
+                    seri_nome__in=serie_tipos,
                 )
+                if is_produtor_rural:
+                    qs_series = qs_series.filter(seri_codi__gte="920", seri_codi__lte="969")
+                series = qs_series.first()
                 if not series:
                     raise ValidationError("Nenhuma série cadastrada para Nota de Saída.")
 

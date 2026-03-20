@@ -5,12 +5,15 @@ from core.dominio_handler import tratar_erro
 from rest_framework.response import Response as DRFResponse
 from ..models import Nota
 from ..utils.sefaz_messages import get_sefaz_message
+import logging
 
 
 try:
     from brazilfiscalreport.danfe import Danfe
 except ImportError:
     Danfe = None
+
+logger = logging.getLogger(__name__)
 
 
 def emitir_nota(request, slug, nota_id):
@@ -35,6 +38,7 @@ def emitir_nota(request, slug, nota_id):
 
         return JsonResponse(resposta)
     except Exception as e:
+        logger.exception("Falha ao emitir nota (slug=%s nota_id=%s)", slug, nota_id)
         drf_response = tratar_erro(e)
         if isinstance(drf_response, DRFResponse):
             data = drf_response.data

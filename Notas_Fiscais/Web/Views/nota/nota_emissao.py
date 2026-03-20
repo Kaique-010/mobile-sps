@@ -4,6 +4,7 @@ from datetime import date
 from ....models import FINALIDADE_CHOICES, MODALIDADE_FRETE
 from core.utils import get_licenca_db_config
 from series.models import Series
+from Licencas.models import Filiais
 
 
 def _to_int(v, default=None):
@@ -41,12 +42,30 @@ class NotaEmissaoView(TemplateView):
         empresa_id = _to_int(empresa, 1)
         filial_id = _to_int(filial, 1)
 
+        emitente = (
+            Filiais.objects.using(banco)
+            .filter(empr_empr=empresa_id, empr_codi=filial_id)
+            .first()
+        )
+        try:
+            regime_emitente = str(getattr(emitente, "empr_regi_trib", "") or "").strip()
+        except Exception:
+            regime_emitente = ""
+        is_produtor_rural = regime_emitente == "5"
+
+        if is_produtor_rural:
+            serie_tipos = ["PR"]
+        else:
+            serie_tipos = ["SA", "NC"]
+
         series_qs = (
             Series.objects.using(banco)
-            .filter(seri_empr=empresa_id, seri_fili=filial_id, seri_nome="SA")
+            .filter(seri_empr=empresa_id, seri_fili=filial_id, seri_nome__in=serie_tipos)
             .order_by("seri_codi")
             .values_list("seri_codi", flat=True)
         )
+        if is_produtor_rural:
+            series_qs = series_qs.filter(seri_codi__gte="920", seri_codi__lte="969")
         serie_opcoes = [{"value": _fmt_serie(c), "label": _fmt_serie(c)} for c in list(series_qs)]
         serie_opcoes = [o for o in serie_opcoes if o.get("value")]
         ctx["serie_opcoes"] = serie_opcoes

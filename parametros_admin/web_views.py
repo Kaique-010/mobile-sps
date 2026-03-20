@@ -7,7 +7,7 @@ from django.core.cache import cache
 from core.decorator import ModuloRequeridoMixin
 from core.utils import get_licenca_db_config
 from core.middleware import get_licenca_slug
-from .models import Modulo, PermissaoModulo
+from .models import Modulo, PermissaoModulo, ParametroSistema
 import logging
 
 logger = logging.getLogger(__name__)
@@ -148,3 +148,59 @@ class ModulosSyncView(ModuloRequeridoMixin, View):
         cache.delete(f"modulos_licenca_{slug}_{empresa_id}_{filial_id}")
         messages.success(request, f'Módulos sincronizados: {created} criados, {updated} reativados; permissões criadas: {criadas}')
         return redirect(reverse('parametros_admin_modulos', kwargs={'slug': slug}))
+
+
+
+
+
+
+class ParametrosListView(ModuloRequeridoMixin, TemplateView):
+  
+    template_name = 'ParametrosAdmin/parametros_lista.html'
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        banco = get_licenca_db_config(self.request)
+        slug = kwargs.get('slug') or get_licenca_slug() or self.request.session.get('slug')
+        empresa_id, filial_id = _resolve_empresa_filial(self.request)
+
+        parametros = list(ParametroSistema.objects.using(banco).all().order_by( 'para_nome'))
+        liberados = set(ParametroSistema.objects.using(banco).filter(
+            para_empr=empresa_id,
+            para_fili=filial_id,
+            para_ativ=True, 
+            para_valo= True
+        ).values_list('para_nome', flat=True))
+
+        itens = []
+        for p in parametros:
+            itens.append({
+                'parametro': p.para_nome,
+                'nome': p.para_nome,
+                'descricao': p.para_desc,
+                'ativo_global': p.para_ativ,
+                'ativo': p.para_valo,
+                'permitido': p.para_nome in liberados,
+            })
+
+        ctx.update({
+            'slug': slug,
+            'empresa_id': empresa_id,
+            'filial_id': filial_id,
+            'parametros': itens,
+        })
+        return ctx
+    
+
+class ParametroToggleView(ModuloRequeridoMixin, View):
+    def post(self, request, slug, parametro_slug):
+        banco = get_licenca_db_config(request)
+        empresa_id, filial_id = _resolve_empresa_filial(request)
+        parametro = ParametroSistema.objects.using(banco).filter(
+            para_nome=parametro_slug,
+            para_empr=empresa_id,
+            para_fili=filial_id,
+        ).first()
+        if not parametro:
+            messages.error(request, f'Parâmetro "{parametro_slug}" não encontrado')
+            return redirect(reverse('parametros_admin_parametros', kwargs={'slug': slug}))

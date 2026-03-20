@@ -125,7 +125,8 @@ class PedidoCreateView(CreateView):
                     banco,
                     pedido_data,
                     itens_data,
-                    pedi_tipo_oper=pedi_tipo_oper
+                    pedi_tipo_oper=pedi_tipo_oper,
+                    request=self.request
                 )
                 logger.debug(
                     "[PedidoCreateView] Pedido criado pedi_nume=%s pedi_topr=%s pedi_desc=%s pedi_tota=%s",

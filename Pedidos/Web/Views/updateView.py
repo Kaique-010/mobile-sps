@@ -164,12 +164,13 @@ class PedidoUpdateView(UpdateView):
 
                 logger.debug("[PedidoUpdateView] Chamando service.update_pedido_venda com %d itens", len(itens_data))
                 logger.debug("[PedidoUpdateView] tipo_oper=%s", pedido_updates.get('pedi_tipo_oper'))
-                PedidoVendaService.update_pedido_venda(
+                pedido = PedidoVendaService.update_pedido_venda(
                     banco,
                     pedido,
                     pedido_updates,
                     itens_data,
-                    pedi_tipo_oper=pedido_updates.get('pedi_tipo_oper', 'VENDA')
+                    pedi_tipo_oper=pedido_updates.get('pedi_tipo_oper', 'VENDA'),
+                    request=self.request
                 )
                 logger.debug(
                     "[PedidoUpdateView] Pedido atualizado pedi_nume=%s pedi_topr=%s pedi_desc=%s pedi_tota=%s",

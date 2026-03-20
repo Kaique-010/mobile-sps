@@ -1,10 +1,32 @@
 from .models import ParametroSistema, Modulo
 from core.utils import get_licenca_db_config
 from django.core.exceptions import ValidationError
+from django.db.models import Count
 from decimal import Decimal, ROUND_HALF_UP
 import logging
 
 logger = logging.getLogger(__name__)
+
+def _resolver_modulo_pedidos(banco: str, empresa_id: int, filial_id: int, parametros_nomes: list[str]):
+    modulo = Modulo.objects.using(banco).filter(modu_nome__icontains='pedido').first()
+    if modulo:
+        return modulo
+
+    row = (
+        ParametroSistema.objects.using(banco)
+        .filter(
+            para_empr=empresa_id,
+            para_fili=filial_id,
+            para_nome__in=parametros_nomes,
+        )
+        .values('para_modu_id')
+        .annotate(qtd=Count('para_nome'))
+        .order_by('-qtd')
+        .first()
+    )
+    if not row:
+        return None
+    return Modulo.objects.using(banco).filter(modu_codi=row.get('para_modu_id')).first()
 
 
 def obter_parametros_pedidos(empresa_id, filial_id, request):
@@ -13,15 +35,6 @@ def obter_parametros_pedidos(empresa_id, filial_id, request):
     """
     try:
         banco = get_licenca_db_config(request)
-        
-        # Buscar módulo de pedidos
-        modulo_pedidos = Modulo.objects.using(banco).filter(
-            modu_nome__icontains='pedido'
-        ).first()
-        
-        if not modulo_pedidos:
-            logger.warning("Módulo de pedidos não encontrado")
-            return {}
         
         parametros_nomes = [
             'desconto_orcamento',
@@ -40,8 +53,13 @@ def obter_parametros_pedidos(empresa_id, filial_id, request):
             'calcular_frete_automatico', 
             'baixa_estoque_orcamento',
             'baixa_estoque_pedido',
-            'pedido_volta_estoque'
+            'pedido_volta_estoque',
         ]
+
+        modulo_pedidos = _resolver_modulo_pedidos(banco, empresa_id, filial_id, parametros_nomes)
+        if not modulo_pedidos:
+            logger.warning("Módulo de pedidos não encontrado")
+            return {}
         
         parametros = {}
         for nome_param in parametros_nomes:
@@ -130,17 +148,55 @@ def verificar_validar_estoque_pedido(empresa_id, filial_id, request):
     return param.get('ativo', False) and str(valor).lower() == 'true'
 
 
-def verificar_baixa_estoque_pedido(empresa_id, filial_id, request):
+def verificar_baixa_estoque_pedido(empresa_id, filial_id, request=None, banco=None):
     """
-    Verifica se deve fazer baixa automática de estoque ao criar pedido
+    Verifica se deve fazer baixa automática de estoque ao criar pedido.
+    Aceita banco diretamente para evitar re-resolução do request.
     """
-    parametros = obter_parametros_pedidos(empresa_id, filial_id, request)
-    param = parametros.get('baixa_estoque_pedido', {})
-    valor = param.get('valor', 'false')
-    # Corrigir para tratar tanto string quanto boolean
-    if isinstance(valor, bool):
-        return param.get('ativo', False) and valor
-    return param.get('ativo', False) and str(valor).lower() == 'true'
+    try:
+        if banco is None and request is not None:
+            banco = get_licenca_db_config(request)
+        if not banco:
+            logger.warning("[verificar_baixa_estoque_pedido] banco não resolvido")
+            return False
+
+        # Buscar módulo diretamente pelo banco já resolvido
+        modulo = Modulo.objects.using(banco).filter(
+            modu_nome__icontains='pedido'
+        ).first()
+
+        if not modulo:
+            logger.warning("[verificar_baixa_estoque_pedido] módulo pedido não encontrado banco=%s", banco)
+            return False
+
+        param = ParametroSistema.objects.using(banco).filter(
+            para_empr=empresa_id,
+            para_fili=filial_id,
+            para_modu=modulo,
+            para_nome='baixa_estoque_pedido'
+        ).first()
+
+        logger.warning(
+            "[verificar_baixa_estoque_pedido] banco=%s empr=%s fili=%s existe=%s ativo=%s valor=%r",
+            banco, empresa_id, filial_id,
+            param is not None,
+            param.para_ativ if param else None,
+            param.para_valo if param else None,
+        )
+
+        if not param:
+            return False
+
+        ativo = param.para_ativ
+        valor = param.para_valo
+
+        if isinstance(valor, bool):
+            return bool(ativo) and valor
+        return bool(ativo) and str(valor).lower() == 'true'
+
+    except Exception as e:
+        logger.error("[verificar_baixa_estoque_pedido] erro: %s", e)
+        return False
 
 
 def obter_preco_produto(produto_codigo, empresa_id, filial_id, request, tipo_preco='normal'):

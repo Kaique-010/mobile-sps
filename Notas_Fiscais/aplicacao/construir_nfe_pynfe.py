@@ -18,15 +18,27 @@ def _limpar_inscricao_estadual(valor):
     somente_digitos = re.sub(r"\D", "", s)
     return somente_digitos[:14]
 
+def _normalizar_crt(regime_trib):
+    r = str(regime_trib or "").strip()
+
+    if r in ("1", "2", "3"):
+        return r
+
+
+    if r in ("4", "5"):
+        return "3"
+
+    return "3"
 
 def construir_nfe_pynfe(dto):
     homolog_text = 'NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL' if int(dto.ambiente) == 2 else None
+    crt = _normalizar_crt(getattr(dto.emitente, "regime_trib", None))
 
     emitente = Emitente(
         razao_social=homolog_text or dto.emitente.razao,
         nome_fantasia=homolog_text or dto.emitente.fantasia,
         cnpj=dto.emitente.cnpj,
-        codigo_de_regime_tributario=str(dto.emitente.regime_trib or "1"),
+        codigo_de_regime_tributario=crt,
         inscricao_estadual=_limpar_inscricao_estadual(dto.emitente.ie),
         inscricao_municipal=dto.emitente.inscricao_municipal or "",
         cnae_fiscal=dto.emitente.cnae or "",
@@ -101,9 +113,27 @@ def construir_nfe_pynfe(dto):
         nota_fiscal._chave_referenciada = chave_ref
 
     for item in dto.itens:
+        cst_icms_raw = str(getattr(item, "cst_icms", "") or "").strip()
+        if crt == "1":
+            csosn = cst_icms_raw if len(cst_icms_raw) == 3 else "102"
+            icms_modalidade = _obter_modalidade_csosn(csosn)
+            icms_csosn = csosn
+        else:
+            cst = cst_icms_raw if len(cst_icms_raw) == 2 else "00"
+            icms_modalidade = cst or "00"
+            icms_csosn = None
+
         qtd = Decimal(str(item.quantidade))
         vunit = Decimal(str(item.valor_unit))
         vtotal = Decimal(str((item.quantidade or 0) * (item.valor_unit or 0)))
+        icms_base = Decimal(str(getattr(item, "base_icms", None) or 0))
+        icms_aliq = Decimal(str(getattr(item, "aliq_icms", None) or 0))
+        icms_valor = Decimal(str(getattr(item, "valor_icms", None) or 0))
+        icms_st_base = Decimal(str(getattr(item, "base_icms_st", None) or 0))
+        icms_st_aliq = Decimal(str(getattr(item, "aliq_icms_st", None) or 0))
+        icms_st_valor = Decimal(str(getattr(item, "valor_icms_st", None) or 0))
+        mva_st = Decimal(str(getattr(item, "mva_st", None) or 0))
+        fcp_valor = Decimal(str(getattr(item, "valor_fcp", None) or 0))
 
         nota_fiscal.adicionar_produto_servico(
             codigo=str(item.codigo),
@@ -120,9 +150,20 @@ def construir_nfe_pynfe(dto):
             quantidade_tributavel=qtd,
             valor_unitario_tributavel=vunit,
             ind_total=1,
-            icms_modalidade=_obter_modalidade_csosn(item.cst_icms) if str(dto.emitente.regime_trib) == "1" else None,
+            icms_modalidade=icms_modalidade,
             icms_origem=0,
-            icms_csosn=item.cst_icms if str(dto.emitente.regime_trib) == "1" else None,
+            icms_csosn=icms_csosn,
+            icms_modalidade_determinacao_bc=3,
+            icms_valor_base_calculo=icms_base,
+            icms_aliquota=icms_aliq,
+            icms_valor=icms_valor,
+            icms_st_modalidade_determinacao_bc=4,
+            icms_st_percentual_adicional=mva_st,
+            icms_st_percentual_reducao_bc=0,
+            icms_st_valor_base_calculo=icms_st_base,
+            icms_st_aliquota=icms_st_aliq,
+            icms_st_valor=icms_st_valor,
+            fcp_valor=fcp_valor,
             pis_modalidade=str(getattr(item, "cst_pis", None) or "07"),
             cofins_modalidade=str(getattr(item, "cst_cofins", None) or "07"),
             valor_tributos_aprox=None,
