@@ -15,7 +15,7 @@ from ...models import (
 
 
 def autocomplete_unidades(request, slug=None):
-    banco = get_licenca_db_config(request) or 'default'
+    banco = get_ncm_master_db(request)
     term = (request.GET.get('term') or request.GET.get('q') or '').strip()
     qs = UnidadeMedida.objects.using(banco).all()
     if term:

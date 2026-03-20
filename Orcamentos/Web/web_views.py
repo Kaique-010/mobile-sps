@@ -82,11 +82,11 @@ def preco_produto(request, slug=None):
     filial_id = request.session.get('filial_id', 1)
 
     prod_codi = (request.GET.get('prod_codi') or '').strip()
-    # Orçamentos não têm tipo financeiro, usar preço padrão (prazo)
     if not prod_codi:
         return JsonResponse({'error': 'prod_codi obrigatório'}, status=400)
 
     try:
+        tipo_financeiro = (request.GET.get('tipo') or request.GET.get('pedi_fina') or '0')
         from Produtos.models import Tabelaprecos
         qs = Tabelaprecos.objects.using(banco).filter(
             tabe_empr=str(empresa_id),
@@ -97,15 +97,20 @@ def preco_produto(request, slug=None):
         if not tp:
             return JsonResponse({'unit_price': None, 'found': False})
 
-        price = tp.tabe_praz or tp.tabe_prco or tp.tabe_avis
+        if str(tipo_financeiro) == '0':
+            price = tp.tabe_avis or tp.tabe_prco or tp.tabe_apra
+            price_source = 'avis/prco/apra'
+        else:
+            price = tp.tabe_apra or tp.tabe_prco or tp.tabe_avis
+            price_source = 'apra/prco/avis'
         try:
             unit_price = float(price or 0)
         except Exception:
             unit_price = 0.0
 
         logger.debug(
-            "[Orcamentos.preco_produto] prod_codi=%s price_source=praz/prco/avis unit_price=%.2f",
-            prod_codi, unit_price
+            "[Orcamentos.preco_produto] prod_codi=%s tipo_financeiro=%s price_source=%s unit_price=%.2f",
+            prod_codi, str(tipo_financeiro), price_source, unit_price
         )
         return JsonResponse({'unit_price': unit_price, 'found': True})
     except Exception as e:

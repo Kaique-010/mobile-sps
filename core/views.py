@@ -5,7 +5,8 @@ import json
 from Entidades.models import Entidades
 from Pedidos.models import PedidoVenda, Itenspedidovenda, PedidosGeral
 from Pisos.models import Pedidospisos, Itenspedidospisos
-from django.db.models import Sum, F, ExpressionWrapper, DecimalField, Q
+from django.db.models import Sum, F, ExpressionWrapper, DecimalField, Q, Subquery, OuterRef, Value as V
+from django.db.models.functions import Coalesce
 from django.db import connections
 from datetime import datetime, timedelta
 from django.views.decorators.http import require_http_methods
@@ -13,6 +14,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from core.utils import get_licenca_db_config, get_db_from_slug
 from core.middleware import get_licenca_slug
 from OrdemdeServico.models import Ordemservico, Ordemservicopecas, Ordemservicoservicos     
+from Produtos.models import Tabelaprecos
 import logging
 
 logger = logging.getLogger(__name__)
@@ -285,7 +287,36 @@ def home(request, slug=None, empresa=None, filial=None):
         ticket_medio = (float(total_valor) / qtd_pedidos) if qtd_pedidos else 0.0
         numeros = list(pedidos_qs.values_list('pedi_nume', flat=True))
         itens_qs = Itenspedidovenda.objects.using(banco).filter(iped_pedi__in=[str(n) for n in numeros])
-        custo_expr = ExpressionWrapper(F('iped_cust') * F('iped_quan'), output_field=DecimalField(max_digits=15, decimal_places=4))
+        if empresa_id is not None:
+            itens_qs = itens_qs.filter(iped_empr=empresa_id)
+        if filial_id is not None:
+            itens_qs = itens_qs.filter(iped_fili=filial_id)
+
+        try:
+            emp_int = int(empresa_id) if empresa_id is not None else None
+        except Exception:
+            emp_int = empresa_id
+        try:
+            fil_int = int(filial_id) if filial_id is not None else None
+        except Exception:
+            fil_int = filial_id
+
+        tp_qs = Tabelaprecos.objects.using(banco).filter(
+            tabe_prod=OuterRef('iped_prod'),
+        )
+        if emp_int is not None:
+            tp_qs = tp_qs.filter(tabe_empr=emp_int)
+        if fil_int is not None:
+            tp_qs = tp_qs.filter(tabe_fili=fil_int)
+
+        custo_unit = Coalesce(
+            Subquery(tp_qs.values('tabe_cuge')[:1], output_field=DecimalField(max_digits=15, decimal_places=4)),
+            F('iped_cust'),
+            V(0),
+            output_field=DecimalField(max_digits=15, decimal_places=4),
+        )
+        qty = Coalesce(F('iped_quan'), V(0), output_field=DecimalField(max_digits=15, decimal_places=5))
+        custo_expr = ExpressionWrapper(custo_unit * qty, output_field=DecimalField(max_digits=15, decimal_places=4))
         total_custo = itens_qs.aggregate(c=Sum(custo_expr)).get('c') or 0
         lucro_valor = (float(total_valor) - float(total_custo)) if total_valor else 0.0
         lucro_percent = (lucro_valor / float(total_valor) * 100.0) if total_valor else 0.0

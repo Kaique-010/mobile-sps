@@ -31,7 +31,7 @@
         const valorDespesas = desp ? toNumber(desp.value) : 0;
         const custoGerencial = precoCompra + custoFrete + valorDespesas;
         if (cuge) cuge.value = custoGerencial.toFixed(2);
-        const precoVista = precoCompra * (1 + percMargem / 100);
+        const precoVista = custoGerencial * (1 + percMargem / 100);
         const precoPrazo = precoVista * (1 + percPrazo / 100);
         avis.value = precoVista.toFixed(2);
         apra.value = precoPrazo.toFixed(2);

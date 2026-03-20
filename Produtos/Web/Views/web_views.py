@@ -220,9 +220,15 @@ class ProdutoListView(DBAndSlugMixin, ListView):
                 preco_qs = preco_qs.filter(tabe_empr=emp_int)
             except Exception:
                 pass
+        if self.filial_id:
+            try:
+                fil_int = int(self.filial_id)
+                preco_qs = preco_qs.filter(tabe_fili=fil_int)
+            except Exception:
+                pass
         preco_vista_sub = Subquery(preco_qs.values('tabe_avis')[:1], output_field=DecimalField())
         preco_prazo_sub = Subquery(preco_qs.values('tabe_praz')[:1], output_field=DecimalField())
-        preco_custo_sub = Subquery(preco_qs.values('tabe_cust')[:1], output_field=DecimalField())
+        preco_custo_sub = Subquery(preco_qs.values('tabe_cuge')[:1], output_field=DecimalField())
         qs = qs.annotate(
             preco_vista=preco_vista_sub,
             preco_prazo=preco_prazo_sub,
@@ -253,12 +259,18 @@ class ProdutoListView(DBAndSlugMixin, ListView):
             emp_int = int(self.empresa_id) if self.empresa_id else None
         except Exception:
             emp_int = None
+        try:
+            fil_int = int(self.filial_id) if self.filial_id else None
+        except Exception:
+            fil_int = None
 
         produtos = ctx.get('page_obj').object_list if ctx.get('page_obj') else ctx.get('produtos', [])
         for p in produtos:
             precos_qs = Tabelaprecos.objects.using(self.db_alias).filter(tabe_prod=p.prod_codi)
             if emp_int is not None:
                 precos_qs = precos_qs.filter(tabe_empr=emp_int)
+            if fil_int is not None:
+                precos_qs = precos_qs.filter(tabe_fili=fil_int)
             p.tabelaprecos_set = _ManagerLike(list(precos_qs))
         return ctx
 

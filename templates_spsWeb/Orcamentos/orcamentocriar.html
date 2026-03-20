@@ -8,8 +8,7 @@
   <div class="card shadow-lg border-0">
     <div class="card-header text-center py-3">
       <h3 class="mb-0 d-flex align-items-center justify-content-center">
-        <i class="bi bi-file-break me-2"></i>{% if form.instance.pk %}Editar Orçamento{% else %}Novo Orçamento{% endif
-        %}
+        <i class="bi bi-file-break me-2"></i>{% if form.instance.pk %}Editar Orçamento{% else %}Novo Orçamento{% endif %}
       </h3>
     </div>
     <div class="card-body p-4">
@@ -26,8 +25,7 @@
             <label class="form-label fw-semibold" for="{{ form.pedi_forn.id_for_label }}"><i
                 class="bi bi-person-circle me-1"></i>Cliente</label>
             <input type="text" class="form-control form-control-lg" id="autocomplete-cliente"
-              placeholder="Buscar cliente por nome ou código" {% if is_edit and cliente_display
-              %}value="{{ cliente_display }}" {% endif %}>
+              placeholder="Buscar cliente por nome ou código" {% if is_edit and cliente_display %}value="{{ cliente_display }}" {% endif %}>
             {{ form.pedi_forn }}
             <small id="cliente-selecionado" class="text-success mt-1 d-block"></small>
           </div>
@@ -164,9 +162,15 @@
       return;
     }
 
+    const $ = window.jQuery;
     const $table = $('#itens-orcamento');
     const $totalForms = $('#id_form-TOTAL_FORMS');
     const $addBtn = $('#add-item');
+
+    const clientesUrl = "{% url 'OrcamentosWeb:autocomplete_clientes' slug=slug %}";
+    const vendedoresUrl = "{% url 'OrcamentosWeb:autocomplete_vendedores' slug=slug %}";
+    const produtosUrl = "{% url 'OrcamentosWeb:autocomplete_produtos' slug=slug %}";
+    const precoUrl = "{% url 'OrcamentosWeb:preco_produto' slug=slug %}";
 
     function formatBRL(value) {
       const num = Number(value || 0);
@@ -252,21 +256,37 @@
 
     updateTotals();
 
-    function createDropdown(container) {
-      let dd = container.querySelector('.autocomplete-dropdown');
+    function createDropdown(inputEl) {
+      let dd = inputEl._autocompleteDropdown;
       if (!dd) {
         dd = document.createElement('div');
-        dd.className = 'autocomplete-dropdown list-group position-absolute w-100';
-        dd.style.zIndex = '1000';
-        container.appendChild(dd);
+        dd.className = 'autocomplete-dropdown list-group';
+        dd.style.position = 'fixed';
+        dd.style.zIndex = '2000';
+        dd.style.maxHeight = '280px';
+        dd.style.overflowY = 'auto';
+        dd.style.display = 'none';
+        document.body.appendChild(dd);
+        inputEl._autocompleteDropdown = dd;
       }
       return dd;
     }
 
+    function positionDropdown(inputEl, dropdown) {
+      const rect = inputEl.getBoundingClientRect();
+      dropdown.style.left = `${rect.left}px`;
+      dropdown.style.top = `${rect.bottom}px`;
+      dropdown.style.width = `${rect.width}px`;
+    }
+
+    function hideDropdown(dropdown) {
+      dropdown.innerHTML = '';
+      dropdown.style.display = 'none';
+    }
+
     function setupInputAutocomplete({ inputEl, hiddenEl, url, onSelect }) {
       if (!inputEl || !hiddenEl) return;
-      const container = inputEl.parentElement;
-      const dropdown = createDropdown(container);
+      const dropdown = createDropdown(inputEl);
 
       let controller = null;
       let debounce = null;
@@ -279,6 +299,8 @@
           const json = await resp.json();
           const results = json.results || [];
           dropdown.innerHTML = '';
+          positionDropdown(inputEl, dropdown);
+          dropdown.style.display = 'block';
           results.forEach(item => {
             const a = document.createElement('a');
             a.href = '#';
@@ -289,11 +311,12 @@
               ev.preventDefault();
               hiddenEl.value = item.id;
               inputEl.value = item.text;
-              dropdown.innerHTML = '';
+              hideDropdown(dropdown);
               if (typeof onSelect === 'function') onSelect(item);
             });
             dropdown.appendChild(a);
           });
+          if (results.length === 0) hideDropdown(dropdown);
         } catch (e) {
           console.error('Erro no autocomplete:', e);
         }
@@ -302,29 +325,35 @@
       inputEl.addEventListener('input', (e) => {
         const term = e.target.value.trim();
         clearTimeout(debounce);
-        dropdown.innerHTML = '';
+        hideDropdown(dropdown);
         if (!term) return;
+        positionDropdown(inputEl, dropdown);
         debounce = setTimeout(() => fetchResults(term), 250);
       });
 
       inputEl.addEventListener('blur', () => {
-        setTimeout(() => { dropdown.innerHTML = ''; }, 150);
+        setTimeout(() => { hideDropdown(dropdown); }, 150);
+      });
+
+      window.addEventListener('scroll', () => {
+        if (dropdown.style.display !== 'none') positionDropdown(inputEl, dropdown);
+      }, true);
+      window.addEventListener('resize', () => {
+        if (dropdown.style.display !== 'none') positionDropdown(inputEl, dropdown);
       });
     }
 
     function bindProdutoAutocomplete($row) {
       const $input = $row.find('.autocomplete-prod');
       const $hidden = $row.find('input[type="hidden"][name$="-iped_prod"]');
-      const slug = localStorage.getItem('slug') || '';
-      const url = `/web/${slug}/orcamentos/autocomplete/produtos/`;
 
       setupInputAutocomplete({
         inputEl: $input.get(0),
         hiddenEl: $hidden.get(0),
-        url,
+        url: produtosUrl,
         onSelect: async (item) => {
           try {
-            const resp = await fetch(`/web/${slug}/orcamentos/preco/?prod_codi=${encodeURIComponent(item.id)}`);
+            const resp = await fetch(`${precoUrl}?prod_codi=${encodeURIComponent(item.id)}`);
             const js = await resp.json();
             if (js && typeof js.unit_price === 'number') {
               const $unit = $row.find('input[name$="-iped_unit"]');
@@ -345,10 +374,8 @@
     (function () {
       const $input = $('#autocomplete-cliente');
       const $hidden = $('#id_pedi_forn');
-      const slug = localStorage.getItem('slug') || '';
-      const url = `/web/${slug}/orcamentos/autocomplete/clientes/`;
       setupInputAutocomplete({
-        inputEl: $input.get(0), hiddenEl: $hidden.get(0), url, onSelect: (item) => {
+        inputEl: $input.get(0), hiddenEl: $hidden.get(0), url: clientesUrl, onSelect: (item) => {
           $('#cliente-selecionado').text(item.text);
         }
       });
@@ -358,10 +385,8 @@
     (function () {
       const $input = $('#autocomplete-vendedor');
       const $hidden = $('#id_pedi_vend');
-      const slug = localStorage.getItem('slug') || '';
-      const url = `/web/${slug}/orcamentos/autocomplete/vendedores/`;
       setupInputAutocomplete({
-        inputEl: $input.get(0), hiddenEl: $hidden.get(0), url, onSelect: (item) => {
+        inputEl: $input.get(0), hiddenEl: $hidden.get(0), url: vendedoresUrl, onSelect: (item) => {
           $('#vendedor-selecionado').text(item.text);
         }
       });
@@ -369,11 +394,6 @@
 
     // Prefill cliente, vendedor e produtos em modo edição
     (async function prefillEditMode() {
-      const slug = localStorage.getItem('slug') || '';
-      const clientesUrl = `/web/${slug}/orcamentos/autocomplete/clientes/`;
-      const vendedoresUrl = `/web/${slug}/orcamentos/autocomplete/vendedores/`;
-      const produtosUrl = `/web/${slug}/orcamentos/autocomplete/produtos/`;
-
       async function prefillEntidade(hiddenSelector, inputSelector, url, labelSelector) {
         const hiddenEl = document.querySelector(hiddenSelector);
         const inputEl = document.querySelector(inputSelector);
@@ -413,27 +433,26 @@
       prefillEntidade('#id_pedi_vend', '#autocomplete-vendedor', vendedoresUrl, '#vendedor-selecionado');
       prefillProdutos();
     })();
-  });
 
-  // Logar dados no submit para diagnosticar falhas
-  const $form = $('#orcamento-form');
-  $form.on('submit', function () {
-    const payload = {
-      pedi_desc: parseFloat($('#id_pedi_desc').val()) || 0,
-      pedi_topr: parseFloat($('#id_pedi_topr').val()) || 0,
-      pedi_tota: parseFloat($('#id_pedi_tota').val()) || 0,
-      itens: []
-    };
-    $('#itens-orcamento .item-row').each(function () {
-      const $row = $(this);
-      payload.itens.push({
-        deleted: $row.find('input[name$="-DELETE"]').is(':checked'),
-        prod: $row.find('input[type="hidden"][name$="-iped_prod"]').val(),
-        quan: parseFloat($row.find('input[name$="-iped_quan"]').val()) || 0,
-        unit: parseFloat($row.find('input[name$="-iped_unit"]').val()) || 0
+    const $form = $('#orcamento-form');
+    $form.on('submit', function () {
+      const payload = {
+        pedi_desc: parseFloat($('#id_pedi_desc').val()) || 0,
+        pedi_topr: parseFloat($('#id_pedi_topr').val()) || 0,
+        pedi_tota: parseFloat($('#id_pedi_tota').val()) || 0,
+        itens: []
+      };
+      $('#itens-orcamento .item-row').each(function () {
+        const $row = $(this);
+        payload.itens.push({
+          deleted: $row.find('input[name$="-DELETE"]').is(':checked'),
+          prod: $row.find('input[type="hidden"][name$="-iped_prod"]').val(),
+          quan: parseFloat($row.find('input[name$="-iped_quan"]').val()) || 0,
+          unit: parseFloat($row.find('input[name$="-iped_unit"]').val()) || 0
+        });
       });
+      console.debug('[Orcamentos.submit] payload', payload);
     });
-    console.debug('[Orcamentos.submit] payload', payload);
   });
 </script>
 {% endblock %}

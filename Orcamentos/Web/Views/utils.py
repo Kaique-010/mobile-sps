@@ -65,6 +65,7 @@ def preco_produto(request, slug=None):
     if not prod_codi:
         return JsonResponse({'error': 'prod_codi obrigatório'}, status=400)
     try:
+        tipo_financeiro = (request.GET.get('tipo') or request.GET.get('pedi_fina') or '0')
         from Produtos.models import Tabelaprecos
         qs = Tabelaprecos.objects.using(banco).filter(
             tabe_empr=str(empresa_id),
@@ -74,7 +75,10 @@ def preco_produto(request, slug=None):
         tp = qs.first()
         if not tp:
             return JsonResponse({'unit_price': None, 'found': False})
-        price = tp.tabe_praz or tp.tabe_prco or tp.tabe_avis
+        if str(tipo_financeiro) == '0':
+            price = tp.tabe_avis or tp.tabe_apra
+        else:
+            price = tp.tabe_apra or tp.tabe_avis
         try:
             unit_price = float(price or 0)
         except Exception:

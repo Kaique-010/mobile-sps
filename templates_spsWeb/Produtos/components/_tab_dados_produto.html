@@ -40,7 +40,7 @@
             <div class="form-group">
                 <label for="{{ form.prod_grup.id_for_label }}">Grupo</label>
                 <input type="text" class="form-control" id="autocomplete-grupo" placeholder="Buscar grupo"
-                    value="{{ form.prod_grup.value }}">
+                    value="{{ form.prod_grup.value|default_if_none:'' }}">
                 <div class="d-none">{{ form.prod_grup }}</div>
                 {% if form.prod_grup.errors %}
                 <div class="alert alert-danger mt-1">{{ form.prod_grup.errors|striptags }}</div>
@@ -59,7 +59,7 @@
             <div class="form-group">
                 <label for="{{ form.prod_sugr.id_for_label }}">Subgrupo</label>
                 <input type="text" class="form-control" id="autocomplete-subgrupo" placeholder="Buscar subgrupo"
-                    value="{{ form.prod_sugr.value }}">
+                    value="{{ form.prod_sugr.value|default_if_none:'' }}">
                 <div class="d-none">{{ form.prod_sugr }}</div>
                 {% if form.prod_sugr.errors %}
                 <div class="alert alert-danger mt-1">{{ form.prod_sugr.errors|striptags }}</div>
@@ -76,7 +76,7 @@
             <div class="form-group">
                 <label for="{{ form.prod_fami.id_for_label }}">Família</label>
                 <input type="text" class="form-control" id="autocomplete-familia" placeholder="Buscar família"
-                    value="{{ form.prod_fami.value }}">
+                    value="{{ form.prod_fami.value|default_if_none:'' }}">
                 <div class="d-none">{{ form.prod_fami }}</div>
                 {% if form.prod_fami.errors %}
                 <div class="alert alert-danger mt-1">{{ form.prod_fami.errors|striptags }}</div>
@@ -126,7 +126,7 @@
             <div class="form-group">
                 <label for="{{ form.prod_marc.id_for_label }}">Marca</label>
                 <input type="text" class="form-control" id="autocomplete-marca" placeholder="Buscar marca"
-                    value="{{ form.prod_marc.value }}">
+                    value="{{ form.prod_marc.value|default_if_none:'' }}">
                 <div class="d-none">{{ form.prod_marc }}</div>
                 {% if form.prod_marc.errors %}
                 <div class="alert alert-danger mt-1">{{ form.prod_marc.errors|striptags }}</div>
