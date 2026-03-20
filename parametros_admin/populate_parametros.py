@@ -145,8 +145,8 @@ class PopulateParametros:
                 'ordem': 3,
                 'parametros': [
                     {
-                        'nome': 'baixa_estoque_orcamento',
-                        'descricao': 'Baixar estoque ao criar orçamento',
+                        'nome': 'baixa_estoque_pedido',
+                        'descricao': 'Baixar estoque ao criar pedido',
                         'valor_padrao': False,
                         'ativo': True
                     },
