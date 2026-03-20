@@ -726,50 +726,103 @@
 
     // Busca de CEP
     if (cepInput) {
-        cepInput.addEventListener('blur', async function (e) {
-            const cep = e.target.value.replace(/\D/g, '');
-            if (cep.length === 8) {
-                const slug = "{{ slug }}";
-                const url = `/api/${slug}/entidades/entidades/buscar-endereco/?cep=${cep}`;
+        const getSlug = () => {
+            const slugTpl = "{{ slug|default:'' }}";
+            if (slugTpl) return slugTpl;
+            try {
+                const parts = String(location.pathname || '').split('/').filter(Boolean);
+                const idx = parts.indexOf('web');
+                if (idx >= 0 && parts.length > idx + 1) return parts[idx + 1] || '';
+            } catch (e) { }
+            return '';
+        };
 
-                // Feedback visual de carregamento
-                const originalPlaceholder = cepInput.placeholder;
-                cepInput.placeholder = "Buscando...";
-                cepInput.disabled = true;
-
-                try {
-                    const response = await fetch(url);
-                    if (response.ok) {
-                        const data = await response.json();
-
-                        // Mapeia os campos retornados pela API (pode variar entre logradouro/rua/enti_ende)
-                        const logradouro = data.logradouro || data.rua || data.enti_ende || '';
-                        const bairro = data.bairro || data.enti_bair || '';
-                        const cidade = data.localidade || data.cidade || data.enti_cida || '';
-                        const uf = data.uf || data.estado || data.enti_esta || '';
-
-                        // Preenche os campos se existirem no formulário
-                        const endeField = document.querySelector('[name="enti_ende"]');
-                        const bairField = document.querySelector('[name="enti_bair"]'); // Caso exista oculto ou futuro
-                        const cidaField = document.querySelector('[name="enti_cida"]');
-                        const estaField = document.querySelector('[name="enti_esta"]');
-                        const numeField = document.querySelector('[name="enti_nume"]');
-
-                        if (endeField && logradouro) endeField.value = logradouro;
-                        if (bairField && bairro) bairField.value = bairro;
-                        if (cidaField && cidade) cidaField.value = cidade;
-                        if (estaField && uf) estaField.value = uf;
-
-                        // Foca no número para preenchimento manual
-                        if (numeField) numeField.focus();
-                    }
-                } catch (error) {
-                    console.error('Erro ao buscar CEP:', error);
-                } finally {
-                    cepInput.disabled = false;
-                    cepInput.placeholder = originalPlaceholder;
-                }
+        const getAccessToken = () => {
+            try {
+                return localStorage.getItem('access') || sessionStorage.getItem('access') || '';
+            } catch (e) {
+                return '';
             }
+        };
+
+        const fireChange = (el) => {
+            try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) { }
+            try { el.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) { }
+        };
+
+        let cepTimer = null;
+        let cepAbort = null;
+        let lastCepRequested = '';
+
+        const buscarCep = async (cepRaw) => {
+            const cep = String(cepRaw || '').replace(/\D/g, '').slice(0, 8);
+            if (cep.length !== 8) return;
+            if (cep === lastCepRequested) return;
+            lastCepRequested = cep;
+
+            const slug = getSlug();
+            const url = `/api/${slug}/entidades/entidades/buscar-endereco/?cep=${encodeURIComponent(cep)}`;
+
+            if (cepAbort) {
+                try { cepAbort.abort(); } catch (e) { }
+            }
+            cepAbort = new AbortController();
+
+            const originalPlaceholder = cepInput.placeholder;
+            cepInput.placeholder = "Buscando...";
+
+            try {
+                const token = getAccessToken();
+                const headers = { 'Accept': 'application/json' };
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+
+                const response = await fetch(url, { method: 'GET', headers, credentials: 'include', signal: cepAbort.signal });
+                if (!response.ok) return;
+
+                const data = await response.json().catch(() => null);
+                if (!data) return;
+                if (String(cepInput.value || '').replace(/\D/g, '').slice(0, 8) !== cep) return;
+
+                const logradouro = data.logradouro || data.rua || data.enti_ende || '';
+                const bairro = data.bairro || data.enti_bair || '';
+                const cidade = data.localidade || data.cidade || data.enti_cida || '';
+                const uf = data.uf || data.estado || data.enti_esta || '';
+
+                const endeField = document.querySelector('[name="enti_ende"]');
+                const bairField = document.querySelector('[name="enti_bair"]');
+                const cidaField = document.querySelector('[name="enti_cida"]');
+                const estaField = document.querySelector('[name="enti_esta"]');
+                const numeField = document.querySelector('[name="enti_nume"]');
+
+                if (endeField && logradouro) { endeField.value = logradouro; fireChange(endeField); }
+                if (bairField && bairro) { bairField.value = bairro; fireChange(bairField); }
+                if (cidaField && cidade) { cidaField.value = cidade; fireChange(cidaField); }
+                if (estaField && uf) { estaField.value = uf; fireChange(estaField); }
+
+                if (numeField) numeField.focus();
+            } catch (error) {
+                if (error && error.name === 'AbortError') return;
+                console.error('Erro ao buscar CEP:', error);
+            } finally {
+                cepInput.placeholder = originalPlaceholder;
+            }
+        };
+
+        cepInput.addEventListener('input', function (e) {
+            const v = String(e.target.value || '').replace(/\D/g, '').slice(0, 8);
+            if (v.length !== 8) {
+                lastCepRequested = '';
+                if (cepAbort) { try { cepAbort.abort(); } catch (e) { } }
+            }
+            if (cepTimer) clearTimeout(cepTimer);
+            if (v.length === 8) {
+                cepTimer = setTimeout(() => buscarCep(v), 300);
+            }
+        });
+
+        cepInput.addEventListener('blur', function (e) {
+            const v = String(e.target.value || '').replace(/\D/g, '').slice(0, 8);
+            buscarCep(v);
         });
     }
 

@@ -392,16 +392,17 @@ def venda_iniciar(request, slug=None):
     empresa_id = request.session.get('empresa_id') or request.headers.get('X-Empresa') or request.GET.get('empresa')
     filial_id = request.session.get('filial_id') or request.headers.get('X-Filial') or request.GET.get('filial')
     if not empresa_id or not filial_id:
-        return JsonResponse({'detail': 'Empresa e Filial são obrigatórios'}, status=400)
+        return JsonResponse({'Detalhe': 'Empresa e Filial são obrigatórios'}, status=400)
     data = request.POST or request.GET
     cliente = data.get('cliente') or request.headers.get('X-Cliente') or request.GET.get('cliente')
     vendedor = data.get('vendedor') or request.headers.get('X-Vendedor') or request.GET.get('vendedor')
     caixa = data.get('caixa') or request.headers.get('X-Caixa') or request.GET.get('caixa')
-    if not all([cliente, vendedor, caixa]):
-        return JsonResponse({'detail': 'Cliente, vendedor e caixa são obrigatórios'}, status=400)
+    if not all([cliente, caixa]):
+        return JsonResponse({'Detalhes': 'Cliente e caixa são obrigatórios'}, status=400)
+    vendedor_val = (str(vendedor).strip() if vendedor is not None else '')
     caixa_aberto = Caixageral.objects.using(banco).filter(caix_empr=empresa_id, caix_fili=filial_id, caix_caix=caixa, caix_aber='A').first()
     if not caixa_aberto:
-        return JsonResponse({'detail': 'Caixa não está aberto'}, status=400)
+        return JsonResponse({'Detalhe': 'Caixa não está aberto'}, status=400)
     with transaction.atomic(using=banco):
         ultimo_num_pedido = PedidoVenda.objects.using(banco).filter(pedi_empr=empresa_id, pedi_fili=filial_id).aggregate(Max('pedi_nume'))['pedi_nume__max'] or 0
         ultimo_num_movimento = Movicaixa.objects.using(banco).filter(movi_empr=empresa_id, movi_fili=filial_id).aggregate(Max('movi_nume_vend'))['movi_nume_vend__max'] or 0
@@ -411,13 +412,13 @@ def venda_iniciar(request, slug=None):
             pedi_fili=filial_id,
             pedi_nume=numero_venda,
             pedi_forn=cliente,
-            pedi_vend=vendedor,
             pedi_data=datetime.today().date(),
             pedi_stat='0',
         ).first()
         if pedido_existente:
             pedido_existente.pedi_forn = cliente
-            pedido_existente.pedi_vend = vendedor
+            if vendedor_val:
+                pedido_existente.pedi_vend = vendedor_val
             pedido_existente.pedi_data = datetime.today().date()
             pedido_existente.pedi_hora = datetime.now().time()
             pedido_existente.save(using=banco)
@@ -427,11 +428,20 @@ def venda_iniciar(request, slug=None):
                 pedi_fili=filial_id,
                 pedi_nume=numero_venda,
                 pedi_forn=cliente,
-                pedi_vend=vendedor,
+                pedi_vend=vendedor_val or '0',
                 pedi_data=datetime.today().date(),
                 pedi_stat='0',
             )
-    return JsonResponse({'numero_venda': numero_venda, 'cliente': cliente, 'vendedor': vendedor, 'caixa': caixa})
+    return JsonResponse({
+        'numero_venda': numero_venda,
+        'cliente': cliente,
+        'vendedor': vendedor_val or '0',
+        'caixa': caixa,
+        'Numero daVenda': numero_venda,
+        'Cliente': cliente,
+        'Vendedor': vendedor_val or '0',
+        'Caixa': caixa
+    })
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -440,22 +450,41 @@ def venda_adicionar_item(request, slug=None):
     empresa_id = request.session.get('empresa_id') or request.headers.get('X-Empresa') or request.GET.get('empresa')
     filial_id = request.session.get('filial_id') or request.headers.get('X-Filial') or request.GET.get('filial')
     if not empresa_id or not filial_id:
-        return JsonResponse({'detail': 'Empresa e Filial são obrigatórios'}, status=400)
+        return JsonResponse({'Detalhe': 'Empresa e Filial são obrigatórios'}, status=400)
     data = request.POST or request.GET
     numero_venda = data.get('numero_venda')
     produto = data.get('produto')
     quantidade = data.get('quantidade')
-    valor_unitario = data.get('valor_unitario')
-    if not all([numero_venda, produto, quantidade, valor_unitario]):
-        return JsonResponse({'detail': 'Número da venda, produto, quantidade e valor unitário são obrigatórios'}, status=400)
+    if not all([numero_venda, produto, quantidade]):
+        return JsonResponse({'Detalhe': 'Número da venda, produto e quantidade são obrigatórios'}, status=400)
+    try:
+        quantidade_val = float(quantidade)
+    except Exception:
+        return JsonResponse({'Detalhe': 'Quantidade inválida'}, status=400)
+    if quantidade_val <= 0:
+        return JsonResponse({'Detalhe': 'Quantidade inválida'}, status=400)
+    try:
+        from Produtos.models import Tabelaprecos
+        tp = Tabelaprecos.objects.using(banco).filter(
+            tabe_empr=str(empresa_id),
+            tabe_fili=str(filial_id),
+            tabe_prod=str(produto),
+        ).first()
+        if not tp:
+            return JsonResponse({'Detalhe': 'Preço de venda à vista não encontrado para o produto'}, status=400)
+        price = tp.tabe_avis or tp.tabe_apra
+        valor_unitario = float(price)
+    except Exception:
+        return JsonResponse({'Detalhe': 'Preço de venda à vista não encontrado para o produto'}, status=400)
     with transaction.atomic(using=banco):
         pedido = PedidoVenda.objects.using(banco).filter(pedi_empr=empresa_id, pedi_fili=filial_id, pedi_nume=numero_venda).first()
         if not pedido:
-            return JsonResponse({'detail': f'Pedido {numero_venda} não encontrado'}, status=400)
-        valor_total = float(quantidade) * float(valor_unitario)
+            return JsonResponse({'Detalhe': f'Pedido {numero_venda} não encontrado'}, status=400)
+        valor_total = float(quantidade_val) * float(valor_unitario)
         item_existente = Itenspedidovenda.objects.using(banco).filter(iped_empr=empresa_id, iped_fili=filial_id, iped_pedi=str(numero_venda), iped_prod=produto).first()
         if item_existente:
-            item_existente.iped_quan = float(item_existente.iped_quan) + float(quantidade)
+            item_existente.iped_unit = valor_unitario
+            item_existente.iped_quan = float(item_existente.iped_quan) + float(quantidade_val)
             item_existente.iped_tota = float(item_existente.iped_quan) * float(item_existente.iped_unit)
             item_existente.save(using=banco)
             item_obj = item_existente
@@ -467,7 +496,7 @@ def venda_adicionar_item(request, slug=None):
                 iped_pedi=str(numero_venda),
                 iped_item=ultimo_item + 1,
                 iped_prod=produto,
-                iped_quan=quantidade,
+                iped_quan=quantidade_val,
                 iped_unit=valor_unitario,
                 iped_tota=valor_total,
                 iped_data=pedido.pedi_data,
@@ -476,7 +505,7 @@ def venda_adicionar_item(request, slug=None):
         total_pedido = Itenspedidovenda.objects.using(banco).filter(iped_empr=empresa_id, iped_fili=filial_id, iped_pedi=str(numero_venda)).aggregate(Sum('iped_tota'))['iped_tota__sum'] or 0
         pedido.pedi_tota = total_pedido
         pedido.save(using=banco)
-    return JsonResponse({'numero_venda': numero_venda, 'produto': produto, 'quantidade': float(quantidade), 'valor_unitario': float(valor_unitario), 'valor_total': float(valor_total), 'total_pedido': float(total_pedido), 'status': 'Item adicionado com sucesso'})
+    return JsonResponse({'numero_venda': numero_venda, 'produto': produto, 'quantidade': float(quantidade_val), 'valor_unitario': float(valor_unitario), 'valor_total': float(valor_total), 'total_pedido': float(total_pedido), 'status': 'Item adicionado com sucesso'})
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -485,14 +514,26 @@ def venda_atualizar_item(request, slug=None):
     empresa_id = request.session.get('empresa_id') or request.headers.get('X-Empresa') or request.GET.get('empresa')
     filial_id = request.session.get('filial_id') or request.headers.get('X-Filial') or request.GET.get('filial')
     if not empresa_id or not filial_id:
-        return JsonResponse({'detail': 'Empresa e Filial são obrigatórios'}, status=400)
+        return JsonResponse({'Detalhe': 'Empresa e Filial são obrigatórios'}, status=400)
     data = request.POST or request.GET
     numero_venda = data.get('numero_venda')
     produto = data.get('produto')
     quantidade = data.get('quantidade')
-    valor_unitario = data.get('valor_unitario')
     if not all([numero_venda, produto]):
-        return JsonResponse({'detail': 'Número da venda e produto são obrigatórios'}, status=400)
+        return JsonResponse({'Detalhe': 'Número da venda e produto são obrigatórios'}, status=400)
+    try:
+        from Produtos.models import Tabelaprecos
+        tp = Tabelaprecos.objects.using(banco).filter(
+            tabe_empr=str(empresa_id),
+            tabe_fili=str(filial_id),
+            tabe_prod=str(produto),
+        ).first()
+        if not tp:
+            return JsonResponse({'Detalhe': 'Preço de venda à vista não encontrado para o produto'}, status=400)
+        price = tp.tabe_avis or tp.tabe_apra
+        valor_unitario = float(price)
+    except Exception:
+        return JsonResponse({'Detalhe': 'Preço de venda à vista não encontrado para o produto'}, status=400)
     with transaction.atomic(using=banco):
         item = Itenspedidovenda.objects.using(banco).filter(
             iped_empr=empresa_id, iped_fili=filial_id, iped_pedi=str(numero_venda), iped_prod=produto
@@ -501,8 +542,7 @@ def venda_atualizar_item(request, slug=None):
             return JsonResponse({'detail': 'Item não encontrado'}, status=404)
         if quantidade is not None and quantidade != '':
             item.iped_quan = float(quantidade)
-        if valor_unitario is not None and valor_unitario != '':
-            item.iped_unit = float(valor_unitario)
+        item.iped_unit = float(valor_unitario)
         item.iped_tota = float(item.iped_quan) * float(item.iped_unit)
         item.save(using=banco)
         total_pedido = Itenspedidovenda.objects.using(banco).filter(
@@ -635,7 +675,7 @@ def venda_finalizar(request, slug=None):
     total_pagamentos = movimentos.exclude(movi_tipo='1').aggregate(total=Sum('movi_entr'))['total'] or 0
     pedido = PedidoVenda.objects.using(banco).filter(pedi_empr=empresa_id, pedi_fili=filial_id, pedi_nume=numero_venda).first()
     if pedido:
-        pedido.pedi_stat = '0'
+        pedido.pedi_stat = '1'
         pedido.save(using=banco)
     return JsonResponse({'numero_venda': numero_venda, 'total_itens': float(total_itens), 'total_pagamentos': float(total_pagamentos), 'status': 'Finalizada'})
 
@@ -1021,9 +1061,20 @@ def venda_emitir(request, slug=None):
     linhas.append(
         f"Pedido número: {numero_venda}"
     )
-    linhas.append(
-        f"Cliente: {pedido.pedi_forn}"
-    )
+    try:
+        from Entidades.models import Entidades
+        cliente_obj = Entidades.objects.using(banco).filter(
+            enti_clie=pedido.pedi_forn,
+            enti_empr=empresa_id,
+        ).first()
+        cliente_nome = (getattr(cliente_obj, 'enti_nome', None) or '').strip()
+    except Exception:
+        cliente_nome = ''
+
+    if cliente_nome:
+        linhas.append(f"Cliente: {pedido.pedi_forn} - {cliente_nome}")
+    else:
+        linhas.append(f"Cliente: {pedido.pedi_forn}")
     
     if cpfcnpj:
         linhas.append(f"CPF/CNPJ: {cpfcnpj}")
