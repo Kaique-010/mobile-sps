@@ -1,6 +1,7 @@
 from django.db import transaction
 import logging
 from decimal import Decimal, InvalidOperation
+from django.db.models import Max
 from ..models import PedidoVenda, Itenspedidovenda
 from Produtos.models import SaldoProduto
 from CFOP.services.services import MotorFiscal
@@ -34,6 +35,34 @@ class PedidoVendaService:
             return Decimal(default)
 
     @staticmethod
+    def _normalizar_codigo_produto(banco: str, pedido, produto_codigo) -> str:
+        from Produtos.models import Produtos
+
+        if produto_codigo is None:
+            return ''
+
+        codigo = str(produto_codigo).strip()
+        if not codigo:
+            return ''
+
+        prod = Produtos.objects.using(banco).filter(
+            prod_empr=str(pedido.pedi_empr),
+            prod_codi=codigo,
+        ).first()
+        if prod:
+            return str(prod.prod_codi)
+
+        if codigo.isdigit():
+            prod = Produtos.objects.using(banco).filter(
+                prod_empr=str(pedido.pedi_empr),
+                prod_codi_nume=codigo,
+            ).first()
+            if prod:
+                return str(prod.prod_codi)
+
+        return codigo
+
+    @staticmethod
     def pedido_tem_baixa(banco: str, pedido) -> bool:
         from Saidas_Estoque.models import SaidasEstoque
 
@@ -60,9 +89,10 @@ class PedidoVendaService:
         from Saidas_Estoque.models import SaidasEstoque
         from parametros_admin.utils_estoque import verificar_estoque_negativo
 
-        produto_codigo = item_data.get('iped_prod')
-        quantidade = Decimal(str(item_data.get('iped_quan', 0) or 0))
-        valor_unitario = Decimal(str(item_data.get('iped_unit', 0) or 0))
+        produto_codigo = PedidoVendaService._normalizar_codigo_produto(banco, pedido, item_data.get('iped_prod'))
+        quantidade = PedidoVendaService._to_decimal(item_data.get('iped_quan', 0), default='0.00')
+        valor_unitario = PedidoVendaService._to_decimal(item_data.get('iped_unit', 0), default='0.00')
+        valor_total = item_data.get('iped_tota')
 
         if quantidade <= 0:
             return {'sucesso': True, 'processado': False, 'motivo': 'Quantidade inválida'}
@@ -93,13 +123,13 @@ class PedidoVendaService:
             if not permite_negativo:
                 return {'sucesso': False, 'erro': f"Produto {produto_codigo} sem estoque suficiente"}
 
-        ultimo = SaidasEstoque.objects.using(banco).filter(
-            said_empr=pedido.pedi_empr,
-            said_fili=pedido.pedi_fili,
-        ).order_by('-said_sequ').first()
-        proximo_sequencial = (ultimo.said_sequ + 1) if ultimo else 1
+        ultimo = SaidasEstoque.objects.using(banco).aggregate(mx=Max('said_sequ')).get('mx')
+        proximo_sequencial = (int(ultimo) + 1) if ultimo else 1
 
-        total_movimentacao = (valor_unitario * abs(quantidade)).quantize(Decimal('0.01'))
+        if valor_total is not None:
+            total_movimentacao = PedidoVendaService._to_decimal(valor_total, default='0.00').quantize(Decimal('0.01'))
+        else:
+            total_movimentacao = (valor_unitario * abs(quantidade)).quantize(Decimal('0.01'))
         usuario_id = getattr(getattr(request, 'user', None), 'usua_codi', 1) if request is not None else 1
         SaidasEstoque.objects.using(banco).create(
             said_empr=pedido.pedi_empr,
@@ -166,31 +196,42 @@ class PedidoVendaService:
     @staticmethod
     @transaction.atomic
     def estornar_estoque_pedido(pedido, banco: str) -> dict:
-        if not PedidoVendaService.pedido_tem_baixa(banco, pedido):
+        from Saidas_Estoque.models import SaidasEstoque
+
+        base_obse = f"Saída automática - Pedido {pedido.pedi_nume}"
+        saidas = SaidasEstoque.objects.using(banco).filter(
+            said_empr=pedido.pedi_empr,
+            said_fili=pedido.pedi_fili,
+            said_obse__startswith=base_obse,
+        ).exclude(said_obse__icontains="REVERTIDA")
+
+        if not saidas.exists():
             return {'sucesso': True, 'processado': False, 'motivo': 'Pedido sem baixa de estoque para estornar'}
 
-        itens = Itenspedidovenda.objects.using(banco).filter(
-            iped_empr=pedido.pedi_empr,
-            iped_fili=pedido.pedi_fili,
-            iped_pedi=str(pedido.pedi_nume),
-        ).order_by('iped_item')
+        processado = False
+        for saida in saidas:
+            produto_codigo = PedidoVendaService._normalizar_codigo_produto(banco, pedido, getattr(saida, 'said_prod', ''))
+            if not produto_codigo:
+                continue
 
-        for item in itens:
-            res = PedidoVendaService._estornar_item(pedido, item, banco)
-            if not res.get('sucesso', True):
-                return res
+            saldo, _ = SaldoProduto.objects.using(banco).get_or_create(
+                produto_codigo=produto_codigo,
+                empresa=str(pedido.pedi_empr),
+                filial=str(pedido.pedi_fili),
+                defaults={'saldo_estoque': Decimal('0.00')},
+            )
+            saldo.saldo_estoque += Decimal(str(saida.said_quan or 0))
+            saldo.save(using=banco, update_fields=["saldo_estoque"])
 
-        return {'sucesso': True, 'processado': True}
+            saida.said_obse = f"{base_obse} - REVERTIDA"
+            saida.save(using=banco, update_fields=["said_obse"])
+            processado = True
+
+        return {'sucesso': True, 'processado': processado}
 
     @staticmethod
     def pedido_cancela_nao_exclui(banco: str, empresa: int = 1) -> bool:
-        from ParametrosSps.models import Parametros
-
-        try:
-            parametro = Parametros.objects.using(banco).get(empresa_id=empresa)
-            return parametro.pedido_cancelamento_habilitado is True
-        except Parametros.DoesNotExist:
-            return False
+        return True
     @staticmethod
     def _proximo_pedido_numero(banco: str, pedi_empr: int, pedi_fili: int) -> int:
         # Número do pedido precisa ser único globalmente, pois é a PK.
@@ -215,6 +256,21 @@ class PedidoVendaService:
             numero = int(numero)
         except Exception:
             numero = PedidoVendaService._proximo_pedido_numero(banco, pedi_empr, pedi_fili)
+        pedido_existente = PedidoVenda.objects.using(banco).filter(
+            pedi_empr=pedi_empr,
+            pedi_fili=pedi_fili,
+            pedi_nume=numero,
+        ).first()
+        if pedido_existente:
+            return PedidoVendaService.update_pedido_venda(
+                banco=banco,
+                pedido=pedido_existente,
+                pedido_updates=pedido_data,
+                itens_data=itens_data,
+                pedi_tipo_oper=pedi_tipo_oper,
+                request=request,
+            )
+
         while PedidoVenda.objects.using(banco).filter(pedi_nume=numero).exists():
             numero += 1
         pedido_data['pedi_nume'] = numero
@@ -322,30 +378,46 @@ class PedidoVendaService:
 
         # Liquido (opcional): igual ao total final
         pedido.pedi_liqu = pedido.pedi_tota
-        if request is not None:
-            resultado = verificar_baixa_estoque_pedido(pedi_empr, pedi_fili, banco=banco)
+        resultado = verificar_baixa_estoque_pedido(pedi_empr, pedi_fili, banco=banco)
+        PedidoVendaService.logger.debug(
+            "[PedidoService] verificar_baixa_estoque_pedido empr=%s fili=%s resultado=%s",
+            pedi_empr, pedi_fili, resultado
+        )
+        if resultado:
             PedidoVendaService.logger.debug(
-                "[PedidoService] verificar_baixa_estoque_pedido empr=%s fili=%s resultado=%s",
-                pedi_empr, pedi_fili, resultado
+                "[PedidoService.create] Iniciando baixa de %d itens", len(itens_data or [])
             )
-            if resultado:
-                PedidoVendaService.logger.debug(
-                        "[PedidoService.create] Iniciando baixa de %d itens", len(itens_criados)
-                    )
-                for item in itens_criados:
-                    try:
-                        item_data_dict = {
-                            'iped_prod': item.iped_prod,
-                            'iped_quan': item.iped_quan,
-                            'iped_unit': item.iped_unit,
-                            'iped_item': getattr(item, 'iped_item', None),
+            itens_agrupados = {}
+            for item_data in (itens_data or []):
+                try:
+                    prod_norm = PedidoVendaService._normalizar_codigo_produto(banco, pedido, item_data.get('iped_prod'))
+                    if not prod_norm:
+                        continue
+                    qtd = PedidoVendaService._to_decimal(item_data.get('iped_quan', 0), default='0.00')
+                    unit = PedidoVendaService._to_decimal(item_data.get('iped_unit', 0), default='0.00')
+                    total = (unit * abs(qtd)).quantize(Decimal('0.01'))
+
+                    if prod_norm not in itens_agrupados:
+                        itens_agrupados[prod_norm] = {
+                            'iped_prod': prod_norm,
+                            'iped_quan': Decimal('0.00'),
+                            'iped_tota': Decimal('0.00'),
                         }
-                        PedidoVendaService._baixar_item_data(pedido, item_data_dict, banco, request=request)
-                    except Exception as e:
-                        PedidoVendaService.logger.exception(
-                            "[PedidoService.create] erro ao baixar item=%s err=%s",
-                            getattr(item, 'iped_prod', None), e
-                        )
+                    itens_agrupados[prod_norm]['iped_quan'] += abs(qtd)
+                    itens_agrupados[prod_norm]['iped_tota'] += total
+                except Exception as e:
+                    PedidoVendaService.logger.exception(
+                        "[PedidoService.create] erro ao baixar item=%s err=%s",
+                        item_data.get('iped_prod', None), e
+                    )
+            for item_data_dict in itens_agrupados.values():
+                try:
+                    PedidoVendaService._baixar_item_data(pedido, item_data_dict, banco, request=request)
+                except Exception as e:
+                    PedidoVendaService.logger.exception(
+                        "[PedidoService.create] erro ao baixar item=%s err=%s",
+                        item_data_dict.get('iped_prod', None), e
+                    )
 
             
 
@@ -484,19 +556,36 @@ class PedidoVendaService:
                 )
         elif deve_baixar:
             if not PedidoVendaService.pedido_tem_baixa(banco, pedido):
-                for item in itens_criados:
+                itens_agrupados = {}
+                for item_data in (itens_data or []):
                     try:
-                        item_dict = {
-                            'iped_prod': item.iped_prod,
-                            'iped_quan': item.iped_quan,
-                            'iped_unit': item.iped_unit,
-                            'iped_item': getattr(item, 'iped_item', None),
-                        }
+                        prod_norm = PedidoVendaService._normalizar_codigo_produto(banco, pedido, item_data.get('iped_prod'))
+                        if not prod_norm:
+                            continue
+                        qtd = PedidoVendaService._to_decimal(item_data.get('iped_quan', 0), default='0.00')
+                        unit = PedidoVendaService._to_decimal(item_data.get('iped_unit', 0), default='0.00')
+                        total = (unit * abs(qtd)).quantize(Decimal('0.01'))
+
+                        if prod_norm not in itens_agrupados:
+                            itens_agrupados[prod_norm] = {
+                                'iped_prod': prod_norm,
+                                'iped_quan': Decimal('0.00'),
+                                'iped_tota': Decimal('0.00'),
+                            }
+                        itens_agrupados[prod_norm]['iped_quan'] += abs(qtd)
+                        itens_agrupados[prod_norm]['iped_tota'] += total
+                    except Exception as e:
+                        PedidoVendaService.logger.exception(
+                            "[PedidoService.update] erro ao baixar item=%s err=%s",
+                            item_data.get('iped_prod', None), e
+                        )
+                for item_dict in itens_agrupados.values():
+                    try:
                         PedidoVendaService._baixar_item_data(pedido, item_dict, banco, request=request)
                     except Exception as e:
                         PedidoVendaService.logger.exception(
                             "[PedidoService.update] erro ao baixar item=%s err=%s",
-                            getattr(item, 'iped_prod', None), e
+                            item_dict.get('iped_prod', None), e
                         )
 
         pedido.save(using=banco)
