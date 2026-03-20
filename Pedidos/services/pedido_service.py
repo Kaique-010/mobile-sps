@@ -2,16 +2,14 @@ from django.db import transaction
 import logging
 from decimal import Decimal, InvalidOperation
 from ..models import PedidoVenda, Itenspedidovenda
+from Produtos.models import SaldoProduto
 from CFOP.services.services import MotorFiscal
 from core.utils import (
     calcular_subtotal_item_bruto,
     calcular_total_item_com_desconto,
 )
 from CFOP.services.bases import FiscalContexto
-from parametros_admin.utils_pedidos import obter_parametros_pedidos,cancelar_pedido_com_volta_estoque, verificar_baixa_estoque_pedido
 from parametros_admin.utils_pedidos import verificar_baixa_estoque_pedido
-from parametros_admin.utils_estoque import processar_saida_estoque
-from ParametrosSps.services.pedidos_service import PedidosService
 class PedidoVendaService:
     logger = logging.getLogger(__name__)
 
@@ -34,6 +32,165 @@ class PedidoVendaService:
         except (InvalidOperation, ValueError, TypeError) as e:
             PedidoVendaService.logger.warning("[_to_decimal] valor inválido=%r, fallback=%s, err=%s", value, default, e)
             return Decimal(default)
+
+    @staticmethod
+    def pedido_tem_baixa(banco: str, pedido) -> bool:
+        from Saidas_Estoque.models import SaidasEstoque
+
+        return SaidasEstoque.objects.using(banco).filter(
+            said_empr=pedido.pedi_empr,
+            said_fili=pedido.pedi_fili,
+            said_obse__exact=f"Saída automática - Pedido {pedido.pedi_nume}",
+        ).exists()
+
+    @staticmethod
+    def pedido_tem_estorno(banco: str, pedido) -> bool:
+        from Saidas_Estoque.models import SaidasEstoque
+
+        base = f"Saída automática - Pedido {pedido.pedi_nume}"
+        return SaidasEstoque.objects.using(banco).filter(
+            said_empr=pedido.pedi_empr,
+            said_fili=pedido.pedi_fili,
+            said_obse__startswith=base,
+            said_obse__icontains="REVERTIDA",
+        ).exists()
+
+    @staticmethod
+    def _baixar_item_data(pedido, item_data: dict, banco: str, request=None) -> dict:
+        from Saidas_Estoque.models import SaidasEstoque
+        from parametros_admin.utils_estoque import verificar_estoque_negativo
+
+        produto_codigo = item_data.get('iped_prod')
+        quantidade = Decimal(str(item_data.get('iped_quan', 0) or 0))
+        valor_unitario = Decimal(str(item_data.get('iped_unit', 0) or 0))
+
+        if quantidade <= 0:
+            return {'sucesso': True, 'processado': False, 'motivo': 'Quantidade inválida'}
+
+        base_obse = f"Saída automática - Pedido {pedido.pedi_nume}"
+        ja_baixado = SaidasEstoque.objects.using(banco).filter(
+            said_empr=pedido.pedi_empr,
+            said_fili=pedido.pedi_fili,
+            said_prod=str(produto_codigo),
+            said_obse__exact=base_obse,
+        ).exists()
+        if ja_baixado:
+            return {'sucesso': True, 'processado': False, 'motivo': 'Item já baixado para este pedido'}
+
+        saldo = SaldoProduto.objects.using(banco).filter(
+            produto_codigo=produto_codigo,
+            empresa=str(pedido.pedi_empr),
+            filial=str(pedido.pedi_fili),
+        ).first()
+
+        if saldo and saldo.saldo_estoque < abs(quantidade):
+            permite_negativo = False
+            if request is not None:
+                try:
+                    permite_negativo = verificar_estoque_negativo(pedido.pedi_empr, pedido.pedi_fili, request)
+                except Exception:
+                    permite_negativo = False
+            if not permite_negativo:
+                return {'sucesso': False, 'erro': f"Produto {produto_codigo} sem estoque suficiente"}
+
+        ultimo = SaidasEstoque.objects.using(banco).filter(
+            said_empr=pedido.pedi_empr,
+            said_fili=pedido.pedi_fili,
+        ).order_by('-said_sequ').first()
+        proximo_sequencial = (ultimo.said_sequ + 1) if ultimo else 1
+
+        total_movimentacao = (valor_unitario * abs(quantidade)).quantize(Decimal('0.01'))
+        usuario_id = getattr(getattr(request, 'user', None), 'usua_codi', 1) if request is not None else 1
+        SaidasEstoque.objects.using(banco).create(
+            said_empr=pedido.pedi_empr,
+            said_fili=pedido.pedi_fili,
+            said_sequ=proximo_sequencial,
+            said_data=pedido.pedi_data,
+            said_prod=str(produto_codigo),
+            said_quan=abs(quantidade),
+            said_tota=total_movimentacao,
+            said_obse=base_obse,
+            said_usua=usuario_id,
+            said_enti=str(pedido.pedi_forn),
+        )
+
+        saldo, _ = SaldoProduto.objects.using(banco).get_or_create(
+            produto_codigo=produto_codigo,
+            empresa=str(pedido.pedi_empr),
+            filial=str(pedido.pedi_fili),
+            defaults={'saldo_estoque': Decimal('0.00')},
+        )
+        saldo.saldo_estoque -= abs(quantidade)
+        saldo.save(using=banco, update_fields=["saldo_estoque"])
+
+        return {'sucesso': True, 'processado': True}
+
+    @staticmethod
+    def _estornar_item(pedido, item, banco: str) -> dict:
+        try:
+            from Saidas_Estoque.models import SaidasEstoque
+
+            produto_codigo = str(getattr(item, 'iped_prod', '') or '')
+            if not produto_codigo:
+                return {'sucesso': True, 'processado': False, 'motivo': 'Produto inválido'}
+
+            base_obse = f"Saída automática - Pedido {pedido.pedi_nume}"
+            saidas = SaidasEstoque.objects.using(banco).filter(
+                said_empr=pedido.pedi_empr,
+                said_fili=pedido.pedi_fili,
+                said_prod=produto_codigo,
+                said_obse__exact=base_obse,
+            )
+            if not saidas.exists():
+                return {'sucesso': True, 'processado': False, 'motivo': 'Item sem baixa para estornar'}
+
+            processado = False
+            for saida in saidas:
+                saldo, _ = SaldoProduto.objects.using(banco).get_or_create(
+                    produto_codigo=produto_codigo,
+                    empresa=str(pedido.pedi_empr),
+                    filial=str(pedido.pedi_fili),
+                    defaults={'saldo_estoque': Decimal('0.00')},
+                )
+                saldo.saldo_estoque += Decimal(str(saida.said_quan or 0))
+                saldo.save(using=banco, update_fields=["saldo_estoque"])
+
+                saida.said_obse = f"{base_obse} - REVERTIDA"
+                saida.save(using=banco, update_fields=["said_obse"])
+                processado = True
+
+            return {'sucesso': True, 'processado': processado}
+        except Exception as e:
+            return {'sucesso': False, 'erro': f"Erro ao estornar item {getattr(item, 'iped_prod', None)}: {str(e)}"}
+
+    @staticmethod
+    @transaction.atomic
+    def estornar_estoque_pedido(pedido, banco: str) -> dict:
+        if not PedidoVendaService.pedido_tem_baixa(banco, pedido):
+            return {'sucesso': True, 'processado': False, 'motivo': 'Pedido sem baixa de estoque para estornar'}
+
+        itens = Itenspedidovenda.objects.using(banco).filter(
+            iped_empr=pedido.pedi_empr,
+            iped_fili=pedido.pedi_fili,
+            iped_pedi=str(pedido.pedi_nume),
+        ).order_by('iped_item')
+
+        for item in itens:
+            res = PedidoVendaService._estornar_item(pedido, item, banco)
+            if not res.get('sucesso', True):
+                return res
+
+        return {'sucesso': True, 'processado': True}
+
+    @staticmethod
+    def pedido_cancela_nao_exclui(banco: str, empresa: int = 1) -> bool:
+        from ParametrosSps.models import Parametros
+
+        try:
+            parametro = Parametros.objects.using(banco).get(empresa_id=empresa)
+            return parametro.pedido_cancelamento_habilitado is True
+        except Parametros.DoesNotExist:
+            return False
     @staticmethod
     def _proximo_pedido_numero(banco: str, pedi_empr: int, pedi_fili: int) -> int:
         # Número do pedido precisa ser único globalmente, pois é a PK.
@@ -183,7 +340,7 @@ class PedidoVendaService:
                             'iped_unit': item.iped_unit,
                             'iped_item': getattr(item, 'iped_item', None),
                         }
-                        PedidosService._baixar_item_data(pedido, item_data_dict, banco)
+                        PedidoVendaService._baixar_item_data(pedido, item_data_dict, banco, request=request)
                     except Exception as e:
                         PedidoVendaService.logger.exception(
                             "[PedidoService.create] erro ao baixar item=%s err=%s",
@@ -319,14 +476,14 @@ class PedidoVendaService:
 
         if status_novo == 4:
             try:
-                PedidosService.estornar_estoque_pedido(pedido, request=request, banco=banco)
+                PedidoVendaService.estornar_estoque_pedido(pedido, banco=banco)
             except Exception as e:
                 PedidoVendaService.logger.exception(
                     "[PedidoService.update] erro ao estornar estoque pedido=%s err=%s",
                     getattr(pedido, 'pedi_nume', None), e
                 )
         elif deve_baixar:
-            if not PedidosService.pedido_tem_baixa(banco, pedido):
+            if not PedidoVendaService.pedido_tem_baixa(banco, pedido):
                 for item in itens_criados:
                     try:
                         item_dict = {
@@ -335,7 +492,7 @@ class PedidoVendaService:
                             'iped_unit': item.iped_unit,
                             'iped_item': getattr(item, 'iped_item', None),
                         }
-                        PedidosService._baixar_item_data(pedido, item_dict, banco)
+                        PedidoVendaService._baixar_item_data(pedido, item_dict, banco, request=request)
                     except Exception as e:
                         PedidoVendaService.logger.exception(
                             "[PedidoService.update] erro ao baixar item=%s err=%s",

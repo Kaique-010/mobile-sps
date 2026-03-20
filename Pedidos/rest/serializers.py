@@ -1,15 +1,13 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.response import Response
 from datetime import datetime
 from Licencas.models import Empresas
 from Produtos.models import Produtos
 from ..models import PedidoVenda, Itenspedidovenda, PedidosGeral
 from Entidades.models import Entidades
 from core.serializers import BancoContextMixin
-from core.utils import calcular_valores_pedido, calcular_subtotal_item_bruto, calcular_total_item_com_desconto
-from ParametrosSps.services.pedidos_service import PedidosService
-from parametros_admin.utils_pedidos import aplicar_descontos
+from core.utils import calcular_valores_pedido
+from ..services.pedido_service import PedidoVendaService
 from .views_financeiro import GerarTitulosPedidoView, RemoverTitulosPedidoView, ConsultarTitulosPedidoView, RelatorioFinanceiroPedidoView
 import logging
 
@@ -96,112 +94,23 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
         if not itens_data:
             raise ValidationError("Itens do pedido são obrigatórios.")
 
-        valores = calcular_valores_pedido(
-            itens_data,
-            desconto_total=validated_data.get('pedi_desc'),
-            desconto_percentual=parametros.get('desconto_percentual')
-        )
-        liquido = valores['total'] - valores['desconto']
-        validated_data['pedi_topr'] = valores['subtotal']
-        validated_data['pedi_desc'] = valores['desconto']
-        validated_data['pedi_tota'] = valores['total']
-        validated_data['pedi_liqu'] = liquido
         validated_data['pedi_fina'] = validated_data.get('pedi_fina', '0')
 
         if 'pedi_form_rece' not in validated_data or validated_data['pedi_form_rece'] is None:
             validated_data['pedi_form_rece'] = '54'
 
-        pedidos_existente = None
-        if 'pedi_nume' in validated_data:
-            pedidos_existente = PedidoVenda.objects.using(banco).filter(
-                pedi_empr=validated_data['pedi_empr'],
-                pedi_fili=validated_data['pedi_fili'],
-                pedi_nume=validated_data['pedi_nume'],
-            ).first()
+        if validated_data.get('pedi_desc') is None and parametros.get('desconto_percentual') is not None:
+            valores = calcular_valores_pedido(itens_data, desconto_percentual=parametros.get('desconto_percentual'))
+            validated_data['pedi_desc'] = valores['desconto']
 
-        if pedidos_existente:
-            Itenspedidovenda.objects.using(banco).filter(
-                iped_empr=pedidos_existente.pedi_empr,
-                iped_fili=pedidos_existente.pedi_fili,
-                iped_pedi=str(pedidos_existente.pedi_nume)
-            ).delete()
-
-            for attr, value in validated_data.items():
-                setattr(pedidos_existente, attr, value)
-            pedidos_existente.save(using=banco)
-            pedido = pedidos_existente
-        else:
-            ultimo = PedidoVenda.objects.using(banco).filter(
-                pedi_empr=validated_data['pedi_empr'],
-                pedi_fili=validated_data['pedi_fili']
-            ).order_by('-pedi_nume').first()
-            validated_data['pedi_nume'] = (ultimo.pedi_nume + 1) if ultimo else 1
-
-            pedido = PedidoVenda.objects.using(banco).create(**validated_data)
-
-        itens_criados = []
-        for idx, item_data in enumerate(itens_data, start=1):
-            subtotal_bruto = calcular_subtotal_item_bruto(
-                item_data.get('iped_quan', 0),
-                item_data.get('iped_unit', 0)
-            )
-
-            total_item = calcular_total_item_com_desconto(
-                item_data.get('iped_quan', 0),
-                item_data.get('iped_unit', 0),
-                item_data.get('iped_desc', 0)
-            )
-
-            item_data_clean = item_data.copy()
-            item_data_clean.pop('iped_suto', None)
-            item_data_clean.pop('iped_tota', None)
-
-            item = Itenspedidovenda.objects.using(banco).create(
-                iped_empr=pedido.pedi_empr,
-                iped_fili=pedido.pedi_fili,
-                iped_item=idx,
-                iped_pedi=str(pedido.pedi_nume),
-                iped_data=pedido.pedi_data,
-                iped_forn=pedido.pedi_forn,
-                iped_vend=pedido.pedi_vend,
-                iped_unli=subtotal_bruto,
-                iped_suto=subtotal_bruto,
-                iped_tota=total_item,
-                **item_data_clean
-            )
-            itens_criados.append(item)
-
-        if usar_desconto_item or usar_desconto_total:
-            try:
-                aplicar_descontos(pedido, itens_criados, usar_desconto_item, usar_desconto_total)
-            except Exception as e:
-                logger.error(f"Erro ao aplicar descontos: {e}")
-
-        if usar_desconto_item or usar_desconto_total:
-            pedido.save(using=banco)
-
-        try:
-            request = self.context.get('request')
-            try:
-                status_pedido = int(getattr(pedido, 'pedi_stat', 0))
-            except Exception:
-                status_pedido = None
-
-            if status_pedido == 4:
-                resultado_estoque = PedidosService.estornar_estoque_pedido(
-                    pedido, request=request, banco=banco
-                )
-            elif not PedidosService.pedido_tem_baixa(banco, pedido):
-                resultado_estoque = PedidosService.baixa_estoque_pedido(
-                    pedido, itens_data, request
-                )
-            else:
-                resultado_estoque = {'sucesso': True, 'processado': False, 'motivo': 'Pedido já teve baixa de estoque'}
-
-            if not resultado_estoque.get('sucesso', True):
-                logger.warning(f"Erro ao processar estoque: {resultado_estoque.get('erro')}")
-        except Exception as e:
-            logger.error(f"Erro ao processar saída de estoque: {e}")
+        request = self.context.get('request')
+        pedido = PedidoVendaService.create_pedido_venda(
+            banco=banco,
+            pedido_data=validated_data,
+            itens_data=itens_data,
+            pedi_tipo_oper=parametros.get('tipo_oper') or 'VENDA',
+            request=request,
+        )
 
         if gerar_titulos and pedido.pedi_fina == '1':
             try:
@@ -249,94 +158,24 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
         if itens_data is None:
             raise ValidationError("Itens do pedido são obrigatórios.")
 
-        valores = calcular_valores_pedido(
-            itens_data,
-            desconto_total=validated_data.get('pedi_desc'),
-            desconto_percentual=parametros.get('desconto_percentual')
-        )
-        liquido = valores['total'] - valores['desconto']
-        validated_data['pedi_topr'] = valores['subtotal']
-        validated_data['pedi_desc'] = valores['desconto']
-        validated_data['pedi_tota'] = valores['total']
-        validated_data['pedi_liqu'] = liquido
         validated_data['pedi_fina'] = validated_data.get('pedi_fina', '0')
 
         if 'pedi_form_rece' not in validated_data or validated_data['pedi_form_rece'] is None:
             validated_data['pedi_form_rece'] = '54'
 
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save(using=banco)
+        if validated_data.get('pedi_desc') is None and parametros.get('desconto_percentual') is not None:
+            valores = calcular_valores_pedido(itens_data, desconto_percentual=parametros.get('desconto_percentual'))
+            validated_data['pedi_desc'] = valores['desconto']
 
-        Itenspedidovenda.objects.using(banco).filter(
-            iped_empr=instance.pedi_empr,
-            iped_fili=instance.pedi_fili,
-            iped_pedi=str(instance.pedi_nume)
-        ).delete()
-
-        itens_criados = []
-        for idx, item_data in enumerate(itens_data, start=1):
-            subtotal_bruto = calcular_subtotal_item_bruto(
-                item_data.get('iped_quan', 0),
-                item_data.get('iped_unit', 0)
-            )
-
-            total_item = calcular_total_item_com_desconto(
-                item_data.get('iped_quan', 0),
-                item_data.get('iped_unit', 0),
-                item_data.get('iped_desc', 0)
-            )
-
-            item_data_clean = item_data.copy()
-            item_data_clean.pop('iped_suto', None)
-            item_data_clean.pop('iped_tota', None)
-
-            item = Itenspedidovenda.objects.using(banco).create(
-                iped_empr=instance.pedi_empr,
-                iped_fili=instance.pedi_fili,
-                iped_item=idx,
-                iped_pedi=str(instance.pedi_nume),
-                iped_data=instance.pedi_data,
-                iped_forn=instance.pedi_forn,
-                iped_vend=instance.pedi_vend,
-                iped_unli=subtotal_bruto,
-                iped_suto=subtotal_bruto,
-                iped_tota=total_item,
-                **item_data_clean
-            )
-            itens_criados.append(item)
-
-        if usar_desconto_item or usar_desconto_total:
-            try:
-                aplicar_descontos(instance, itens_criados, usar_desconto_item, usar_desconto_total)
-            except Exception as e:
-                logger.error(f"Erro ao aplicar descontos na atualização: {e}")
-
-        if usar_desconto_item or usar_desconto_total:
-            instance.save(using=banco)
-
-        try:
-            request = self.context.get('request')
-            try:
-                status_pedido = int(getattr(instance, 'pedi_stat', 0))
-            except Exception:
-                status_pedido = None
-
-            if status_pedido == 4:
-                resultado_estoque = PedidosService.estornar_estoque_pedido(
-                    instance, request=request, banco=banco
-                )
-            elif not PedidosService.pedido_tem_baixa(banco, instance):
-                resultado_estoque = PedidosService.baixa_estoque_pedido(
-                    instance, itens_data, request
-                )
-            else:
-                resultado_estoque = {'sucesso': True, 'processado': False, 'motivo': 'Pedido já teve baixa de estoque'}
-
-            if not resultado_estoque.get('sucesso', True):
-                logger.warning(f"Erro ao processar estoque: {resultado_estoque.get('erro')}")
-        except Exception as e:
-            logger.error(f"Erro ao processar saída de estoque: {e}")
+        request = self.context.get('request')
+        instance = PedidoVendaService.update_pedido_venda(
+            banco=banco,
+            pedido=instance,
+            pedido_updates=validated_data,
+            itens_data=itens_data,
+            pedi_tipo_oper=parametros.get('tipo_oper') or 'VENDA',
+            request=request,
+        )
 
         if gerar_titulos and instance.pedi_fina == '1':
             try:
