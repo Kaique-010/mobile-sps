@@ -10,20 +10,20 @@
 {% endfor %}
 {% endif %}
 <div class="container page-container">
-    <div class="page-header-custom">
-        <div class="container geral align-items-center">
-            <h2 class="page-title">
-                <i class="bi bi-box-seam"></i> Entradas de Estoque
-            </h2>
-        </div>
-        <div class="container d-flex justify-content-end">
-            <div class="page-actions">
-                <a href="/web/login/" data-slug-route="/web/{slug}/entradas/criar/" class="btn btn-success">
-                    <i class="bi bi-plus"></i> Nova Entrada
-                </a>
-            </div>
-        </div>
+  <div class="page-header-custom">
+    <div class="container geral align-items-center">
+      <h2 class="page-title">
+        <i class="bi bi-box-seam"></i> Entradas de Estoque
+      </h2>
     </div>
+    <div class="container d-flex justify-content-end">
+      <div class="page-actions">
+        <a href="/web/login/" data-slug-route="/web/{slug}/entradas/criar/" class="btn btn-success">
+          <i class="bi bi-plus"></i> Nova Entrada
+        </a>
+      </div>
+    </div>
+  </div>
   <div class="card">
     <div class="card-body">
       <div class="table-responsive d-none d-md-block">
@@ -44,8 +44,8 @@
             <tr>
               <td>{{ e.entr_sequ }}</td>
               <td>{{ e.entr_data }}</td>
-              <td>{{ e.entr_prod }}</td>
-              <td>{{ e.entr_enti }}</td>
+              <td>{{ e.produto_nome|default:e.entr_prod }}</td>
+              <td>{{ e.entidade_nome|default:e.entr_enti }}</td>
               <td class="text-end">{{ e.entr_quan }}</td>
               <td class="text-end">R$ {{ e.entr_tota }}</td>
               <td class="text-end">
@@ -73,14 +73,16 @@
               <div class="text-muted small">{{ e.entr_data }}</div>
             </div>
             <div class="mt-2 small">
-              <div><strong>Produto:</strong> {{ e.entr_prod }}</div>
-              <div><strong>Entidade:</strong> {{ e.entr_enti }}</div>
+              <div><strong>Produto:</strong> {{ e.produto_nome|default:e.entr_prod }}</div>
+              <div><strong>Entidade:</strong> {{ e.entidade_nome|default:e.entr_enti }}</div>
               <div><strong>Quantidade:</strong> {{ e.entr_quan }}</div>
               <div><strong>Total:</strong> R$ {{ e.entr_tota }}</div>
             </div>
             <div class="mt-3 d-flex gap-2">
-              <a class="btn btn-sm btn-outline-secondary" href="/web/login/" data-slug-route="/web/{slug}/entradas/{{ e.pk }}/">Detalhe</a>
-              <a class="btn btn-sm btn-outline-primary" href="/web/login/" data-slug-route="/web/{slug}/entradas/{{ e.pk }}/editar/">Editar</a>
+              <a class="btn btn-sm btn-outline-secondary" href="/web/login/"
+                data-slug-route="/web/{slug}/entradas/{{ e.pk }}/">Detalhe</a>
+              <a class="btn btn-sm btn-outline-primary" href="/web/login/"
+                data-slug-route="/web/{slug}/entradas/{{ e.pk }}/editar/">Editar</a>
             </div>
           </div>
         </div>

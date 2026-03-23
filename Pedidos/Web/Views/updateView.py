@@ -78,6 +78,7 @@ class PedidoUpdateView(UpdateView):
                         'iped_quan': i.iped_quan,
                         'iped_unit': i.iped_unit,
                         'iped_desc': i.iped_desc or 0,
+                        'iped_lote_vend': getattr(i, 'iped_lote_vend', None),
                     })
                     codigos.append(i.iped_prod)
                 logger.debug("[PedidoUpdateView.get_context_data] itens_qs=%d initial_forms=%d", len(list(itens_qs)), len(initial))
@@ -156,6 +157,7 @@ class PedidoUpdateView(UpdateView):
                         'iped_quan': item_data.get('iped_quan', 1),
                         'iped_unit': item_data.get('iped_unit', 0),
                         'iped_desc': item_data.get('iped_desc', 0),
+                        'iped_lote_vend': item_data.get('iped_lote_vend') or None,
                     })
 
                 if not itens_data:

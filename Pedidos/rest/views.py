@@ -245,6 +245,74 @@ class PedidoVendaViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
         except Exception as e:
             return tratar_erro(e)
 
+    @action(detail=False, methods=['get'], url_path='lotes-produto')
+    def lotes_produto(self, request, *args, **kwargs):
+        try:
+            banco = get_licenca_db_config(request)
+            if not banco:
+                raise NotFound("Banco de dados não encontrado.")
+
+            empresa_id = (
+                request.query_params.get('empresa')
+                or request.query_params.get('pedi_empr')
+                or request.query_params.get('lote_empr')
+                or request.session.get('empresa_id', 1)
+            )
+            prod_codi = (request.query_params.get('prod_codi') or request.query_params.get('produto') or '').strip()
+            if not prod_codi:
+                raise ValidationError("prod_codi é obrigatório")
+
+            from Produtos.models import Lote
+
+            lotes_qs = (
+                Lote.objects.using(banco)
+                .filter(
+                    lote_empr=int(empresa_id),
+                    lote_prod=str(prod_codi),
+                    lote_ativ=True,
+                )
+                .order_by('lote_data_vali', 'lote_lote')
+            )
+
+            lotes = []
+            from decimal import Decimal
+            saldo_lotes = Decimal("0")
+            for row in lotes_qs.values('lote_lote', 'lote_sald', 'lote_data_fabr', 'lote_data_vali', 'lote_obse')[:200]:
+                saldo_lotes += Decimal(str(row.get('lote_sald') or 0))
+                lotes.append(
+                    {
+                        'lote_lote': int(row.get('lote_lote')),
+                        'lote_sald': float(row.get('lote_sald') or 0),
+                        'lote_data_fabr': row.get('lote_data_fabr'),
+                        'lote_data_vali': row.get('lote_data_vali'),
+                        'lote_obse': row.get('lote_obse'),
+                    }
+                )
+
+            filial_id = (
+                request.query_params.get('filial')
+                or request.query_params.get('pedi_fili')
+                or request.query_params.get('lote_fili')
+                or request.session.get('filial_id', 1)
+            )
+            from Produtos.models import SaldoProduto
+            sp = (
+                SaldoProduto.objects.using(banco)
+                .filter(produto_codigo_id=str(prod_codi), empresa=str(empresa_id), filial=str(filial_id))
+                .first()
+            )
+            saldo_total = Decimal(str(getattr(sp, 'saldo_estoque', 0) or 0))
+            saldo_sem_lote = saldo_total - saldo_lotes
+
+            return Response({
+                'results': lotes,
+                'saldo_total': float(saldo_total),
+                'saldo_lotes': float(saldo_lotes),
+                'saldo_sem_lote': float(saldo_sem_lote),
+            })
+        except Exception as e:
+            return tratar_erro(e)
+
     @action(detail=True, methods=['post'])
     def cancelar_pedido(self, request, empresa=None, filial=None, numero=None, **kwargs):
         try:

@@ -109,12 +109,13 @@ class PedidoVendaForm(forms.ModelForm):
 class ItensPedidoVendaForm(forms.ModelForm):
     class Meta:
         model = Itenspedidovenda
-        fields = ['iped_prod', 'iped_quan', 'iped_unit', 'iped_desc']
+        fields = ['iped_prod', 'iped_quan', 'iped_unit', 'iped_desc', 'iped_lote_vend']
         widgets = {
             'iped_prod': forms.HiddenInput(),
             'iped_quan': forms.NumberInput(attrs={'class': 'form-control text-end', 'min': '1', 'value': '1'}),
             'iped_unit': forms.NumberInput(attrs={'class': 'form-control text-end', 'step': '0.01', 'value': '0.00'}),
             'iped_desc': forms.NumberInput(attrs={'class': 'form-control text-end', 'step': '0.01', 'value': '0.00'}),
+            'iped_lote_vend': forms.HiddenInput(),
         }
         labels = {
             'iped_prod': 'Produto',
@@ -144,6 +145,7 @@ class ItensPedidoVendaForm(forms.ModelForm):
         
         # Campos opcionais
         self.fields['iped_desc'].required = False
+        self.fields['iped_lote_vend'].required = False
 
     def clean(self):
         cleaned = super().clean()

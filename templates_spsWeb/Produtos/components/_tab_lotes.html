@@ -1,0 +1,58 @@
+<div class="tab-pane fade" id="lotes">
+    <h5 class="form-section-title text-center mb-5">Lotes</h5>
+
+    {% if not form.instance or not form.instance.prod_codi %}
+    <div class="alert alert-secondary">Salve o produto para visualizar os lotes.</div>
+    {% else %}
+    {% if saldo_total is not None %}
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        <span class="badge bg-secondary">Saldo total: {{ saldo_total|floatformat:2 }}</span>
+        <span class="badge bg-info">Em lotes: {{ saldo_lotes|floatformat:2 }}</span>
+        {% if saldo_sem_lote and saldo_sem_lote != 0 %}
+        <span class="badge bg-warning text-dark">Sem lote: {{ saldo_sem_lote|floatformat:2 }}</span>
+        {% endif %}
+    </div>
+    {% endif %}
+    {% if lotes %}
+    <div class="table-responsive">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th>Lote</th>
+                    <th class="text-end">Quantidade</th>
+                    <th>Fabricação</th>
+                    <th>Validade</th>
+                    <th>Situação</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lote in lotes %}
+                <tr
+                    class="{% if lote.lote_data_vali and hoje and lote.lote_data_vali < hoje %}table-danger{% else %}table-success{% endif %}">
+                    <td class="fw-semibold">
+                        {% if lote.lote_obse %}
+                        {{ lote.lote_obse }}
+                        <div class="small text-muted">Nº {{ lote.lote_lote }}</div>
+                        {% else %}
+                        {{ lote.lote_lote }}
+                        {% endif %}
+                    </td>
+                    <td class="text-end">{{ lote.lote_sald|floatformat:2 }}</td>
+                    <td>{{ lote.lote_data_fabr|date:"d/m/Y"|default:"-" }}</td>
+                    <td>{{ lote.lote_data_vali|date:"d/m/Y"|default:"-" }}</td>
+                    <td>
+                        <span
+                            class="badge {% if lote.lote_data_vali and hoje and lote.lote_data_vali < hoje %}bg-danger{% else %}bg-success{% endif %}">
+                            {% if lote.lote_data_vali and hoje and lote.lote_data_vali < hoje %}Vencido{% else
+                                %}Válido{% endif %} </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-info">Nenhum lote encontrado para este produto.</div>
+    {% endif %}
+    {% endif %}
+</div>

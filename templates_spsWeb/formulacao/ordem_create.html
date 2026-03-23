@@ -1,0 +1,279 @@
+{% extends 'formulacao/base_formulacao.html' %}
+
+{% block title %}Nova Ordem{% endblock %}
+
+{% block formulacao_content %}
+<div class="card shadow-sm mb-4">
+    <div class="card-header py-3 border-bottom">
+        <div class="d-flex justify-content-center align-items-center position-relative">
+            <h4 class="mb-0 fw-bold text-secondary">Nova Ordem de Produção</h4>
+            <div class="position-absolute start-0">
+                <a href="{% url 'FormulacaoWeb:ordem_list' slug=slug %}" class="btn btn-outline-secondary btn-sm">
+                    Voltar
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <form method="post" class="row g-3">
+            {% csrf_token %}
+            <div class="col-md-3">
+                <label class="form-label" for="{{ form.op_data.id_for_label }}">{{ form.op_data.label }}</label>
+                {{ form.op_data }}
+                {% if form.op_data.errors %}
+                <div class="alert alert-danger mt-1">{{ form.op_data.errors|striptags }}</div>
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" for="autocomplete-op-prod">{{ form.op_prod.label }}</label>
+                <div class="position-relative">
+                    <div class="input-group">
+                        <input type="text" id="autocomplete-op-prod" class="form-control"
+                            placeholder="Digite para buscar produto...">
+                        <button type="button" class="btn btn-outline-primary" id="btn-op-cadastro-rapido">Cadastro
+                            rápido</button>
+                    </div>
+                    <div id="dropdown-op-prod" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
+                </div>
+                <div class="d-none">
+                    {{ form.op_prod }}
+                </div>
+                {% if form.op_prod.errors %}
+                <div class="alert alert-danger mt-1">{{ form.op_prod.errors|striptags }}</div>
+                {% endif %}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="{{ form.op_vers.id_for_label }}">{{ form.op_vers.label }}</label>
+                {{ form.op_vers }}
+                {% if form.op_vers.errors %}
+                <div class="alert alert-danger mt-1">{{ form.op_vers.errors|striptags }}</div>
+                {% endif %}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="{{ form.op_quan.id_for_label }}">{{ form.op_quan.label }}</label>
+                {{ form.op_quan }}
+                {% if form.op_quan.errors %}
+                <div class="alert alert-danger mt-1">{{ form.op_quan.errors|striptags }}</div>
+                {% endif %}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="{{ form.op_lote.id_for_label }}">{{ form.op_lote.label }}</label>
+                {{ form.op_lote }}
+                {% if form.op_lote.errors %}
+                <div class="alert alert-danger mt-1">{{ form.op_lote.errors|striptags }}</div>
+                {% endif %}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Data de fabricação</label>
+                <input type="date" name="lote_data_fabr_ui" class="form-control form-control-sm" id="ui-lote-data-fabr"
+                    value="{{ lote_data_fabr_ui }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Data de validade</label>
+                <input type="date" name="lote_data_venc_ui" class="form-control form-control-sm" id="ui-lote-data-venc"
+                    value="{{ lote_data_venc_ui }}">
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <div class="form-check">
+                    {{ form.auto_lote }}
+                    <label class="form-check-label" for="{{ form.auto_lote.id_for_label }}">{{ form.auto_lote.label }}</label>
+                </div>
+                {% if form.auto_lote.errors %}
+                <div class="alert alert-danger mt-1">{{ form.auto_lote.errors|striptags }}</div>
+                {% endif %}
+            </div>
+            <div class="col-md-6 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">Criar Ordem</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if formula %}
+<div class="card shadow-sm mb-4">
+    <div class="card-header py-3 border-bottom">
+        <h5 class="mb-0 fw-bold text-secondary">Fórmula Selecionada</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-8">
+                <div class="fw-semibold">{{ formula.form_prod.prod_codi }} - {{ formula.form_prod.prod_nome }}</div>
+                <div class="text-muted small">Versão {{ formula.form_vers }}</div>
+            </div>
+        </div>
+        <hr class="my-4">
+        <h6 class="fw-bold">Insumos</h6>
+        <div class="table-responsive mb-4">
+            <table class="table table-sm table-striped align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>Insumo</th>
+                        <th class="text-end">Qtde</th>
+                        <th class="text-end">Perda (%)</th>
+                        <th class="text-center">Saída</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for i in insumos %}
+                    <tr>
+                        <td>{{ i.form_item }}</td>
+                        <td>{{ i.form_insu.prod_codi }} - {{ i.form_insu.prod_nome }}</td>
+                        <td class="text-end">{{ i.form_qtde }}</td>
+                        <td class="text-end">{{ i.form_perd_perc|default:"0" }}</td>
+                        <td class="text-center">{% if i.form_baixa_estoque %}Sim{% else %}Não{% endif %}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-3">Sem insumos</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (function () {
+        function setupSelectAutocomplete(opts) {
+            const inputEl = opts.inputEl;
+            const selectEl = opts.selectEl;
+            const dropdownEl = opts.dropdownEl;
+            const url = opts.url;
+            if (!inputEl || !selectEl || !dropdownEl || !url) return;
+
+            let debounce = null;
+            async function fetchResults(term) {
+                try {
+                    const resp = await fetch(`${url}?term=${encodeURIComponent(term)}`);
+                    const json = await resp.json();
+                    dropdownEl.innerHTML = '';
+                    (json.results || []).forEach((item) => {
+                        const a = document.createElement('a');
+                        a.href = '#';
+                        a.className = 'list-group-item list-group-item-action';
+                        a.textContent = item.text;
+                        a.dataset.id = item.id;
+                        a.addEventListener('click', (ev) => {
+                            ev.preventDefault();
+                            selectEl.value = item.id;
+                            inputEl.value = item.text;
+                            dropdownEl.innerHTML = '';
+                        });
+                        dropdownEl.appendChild(a);
+                    });
+                } catch (e) { console.error('Erro no autocomplete:', e); }
+            }
+
+            inputEl.addEventListener('input', (e) => {
+                const term = (e.target.value || '').trim();
+                clearTimeout(debounce);
+                dropdownEl.innerHTML = '';
+                if (term.length < 2) return;
+                debounce = setTimeout(() => fetchResults(term), 250);
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!dropdownEl.parentElement.contains(e.target)) dropdownEl.innerHTML = '';
+            });
+
+            (function prefillFromSelect() {
+                if (!selectEl.value) return;
+                const opt = selectEl.options[selectEl.selectedIndex];
+                if (opt && opt.text) inputEl.value = opt.text;
+            })();
+        }
+
+        const url = "{% url 'FormulacaoWeb:autocomplete_produtos' slug=slug %}";
+        setupSelectAutocomplete({
+            inputEl: document.getElementById('autocomplete-op-prod'),
+            selectEl: document.getElementById('{{ form.op_prod.id_for_label }}'),
+            dropdownEl: document.getElementById('dropdown-op-prod'),
+            url: url
+        });
+
+        const empresaId = "{{ request.session.empresa_id|default:'1' }}";
+        const filialId = "{{ request.session.filial_id|default:'1' }}";
+        const selectProdEl = document.getElementById('{{ form.op_prod.id_for_label }}');
+        const btnCadastroRapido = document.getElementById('btn-op-cadastro-rapido');
+        const modalHtml = `
+          <div id="modal-op-cadastro-rapido" class="modal fade show" tabindex="-1" style="display:none; background-color: rgba(0,0,0,.5);">
+            <div class="modal-dialog">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title">Cadastro rápido de produto</h5>
+                  <button type="button" class="btn-close" id="modal-op-close"></button>
+                </div>
+                <div class="modal-body">
+                  <div class="mb-3">
+                    <label class="form-label">Nome</label>
+                    <input type="text" class="form-control" id="op-cr-nome" placeholder="Nome do produto">
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Unidade (código)</label>
+                    <input type="text" class="form-control" id="op-cr-unme" placeholder="Ex: UN">
+                  </div>
+                  <div class="text-muted small">Empresa: ${empresaId} | Filial: ${filialId}</div>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" id="modal-op-cancel">Cancelar</button>
+                  <button type="button" class="btn btn-primary" id="modal-op-save">Salvar</button>
+                </div>
+              </div>
+            </div>
+          </div>`;
+        function ensureModal() {
+            let el = document.getElementById('modal-op-cadastro-rapido');
+            if (!el) {
+                const div = document.createElement('div');
+                div.innerHTML = modalHtml;
+                document.body.appendChild(div.firstElementChild);
+                el = document.getElementById('modal-op-cadastro-rapido');
+                const hide = () => { el.style.display = 'none'; };
+                document.getElementById('modal-op-close').addEventListener('click', hide);
+                document.getElementById('modal-op-cancel').addEventListener('click', hide);
+                document.getElementById('modal-op-save').addEventListener('click', async () => {
+                    const nome = document.getElementById('op-cr-nome').value.trim();
+                    const unme = document.getElementById('op-cr-unme').value.trim();
+                    if (!nome) return;
+                    try {
+                        const csrf = (document.querySelector('[name=csrfmiddlewaretoken]')?.value) || (document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '');
+                        const resp = await fetch(`/api/{{ slug }}/produtos/produtos/cadastro_rapido/`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                            credentials: 'same-origin',
+                            body: JSON.stringify({ prod_nome: nome, unme: unme })
+                        });
+                        const json = await resp.json();
+                        if (resp.ok) {
+                            const id = json.id;
+                            const codigo = json.prod_codi;
+                            const nomeOut = json.prod_nome;
+                            if (selectProdEl) {
+                                selectProdEl.value = id;
+                            }
+                            const inputEl = document.getElementById('autocomplete-op-prod');
+                            if (inputEl) inputEl.value = `${codigo} - ${nomeOut}`;
+                            el.style.display = 'none';
+                        } else {
+                            alert('Erro ao cadastrar: ' + (json.detail || 'Verifique os dados.'));
+                        }
+                    } catch (e) { alert('Falha ao cadastrar produto.'); }
+                });
+            }
+            return el;
+        }
+        if (btnCadastroRapido) {
+            btnCadastroRapido.addEventListener('click', () => {
+                const el = ensureModal();
+                el.style.display = 'block';
+            });
+        }
+    })();
+</script>
+{% endblock %}

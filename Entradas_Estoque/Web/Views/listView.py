@@ -18,6 +18,7 @@ class EntradaListView(ListView):
     def get_queryset(self):
         banco = get_licenca_db_config(self.request) or 'default'
         from Entidades.models import Entidades
+        from Produtos.models import Produtos
         
         qs = EntradaEstoque.objects.using(banco).all()
         
@@ -39,13 +40,17 @@ class EntradaListView(ListView):
                 else:
                     qs = qs.none()   # Nenhum resultado se não houver IDs
 
-        # Anotar nomes (opcional)
-        # entidade_nome = Subquery(
-        #     Entidades.objects.using(banco)
-        #     .filter(enti_clie=Cast(OuterRef('entr_enti'), BigIntegerField()))
-        #     .values('enti_nome')[:1]
-        # )
-        # qs = qs.annotate(entidade_nome=entidade_nome)
+        entidade_nome = Subquery(
+            Entidades.objects.using(banco)
+            .filter(enti_clie=Cast(OuterRef('entr_enti'), BigIntegerField()))
+            .values('enti_nome')[:1]
+        )
+        produto_nome = Subquery(
+            Produtos.objects.using(banco)
+            .filter(prod_codi=OuterRef('entr_prod'))
+            .values('prod_nome')[:1]
+        )
+        qs = qs.annotate(entidade_nome=entidade_nome, produto_nome=produto_nome)
 
         return qs.order_by('-entr_data', '-entr_sequ')
 

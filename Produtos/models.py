@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils.html import mark_safe
+from datetime import date, timedelta
 
 
 class Ncm(models.Model):
@@ -53,12 +54,11 @@ class NcmAliquota(models.Model):
 class Lote(models.Model):
     lote_empr = models.IntegerField()
     lote_prod = models.CharField(max_length=60)
-    lote_lote = models.IntegerField()
+    lote_lote = models.IntegerField(primary_key=True)
     lote_unit = models.DecimalField(max_digits=15, decimal_places=2, help_text="Preço unitário") 
     lote_sald = models.DecimalField(max_digits=15, decimal_places=2, help_text="Saldo") 
-    lote_usua = models.IntegerField()
-    lote_data_alt = models.DateTimeField(auto_now=True, help_text="Data de alteração")
-    lote_data_venc = models.DateField(help_text="Data de vencimento")
+    lote_data_alte = models.DateTimeField(auto_now=True, help_text="Data de alteração")
+    lote_data_vali = models.DateField(help_text="Data de validade")
     lote_ativ = models.BooleanField(default=True, help_text="Lote ativo")
     lote_data_fabr = models.DateField(blank=True, null=True, help_text="Data de fabricação")
     lote_obse= models.TextField(blank=True, null=True, help_text="Observações do lote")
@@ -77,8 +77,8 @@ class Lote(models.Model):
     @property
     def dias_para_vencimento(self):
         """Calcula quantos dias faltam para o vencimento"""
-        if self.lote_data_venc:
-            delta = self.lote_data_venc - date.today()
+        if self.lote_data_vali:
+            delta = self.lote_data_vali - date.today()
             return delta.days
         return None
     
@@ -118,9 +118,9 @@ class Lote(models.Model):
         if not self.lote_data_fabr:
             self.lote_data_fabr = date.today()
         
-        # Se não tem data de vencimento, calcula baseado na fabricação
-        if not self.lote_data_venc and self.lote_data_fabr:
-            self.lote_data_venc = self.lote_data_fabr + timedelta(days=365)
+        # Se não tem data de validade, calcula baseado na fabricação
+        if not self.lote_data_vali and self.lote_data_fabr:
+            self.lote_data_vali = self.lote_data_fabr + timedelta(days=365)
         
         super().save(*args, **kwargs)
 
@@ -443,3 +443,4 @@ class Movimentoestoque(models.Model):
         managed = False
         db_table = 'movimentoestoque'
         unique_together = (('moes_empr', 'moes_fili', 'moes_tipo', 'moes_docu', 'moes_seri', 'moes_mode', 'moes_enti', 'moes_item', 'moes_seto'),)
+

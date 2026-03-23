@@ -7,9 +7,12 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
 <link rel="stylesheet" href="{% static 'css/detail.css' %}">
 
-<div class="container py-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3 class="mb-0">Entrada #{{ object.entr_sequ }}</h3>
+<div class="container pt-2">
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+      <h3 class="mb-0">Entrada #{{ object.entr_sequ }}</h3>
+      <div class="text-muted small">Detalhe da entrada de estoque</div>
+    </div>
     <div class="btn-group">
       <a class="btn btn-outline-secondary" href="{% url 'EntradasWeb:entradas_listar' slug=slug %}">Voltar</a>
       <a class="btn btn-outline-primary" href="{% url 'EntradasWeb:entradas_editar' slug=slug pk=object.pk %}">Editar</a>
@@ -17,12 +20,12 @@
   </div>
 
   {% if messages %}
-    {% for message in messages %}
-      <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-    {% endfor %}
+  {% for message in messages %}
+  <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+  {% endfor %}
   {% endif %}
 
-  <div class="card">
+  <div class="card shadow-sm">
     <div class="card-body">
       <div class="row g-3">
         <div class="col-md-3">
@@ -30,40 +33,54 @@
           <div class="fw-semibold">{{ object.entr_data }}</div>
         </div>
         <div class="col-md-3">
-          <div class="text-muted">Produto</div>
-          <div class="fw-semibold">{{ object.entr_prod }}</div>
+          <div class="text-muted">Empresa / Filial</div>
+          <div class="fw-semibold">{{ object.entr_empr }} / {{ object.entr_fili }}</div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-6">
           <div class="text-muted">Entidade</div>
           <div class="fw-semibold">{{ object.entr_enti }}</div>
         </div>
-        <div class="col-md-3">
-          <div class="text-muted">Empresa / Filial</div>
-          <div class="fw-semibold">{{ object.entr_empr }} / {{ object.entr_fili }}</div>
+
+        <div class="col-md-12">
+          <hr class="my-2">
+        </div>
+
+        <div class="col-md-6">
+          <div class="text-muted">Produto</div>
+          <div class="fw-semibold">{{ object.entr_prod }}</div>
         </div>
         <div class="col-md-3">
           <div class="text-muted">Quantidade</div>
           <div class="fw-semibold">{{ object.entr_quan }}</div>
         </div>
         <div class="col-md-3">
-          <div class="text-muted">Unitário</div>
+          <div class="text-muted">Custo (unitário)</div>
           <div class="fw-semibold">{{ object.entr_unit }}</div>
         </div>
         <div class="col-md-3">
           <div class="text-muted">Total</div>
           <div class="fw-semibold">{{ object.entr_tota }}</div>
         </div>
+        <div class="col-md-3">
+          <div class="text-muted">Lote</div>
+          <div class="fw-semibold">{{ object.entr_lote_vend|default:'-' }}</div>
+        </div>
+        <div class="col-md-3">
+          <div class="text-muted">Fabricação</div>
+          <div class="fw-semibold">{{ object.lote_data_fabr|default:'-' }}</div>
+        </div>
+        <div class="col-md-3">
+          <div class="text-muted">Validade</div>
+          <div class="fw-semibold">{{ object.lote_data_vali|default:'-' }}</div>
+        </div>
+
         <div class="col-md-6">
           <div class="text-muted">Observação</div>
           <div class="fw-semibold">{{ object.entr_obse|default:'-' }}</div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-6">
           <div class="text-muted">Usuário</div>
           <div class="fw-semibold">{{ object.entr_usua }}</div>
-        </div>
-        <div class="col-md-3">
-          <div class="text-muted">Lote</div>
-          <div class="fw-semibold">{{ object.entr_lote_vend|default:'-' }}</div>
         </div>
       </div>
     </div>

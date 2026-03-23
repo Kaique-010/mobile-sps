@@ -1,17 +1,24 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{% if form.instance.pk %}Editar Saída de Estoque{% else %}Cadastrar Saída de Estoque{% endif %}{% endblock %}
+{% block title %}{% if form.instance.pk %}Editar Saída de Estoque{% else %}Cadastrar Saída de Estoque{% endif %}{%endblock %}
 
 {% block content %}
+<style>
+  #btn-saidas-cadastro-rapido {
+    border-radius: 20px;
+    padding: 10px 20px;
+    box-shadow: 0 2px 4px rgba(121, 188, 214, 0.678);
+  }
+</style>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
 <link rel="stylesheet" href="{% static 'css/form.css' %}">
 {% if messages %}
-    {% for message in messages %}
-        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-    {% endfor %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }}">{{ message }}</div>
+{% endfor %}
 {% endif %}
-<div class="container py-4">
+<div class="container pt-2">
   <h3 class="card-title mb-4 fs-4 text-center">{% if form.instance.pk %}Editar Saída{% else %}Saída de Estoque{% endif %}</h3>
   <div class="card shadow-sm">
     <div class="card-body">
@@ -21,9 +28,10 @@
         <div class="alert alert-danger">{{ form.non_field_errors|striptags }}</div>
         {% endif %}
 
-        <div class="row g-3">
-          <div class="col-md-12">
-            <label class="form-label" for="{{ form.said_data.id_for_label }}">Data</label>
+        <div class="row g-3 m-3">
+          <div class="col-md-9"></div>
+          <div class="col-md-3">
+            <label class="form-label" for="{{ form.said_data.id_for_label }}">Data da Saída</label>
             {{ form.said_data }}
             {% if form.said_data.errors %}
             <div class="alert alert-danger mt-1">{{ form.said_data.errors|striptags }}</div>
@@ -32,7 +40,7 @@
         </div>
 
         <div class="row g-3">
-          <div class="col-md-12 position-relative">
+          <div class="col-md-5 position-relative">
             <label class="form-label" for="{{ form.said_enti.id_for_label }}">Entidade</label>
             <input type="text" class="form-control" id="autocomplete-entidade" placeholder="Buscar entidade">
             {{ form.said_enti }}
@@ -43,31 +51,31 @@
           </div>
         </div>
 
-        <div class="row g-3">
-          <div class="col-md-12 position-relative">
+        <div class="row g-3 mt-2">
+          <div class="col-md-5 position-relative">
             <label class="form-label" for="{{ form.said_prod.id_for_label }}">Produto</label>
-            <input type="text" class="form-control" id="autocomplete-produto" placeholder="Buscar produto">
+            <div class="input-group">
+              <input type="text" class="form-control" id="autocomplete-produto" placeholder="Buscar produto">
+              <button type="button" class="btn btn-outline-primary" id="btn-saidas-cadastro-rapido">Cadastro rápido</button>
+            </div>
             {{ form.said_prod }}
             <small id="produto-selecionado" class="text-muted"></small>
             {% if form.said_prod.errors %}
             <div class="alert alert-danger mt-1">{{ form.said_prod.errors|striptags }}</div>
             {% endif %}
           </div>
-        </div>
-
-        <div class="row g-3">
-          <div class="col-md-4">
+          <div class="col-md-2">
             <label class="form-label" for="{{ form.said_quan.id_for_label }}">Quantidade</label>
             {{ form.said_quan }}
             {% if form.said_quan.errors %}
             <div class="alert alert-danger mt-1">{{ form.said_quan.errors|striptags }}</div>
             {% endif %}
           </div>
-          <div class="col-md-4">
+          <div class="col-md-2">
             <label class="form-label" for="{{ form.valor_unitario.id_for_label }}">Unitário</label>
             {{ form.valor_unitario }}
           </div>
-          <div class="col-md-4">
+          <div class="col-md-3">
             <label class="form-label" for="{{ form.said_tota.id_for_label }}">Total</label>
             <div class="input-group">
               <span class="input-group-text">R$</span>
@@ -78,17 +86,73 @@
             {% endif %}
           </div>
         </div>
+        <div class="row g-3 mt-2">
+          <div class="col-md-12">
+            <div class="d-flex align-items-center justify-content-between">
+              <label class="form-label mb-0">Lotes disponíveis</label>
+              <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-recarregar-lotes">Recarregar</button>
+            </div>
+            <div id="lotes-disponiveis" class="list-group mt-1"></div>
+          </div>
+        </div>
+        <div class="row g-3 mt-2">
+          <div class="col-md-4">
+            <label class="form-label" for="{{ form.said_lote_vend.id_for_label }}">Lote</label>
+            {{ form.said_lote_vend }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label" for="{{ form.lote_data_fabr.id_for_label }}">Data Fabricação (opcional)</label>
+            {{ form.lote_data_fabr }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label" for="{{ form.lote_data_vali.id_for_label }}">Data Validade (opcional)</label>
+            {{ form.lote_data_vali }}
+          </div>
+        </div>
 
         <div class="mt-4 d-flex justify-content-end gap-2">
           <a class="btn btn-outline-secondary" href="{% url 'SaidasWeb:saidas_listar' slug=slug %}">Cancelar</a>
-          <button type="submit" class="btn btn-success">Salvar</button>
+          <button type="button" class="btn btn-outline-primary" id="add-item">Adicionar item</button>
         </div>
       </form>
     </div>
+    <table class="table mt-3" id="lista-itens">
+      <thead>
+        <tr>
+          <th>Produto</th>
+          <th>Lote</th>
+          <th>Qtd</th>
+          <th>Unit</th>
+          <th>Total</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <button type="button" class="btn btn-outline-success" id="processar">
+      Processar tudo
+    </button>
   </div>
 </div>
 <script>
-  (function() {
+  const clientesUrl = "{% url 'SaidasWeb:autocomplete_clientes' slug=slug %}";
+  const produtosUrl = "{% url 'SaidasWeb:autocomplete_produtos' slug=slug %}";
+  const loteUrl = "{% url 'SaidasWeb:saidas_lote' slug=slug %}";
+  const lotesProdutoUrl = "{% url 'SaidasWeb:lotes_produto' slug=slug %}";
+  const listUrl = "{% url 'SaidasWeb:saidas_listar' slug=slug %}";
+
+  function toastError(msg) {
+    if (window.Toast && typeof window.Toast.error === 'function') window.Toast.error(msg);
+    else alert(msg);
+  }
+
+  function toastSuccess(msg) {
+    if (window.Toast && typeof window.Toast.success === 'function') window.Toast.success(msg);
+    else alert(msg);
+  }
+
+  (function () {
     function createDropdown(container) {
       let dd = container.querySelector('.autocomplete-dropdown');
       if (!dd) {
@@ -102,7 +166,7 @@
 
     function setupInputAutocomplete({ inputEl, hiddenEl, url, onSelect }) {
       if (!inputEl || !hiddenEl) return;
-      const container = inputEl.parentElement;
+      const container = inputEl.closest('.position-relative') || inputEl.parentElement;
       const dropdown = createDropdown(container);
       let controller = null;
       let debounce = null;
@@ -143,8 +207,6 @@
       });
     }
 
-    const clientesUrl = "{% url 'SaidasWeb:autocomplete_clientes' slug=slug %}";
-    const produtosUrl = "{% url 'SaidasWeb:autocomplete_produtos' slug=slug %}";
     setupInputAutocomplete({
       inputEl: document.getElementById('autocomplete-entidade'),
       hiddenEl: document.getElementById('id_said_enti'),
@@ -161,8 +223,109 @@
       onSelect: (item) => {
         const el = document.getElementById('produto-selecionado');
         if (el) el.textContent = item.text;
+        try { carregarLotes(); } catch (e) { }
       }
     });
+
+    (function () {
+      const btnCadastroRapido = document.getElementById('btn-saidas-cadastro-rapido');
+      const empresaId = "{{ request.session.empresa_id|default:'1' }}";
+      const filialId = "{{ request.session.filial_id|default:'1' }}";
+      const modalHtml = `
+        <div id="modal-saidas-cadastro-rapido" class="modal fade show" tabindex="-1" style="display:none; background-color: rgba(0,0,0,.5);">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Cadastro rápido de produto</h5>
+                <button type="button" class="btn-close" id="modal-saidas-close"></button>
+              </div>
+              <div class="modal-body">
+                <div class="mb-3">
+                  <label class="form-label">Nome</label>
+                  <input type="text" class="form-control" id="saidas-cr-nome" placeholder="Nome do produto">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Unidade (código)</label>
+                  <input type="text" class="form-control" id="saidas-cr-unme" placeholder="Ex: UN">
+                </div>
+                <div class="row g-2">
+                  <div class="col-md-6">
+                    <label class="form-label">Preço à vista (opcional)</label>
+                    <input type="number" class="form-control" id="saidas-cr-preco-vista" step="0.01" inputmode="decimal" placeholder="0,00">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Preço a prazo (opcional)</label>
+                    <input type="number" class="form-control" id="saidas-cr-preco-prazo" step="0.01" inputmode="decimal" placeholder="0,00">
+                  </div>
+                </div>
+                <div class="text-muted small mt-2">Empresa: ${empresaId} | Filial: ${filialId}</div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="modal-saidas-cancel">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="modal-saidas-save">Salvar</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      function ensureModal() {
+        let el = document.getElementById('modal-saidas-cadastro-rapido');
+        if (!el) {
+          const div = document.createElement('div');
+          div.innerHTML = modalHtml;
+          document.body.appendChild(div.firstElementChild);
+          el = document.getElementById('modal-saidas-cadastro-rapido');
+          const hide = () => { el.style.display = 'none'; };
+          document.getElementById('modal-saidas-close').addEventListener('click', hide);
+          document.getElementById('modal-saidas-cancel').addEventListener('click', hide);
+          document.getElementById('modal-saidas-save').addEventListener('click', async () => {
+            const nome = document.getElementById('saidas-cr-nome').value.trim();
+            const unme = document.getElementById('saidas-cr-unme').value.trim();
+            const precoVista = document.getElementById('saidas-cr-preco-vista').value;
+            const precoPrazo = document.getElementById('saidas-cr-preco-prazo').value;
+            if (!nome) return;
+            const csrf = (document.querySelector('[name=csrfmiddlewaretoken]')?.value) || (document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '');
+            try {
+              const resp = await fetch(`/api/{{ slug }}/produtos/produtos/cadastro_rapido/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                  prod_nome: nome,
+                  unme: unme,
+                  preco_vista: precoVista,
+                  preco_prazo: precoPrazo,
+                })
+              });
+              const json = await resp.json();
+              if (resp.ok) {
+                const id = json.id;
+                const codigo = json.prod_codi;
+                const nomeOut = json.prod_nome;
+                const hidden = document.getElementById('id_said_prod');
+                const input = document.getElementById('autocomplete-produto');
+                const small = document.getElementById('produto-selecionado');
+                if (hidden) hidden.value = id;
+                if (input) input.value = `${codigo} - ${nomeOut}`;
+                if (small) small.textContent = `${codigo} - ${nomeOut}`;
+                try { carregarLotes(); } catch (e) { }
+                el.style.display = 'none';
+              } else {
+                toastError('Erro ao cadastrar: ' + (json.detail || 'Verifique os dados.'));
+              }
+            } catch (e) {
+              toastError('Falha ao cadastrar produto.');
+            }
+          });
+        }
+        return el;
+      }
+      if (btnCadastroRapido) {
+        btnCadastroRapido.addEventListener('click', () => {
+          const el = ensureModal();
+          el.style.display = 'block';
+        });
+      }
+    })();
 
     async function prefill(hiddenSelector, inputSelector, url, selectedTextSelector) {
       const hiddenEl = document.querySelector(hiddenSelector);
@@ -183,6 +346,44 @@
     }
     prefill('#id_said_enti', '#autocomplete-entidade', clientesUrl, '#entidade-selecionada');
     prefill('#id_said_prod', '#autocomplete-produto', produtosUrl, '#produto-selecionado');
+    async function carregarLotes() {
+      const prod = document.getElementById('id_said_prod')?.value;
+      const cont = document.getElementById('lotes-disponiveis');
+      if (!cont) return;
+      cont.innerHTML = '';
+      if (!prod) return;
+      try {
+        const resp = await fetch(`${lotesProdutoUrl}?prod_codi=${encodeURIComponent(prod)}`);
+        const json = await resp.json();
+        const lotes = (json.results || []).filter(r => (parseFloat(r.lote_sald || 0) > 0));
+        if (!lotes.length) {
+          cont.innerHTML = '<div class="alert alert-warning mb-0">Nenhum lote com saldo disponível.</div>';
+          return;
+        }
+        lotes.forEach(r => {
+          const a = document.createElement('a');
+          a.href = '#';
+          a.className = 'list-group-item list-group-item-action';
+          const saldo = parseFloat(r.lote_sald || 0).toFixed(2);
+          const df = r.lote_data_fabr ? ` | Fabr: ${r.lote_data_fabr}` : '';
+          const dv = r.lote_data_vali ? ` | Venc: ${r.lote_data_vali}` : '';
+          a.textContent = `Lote ${r.lote_lote} | Saldo ${saldo}${df}${dv}`;
+          a.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            const input = document.getElementById('id_said_lote_vend');
+            if (input) input.value = r.lote_lote;
+          });
+          cont.appendChild(a);
+        });
+      } catch (e) {
+        cont.innerHTML = '<div class="alert alert-danger mb-0">Falha ao carregar lotes.</div>';
+      }
+    }
+    const btnRec = document.getElementById('btn-recarregar-lotes');
+    if (btnRec) btnRec.addEventListener('click', carregarLotes);
+    const hidProd = document.getElementById('id_said_prod');
+    if (hidProd) hidProd.addEventListener('change', carregarLotes);
+    carregarLotes();
 
     function updateTotal() {
       const qEl = document.getElementById('id_said_quan');
@@ -214,6 +415,113 @@
       }
     })();
     updateTotal();
+
+    const dataEl = document.getElementById('id_said_data');
+    if (dataEl && !dataEl.value) {
+      dataEl.value = new Date().toISOString().slice(0, 10);
+    }
   })();
+
+  function limparItemForm() {
+    document.getElementById('id_said_prod').value = '';
+    document.getElementById('autocomplete-produto').value = '';
+    document.getElementById('id_said_quan').value = '';
+    document.getElementById('id_valor_unitario').value = '';
+    document.getElementById('id_said_tota').value = '';
+    const loteEl = document.getElementById('id_said_lote_vend');
+    if (loteEl) loteEl.value = '';
+  }
+
+  let itens = [];
+  document.getElementById('add-item').addEventListener('click', () => {
+    const produto = document.getElementById('id_said_prod').value;
+    const produto_text = document.getElementById('autocomplete-produto').value;
+    const qtd = parseFloat((document.getElementById('id_said_quan').value || '0').replace(',', '.'));
+    const unit = parseFloat((document.getElementById('id_valor_unitario').value || '0').replace(',', '.'));
+    const lote = document.getElementById('id_said_lote_vend') ? document.getElementById('id_said_lote_vend').value : '';
+    if (!produto || !qtd || !unit) {
+      toastError('Preencha todos os campos do item.');
+      return;
+    }
+    itens.push({
+      produto,
+      produto_text,
+      lote,
+      qtd,
+      unit,
+      total: qtd * unit
+    });
+    renderTabela();
+    limparItemForm();
+  });
+
+  function renderTabela() {
+    const tbody = document.querySelector('#lista-itens tbody');
+    tbody.innerHTML = '';
+
+    itens.forEach((item, index) => {
+      tbody.innerHTML += `
+        <tr>
+          <td>${item.produto_text}</td>
+          <td>${item.lote || ''}</td>
+          <td>${item.qtd}</td>
+          <td>${item.unit.toFixed(2)}</td>
+          <td>${item.total.toFixed(2)}</td>
+          <td>
+            <button onclick="removerItem(${index})" class="btn btn-sm btn-danger">X</button>
+          </td>
+        </tr>
+      `;
+    });
+  }
+
+  function removerItem(index) {
+    itens.splice(index, 1);
+    renderTabela();
+  }
+
+  document.getElementById('processar').addEventListener('click', async () => {
+    const entidade = document.getElementById('id_said_enti').value;
+    const data = document.getElementById('id_said_data').value;
+
+    if (!data) {
+      toastError('Selecione a data.');
+      return;
+    }
+    if (!itens.length) {
+      toastError('Adicione pelo menos um item.');
+      return;
+    }
+
+    const btn = document.getElementById('processar');
+    if (btn) btn.disabled = true;
+
+    const resp = await fetch(loteUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      },
+      body: JSON.stringify({
+        entidade,
+        data,
+        itens
+      })
+    });
+
+    if (resp.ok) {
+      toastSuccess('Salvo com sucesso');
+      window.location.href = listUrl;
+    } else {
+      let msg = 'Erro ao salvar';
+      try {
+        const json = await resp.json();
+        if (json && (json.erro || json.error)) msg = json.erro || json.error;
+      } catch (e) { }
+      toastError(msg);
+    }
+
+    if (btn) btn.disabled = false;
+  });
 </script>
 {% endblock %}

@@ -39,12 +39,16 @@
         <li class="nav-item">
           <a class="nav-link" id="precos-tab" data-bs-toggle="tab" href="#precos">Tabela de Preços</a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link" id="lotes-tab" data-bs-toggle="tab" href="#lotes">Lotes</a>
+        </li>
       </ul>
 
       <div class="tab-content mt-3">
         {% include "Produtos/components/_tab_dados_produto.html" %}
         {% include "Produtos/components/_tab_fiscal.html" %}
         {% include "Produtos/components/_tab_precos.html" %}
+        {% include "Produtos/components/_tab_lotes.html" %}
       </div>
 
       <div class="mt-3 form-actions">

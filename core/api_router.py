@@ -16,6 +16,7 @@ urlpatterns = [
     # Rotas principais (privadas)
     path("<slug>/licencas/", include("Licencas.urls")),
     path("<slug>/produtos/", include("Produtos.urls")),
+    path("<slug>/formulacao/", include("formulacao.Rest.urls")),
     path("<slug>/entidades/", include("Entidades.urls")),
     path("<slug>/pedidos/", include("Pedidos.urls")),
     path("<slug>/orcamentos/", include("Orcamentos.urls")),

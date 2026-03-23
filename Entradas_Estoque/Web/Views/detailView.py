@@ -21,14 +21,27 @@ class EntradaDetailView(DetailView):
         
         try:
             from Entidades.models import Entidades
-            from Produtos.models import Produtos
+            from Produtos.models import Lote
             banco = get_licenca_db_config(self.request) or 'default'
             entrada = context.get('object')
             
             if entrada:
-                entidade = Entidades.objects.using(banco).filter(
+                Entidades.objects.using(banco).filter(
                     enti_clie=entrada.entr_enti
                 ).values('enti_nome').first()
+                try:
+                    lote_num = getattr(entrada, 'entr_lote_vend', None)
+                    if lote_num:
+                        lote = (
+                            Lote.objects.using(banco)
+                            .filter(lote_empr=int(entrada.entr_empr), lote_prod=str(entrada.entr_prod), lote_lote=int(lote_num))
+                            .first()
+                        )
+                        if lote:
+                            setattr(entrada, 'lote_data_fabr', getattr(lote, 'lote_data_fabr', None))
+                            setattr(entrada, 'lote_data_vali', getattr(lote, 'lote_data_vali', None))
+                except Exception:
+                    pass
         except Exception as e:
                 logger.error(f"Erro ao carregar entidade: {e}")
         return context

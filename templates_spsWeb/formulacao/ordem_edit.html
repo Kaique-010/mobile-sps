@@ -1,0 +1,250 @@
+{% extends 'formulacao/base_formulacao.html' %}
+
+{% block title %}Editar Ordem{% endblock %}
+
+{% block formulacao_content %}
+{% if not op %}
+<div class="alert alert-warning">Ordem não encontrada.</div>
+{% else %}
+<div class="card shadow-sm mb-4">
+  <div class="card-header py-3 border-bottom">
+    <div class="d-flex justify-content-center align-items-center position-relative">
+      <h4 class="mb-0 fw-bold text-secondary">Editar Ordem de Produção</h4>
+      <div class="position-absolute start-0 d-flex gap-2">
+        <a href="{% url 'FormulacaoWeb:ordem_list' slug=slug %}" class="btn btn-outline-secondary btn-sm">
+          Voltar
+        </a>
+        <button type="button" class="btn btn-outline-primary btn-sm" id="btn-op-edit-cadastro-rapido">Cadastro
+          rápido</button>
+      </div>
+      <div class="position-absolute end-0">
+        {% if op.op_status == 'A' %}
+        <form method="post" action="{% url 'FormulacaoWeb:ordem_executar' slug=slug pk=op.op_nume %}"
+          class="d-inline d-flex align-items-center gap-2" id="op-exec-form">
+          {% csrf_token %}
+          <input type="hidden" name="preco_vista" id="exec-preco-vista">
+          <input type="hidden" name="preco_prazo" id="exec-preco-prazo">
+          <input type="hidden" name="lote_data_fabr" id="exec-lote-data-fabr">
+          <input type="hidden" name="lote_data_venc" id="exec-lote-data-venc">
+          <button type="submit" class="btn btn-outline-success btn-sm"
+            onclick="return confirm('Deseja executar esta ordem?');">
+            Executar
+          </button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="row g-2 align-items-center mb-3">
+      <div class="col-md-8">
+        <div class="fw-semibold">{{ op.op_prod.prod_codi }} - {{ op.op_prod.prod_nome }}</div>
+        <div class="text-muted small">OP {{ op.op_nume }} | Versão {{ op.op_vers }} | Status {{ op.op_status }}</div>
+      </div>
+    </div>
+
+    <form method="post" class="row g-3" id="op-edit-form">
+      {% csrf_token %}
+      <div class="col-md-3">
+        <label class="form-label" for="{{ form.op_data.id_for_label }}">{{ form.op_data.label }}</label>
+        {{ form.op_data }}
+        {% if form.op_data.errors %}
+        <div class="alert alert-danger mt-1">{{ form.op_data.errors|striptags }}</div>
+        {% endif %}
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="{{ form.op_quan.id_for_label }}">{{ form.op_quan.label }}</label>
+        {{ form.op_quan }}
+        {% if form.op_quan.errors %}
+        <div class="alert alert-danger mt-1">{{ form.op_quan.errors|striptags }}</div>
+        {% endif %}
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="{{ form.op_lote.id_for_label }}">{{ form.op_lote.label }}</label>
+        {{ form.op_lote }}
+        {% if form.op_lote.errors %}
+        <div class="alert alert-danger mt-1">{{ form.op_lote.errors|striptags }}</div>
+        {% endif %}
+      </div>
+      <div class="col-md-3 d-flex align-items-end">
+        <div class="form-check">
+          {{ form.auto_lote }}
+          <label class="form-check-label" for="{{ form.auto_lote.id_for_label }}">{{ form.auto_lote.label }}</label>
+        </div>
+        {% if form.auto_lote.errors %}
+        <div class="alert alert-danger mt-1">{{ form.auto_lote.errors|striptags }}</div>
+        {% endif %}
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label" for="{{ form.preco_vista.id_for_label }}">{{ form.preco_vista.label }}</label>
+        {{ form.preco_vista }}
+        {% if form.preco_vista.errors %}
+        <div class="alert alert-danger mt-1">{{ form.preco_vista.errors|striptags }}</div>
+        {% endif %}
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="{{ form.preco_prazo.id_for_label }}">{{ form.preco_prazo.label }}</label>
+        {{ form.preco_prazo }}
+        {% if form.preco_prazo.errors %}
+        <div class="alert alert-danger mt-1">{{ form.preco_prazo.errors|striptags }}</div>
+        {% endif %}
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Data de fabricação</label>
+        <input type="date" name="lote_data_fabr_ui" class="form-control form-control-sm" id="ui-lote-data-fabr"
+          value="{% if lote_data_fabr %}{{ lote_data_fabr|date:'Y-m-d' }}{% endif %}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Data de validade</label>
+        <input type="date" name="lote_data_venc_ui" class="form-control form-control-sm" id="ui-lote-data-venc"
+          value="{% if lote_data_vali %}{{ lote_data_vali|date:'Y-m-d' }}{% endif %}">
+      </div>
+
+      <div class="col-md-6 d-flex align-items-end">
+        <button type="submit" class="btn btn-primary w-100" {% if op.op_status != 'A' %}disabled{% endif %}>
+          Salvar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if formula %}
+<div class="card shadow-sm mb-4">
+  <div class="card-header py-3 border-bottom">
+    <h5 class="mb-0 fw-bold text-secondary">Insumos (referência)</h5>
+  </div>
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-sm table-striped align-middle">
+        <thead class="table-dark">
+          <tr>
+            <th>#</th>
+            <th>Insumo</th>
+            <th class="text-end">Qtde</th>
+            <th class="text-end">Perda (%)</th>
+            <th class="text-center">Saída</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for i in insumos %}
+          <tr>
+            <td>{{ i.form_item }}</td>
+            <td>{{ i.form_insu.prod_codi }} - {{ i.form_insu.prod_nome }}</td>
+            <td class="text-end">{{ i.form_qtde }}</td>
+            <td class="text-end">{{ i.form_perd_perc|default:"0" }}</td>
+            <td class="text-center">{% if i.form_baixa_estoque %}Sim{% else %}Não{% endif %}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="text-center text-muted py-3">Sem insumos</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function () {
+    const editForm = document.getElementById('op-edit-form');
+    const execForm = document.getElementById('op-exec-form');
+    if (editForm && execForm) {
+      execForm.addEventListener('submit', function () {
+        const getValue = (selector) => {
+          const el = editForm.querySelector(selector);
+          return el ? el.value : '';
+        };
+        const precoVista = getValue('[name="{{ form.preco_vista.name }}"]');
+        const precoPrazo = getValue('[name="{{ form.preco_prazo.name }}"]');
+        const dataFabr = getValue('#ui-lote-data-fabr');
+        const dataVenc = getValue('#ui-lote-data-venc');
+        const set = (id, val) => {
+          const el = document.getElementById(id);
+          if (el) el.value = val || '';
+        };
+        set('exec-preco-vista', precoVista);
+        set('exec-preco-prazo', precoPrazo);
+        set('exec-lote-data-fabr', dataFabr);
+        set('exec-lote-data-venc', dataVenc);
+      });
+    }
+
+    const empresaId = "{{ request.session.empresa_id|default:'1' }}";
+    const filialId = "{{ request.session.filial_id|default:'1' }}";
+    const btnCadastroRapido = document.getElementById('btn-op-edit-cadastro-rapido');
+    const modalHtml = `
+      <div id="modal-op-edit-cadastro-rapido" class="modal fade show" tabindex="-1" style="display:none; background-color: rgba(0,0,0,.5);">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Cadastro rápido de produto</h5>
+              <button type="button" class="btn-close" id="modal-op-edit-close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="mb-3">
+                <label class="form-label">Nome</label>
+                <input type="text" class="form-control" id="op-edit-cr-nome" placeholder="Nome do produto">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Unidade (código)</label>
+                <input type="text" class="form-control" id="op-edit-cr-unme" placeholder="Ex: UN">
+              </div>
+              <div class="text-muted small">Empresa: ${empresaId} | Filial: ${filialId}</div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" id="modal-op-edit-cancel">Cancelar</button>
+              <button type="button" class="btn btn-primary" id="modal-op-edit-save">Salvar</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    function ensureModal() {
+      let el = document.getElementById('modal-op-edit-cadastro-rapido');
+      if (!el) {
+        const div = document.createElement('div');
+        div.innerHTML = modalHtml;
+        document.body.appendChild(div.firstElementChild);
+        el = document.getElementById('modal-op-edit-cadastro-rapido');
+        const hide = () => { el.style.display = 'none'; };
+        document.getElementById('modal-op-edit-close').addEventListener('click', hide);
+        document.getElementById('modal-op-edit-cancel').addEventListener('click', hide);
+        document.getElementById('modal-op-edit-save').addEventListener('click', async () => {
+          const nome = document.getElementById('op-edit-cr-nome').value.trim();
+          const unme = document.getElementById('op-edit-cr-unme').value.trim();
+          if (!nome) return;
+          try {
+            const csrf = (document.querySelector('[name=csrfmiddlewaretoken]')?.value) || (document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '');
+            const resp = await fetch(`/api/{{ slug }}/produtos/produtos/cadastro_rapido/`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+              credentials: 'same-origin',
+              body: JSON.stringify({ prod_nome: nome, unme: unme })
+            });
+            const json = await resp.json();
+            if (resp.ok) {
+              alert('Produto cadastrado: ' + (json.prod_codi + ' - ' + json.prod_nome));
+              el.style.display = 'none';
+            } else {
+              alert('Erro ao cadastrar: ' + (json.detail || 'Verifique os dados.'));
+            }
+          } catch (e) { alert('Falha ao cadastrar produto.'); }
+        });
+      }
+      return el;
+    }
+    if (btnCadastroRapido) {
+      btnCadastroRapido.addEventListener('click', () => {
+        const el = ensureModal();
+        el.style.display = 'block';
+      });
+    }
+  })();
+</script>
+{% endblock %}

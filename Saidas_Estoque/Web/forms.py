@@ -10,16 +10,27 @@ class SaidasEstoqueForm(forms.ModelForm):
         'step': '0.01',
         'inputmode': 'decimal'
     }))
+    lote_data_fabr = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+        label='Data Fabricação'
+    )
+    lote_data_vali = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+        label='Data Validade'
+    )
 
     class Meta:
         model = SaidasEstoque
-        fields = ['said_prod', 'said_enti', 'said_data', 'said_quan', 'said_tota']
+        fields = ['said_prod', 'said_enti', 'said_data', 'said_quan', 'said_tota', 'said_lote_vend']
         widgets = {
             'said_prod': forms.HiddenInput(attrs={'class': 'form-control', 'placeholder': 'Produto'}),
             'said_enti': forms.HiddenInput(attrs={'class': 'form-control', 'placeholder': 'Entidade Responsável'}),
             'said_data': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'placeholder': 'Data da Saída'}),
             'said_quan': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Quantidade', 'step': '0.01', 'inputmode': 'decimal'}),
             'said_tota': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Total', 'readonly': True}),
+            'said_lote_vend': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Lote'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -56,3 +67,26 @@ class SaidasEstoqueForm(forms.ModelForm):
         except Exception:
             pass
         return cleaned
+
+    def clean_said_lote_vend(self):
+        value = self.cleaned_data.get('said_lote_vend')
+        if value is None or value == '':
+            return None
+        if isinstance(value, int):
+            return value
+        try:
+            s = str(value).strip()
+        except Exception:
+            return None
+        if not s:
+            return None
+        if s.isdigit():
+            return int(s)
+        try:
+            import re
+            parts = re.findall(r'(\d+)', s)
+            if parts:
+                return int(parts[-1])
+        except Exception:
+            pass
+        raise forms.ValidationError("Lote inválido. Informe um lote com número (ex: 123 ou LOTE-123).")

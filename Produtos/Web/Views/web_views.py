@@ -17,6 +17,7 @@ from django.db.models import Subquery, OuterRef, DecimalField, Value as V, Integ
 from django.db.models.functions import Coalesce, Cast
 
 from ...models import (
+    Lote,
     Produtos,
     Tabelaprecos,
     SaldoProduto,
@@ -280,6 +281,11 @@ class ProdutoCreateView(DBAndSlugMixin, CreateView):
     form_class = ProdutosForm
     template_name = 'Produtos/produtos_form.html'
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['database'] = self.db_alias
+        return kwargs
+
     def _get_cst_choices(self):
         try:
             empresa_id = int(self.empresa_id or 1)
@@ -296,6 +302,11 @@ class ProdutoCreateView(DBAndSlugMixin, CreateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['slug'] = self.slug
+        try:
+            ctx['hoje'] = timezone.localdate()
+        except Exception:
+            ctx['hoje'] = timezone.now().date()
+        ctx['lotes'] = []
         # Formset vazio por enquanto; será inicializado após salvar o produto
         from Produtos.models import Tabelaprecos
         ctx['formset'] = TabelaprecosFormSet(queryset=Tabelaprecos.objects.none(), prefix='precos')
@@ -308,6 +319,39 @@ class ProdutoCreateView(DBAndSlugMixin, CreateView):
 
     def form_valid(self, form):
         instance = form.save(commit=False)
+        try:
+            unme_input = form.cleaned_data.get('prod_unme')
+            from Produtos.models import UnidadeMedida
+            if unme_input and not isinstance(unme_input, UnidadeMedida):
+                code = str(unme_input).strip().upper()
+                from core.utils import get_ncm_master_db
+                unme = UnidadeMedida.objects.using(self.db_alias).filter(unid_codi=code).first()
+                if not unme:
+                    master_alias = get_ncm_master_db(self.db_alias)
+                    master_unme = UnidadeMedida.objects.using(master_alias).filter(unid_codi=code).first()
+                    desc = getattr(master_unme, 'unid_desc', code) if master_unme else code
+                    unme = UnidadeMedida(unid_codi=code, unid_desc=desc)
+                    unme.save(using=self.db_alias)
+                instance.prod_unme = unme
+        except Exception:
+            pass
+        try:
+            unme_input = form.cleaned_data.get('prod_unme')
+            if unme_input and not isinstance(unme_input, UnidadeMedida):
+                code = str(unme_input).strip().upper()
+                from core.utils import get_ncm_master_db
+                # Busca no tenant
+                unme = UnidadeMedida.objects.using(self.db_alias).filter(unid_codi=code).first()
+                if not unme:
+                    # Busca no master e clona
+                    master_alias = get_ncm_master_db(self.db_alias)
+                    master_unme = UnidadeMedida.objects.using(master_alias).filter(unid_codi=code).first()
+                    desc = getattr(master_unme, 'unid_desc', code) if master_unme else code
+                    unme = UnidadeMedida(unid_codi=code, unid_desc=desc)
+                    unme.save(using=self.db_alias)
+                instance.prod_unme = unme
+        except Exception:
+            pass
         # Atribuir empresa a partir de headers ou sessão
         empresa = (
             self.request.headers.get('X-Empresa')
@@ -616,8 +660,50 @@ class ProdutoUpdateView(DBAndSlugMixin, UpdateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['slug'] = self.slug
+        try:
+            ctx['hoje'] = timezone.localdate()
+        except Exception:
+            ctx['hoje'] = timezone.now().date()
         # Carregar preços vinculados ao produto via tabe_prod/tabe_empr
         produto = self.object
+        try:
+            lote_empr = int(produto.prod_empr)
+        except Exception:
+            lote_empr = produto.prod_empr
+        try:
+            ctx['lotes'] = list(
+                Lote.objects.using(self.db_alias)
+                .filter(lote_empr=lote_empr, lote_prod=str(produto.prod_codi))
+                .order_by('-lote_lote')
+            )
+        except Exception:
+            ctx['lotes'] = []
+        try:
+            from django.db.models import Sum
+            from decimal import Decimal
+            from Produtos.models import SaldoProduto
+            lotes_total = (
+                Lote.objects.using(self.db_alias)
+                .filter(lote_empr=lote_empr, lote_prod=str(produto.prod_codi), lote_ativ=True)
+                .aggregate(total=Sum('lote_sald'))
+                .get('total')
+            )
+            saldo_lotes = Decimal(str(lotes_total or 0))
+            filial_id = self.filial_id or self.request.session.get('filial_id') or 1
+            sp = (
+                SaldoProduto.objects.using(self.db_alias)
+                .filter(produto_codigo=produto, empresa=str(produto.prod_empr), filial=str(filial_id))
+                .first()
+            )
+            saldo_total = Decimal(str(getattr(sp, 'saldo_estoque', 0) or 0))
+            saldo_sem_lote = saldo_total - saldo_lotes
+            ctx['saldo_total'] = saldo_total
+            ctx['saldo_lotes'] = saldo_lotes
+            ctx['saldo_sem_lote'] = saldo_sem_lote
+        except Exception:
+            ctx['saldo_total'] = None
+            ctx['saldo_lotes'] = None
+            ctx['saldo_sem_lote'] = None
         try:
             emp_int = int(produto.prod_empr)
         except Exception:
@@ -1508,6 +1594,9 @@ class SaldosDashboardView(DBAndSlugMixin, TemplateView):
         # Saldos atuais por produto
         saldos_list = []
         try:
+            from decimal import Decimal
+            from django.db.models import Sum
+            from Produtos.models import Lote
             if filtro_empresa:
                 saldos_qs = SaldoProduto.objects.using(banco).filter(empresa=str(empresa))
                 if filtro_filial:
@@ -1517,15 +1606,32 @@ class SaldosDashboardView(DBAndSlugMixin, TemplateView):
             if produtos_sel:
                 saldos_qs = saldos_qs.filter(produto_codigo__in=produtos_sel)
             saldos_qs = saldos_qs.order_by('produto_codigo')[:300]
-            codigos = [s.produto_codigo for s in saldos_qs]
+            codigos = [str(getattr(s, 'produto_codigo_id', None) or getattr(s, 'produto_codigo', '')) for s in saldos_qs]
             nomes_map = {}
             if codigos:
                 prods = Produtos.objects.using(banco).filter(prod_codi__in=codigos)
                 nomes_map = {p.prod_codi: p.prod_nome for p in prods}
+            lotes_map = {}
+            try:
+                lotes_group = (
+                    Lote.objects.using(banco)
+                    .filter(lote_empr=int(empresa), lote_prod__in=codigos, lote_ativ=True)
+                    .values('lote_prod')
+                    .annotate(total=Sum('lote_sald'))
+                )
+                lotes_map = {str(r.get('lote_prod')): Decimal(str(r.get('total') or 0)) for r in lotes_group}
+            except Exception:
+                lotes_map = {}
             for s in saldos_qs:
+                codigo = str(getattr(s, 'produto_codigo_id', None) or getattr(s, 'produto_codigo', ''))
+                saldo_total = Decimal(str(getattr(s, 'saldo_estoque', 0) or 0))
+                saldo_lotes = lotes_map.get(codigo, Decimal('0'))
+                saldo_sem_lote = saldo_total - saldo_lotes
                 saldos_list.append({
-                    'prod_nome': nomes_map.get(s.produto_codigo, s.produto_codigo),
-                    'saldo_atual': getattr(s, 'saldo_estoque', 0),
+                    'prod_nome': nomes_map.get(codigo, codigo),
+                    'saldo_total': saldo_total,
+                    'saldo_lotes': saldo_lotes,
+                    'saldo_sem_lote': saldo_sem_lote,
                 })
         except Exception:
             saldos_list = []

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models import Produtos, ProdutosDetalhados, Tabelaprecos
+from ..models import Lote, Produtos, ProdutosDetalhados, Tabelaprecos
 from core.serializers import BancoContextMixin
 from decimal import Decimal, InvalidOperation
 import base64
@@ -18,6 +18,9 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
     prod_cera_m2cx = serializers.SerializerMethodField()
     prod_cera_pccx = serializers.SerializerMethodField()
     prod_cera_kgcx = serializers.SerializerMethodField()
+    lote_atual = serializers.SerializerMethodField()
+    lote_data_fabr = serializers.SerializerMethodField()
+    lote_data_venc = serializers.SerializerMethodField()
 
     class Meta:
         model = Produtos
@@ -65,6 +68,35 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
     def get_prod_cera_kgcx(self, obj):
         """Retorna kg/caixa de forma segura"""
         return self.safe_decimal_conversion(getattr(obj, 'prod_cera_kgcx', None), Decimal('0.00'))
+
+    def _ultimo_lote(self, obj):
+        banco = self.context.get("using") or self.context.get("banco")
+        if not banco:
+            return None
+        try:
+            return (
+                Lote.objects.using(banco)
+                .filter(lote_empr=int(obj.prod_empr), lote_prod=str(obj.prod_codi), lote_ativ=True)
+                .order_by("-lote_lote")
+                .values("lote_lote", "lote_data_fabr", "lote_data_vali")
+                .first()
+            )
+        except Exception:
+            return None
+
+    def get_lote_atual(self, obj):
+        row = self._ultimo_lote(obj)
+        return row.get("lote_lote") if row else None
+
+    def get_lote_data_fabr(self, obj):
+        row = self._ultimo_lote(obj)
+        d = row.get("lote_data_fabr") if row else None
+        return d.isoformat() if d else None
+
+    def get_lote_data_venc(self, obj):
+        row = self._ultimo_lote(obj)
+        d = row.get("lote_data_vali") if row else None
+        return d.isoformat() if d else None
 
     def to_internal_value(self, data):
         """Normaliza entradas antes da validação de campo (blank -> None)."""

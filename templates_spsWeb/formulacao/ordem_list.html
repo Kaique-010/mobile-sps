@@ -1,0 +1,118 @@
+{% extends 'formulacao/base_formulacao.html' %}
+
+{% block title %}Ordens de Produção{% endblock %}
+
+{% block formulacao_content %}
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="card h-100 border-0 text-white" style="background: linear-gradient(135deg, #a1c1e0 0%, #2b577c 100%);">
+                    <div class="card-body">
+                        <div class="text-uppercase small fw-bold mb-2" style="opacity: 0.9;">Total de OPs</div>
+                        <div class="fw-bold display-6 mb-0">{{ total_ops }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 text-white" style="background: linear-gradient(135deg, #a7c4aa 0%, #5d8260 100%);">
+                    <div class="card-body">
+                        <div class="text-uppercase small fw-bold mb-2" style="opacity: 0.9;">Abertas</div>
+                        <div class="fw-bold display-6 mb-0">{{ total_abertas }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 text-white" style="background: linear-gradient(135deg, #c2a28d 0%, #b57045 100%);">
+                    <div class="card-body">
+                        <div class="text-uppercase small fw-bold mb-2" style="opacity: 0.9;">Finalizadas</div>
+                        <div class="fw-bold display-6 mb-0">{{ total_finalizadas }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-header py-3 border-bottom">
+        <div class="d-flex justify-content-center align-items-center position-relative">
+            <h4 class="mb-0 fw-bold text-secondary">Ordens de Produção</h4>
+            <div class="position-absolute end-0">
+                <a href="{% url 'FormulacaoWeb:ordem_create' slug=slug %}" class="btn btn-outline-primary btn-sm">
+                    Nova Ordem
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <form method="get" class="row g-2 mb-3">
+            <div class="col-md-3">
+                <select name="status" class="form-select">
+                    <option value="" {% if not status %}selected{% endif %}>Todos</option>
+                    <option value="A" {% if status == 'A' %}selected{% endif %}>Abertas</option>
+                    <option value="F" {% if status == 'F' %}selected{% endif %}>Finalizadas</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-grid">
+                <button class="btn btn-outline-secondary" type="submit">Filtrar</button>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Número</th>
+                        <th>Data</th>
+                        <th>Status</th>
+                        <th>Produto</th>
+                        <th>Versão</th>
+                        <th class="text-end">Quantidade</th>
+                        <th>Lote</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for op in ordens %}
+                    <tr>
+                        <td>{{ op.op_nume }}</td>
+                        <td>{{ op.op_data|date:"d/m/Y" }}</td>
+                        <td>
+                            <span class="badge {% if op.op_status == 'A' %}bg-warning text-dark{% elif op.op_status == 'F' %}bg-success{% else %}bg-secondary{% endif %}">
+                                {{ op.op_status }}
+                            </span>
+                        </td>
+                        <td>{{ op.op_prod.prod_codi }} - {{ op.op_prod.prod_nome }}</td>
+                        <td>{{ op.op_vers }}</td>
+                        <td class="text-end">{{ op.op_quan }}</td>
+                        <td>{{ op.op_lote|default:"-" }}</td>
+                        <td class="text-end">
+                            {% if op.op_status == 'A' %}
+                            <a href="{% url 'FormulacaoWeb:ordem_edit' slug=slug pk=op.op_nume %}" class="btn btn-sm btn-outline-secondary me-1">
+                                Editar
+                            </a>
+                            <form method="post" action="{% url 'FormulacaoWeb:ordem_executar' slug=slug pk=op.op_nume %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-success"
+                                    onclick="return confirm('Deseja executar esta ordem?');">
+                                    Executar
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">Nenhuma ordem encontrada.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if is_paginated %}
+        {% include 'components/pagination.html' %}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,30 +1,39 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{% if form.instance.pk %}Editar Entrada de Estoque{% else %}Cadastrar Entrada de Estoque{% endif %}{% endblock %}
+{% block title %}{% if form.instance.pk %}Editar Entrada de Estoque{% else %}Cadastrar Entrada de Estoque{% endif%}{%endblock %}
 
 
 {% block content %}
+<style>
+  #btn-entradas-cadastro-rapido {
+    border-radius: 20px;
+    padding: 10px 20px;
+    box-shadow: 0 2px 4px rgba(121, 188, 214, 0.678);
+
+  }
+</style>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
 <link rel="stylesheet" href="{% static 'css/form.css' %}">
 {% if messages %}
-    {% for message in messages %}
-        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-    {% endfor %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }}">{{ message }}</div>
+{% endfor %}
 {% endif %}
-<div class="container py-4 ">
+<div class="container pt-2">
   <h3 class="card-title mb-4 fs-4 text-center">{% if form.instance.pk %}Editar Entrada{% else %}Entrada de Estoque{% endif %}</h3>
   <div class="card shadow-sm">
-    <div class="card-body padding-20">
+    <div class="card-body">
       <form method="post" id="entrada-form">
         {% csrf_token %}
         {% if form.non_field_errors %}
         <div class="alert alert-danger">{{ form.non_field_errors|striptags }}</div>
         {% endif %}
 
-        <div class="row g-3">
-          <div class="col-md-12">
-            <label class="form-label" for="{{ form.entr_data.id_for_label }}">Data</label>
+        <div class="row g-3 m-3">
+          <div class="col-md-9"></div>
+          <div class="col-md-3">
+            <label class="form-label" for="{{ form.entr_data.id_for_label }}">Data da Entrada</label>
             {{ form.entr_data }}
             {% if form.entr_data.errors %}
             <div class="alert alert-danger mt-1">{{ form.entr_data.errors|striptags }}</div>
@@ -33,7 +42,7 @@
         </div>
 
         <div class="row g-3">
-          <div class="col-md-12 position-relative">
+          <div class="col-md-5 position-relative">
             <label class="form-label" for="{{ form.entr_enti.id_for_label }}">Entidade</label>
             <input type="text" class="form-control" id="autocomplete-entidade" placeholder="Buscar entidade">
             {{ form.entr_enti }}
@@ -44,34 +53,36 @@
           </div>
         </div>
 
-        <div class="row g-3">
-          <div class="col-md-12 position-relative">
+        <div class="row g-3 mt-2">
+          <div class="col-md-5 position-relative">
             <label class="form-label" for="{{ form.entr_prod.id_for_label }}">Produto</label>
-            <input type="text" class="form-control" id="autocomplete-produto" placeholder="Buscar produto">
+            <div class="input-group">
+              <input type="text" class="form-control" id="autocomplete-produto" placeholder="Buscar produto">
+              <button type="button" class="btn btn-outline-primary" id="btn-entradas-cadastro-rapido">Cadastro rápido</button>
+            </div>
             {{ form.entr_prod }}
             <small id="produto-selecionado" class="text-muted"></small>
             {% if form.entr_prod.errors %}
             <div class="alert alert-danger mt-1">{{ form.entr_prod.errors|striptags }}</div>
             {% endif %}
           </div>
-        </div>
-
-        <div class="row g-3">
-          <div class="col-md-4">
+       
+          <div class="col-md-2">
             <label class="form-label" for="{{ form.entr_quan.id_for_label }}">Quantidade</label>
             {{ form.entr_quan }}
             {% if form.entr_quan.errors %}
             <div class="alert alert-danger mt-1">{{ form.entr_quan.errors|striptags }}</div>
             {% endif %}
-          </div>
-          <div class="col-md-4">
-            <label class="form-label" for="{{ form.entr_unit.id_for_label }}">Unitário</label>
+            </div>
+           
+          <div class="col-md-2">
+            <label class="form-label" for="{{ form.entr_unit.id_for_label }}">Custo (unitário)</label>
             {{ form.entr_unit }}
             {% if form.entr_unit.errors %}
             <div class="alert alert-danger mt-1">{{ form.entr_unit.errors|striptags }}</div>
             {% endif %}
           </div>
-          <div class="col-md-4">
+          <div class="col-md-3">
             <label class="form-label" for="{{ form.entr_tota.id_for_label }}">Total</label>
             <div class="input-group">
               <span class="input-group-text">R$</span>
@@ -81,18 +92,102 @@
             <div class="alert alert-danger mt-1">{{ form.entr_tota.errors|striptags }}</div>
             {% endif %}
           </div>
+          </div>
+          <div class="row g-3 mt-2">
+          <div class="col-md-5">
+            <label class="form-label" for="{{ form.preco_vista.id_for_label }}">Preço à vista (opcional)</label>
+            {{ form.preco_vista }}
+            {% if form.preco_vista.errors %}
+            <div class="alert alert-danger mt-1">{{ form.preco_vista.errors|striptags }}</div>
+            {% endif %}
+          </div>
+           <div class="col-md-2"></div>
+          <div class="col-md-5">
+            <label class="form-label" for="{{ form.preco_prazo.id_for_label }}">Preço a prazo (opcional)</label>
+            {{ form.preco_prazo }}
+            {% if form.preco_prazo.errors %}
+            <div class="alert alert-danger mt-1">{{ form.preco_prazo.errors|striptags }}</div>
+            {% endif %}
+          </div>
+       
+          
+        <div class="row g-3 mt-2">
+          <div class="col-md-4">
+            <label class="form-label" for="{{ form.entr_lote_vend.id_for_label }}">Lote</label>
+            {{ form.entr_lote_vend }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label" for="{{ form.lote_data_fabr.id_for_label }}">Data Fabricação (opcional)</label>
+            {{ form.lote_data_fabr }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label" for="{{ form.lote_data_vali.id_for_label }}">Data Validade (opcional)</label>
+            {{ form.lote_data_vali }}
+          </div>
+        </div>
+        <div class="row g-3 mt-2">
+          <div class="col-md-8 d-flex align-items-center gap-3 flex-wrap">
+            <div class="d-flex align-items-center gap-2">
+              {{ form.auto_lote }}
+              <label class="form-check-label" for="{{ form.auto_lote.id_for_label }}">{{ form.auto_lote.label }}</label>
+              <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-sugerir-lote">Sugerir próximo lote</button>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              {{ form.atualizar_preco }}
+              <label class="form-check-label" for="{{ form.atualizar_preco.id_for_label }}">{{ form.atualizar_preco.label }}</label>
+            </div>
+          </div>
         </div>
 
         <div class="mt-4 d-flex justify-content-end gap-2">
           <a class="btn btn-outline-secondary" href="/web/login/" data-slug-route="/web/{slug}/entradas/">Cancelar</a>
-          <button type="submit" class="btn btn-success">Salvar</button>
+          <button type="button" class="btn btn-outline-primary" id="add-item">
+            Adicionar item
+          </button>
         </div>
       </form>
     </div>
+    <table class="table mt-3" id="lista-itens">
+      <thead>
+        <tr>
+          <th>Produto</th>
+          <th>Lote</th>
+          <th>Qtd</th>
+          <th>Custo</th>
+          <th>À vista</th>
+          <th>A prazo</th>
+          <th>Total</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <button type="button" class="btn btn-outline-success" id="processar">
+      Processar tudo
+    </button>
   </div>
 </div>
+
+
 <script>
-  (function() {
+  const clientesUrl = "{% url 'EntradasWeb:autocomplete_clientes' slug=slug %}";
+  const produtosUrl = "{% url 'EntradasWeb:autocomplete_produtos' slug=slug %}";
+  const loteUrl = "{% url 'EntradasWeb:entradas_lote' slug=slug %}";
+  const lotesProdutoUrl = "{% url 'EntradasWeb:lotes_produto' slug=slug %}";
+  const listUrl = "{% url 'EntradasWeb:entradas_listar' slug=slug %}";
+
+  function toastError(msg) {
+    if (window.Toast && typeof window.Toast.error === 'function') window.Toast.error(msg);
+    else alert(msg);
+  }
+
+  function toastSuccess(msg) {
+    if (window.Toast && typeof window.Toast.success === 'function') window.Toast.success(msg);
+    else alert(msg);
+  }
+
+  (function () {
     function createDropdown(container) {
       let dd = container.querySelector('.autocomplete-dropdown');
       if (!dd) {
@@ -147,8 +242,6 @@
       });
     }
 
-    const clientesUrl = "{% url 'EntradasWeb:autocomplete_clientes' slug=slug %}";
-    const produtosUrl = "{% url 'EntradasWeb:autocomplete_produtos' slug=slug %}";
     setupInputAutocomplete({
       inputEl: document.getElementById('autocomplete-entidade'),
       hiddenEl: document.getElementById('id_entr_enti'),
@@ -168,6 +261,105 @@
       }
     });
 
+    (function () {
+      const btnCadastroRapido = document.getElementById('btn-entradas-cadastro-rapido');
+      const empresaId = "{{ request.session.empresa_id|default:'1' }}";
+      const filialId = "{{ request.session.filial_id|default:'1' }}";
+      const modalHtml = `
+        <div id="modal-entradas-cadastro-rapido" class="modal fade show" tabindex="-1" style="display:none; background-color: rgba(0,0,0,.5);">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Cadastro rápido de produto</h5>
+                <button type="button" class="btn-close" id="modal-entradas-close"></button>
+              </div>
+              <div class="modal-body">
+                <div class="mb-3">
+                  <label class="form-label">Nome</label>
+                  <input type="text" class="form-control" id="entradas-cr-nome" placeholder="Nome do produto">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Unidade (código)</label>
+                  <input type="text" class="form-control" id="entradas-cr-unme" placeholder="Ex: UN">
+                </div>
+                <div class="row g-2">
+                  <div class="col-md-6">
+                    <label class="form-label">Preço à vista (opcional)</label>
+                    <input type="number" class="form-control" id="entradas-cr-preco-vista" step="0.01" inputmode="decimal" placeholder="0,00">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Preço a prazo (opcional)</label>
+                    <input type="number" class="form-control" id="entradas-cr-preco-prazo" step="0.01" inputmode="decimal" placeholder="0,00">
+                  </div>
+                </div>
+                <div class="text-muted small mt-2">Empresa: ${empresaId} | Filial: ${filialId}</div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="modal-entradas-cancel">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="modal-entradas-save">Salvar</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      function ensureModal() {
+        let el = document.getElementById('modal-entradas-cadastro-rapido');
+        if (!el) {
+          const div = document.createElement('div');
+          div.innerHTML = modalHtml;
+          document.body.appendChild(div.firstElementChild);
+          el = document.getElementById('modal-entradas-cadastro-rapido');
+          const hide = () => { el.style.display = 'none'; };
+          document.getElementById('modal-entradas-close').addEventListener('click', hide);
+          document.getElementById('modal-entradas-cancel').addEventListener('click', hide);
+          document.getElementById('modal-entradas-save').addEventListener('click', async () => {
+            const nome = document.getElementById('entradas-cr-nome').value.trim();
+            const unme = document.getElementById('entradas-cr-unme').value.trim();
+            const precoVista = document.getElementById('entradas-cr-preco-vista').value;
+            const precoPrazo = document.getElementById('entradas-cr-preco-prazo').value;
+            if (!nome) return;
+            const csrf = (document.querySelector('[name=csrfmiddlewaretoken]')?.value) || (document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '');
+            try {
+              const resp = await fetch(`/api/{{ slug }}/produtos/produtos/cadastro_rapido/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                  prod_nome: nome,
+                  unme: unme,
+                  preco_vista: precoVista,
+                  preco_prazo: precoPrazo,
+                })
+              });
+              const json = await resp.json();
+              if (resp.ok) {
+                const id = json.id;
+                const codigo = json.prod_codi;
+                const nomeOut = json.prod_nome;
+                const hidden = document.getElementById('id_entr_prod');
+                const input = document.getElementById('autocomplete-produto');
+                const small = document.getElementById('produto-selecionado');
+                if (hidden) hidden.value = codigo;
+                if (input) input.value = `${codigo} - ${nomeOut}`;
+                if (small) small.textContent = `${codigo} - ${nomeOut}`;
+                el.style.display = 'none';
+              } else {
+                toastError('Erro ao cadastrar: ' + (json.detail || 'Verifique os dados.'));
+              }
+            } catch (e) {
+              toastError('Falha ao cadastrar produto.');
+            }
+          });
+        }
+        return el;
+      }
+      if (btnCadastroRapido) {
+        btnCadastroRapido.addEventListener('click', () => {
+          const el = ensureModal();
+          el.style.display = 'block';
+        });
+      }
+    })();
+
     async function prefill(hiddenSelector, inputSelector, url) {
       const hiddenEl = document.querySelector(hiddenSelector);
       const inputEl = document.querySelector(inputSelector);
@@ -181,6 +373,20 @@
     }
     prefill('#id_entr_enti', '#autocomplete-entidade', clientesUrl);
     prefill('#id_entr_prod', '#autocomplete-produto', produtosUrl);
+    async function sugerirProximoLote() {
+      const produto = document.getElementById('id_entr_prod')?.value;
+      if (!produto) { toastError('Selecione o produto para sugerir lote.'); return; }
+      try {
+        const resp = await fetch(`${lotesProdutoUrl}?prod_codi=${encodeURIComponent(produto)}`);
+        const json = await resp.json();
+        const nums = (json.results || []).map(r => parseInt(r.lote_lote)).filter(n => !isNaN(n));
+        const next = (nums.length ? Math.max(...nums) : 0) + 1;
+        const loteEl = document.getElementById('id_entr_lote_vend');
+        if (loteEl) loteEl.value = String(next);
+      } catch (e) { toastError('Falha ao sugerir lote.'); }
+    }
+    const btnSug = document.getElementById('btn-sugerir-lote');
+    if (btnSug) btnSug.addEventListener('click', sugerirProximoLote);
 
     function updateTotal() {
       const qEl = document.getElementById('id_entr_quan');
@@ -197,6 +403,136 @@
     if (qEl) qEl.addEventListener('input', updateTotal);
     if (uEl) uEl.addEventListener('input', updateTotal);
     updateTotal();
+
+    const dataEl = document.getElementById('id_entr_data');
+    if (dataEl && !dataEl.value) {
+      dataEl.value = new Date().toISOString().slice(0, 10);
+    }
   })();
+
+  function limparItemForm() {
+    document.getElementById('id_entr_prod').value = '';
+    document.getElementById('autocomplete-produto').value = '';
+
+    document.getElementById('id_entr_quan').value = '';
+    document.getElementById('id_entr_unit').value = '';
+    const vEl = document.getElementById('id_preco_vista');
+    const pEl = document.getElementById('id_preco_prazo');
+    if (vEl) vEl.value = '';
+    if (pEl) pEl.value = '';
+    document.getElementById('id_entr_tota').value = '';
+    const loteEl = document.getElementById('id_entr_lote_vend');
+    if (loteEl) loteEl.value = '';
+    const fabEl = document.getElementById('id_lote_data_fabr');
+    const valEl = document.getElementById('id_lote_data_vali');
+    if (fabEl) fabEl.value = '';
+    if (valEl) valEl.value = '';
+  }
+
+  let itens = [];
+  document.getElementById('add-item').addEventListener('click', () => {
+    const produto = document.getElementById('id_entr_prod').value;
+    const produto_text = document.getElementById('autocomplete-produto').value;
+    const qtd = parseFloat((document.getElementById('id_entr_quan').value || '0').replace(',', '.'));
+    const unit = parseFloat((document.getElementById('id_entr_unit').value || '0').replace(',', '.'));
+    const preco_vista = parseFloat((document.getElementById('id_preco_vista')?.value || '0').replace(',', '.')) || null;
+    const preco_prazo = parseFloat((document.getElementById('id_preco_prazo')?.value || '0').replace(',', '.')) || null;
+    const lote = document.getElementById('id_entr_lote_vend') ? document.getElementById('id_entr_lote_vend').value : '';
+    const lote_data_fabr = document.getElementById('id_lote_data_fabr') ? document.getElementById('id_lote_data_fabr').value : '';
+    const lote_data_vali = document.getElementById('id_lote_data_vali') ? document.getElementById('id_lote_data_vali').value : '';
+    if (!produto || !qtd || !unit) {
+      toastError('Preencha todos os campos do item.');
+      return;
+    }
+    itens.push({
+      produto,
+      produto_text,
+      lote,
+      qtd,
+      unit,
+      preco_vista,
+      preco_prazo,
+      lote_data_fabr,
+      lote_data_vali,
+      total: qtd * unit
+    });
+    renderTabela();
+    limparItemForm();
+  });
+
+  function renderTabela() {
+    const tbody = document.querySelector('#lista-itens tbody');
+    tbody.innerHTML = '';
+
+    itens.forEach((item, index) => {
+      tbody.innerHTML += `
+      <tr>
+        <td>${item.produto_text}</td>
+        <td>${item.lote || ''}</td>
+        <td>${item.qtd}</td>
+        <td>${item.unit.toFixed(2)}</td>
+        <td>${item.preco_vista !== null ? Number(item.preco_vista).toFixed(2) : ''}</td>
+        <td>${item.preco_prazo !== null ? Number(item.preco_prazo).toFixed(2) : ''}</td>
+        <td>${item.total.toFixed(2)}</td>
+        <td>
+          <button onclick="removerItem(${index})" class="btn btn-sm btn-danger">X</button>
+        </td>
+      </tr>
+    `;
+    });
+  }
+
+  function removerItem(index) {
+    itens.splice(index, 1);
+    renderTabela();
+  }
+  document.getElementById('processar').addEventListener('click', async () => {
+    const entidade = document.getElementById('id_entr_enti').value;
+    const data = document.getElementById('id_entr_data').value;
+    const autoLoteEl = document.getElementById('{{ form.auto_lote.id_for_label }}') || document.getElementById('id_auto_lote');
+    const auto_lote = !!(autoLoteEl && (autoLoteEl.checked || autoLoteEl.value === 'on'));
+    const atualizarPrecoEl = document.getElementById('{{ form.atualizar_preco.id_for_label }}') || document.getElementById('id_atualizar_preco');
+    const atualizar_preco = !!(atualizarPrecoEl && (atualizarPrecoEl.checked || atualizarPrecoEl.value === 'on'));
+
+    if (!entidade || !data) {
+      toastError('Selecione entidade e data.');
+      return;
+    }
+    if (!itens.length) {
+      toastError('Adicione pelo menos um item.');
+      return;
+    }
+
+    const btn = document.getElementById('processar');
+    if (btn) btn.disabled = true;
+    const resp = await fetch(loteUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      },
+      body: JSON.stringify({
+        entidade,
+        data,
+        itens,
+        auto_lote,
+        atualizar_preco
+      })
+    });
+
+    if (resp.ok) {
+      toastSuccess('Salvo com sucesso');
+      window.location.href = listUrl;
+    } else {
+      let msg = 'Erro ao salvar';
+      try {
+        const json = await resp.json();
+        if (json && (json.erro || json.error)) msg = json.erro || json.error;
+      } catch (e) { }
+      toastError(msg);
+    }
+    if (btn) btn.disabled = false;
+  });
+
 </script>
 {% endblock %}

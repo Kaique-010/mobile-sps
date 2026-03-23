@@ -11,8 +11,9 @@ from django.utils import timezone
 
 from core.decorator import ModuloRequeridoMixin
 from core.registry import get_licenca_db_config
+from core.utils import get_ncm_master_db
 
-from ..models import Produtos, Tabelaprecos
+from ..models import Produtos, Tabelaprecos, UnidadeMedida
 from ..serializers.produto_serializer import ProdutoSerializer, ProdutoServicoSerializer
 from ..serializers.tabela_preco_serializer import TabelaPrecoSerializer
 from ..consultas.produto_consultas import listar_produtos, buscar_produto_por_codigo
@@ -56,7 +57,6 @@ class ProdutoListView(ModuloRequeridoMixin, APIView):
 class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
     modulo_necessario = 'Produtos'
     serializer_class = ProdutoSerializer
-    permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter]
     search_fields = ['prod_nome', 'prod_codi', 'prod_coba']
     filterset_fields = ['prod_empr']
@@ -220,6 +220,84 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['post'])
+    def cadastro_rapido(self, request, slug=None):
+        """
+        Cadastro rápido de produto com campos essenciais, gerando código sequencial por empresa.
+        Campos aceitos:
+          - prod_nome (obrigatório)
+          - unme (código da unidade ou id)
+          - preco_vista / preco_prazo (opcionais) para criar/atualizar Tabela de Preços
+        """
+        banco = get_licenca_db_config(request)
+        if not banco:
+            return Response({"detail": "Banco não encontrado."}, status=status.HTTP_400_BAD_REQUEST)
+
+        empresa_id = (
+            request.headers.get('X-Empresa') or
+            request.session.get('empresa_id')
+        )
+        filial_id = (
+            request.headers.get('X-Filial') or
+            request.session.get('filial_id')
+        )
+        if not empresa_id:
+            return Response({"detail": "Empresa não informada."}, status=status.HTTP_400_BAD_REQUEST)
+
+        nome = (request.data.get('prod_nome') or request.data.get('nome') or '').strip()
+        if not nome:
+            return Response({"detail": "prod_nome é obrigatório."}, status=status.HTTP_400_BAD_REQUEST)
+
+        unme_code_or_id = (request.data.get('unme') or request.data.get('prod_unme') or '').strip()
+        unidade = None
+        if unme_code_or_id:
+            unidade = UnidadeMedida.objects.using(banco).filter(unid_codi=str(unme_code_or_id).upper()).first()
+            if not unidade and str(unme_code_or_id).isdigit():
+                unidade = UnidadeMedida.objects.using(banco).filter(pk=int(unme_code_or_id)).first()
+            if not unidade:
+                master_alias = get_ncm_master_db(banco)
+                master_unme = UnidadeMedida.objects.using(master_alias).filter(unid_codi=str(unme_code_or_id).upper()).first()
+                desc = getattr(master_unme, 'unid_desc', str(unme_code_or_id).upper()) if master_unme else str(unme_code_or_id).upper()
+                unidade = UnidadeMedida(unid_codi=str(unme_code_or_id).upper(), unid_desc=desc)
+                unidade.save(using=banco)
+
+        payload = {
+            'prod_empr': str(empresa_id),
+            'prod_fili': str(filial_id) if filial_id else None,
+            'prod_nome': nome,
+        }
+        if unidade:
+            payload['prod_unme'] = unidade.pk
+
+        preco_vista = request.data.get('preco_vista')
+        preco_prazo = request.data.get('preco_prazo')
+
+        serializer = ProdutoSerializer(data=payload, context={'banco': banco})
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        produto = serializer.save()
+
+        if preco_vista is not None or preco_prazo is not None:
+            preco_ctx = {
+                'using': banco,
+                'tabe_empr': produto.prod_empr,  
+                'tabe_prod': produto.prod_codi,
+            }
+            preco_data = {}
+            if preco_vista is not None and str(preco_vista).strip() != '':
+                preco_data['tabe_avis'] = str(preco_vista)
+            if preco_prazo is not None and str(preco_prazo).strip() != '':
+                preco_data['tabe_apra'] = str(preco_prazo)
+            if preco_data:
+                t_serializer = TabelaPrecoSerializer(data=preco_data, context=preco_ctx)
+                if t_serializer.is_valid():
+                    t_serializer.save()
+                else:
+                    logger.warning(f"Falha ao gravar preços do cadastro rápido: {t_serializer.errors}")
+
+        return Response(ProdutoSerializer(produto, context={'banco': banco}).data, status=status.HTTP_201_CREATED)
 
     def create(self, request, *args, **kwargs):
         banco = get_licenca_db_config(request)

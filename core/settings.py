@@ -149,6 +149,7 @@ INSTALLED_APPS = [
     'Renegociacao',
     'bens',
     'transportes',
+    'formulacao',
 ]
 
 # Middleware

@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{% if form.instance.pk %}Editar Pedido de Venda{% else %}Cadastrar Pedido de Venda{% endif %}{% endblock %}
+{% block title %}{% if form.instance.pk %}Editar Pedido de Venda{% else %}Cadastrar Pedido de Venda{% endif %}{%endblock %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
 <link rel="stylesheet" href="{% static 'css/form.css' %}">
 {% block content %}
@@ -35,38 +35,52 @@
 
         <div class="row g-3 mb-4">
           <div class="col-md-3">
-            <label class="form-label fw-semibold" for="{{ form.pedi_data.id_for_label }}"><i class="bi bi-calendar-event me-1"></i>Data do Pedido</label>
+            <label class="form-label fw-semibold" for="{{ form.pedi_data.id_for_label }}"><i
+                class="bi bi-calendar-event me-1"></i>Data do Pedido</label>
             {{ form.pedi_data }}
-            {% if form.pedi_data.errors %}<div class="invalid-feedback d-block">{{ form.pedi_data.errors|striptags }}</div>{% endif %}
+            {% if form.pedi_data.errors %}<div class="invalid-feedback d-block">{{ form.pedi_data.errors|striptags }}
+            </div>{% endif %}
           </div>
           <div class="col-md-5 position-relative">
-            <label class="form-label fw-semibold" for="{{ form.pedi_forn.id_for_label }}"><i class="bi bi-person-circle me-1"></i>Cliente</label>
-            <input type="text" class="form-control form-control-lg" id="autocomplete-cliente" placeholder="Buscar cliente por nome ou código" {% if is_edit and cliente_display %}value="{{ cliente_display }}"{% endif %}>
+            <label class="form-label fw-semibold" for="{{ form.pedi_forn.id_for_label }}"><i
+                class="bi bi-person-circle me-1"></i>Cliente</label>
+            <input type="text" class="form-control form-control-lg" id="autocomplete-cliente"
+              placeholder="Buscar cliente por nome ou código" {% if is_edit and cliente_display %}value="{{ cliente_display }}" {% endif %}>
             {{ form.pedi_forn }}
             <small id="cliente-selecionado" class="text-success mt-1 d-block"></small>
-            {% if form.pedi_forn.errors %}<div class="invalid-feedback d-block">{{ form.pedi_forn.errors|striptags }}</div>{% endif %}
+            {% if form.pedi_forn.errors %}<div class="invalid-feedback d-block">{{ form.pedi_forn.errors|striptags }}
+            </div>{% endif %}
           </div>
           <div class="col-md-4 position-relative">
-            <label class="form-label fw-semibold" for="{{ form.pedi_vend.id_for_label }}"><i class="bi bi-person-badge me-1"></i>Vendedor</label>
-            <input type="text" class="form-control form-control-lg" id="autocomplete-vendedor" placeholder="Buscar vendedor por nome ou código" {% if is_edit and vendedor_display %}value="{{ vendedor_display }}"{% endif %}>
+            <label class="form-label fw-semibold" for="{{ form.pedi_vend.id_for_label }}"><i
+                class="bi bi-person-badge me-1"></i>Vendedor</label>
+            <input type="text" class="form-control form-control-lg" id="autocomplete-vendedor"
+              placeholder="Buscar vendedor por nome ou código" {% if is_edit and vendedor_display %}value="{{ vendedor_display }}" {% endif %}>
             {{ form.pedi_vend }}
             <small id="vendedor-selecionado" class="text-success mt-1 d-block"></small>
-            {% if form.pedi_vend.errors %}<div class="invalid-feedback d-block">{{ form.pedi_vend.errors|striptags }}</div>{% endif %}
+            {% if form.pedi_vend.errors %}<div class="invalid-feedback d-block">{{ form.pedi_vend.errors|striptags }}
+            </div>{% endif %}
           </div>
           <div class="col-md-4">
-            <label class="form-label fw-semibold" for="{{ form.pedi_fina.id_for_label }}"><i class="bi bi-cash-coin me-1"></i>Tipo Financeiro</label>
+            <label class="form-label fw-semibold" for="{{ form.pedi_fina.id_for_label }}"><i
+                class="bi bi-cash-coin me-1"></i>Tipo Financeiro</label>
             {{ form.pedi_fina }}
-            {% if form.pedi_fina.errors %}<div class="invalid-feedback d-block">{{ form.pedi_fina.errors|striptags }}</div>{% endif %}
+            {% if form.pedi_fina.errors %}<div class="invalid-feedback d-block">{{ form.pedi_fina.errors|striptags }}
+            </div>{% endif %}
           </div>
           <div class="col-md-4">
-            <label class="form-label fw-semibold" for="{{ form.pedi_tipo_oper.id_for_label }}"><i class="bi bi-diagram-3 me-1"></i>Tipo de Operação</label>
+            <label class="form-label fw-semibold" for="{{ form.pedi_tipo_oper.id_for_label }}"><i
+                class="bi bi-diagram-3 me-1"></i>Tipo de Operação</label>
             {{ form.pedi_tipo_oper }}
-            {% if form.pedi_tipo_oper.errors %}<div class="invalid-feedback d-block">{{ form.pedi_tipo_oper.errors|striptags }}</div>{% endif %}
+            {% if form.pedi_tipo_oper.errors %}<div class="invalid-feedback d-block">{{
+              form.pedi_tipo_oper.errors|striptags }}</div>{% endif %}
           </div>
           <div class="col-md-4">
-            <label class="form-label fw-semibold" for="{{ form.pedi_stat.id_for_label }}"><i class="bi bi-flag me-1"></i>Status</label>
+            <label class="form-label fw-semibold" for="{{ form.pedi_stat.id_for_label }}"><i
+                class="bi bi-flag me-1"></i>Status</label>
             {{ form.pedi_stat }}
-            {% if form.pedi_stat.errors %}<div class="invalid-feedback d-block">{{ form.pedi_stat.errors|striptags }}</div>{% endif %}
+            {% if form.pedi_stat.errors %}<div class="invalid-feedback d-block">{{ form.pedi_stat.errors|striptags }}
+            </div>{% endif %}
           </div>
         </div>
 
@@ -74,12 +88,14 @@
 
         <ul class="nav nav-tabs nav-fill mb-5" role="tablist">
           <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="tab-itens" data-bs-toggle="tab" data-bs-target="#pane-itens" type="button" role="tab">
+            <button class="nav-link active" id="tab-itens" data-bs-toggle="tab" data-bs-target="#pane-itens"
+              type="button" role="tab">
               <i class="bi bi-cart me-2"></i>Itens do Pedido
             </button>
           </li>
           <li class="nav-item" role="presentation">
-            <button class="nav-link" id="tab-financeiro" data-bs-toggle="tab" data-bs-target="#pane-financeiro" type="button" role="tab">
+            <button class="nav-link" id="tab-financeiro" data-bs-toggle="tab" data-bs-target="#pane-financeiro"
+              type="button" role="tab">
               <i class="bi bi-calculator me-2"></i>Resumo Financeiro
             </button>
           </li>
@@ -107,7 +123,9 @@
                 <tbody id="itens-pedido">
                   {% if formset.non_form_errors %}
                   <tr>
-                    <td colspan="5"><div class="alert alert-danger" role="alert">{{ formset.non_form_errors }}</div></td>
+                    <td colspan="5">
+                      <div class="alert alert-danger" role="alert">{{ formset.non_form_errors }}</div>
+                    </td>
                   </tr>
                   {% endif %}
                   {{ formset.management_form }}
@@ -115,14 +133,28 @@
                   <tr class="item-row">
                     <td class="position-relative">
                       {{ form_item.iped_prod }}
+                      {{ form_item.iped_lote_vend }}
                       <div class="d-none">{{ form_item.DELETE }}</div>
-                      <input type="text" class="form-control autocomplete-prod" data-index="{{ forloop.counter0 }}" placeholder="Buscar produto por nome ou código" {% if is_edit and form_item.initial.display_prod_text %}value="{{ form_item.initial.display_prod_text }}"{% endif %}>
+                      <input type="text" class="form-control autocomplete-prod" data-index="{{ forloop.counter0 }}"
+                        placeholder="Buscar produto por nome ou código" {% if is_edit and
+                        form_item.initial.display_prod_text %}value="{{ form_item.initial.display_prod_text }}" {% endif
+                        %}>
+                      <div class="d-flex align-items-center justify-content-between mt-1">
+                        <small class="text-muted">Lote: <span class="js-lote-display">-</span></small>
+                        <button type="button" class="btn btn-outline-secondary btn-sm js-escolher-lote"
+                          data-index="{{ forloop.counter0 }}">Lotes</button>
+                      </div>
                       {% if form_item.iped_prod.errors %}<div class="invalid-feedback d-block">{{ form_item.iped_prod.errors|striptags }}</div>{% endif %}
                     </td>
-                    <td>{{ form_item.iped_quan }}{% if form_item.iped_quan.errors %}<div class="invalid-feedback d-block">{{ form_item.iped_quan.errors|striptags }}</div>{% endif %}</td>
-                    <td>{{ form_item.iped_unit }}{% if form_item.iped_unit.errors %}<div class="invalid-feedback d-block">{{ form_item.iped_unit.errors|striptags }}</div>{% endif %}</td>
+                    <td>{{ form_item.iped_quan }}{% if form_item.iped_quan.errors %}<div
+                        class="invalid-feedback d-block">{{ form_item.iped_quan.errors|striptags }}</div>{% endif %}
+                    </td>
+                    <td>{{ form_item.iped_unit }}{% if form_item.iped_unit.errors %}<div
+                        class="invalid-feedback d-block">{{ form_item.iped_unit.errors|striptags }}</div>{% endif %}
+                    </td>
                     <td class="text-end item-total">R$ 0,00</td>
-                    <td class="text-center"><button type="button" class="btn btn-sm btn-danger remove-item"><i class="bi bi-trash"></i></button></td>
+                    <td class="text-center"><button type="button" class="btn btn-sm btn-danger remove-item"><i
+                          class="bi bi-trash"></i></button></td>
                   </tr>
                   {% endfor %}
                 </tbody>
@@ -180,7 +212,8 @@
             <i class="bi bi-check-circle me-2"></i>{% if form.instance.pk %}Salvar Pedido{% else %}Criar Pedido{% endif %}
           </button>
           {% if form.instance.pk %}
-          <a class="btn btn-outline-primary btn-lg" href="{% url 'PedidosWeb:pedido_emitir_nfe' slug=slug pk=form.instance.pk %}">
+          <a class="btn btn-outline-primary btn-lg"
+            href="{% url 'PedidosWeb:pedido_emitir_nfe' slug=slug pk=form.instance.pk %}">
             <i class="bi bi-file-text me-2"></i>Emitir NF-e
           </a>
           {% else %}
@@ -190,6 +223,42 @@
           {% endif %}
         </div>
       </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="loteModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Selecionar lote</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <div class="text-muted small" id="loteModalProduto"></div>
+          <div class="text-muted small" id="loteModalStatus"></div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm table-hover align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Lote</th>
+                <th class="text-end">Saldo</th>
+                <th>Fabricação</th>
+                <th>Validade</th>
+                <th class="text-end" style="width: 140px;">Qtd</th>
+                <th style="width: 110px;"></th>
+              </tr>
+            </thead>
+            <tbody id="loteModalBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
+        <button type="button" class="btn btn-outline-danger" id="loteModalLimpar">Limpar lote</button>
+      </div>
     </div>
   </div>
 </div>
@@ -247,8 +316,13 @@
       <tr class="item-row">
         <td class="position-relative">
           <input type="hidden" name="form-${currentIndex}-iped_prod" id="id_form-${currentIndex}-iped_prod">
+          <input type="hidden" name="form-${currentIndex}-iped_lote_vend" id="id_form-${currentIndex}-iped_lote_vend">
           <input type="checkbox" name="form-${currentIndex}-DELETE" id="id_form-${currentIndex}-DELETE" class="visually-hidden">
           <input type="text" class="form-control autocomplete-prod" data-index="${currentIndex}" placeholder="Buscar produto por nome ou código">
+          <div class="d-flex align-items-center justify-content-between mt-1">
+            <small class="text-muted">Lote: <span class="js-lote-display">-</span></small>
+            <button type="button" class="btn btn-outline-secondary btn-sm js-escolher-lote" data-index="${currentIndex}">Lotes</button>
+          </div>
         </td>
         <td>
           <input type="number" name="form-${currentIndex}-iped_quan" id="id_form-${currentIndex}-iped_quan" 
@@ -411,6 +485,157 @@
     const vendedoresUrl = "{% url 'PedidosWeb:autocomplete_vendedores' slug=slug %}";
     const produtosUrl = "{% url 'PedidosWeb:autocomplete_produtos' slug=slug %}";
     const precoUrl = "{% url 'PedidosWeb:preco_produto' slug=slug %}";
+    const lotesUrl = "{% url 'PedidosWeb:lotes_produto' slug=slug %}";
+
+    function formatDateBR(iso) {
+      if (!iso) return '-';
+      const s = String(iso);
+      const parts = s.split('-');
+      if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      return s;
+    }
+
+    function getRowElementsByIndex(idx) {
+      const prodHidden = document.getElementById(`id_form-${idx}-iped_prod`);
+      const loteHidden = document.getElementById(`id_form-${idx}-iped_lote_vend`);
+      const qtyEl = document.getElementById(`id_form-${idx}-iped_quan`);
+      const row = prodHidden ? prodHidden.closest('tr') : null;
+      return { row, prodHidden, loteHidden, qtyEl };
+    }
+
+    function atualizarLoteDisplay(idx) {
+      const { row, loteHidden } = getRowElementsByIndex(idx);
+      if (!row) return;
+      const span = row.querySelector('.js-lote-display');
+      if (!span) return;
+      const val = (loteHidden && loteHidden.value) ? String(loteHidden.value).trim() : '';
+      if (val) {
+        row.dataset.loteModo = 'lote';
+        span.textContent = val;
+        return;
+      }
+      if ((row.dataset.loteModo || '') === 'sem') {
+        span.textContent = 'SEM LOTE';
+        return;
+      }
+      span.textContent = '-';
+    }
+
+    const loteModalEl = document.getElementById('loteModal');
+    const loteModalProdutoEl = document.getElementById('loteModalProduto');
+    const loteModalStatusEl = document.getElementById('loteModalStatus');
+    const loteModalBodyEl = document.getElementById('loteModalBody');
+    const loteModalLimparEl = document.getElementById('loteModalLimpar');
+    const loteModal = (loteModalEl && window.bootstrap && window.bootstrap.Modal) ? new window.bootstrap.Modal(loteModalEl) : null;
+    let loteModalIndex = null;
+    let loteModalProd = null;
+    let loteModalProdText = null;
+
+    async function abrirModalLotes(idx, prodCodi, prodText) {
+      loteModalIndex = idx;
+      loteModalProd = prodCodi;
+      loteModalProdText = prodText || prodCodi;
+
+      if (loteModalProdutoEl) loteModalProdutoEl.textContent = `Produto: ${loteModalProdText}`;
+      if (loteModalStatusEl) loteModalStatusEl.textContent = 'Carregando lotes...';
+      if (loteModalBodyEl) loteModalBodyEl.innerHTML = '';
+
+      try {
+        const resp = await fetch(`${lotesUrl}?prod_codi=${encodeURIComponent(prodCodi)}`, { credentials: 'same-origin' });
+        const json = await resp.json();
+        const lotes = json.results || [];
+
+        const saldoTotal = Number(json.saldo_total || 0);
+        const saldoLotes = Number(json.saldo_lotes || 0);
+        const saldoSemLote = Number(json.saldo_sem_lote || 0);
+        if (loteModalStatusEl) {
+          loteModalStatusEl.textContent =
+            `Saldo total: ${saldoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} | ` +
+            `Em lotes: ${saldoLotes.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} | ` +
+            `Sem lote: ${saldoSemLote.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+        if (!loteModalBodyEl) return;
+
+        const { qtyEl } = getRowElementsByIndex(idx);
+        const qtyAtual = qtyEl ? (parseFloat(qtyEl.value) || 0) : 0;
+
+        const rows = [];
+
+        if (saldoSemLote > 0) {
+          rows.push({
+            tipo: 'sem',
+            lote_lote: null,
+            lote_obse: 'SEM LOTE',
+            lote_sald: saldoSemLote,
+            lote_data_fabr: null,
+            lote_data_vali: null,
+          });
+        }
+
+        lotes.forEach(l => {
+          rows.push({ ...l, tipo: 'lote' });
+        });
+
+        if (rows.length === 0) {
+          loteModalBodyEl.innerHTML = `<tr><td colspan="6" class="text-center text-muted">Nenhum saldo disponível</td></tr>`;
+        } else {
+          rows.forEach(l => {
+            const saldo = Number(l.lote_sald || 0);
+            const sugestao = Math.max(Math.min(qtyAtual || 1, saldo), 0);
+            const tr = document.createElement('tr');
+            const label = (l.tipo === 'sem')
+              ? 'SEM LOTE'
+              : (l.lote_obse ? `${l.lote_obse}<div class="small text-muted">Nº ${l.lote_lote}</div>` : `${l.lote_lote}`);
+            tr.innerHTML = `
+              <td class="fw-semibold">${label}</td>
+              <td class="text-end">${saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+              <td>${formatDateBR(l.lote_data_fabr)}</td>
+              <td>${formatDateBR(l.lote_data_vali)}</td>
+              <td class="text-end">
+                <input type="number" class="form-control form-control-sm text-end js-lote-qtd" step="0.01" min="0.01" max="${saldo}" value="${sugestao ? sugestao.toFixed(2) : '0.00'}">
+              </td>
+              <td class="text-end">
+                <button type="button" class="btn btn-sm btn-outline-primary js-lote-usar">Usar</button>
+              </td>
+            `;
+            const btn = tr.querySelector('.js-lote-usar');
+            const qtdEl = tr.querySelector('.js-lote-qtd');
+            if (btn) {
+              btn.addEventListener('click', () => {
+                const qtd = qtdEl ? (parseFloat(qtdEl.value) || 0) : 0;
+                if (qtd <= 0) return;
+                if (qtd > saldo) return;
+                const { loteHidden, qtyEl: rowQtyEl, row } = getRowElementsByIndex(idx);
+                if (row) row.dataset.loteModo = (l.tipo === 'sem') ? 'sem' : 'lote';
+                if (loteHidden) loteHidden.value = (l.tipo === 'sem') ? '' : String(l.lote_lote);
+                if (rowQtyEl) rowQtyEl.value = Number(qtd).toFixed(2);
+                atualizarLoteDisplay(idx);
+                updateTotals();
+                if (loteModal) loteModal.hide();
+              });
+            }
+            loteModalBodyEl.appendChild(tr);
+          });
+        }
+
+        if (loteModal) loteModal.show();
+      } catch (e) {
+        if (loteModalStatusEl) loteModalStatusEl.textContent = 'Falha ao carregar lotes';
+        console.error('Erro ao listar lotes:', e);
+        if (loteModal) loteModal.show();
+      }
+    }
+
+    if (loteModalLimparEl) {
+      loteModalLimparEl.addEventListener('click', () => {
+        if (loteModalIndex === null) return;
+        const { loteHidden, row } = getRowElementsByIndex(loteModalIndex);
+        if (loteHidden) loteHidden.value = '';
+        if (row) row.dataset.loteModo = '';
+        atualizarLoteDisplay(loteModalIndex);
+        if (loteModal) loteModal.hide();
+      });
+    }
 
     // Cliente
     setupInputAutocomplete({
@@ -442,16 +667,24 @@
         const idx = inputEl.getAttribute('data-index');
         const hiddenEl = document.getElementById(`id_form-${idx}-iped_prod`);
         const unitEl = document.getElementById(`id_form-${idx}-iped_unit`);
+        const loteEl = document.getElementById(`id_form-${idx}-iped_lote_vend`);
 
         setupInputAutocomplete({
           inputEl,
           hiddenEl,
           url: produtosUrl,
           onSelect: async (item) => {
+            if (loteEl) loteEl.value = '';
+            try {
+              const { row } = getRowElementsByIndex(idx);
+              if (row) row.dataset.loteModo = '';
+            } catch (e) { }
+            atualizarLoteDisplay(idx);
+
             // Buscar preço pelo financeiro atual
             const tipo = $('#id_pedi_fina').val();
             try {
-              const resp = await fetch(`${precoUrl}?prod_codi=${encodeURIComponent(item.id)}&pedi_fina=${encodeURIComponent(tipo)}`);
+              const resp = await fetch(`${precoUrl}?prod_codi=${encodeURIComponent(item.id)}&pedi_fina=${encodeURIComponent(tipo)}`, { credentials: 'same-origin' });
               const json = await resp.json();
               if (json && typeof json.unit_price !== 'undefined') {
                 unitEl.value = Number(json.unit_price || 0).toFixed(2);
@@ -461,12 +694,33 @@
             } catch (e) {
               console.error('Erro ao obter preço:', e);
             }
+
+            try {
+              await abrirModalLotes(idx, item.id, item.text);
+            } catch (e) {
+              console.error('Erro ao abrir modal de lotes:', e);
+            }
           }
         });
       });
     }
 
     bindProdutoAutocomplete($(document));
+
+    $table.on('click', '.js-escolher-lote', async function () {
+      const idx = String($(this).data('index'));
+      const { prodHidden } = getRowElementsByIndex(idx);
+      const prodCodi = prodHidden ? String(prodHidden.value || '').trim() : '';
+      if (!prodCodi) return;
+      const row = prodHidden.closest('tr');
+      const prodText = row ? (row.querySelector('.autocomplete-prod')?.value || prodCodi) : prodCodi;
+      await abrirModalLotes(idx, prodCodi, prodText);
+    });
+
+    document.querySelectorAll('#itens-pedido tr.item-row .autocomplete-prod').forEach(el => {
+      const idx = el.getAttribute('data-index');
+      if (idx !== null) atualizarLoteDisplay(idx);
+    });
 
     // Prefill cliente, vendedor e produtos em modo edição
     async function prefillEntidade(hiddenSelector, inputSelector, url, labelSelector) {

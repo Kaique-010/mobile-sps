@@ -112,6 +112,7 @@ class PedidoCreateView(CreateView):
                         'iped_quan': item_data.get('iped_quan', 1),
                         'iped_unit': item_data.get('iped_unit', 0),
                         'iped_desc': item_data.get('iped_desc', 0),
+                        'iped_lote_vend': item_data.get('iped_lote_vend') or None,
                     })
 
                 if not itens_data:

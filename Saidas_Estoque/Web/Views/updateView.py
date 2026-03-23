@@ -35,11 +35,30 @@ class SaidaUpdateView(UpdateView):
     def form_valid(self, form):
         banco = get_licenca_db_config(self.request) or 'default'
         try:
+            from Produtos.models import Lote
+            from decimal import Decimal
             obj = form.save(commit=False)
             unit = form.cleaned_data.get('valor_unitario')
             if unit is not None and obj.said_quan is not None:
                 obj.said_tota = obj.said_quan * unit
+            obj.said_lote_vend = form.cleaned_data.get('said_lote_vend') or obj.said_lote_vend
             obj.save(using=banco)
+            lote_num = obj.said_lote_vend
+            if lote_num:
+                try:
+                    lote = Lote.objects.using(banco).filter(
+                        lote_empr=int(obj.said_empr),
+                        lote_prod=str(obj.said_prod),
+                        lote_lote=int(lote_num),
+                    ).first()
+                    if lote:
+                        if form.cleaned_data.get('lote_data_fabr'):
+                            lote.lote_data_fabr = form.cleaned_data.get('lote_data_fabr')
+                        if form.cleaned_data.get('lote_data_vali'):
+                            lote.lote_data_vali = form.cleaned_data.get('lote_data_vali')
+                        lote.save(using=banco)
+                except Exception:
+                    pass
             return redirect(self.get_success_url())
         except Exception as e:
             logger.error(f"Erro ao atualizar saída: {e}")

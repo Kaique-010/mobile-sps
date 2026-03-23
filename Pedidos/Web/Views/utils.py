@@ -86,3 +86,52 @@ def preco_produto(request, slug=None):
         return JsonResponse({'unit_price': unit_price, 'found': True})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+def lotes_produto(request, slug=None):
+    banco = get_licenca_db_config(request) or 'default'
+    empresa_id = request.session.get('empresa_id', 1)
+    filial_id = request.session.get('filial_id', 1)
+    prod_codi = (request.GET.get('prod_codi') or request.GET.get('produto') or '').strip()
+    if not prod_codi:
+        return JsonResponse({'results': [], 'saldo_total': 0, 'saldo_lotes': 0, 'saldo_sem_lote': 0})
+    try:
+        from decimal import Decimal
+        from django.db.models import Sum
+        from Produtos.models import Lote, SaldoProduto
+
+        lotes_qs = (
+            Lote.objects.using(banco)
+            .filter(lote_empr=int(empresa_id), lote_prod=str(prod_codi), lote_ativ=True)
+            .order_by('lote_data_vali', 'lote_lote')
+            .values('lote_lote', 'lote_sald', 'lote_data_fabr', 'lote_data_vali', 'lote_obse')[:200]
+        )
+        results = []
+        saldo_lotes = Decimal('0')
+        for row in lotes_qs:
+            sald = Decimal(str(row.get('lote_sald') or 0))
+            saldo_lotes += sald
+            results.append({
+                'lote_lote': int(row.get('lote_lote')),
+                'lote_sald': float(sald),
+                'lote_data_fabr': row.get('lote_data_fabr'),
+                'lote_data_vali': row.get('lote_data_vali'),
+                'lote_obse': row.get('lote_obse'),
+            })
+
+        sp = (
+            SaldoProduto.objects.using(banco)
+            .filter(produto_codigo_id=str(prod_codi), empresa=str(empresa_id), filial=str(filial_id))
+            .first()
+        )
+        saldo_total = Decimal(str(getattr(sp, 'saldo_estoque', 0) or 0))
+        saldo_sem_lote = saldo_total - saldo_lotes
+
+        return JsonResponse({
+            'results': results,
+            'saldo_total': float(saldo_total),
+            'saldo_lotes': float(saldo_lotes),
+            'saldo_sem_lote': float(saldo_sem_lote),
+        })
+    except Exception:
+        return JsonResponse({'results': [], 'saldo_total': 0, 'saldo_lotes': 0, 'saldo_sem_lote': 0})

@@ -19,7 +19,6 @@ class Migration(migrations.Migration):
                 ('lote_lote', models.IntegerField()),
                 ('lote_unit', models.DecimalField(decimal_places=2, help_text='Preço unitário', max_digits=15)),
                 ('lote_sald', models.DecimalField(decimal_places=2, help_text='Saldo', max_digits=15)),
-                ('lote_usua', models.IntegerField()),
                 ('lote_data_alt', models.DateTimeField(auto_now=True, help_text='Data de alteração')),
                 ('lote_data_venc', models.DateField(help_text='Data de vencimento')),
                 ('lote_ativ', models.BooleanField(default=True, help_text='Lote ativo')),

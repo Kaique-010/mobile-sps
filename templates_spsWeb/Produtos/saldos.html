@@ -86,8 +86,14 @@
             <ul class="list-group">
               {% for produto in saldos_produtos %}
               <li class="list-group-item d-flex justify-content-between align-items-center">
-                {{ produto.prod_nome }}
-                <span class="badge bg-primary">{{ produto.saldo_atual }}</span>
+                <div class="me-2">{{ produto.prod_nome }}</div>
+                <div class="d-flex gap-2 flex-wrap justify-content-end">
+                  <span class="badge bg-secondary">Total {{ produto.saldo_total|floatformat:2 }}</span>
+                  <span class="badge bg-primary">Lotes {{ produto.saldo_lotes|floatformat:2 }}</span>
+                  {% if produto.saldo_sem_lote and produto.saldo_sem_lote != 0 %}
+                  <span class="badge bg-warning text-dark">Sem lote {{ produto.saldo_sem_lote|floatformat:2 }}</span>
+                  {% endif %}
+                </div>
               </li>
               {% endfor %}
             </ul>

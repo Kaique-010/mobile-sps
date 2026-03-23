@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block content %}
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Formulação{% endblock %}</title>
+    <style>
+        .sidebar {
+            height: 70vh;
+            background-color: #2c2f31;
+            color: white;
+            padding-top: 20px;
+            border-radius: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .sidebar a {
+            color: #adb5bd;
+            text-decoration: none;
+            padding: 10px 20px;
+            display: block;
+        }
+
+        .sidebar a:hover,
+        .sidebar a.active {
+            color: white;
+        }
+
+        .main-content {
+            padding: 15px;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-2 sidebar d-none d-md-block">
+                <h4 class="text-left mb-4">Formulação</h4>
+                <a href="{% url 'FormulacaoWeb:formula_list' slug=slug %}"
+                    class="{% if request.resolver_match.url_name == 'formula_list' or request.resolver_match.url_name == 'formula_create' or request.resolver_match.url_name == 'formula_edit' %}active{% endif %}">
+                    Fórmulas
+                </a>
+                <a href="{% url 'FormulacaoWeb:ordem_list' slug=slug %}"
+                    class="{% if request.resolver_match.url_name == 'ordem_list' or request.resolver_match.url_name == 'ordem_create' %}active{% endif %}">
+                    Ordens de Produção
+                </a>
+            </div>
+            <div class="col-md-10 main-content">
+                {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+                {% endif %}
+                {% block formulacao_content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+    {% block extra_js %}{% endblock %}
+</body>
+
+</html>
+{% endblock %}

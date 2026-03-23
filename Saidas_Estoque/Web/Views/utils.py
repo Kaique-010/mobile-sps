@@ -43,3 +43,32 @@ def autocomplete_produtos(request, slug=None):
     qs = qs.order_by('prod_nome')[:20]
     data = [{'id': str(obj.prod_codi), 'text': f"{obj.prod_codi} - {obj.prod_nome}"} for obj in qs]
     return JsonResponse({'results': data})
+
+
+def lotes_produto(request, slug=None):
+    banco = get_licenca_db_config(request) or 'default'
+    empresa_id = request.session.get('empresa_id', 1)
+    prod_codi = (request.GET.get('prod_codi') or request.GET.get('produto') or '').strip()
+    if not prod_codi:
+        return JsonResponse({'results': []})
+    try:
+        from Produtos.models import Lote
+        qs = (
+            Lote.objects.using(banco)
+            .filter(lote_empr=int(empresa_id), lote_prod=str(prod_codi), lote_ativ=True)
+            .order_by('lote_data_vali', 'lote_lote')
+            .values('lote_lote', 'lote_sald', 'lote_data_fabr', 'lote_data_vali')[:200]
+        )
+        results = []
+        for row in qs:
+            results.append(
+                {
+                    'lote_lote': int(row.get('lote_lote')),
+                    'lote_sald': float(row.get('lote_sald') or 0),
+                    'lote_data_fabr': row.get('lote_data_fabr'),
+                    'lote_data_vali': row.get('lote_data_vali'),
+                }
+            )
+        return JsonResponse({'results': results})
+    except Exception:
+        return JsonResponse({'results': []})

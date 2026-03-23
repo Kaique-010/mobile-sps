@@ -10,10 +10,44 @@ logger = logging.getLogger(__name__)
 
 
 class EntradaEstoqueForm(forms.ModelForm):
+    auto_lote = forms.BooleanField(
+        required=False,
+        initial=False,
+        label='Gerar lote sequencial'
+    )
+    lote_data_fabr = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+        label='Data Fabricação'
+    )
+    lote_data_vali = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+        label='Data Validade'
+    )
+    atualizar_preco = forms.BooleanField(
+        required=False,
+        initial=True,
+        label='Atualizar tabela de preços'
+    )
+    preco_vista = forms.DecimalField(
+        required=False,
+        decimal_places=2,
+        max_digits=15,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'inputmode': 'decimal', 'placeholder': 'Preço à vista'}),
+        label='Preço à vista'
+    )
+    preco_prazo = forms.DecimalField(
+        required=False,
+        decimal_places=2,
+        max_digits=15,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'inputmode': 'decimal', 'placeholder': 'Preço a prazo'}),
+        label='Preço a prazo'
+    )
     class Meta:
         model = EntradaEstoque
         fields = [
-            'entr_prod', 'entr_enti', 'entr_data', 'entr_quan', 'entr_tota', 'entr_unit'
+            'entr_prod', 'entr_enti', 'entr_data', 'entr_quan', 'entr_tota', 'entr_unit', 'entr_lote_vend'
         ]
         widgets = {
             'entr_prod': forms.HiddenInput(attrs={
@@ -45,6 +79,10 @@ class EntradaEstoqueForm(forms.ModelForm):
                 'class': 'form-control', 
                 'placeholder': 'Total',
                 'readonly': True}),
+            'entr_lote_vend': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Lote',
+            }),
             
         }
 
@@ -87,3 +125,26 @@ class EntradaEstoqueForm(forms.ModelForm):
         except Exception:
             pass
         return cleaned
+
+    def clean_entr_lote_vend(self):
+        value = self.cleaned_data.get('entr_lote_vend')
+        if value is None or value == '':
+            return None
+        if isinstance(value, int):
+            return value
+        try:
+            s = str(value).strip()
+        except Exception:
+            return None
+        if not s:
+            return None
+        if s.isdigit():
+            return int(s)
+        try:
+            import re
+            parts = re.findall(r'(\d+)', s)
+            if parts:
+                return int(parts[-1])
+        except Exception:
+            pass
+        return None

@@ -76,6 +76,13 @@ class ProdutoFiscalPadraoForm(forms.ModelForm):
             self.fields[field].required = False
 
 class ProdutosForm(forms.ModelForm):
+    prod_unme = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Unidade de Medida'
+        })
+    )
     # Campo de upload de foto desacoplado do BinaryField do modelo
     prod_foto = forms.FileField(required=False, widget=forms.ClearableFileInput(attrs={'class': 'form-control-file'}))
     # Campo livre para Código do Fabricante (não pertence ao modelo)
@@ -97,10 +104,6 @@ class ProdutosForm(forms.ModelForm):
             'prod_nome': forms.TextInput(attrs={
                 'class': 'form-control', 
                 'placeholder': 'Nome do Produto'
-            }),
-            'prod_unme': forms.TextInput(attrs={
-                'class': 'form-control', 
-                'placeholder': 'Unidade de Medida'
             }),
             'prod_grup': forms.Select(attrs={
                 'class': 'form-control', 
@@ -134,6 +137,7 @@ class ProdutosForm(forms.ModelForm):
         }
     
     def __init__(self, *args, **kwargs):
+        self._db_alias = kwargs.pop('database', None)
         super(ProdutosForm, self).__init__(*args, **kwargs)
         # Configurando campos opcionais
         self.fields['prod_grup'].required = False
@@ -144,6 +148,32 @@ class ProdutosForm(forms.ModelForm):
         self.fields['prod_foto'].required = False
         self.fields['prod_codi'].required = False
         self.fields['prod_gtin'].required = False
+        self.fields['prod_unme'].required = True
+
+    def clean_prod_unme(self):
+        val = self.cleaned_data.get('prod_unme')
+        code = None
+        try:
+            from Produtos.models import UnidadeMedida
+        except Exception:
+            return val
+        if isinstance(val, UnidadeMedida):
+            return val
+        if isinstance(val, str):
+            code = val.strip().upper()
+        if not code:
+            raise forms.ValidationError('Informe a unidade de medida.')
+        alias = self._db_alias or 'default'
+        unme = UnidadeMedida.objects.using(alias).filter(unid_codi=code).first()
+        if unme:
+            return unme
+        from core.utils import get_ncm_master_db
+        master_alias = get_ncm_master_db(alias)
+        master_unme = UnidadeMedida.objects.using(master_alias).filter(unid_codi=code).first()
+        desc = getattr(master_unme, 'unid_desc', code) if master_unme else code
+        unme = UnidadeMedida(unid_codi=code, unid_desc=desc)
+        unme.save(using=alias)
+        return unme
 
 class UnidadeMedidaForm(forms.ModelForm):
     class Meta:

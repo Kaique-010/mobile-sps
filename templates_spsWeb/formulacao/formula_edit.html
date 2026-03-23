@@ -1,0 +1,281 @@
+{% extends 'formulacao/base_formulacao.html' %}
+
+{% block title %}Editar Fórmula{% endblock %}
+
+{% block formulacao_content %}
+{% if not formula %}
+<div class="alert alert-warning">Fórmula não encontrada.</div>
+{% else %}
+<div class="card shadow-sm mb-4">
+    <div class="card-header py-3 border-bottom">
+        <div class="d-flex justify-content-center align-items-center position-relative">
+            <h4 class="mb-0 fw-bold text-secondary">Fórmula</h4>
+            <div class="position-absolute start-0">
+                <a href="{% url 'FormulacaoWeb:formula_list' slug=slug %}" class="btn btn-outline-secondary btn-sm">
+                    Voltar
+                </a>
+            </div>
+            <div class="position-absolute end-0">
+                <a class="btn btn-outline-primary btn-sm"
+                    href="{% url 'FormulacaoWeb:ordem_create' slug=slug %}?produto={{ formula.form_prod.prod_codi }}&versao={{ formula.form_vers }}">
+                    Criar OP
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row g-2 align-items-center">
+            <div class="col-md-8">
+                <div class="fw-semibold">{{ formula.form_prod.prod_codi }} - {{ formula.form_prod.prod_nome }}</div>
+                <div class="text-muted small">Versão {{ formula.form_vers }} | ID {{ formula.id }}</div>
+            </div>
+            <div class="col-md-4">
+                <form method="post" class="d-flex justify-content-end align-items-center gap-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="toggle_ativ">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="form_ativ" name="form_ativ" {% if
+                            formula.form_ativ %}checked{% endif %}>
+                        <label class="form-check-label" for="form_ativ">Ativa</label>
+                    </div>
+                    <button type="submit" class="btn btn-outline-secondary btn-sm">Salvar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header py-3 border-bottom">
+        <h5 class="mb-0 fw-bold text-secondary">Insumos</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive mb-4">
+            <table class="table table-sm table-striped align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>Insumo</th>
+                        <th class="text-end">Qtde</th>
+                        <th class="text-end">Perda (%)</th>
+                        <th class="text-center">Saída</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for i in itens %}
+                    <tr>
+                        <td>{{ i.form_item }}</td>
+                        <td>{{ i.form_insu.prod_codi }} - {{ i.form_insu.prod_nome }}</td>
+                        <td class="text-end">{{ i.form_qtde }}</td>
+                        <td class="text-end">{{ i.form_perd_perc|default:"0" }}</td>
+                        <td class="text-center">
+                            <form method="post" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="toggle_baixa_item">
+                                <input type="hidden" name="id" value="{{ i.id }}">
+                                <input type="hidden" name="baixar"
+                                    value="{% if i.form_baixa_estoque %}0{% else %}1{% endif %}">
+                                <button type="submit" class="btn btn-outline-secondary btn-sm">
+                                    {% if i.form_baixa_estoque %}Sim{% else %}Não{% endif %}
+                                </button>
+                            </form>
+                        </td>
+                        <td class="text-end">
+                            <form method="post" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="del_item">
+                                <input type="hidden" name="id" value="{{ i.id }}">
+                                <button type="submit" class="btn btn-outline-danger btn-sm">Remover</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-3">Sem insumos</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <form method="post" class="row g-3">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_item">
+            <div class="col-md-7">
+                <label class="form-label" for="autocomplete-form-insumo">{{ item_form.form_insu.label }}</label>
+                <div class="position-relative">
+                    <div class="input-group">
+                        <input type="text" id="autocomplete-form-insumo" class="form-control"
+                            placeholder="Digite para buscar insumo...">
+                        <button type="button" class="btn btn-outline-primary" id="btn-insumo-cadastro-rapido">Cadastro
+                            rápido</button>
+                    </div>
+                    <div id="dropdown-form-insumo" class="list-group position-absolute w-100" style="z-index: 1000;">
+                    </div>
+                </div>
+                <div class="d-none">
+                    {{ item_form.form_insu }}
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="{{ item_form.form_qtde.id_for_label }}">{{ item_form.form_qtde.label }}</label>
+                {{ item_form.form_qtde }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label"
+                    for="{{ item_form.form_perd_perc.id_for_label }}">{{item_form.form_perd_perc.label }}</label>
+                {{ item_form.form_perd_perc }}
+            </div>
+            <div class="col-md-12 d-grid">
+                <button type="submit" class="btn btn-primary">Adicionar Insumo</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+    (function () {
+        function setupSelectAutocomplete(opts) {
+            const inputEl = opts.inputEl;
+            const selectEl = opts.selectEl;
+            const dropdownEl = opts.dropdownEl;
+            const url = opts.url;
+            if (!inputEl || !selectEl || !dropdownEl || !url) return;
+
+            let debounce = null;
+            async function fetchResults(term) {
+                try {
+                    const resp = await fetch(`${url}?term=${encodeURIComponent(term)}`);
+                    const json = await resp.json();
+                    dropdownEl.innerHTML = '';
+                    (json.results || []).forEach((item) => {
+                        const a = document.createElement('a');
+                        a.href = '#';
+                        a.className = 'list-group-item list-group-item-action';
+                        a.textContent = item.text;
+                        a.dataset.id = item.id;
+                        a.addEventListener('click', (ev) => {
+                            ev.preventDefault();
+                            selectEl.value = item.id;
+                            inputEl.value = item.text;
+                            dropdownEl.innerHTML = '';
+                        });
+                        dropdownEl.appendChild(a);
+                    });
+                } catch (e) { console.error('Erro no autocomplete:', e); }
+            }
+
+            inputEl.addEventListener('input', (e) => {
+                const term = (e.target.value || '').trim();
+                clearTimeout(debounce);
+                dropdownEl.innerHTML = '';
+                if (term.length < 2) return;
+                debounce = setTimeout(() => fetchResults(term), 250);
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!dropdownEl.parentElement.contains(e.target)) dropdownEl.innerHTML = '';
+            });
+
+            (function prefillFromSelect() {
+                if (!selectEl.value) return;
+                const opt = selectEl.options[selectEl.selectedIndex];
+                if (opt && opt.text) inputEl.value = opt.text;
+            })();
+        }
+
+        const url = "{% url 'FormulacaoWeb:autocomplete_produtos' slug=slug %}";
+        setupSelectAutocomplete({
+            inputEl: document.getElementById('autocomplete-form-insumo'),
+            selectEl: document.getElementById('{{ item_form.form_insu.id_for_label }}'),
+            dropdownEl: document.getElementById('dropdown-form-insumo'),
+            url: url
+        });
+    })();
+</script>
+<script>
+    (function () {
+        const empresaId = "{{ request.session.empresa_id|default:'1' }}";
+        const filialId = "{{ request.session.filial_id|default:'1' }}";
+        const selectInsumoEl = document.getElementById('{{ item_form.form_insu.id_for_label }}');
+        const btnCadastroRapido = document.getElementById('btn-insumo-cadastro-rapido');
+        const modalHtml = `
+          <div id="modal-insumo-cadastro-rapido" class="modal fade show" tabindex="-1" style="display:none; background-color: rgba(0,0,0,.5);">
+            <div class="modal-dialog">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title">Cadastro rápido de produto (insumo)</h5>
+                  <button type="button" class="btn-close" id="modal-insumo-close"></button>
+                </div>
+                <div class="modal-body">
+                  <div class="mb-3">
+                    <label class="form-label">Nome</label>
+                    <input type="text" class="form-control" id="insumo-cr-nome" placeholder="Nome do produto">
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Unidade (código)</label>
+                    <input type="text" class="form-control" id="insumo-cr-unme" placeholder="Ex: UN">
+                  </div>
+                  <div class="text-muted small">Empresa: ${empresaId} | Filial: ${filialId}</div>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" id="modal-insumo-cancel">Cancelar</button>
+                  <button type="button" class="btn btn-primary" id="modal-insumo-save">Salvar</button>
+                </div>
+              </div>
+            </div>
+          </div>`;
+        function ensureModal() {
+            let el = document.getElementById('modal-insumo-cadastro-rapido');
+            if (!el) {
+                const div = document.createElement('div');
+                div.innerHTML = modalHtml;
+                document.body.appendChild(div.firstElementChild);
+                el = document.getElementById('modal-insumo-cadastro-rapido');
+                const hide = () => { el.style.display = 'none'; };
+                document.getElementById('modal-insumo-close').addEventListener('click', hide);
+                document.getElementById('modal-insumo-cancel').addEventListener('click', hide);
+                document.getElementById('modal-insumo-save').addEventListener('click', async () => {
+                    const nome = document.getElementById('insumo-cr-nome').value.trim();
+                    const unme = document.getElementById('insumo-cr-unme').value.trim();
+                    if (!nome) return;
+                    try {
+                        const csrf = (document.querySelector('[name=csrfmiddlewaretoken]')?.value) || (document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '');
+                        const resp = await fetch(`/api/{{ slug }}/produtos/produtos/cadastro_rapido/`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                            credentials: 'same-origin',
+                            body: JSON.stringify({ prod_nome: nome, unme: unme })
+                        });
+                        const json = await resp.json();
+                        if (resp.ok) {
+                            const id = json.id;
+                            const codigo = json.prod_codi;
+                            const nomeOut = json.prod_nome;
+                            if (selectInsumoEl) {
+                                selectInsumoEl.value = id;
+                            }
+                            const inputEl = document.getElementById('autocomplete-form-insumo');
+                            if (inputEl) inputEl.value = `${codigo} - ${nomeOut}`;
+                            el.style.display = 'none';
+                        } else {
+                            alert('Erro ao cadastrar: ' + (json.detail || 'Verifique os dados.'));
+                        }
+                    } catch (e) { alert('Falha ao cadastrar produto.'); }
+                });
+            }
+            return el;
+        }
+        if (btnCadastroRapido) {
+            btnCadastroRapido.addEventListener('click', () => {
+                const el = ensureModal();
+                el.style.display = 'block';
+            });
+        }
+    })();
+</script>
+{% endblock %}
