@@ -1,4 +1,4 @@
-from django.db import transaction
+from django.db import transaction, connections
 import logging
 from decimal import Decimal, InvalidOperation
 from django.db.models import Max
@@ -66,11 +66,12 @@ class PedidoVendaService:
     def pedido_tem_baixa(banco: str, pedido) -> bool:
         from Saidas_Estoque.models import SaidasEstoque
 
+        base = f"Saída automática - Pedido {pedido.pedi_nume}"
         return SaidasEstoque.objects.using(banco).filter(
             said_empr=pedido.pedi_empr,
             said_fili=pedido.pedi_fili,
-            said_obse__exact=f"Saída automática - Pedido {pedido.pedi_nume}",
-        ).exists()
+            said_obse__startswith=base,
+        ).exclude(said_obse__icontains="ESTORNO").exists()
 
     @staticmethod
     def pedido_tem_estorno(banco: str, pedido) -> bool:
@@ -144,15 +145,6 @@ class PedidoVendaService:
             said_enti=str(pedido.pedi_forn),
         )
 
-        saldo, _ = SaldoProduto.objects.using(banco).get_or_create(
-            produto_codigo=produto_codigo,
-            empresa=str(pedido.pedi_empr),
-            filial=str(pedido.pedi_fili),
-            defaults={'saldo_estoque': Decimal('0.00')},
-        )
-        saldo.saldo_estoque -= abs(quantidade)
-        saldo.save(using=banco, update_fields=["saldo_estoque"])
-
         return {'sucesso': True, 'processado': True}
 
     @staticmethod
@@ -175,15 +167,22 @@ class PedidoVendaService:
                 return {'sucesso': True, 'processado': False, 'motivo': 'Item sem baixa para estornar'}
 
             processado = False
+            ultimo = SaidasEstoque.objects.using(banco).aggregate(mx=Max('said_sequ')).get('mx')
+            proximo_sequencial = (int(ultimo) + 1) if ultimo else 1
             for saida in saidas:
-                saldo, _ = SaldoProduto.objects.using(banco).get_or_create(
-                    produto_codigo=produto_codigo,
-                    empresa=str(pedido.pedi_empr),
-                    filial=str(pedido.pedi_fili),
-                    defaults={'saldo_estoque': Decimal('0.00')},
+                SaidasEstoque.objects.using(banco).create(
+                    said_empr=pedido.pedi_empr,
+                    said_fili=pedido.pedi_fili,
+                    said_sequ=proximo_sequencial,
+                    said_data=getattr(saida, "said_data", None) or pedido.pedi_data,
+                    said_prod=str(getattr(saida, "said_prod", "") or produto_codigo),
+                    said_quan=Decimal(str(getattr(saida, "said_quan", 0) or 0)) * Decimal("-1"),
+                    said_tota=Decimal(str(getattr(saida, "said_tota", 0) or 0)) * Decimal("-1"),
+                    said_obse=f"{base_obse} - ESTORNO",
+                    said_usua=int(getattr(saida, "said_usua", 1) or 1),
+                    said_enti=str(getattr(saida, "said_enti", "") or pedido.pedi_forn),
                 )
-                saldo.saldo_estoque += Decimal(str(saida.said_quan or 0))
-                saldo.save(using=banco, update_fields=["saldo_estoque"])
+                proximo_sequencial += 1
 
                 saida.said_obse = f"{base_obse} - REVERTIDA"
                 saida.save(using=banco, update_fields=["said_obse"])
@@ -202,26 +201,32 @@ class PedidoVendaService:
         saidas = SaidasEstoque.objects.using(banco).filter(
             said_empr=pedido.pedi_empr,
             said_fili=pedido.pedi_fili,
-            said_obse__startswith=base_obse,
-        ).exclude(said_obse__icontains="REVERTIDA")
+            said_obse__exact=base_obse,
+        )
 
         if not saidas.exists():
             return {'sucesso': True, 'processado': False, 'motivo': 'Pedido sem baixa de estoque para estornar'}
 
         processado = False
+        ultimo = SaidasEstoque.objects.using(banco).aggregate(mx=Max('said_sequ')).get('mx')
+        proximo_sequencial = (int(ultimo) + 1) if ultimo else 1
         for saida in saidas:
             produto_codigo = PedidoVendaService._normalizar_codigo_produto(banco, pedido, getattr(saida, 'said_prod', ''))
             if not produto_codigo:
                 continue
-
-            saldo, _ = SaldoProduto.objects.using(banco).get_or_create(
-                produto_codigo=produto_codigo,
-                empresa=str(pedido.pedi_empr),
-                filial=str(pedido.pedi_fili),
-                defaults={'saldo_estoque': Decimal('0.00')},
+            SaidasEstoque.objects.using(banco).create(
+                said_empr=pedido.pedi_empr,
+                said_fili=pedido.pedi_fili,
+                said_sequ=proximo_sequencial,
+                said_data=getattr(saida, "said_data", None) or pedido.pedi_data,
+                said_prod=str(getattr(saida, "said_prod", "") or produto_codigo),
+                said_quan=Decimal(str(getattr(saida, "said_quan", 0) or 0)) * Decimal("-1"),
+                said_tota=Decimal(str(getattr(saida, "said_tota", 0) or 0)) * Decimal("-1"),
+                said_obse=f"{base_obse} - ESTORNO",
+                said_usua=int(getattr(saida, "said_usua", 1) or 1),
+                said_enti=str(getattr(saida, "said_enti", "") or pedido.pedi_forn),
             )
-            saldo.saldo_estoque += Decimal(str(saida.said_quan or 0))
-            saldo.save(using=banco, update_fields=["saldo_estoque"])
+            proximo_sequencial += 1
 
             saida.said_obse = f"{base_obse} - REVERTIDA"
             saida.save(using=banco, update_fields=["said_obse"])
@@ -234,13 +239,24 @@ class PedidoVendaService:
         return True
     @staticmethod
     def _proximo_pedido_numero(banco: str, pedi_empr: int, pedi_fili: int) -> int:
-        # Número do pedido precisa ser único globalmente, pois é a PK.
-        ultimo = (
-            PedidoVenda.objects.using(banco)
-            .order_by('-pedi_nume')
-            .first()
-        )
-        return (ultimo.pedi_nume + 1) if ultimo else 1
+        with connections[banco].cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT GREATEST(
+                    COALESCE((SELECT MAX(pedi_nume)::bigint FROM pedidosvenda), 0),
+                    COALESCE((
+                        SELECT MAX(NULLIF(regexp_replace(said_obse, '\\D', '', 'g'), '')::bigint)
+                        FROM saidasestoque
+                        WHERE said_empr = %s
+                          AND said_fili = %s
+                          AND said_obse LIKE 'Saída automática - Pedido %%'
+                    ), 0)
+                ) AS max_num
+                """,
+                [pedi_empr, pedi_fili],
+            )
+            max_num = cursor.fetchone()[0] or 0
+        return int(max_num) + 1 if max_num else 1
 
     @transaction.atomic
     @staticmethod
@@ -348,7 +364,6 @@ class PedidoVendaService:
                 )
                 
                 motor.aplicar_no_item(item, pacote)  # <-- substitui todos os hasattr manuais
-                item.save(using=banco)
 
             except Exception as e:
                 PedidoVendaService.logger.exception(
@@ -522,7 +537,6 @@ class PedidoVendaService:
                 )
                 pacote = motor.calcular_item(ctx=ctx, item=item, tipo_oper=pedi_tipo_oper or 'VENDA')
                 motor.aplicar_no_item(item, pacote)
-                item.save(using=banco)
             except Exception as e:
                 PedidoVendaService.logger.exception(
                     "[PedidoService.update] erro fiscal item=%s tipo=%s err=%s",
