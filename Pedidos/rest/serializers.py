@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from datetime import datetime
+from decimal import Decimal
 from Licencas.models import Empresas
 from Produtos.models import Produtos
 from ..models import PedidoVenda, Itenspedidovenda, PedidosGeral
@@ -14,15 +15,21 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+class ConsumoPorLoteSerializer(serializers.Serializer):
+    iped_lote_vend = serializers.IntegerField(required=False, allow_null=True)
+    iped_quan = serializers.DecimalField(max_digits=15, decimal_places=5)
+
+
 class ItemPedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
     produto_nome = serializers.SerializerMethodField()
+    consumo_por_lote = ConsumoPorLoteSerializer(many=True, write_only=True, required=False)
 
     class Meta:
         model = Itenspedidovenda
         fields = [
-            'iped_prod', 'iped_quan', 'iped_unit', 'iped_fret', 'iped_desc',
+            'iped_prod', 'iped_quan', 'iped_unit', 'iped_fret', 'iped_desc', 'iped_lote_vend',
             'iped_unli', 'iped_cust', 'iped_tipo', 'iped_desc_item',
-            'iped_perc_desc', 'iped_unme', 'produto_nome'
+            'iped_perc_desc', 'iped_unme', 'produto_nome', 'consumo_por_lote'
         ]
 
     def get_produto_nome(self, obj):
@@ -63,6 +70,73 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
             'gerar_titulos', 'financeiro_titulos'
         ]
 
+    @staticmethod
+    def _to_decimal(value, default='0'):
+        if value is None:
+            return Decimal(str(default))
+        try:
+            s = str(value).strip()
+            if s == '':
+                return Decimal(str(default))
+            return Decimal(s)
+        except Exception:
+            return Decimal(str(default))
+
+    @staticmethod
+    def _expand_itens_por_lote(itens_data):
+        itens_expandidos = []
+        for item in (itens_data or []):
+            if not isinstance(item, dict):
+                itens_expandidos.append(item)
+                continue
+
+            consumo_por_lote = item.pop('consumo_por_lote', None)
+            if not consumo_por_lote:
+                itens_expandidos.append(item)
+                continue
+
+            partes = []
+            for c in (consumo_por_lote or []):
+                if not isinstance(c, dict):
+                    continue
+                qtd = PedidoVendaSerializer._to_decimal(c.get('iped_quan', 0), default='0')
+                if qtd <= 0:
+                    continue
+                partes.append({
+                    'iped_lote_vend': c.get('iped_lote_vend', None),
+                    'iped_quan': qtd,
+                })
+
+            if not partes:
+                itens_expandidos.append(item)
+                continue
+
+            qtd_original = PedidoVendaSerializer._to_decimal(item.get('iped_quan', 0), default='0')
+            qtd_total = sum((p['iped_quan'] for p in partes), Decimal('0'))
+            if qtd_original <= 0:
+                qtd_original = qtd_total
+
+            desc_total = PedidoVendaSerializer._to_decimal(item.get('iped_desc', 0), default='0')
+            desc_acumulado = Decimal('0.00')
+
+            for idx, p in enumerate(partes):
+                novo = item.copy()
+                novo['iped_quan'] = p['iped_quan']
+                novo['iped_lote_vend'] = p.get('iped_lote_vend', None)
+
+                if desc_total and desc_total != 0 and qtd_original > 0:
+                    if idx == len(partes) - 1:
+                        desc_item = (desc_total - desc_acumulado).quantize(Decimal('0.01'))
+                    else:
+                        proporcao = (p['iped_quan'] / qtd_original) if qtd_original else Decimal('0')
+                        desc_item = (desc_total * proporcao).quantize(Decimal('0.01'))
+                        desc_acumulado += desc_item
+                    novo['iped_desc'] = desc_item
+
+                itens_expandidos.append(novo)
+
+        return itens_expandidos
+
     def get_itens(self, obj):
         banco = self.context.get('banco')
         itens = Itenspedidovenda.objects.using(banco).filter(
@@ -102,6 +176,8 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
         if validated_data.get('pedi_desc') is None and parametros.get('desconto_percentual') is not None:
             valores = calcular_valores_pedido(itens_data, desconto_percentual=parametros.get('desconto_percentual'))
             validated_data['pedi_desc'] = valores['desconto']
+
+        itens_data = self._expand_itens_por_lote(itens_data)
 
         request = self.context.get('request')
         pedido = PedidoVendaService.create_pedido_venda(
@@ -166,6 +242,8 @@ class PedidoVendaSerializer(BancoContextMixin, serializers.ModelSerializer):
         if validated_data.get('pedi_desc') is None and parametros.get('desconto_percentual') is not None:
             valores = calcular_valores_pedido(itens_data, desconto_percentual=parametros.get('desconto_percentual'))
             validated_data['pedi_desc'] = valores['desconto']
+
+        itens_data = self._expand_itens_por_lote(itens_data)
 
         request = self.context.get('request')
         instance = PedidoVendaService.update_pedido_venda(

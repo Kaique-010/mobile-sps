@@ -313,6 +313,140 @@ class PedidoVendaViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
         except Exception as e:
             return tratar_erro(e)
 
+    @action(detail=False, methods=['get'], url_path='lotes-produtos-desc')
+    def lotes_produtos_desc(self, request, *args, **kwargs):
+        try:
+            banco = get_licenca_db_config(request)
+            if not banco:
+                raise NotFound("Banco de dados não encontrado.")
+
+            empresa_id = (
+                request.query_params.get('empresa')
+                or request.query_params.get('pedi_empr')
+                or request.query_params.get('lote_empr')
+                or request.session.get('empresa_id', 1)
+            )
+
+            prod_codi = (request.query_params.get('prod_codi') or request.query_params.get('produto') or '').strip()
+            if not prod_codi:
+                raise ValidationError("prod_codi é obrigatório")
+
+            qtd = request.query_params.get('qtd') or request.query_params.get('quantidade')
+            qtd = float(qtd) if (qtd is not None and str(qtd).strip() != '') else None
+
+            from Produtos.models import Lote, SaldoProduto
+            from decimal import Decimal
+            from django.utils import timezone
+
+            try:
+                empresa_int = int(empresa_id)
+            except Exception:
+                empresa_int = int(str(empresa_id or 1).strip() or 1)
+
+            lotes_qs = (
+                Lote.objects.using(banco)
+                .filter(
+                    lote_empr=empresa_int,
+                    lote_prod=str(prod_codi),
+                    lote_ativ=True,
+                )
+                .order_by('lote_data_vali', 'lote_data_fabr', 'lote_lote')
+            )
+
+            lotes = []
+            saldo_lotes = Decimal("0")
+            for row in lotes_qs.values('lote_lote', 'lote_unit', 'lote_sald', 'lote_data_fabr', 'lote_data_vali', 'lote_obse')[:500]:
+                saldo_lotes += Decimal(str(row.get('lote_sald') or 0))
+                data_vali = row.get('lote_data_vali')
+                data_fabr = row.get('lote_data_fabr')
+                status_venc = None
+                if data_vali:
+                    try:
+                        hoje = timezone.localdate()
+                    except Exception:
+                        hoje = timezone.now().date()
+                    if data_vali < hoje:
+                        status_venc = 'VENCIDO'
+                    else:
+                        try:
+                            delta = (data_vali - hoje).days
+                        except Exception:
+                            delta = None
+                        if delta is not None and 0 <= delta <= 30:
+                            status_venc = 'PRÓXIMO_VENCIMENTO'
+                        else:
+                            status_venc = 'VÁLIDO'
+                lotes.append(
+                    {
+                        'lote_lote': int(row.get('lote_lote')),
+                        'lote_unit': float(row.get('lote_unit') or 0),
+                        'lote_sald': float(row.get('lote_sald') or 0),
+                        'lote_data_fabr': data_fabr.isoformat() if hasattr(data_fabr, 'isoformat') else data_fabr,
+                        'lote_data_vali': data_vali.isoformat() if hasattr(data_vali, 'isoformat') else data_vali,
+                        'lote_obse': row.get('lote_obse'),
+                        'status_vencimento': status_venc,
+                    }
+                )
+
+            filial_id = (
+                request.query_params.get('filial')
+                or request.query_params.get('pedi_fili')
+                or request.query_params.get('lote_fili')
+                or request.session.get('filial_id', 1)
+            )
+            sp = (
+                SaldoProduto.objects.using(banco)
+                .filter(produto_codigo_id=str(prod_codi), empresa=str(empresa_id), filial=str(filial_id))
+                .first()
+            )
+            saldo_total = Decimal(str(getattr(sp, 'saldo_estoque', 0) or 0))
+            saldo_sem_lote = saldo_total - saldo_lotes
+
+            consumo = []
+            saldo_faltante = None
+            if qtd is not None:
+                restante = Decimal(str(qtd))
+                for lote in lotes:
+                    if restante <= 0:
+                        break
+                    saldo_lote = Decimal(str(lote.get('lote_sald') or 0))
+                    usar = saldo_lote if saldo_lote <= restante else restante
+                    restante -= usar
+                    if usar > 0:
+                        consumo.append(
+                            {
+                                'origem': 'LOTE',
+                                'lote_lote': lote.get('lote_lote'),
+                                'quantidade': float(usar),
+                            }
+                        )
+                if restante > 0:
+                    saldo_disponivel_sem_lote = saldo_sem_lote if saldo_sem_lote > 0 else Decimal("0")
+                    usar = saldo_disponivel_sem_lote if saldo_disponivel_sem_lote <= restante else restante
+                    restante -= usar
+                    if usar > 0:
+                        consumo.append(
+                            {
+                                'origem': 'SEM_LOTE',
+                                'lote_lote': None,
+                                'quantidade': float(usar),
+                            }
+                        )
+                saldo_faltante = float(restante) if restante > 0 else 0.0
+
+            return Response(
+                {
+                    'results': lotes,
+                    'saldo_total': float(saldo_total),
+                    'saldo_lotes': float(saldo_lotes),
+                    'saldo_sem_lote': float(saldo_sem_lote),
+                    'consumo': consumo,
+                    'saldo_faltante': saldo_faltante,
+                }
+            )
+        except Exception as e:
+            return tratar_erro(e)
+
     @action(detail=True, methods=['post'])
     def cancelar_pedido(self, request, empresa=None, filial=None, numero=None, **kwargs):
         try:

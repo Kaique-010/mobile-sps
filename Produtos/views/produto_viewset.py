@@ -6,14 +6,17 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.filters import SearchFilter
+from rest_framework.exceptions import NotFound
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
+from django.db.models import Sum
+from decimal import Decimal
 
 from core.decorator import ModuloRequeridoMixin
 from core.registry import get_licenca_db_config
 from core.utils import get_ncm_master_db
 
-from ..models import Produtos, Tabelaprecos, UnidadeMedida
+from ..models import Produtos, Tabelaprecos, UnidadeMedida, Lote, SaldoProduto
 from ..serializers.produto_serializer import ProdutoSerializer, ProdutoServicoSerializer
 from ..serializers.tabela_preco_serializer import TabelaPrecoSerializer
 from ..consultas.produto_consultas import listar_produtos, buscar_produto_por_codigo
@@ -61,22 +64,30 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
     search_fields = ['prod_nome', 'prod_codi', 'prod_coba']
     filterset_fields = ['prod_empr']
 
+    def _empresa_id(self, request):
+        return (
+            request.query_params.get('prod_empr')
+            or request.query_params.get('empresa')
+            or request.headers.get('X-Empresa')
+            or request.session.get('empresa_id')
+            or request.headers.get('Empresa_id')
+        )
+
+    def _filial_id(self, request):
+        return (
+            request.query_params.get('prod_fili')
+            or request.query_params.get('filial')
+            or request.headers.get('X-Filial')
+            or request.session.get('filial_id')
+            or request.headers.get('Filial_id')
+            or 1
+        )
+
     def get_queryset(self):
         banco = get_licenca_db_config(self.request)
         
-        empresa_id = (
-            self.request.query_params.get('prod_empr') or 
-            self.request.headers.get('X-Empresa') or 
-            self.request.session.get('empresa_id') or
-            self.request.headers.get('Empresa_id')
-        )
-
-        filial_id = (
-            self.request.query_params.get('prod_fili') or
-            self.request.headers.get('X-Filial') or 
-            self.request.session.get('filial_id') or
-            self.request.headers.get('Filial_id')
-        )
+        empresa_id = self._empresa_id(self.request)
+        filial_id = self._filial_id(self.request)
         
         # Reutiliza a consulta otimizada, mas sem limite padrão do ListView
         
@@ -91,6 +102,105 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         context['banco'] = get_licenca_db_config(self.request)
         return context
 
+    def _status_vencimento(self, lote_data_vali):
+        if not lote_data_vali:
+            return None
+        try:
+            hoje = timezone.localdate()
+        except Exception:
+            hoje = timezone.now().date()
+        if lote_data_vali < hoje:
+            return 'VENCIDO'
+        try:
+            delta = (lote_data_vali - hoje).days
+        except Exception:
+            return 'VÁLIDO'
+        if 0 <= delta <= 30:
+            return 'PRÓXIMO_VENCIMENTO'
+        return 'VÁLIDO'
+
+    def get_object(self):
+        banco = get_licenca_db_config(self.request)
+        if not banco:
+            raise NotFound("Banco não encontrado.")
+
+        codigo = self.kwargs.get('codigo') or self.kwargs.get('pk')
+        if codigo is None or str(codigo).strip() == '':
+            raise NotFound("Código do produto não informado.")
+
+        empresa_id = self.kwargs.get('empresa') or self._empresa_id(self.request)
+
+        qs = Produtos.objects.using(banco).filter(prod_codi=str(codigo))
+        if empresa_id is not None and str(empresa_id).strip() != '':
+            qs = qs.filter(prod_empr=str(empresa_id))
+
+        obj = qs.order_by('prod_empr').first()
+        if not obj:
+            raise NotFound("Produto não encontrado.")
+
+        self.check_object_permissions(self.request, obj)
+        return obj
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        data = dict(serializer.data)
+
+        banco = get_licenca_db_config(request)
+        if banco:
+            try:
+                lote_empr = int(instance.prod_empr)
+            except Exception:
+                lote_empr = instance.prod_empr
+
+            try:
+                lotes_qs = (
+                    Lote.objects.using(banco)
+                    .filter(lote_empr=lote_empr, lote_prod=str(instance.prod_codi))
+                    .order_by('lote_data_fabr', 'lote_lote')
+                )
+                data['lotes'] = list(
+                    lotes_qs.values(
+                        'lote_lote',
+                        'lote_unit',
+                        'lote_sald',
+                        'lote_data_fabr',
+                        'lote_data_vali',
+                        'lote_ativ',
+                        'lote_obse',
+                    )
+                )
+            except Exception:
+                data['lotes'] = []
+
+            try:
+                lotes_total = (
+                    Lote.objects.using(banco)
+                    .filter(lote_empr=lote_empr, lote_prod=str(instance.prod_codi), lote_ativ=True)
+                    .aggregate(total=Sum('lote_sald'))
+                    .get('total')
+                )
+                saldo_lotes = Decimal(str(lotes_total or 0))
+
+                filial_id = self._filial_id(request)
+                sp = (
+                    SaldoProduto.objects.using(banco)
+                    .filter(produto_codigo=instance, empresa=str(instance.prod_empr), filial=str(filial_id))
+                    .first()
+                )
+                saldo_total = Decimal(str(getattr(sp, 'saldo_estoque', 0) or 0))
+                saldo_sem_lote = saldo_total - saldo_lotes
+
+                data['saldo_total'] = saldo_total
+                data['saldo_lotes'] = saldo_lotes
+                data['saldo_sem_lote'] = saldo_sem_lote
+            except Exception:
+                data['saldo_total'] = None
+                data['saldo_lotes'] = None
+                data['saldo_sem_lote'] = None
+
+        return Response(data)
+
     @action(detail=False, methods=['get'])
     def busca(self, request, slug=None):
         banco = get_licenca_db_config(request)
@@ -100,10 +210,12 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             request.session.get('empresa_id') or
             request.headers.get('Empresa_id')
         )
+
+        termo = request.query_params.get('q') or request.query_params.get('termo')
+        hash_busca = request.query_params.get('hash')
         logger.info(f"Busca produto com filtro: q={termo}, hash={hash_busca}, empresa={empresa_id}")
 
         # 1. Busca por Hash (QR Code)
-        hash_busca = request.query_params.get('hash')
         if hash_busca:
             cod_produto = buscar_produto_por_hash(banco, hash_busca, empresa_id)
             if cod_produto:
@@ -114,7 +226,6 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             return Response({"detail": "Produto não encontrado via hash"}, status=status.HTTP_404_NOT_FOUND)
 
         # 2. Busca convencional
-        termo = request.query_params.get('q') or request.query_params.get('termo')
         
         # Lógica de fallback para leitura de QR Code direto no campo de busca
         if termo and "/p/" in termo:
@@ -141,7 +252,75 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         )
         
         serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+        data = list(serializer.data)
+
+        if banco and data:
+            try:
+                codigos = []
+                emprs = set()
+                for item in data:
+                    codi = (item.get('prod_codi') or '').strip()
+                    empr = item.get('prod_empr')
+                    if codi:
+                        codigos.append(codi)
+                    if empr is not None and str(empr).strip() != '':
+                        try:
+                            emprs.add(int(empr))
+                        except Exception:
+                            pass
+
+                lotes_rows = []
+                if codigos and emprs:
+                    lotes_rows = list(
+                        Lote.objects.using(banco)
+                        .filter(lote_empr__in=list(emprs), lote_prod__in=codigos, lote_ativ=True)
+                        .order_by('lote_empr', 'lote_prod', 'lote_data_fabr', 'lote_lote')
+                        .values(
+                            'lote_empr',
+                            'lote_prod',
+                            'lote_lote',
+                            'lote_unit',
+                            'lote_sald',
+                            'lote_data_fabr',
+                            'lote_data_vali',
+                            'lote_ativ',
+                            'lote_obse',
+                        )[:3000]
+                    )
+
+                por_produto = {}
+                limite_por_produto = 20
+                for r in lotes_rows:
+                    chave = (str(r.get('lote_empr')), str(r.get('lote_prod')))
+                    arr = por_produto.get(chave)
+                    if arr is None:
+                        arr = []
+                        por_produto[chave] = arr
+                    if len(arr) >= limite_por_produto:
+                        continue
+                    data_vali = r.get('lote_data_vali')
+                    data_fabr = r.get('lote_data_fabr')
+                    arr.append(
+                        {
+                            'lote_lote': r.get('lote_lote'),
+                            'lote_unit': float(r.get('lote_unit') or 0),
+                            'lote_sald': float(r.get('lote_sald') or 0),
+                            'lote_data_fabr': data_fabr.isoformat() if hasattr(data_fabr, 'isoformat') else data_fabr,
+                            'lote_data_vali': data_vali.isoformat() if hasattr(data_vali, 'isoformat') else data_vali,
+                            'lote_ativ': bool(r.get('lote_ativ')),
+                            'lote_obse': r.get('lote_obse'),
+                            'status_vencimento': self._status_vencimento(data_vali),
+                        }
+                    )
+
+                for item in data:
+                    chave = (str(item.get('prod_empr')), str(item.get('prod_codi')))
+                    item['lotes'] = por_produto.get(chave, [])
+            except Exception:
+                for item in data:
+                    item['lotes'] = []
+
+        return Response(data)
 
     @action(detail=False, methods=['post'])
     def impressao_etiquetas(self, request):
