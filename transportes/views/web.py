@@ -46,8 +46,8 @@ class CteListView(CteBaseMixin, ListView):
     model = Cte
     template_name = 'transportes/cte_list.html'
     context_object_name = 'ctes'
-    ordering = ['-id']
-    paginate_by = 20
+    ordering = ['id']
+    paginate_by = 50
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

@@ -66,7 +66,11 @@ class CertificadoLoader:
         if senha is None:
             senha = ""
 
-        logger.info("Carregando certificado digital para filial %s", getattr(self.filial, "id", None))
+        logger.info(
+                "Carregando certificado digital para filial %s/%s",
+                getattr(self.filial, "empr_empr", None),
+                getattr(self.filial, "empr_codi", None),
+            )
 
         try:
             cert_bytes = decrypt_bytes(cert_token)
