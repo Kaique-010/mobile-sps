@@ -1,6 +1,7 @@
 from transportes.models import Cte
 from django.db import transaction
 from django.utils import timezone
+from transportes.services.numeracao_service import NumeracaoService
 
 class RascunhoService:
     def __init__(self, user, empresa, filial, slug=None):
@@ -22,8 +23,8 @@ class RascunhoService:
                 cte.empresa = self.empresa
 
             # Handle Filial assignment (IntegerField)
-            if hasattr(self.filial, 'empr_empr'):
-                cte.filial = self.filial.empr_empr
+            if hasattr(self.filial, 'empr_codi'):
+                cte.filial = self.filial.empr_codi
             else:
                 cte.filial = self.filial
 
@@ -37,7 +38,10 @@ class RascunhoService:
             cte.modelo = '57' # Modelo padrão CTe
             cte.serie = '1' # Série padrão, idealmente viria de config da filial
             cte.subserie = ''
-            cte.numero = 0 # Rascunho começa com zero
+            numerador = NumeracaoService(cte.empresa, cte.filial, cte.serie, slug=self.slug)
+            novo_numero = numerador.proximo_numero()
+            cte.numero = novo_numero
+            cte.id = str(novo_numero)
             cte.emissao = timezone.now().date()
             cte.hora = timezone.now().time()
             
@@ -57,23 +61,6 @@ class RascunhoService:
                          setattr(cte, key, value)
             
             cte.save(using=self.slug)
-            
-            # Tenta recuperar o ID gerado pelo banco se não estiver preenchido
-            if not cte.id:
-                 # Recarrega do banco usando campos unicos (ou quase unicos)
-                 # Ordena por ID descrescente para pegar o ultimo inserido se houver multiplos no mesmo timestamp
-                 cte_recuperado = Cte.objects.using(self.slug).filter(
-                     empresa=cte.empresa,
-                     filial=cte.filial,
-                     status='RAS',
-                     numero=0,
-                     emissao=cte.emissao
-                     # Hora pode ter precisão diferente, melhor não filtrar ou filtrar com range se necessário
-                     # mas para rascunho, empresa/filial/numero=0/status=RAS é forte indicio
-                 ).order_by('-id').first()
-                 
-                 if cte_recuperado:
-                     cte.id = cte_recuperado.id
             
             return cte
 

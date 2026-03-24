@@ -11,13 +11,14 @@ class ValidacaoService:
     def validar_emissao(self) -> bool:
         """Valida se o CTe pode ser emitido"""
         self.errors = []
+        db_alias = self.cte._state.db or 'default'
         
         # Validação de Emitente (Filial)
         if not self.cte.filial:
             self.errors.append("Filial não informada.")
         else:
             # Usar defer para evitar erro em colunas opcionais que podem não existir no banco legado
-            filial = Filiais.objects.using(self.cte._state.db).filter(
+            filial = Filiais.objects.using(db_alias).filter(
                 empr_empr=self.cte.empresa,
                 empr_codi=self.cte.filial
             ).defer('empr_cert_digi').first()
@@ -52,7 +53,7 @@ class ValidacaoService:
             
             
         # Validação de Documentos
-        docs_count = self.cte.documentos.count()
+        docs_count = CteDocumento.objects.using(db_alias).filter(cte_id=self.cte.pk).count()
         if docs_count == 0:
             self.errors.append("Pelo menos um documento (NFe/Outros) deve ser vinculado ao CTe.")
             

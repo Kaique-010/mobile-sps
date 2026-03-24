@@ -27,6 +27,7 @@ class EmissaoService:
         5. Envio para SEFAZ
         6. Atualização de Status
         """
+        db_alias = self.slug or self.cte._state.db or 'default'
         # 1. Validar
         if not self.validador.validar_emissao():
             raise Exception("Falha na validação do CTe: " + str(self.validador.get_errors()))
@@ -35,13 +36,13 @@ class EmissaoService:
         if not self.cte.numero:
             novo_numero = self.numerador.proximo_numero()
             self.cte.numero = novo_numero
-            self.cte.save()
+            self.cte.save(using=db_alias)
 
         # 3. Gerar XML
         try:
             xml_conteudo = self.xml_builder.build()
             self.cte.xml_cte = xml_conteudo
-            self.cte.save()
+            self.cte.save(using=db_alias)
         except Exception as e:
             raise Exception(f"Erro ao gerar XML: {str(e)}")
 
@@ -49,7 +50,7 @@ class EmissaoService:
         try:
             xml_assinado = self.assinador.assinar(xml_conteudo)
             self.cte.xml_cte = xml_assinado # Atualiza com XML assinado
-            self.cte.save()
+            self.cte.save(using=db_alias)
         except Exception as e:
             raise Exception(f"Erro ao assinar XML: {str(e)}")
 
@@ -73,7 +74,7 @@ class EmissaoService:
             self.cte.status = 'REC'
             if resultado_envio.get('recibo'):
                 self.cte.recibo = resultado_envio.get('recibo')
-            self.cte.save()
+            self.cte.save(using=db_alias)
 
             recibo = self.cte.recibo
             if recibo:
@@ -101,20 +102,20 @@ class EmissaoService:
                             break
                         elif status_consulta == 'rejeitado':
                             self.cte.status = 'REJ'
-                            self.cte.save()
+                            self.cte.save(using=db_alias)
                             resultado_envio = retorno_consulta
                             break
                         elif status_consulta == 'processando':
                             self.cte.status = 'PRO'
-                            self.cte.save()
+                            self.cte.save(using=db_alias)
                             continue
                         elif status_consulta == 'recebido':
                             self.cte.status = 'REC'
-                            self.cte.save()
+                            self.cte.save(using=db_alias)
                             continue
                         else:
                             logger.warning(f"Status desconhecido na consulta: {status_consulta}")
-                            self.cte.save()
+                            self.cte.save(using=db_alias)
                             continue
 
                     except Exception as e:
@@ -123,14 +124,15 @@ class EmissaoService:
 
         elif status_envio == 'processando':
             self.cte.status = 'PRO'
-            self.cte.save()
+            self.cte.save(using=db_alias)
         elif status_envio == 'rejeitado':
             self.cte.status = 'REJ'
-            self.cte.save()
+            self.cte.save(using=db_alias)
         
         return resultado_envio
 
     def _processar_autorizacao(self, resultado):
+         db_alias = self.slug or self.cte._state.db or 'default'
          self.cte.status = 'AUT'
          self.cte.protocolo = resultado.get('protocolo')
          
@@ -146,6 +148,6 @@ class EmissaoService:
              
              # Verifica se já não está encapsulado (caso de reprocessamento)
              if not xml_assinado_str.strip().startswith('<cteProc'):
-                self.cte.xml_cte = f'<cteProc xmlns="http://www.portalfiscal.inf.br/cte" versao="3.00">{xml_assinado_str}{xml_protocolo}</cteProc>'
+                self.cte.xml_cte = f'<cteProc xmlns="http://www.portalfiscal.inf.br/cte" versao="4.00">{xml_assinado_str}{xml_protocolo}</cteProc>'
          
-         self.cte.save()
+         self.cte.save(using=db_alias)

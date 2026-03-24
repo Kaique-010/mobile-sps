@@ -118,12 +118,12 @@ class Command(BaseCommand):
                 self.stdout.write("Documento NFe adicionado.")
                 
                 # Debug documentos
-                docs_count = cte.documentos.all().count()
+                docs_count = CteDocumento.objects.using(slug).filter(cte_id=cte.pk).count()
                 self.stdout.write(f"Documentos vinculados: {docs_count}")
                 if docs_count == 0:
                      # Tenta forçar refresh
                      cte.refresh_from_db(using=slug)
-                     self.stdout.write(f"Documentos após refresh: {cte.documentos.all().count()}")
+                     self.stdout.write(f"Documentos após refresh: {CteDocumento.objects.using(slug).filter(cte_id=cte.pk).count()}")
 
             except Exception as e:
                  self.stdout.write(self.style.WARNING(f"Não foi possível adicionar documento (tabela existe?): {e}"))
@@ -142,7 +142,7 @@ class Command(BaseCommand):
             # Recarregar CTe
             cte.refresh_from_db(using=slug)
             self.stdout.write(f"Status Final: {cte.status}")
-            self.stdout.write(f"Chave Acesso: {cte.chave_acesso}")
+            self.stdout.write(f"Chave Acesso: {cte.chave_de_acesso}")
             self.stdout.write(f"Protocolo: {cte.protocolo}")
             if cte.observacoes_fiscais:
                 self.stdout.write(f"Msg Fiscal: {cte.observacoes_fiscais}")
