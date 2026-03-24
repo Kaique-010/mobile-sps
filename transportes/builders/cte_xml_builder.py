@@ -5,7 +5,6 @@ import hashlib
 import re
 import random
 import xml.etree.ElementTree as ET
-from xml.dom import minidom
 
 from transportes.models import Cte, CteDocumento
 from Entidades.models import Entidades
@@ -16,6 +15,7 @@ logger = logging.getLogger(__name__)
 CTE_NS = "http://www.portalfiscal.inf.br/cte"
 ET.register_namespace("", CTE_NS)
 
+
 class CteXmlBuilder:
     def __init__(self, cte: Cte):
         self.cte = cte
@@ -25,8 +25,18 @@ class CteXmlBuilder:
         self.expedidor = None
         self.recebedor = None
         self.tomador = None
-        
+
+        # Campos derivados — preenchidos após carregar entidades
+        self.cidade_ini_nome = ""
+        self.cidade_ini_uf = ""
+        self.cidade_fim_nome = ""
+        self.cidade_fim_uf = ""
+
         self._carregar_dados()
+
+    # ------------------------------------------------------------------
+    # HELPERS de XML
+    # ------------------------------------------------------------------
 
     def _tag(self, local_name: str) -> str:
         return f"{{{CTE_NS}}}{local_name}"
@@ -38,12 +48,11 @@ class CteXmlBuilder:
         return el
 
     def _to_xml(self, root: ET.Element) -> str:
-        raw = ET.tostring(root, encoding="utf-8", xml_declaration=True)
-        try:
-            parsed = minidom.parseString(raw)
-            return parsed.toprettyxml(indent="  ", encoding="utf-8").decode("utf-8")
-        except Exception:
-            return raw.decode("utf-8")
+        """
+        Gera XML compacto sem indentação, sem quebras de linha e SEM declaração <?xml?>.
+        A SEFAZ falha na descompactação se houver whitespace ou pretty-print.
+        """
+        return ET.tostring(root, encoding="unicode", xml_declaration=False)
 
     def _fmt(self, v, decimals: int = 2) -> str:
         try:
@@ -52,31 +61,56 @@ class CteXmlBuilder:
             n = 0.0
         return f"{n:.{decimals}f}"
 
+    def _limpar_numero(self, valor):
+        if not valor:
+            return ""
+        return re.sub(r'\D', '', str(valor))
+
+    # ------------------------------------------------------------------
+    # CARREGAMENTO DE DADOS
+    # ------------------------------------------------------------------
+
     def _carregar_dados(self):
         """Carrega os dados relacionados necessários para o XML"""
         db_alias = self.cte._state.db or 'default'
-        # Carregar dados da filial emitente
+
+        # 1. Filial emitente
         try:
             self.filial = Filiais.objects.using(db_alias).defer('empr_cert_digi').filter(
                 empr_empr=self.cte.empresa,
                 empr_codi=self.cte.filial
             ).first()
             if not self.filial:
-                 raise Exception("Filial não encontrada.")
+                raise Exception("Filial não encontrada.")
         except Exception as e:
             logger.error(f"Erro ao carregar dados da filial: {e}")
             raise Exception("Dados da filial emitente não encontrados.")
 
-        # Carregar dados das entidades envolvidas
+        # 2. Carregar entidades PRIMEIRO
         if self.cte.remetente:
-            self.remetente = Entidades.objects.using(db_alias).filter(enti_clie=self.cte.remetente).first()
-        
+            self.remetente = Entidades.objects.using(db_alias).filter(
+                enti_clie=self.cte.remetente
+            ).first()
+
         if self.cte.destinatario:
-            self.destinatario = Entidades.objects.using(db_alias).filter(enti_clie=self.cte.destinatario).first()
-            
-        # Carregar outros envolvidos se houver (expedidor, recebedor, tomador se for outro)
+            self.destinatario = Entidades.objects.using(db_alias).filter(
+                enti_clie=self.cte.destinatario
+            ).first()
+
         if self.cte.tomador_servico == 4 and self.cte.outro_tomador:
-            self.tomador = Entidades.objects.using(db_alias).filter(enti_clie=self.cte.outro_tomador).first()
+            self.tomador = Entidades.objects.using(db_alias).filter(
+                enti_clie=self.cte.outro_tomador
+            ).first()
+
+        # 3. Derivar nome/UF das cidades DEPOIS de carregar as entidades
+        self.cidade_ini_nome = self.remetente.enti_cida if self.remetente else ""
+        self.cidade_ini_uf   = self.remetente.enti_esta if self.remetente else ""
+        self.cidade_fim_nome = self.destinatario.enti_cida if self.destinatario else ""
+        self.cidade_fim_uf   = self.destinatario.enti_esta if self.destinatario else ""
+
+    # ------------------------------------------------------------------
+    # BUILD PRINCIPAL
+    # ------------------------------------------------------------------
 
     def build(self) -> str:
         chave, cct, dv = self._gerar_chave_acesso()
@@ -97,11 +131,15 @@ class CteXmlBuilder:
 
         return self._to_xml(root)
 
+    # ------------------------------------------------------------------
+    # CHAVE DE ACESSO
+    # ------------------------------------------------------------------
+
     def _gerar_chave_acesso(self):
         if self.cte.chave_de_acesso and len(self.cte.chave_de_acesso) == 44:
             chave = self.cte.chave_de_acesso
             return chave, chave[-9:-1], chave[-1]
-            
+
         uf = str(getattr(self.filial, 'empr_codi_uf', '35')).zfill(2)
         agora = datetime.now()
         am = f"{agora.year % 100:02d}{agora.month:02d}"
@@ -110,11 +148,11 @@ class CteXmlBuilder:
         serie = str(self.cte.serie or "1").zfill(3)
         nct = str(self.cte.numero).zfill(9)
         tp_emis = str(self.cte.forma_emissao or "1")
-        
+
         cct = f"{random.randint(0, 99999999):08d}"
-        
+
         chave_sem_dv = f"{uf}{am}{cnpj}{mod}{serie}{nct}{tp_emis}{cct}"
-        
+
         soma = 0
         peso = 2
         for digito in reversed(chave_sem_dv):
@@ -122,23 +160,60 @@ class CteXmlBuilder:
             peso += 1
             if peso > 9:
                 peso = 2
-        
+
         resto = soma % 11
         dv = 0 if resto < 2 else 11 - resto
-        
+
         chave = f"{chave_sem_dv}{dv}"
         return chave, cct, str(dv)
 
+    # ------------------------------------------------------------------
+    # IDE
+    # ------------------------------------------------------------------
+
     def _build_ide(self, parent, cct: str, dv: str):
         ide = self._add(parent, "ide")
-        self._add(ide, "cUF", str(getattr(self.filial, 'empr_codi_uf', '35')))
+        uf_to_cuf = {
+            "RO": "11",
+            "AC": "12",
+            "AM": "13",
+            "RR": "14",
+            "PA": "15",
+            "AP": "16",
+            "TO": "17",
+            "MA": "21",
+            "PI": "22",
+            "CE": "23",
+            "RN": "24",
+            "PB": "25",
+            "PE": "26",
+            "AL": "27",
+            "SE": "28",
+            "BA": "29",
+            "MG": "31",
+            "ES": "32",
+            "RJ": "33",
+            "SP": "35",
+            "PR": "41",
+            "SC": "42",
+            "RS": "43",
+            "MS": "50",
+            "MT": "51",
+            "GO": "52",
+            "DF": "53",
+        }
+        cuf = str(getattr(self.filial, "empr_codi_uf", "") or "").strip()
+        if not (cuf.isdigit() and len(cuf) == 2):
+            uf = str(getattr(self.filial, "empr_esta", "") or "").strip().upper()
+            cuf = uf_to_cuf.get(uf, "35")
+        self._add(ide, "cUF", cuf)
         self._add(ide, "cCT", str(cct).zfill(8))
         self._add(ide, "CFOP", str(self.cte.cfop or "5353"))
         self._add(ide, "natOp", "PRESTACAO DE SERVICO")
         self._add(ide, "mod", self.cte.modelo or "57")
         self._add(ide, "serie", str(self.cte.serie or "1"))
         self._add(ide, "nCT", str(self.cte.numero))
-        self._add(ide, "dhEmi", datetime.now().isoformat())
+        self._add(ide, "dhEmi", datetime.now().astimezone().isoformat(timespec="seconds"))
         self._add(ide, "tpImp", "1")
         self._add(ide, "tpEmis", self.cte.forma_emissao or "1")
         self._add(ide, "cDV", dv)
@@ -146,35 +221,53 @@ class CteXmlBuilder:
         self._add(ide, "tpCTe", self.cte.tipo_cte or "0")
         self._add(ide, "procEmi", "0")
         self._add(ide, "verProc", "1.0")
-        self._add(ide, "cMunEnv", str(getattr(self.filial, 'empr_codi_cida', '0000000')))
-        self._add(ide, "xMunEnv", self.filial.empr_cida or "Cidade")
-        self._add(ide, "UFEnv", self.filial.empr_esta or "UF")
+        cmun_env = str(getattr(self.filial, "empr_codi_cida", "") or "").strip()
+        if cmun_env.isdigit() and len(cmun_env) < 7:
+            cmun_env = cmun_env.zfill(7)
+        self._add(ide, "cMunEnv", cmun_env or "0000000")
+        self._add(ide, "xMunEnv", self.filial.empr_cida or "")
+        self._add(ide, "UFEnv", self.filial.empr_esta or "")
         self._add(ide, "modal", "01")
         self._add(ide, "tpServ", self.cte.tipo_servico or "0")
         self._add(ide, "indIEToma", "1")
-        self._add(ide, "cMunIni", str(self.cte.cidade_coleta))
-        self._add(ide, "xMunIni", "Cidade Inicio")
-        self._add(ide, "UFIni", "UF")
-        self._add(ide, "cMunFim", str(self.cte.cidade_entrega))
-        self._add(ide, "xMunFim", "Cidade Fim")
-        self._add(ide, "UFFim", "UF")
-        self._add(ide, "retira", "1")
-        self._add(ide, "xDetRetira", "")
 
-    def _limpar_numero(self, valor):
-        if not valor: return ""
-        return re.sub(r'\D', '', str(valor))
+        # Cidade/UF de coleta
+        self._add(ide, "cMunIni", str(self.cte.cidade_coleta or ""))
+        self._add(ide, "xMunIni", self.cidade_ini_nome)
+        self._add(ide, "UFIni", self.cidade_ini_uf)
+
+        # Cidade/UF de entrega
+        self._add(ide, "cMunFim", str(self.cte.cidade_entrega or ""))
+        self._add(ide, "xMunFim", self.cidade_fim_nome)
+        self._add(ide, "UFFim", self.cidade_fim_uf)
+
+        # retira — campo pode não existir no model ainda
+        retira = str(getattr(self.cte, "retira", None) or "0")
+        self._add(ide, "retira", retira)
+
+        # xDetRetira só vai quando retira = 0
+        if retira == "0":
+            det = getattr(self.cte, "det_retira", None) or ""
+            self._add(ide, "xDetRetira", det)
+
+    # ------------------------------------------------------------------
+    # EMIT
+    # ------------------------------------------------------------------
 
     def _build_emit(self, parent):
         if not self.filial:
             return None
-            
+
         cnpj = self._limpar_numero(self.filial.empr_docu)
 
         emit = self._add(parent, "emit")
         self._add(emit, "CNPJ", cnpj)
         self._add(emit, "IE", self._limpar_numero(self.filial.empr_insc_esta))
-        if hasattr(self.filial, "empr_regi_trib") and self.filial.empr_regi_trib is not None and str(self.filial.empr_regi_trib) != "":
+        if (
+            hasattr(self.filial, "empr_regi_trib")
+            and self.filial.empr_regi_trib is not None
+            and str(self.filial.empr_regi_trib) != ""
+        ):
             self._add(emit, "CRT", str(self.filial.empr_regi_trib))
         self._add(emit, "xNome", self.filial.empr_nome)
         self._add(emit, "xFant", self.filial.empr_fant or self.filial.empr_nome)
@@ -189,6 +282,10 @@ class CteXmlBuilder:
         self._add(ender_emit, "UF", self.filial.empr_esta or "")
         self._add(ender_emit, "fone", self._limpar_numero(self.filial.empr_fone))
         return emit
+
+    # ------------------------------------------------------------------
+    # RESPONSÁVEL TÉCNICO
+    # ------------------------------------------------------------------
 
     def _build_resp_tecnico(self, parent, *, chave: str):
         try:
@@ -250,10 +347,14 @@ class CteXmlBuilder:
                 self._add(resp, "hashCSRT", hash_csrt)
         return resp
 
+    # ------------------------------------------------------------------
+    # REMETENTE
+    # ------------------------------------------------------------------
+
     def _build_rem(self, parent):
         if not self.remetente:
             return None
-            
+
         cnpj = self._limpar_numero(self.remetente.enti_cnpj)
         cpf = self._limpar_numero(self.remetente.enti_cpf)
 
@@ -269,7 +370,10 @@ class CteXmlBuilder:
         self._add(ender, "nro", self.remetente.enti_nume or "S/N")
         self._add(ender, "xCpl", self.remetente.enti_comp or "")
         self._add(ender, "xBairro", self.remetente.enti_bair or "")
-        self._add(ender, "cMun", str(getattr(self.remetente, 'enti_cida_codi', '') or ''))
+        cmun = str(getattr(self.remetente, "enti_codi_cida", "") or "").strip()
+        if cmun.isdigit() and len(cmun) < 7:
+            cmun = cmun.zfill(7)
+        self._add(ender, "cMun", cmun)
         self._add(ender, "xMun", self.remetente.enti_cida or "")
         self._add(ender, "CEP", self._limpar_numero(self.remetente.enti_cep))
         self._add(ender, "UF", self.remetente.enti_esta or "")
@@ -277,10 +381,14 @@ class CteXmlBuilder:
             self._add(ender, "fone", self._limpar_numero(self.remetente.enti_fone))
         return rem
 
+    # ------------------------------------------------------------------
+    # DESTINATÁRIO
+    # ------------------------------------------------------------------
+
     def _build_dest(self, parent):
         if not self.destinatario:
             return None
-            
+
         cnpj = self._limpar_numero(self.destinatario.enti_cnpj)
         cpf = self._limpar_numero(self.destinatario.enti_cpf)
 
@@ -296,7 +404,10 @@ class CteXmlBuilder:
         self._add(ender, "nro", self.destinatario.enti_nume or "S/N")
         self._add(ender, "xCpl", self.destinatario.enti_comp or "")
         self._add(ender, "xBairro", self.destinatario.enti_bair or "")
-        self._add(ender, "cMun", str(getattr(self.destinatario, 'enti_cida_codi', '') or ''))
+        cmun = str(getattr(self.destinatario, "enti_codi_cida", "") or "").strip()
+        if cmun.isdigit() and len(cmun) < 7:
+            cmun = cmun.zfill(7)
+        self._add(ender, "cMun", cmun)
         self._add(ender, "xMun", self.destinatario.enti_cida or "")
         self._add(ender, "CEP", self._limpar_numero(self.destinatario.enti_cep))
         self._add(ender, "UF", self.destinatario.enti_esta or "")
@@ -304,15 +415,19 @@ class CteXmlBuilder:
             self._add(ender, "fone", self._limpar_numero(self.destinatario.enti_fone))
         return dest
 
+    # ------------------------------------------------------------------
+    # VALORES DA PRESTAÇÃO
+    # ------------------------------------------------------------------
+
     def _build_vprest(self, parent):
         comps = []
         if self.cte.frete_valor:
-             comps.append(("Frete Valor", self._fmt(self.cte.frete_valor)))
+            comps.append(("Frete Valor", self._fmt(self.cte.frete_valor)))
         if self.cte.pedagio:
-             comps.append(("Pedagio", self._fmt(self.cte.pedagio)))
-        
+            comps.append(("Pedagio", self._fmt(self.cte.pedagio)))
+
         if not comps:
-             comps.append(("Frete Peso", self._fmt(self.cte.total_valor)))
+            comps.append(("Frete Peso", self._fmt(self.cte.total_valor)))
 
         vprest = self._add(parent, "vPrest")
         self._add(vprest, "vTPrest", self._fmt(self.cte.total_valor))
@@ -323,9 +438,13 @@ class CteXmlBuilder:
             self._add(comp_el, "vComp", valor)
         return vprest
 
+    # ------------------------------------------------------------------
+    # IMPOSTOS
+    # ------------------------------------------------------------------
+
     def _build_imp(self, parent):
         cst = self.cte.cst_icms or "00"
-        
+
         imp = self._add(parent, "imp")
         icms = self._add(imp, "ICMS")
         self._add(icms, "CST", cst)
@@ -337,15 +456,14 @@ class CteXmlBuilder:
             self._add(icms, "pRedBC", self._fmt(self.cte.reducao_icms))
 
         if cst in ['10', '70', '90']:
-             if self.cte.base_icms_st and float(self.cte.base_icms_st) > 0:
-                 self._add(icms, "vBCST", self._fmt(self.cte.base_icms_st))
-                 self._add(icms, "pICMSST", self._fmt(self.cte.aliquota_icms_st))
-                 self._add(icms, "vICMSST", self._fmt(self.cte.valor_icms_st))
-                 self._add(icms, "pMVAST", self._fmt(self.cte.margem_valor_adicionado_st))
-                 self._add(icms, "pRedBCST", self._fmt(self.cte.reducao_base_icms_st))
-             
-             if self.cte.reducao_icms and float(self.cte.reducao_icms) > 0:
-                 self._add(icms, "pRedBC", self._fmt(self.cte.reducao_icms))
+            if self.cte.base_icms_st and float(self.cte.base_icms_st) > 0:
+                self._add(icms, "vBCST", self._fmt(self.cte.base_icms_st))
+                self._add(icms, "pICMSST", self._fmt(self.cte.aliquota_icms_st))
+                self._add(icms, "vICMSST", self._fmt(self.cte.valor_icms_st))
+                self._add(icms, "pMVAST", self._fmt(self.cte.margem_valor_adicionado_st))
+                self._add(icms, "pRedBCST", self._fmt(self.cte.reducao_base_icms_st))
+            if self.cte.reducao_icms and float(self.cte.reducao_icms) > 0:
+                self._add(icms, "pRedBC", self._fmt(self.cte.reducao_icms))
 
         if self.cte.valor_icms_uf_dest and float(self.cte.valor_icms_uf_dest) > 0:
             icms_uf_dest = self._add(imp, "ICMSUFDest")
@@ -364,7 +482,11 @@ class CteXmlBuilder:
         return imp
 
     def _build_ibscbs(self, parent):
-        if not getattr(self.cte, "ibscbs_cst", None) and not getattr(self.cte, "ibscbs_cclasstrib", None) and not getattr(self.cte, "ibscbs_vbc", None):
+        if (
+            not getattr(self.cte, "ibscbs_cst", None)
+            and not getattr(self.cte, "ibscbs_cclasstrib", None)
+            and not getattr(self.cte, "ibscbs_vbc", None)
+        ):
             return None
 
         ibscbs = self._add(parent, "IBSCBS")
@@ -484,6 +606,10 @@ class CteXmlBuilder:
             self._add(inf_trib_fed, "vCOFINS", self._fmt(v_cofins))
         return inf_trib_fed
 
+    # ------------------------------------------------------------------
+    # INF CTE NORM
+    # ------------------------------------------------------------------
+
     def _build_inf_cte_norm(self, parent):
         inf_cte_norm = self._add(parent, "infCTeNorm")
         self._build_inf_carga(inf_cte_norm)
@@ -491,7 +617,7 @@ class CteXmlBuilder:
 
         inf_modal = self._add(inf_cte_norm, "infModal", attrib={"versaoModal": "4.00"})
         rodo = self._add(inf_modal, "rodo")
-        self._add(rodo, "RNTRC", self.cte.rntrc if hasattr(self.cte, 'rntrc') else '00000000')
+        self._add(rodo, "RNTRC", getattr(self.cte, 'rntrc', None) or '00000000')
         return inf_cte_norm
 
     def _build_inf_carga(self, parent):
@@ -499,28 +625,18 @@ class CteXmlBuilder:
         self._add(inf_carga, "vCarga", self._fmt(self.cte.total_mercadoria))
         self._add(inf_carga, "proPred", self.cte.produto_predominante or "DIVERSOS")
 
-        if self.cte.peso_total:
-            inf_q = self._add(inf_carga, "infQ")
-            self._add(inf_q, "cUnid", "01")
-            self._add(inf_q, "tpMed", "PESO BRUTO")
-            self._add(inf_q, "qCarga", self._fmt(self.cte.peso_total, decimals=4))
-        else:
-            inf_q = self._add(inf_carga, "infQ")
-            self._add(inf_q, "cUnid", "01")
-            self._add(inf_q, "tpMed", "PESO BRUTO")
-            self._add(inf_q, "qCarga", "0.0000")
+        inf_q = self._add(inf_carga, "infQ")
+        self._add(inf_q, "cUnid", "01")
+        self._add(inf_q, "tpMed", "PESO BRUTO")
+        self._add(inf_q, "qCarga", self._fmt(self.cte.peso_total, decimals=4) if self.cte.peso_total else "0.0000")
 
         return inf_carga
 
     def _build_inf_doc(self, parent):
         db_alias = self.cte._state.db or 'default'
         docs = self.cte.documentos.using(db_alias).all()
-        chaves = []
-        
-        for doc in docs:
-            if doc.chave_nfe:
-                chaves.append(doc.chave_nfe)
-                
+        chaves = [doc.chave_nfe for doc in docs if doc.chave_nfe]
+
         if not chaves:
             return None
 
@@ -530,22 +646,24 @@ class CteXmlBuilder:
             self._add(inf_nfe, "chave", chave)
         return inf_doc
 
+    # ------------------------------------------------------------------
+    # TOMADOR
+    # ------------------------------------------------------------------
+
     def _build_tomador(self, parent):
         toma = self.cte.tomador_servico
         if toma in [0, 1, 2, 3]:
             toma3 = self._add(parent, "toma3")
             self._add(toma3, "toma", str(toma))
             return toma3
-
         if toma == 4:
             return self._build_toma4(parent)
-
         return None
 
     def _build_toma4(self, parent):
         if not self.tomador:
             return None
-            
+
         cnpj = self._limpar_numero(self.tomador.enti_cnpj)
         cpf = self._limpar_numero(self.tomador.enti_cpf)
 
@@ -562,7 +680,10 @@ class CteXmlBuilder:
         self._add(ender, "nro", self.tomador.enti_nume or "S/N")
         self._add(ender, "xCpl", self.tomador.enti_comp or "")
         self._add(ender, "xBairro", self.tomador.enti_bair or "")
-        self._add(ender, "cMun", str(getattr(self.tomador, 'enti_cida_codi', '') or ''))
+        cmun = str(getattr(self.tomador, "enti_codi_cida", "") or "").strip()
+        if cmun.isdigit() and len(cmun) < 7:
+            cmun = cmun.zfill(7)
+        self._add(ender, "cMun", cmun)
         self._add(ender, "xMun", self.tomador.enti_cida or "")
         self._add(ender, "CEP", self._limpar_numero(self.tomador.enti_cep))
         self._add(ender, "UF", self.tomador.enti_esta or "")

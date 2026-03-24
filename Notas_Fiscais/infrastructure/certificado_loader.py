@@ -1,6 +1,8 @@
 import tempfile
 import logging
 from Licencas.crypto import decrypt_bytes, decrypt_str
+import os
+from Licencas.models import Filiais
 
 
 logger = logging.getLogger(__name__)
@@ -19,30 +21,42 @@ class CertificadoLoader:
 
     def load(self):
         cert_token = None
-        try:
-            # Tenta acessar o campo binário (pode falhar se a coluna não existir no DB)
-            if hasattr(self.filial, 'empr_cert_digi'):
-                cert_token = self.filial.empr_cert_digi
-        except Exception:
-            pass
+        senha_token = getattr(self.filial, "empr_senh_cert", None)
+        caminho_arquivo = getattr(self.filial, "empr_cert", None)
+        db_alias = getattr(getattr(self.filial, "_state", None), "db", None) or "default"
+
+        empr_empr = getattr(self.filial, "empr_empr", None)
+        empr_codi = getattr(self.filial, "empr_codi", None)
+        if empr_empr is not None and empr_codi is not None:
+            try:
+                row = (
+                    Filiais.objects.using(db_alias)
+                    .filter(empr_empr=empr_empr, empr_codi=empr_codi)
+                    .values_list("empr_cert_digi", "empr_senh_cert", "empr_cert")
+                    .first()
+                )
+                if row:
+                    cert_token, senha_token, caminho_arquivo = row
+            except Exception:
+                cert_token = None
 
         # Se não encontrou no banco, tenta via arquivo (fallback legado)
         if not cert_token:
-            caminho_arquivo = getattr(self.filial, 'empr_cert', None)
             if caminho_arquivo:
-                import os
                 if os.path.isfile(caminho_arquivo):
-                    senha_token = self.filial.empr_senh_cert
                     try:
                         senha = decrypt_str(senha_token)
                     except Exception:
                         senha = senha_token
                     return caminho_arquivo, (senha or "")
+            env_path = os.environ.get("CTE_PFX_PATH") or os.environ.get("PFX_PATH")
+            env_pass = os.environ.get("CTE_PFX_PASSWORD") or os.environ.get("PFX_PASSWORD")
+            if env_path and os.path.isfile(env_path):
+                logger.info("Usando certificado A1 via ambiente: %s", env_path)
+                return env_path, (env_pass or "")
 
         if not cert_token:
             raise Exception("Filial não possui certificado digital cadastrado (nem banco, nem arquivo).")
-
-        senha_token = self.filial.empr_senh_cert
 
         try:
             senha = decrypt_str(senha_token)

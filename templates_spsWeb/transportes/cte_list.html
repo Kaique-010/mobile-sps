@@ -174,7 +174,7 @@
                                     </button>
                                 </form>
                                 {% endif %}
-                                {% if cte.status == 'AUT' %}
+                                {% if cte.status == 'AUT' and cte.xml_cte %}
                                 <a href="{% url 'transportes:cte_imprimir' slug=slug pk=cte.pk %}" target="_blank"
                                     class="btn btn-sm btn-outline-dark" title="Imprimir DACTE">
                                     <i class="fas fa-print"></i>

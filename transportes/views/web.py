@@ -3,6 +3,7 @@ from django import forms
 from django.shortcuts import redirect, get_object_or_404
 from django.urls import reverse_lazy, reverse
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse, HttpResponseRedirect
 from django.db import transaction
 
@@ -26,7 +27,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class CteBaseMixin():
+class CteBaseMixin(LoginRequiredMixin):
+    login_url = reverse_lazy('web_login')
+
     def get_queryset(self):
         slug = get_licenca_db_config(self.request)
         # Filtra registros inválidos que possam ter id vazio ou nulo (legado)

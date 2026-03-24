@@ -167,8 +167,22 @@
                 btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Calculando...';
             }
 
-            fetch(`{% url 'transportes:api_cte_calcular_impostos' slug=slug pk=object.pk %}?cfop=${cfopId}`)
-                .then(response => response.json())
+            fetch(`{% url 'transportes:api_cte_calcular_impostos' slug=slug pk=object.pk %}?cfop=${cfopId}`, {
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then(async (response) => {
+                    const contentType = (response.headers.get('content-type') || '').toLowerCase();
+                    if (!contentType.includes('application/json')) {
+                        window.location.reload();
+                        throw new Error('Resposta inválida');
+                    }
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        throw new Error(data.error || `HTTP ${response.status}`);
+                    }
+                    return data;
+                })
                 .then(data => {
                     if (data.error) {
                         alert(data.error);

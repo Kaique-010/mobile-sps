@@ -86,7 +86,13 @@ class EmissaoService:
                     time.sleep(2)
                     try:
                         logger.info(f"Consultando recibo {recibo} (tentativa {i+1}/5)...")
-                        retorno_consulta = self.gateway.consultar_recibo(recibo)
+                        try:
+                            retorno_consulta = self.gateway.consultar_recibo(recibo)
+                        except Exception:
+                            chave = (getattr(self.cte, "chave_de_acesso", None) or "").strip()
+                            if not chave:
+                                raise
+                            retorno_consulta = self.gateway.consultar_chave(chave)
 
                         status_consulta = retorno_consulta.get('status')
                         mensagem_consulta = retorno_consulta.get('mensagem') or ''

@@ -32,32 +32,32 @@
     </div>
 
     <div class="col-md-3">
-        <label for="{{ form.peso_total.id_for_label }}" class="form-label fw-semibold">{{ form.peso_total.label }}</label>
+        <label for="{{ form.peso_total.id_for_label }}" class="form-label fw-semibold" id="peso_total">{{ form.peso_total.label }}</label>
         {{ form.peso_total }}
     </div>
     <div class="col-md-3">
-        <label for="{{ form.pedagio.id_for_label }}" class="form-label fw-semibold">{{ form.pedagio.label }}</label>
+        <label for="{{ form.pedagio.id_for_label }}" class="form-label fw-semibold" id="pedagio">{{ form.pedagio.label }}</label>
         {{ form.pedagio }}
     </div>
     <div class="col-md-3">
-        <label for="{{ form.tarifa.id_for_label }}" class="form-label fw-semibold">{{ form.tarifa.label }}</label>
+        <label for="{{ form.tarifa.id_for_label }}" class="form-label fw-semibold" id="tarifa">{{ form.tarifa.label }}</label>
         {{ form.tarifa }}
     </div>
     <div class="col-md-3">
-        <label for="{{ form.frete_peso.id_for_label }}" class="form-label fw-semibold">{{ form.frete_peso.label }}</label>
+        <label for="{{ form.frete_peso.id_for_label }}" class="form-label fw-semibold" id="frete_peso">{{ form.frete_peso.label }}</label>
         {{ form.frete_peso }}
     </div>
     <div class="col-md-3">
-        <label for="{{ form.frete_valor.id_for_label }}" class="form-label fw-semibold">{{ form.frete_valor.label }}</label>
+        <label for="{{ form.frete_valor.id_for_label }}" class="form-label fw-semibold" id="frete_valor">{{ form.frete_valor.label }}</label>
         {{ form.frete_valor }}
     </div>
     <div class="col-md-3">
-        <label for="{{ form.total_valor.id_for_label }}" class="form-label fw-semibold">{{ form.total_valor.label }}</label>
+        <label for="{{ form.total_valor.id_for_label }}" class="form-label fw-semibold" id="total_valor">{{ form.total_valor.label }}</label>
         {{ form.total_valor }}
     </div>
 
     <div class="col-12">
-        <label for="{{ form.outras_observacoes.id_for_label }}" class="form-label fw-semibold">{{ form.outras_observacoes.label }}</label>
+        <label for="{{ form.outras_observacoes.id_for_label }}" class="form-label fw-semibold" id="outras_observacoes">{{ form.outras_observacoes.label }}</label>
         {{ form.outras_observacoes }}
     </div>
 </div>
@@ -67,16 +67,27 @@
         const btnRemetente = document.getElementById('btnCopiarRemetente');
         const btnDestinatario = document.getElementById('btnCopiarDestinatario');
 
-        // As we are in Rota tab, the CTe object is available in context (object)
-        // But we need the IDs of remetente/destinatario which are on the object, not necessarily in the form.
-        // We can pass them via data attributes or fetch from server.
-        // Better: Fetch details from server using the CTe ID.
-
+        function fetchJson(url) {
+            return fetch(url, {
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            }).then(async (r) => {
+                const contentType = (r.headers.get('content-type') || '').toLowerCase();
+                if (!contentType.includes('application/json')) {
+                    window.location.reload();
+                    throw new Error('Resposta inválida');
+                }
+                const data = await r.json().catch(() => ({}));
+                if (!r.ok) {
+                    throw new Error(data.error || `HTTP ${r.status}`);
+                }
+                return data;
+            });
+        }
 
         if (btnRemetente) {
             btnRemetente.addEventListener('click', function () {
-                fetch(`{% url 'transportes:api_cte_rota_info' slug=slug pk=object.pk %}?tipo=remetente`)
-                    .then(r => r.json())
+                fetchJson(`{% url 'transportes:api_cte_rota_info' slug=slug pk=object.pk %}?tipo=remetente`)
                     .then(data => {
                         if (data.cidade_id) {
                             const input = document.getElementById("{{ form.cidade_coleta.auto_id }}");
@@ -94,8 +105,7 @@
 
         if (btnDestinatario) {
             btnDestinatario.addEventListener('click', function () {
-                fetch(`{% url 'transportes:api_cte_rota_info' slug=slug pk=object.pk %}?tipo=destinatario`)
-                    .then(r => r.json())
+                fetchJson(`{% url 'transportes:api_cte_rota_info' slug=slug pk=object.pk %}?tipo=destinatario`)
                     .then(data => {
                         if (data.cidade_id) {
                             const input = document.getElementById("{{ form.cidade_entrega.auto_id }}");
@@ -111,4 +121,46 @@
             });
         }
     });
+
+    (function () {
+        function parseNumberBR(val) {
+            if (typeof val !== 'string') val = String(val || '');
+            val = val.replace(/\s/g, '').replace('R$', '').trim();
+            if (/[,]/.test(val) && !/[.]/.test(val)) {
+                val = val.replace(',', '.');
+            } else if (/[.].*[,]/.test(val)) {
+                val = val.replace(/\./g, '').replace(',', '.');
+            }
+            const n = parseFloat(val);
+            return isNaN(n) ? 0 : n;
+        }
+
+        function updateTotal() {
+            const freteEl = document.getElementById("{{ form.frete_valor.auto_id }}");
+            const pedagioEl = document.getElementById("{{ form.pedagio.auto_id }}");
+            const totalEl = document.getElementById("{{ form.total_valor.auto_id }}");
+            const labelEl = document.getElementById("total_valor");
+            if (!freteEl || !pedagioEl || !totalEl || !labelEl) return;
+
+            const freteValor = parseNumberBR(freteEl.value);
+            const pedagio = parseNumberBR(pedagioEl.value);
+            const totalValor = freteValor + pedagio;
+
+            labelEl.textContent = `Total (${freteValor.toFixed(2)} R$ + ${pedagio.toFixed(2)} R$) =`;
+            totalEl.value = totalValor.toFixed(2);
+        }
+
+        const form = document.getElementById("cteForm");
+        if (form) {
+            form.addEventListener("submit", function () {
+                updateTotal();
+            });
+        }
+        const freteEl = document.getElementById("{{ form.frete_valor.auto_id }}");
+        const pedagioEl = document.getElementById("{{ form.pedagio.auto_id }}");
+        if (freteEl) freteEl.addEventListener("input", updateTotal);
+        if (pedagioEl) pedagioEl.addEventListener("input", updateTotal);
+        updateTotal();
+    })();
+    
 </script>

@@ -130,6 +130,7 @@ def get_cte_rota_info(request, pk, slug=None):
     })
 
 
+@login_required(login_url='/web/login/')
 def calcular_impostos_cte(request, pk, slug=None):
     """
     Calcula impostos do CTe baseado no CFOP informado.
