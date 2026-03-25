@@ -14,6 +14,62 @@ class EntradaUpdateView(UpdateView):
     form_class = EntradaEstoqueForm
     template_name = 'Entradas/entradas_criar.html'
 
+    def get_initial(self):
+        initial = super().get_initial()
+        banco = get_licenca_db_config(self.request) or 'default'
+        obj = self.get_object()
+        try:
+            from Produtos.models import Lote, Tabelaprecos
+
+            prod_raw = str(getattr(obj, 'entr_prod', '') or '').strip()
+            prod_variants = []
+            if prod_raw:
+                prod_variants.append(prod_raw)
+                if prod_raw.isdigit():
+                    prod_variants.append(prod_raw.zfill(6))
+                    prod_variants.append(str(int(prod_raw)))
+            prod_variants = [p for i, p in enumerate(prod_variants) if p and p not in prod_variants[:i]]
+
+            lote_num = getattr(obj, 'entr_lote_vend', None)
+            if lote_num:
+                lote = (
+                    Lote.objects.using(banco)
+                    .filter(
+                        lote_empr=int(obj.entr_empr),
+                        lote_prod__in=prod_variants or [prod_raw],
+                        lote_lote=int(lote_num),
+                    )
+                    .first()
+                )
+                if lote:
+                    if getattr(lote, 'lote_data_fabr', None):
+                        initial['lote_data_fabr'] = lote.lote_data_fabr
+                    if getattr(lote, 'lote_data_vali', None):
+                        initial['lote_data_vali'] = lote.lote_data_vali
+
+            preco = (
+                Tabelaprecos.objects.using(banco)
+                .filter(
+                    tabe_empr=int(obj.entr_empr),
+                    tabe_fili=int(obj.entr_fili),
+                    tabe_prod__in=prod_variants or [prod_raw],
+                )
+                .first()
+            )
+            if preco:
+                if getattr(preco, 'tabe_avis', None) is not None:
+                    initial['preco_vista'] = preco.tabe_avis
+                if getattr(preco, 'tabe_apra', None) is not None:
+                    initial['preco_prazo'] = preco.tabe_apra
+        except Exception:
+            pass
+
+        if 'atualizar_preco' not in initial:
+            initial['atualizar_preco'] = True
+        if 'auto_lote' not in initial:
+            initial['auto_lote'] = False
+        return initial
+
     def get_success_url(self):
         slug = self.kwargs.get('slug')
         return f"/web/{slug}/entradas/" if slug else "/web/home/"

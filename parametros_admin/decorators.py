@@ -3,6 +3,7 @@ from django.core.exceptions import ValidationError
 from django.http import JsonResponse
 from rest_framework import status
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError as DRFValidationError
 import logging
 
 logger = logging.getLogger(__name__)
@@ -100,7 +101,7 @@ def aplicar_parametros_estoque(operacao='entrada'):
                 
                 return response
                 
-            except ValidationError as e:
+            except (ValidationError, DRFValidationError) as e:
                 return Response(
                     {'erro': str(e)},
                     status=status.HTTP_400_BAD_REQUEST

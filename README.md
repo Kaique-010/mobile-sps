@@ -89,6 +89,9 @@ feito isto é necessário rodar o comando abaixo que irá criar as parametrizaç
 Bash
 python setup_mobile.py --tenant "nomedosaveinserido"
 
+"Certifique-se de que o slug inserido no admin seja exatamente o mesmo nome usado no parâmetro --tenant."
+
+
 Nota: As APIs podem ser validadas via Swagger em:
 
 https://mobile-sps.site/api/schema/swagger-ui/
@@ -105,31 +108,32 @@ Porém o projeto usa um padrão de arquitetura horizontal separado como no exemp
 
 para as versões Rest e web, quando formos criar api's usamos o padrão rest, quando formos criar django templates para versão web, usamos o padrão web.
 
-Pedidos:
-        - rest (Padrão Django Rest Framework)
-              - __init__.py
-              - serializers (contrato dto com os dados de entrada e saida)
-              - views (controladores da api, onde mostra as respostas e chama os metodos do services e aponta para as apis)
-                    - __init__.py
-                    - listar.py
-                    - criar.py
-                    - atualizar.py
-                    - deletar.py
-              - urls.py
-        - services (responsavel pelas regras de negocio e integração com o savexml)
-              - __init__.py
-        - web (controladores da api, onde mostra as respostas e chama os metodos do services e aponta para as apis)
-              - __init__.py
-              - forms.py (formularios django, onde são definidos os campos e validacoes, contratos web)
-              - views.py (controladores da api, onde mostra as respostas e chama os metodos do services e aponta para as apis)
-                        - __init__.py
-                        - listar.py
-                        - criar.py
-                        - atualizar.py
-                        - deletar.py
-              - urls.py (rotas da api, onde são definidos os endpoints da api)
-        - models (modelos de dados do django, onde são definidos os campos e relações do banco de dados)
-
+📦 pedidos/
+├── 📜 __init__.py
+├── 📜 models.py          # Definição de tabelas e relações (ORM Django)
+│
+├── 📂 rest/              # Camada de API (Django Rest Framework)
+│   ├── 📜 __init__.py
+│   ├── 📜 serializers.py # Contratos DTO (Entrada/Saída de dados)
+│   ├── 📜 urls.py        # Endpoints da API (ex: /api/pedidos/)
+│   └── 📂 views/         # Lógica de controle da API
+│       ├── 📜 listar.py
+│       ├── 📜 criar.py
+│       ├── 📜 atualizar.py
+│       └── 📜 deletar.py
+│
+├── 📂 services/          # CAMADA CORE: Regras de negócio e integração
+│   ├── 📜 __init__.py
+│   └── 📜 logic.py       # Onde a "mágica" acontece e chama o SaveXML
+│
+└── 📂 web/               # Camada de Interface Web (Django Templates)
+    ├── 📜 __init__.py
+    ├── 📜 forms.py       # Validações e Contratos de formulários Web
+    ├── 📜 urls.py        # Rotas das páginas HTML
+    └── 📂 views/         # Controladores que renderizam os Templates
+        ├── 📜 listar.py
+        ├── 📜 criar.py
+        └── ...
 
 
 ************\_\_\_************//---------------------------------//-------------------------------------//**************\_**************

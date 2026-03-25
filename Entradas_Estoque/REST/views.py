@@ -45,17 +45,160 @@ class EntradasEstoqueViewSet(ModuloRequeridoMixin, ModelViewSet):
         context = super().get_serializer_context()
         context['banco'] = get_licenca_db_config(self.request)
         return context
+
+    def _merge_context_fields(self, request):
+        raw = request.data
+        try:
+            data = raw.copy()
+        except Exception:
+            try:
+                data = dict(raw)
+            except Exception:
+                data = {}
+
+        def pick(*keys):
+            for k in keys:
+                v = data.get(k)
+                if v is not None and str(v) != '':
+                    return v
+            return None
+
+        if data.get('entr_empr') in (None, ''):
+            data['entr_empr'] = pick('empresa_id', 'empr') or request.headers.get('X-Empresa')
+        if data.get('entr_fili') in (None, ''):
+            data['entr_fili'] = pick('filial_id', 'fili') or request.headers.get('X-Filial')
+        if data.get('entr_usua') in (None, ''):
+            usuario_id = pick('entr_usuario_id', 'usuario_id', 'usua')
+            if usuario_id is None:
+                user = getattr(request, 'user', None)
+                usuario_id = (
+                    getattr(user, 'usua_codi', None)
+                    or getattr(user, 'id', None)
+                    or getattr(user, 'pk', None)
+                )
+            data['entr_usua'] = usuario_id
+
+        return data
         
 
     @parametros_estoque_completo(operacao='entrada')
     def create(self, request, *args, **kwargs):
-        db_alias = getattr(request, 'db_alias', 'default')
-        serializer = self.get_serializer(data=request.data)
+        from django.db import models
+        from decimal import Decimal
+        import re
+        db_alias = getattr(request, 'db_alias', get_licenca_db_config(request) or 'default')
+        serializer = self.get_serializer(data=self._merge_context_fields(request))
         serializer.is_valid(raise_exception=True)
         try:
             with transaction.atomic(using=db_alias):
-                self.perform_create(serializer)
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+                banco = db_alias
+                empresa_id = getattr(request, 'empresa_id', None) or serializer.validated_data.get('entr_empr') or 1
+                filial_id = getattr(request, 'filial_id', None) or serializer.validated_data.get('entr_fili') or 1
+                max_sequ = EntradaEstoque.objects.using(banco).aggregate(models.Max('entr_sequ'))['entr_sequ__max'] or 0
+                data = serializer.validated_data
+                entr_sequ = data.get('entr_sequ') or (max_sequ + 1)
+                instance = serializer.save(entr_sequ=entr_sequ)
+                auto_lote = bool(request.data.get('auto_lote'))
+                atualizar_preco = bool(request.data.get('atualizar_preco', True))
+                lote_texto = (request.data.get('entr_lote_vend') or '').strip() if isinstance(request.data.get('entr_lote_vend'), str) else ''
+                lote_label = lote_texto if (lote_texto and not lote_texto.isdigit()) else None
+                if not getattr(instance, 'entr_lote_vend', None) and lote_texto and not re.search(r'\d', lote_texto):
+                    from Produtos.models import Lote
+                    ultimo = (
+                        Lote.objects.using(banco)
+                        .filter(lote_empr=int(empresa_id), lote_prod=str(instance.entr_prod))
+                        .aggregate(models.Max('lote_lote'))
+                        .get('lote_lote__max')
+                        or 0
+                    )
+                    novo = int(ultimo) + 1
+                    EntradaEstoque.objects.using(banco).filter(pk=instance.pk).update(entr_lote_vend=int(novo))
+                    instance.entr_lote_vend = int(novo)
+                elif auto_lote and not getattr(instance, 'entr_lote_vend', None):
+                    from Produtos.models import Lote
+                    ultimo = (
+                        Lote.objects.using(banco)
+                        .filter(lote_empr=int(empresa_id), lote_prod=str(instance.entr_prod))
+                        .aggregate(models.Max('lote_lote'))
+                        .get('lote_lote__max')
+                        or 0
+                    )
+                    novo = int(ultimo) + 1
+                    EntradaEstoque.objects.using(banco).filter(pk=instance.pk).update(entr_lote_vend=int(novo))
+                    instance.entr_lote_vend = int(novo)
+                if getattr(instance, 'entr_lote_vend', None):
+                    from Produtos.models import Lote
+                    lote_num = int(instance.entr_lote_vend)
+                    lote_data_fabr = request.data.get('lote_data_fabr') or instance.entr_data
+                    lote_data_vali = request.data.get('lote_data_vali')
+                    try:
+                        if lote_data_fabr and not hasattr(lote_data_fabr, 'year'):
+                            from datetime import date
+                            lote_data_fabr = date.fromisoformat(str(lote_data_fabr))
+                    except Exception:
+                        lote_data_fabr = instance.entr_data
+                    try:
+                        if lote_data_vali and not hasattr(lote_data_vali, 'year'):
+                            from datetime import date
+                            lote_data_vali = date.fromisoformat(str(lote_data_vali))
+                    except Exception:
+                        lote_data_vali = None
+                    lote = (
+                        Lote.objects.using(banco)
+                        .filter(lote_empr=int(empresa_id), lote_prod=str(instance.entr_prod), lote_lote=lote_num)
+                        .first()
+                    )
+                    if not lote:
+                        from decimal import Decimal as D
+                        lote = Lote(
+                            lote_empr=int(empresa_id),
+                            lote_prod=str(instance.entr_prod),
+                            lote_lote=lote_num,
+                            lote_unit=D(str(getattr(instance, 'entr_unit', 0) or 0)),
+                            lote_sald=D('0.00'),
+                            lote_data_fabr=lote_data_fabr,
+                            lote_data_vali=lote_data_vali,
+                            lote_ativ=True,
+                            lote_obse=lote_label,
+                        )
+                    elif lote_label and not getattr(lote, 'lote_obse', None):
+                        lote.lote_obse = lote_label
+                    if lote_data_fabr is not None:
+                        lote.lote_data_fabr = lote_data_fabr
+                    if lote_data_vali is not None:
+                        lote.lote_data_vali = lote_data_vali
+                    saldo_atual = Decimal(str(getattr(lote, 'lote_sald', 0) or 0))
+                    qtd = Decimal(str(getattr(instance, 'entr_quan', 0) or 0))
+                    lote.lote_sald = (saldo_atual + qtd).quantize(Decimal('0.01'))
+                    lote.save(using=banco)
+                if atualizar_preco:
+                    from Produtos.models import Tabelaprecos
+                    update_fields = {
+                        'tabe_cuge': Decimal(str(getattr(instance, 'entr_unit', 0) or 0)).quantize(Decimal('0.01')),
+                        'tabe_entr': getattr(instance, 'entr_data', None),
+                    }
+                    preco_vista = request.data.get('preco_vista')
+                    preco_prazo = request.data.get('preco_prazo')
+                    if preco_vista is not None and str(preco_vista) != '':
+                        update_fields['tabe_avis'] = Decimal(str(preco_vista)).quantize(Decimal('0.01'))
+                    if preco_prazo is not None and str(preco_prazo) != '':
+                        update_fields['tabe_apra'] = Decimal(str(preco_prazo)).quantize(Decimal('0.01'))
+                    qs = Tabelaprecos.objects.using(banco).filter(
+                        tabe_empr=int(empresa_id),
+                        tabe_fili=int(filial_id),
+                        tabe_prod=str(instance.entr_prod),
+                    )
+                    updated = qs.update(**update_fields)
+                    if not updated:
+                        create_fields = {
+                            'tabe_empr': int(empresa_id),
+                            'tabe_fili': int(filial_id),
+                            'tabe_prod': str(instance.entr_prod),
+                            **update_fields,
+                        }
+                        Tabelaprecos.objects.using(banco).create(**create_fields)
+                out = self.get_serializer(instance)
+                return Response(out.data, status=status.HTTP_201_CREATED)
         except IntegrityError as e:
             logger.error(f"IntegrityError: {e}")
             raise ValidationError({"detail": "Erro de integridade no banco de dados."})
@@ -77,13 +220,139 @@ class EntradasEstoqueViewSet(ModuloRequeridoMixin, ModelViewSet):
     
     @parametros_estoque_completo(operacao='entrada')
     def update(self, request, *args, **kwargs):
-        db_alias = getattr(request, 'db_alias', 'default')
-        serializer = self.get_serializer(data=request.data)
+        from django.db import models
+        from decimal import Decimal
+        import re
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        db_alias = getattr(request, 'db_alias', get_licenca_db_config(request) or 'default')
+        serializer = self.get_serializer(instance, data=self._merge_context_fields(request), partial=partial)
         serializer.is_valid(raise_exception=True)
         try:
             with transaction.atomic(using=db_alias):
-                self.perform_create(serializer)
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+                banco = db_alias
+                empresa_id = getattr(request, 'empresa_id', None) or serializer.validated_data.get('entr_empr') or getattr(instance, 'entr_empr', 1)
+                filial_id = getattr(request, 'filial_id', None) or serializer.validated_data.get('entr_fili') or getattr(instance, 'entr_fili', 1)
+                old_lote = getattr(instance, 'entr_lote_vend', None)
+                old_quan = Decimal(str(getattr(instance, 'entr_quan', 0) or 0))
+                old_prod = str(getattr(instance, 'entr_prod', ''))
+                instance = serializer.save()
+                auto_lote = bool(request.data.get('auto_lote'))
+                atualizar_preco = bool(request.data.get('atualizar_preco', True))
+                lote_texto = (request.data.get('entr_lote_vend') or '').strip() if isinstance(request.data.get('entr_lote_vend'), str) else ''
+                lote_label = lote_texto if (lote_texto and not lote_texto.isdigit()) else None
+                if not getattr(instance, 'entr_lote_vend', None) and lote_texto and not re.search(r'\d', lote_texto):
+                    from Produtos.models import Lote
+                    ultimo = (
+                        Lote.objects.using(banco)
+                        .filter(lote_empr=int(empresa_id), lote_prod=str(instance.entr_prod))
+                        .aggregate(models.Max('lote_lote'))
+                        .get('lote_lote__max')
+                        or 0
+                    )
+                    novo = int(ultimo) + 1
+                    EntradaEstoque.objects.using(banco).filter(pk=instance.pk).update(entr_lote_vend=int(novo))
+                    instance.entr_lote_vend = int(novo)
+                elif auto_lote and not getattr(instance, 'entr_lote_vend', None):
+                    from Produtos.models import Lote
+                    ultimo = (
+                        Lote.objects.using(banco)
+                        .filter(lote_empr=int(empresa_id), lote_prod=str(instance.entr_prod))
+                        .aggregate(models.Max('lote_lote'))
+                        .get('lote_lote__max')
+                        or 0
+                    )
+                    novo = int(ultimo) + 1
+                    EntradaEstoque.objects.using(banco).filter(pk=instance.pk).update(entr_lote_vend=int(novo))
+                    instance.entr_lote_vend = int(novo)
+                from Produtos.models import Lote
+                new_lote = getattr(instance, 'entr_lote_vend', None)
+                new_quan = Decimal(str(getattr(instance, 'entr_quan', 0) or 0))
+                new_prod = str(getattr(instance, 'entr_prod', old_prod))
+                lote_data_fabr = request.data.get('lote_data_fabr')
+                lote_data_vali = request.data.get('lote_data_vali')
+                try:
+                    if lote_data_fabr and not hasattr(lote_data_fabr, 'year'):
+                        from datetime import date
+                        lote_data_fabr = date.fromisoformat(str(lote_data_fabr))
+                except Exception:
+                    lote_data_fabr = None
+                try:
+                    if lote_data_vali and not hasattr(lote_data_vali, 'year'):
+                        from datetime import date
+                        lote_data_vali = date.fromisoformat(str(lote_data_vali))
+                except Exception:
+                    lote_data_vali = None
+                if old_lote and (old_lote != new_lote or old_prod != new_prod):
+                    try:
+                        lote_old = (
+                            Lote.objects.using(banco)
+                            .filter(lote_empr=int(empresa_id), lote_prod=str(old_prod), lote_lote=int(old_lote))
+                            .first()
+                        )
+                        if lote_old:
+                            saldo_atual = Decimal(str(getattr(lote_old, 'lote_sald', 0) or 0))
+                            lote_old.lote_sald = (saldo_atual - old_quan).quantize(Decimal('0.01'))
+                            lote_old.save(using=banco)
+                    except Exception:
+                        pass
+                if new_lote:
+                    lote = (
+                        Lote.objects.using(banco)
+                        .filter(lote_empr=int(empresa_id), lote_prod=str(new_prod), lote_lote=int(new_lote))
+                        .first()
+                    )
+                    if not lote:
+                        from decimal import Decimal as D
+                        lote = Lote(
+                            lote_empr=int(empresa_id),
+                            lote_prod=str(new_prod),
+                            lote_lote=int(new_lote),
+                            lote_unit=D(str(getattr(instance, 'entr_unit', 0) or 0)),
+                            lote_sald=D('0.00'),
+                            lote_data_fabr=lote_data_fabr or getattr(instance, 'entr_data', None),
+                            lote_data_vali=lote_data_vali,
+                            lote_ativ=True,
+                            lote_obse=lote_label,
+                        )
+                    elif lote_label and not getattr(lote, 'lote_obse', None):
+                        lote.lote_obse = lote_label
+                    if lote_data_fabr is not None:
+                        lote.lote_data_fabr = lote_data_fabr
+                    if lote_data_vali is not None:
+                        lote.lote_data_vali = lote_data_vali
+                    saldo_atual = Decimal(str(getattr(lote, 'lote_sald', 0) or 0))
+                    delta = new_quan if (old_lote != new_lote or old_prod != new_prod) else (new_quan - old_quan)
+                    lote.lote_sald = (saldo_atual + delta).quantize(Decimal('0.01'))
+                    lote.save(using=banco)
+                if atualizar_preco:
+                    from Produtos.models import Tabelaprecos
+                    update_fields = {
+                        'tabe_cuge': Decimal(str(getattr(instance, 'entr_unit', 0) or 0)).quantize(Decimal('0.01')),
+                        'tabe_entr': getattr(instance, 'entr_data', None),
+                    }
+                    preco_vista = request.data.get('preco_vista')
+                    preco_prazo = request.data.get('preco_prazo')
+                    if preco_vista is not None and str(preco_vista) != '':
+                        update_fields['tabe_avis'] = Decimal(str(preco_vista)).quantize(Decimal('0.01'))
+                    if preco_prazo is not None and str(preco_prazo) != '':
+                        update_fields['tabe_apra'] = Decimal(str(preco_prazo)).quantize(Decimal('0.01'))
+                    qs = Tabelaprecos.objects.using(banco).filter(
+                        tabe_empr=int(empresa_id),
+                        tabe_fili=int(filial_id),
+                        tabe_prod=str(getattr(instance, 'entr_prod', new_prod)),
+                    )
+                    updated = qs.update(**update_fields)
+                    if not updated:
+                        create_fields = {
+                            'tabe_empr': int(empresa_id),
+                            'tabe_fili': int(filial_id),
+                            'tabe_prod': str(getattr(instance, 'entr_prod', new_prod)),
+                            **update_fields,
+                        }
+                        Tabelaprecos.objects.using(banco).create(**create_fields)
+                out = self.get_serializer(instance)
+                return Response(out.data, status=status.HTTP_200_OK)
         except IntegrityError as e:
             logger.error(f"IntegrityError: {e}")
             raise ValidationError({"detail": "Erro de integridade no banco de dados."})
