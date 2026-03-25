@@ -24,6 +24,9 @@ from django.core.cache import cache
 logger = logging.getLogger(__name__)
 
 class EntidadesLoginViewSet(viewsets.ViewSet):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
     def create(self, request, slug=None):
         data = request.data
         documento = data.get('documento')  
