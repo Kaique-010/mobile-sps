@@ -1,12 +1,15 @@
 
 
 from re import T
+from django.core.cache import cache
 from django.db.models import Q
 from Pedidos.models import PedidoVenda, PedidosGeral,Itenspedidovenda
+import logging
 from Orcamentos.models import Orcamentos,ItensOrcamento
 from O_S.models import  Os
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework import status
 from rest_framework import status
 from Entidades.models import Entidades
 from Produtos.models import Produtos
@@ -32,6 +35,7 @@ from OrdemdeServico.serializers import (
 from .base_cliente import BaseClienteViewSet
 from core.excecoes import ErroDominio
 from core.dominio_handler import tratar_erro, tratar_sucesso
+from django.core.cache import cache
 
 
 class PedidosViewSet(BaseClienteViewSet):
@@ -67,25 +71,147 @@ class OrdemServicoViewSet(BaseClienteViewSet):
     pagination_class = StandardResultsSetPagination
     
     serializer_class = OrdemServicoSerializer
+    logger = logging.getLogger(__name__)
+
+    def _cache_key(self, base: str, status_override=None):
+        banco = getattr(self.request, 'banco', None) or 'default'
+        cliente = getattr(self.request, 'cliente_id', '')
+        permissoes = getattr(self.request, 'permissoes', {}) or {}
+        ver_preco = 1 if permissoes.get('ver_preco', True) else 0
+        ver_foto = 1 if permissoes.get('ver_foto', True) else 0
+        qp = self.request.query_params
+        status_value = status_override if status_override is not None else qp.get('status', '')
+        numero_value = qp.get('orde_nume') or qp.get('numero') or qp.get('ordem') or ''
+        motor_value = qp.get('motor', '')
+        tipo_value = qp.get('tipo') or qp.get('orde_tipo') or ''
+        voltagem_value = qp.get('voltagem') or qp.get('orde_volt') or ''
+        potencia_value = qp.get('potencia') or qp.get('orde_pote') or ''
+        parts = [
+            f"b={banco}",
+            f"c={cliente}",
+            f"vp={ver_preco}",
+            f"vf={ver_foto}",
+            f"s={status_value}",
+            f"di={qp.get('data_inicial','')}",
+            f"df={qp.get('data_final','')}",
+            f"n={numero_value}",
+            f"m={motor_value}",
+            f"t={tipo_value}",
+            f"v={voltagem_value}",
+            f"po={potencia_value}",
+            f"p={qp.get('page','')}",
+            f"ps={qp.get('page_size','')}",
+        ]
+        return f"os:{base}:" + "|".join(parts)
+    
+    def _should_refresh(self):
+        val = (self.request.query_params.get('refresh') or '').strip().lower()
+        return val in ('1', 'true', 'yes', 'y')
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         
-        # DEBUG: Verificar tamanho do queryset
-        count = queryset.count()
-        print(f"DEBUG: OrdemServicoViewSet.list - Total de registros encontrados: {count}")
+        cache_key = self._cache_key('lista')
+        if not self._should_refresh():
+            cached = cache.get(cache_key)
+            if cached is not None:
+                try:
+                    self.logger.info(f"[CACHE HIT][OS list] key={cache_key} size={len(cached) if isinstance(cached, list) else 'page'}")
+                except Exception:
+                    pass
+                return Response(cached)
 
         page = self.paginate_queryset(queryset)
         if page is not None:
-            print(f"DEBUG: Paginando {len(page)} registros.")
             self._prefetch_related_objects(page)
             serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
+            resp = self.get_paginated_response(serializer.data)
+            cache.set(cache_key, resp.data)
+            try:
+                self.logger.info(f"[CACHE SET][OS list] key={cache_key} paginated=1")
+            except Exception:
+                pass
+            return Response(resp.data)
 
-        print("DEBUG: Sem paginação, retornando tudo (CUIDADO).")
         self._prefetch_related_objects(queryset)
         serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+        data = serializer.data
+        cache.set(cache_key, data)
+        try:
+            self.logger.info(f"[CACHE SET][OS list] key={cache_key} paginated=0 size={len(data)}")
+        except Exception:
+            pass
+        return Response(data)
+
+    def _aplicar_filtros(self, queryset, incluir_status=True):
+        qp = self.request.query_params
+
+        status_param = (qp.get('status') or '').strip()
+        data_inicial = (qp.get('data_inicial') or '').strip()
+        data_final = (qp.get('data_final') or '').strip()
+
+        numero_ordem = (qp.get('orde_nume') or qp.get('numero') or qp.get('ordem') or '').strip()
+        motor = (qp.get('motor') or '').strip()
+        tipo = (qp.get('tipo') or qp.get('orde_tipo') or '').strip()
+        voltagem = (qp.get('voltagem') or qp.get('orde_volt') or '').strip()
+        potencia = (qp.get('potencia') or qp.get('orde_pote') or '').strip()
+
+        if incluir_status and status_param:
+            queryset = queryset.filter(orde_stat_orde=status_param)
+
+        if data_inicial:
+            queryset = queryset.filter(orde_data_aber__gte=data_inicial)
+
+        if data_final:
+            queryset = queryset.filter(orde_data_aber__lte=data_final)
+
+        if numero_ordem:
+            try:
+                queryset = queryset.filter(orde_nume=int(numero_ordem))
+            except (TypeError, ValueError):
+                pass
+
+        if motor:
+            queryset = queryset.filter(
+                Q(orde_mode__icontains=motor)
+                | Q(orde_seri__icontains=motor)
+                | Q(orde_patr__icontains=motor)
+                | Q(orde_plac__icontains=motor)
+            )
+
+        if tipo:
+            queryset = queryset.filter(orde_tipo=tipo)
+
+        if voltagem:
+            try:
+                queryset = queryset.filter(orde_volt=int(voltagem))
+            except (TypeError, ValueError):
+                pass
+
+        if potencia:
+            queryset = queryset.filter(orde_pote__icontains=potencia)
+
+        return queryset
+
+    def _blindar_datas(self, queryset):
+        date_fields = [
+            'orde_data_aber', 'orde_data_fech',
+            'orde_nf_data', 'orde_data_repr', 'orde_ulti_alte'
+        ]
+        queryset = queryset.defer(*date_fields)
+
+        select_dict = {}
+        for field in date_fields:
+            select_dict[f'safe_{field}'] = f"""
+                CASE 
+                    WHEN {field} IS NOT NULL 
+                         AND EXTRACT(YEAR FROM {field}) BETWEEN 2020 AND 2100 
+                    THEN {field}::text 
+                    ELSE NULL 
+                END
+            """
+        queryset = queryset.extra(select=select_dict)
+        return queryset
 
     def _prefetch_related_objects(self, objects):
         if not objects:
@@ -226,55 +352,33 @@ class OrdemServicoViewSet(BaseClienteViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
         
-        # Filtros
-        status_param = self.request.query_params.get('status')
-        data_inicial = self.request.query_params.get('data_inicial')
-        data_final = self.request.query_params.get('data_final')
-
-        if status_param:
-            queryset = queryset.filter(orde_stat_orde=status_param)
-        
-        if data_inicial:
-            queryset = queryset.filter(orde_data_aber__gte=data_inicial)
-        
-        if data_final:
-            queryset = queryset.filter(orde_data_aber__lte=data_final)
-
-        # BLINDAGEM CONTRA DATAS CORROMPIDAS (ex: ano -18)
-        # Deferir campos de data que podem quebrar o driver psycopg2
-        date_fields = [
-            'orde_data_aber', 'orde_data_fech', 
-            'orde_nf_data', 'orde_data_repr', 'orde_ulti_alte'
-        ]
-        queryset = queryset.defer(*date_fields)
-        
-        # Injetar campos seguros como texto
-        select_dict = {}
-        for field in date_fields:
-            select_dict[f'safe_{field}'] = f"""
-                CASE 
-                    WHEN {field} IS NOT NULL 
-                         AND EXTRACT(YEAR FROM {field}) BETWEEN 2020 AND 2100 
-                    THEN {field}::text 
-                    ELSE NULL 
-                END
-            """
-        queryset = queryset.extra(select=select_dict)
-        
+        queryset = self._aplicar_filtros(queryset, incluir_status=True)
+        queryset = self._blindar_datas(queryset)
+        # Ordenação determinística para evitar UnorderedObjectListWarning na paginação
+        queryset = queryset.order_by('-orde_nume')
         return queryset
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
         
-        # Tenta recuperar permissões já injetadas no request
         if getattr(self.request, 'permissoes', None):
             context['permissoes'] = self.request.permissoes
             return context
 
-        # Se não tiver, tenta extrair novamente do header (fallback)
         session_id = self.request.headers.get('X-Session-ID')
         if session_id:
             try:
+                from django.core.cache import cache as _cache
+                session_key = f"session:{session_id}:permissoes"
+                cached = _cache.get(session_key)
+                if cached:
+                    context['permissoes'] = cached
+                    self.request.permissoes = cached
+                    try:
+                        logging.getLogger(__name__).info(f"[CACHE HIT][SESSION] key={session_key}")
+                    except Exception:
+                        pass
+                    return context
                 parts = session_id.split('_')
                 if len(parts) >= 3:
                     cliente_id = parts[0]
@@ -291,9 +395,13 @@ class OrdemServicoViewSet(BaseClienteViewSet):
                             permissoes['ver_preco'] = entidade.enti_usua_prec
                             permissoes['ver_foto'] = entidade.enti_usua_foto
                         
-                        # Injeta no contexto E no request para garantir
                         context['permissoes'] = permissoes
                         self.request.permissoes = permissoes
+                        _cache.set(session_key, permissoes)
+                        try:
+                            logging.getLogger(__name__).info(f"[CACHE SET][SESSION] key={session_key}")
+                        except Exception:
+                            pass
             except Exception as e:
                 print(f"Erro ao injetar permissões no get_serializer_context: {e}")
         
@@ -302,16 +410,24 @@ class OrdemServicoViewSet(BaseClienteViewSet):
     def initial(self, request, *args, **kwargs):
         super().initial(request, *args, **kwargs)
         
-        # Garantir que permissões estejam carregadas
         if not getattr(request, 'permissoes', None):
             session_id = request.headers.get('X-Session-ID')
             if session_id:
                 try:
+                    from django.core.cache import cache as _cache
+                    session_key = f"session:{session_id}:permissoes"
+                    cached = _cache.get(session_key)
+                    if cached:
+                        request.permissoes = cached
+                        try:
+                            logging.getLogger(__name__).info(f"[CACHE HIT][SESSION] key={session_key}")
+                        except Exception:
+                            pass
+                        return
                     parts = session_id.split('_')
                     if len(parts) >= 3:
                         cliente_id = parts[0]
                         usuario_tipo = parts[-1]
-                        # Reconstrói banco slug caso contenha underscores
                         banco_slug = "_".join(parts[1:-1])
                         
                         entidade = Entidades.objects.using(banco_slug).filter(enti_clie=cliente_id).first()
@@ -326,15 +442,18 @@ class OrdemServicoViewSet(BaseClienteViewSet):
                             
                             request.permissoes = permissoes
                             
-                            # Garantir outros atributos de contexto se necessário
                             if not getattr(request, 'banco', None):
                                 request.banco = banco_slug
                             if not getattr(request, 'cliente_id', None):
                                 request.cliente_id = cliente_id
+                            _cache.set(session_key, permissoes)
+                            try:
+                                logging.getLogger(__name__).info(f"[CACHE SET][SESSION] key={session_key}")
+                            except Exception:
+                                pass
                                 
                 except Exception as e:
                     print(f"Erro ao injetar permissões no initial: {e}")
-    
     @action(detail=False, methods=['post'], url_path='definir-permissao-preco')
     def definir_permissao_preco(self, request):
         try:
@@ -409,11 +528,28 @@ class OrdemServicoViewSet(BaseClienteViewSet):
     @action(detail=False, methods=['get'], url_path='em-estoque')
     def listar_ordem_em_estoque(self, request, *args, **kwargs):
         try:
-            queryset = self.get_queryset().filter(orde_stat_orde=22)
-            print("ordens em estoque:", queryset)
-            # USAR self.get_serializer para injetar o contexto (request, banco, permissoes)
+            cache_key = self._cache_key('estoque', status_override='22')
+            if not self._should_refresh():
+                cached = cache.get(cache_key)
+                if cached is not None:
+                    try:
+                        self.logger.info(f"[CACHE HIT][OS estoque] key={cache_key} size={len(cached)}")
+                    except Exception:
+                        pass
+                    return tratar_sucesso(cached)
+
+            queryset = super().get_queryset()
+            queryset = self._aplicar_filtros(queryset, incluir_status=False)
+            queryset = queryset.filter(orde_stat_orde=22)
+            queryset = self._blindar_datas(queryset).order_by('-orde_nume')
             serializer = self.get_serializer(queryset, many=True)
-            return tratar_sucesso(serializer.data)
+            data = serializer.data
+            cache.set(cache_key, data)
+            try:
+                self.logger.info(f"[CACHE SET][OS estoque] key={cache_key} size={len(data)}")
+            except Exception:
+                pass
+            return tratar_sucesso(data)
         except (ErroDominio, ValueError) as e:
             return tratar_erro(e)
     

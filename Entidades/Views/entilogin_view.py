@@ -18,6 +18,7 @@ import logging
 from rest_framework.decorators import action
 import jwt
 from datetime import datetime, timedelta
+from django.core.cache import cache
 
 
 logger = logging.getLogger(__name__)
@@ -108,7 +109,7 @@ class EntidadesLoginViewSet(viewsets.ViewSet):
                     
                     print(f"[LOGIN DEBUG] cliente={entidade.enti_clie} usuario={usuario_tipo_logado} ver_preco={ver_preco} ver_foto={ver_foto}")
                     
-                    return Response({
+                    resp = {
                         'success': True,
                         'cliente_id': entidade.enti_clie,
                         'cliente_nome': entidade.enti_nome,
@@ -130,7 +131,14 @@ class EntidadesLoginViewSet(viewsets.ViewSet):
                                 'ver_foto': entidade.enti_usua_foto
                             }
                         }
-                    })
+                    }
+                    session_key = f"session:{resp['session_id']}:permissoes"
+                    cache.set(session_key, {'ver_preco': ver_preco, 'ver_foto': ver_foto})
+                    try:
+                        logger.info(f"[CACHE SET][SESSION] key={session_key}")
+                    except Exception:
+                        pass
+                    return Response(resp)
                 else:
                     logger.warning(f"[LOGIN FAIL] Credenciais inválidas para {documento} no banco {banco_slug}")
 

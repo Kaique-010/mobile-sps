@@ -10,11 +10,21 @@ from OrdemdeServico.models import Ordemservico
 from django.db.models import Sum, Q, Case, When, Value, DateField
 from rest_framework.permissions import IsAuthenticated
 from core.middleware import get_licenca_slug
+from django.core.cache import cache
+import logging
 
 
 
 class ClienteDashboardViewSet(viewsets.ViewSet): 
     permission_classes = [IsCliente]
+    logger = logging.getLogger(__name__)
+
+    def _cache_key(self, banco, cliente_id, ver_preco):
+        return f"dash:cliente:b={banco}|c={cliente_id}|vp={'1' if ver_preco else '0'}"
+
+    def _should_refresh(self, request):
+        val = (request.query_params.get('refresh') or '').strip().lower()
+        return val in ('1', 'true', 'yes', 'y')
 
     def _get_safe_ordemservico_totals(self, banco, cliente_id):
         """Retorna totais de Ordemservico usando SQL puro para evitar erros de data no Django"""
@@ -189,16 +199,22 @@ class ClienteDashboardViewSet(viewsets.ViewSet):
         banco = request.banco
         slug = get_licenca_slug()
         
-        # Verificar permissão de ver preço
         ver_preco = True
         permissoes = getattr(request, 'permissoes', {})
         if permissoes:
              ver_preco = permissoes.get('ver_preco', False)
+
+        key = self._cache_key(banco, cliente_id, ver_preco)
+        if not self._should_refresh(request):
+            cached = cache.get(key)
+            if cached is not None:
+                try:
+                    self.logger.info(f"[CACHE HIT][DASH] key={key}")
+                except Exception:
+                    pass
+                return Response(cached)
         
-        # Condicional para cliente 'eletro' (ou banco savexml144)
-        # if slug in ['eletro', 'savexml144']:
         if False:
-            # Apenas informações de Ordens de Serviço usando SQL puro para evitar erros de data
             total_ordens_servico, total_valor_ordens_servico = self._get_safe_ordemservico_totals(banco, cliente_id)
             total_os, total_valor_os = self._get_safe_os_totals(banco, cliente_id)
             
@@ -218,6 +234,11 @@ class ClienteDashboardViewSet(viewsets.ViewSet):
                 'total_valor_os': total_valor_os,
                 'total_valor_total': total_valor_total, 
             }
+            cache.set(key, dashboard_data)
+            try:
+                self.logger.info(f"[CACHE SET][DASH] key={key}")
+            except Exception:
+                pass
             return Response(dashboard_data)
         
         # Fluxo padrão para outros clientes
@@ -245,7 +266,6 @@ class ClienteDashboardViewSet(viewsets.ViewSet):
         total_valor_total = total_valor_pedidos + total_valor_orcamentos + total_valor_ordens_servico + total_valor_os
         total_valor_total = round(total_valor_total, 2)
 
-        # Se não tiver permissão de ver preço, zera os totais monetários
         if not ver_preco:
             total_valor_pedidos = 0
             total_valor_orcamentos = 0
@@ -267,6 +287,11 @@ class ClienteDashboardViewSet(viewsets.ViewSet):
             'total_valor_total': total_valor_total, 
         }
         
+        cache.set(key, dashboard_data)
+        try:
+            self.logger.info(f"[CACHE SET][DASH] key={key}")
+        except Exception:
+            pass
         return Response(dashboard_data)
 
 

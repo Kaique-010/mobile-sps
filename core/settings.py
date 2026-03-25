@@ -496,9 +496,9 @@ if USE_LOCAL_DB:
         'default': {
             'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
             'LOCATION': 'mobile-sps-cache',
-            'TIMEOUT': 1800,  # 30 minutos (era 150 segundos - muito curto!)
+            'TIMEOUT': 86400,  # 24 horas - mesmo valor do Redis
             'OPTIONS': {
-                'MAX_ENTRIES': 10000,  # Aumentar limite de entradas
+                'MAX_ENTRIES': 10000,  
             }
         }
     }
@@ -522,7 +522,7 @@ else:
                 'SOCKET_TIMEOUT': 5,
             },
             'KEY_PREFIX': 'mobile_sps',
-            'TIMEOUT': 3600,  # 1 hora
+            'TIMEOUT': 86400,  # 24 horas - mesmo valor do LocMemCache
         }
     }
 
