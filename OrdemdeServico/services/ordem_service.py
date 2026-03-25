@@ -1,7 +1,6 @@
 from ..repositorios import ordem_repo
 from ..services import total_service
 from django.db import transaction
-
 def criar_ordem_servico(dados, pecas_data, servicos_data, usuario, banco):
     """
     Cria uma nova ordem de serviço com suas peças e serviços.
@@ -10,14 +9,9 @@ def criar_ordem_servico(dados, pecas_data, servicos_data, usuario, banco):
     # Por enquanto, seguindo a lógica do antigo viewset, o número vem no payload se for manual.
     # Se precisarmos gerar:
     if not dados.get('orde_nume'):
+        pass
         # TODO: Implementar geração automática quando sair do modo manual
         pass
-
-    with transaction.atomic(using=banco):
-        ordem = ordem_repo.criar_ordem(dados, banco)
-        
-        if pecas_data:
-            ordem_repo.sync_pecas(ordem, pecas_data, banco)
         
         if servicos_data:
             ordem_repo.sync_servicos(ordem, servicos_data, banco)

@@ -1,4 +1,3 @@
-from django.db import models
 from ..models import (
     Ordemservico, 
     Ordemservicopecas, 
@@ -7,6 +6,7 @@ from ..models import (
     Ordemservicoimgdurante,
     Ordemservicoimgdepois
 )
+from ..utils import get_next_item_number_sequence, get_next_service_id
 
 def buscar_ordem_por_numero(numero, banco):
     """Busca uma OS pelo número."""
@@ -57,23 +57,15 @@ def sync_pecas(ordem, pecas_data, banco):
             ids_enviados.append(obj.peca_id)
         else:
             # Create new
-            # Generate ID if necessary (assuming manual ID generation is needed based on legacy code)
-            # Legacy code used update_or_create with defaults. If no ID, it likely relied on auto-increment OR 
-            # the legacy code we saw had a fallback?
-            # The legacy serializer code:
-            # if peca_id: update_or_create(...) else: create(...)
-            # If the model is not AutoField, create() without ID might fail if ID is mandatory.
-            # Checking legacy code again:
-            # obj = Ordemservicopecas.objects.using(banco).create(**item)
-            # If this worked, then either ID is AutoField or item has ID or DB handles it.
-            # But the repo code I read earlier had manual ID generation.
-            # Let's keep manual ID generation to be safe if it's not AutoField.
-            
             if 'peca_id' in item:
                 del item['peca_id']
-                
-            ultimo_id = Ordemservicopecas.objects.using(banco).aggregate(models.Max('peca_id'))['peca_id__max'] or 0
-            item['peca_id'] = ultimo_id + 1
+
+            item['peca_id'] = get_next_item_number_sequence(
+                banco,
+                ordem.orde_nume,
+                ordem.orde_empr,
+                ordem.orde_fili,
+            )
             obj = Ordemservicopecas.objects.using(banco).create(**item)
             ids_enviados.append(obj.peca_id)
 
@@ -115,9 +107,21 @@ def sync_servicos(ordem, servicos_data, banco):
         else:
             if 'serv_id' in item:
                 del item['serv_id']
-            
-            ultimo_id = Ordemservicoservicos.objects.using(banco).aggregate(models.Max('serv_id'))['serv_id__max'] or 0
-            item['serv_id'] = ultimo_id + 1
+
+            if not item.get('serv_sequ'):
+                item['serv_id'], item['serv_sequ'] = get_next_service_id(
+                    banco,
+                    ordem.orde_nume,
+                    ordem.orde_empr,
+                    ordem.orde_fili,
+                )
+            else:
+                item['serv_id'], _ = get_next_service_id(
+                    banco,
+                    ordem.orde_nume,
+                    ordem.orde_empr,
+                    ordem.orde_fili,
+                )
             obj = Ordemservicoservicos.objects.using(banco).create(**item)
             ids_enviados.append(obj.serv_id)
 

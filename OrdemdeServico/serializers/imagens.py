@@ -4,7 +4,7 @@ from datetime import datetime
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from .base import BancoModelSerializer
-from ..models import Ordemservicoimgantes, Ordemservicoimgdurante, Ordemservicoimgdepois
+from ..models import Ordemservicoimgantes, Ordemservicoimgdurante, Ordemservicoimgdepois, Osarquivos
 
 logger = logging.getLogger(__name__)
 
@@ -106,3 +106,56 @@ class ImagemDepoisSerializer(ImagemBase64Serializer):
             'imde_come', 'imde_obse', 'img_latitude', 'img_longitude',
             'img_data', 'imagem_base64', 'imagem_data_uri', 'imagem_upload'
         ]
+
+class OsArquSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(source="arqu_codi_arqu", read_only=True)
+    numero_os = serializers.IntegerField(source="arqu_os", read_only=True)
+    nome = serializers.CharField(source="arqu_nome_arqu", read_only=True)
+    usuario = serializers.IntegerField(source="arqu_usua", read_only=True)
+    arquivo_base64 = serializers.SerializerMethodField()
+    arquivo_data_uri = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Osarquivos
+        fields = [
+            "id",
+            "numero_os",
+            "nome",
+            "usuario",
+            "arquivo_base64",
+            "arquivo_data_uri",
+        ]
+    
+    def get_arquivo_base64(self, obj):
+        if not self.context.get("include_base64"):
+            return None
+        blob = getattr(obj, "arqu_arqu", None)
+        if not blob:
+            return None
+        try:
+            return base64.b64encode(bytes(blob)).decode("utf-8")
+        except Exception:
+            return None
+
+    def get_arquivo_data_uri(self, obj):
+        b64 = self.get_arquivo_base64(obj)
+        if not b64:
+            return None
+        blob = getattr(obj, "arqu_arqu", None)
+        mime = self._detectar_mime(blob)
+        return f"data:{mime};base64,{b64}"
+
+    def _detectar_mime(self, blob):
+        try:
+            head = bytes(blob)[:12]
+        except Exception:
+            return "application/octet-stream"
+        if len(head) >= 3 and head[0] == 0xFF and head[1] == 0xD8 and head[2] == 0xFF:
+            return "image/jpeg"
+        if len(head) >= 8 and head[:8] == b"\x89PNG\r\n\x1a\n":
+            return "image/png"
+        if len(head) >= 12 and head[:4] == b"RIFF" and head[8:12] == b"WEBP":
+            return "image/webp"
+        if len(head) >= 4 and head[:4] == b"%PDF":
+            return "application/pdf"
+        return "application/octet-stream"

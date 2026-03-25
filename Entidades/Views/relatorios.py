@@ -1,6 +1,7 @@
 
 
 from re import T
+import base64
 from django.core.cache import cache
 from django.db.models import Q
 from Pedidos.models import PedidoVenda, PedidosGeral,Itenspedidovenda
@@ -13,6 +14,7 @@ from rest_framework import status
 from rest_framework import status
 from Entidades.models import Entidades
 from Produtos.models import Produtos
+from OrdemdeServico.models import Osarquivos
 from OrdemdeServico.models import (
     Ordemservico,
     Ordemservicoimgantes,
@@ -30,7 +32,8 @@ from OrdemdeServico.serializers import (
     OrdemServicoSerializer,
     ImagemAntesSerializer,
     ImagemDuranteSerializer,
-    ImagemDepoisSerializer
+    ImagemDepoisSerializer,
+    OsArquSerializer
 )
 from .base_cliente import BaseClienteViewSet
 from core.excecoes import ErroDominio
@@ -72,6 +75,40 @@ class OrdemServicoViewSet(BaseClienteViewSet):
     
     serializer_class = OrdemServicoSerializer
     logger = logging.getLogger(__name__)
+
+    def _get_arquivos_map_por_ordem(self, ordens):
+        permissoes = getattr(self.request, 'permissoes', {}) or {}
+        if not permissoes.get('ver_foto', True):
+            return {}
+
+        if not ordens:
+            return {}
+
+        banco = self.request.banco
+        orde_ids = [obj.orde_nume for obj in ordens]
+        empr_ids = {obj.orde_empr for obj in ordens if obj.orde_empr is not None}
+        fili_ids = {obj.orde_fili for obj in ordens if obj.orde_fili is not None}
+
+        qs = Osarquivos.objects.using(banco).filter(
+            arqu_os__in=orde_ids,
+            arqu_empr__in=empr_ids,
+            arqu_fili__in=fili_ids,
+        ).order_by("-arqu_codi_arqu")
+
+        arquivos_map = {}
+        for obj in qs:
+            key = (obj.arqu_empr, obj.arqu_fili, obj.arqu_os)
+            item = OsArquSerializer(obj, context={"banco": banco, "include_base64": True}).data
+            arquivos_map.setdefault(key, []).append(item)
+        return arquivos_map
+
+    def _inject_arquivos_no_payload(self, ordens, data):
+        if not ordens or not data:
+            return
+        arquivos_map = self._get_arquivos_map_por_ordem(ordens)
+        for obj, item in zip(ordens, data):
+            key = (obj.orde_empr, obj.orde_fili, obj.orde_nume)
+            item["arquivos"] = arquivos_map.get(key, [])
 
     def _cache_key(self, base: str, status_override=None):
         banco = getattr(self.request, 'banco', None) or 'default'
@@ -125,6 +162,7 @@ class OrdemServicoViewSet(BaseClienteViewSet):
         if page is not None:
             self._prefetch_related_objects(page)
             serializer = self.get_serializer(page, many=True)
+            self._inject_arquivos_no_payload(page, serializer.data)
             resp = self.get_paginated_response(serializer.data)
             cache.set(cache_key, resp.data)
             try:
@@ -136,6 +174,7 @@ class OrdemServicoViewSet(BaseClienteViewSet):
         self._prefetch_related_objects(queryset)
         serializer = self.get_serializer(queryset, many=True)
         data = serializer.data
+        self._inject_arquivos_no_payload(queryset, data)
         cache.set(cache_key, data)
         try:
             self.logger.info(f"[CACHE SET][OS list] key={cache_key} paginated=0 size={len(data)}")
@@ -544,6 +583,7 @@ class OrdemServicoViewSet(BaseClienteViewSet):
             queryset = self._blindar_datas(queryset).order_by('-orde_nume')
             serializer = self.get_serializer(queryset, many=True)
             data = serializer.data
+            self._inject_arquivos_no_payload(queryset, data)
             cache.set(cache_key, data)
             try:
                 self.logger.info(f"[CACHE SET][OS estoque] key={cache_key} size={len(data)}")

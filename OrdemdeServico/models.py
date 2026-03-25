@@ -450,3 +450,21 @@ class OrdensEletro(models.Model):
     class Meta:
         managed = False
         db_table = 'ordenseletro'
+
+
+
+
+
+class Osarquivos(models.Model):
+    arqu_empr = models.IntegerField()
+    arqu_fili = models.IntegerField()
+    arqu_os = models.IntegerField(primary_key=True)
+    arqu_codi_arqu = models.IntegerField()
+    arqu_arqu = models.BinaryField(blank=True, null=True)
+    arqu_nome_arqu = models.TextField(blank=True, null=True)
+    arqu_usua = models.IntegerField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'osarquivos'
+        unique_together = (('arqu_empr', 'arqu_fili', 'arqu_os', 'arqu_codi_arqu'),)

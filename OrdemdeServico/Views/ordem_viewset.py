@@ -6,16 +6,19 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db import transaction
 from django.db.models.expressions import RawSQL
 from .base import BaseMultiDBModelViewSet
-from ..models import Ordemservico, Ordemservicopecas, Ordemservicoservicos, OrdemServicoFaseSetor
-from ..serializers import OrdemServicoSerializer
+from ..models import Ordemservico, Ordemservicopecas, Ordemservicoservicos, OrdemServicoFaseSetor, Osarquivos
+from ..serializers import OrdemServicoSerializer, OsArquSerializer
 from ..filters.os import OrdemServicoFilter
 from ..pagination import OrdemServicoPagination
 from ..permissions import OrdemServicoPermission, PodeVerOrdemDoSetor, WorkflowPermission
 from Entidades.models import Entidades
 
 from ..services import workflow_service, ordem_service, total_service
+from ..services.os_arquivo_service import OsArquivoService
 from ..handlers.dominio_handler import tratar_erro
 from django.db.models import Q, Case, When, Value, DateField
+from Agricola.service.sequencial_Service import SequencialService
+import base64
 
 import logging
 logger = logging.getLogger(__name__)
@@ -489,5 +492,89 @@ class OrdemViewSet(BaseMultiDBModelViewSet):
         except Exception as e:
             return tratar_erro(e)
 
+    @action(detail=True, methods=["get"], url_path="arquivos", permission_classes=[IsAuthenticated, PodeVerOrdemDoSetor])
+    def arquivos(self, request, *args, **kwargs):
+        try:
+            banco = self.get_banco()
+            ordem = self.get_object()
 
+            queryset = Osarquivos.objects.using(banco).filter(
+                arqu_empr=ordem.orde_empr,
+                arqu_fili=ordem.orde_fili,
+                arqu_os=ordem.orde_nume,
+            ).order_by("-arqu_codi_arqu")
 
+            page = self.paginate_queryset(queryset)
+            objs = page if page is not None else queryset
+
+            data = []
+            for obj in objs:
+                item = OsArquSerializer(obj, context={"banco": banco, "include_base64": True}).data
+                prev = OsArquivoService.preview(obj)
+                if isinstance(prev, bytes):
+                    prev = base64.b64encode(prev).decode("utf-8")
+                item["preview"] = prev
+                data.append(item)
+
+            if page is not None:
+                return self.get_paginated_response(data)
+            return Response(data)
+        except Exception as e:
+            return tratar_erro(e)
+
+    @action(detail=True, methods=["get"], url_path=r"arquivos/(?P<arquivo_id>\d+)", permission_classes=[IsAuthenticated, PodeVerOrdemDoSetor])
+    def arquivo(self, request, arquivo_id=None, *args, **kwargs):
+        try:
+            banco = self.get_banco()
+            ordem = self.get_object()
+
+            obj = Osarquivos.objects.using(banco).filter(
+                arqu_empr=ordem.orde_empr,
+                arqu_fili=ordem.orde_fili,
+                arqu_os=ordem.orde_nume,
+                arqu_codi_arqu=arquivo_id,
+            ).first()
+
+            if not obj:
+                return Response({"detail": "Arquivo não encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+            data = OsArquSerializer(obj, context={"banco": banco, "include_base64": True}).data
+            prev = OsArquivoService.preview(obj)
+            if isinstance(prev, bytes):
+                prev = base64.b64encode(prev).decode("utf-8")
+            data["preview"] = prev
+            return Response(data)
+        except Exception as e:
+            return tratar_erro(e)
+
+    @action(detail=True, methods=["post", "patch"], url_path="arquivos/upload", permission_classes=[IsAuthenticated, PodeVerOrdemDoSetor])
+    def upload_arquivos(self, request, *args, **kwargs):
+        try:
+            banco = self.get_banco()
+            ordem = self.get_object()
+            arquivos = request.data.get("arquivos")
+
+            user = (
+                getattr(request.user, "pk", None)
+                or request.data.get("usua")
+                or request.data.get("usuario")
+                or request.data.get("usuario_id")
+                or 0
+            )
+            empresa = ordem.orde_empr
+            filial = ordem.orde_fili
+            os_nume = ordem.orde_nume
+
+            if isinstance(arquivos, str):
+                obj = OsArquivoService.salvar_um(os_nume, arquivos, user, empresa, filial, banco=banco)
+                data = OsArquSerializer(obj, context={"banco": banco}).data if obj else None
+                return Response({"msg": "1 arquivo enviado", "arquivo": data})
+
+            if isinstance(arquivos, list):
+                objs = OsArquivoService.salvar_multiplos(os_nume, arquivos, user, empresa, filial, banco=banco)
+                data = [OsArquSerializer(o, context={"banco": banco}).data for o in objs]
+                return Response({"msg": f"{len(objs)} arquivos enviados", "arquivos": data})
+
+            return Response({"erro": "formato inválido"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return tratar_erro(e)
