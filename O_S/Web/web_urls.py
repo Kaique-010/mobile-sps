@@ -5,11 +5,13 @@ from .Views.criar import OsCreateView
 from .Views.detalhes import OsDetailView
 from .Views.update import OsUpdateView
 from .Views.imprimir import OsPrintView
+from .Views.os_rentabilidade import OsRentabilidadeView
 
 app_name = "OsWeb"
 
 urlpatterns = [
     path("", OsListView.as_view(), name="os_listar"),
+    path("rentabilidade/<int:pk>/", OsRentabilidadeView.as_view(), name="os_rentabilidade"),
     path("criar/", OsCreateView.as_view(), name="os_criar"),
     path("<int:pk>/", OsDetailView.as_view(), name="os_detalhe"),
     path("<int:pk>/editar/", OsUpdateView.as_view(), name="os_editar"),

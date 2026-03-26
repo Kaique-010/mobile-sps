@@ -1,0 +1,159 @@
+<div class="modal fade" id="modalRentabilidadeOs" tabindex="-1" aria-labelledby="modalRentabilidadeOsLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalRentabilidadeOsLabel">Rentabilidade da OS</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div id="rentabilidadeOsBody" class="small text-muted">Carregando...</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const modalEl = document.getElementById('modalRentabilidadeOs');
+        const bodyEl = document.getElementById('rentabilidadeOsBody');
+        if (!modalEl || !bodyEl) return;
+
+        const fmtBRL = (val) => {
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
+        };
+
+        const render = (data) => {
+            const { os, resumo, itens } = data;
+
+            let html = `
+                <div class="d-flex flex-wrap gap-3 align-items-center mb-3">
+                    <div><span class="text-muted">OS</span> <strong>#${os.numero || ''}</strong></div>
+                    <div><span class="text-muted">Cliente</span> <strong>${os.cliente_nome || ''} (${os.cliente || ''})</strong></div>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-12 col-md-3">
+                        <div class="border rounded p-2 d-flex align-items-center gap-2">
+                            <i class="bi bi-cash-stack text-primary"></i>
+                            <div>
+                                <div class="text-muted">Receita</div>
+                                <div class="fw-semibold">${fmtBRL(resumo.receita)}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <div class="border rounded p-2 d-flex align-items-center gap-2">
+                            <i class="bi bi-receipt text-danger"></i>
+                            <div>
+                                <div class="text-muted">Custo</div>
+                                <div class="fw-semibold">${fmtBRL(resumo.custo)}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <div class="border rounded p-2 d-flex align-items-center gap-2">
+                            <i class="bi bi-graph-up-arrow text-success"></i>
+                            <div>
+                                <div class="text-muted">Lucro</div>
+                                <div class="fw-semibold">${fmtBRL(resumo.lucro)}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <div class="border rounded p-2 d-flex align-items-center gap-2">
+                            <i class="bi bi-percent text-info"></i>
+                            <div>
+                                <div class="text-muted">Margem</div>
+                                <div class="fw-semibold">${resumo.margem}%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h6 class="mb-2">Itens</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Tipo</th>
+                                <th>Produto/Serviço</th>
+                                <th class="text-end">Qtd</th>
+                                <th class="text-end">Receita</th>
+                                <th class="text-end">Custo</th>
+                                <th class="text-end">Lucro</th>
+                                <th class="text-end">Margem</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            if (itens && itens.length > 0) {
+                itens.forEach(i => {
+                    html += `
+                        <tr>
+                            <td>${i.tipo}</td>
+                            <td>${i.prod_codi}</td>
+                            <td class="text-end">${i.quantidade}</td>
+                            <td class="text-end">${fmtBRL(i.receita)}</td>
+                            <td class="text-end">${fmtBRL(i.custo)}</td>
+                            <td class="text-end">${fmtBRL(i.lucro)}</td>
+                            <td class="text-end">${i.margem}%</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                html += `<tr><td colspan="7" class="text-center text-muted">Nenhum item encontrado.</td></tr>`;
+            }
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            return html;
+        };
+
+        const openAndLoad = async (url) => {
+            bodyEl.className = 'small text-muted';
+            bodyEl.innerHTML = '<div class="text-center py-3"><div class="spinner-border text-primary" role="status"></div></div>';
+
+            let modal;
+            try {
+                modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.show();
+            } catch (e) {
+                console.error("Erro ao abrir modal", e);
+                return;
+            }
+
+            try {
+                const res = await fetch(url);
+                if (!res.ok) throw new Error('Erro na requisição');
+                const json = await res.json();
+                if (json.erro) {
+                    bodyEl.className = '';
+                    bodyEl.innerHTML = `<div class="alert alert-danger">${json.erro}</div>`;
+                    return;
+                }
+                bodyEl.className = '';
+                bodyEl.innerHTML = render(json);
+            } catch (e) {
+                bodyEl.className = 'text-danger';
+                bodyEl.textContent = 'Erro ao carregar rentabilidade.';
+            }
+        };
+
+        document.addEventListener('click', function (ev) {
+            const btn = ev.target.closest('.js-rentabilidade-os');
+            if (!btn) return;
+            ev.preventDefault();
+            const url = btn.getAttribute('data-url');
+            if (!url) return;
+            openAndLoad(url);
+        });
+    })();
+</script>

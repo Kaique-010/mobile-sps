@@ -94,10 +94,17 @@
           <td>{{ o.vendedor_nome|default:"—" }}</td>
           <td class="text-end">{{ o.pedi_tota|brl }}</td>
           <td class="text-end">
+           <button type="button" class="btn btn-sm btn-outline-info js-rentabilidade-orcamento rounded-circle p-0"
+              data-bs-toggle="tooltip" title="Rentabilidade"
+              style="width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center"
+              data-url="{% url 'OrcamentosWeb:orcamento_rentabilidade' slug=slug pk=o.pk %}">
+              <i class="bi bi-coin"></i>
+            </button>
             <a class="btn btn-sm btn-outline-primary"
               href="{% url 'OrcamentosWeb:orcamento_detalhe' slug=slug pk=o.pk %}">Detalhes</a>
             <a class="btn btn-sm btn-outline-secondary"
               href="{% url 'OrcamentosWeb:orcamento_editar' slug=slug pk=o.pk %}">Editar</a>
+
             {% if not o.pedi_nume_pedi %}
             <form method="post" action="{% url 'OrcamentosWeb:orcamento_transformar' slug=slug pk=o.pk %}"
               style="display:inline">
@@ -140,6 +147,12 @@
             href="{% url 'OrcamentosWeb:orcamento_detalhe' slug=slug pk=o.pk %}">Detalhes</a>
           <a class="btn btn-sm btn-outline-secondary"
             href="{% url 'OrcamentosWeb:orcamento_editar' slug=slug pk=o.pk %}">Editar</a>
+          <button type="button" class="btn btn-sm btn-outline-info js-rentabilidade-orcamento rounded-circle p-0"
+            data-bs-toggle="tooltip" title="Rentabilidade"
+            style="width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center"
+            data-url="{% url 'OrcamentosWeb:orcamento_rentabilidade' slug=slug pk=o.pk %}">
+            <i class="bi bi-coin"></i>
+          </button>
           {% if not o.pedi_nume_pedi %}
           <form method="post" action="{% url 'OrcamentosWeb:orcamento_transformar' slug=slug pk=o.pk %}"
             style="display:inline">
@@ -156,4 +169,11 @@
   </div>
 </div>
 {% include 'components/pagination.html' with page_obj=page_obj extra_query=extra_query %}
+{% include 'Orcamentos/modal_rentabilidade.html' %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.forEach(function (el) { new bootstrap.Tooltip(el); });
+  });
+</script>
 {% endblock %}

@@ -113,6 +113,12 @@
           <td class="text-end">
             <a class="btn btn-sm btn-outline-primary" href="{% url 'PedidosWeb:pedido_detalhe' slug=slug pk=p.pk %}">Detalhes</a>
             <a class="btn btn-sm btn-outline-secondary" href="{% url 'PedidosWeb:pedido_editar' slug=slug pk=p.pk %}">Editar</a>
+            <button type="button" class="btn btn-sm btn-outline-info js-rentabilidade rounded-circle p-0"
+                    data-bs-toggle="tooltip" title="Rentabilidade"
+                    style="width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center"
+                    data-url="{% url 'PedidosWeb:pedido_rentabilidade' slug=slug pk=p.pk %}">
+              <i class="bi bi-coin"></i>
+            </button>
           </td>
         </tr>
         {% empty %}
@@ -150,6 +156,12 @@
         <div class="mt-3 d-flex gap-2">
           <a class="btn btn-sm btn-outline-primary" href="{% url 'PedidosWeb:pedido_detalhe' slug=slug pk=p.pk %}">Detalhes</a>
           <a class="btn btn-sm btn-outline-secondary" href="{% url 'PedidosWeb:pedido_editar' slug=slug pk=p.pk %}">Editar</a>
+          <button type="button" class="btn btn-sm btn-outline-info js-rentabilidade rounded-circle p-0"
+                  data-bs-toggle="tooltip" title="Rentabilidade"
+                  style="width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center"
+                  data-url="{% url 'PedidosWeb:pedido_rentabilidade' slug=slug pk=p.pk %}">
+            <i class="bi bi-coin"></i>
+          </button>
         </div>
       </div>
     </div>
@@ -168,5 +180,12 @@
   </div>
 
   {% include 'components/pagination.html' with page_obj=page_obj extra_query=extra_query %}
+  {% include 'Pedidos/modal_rentabilidade.html' %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+      tooltipTriggerList.forEach(function (el) { new bootstrap.Tooltip(el); });
+    });
+  </script>
 </div>
 {% endblock %}

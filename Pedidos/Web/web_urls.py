@@ -8,6 +8,7 @@ from .Views.dashboardView import PedidosDashboardView
 from .Views.utils import autocomplete_clientes, autocomplete_vendedores, autocomplete_produtos, preco_produto, lotes_produto
 from .Views.emissao_nota import PedidoEmitirNFeView
 from .Views.dashboard_ebitida import DashboardEbitdaView
+from .Views.pedido_rentabilidade import PedidoRentabilidadeView
 
 app_name = "PedidosWeb"
 
@@ -15,6 +16,7 @@ urlpatterns = [
     path("", PedidosListView.as_view(), name="pedidos_listar"),
     path("dashboard/", PedidosDashboardView.as_view(), name="pedidos_dashboard"),
     path("dashboard/ebitda/", DashboardEbitdaView.as_view(), name="pedidos_dashboard_ebitda"),
+    path("rentabilidade/<int:pk>/", PedidoRentabilidadeView.as_view(), name="pedido_rentabilidade"),
     path("criar/", PedidoCreateView.as_view(), name="pedido_criar"),
     path("<int:pk>/", PedidoDetailView.as_view(), name="pedido_detalhe"),
     path("<int:pk>/editar/", PedidoUpdateView.as_view(), name="pedido_editar"),

@@ -6,11 +6,13 @@ from .Views.updateView import OrcamentoUpdateView
 from .Views.printView import OrcamentoPrintView
 from .Views.utils import autocomplete_clientes, autocomplete_vendedores, autocomplete_produtos, preco_produto
 from .Views.trans_pedido import transformar_em_pedido_web
+from .Views.orcamento_rentabilidade import OrcamentoRentabilidadeView
 
 app_name = "OrcamentosWeb"
 
 urlpatterns = [
     path("", OrcamentosListView.as_view(), name="orcamentos_listar"),
+    path("rentabilidade/<int:pk>/", OrcamentoRentabilidadeView.as_view(), name="orcamento_rentabilidade"),
     path("criar/", OrcamentoCreateView.as_view(), name="orcamento_criar"),
     path("<int:pk>/", OrcamentoDetailView.as_view(), name="orcamento_detalhe"),
     path("<int:pk>/editar/", OrcamentoUpdateView.as_view(), name="orcamento_editar"),

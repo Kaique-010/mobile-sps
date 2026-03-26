@@ -1,0 +1,146 @@
+<div class="modal fade" id="modalRentabilidadeOrcamento" tabindex="-1" aria-labelledby="modalRentabilidadeOrcamentoLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalRentabilidadeOrcamentoLabel">Rentabilidade</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div id="rentabilidadeOrcamentoBody" class="small text-muted">Carregando...</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const modalEl = document.getElementById('modalRentabilidadeOrcamento');
+        const bodyEl = document.getElementById('rentabilidadeOrcamentoBody');
+        if (!modalEl || !bodyEl) return;
+
+        const fmtBRL = (v) => {
+            const n = Number(v || 0);
+            return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        };
+
+        const fmtPct = (v) => {
+            const n = Number(v || 0);
+            return `${n.toFixed(2)}%`;
+        };
+
+        const render = (data) => {
+            const orcamento = data && data.orcamento ? data.orcamento : {};
+            const resumo = data && data.resumo ? data.resumo : {};
+            const itens = Array.isArray(data && data.itens ? data.itens : []) ? data.itens : [];
+
+            const clienteNome = (orcamento.cliente_nome || '').trim();
+            const clienteCodigo = (orcamento.cliente || '').trim();
+            const clienteLinha = clienteNome
+                ? `${clienteNome} <span class="text-muted">(${clienteCodigo})</span>`
+                : `${clienteCodigo}`;
+
+            const metricCard = (label, value, iconClass) => `
+      <div class="col-12 col-md-3">
+        <div class="border rounded p-2 h-100">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <div class="text-muted">${label}</div>
+              <div class="fw-semibold">${value}</div>
+            </div>
+            <div class="d-inline-flex align-items-center justify-content-center rounded"
+                 style="width:34px;height:34px;border:1px solid rgba(99,102,241,0.35);background:rgba(99,102,241,0.12);">
+              <i class="bi ${iconClass}"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+            const header = `
+      <div class="d-flex flex-wrap gap-3 align-items-center mb-3">
+        <div><span class="text-muted">Orçamento</span> <strong>#${orcamento.numero ?? ''}</strong></div>
+        <div><span class="text-muted">Cliente</span> <strong>${clienteLinha}</strong></div>
+      </div>
+      <div class="row g-2 mb-3">
+        ${metricCard('Receita', fmtBRL(resumo.receita), 'bi-cash-stack')}
+        ${metricCard('Custo', fmtBRL(resumo.custo), 'bi-receipt')}
+        ${metricCard('Lucro', fmtBRL(resumo.lucro), 'bi-graph-up-arrow')}
+        ${metricCard('Margem', fmtPct(resumo.margem), 'bi-percent')}
+      </div>
+    `;
+
+            const rows = itens.map((it) => `
+      <tr>
+        <td>${it.prod_codi ?? ''}</td>
+        <td class="text-end">${Number(it.quantidade || 0).toLocaleString('pt-BR')}</td>
+        <td class="text-end">${fmtBRL(it.receita)}</td>
+        <td class="text-end">${fmtBRL(it.custo)}</td>
+        <td class="text-end">${fmtBRL(it.lucro)}</td>
+        <td class="text-end">${fmtPct(it.margem)}</td>
+      </tr>
+    `).join('');
+
+            const table = `
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle">
+          <thead class="table">
+            <tr>
+              <th>Produto</th>
+              <th class="text-end">Qtd</th>
+              <th class="text-end">Receita</th>
+              <th class="text-end">Custo</th>
+              <th class="text-end">Lucro</th>
+              <th class="text-end">Margem</th>
+            </tr>
+          </thead>
+          <tbody>${rows || `<tr><td colspan="6" class="text-center text-muted">Sem itens</td></tr>`}</tbody>
+        </table>
+      </div>
+    `;
+
+            return header + table;
+        };
+
+        const openAndLoad = async (url) => {
+            bodyEl.className = 'small text-muted';
+            bodyEl.textContent = 'Carregando...';
+
+            let modal;
+            try {
+                modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.show();
+            } catch (e) {
+                return;
+            }
+
+            try {
+                const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                const json = await res.json();
+                if (!res.ok) {
+                    bodyEl.className = 'text-danger';
+                    bodyEl.textContent = json && (json.erro || json.detail) ? (json.erro || json.detail) : 'Erro ao carregar rentabilidade.';
+                    return;
+                }
+                bodyEl.className = '';
+                bodyEl.innerHTML = render(json);
+            } catch (e) {
+                bodyEl.className = 'text-danger';
+                bodyEl.textContent = 'Erro ao carregar rentabilidade.';
+            }
+        };
+
+        document.addEventListener('click', function (ev) {
+            const btn = ev.target.closest('.js-rentabilidade-orcamento');
+            if (!btn) return;
+            ev.preventDefault();
+            const url = btn.getAttribute('data-url');
+            if (!url) return;
+            openAndLoad(url);
+        });
+    })();
+</script>
+
