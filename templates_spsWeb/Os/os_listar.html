@@ -47,10 +47,10 @@
     </div>
     <div class="col-md-2">
       <select name="status" class="form-select">
-        <option value="todos" {% if request.GET.status=='todos' or not request.GET.status %}selected{% endif %}>Todos
+        <option value="todos" {% if request.GET.status == 'todos' or not request.GET.status %}selected{% endif %}>Todos
         </option>
         {% for st in status_ordens %}
-        <option value="{{ st.value }}" {% if request.GET.status==st.value|stringformat:"s" %}selected{% endif %}>{{
+        <option value="{{ st.value }}" {% if request.GET.status == st.value|stringformat:"s" %}selected{% endif %>{{
           st.label }}</option>
         {% endfor %}
       </select>

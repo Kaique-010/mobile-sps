@@ -12,7 +12,7 @@ from Licencas.models import Filiais
 class CFOPCreateView(CreateView):
     model = CFOP
     form_class = CFOPForm
-    template_name = "cfop/cfop_form.html"  # seu template
+    template_name = "CFOP/cfop_form.html"
 
     # --------------------------
     # BANCO / EMPRESA / REGIME
