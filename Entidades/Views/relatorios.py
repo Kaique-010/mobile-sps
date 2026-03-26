@@ -602,28 +602,53 @@ class OrdemServicoViewSet(BaseClienteViewSet):
     @action(detail=False, methods=['get'], url_path='todas_ordens')
     def listar_todas_ordens(self, request, *args, **kwargs):
         try:
-            cache_key = self._cache_key('estoque', status_override='1,22')
+            status_list = [1, 2, 3, 4, 5, 6, 21, 22]
+            status_override = ",".join(str(s) for s in status_list)
+            cache_key = self._cache_key('todas', status_override=status_override)
             if not self._should_refresh():
                 cached = cache.get(cache_key)
                 if cached is not None:
                     try:
-                        self.logger.info(f"[CACHE HIT][OS estoque] key={cache_key} size={len(cached)}")
+                        self.logger.info(f"[CACHE HIT][OS todas] key={cache_key} type={type(cached).__name__}")
                     except Exception:
                         pass
                     return tratar_sucesso(cached)
 
             queryset = super().get_queryset()
-            queryset = queryset.filter(orde_enti=request.cliente_id)
             queryset = self._aplicar_filtros(queryset, incluir_status=False)
-            queryset = queryset.filter(orde_stat_orde__in=[1, 2, 3, 4, 5, 6, 21, 22])
+            queryset = queryset.filter(orde_stat_orde__in=status_list)
             queryset = self._blindar_datas(queryset).order_by('-orde_nume')
+
+            include_arquivos = (request.query_params.get('include_arquivos') or '').strip().lower() in (
+                '1',
+                'true',
+                'yes',
+                'y',
+            )
+
+            page = self.paginate_queryset(queryset)
+            if page is not None:
+                self._prefetch_related_objects(page)
+                serializer = self.get_serializer(page, many=True)
+                data = serializer.data
+                if include_arquivos:
+                    self._inject_arquivos_no_payload(page, data)
+                resp = self.get_paginated_response(data)
+                cache.set(cache_key, resp.data)
+                try:
+                    self.logger.info(f"[CACHE SET][OS todas] key={cache_key} paginated=1")
+                except Exception:
+                    pass
+                return tratar_sucesso(resp.data)
+
             self._prefetch_related_objects(queryset)
             serializer = self.get_serializer(queryset, many=True)
             data = serializer.data
-            self._inject_arquivos_no_payload(queryset, data)
+            if include_arquivos:
+                self._inject_arquivos_no_payload(queryset, data)
             cache.set(cache_key, data)
             try:
-                self.logger.info(f"[CACHE SET][OS estoque] key={cache_key} size={len(data)}")
+                self.logger.info(f"[CACHE SET][OS todas] key={cache_key} paginated=0 size={len(data)}")
             except Exception:
                 pass
             return tratar_sucesso(data)
