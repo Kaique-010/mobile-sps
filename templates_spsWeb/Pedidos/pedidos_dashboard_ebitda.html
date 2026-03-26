@@ -1,0 +1,409 @@
+{% extends "base.html" %}
+
+{% block title %}
+EBITDA
+{% endblock %}
+
+{% block content %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    .ebitda-page {
+        color: #e5e7eb;
+    }
+
+    .ebitda-card {
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        background: linear-gradient(180deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.92));
+        border-radius: 14px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    .ebitda-metric {
+        padding: 18px;
+    }
+
+    .ebitda-metric .label {
+        font-size: 0.9rem;
+        color: rgba(226, 232, 240, 0.8);
+        margin-bottom: 2px;
+    }
+
+    .ebitda-metric .value {
+        font-size: 1.35rem;
+        font-weight: 700;
+        letter-spacing: 0.2px;
+    }
+
+    .ebitda-metric .icon {
+        width: 44px;
+        height: 44px;
+        display: grid;
+        place-items: center;
+        border-radius: 12px;
+        border: 1px solid rgba(99, 102, 241, 0.35);
+        background: rgba(99, 102, 241, 0.12);
+        color: rgba(199, 210, 254, 0.95);
+        flex: 0 0 auto;
+    }
+
+    /* FIX MOBILE: chart height responsivo */
+    .ebitda-chart-wrap {
+        position: relative;
+        height: 340px;
+    }
+
+    @media (max-width: 576px) {
+        .ebitda-chart-wrap {
+            height: 220px;
+        }
+    }
+
+    .ebitda-table-scroll {
+        max-height: 420px;
+        overflow: auto;
+        border-radius: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        /* FIX MOBILE: evita overflow horizontal na tabela */
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .ebitda-table-scroll thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: #0f172a; /* FIX: thead transparente fazia header "sumir" no scroll */
+    }
+
+    .ebitda-muted {
+        color: rgba(226, 232, 240, 0.75);
+    }
+
+    .ebitda-input {
+        background: rgba(2, 6, 23, 0.35);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        color: #e5e7eb;
+    }
+
+    .ebitda-input:focus {
+        background: rgba(2, 6, 23, 0.35);
+        border-color: rgba(99, 102, 241, 0.65);
+        box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.18);
+        color: #e5e7eb;
+    }
+
+    /* FIX MOBILE: botões de range quebram linha corretamente */
+    .range-btns {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    /* FIX MOBILE: métricas empilham sem ficar espremidas */
+    @media (max-width: 576px) {
+        .ebitda-metric .value {
+            font-size: 1.1rem;
+        }
+    }
+</style>
+
+<div class="container-fluid py-4 ebitda-page">
+    <div class="d-flex align-items-start align-items-md-center justify-content-between flex-wrap gap-2 mb-3">
+        <div>
+            <h3 class="mb-1">EBITDA</h3>
+            <div class="ebitda-muted small">Análise de receita, custo e margem no período</div>
+        </div>
+        {# FIX MOBILE: flex-wrap adicionado via classe range-btns #}
+        <div class="range-btns">
+            <button type="button" class="btn btn-outline-light btn-sm" data-range="7">Últimos 7 dias</button>
+            <button type="button" class="btn btn-outline-light btn-sm" data-range="30">Últimos 30 dias</button>
+            <button type="button" class="btn btn-outline-light btn-sm" data-range="90">Últimos 90 dias</button>
+        </div>
+    </div>
+
+    <div class="card ebitda-card mb-3">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end" id="filtrosForm">
+                <div class="col-12 col-md-3">
+                    <label class="form-label ebitda-muted mb-1">Início</label>
+                    <input class="form-control ebitda-input" type="date" name="inicio" id="inputInicio"
+                        value="{{ filtros.inicio|date:'Y-m-d' }}">
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label ebitda-muted mb-1">Fim</label>
+                    <input class="form-control ebitda-input" type="date" name="fim" id="inputFim"
+                        value="{{ filtros.fim|date:'Y-m-d' }}">
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label ebitda-muted mb-1">Produto</label>
+                    <input class="form-control ebitda-input" type="text" name="produto" id="inputProduto"
+                        value="{{ filtros.produto }}" placeholder="Código do produto (ex: 12345)">
+                </div>
+                <div class="col-12 col-md-2 d-grid">
+                    <button class="btn btn-primary" type="submit">
+                        <i class="bi bi-funnel me-1"></i> Filtrar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-md-3">
+            <div class="card ebitda-card ebitda-metric h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="label">Receita</div>
+                        <div class="value">R$&nbsp;{{ resumo.receita|floatformat:2 }}</div>
+                    </div>
+                    <div class="icon"><i class="bi bi-cash-stack fs-5"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card ebitda-card ebitda-metric h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="label">Custo</div>
+                        <div class="value">R$&nbsp;{{ resumo.custo|floatformat:2 }}</div>
+                    </div>
+                    <div class="icon"><i class="bi bi-receipt fs-5"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card ebitda-card ebitda-metric h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="label">EBITDA</div>
+                        <div class="value">R$&nbsp;{{ resumo.ebitda|floatformat:2 }}</div>
+                    </div>
+                    <div class="icon"><i class="bi bi-graph-up-arrow fs-5"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card ebitda-card ebitda-metric h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="label">Margem</div>
+                        <div class="value">{{ resumo.margem|floatformat:2 }}%</div>
+                    </div>
+                    <div class="icon"><i class="bi bi-percent fs-5"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card ebitda-card mb-3">
+        <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                <h5 class="mb-0">Evolução no período</h5>
+                <div class="ebitda-muted small">Receita (barras) e EBITDA (linha)</div>
+            </div>
+            <div class="ebitda-chart-wrap">
+                <canvas id="chart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="card ebitda-card">
+        <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                <h5 class="mb-0">Rentabilidade por Produto</h5>
+                <div class="ebitda-muted small" id="itensStatus"></div>
+            </div>
+            <div class="ebitda-table-scroll" id="tabelaContainer">
+                <table class="table table-sm table-dark table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th style="min-width: 140px;">Produto</th>
+                            <th class="text-end" style="min-width: 140px;">Receita</th>
+                            <th class="text-end" style="min-width: 140px;">Custo</th>
+                            <th class="text-end" style="min-width: 140px;">Lucro</th>
+                            <th class="text-end" style="min-width: 120px;">Margem %</th>
+                        </tr>
+                    </thead>
+                    <tbody id="itensTbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# json_script serializa e escapa com segurança. A view passa listas Python puras — não json.dumps() #}
+{{ mensal_json|json_script:"mensal-data" }}
+{{ itens_json|json_script:"itens-data" }}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+
+        // FIX: JSON.parse DENTRO do DOMContentLoaded — garante que as tags
+        // <script type="application/json"> já existem no DOM antes de ler.
+        const dataMensal = JSON.parse(document.getElementById('mensal-data').textContent);
+        const itensData  = JSON.parse(document.getElementById('itens-data').textContent);
+
+        const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+        const pct = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        // --- Gráfico ---
+        const canvas = document.getElementById('chart');
+        const ctx = canvas.getContext('2d');
+
+        // FIX: gradientes criados após o canvas existir no DOM com tamanho real
+        function buildChart() {
+            const w = canvas.offsetWidth  || 600;
+            const h = canvas.offsetHeight || 340;
+
+            const gradientLine = ctx.createLinearGradient(0, 0, 0, h);
+            gradientLine.addColorStop(0, 'rgba(99,102,241,0.70)');
+            gradientLine.addColorStop(1, 'rgba(99,102,241,0.08)');
+
+            const gradientBar = ctx.createLinearGradient(0, 0, 0, h);
+            gradientBar.addColorStop(0, 'rgba(56,189,248,0.40)');
+            gradientBar.addColorStop(1, 'rgba(56,189,248,0.08)');
+
+            const labels         = dataMensal.map(i => i.mes);
+            const valoresReceita = dataMensal.map(i => i.receita);
+            const valoresEbitda  = dataMensal.map(i => i.ebitda);
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            type: 'bar',
+                            label: 'Receita',
+                            data: valoresReceita,
+                            backgroundColor: gradientBar,
+                            borderColor: 'rgba(56,189,248,0.55)',
+                            borderWidth: 1,
+                            borderRadius: 10,
+                            barPercentage: 0.8,
+                            categoryPercentage: 0.7
+                        },
+                        {
+                            type: 'line',
+                            label: 'EBITDA',
+                            data: valoresEbitda,
+                            fill: true,
+                            backgroundColor: gradientLine,
+                            borderColor: '#6366f1',
+                            pointRadius: 2,
+                            pointHoverRadius: 4,
+                            tension: 0.35
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#e5e7eb' }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => `${ctx.dataset.label}: ${brl.format(ctx.parsed.y || 0)}`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: 'rgba(226,232,240,0.85)' },
+                            grid:  { color: 'rgba(148,163,184,0.08)' }
+                        },
+                        y: {
+                            ticks: {
+                                color: 'rgba(226,232,240,0.85)',
+                                callback: (v) => brl.format(v)
+                            },
+                            grid: { color: 'rgba(148,163,184,0.08)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        buildChart();
+
+        // --- Tabela com scroll infinito ---
+        const tbody      = document.getElementById('itensTbody');
+        const itensStatus = document.getElementById('itensStatus');
+
+        // FIX: selecionar pelo id explícito, garantindo que o elemento existe
+        const container = document.getElementById('tabelaContainer');
+
+        let cursor   = 0;
+        const pageSize = 50;
+
+        function rowHtml(item) {
+            const receita = Number(item.receita || 0);
+            const custo   = Number(item.custo   || 0);
+            const lucro   = Number(item.lucro   || 0);
+            const margem  = Number(item.margem  || 0);
+            const prod    = item.prod_codi ?? '';
+            return `
+                <tr>
+                    <td>${String(prod)}</td>
+                    <td class="text-end">${brl.format(receita)}</td>
+                    <td class="text-end">${brl.format(custo)}</td>
+                    <td class="text-end">${brl.format(lucro)}</td>
+                    <td class="text-end">${pct.format(margem)}%</td>
+                </tr>
+            `;
+        }
+
+        function renderNext() {
+            if (!Array.isArray(itensData)) return;
+            const slice = itensData.slice(cursor, cursor + pageSize);
+            if (!slice.length) return;
+            tbody.insertAdjacentHTML('beforeend', slice.map(rowHtml).join(''));
+            cursor += slice.length;
+            itensStatus.textContent = `${cursor} de ${itensData.length} itens`;
+        }
+
+        // FIX SCROLL INFINITO: verificar que container existe antes de adicionar listener
+        if (Array.isArray(itensData) && itensData.length > 0) {
+            renderNext(); // primeira página
+
+            if (container) {
+                container.addEventListener('scroll', function () {
+                    // FIX: usar scrollTop + clientHeight >= scrollHeight - margem
+                    const remaining = container.scrollHeight - container.scrollTop - container.clientHeight;
+                    if (remaining < 220) renderNext();
+                });
+            }
+        } else {
+            itensStatus.textContent = 'Nenhum item encontrado';
+        }
+
+        // --- Botões de range de datas ---
+        function setRange(days) {
+            const fim    = new Date();
+            const inicio = new Date();
+            inicio.setDate(fim.getDate() - (days - 1));
+
+            const pad   = (n) => String(n).padStart(2, '0');
+            const toYmd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+            // FIX: montar URL diretamente em vez de preencher inputs e chamar form.submit().
+            // form.submit() em alguns browsers submete antes de aplicar os novos valores.
+            const params = new URLSearchParams(window.location.search);
+            params.set('inicio', toYmd(inicio));
+            params.set('fim',    toYmd(fim));
+            params.delete('produto'); // limpa filtro de produto ao usar atalho de período
+            window.location.href = window.location.pathname + '?' + params.toString();
+        }
+
+        document.querySelectorAll('[data-range]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                setRange(Number(btn.getAttribute('data-range')));
+            });
+        });
+
+    }); // fim DOMContentLoaded
+</script>
+
+{% endblock %}
