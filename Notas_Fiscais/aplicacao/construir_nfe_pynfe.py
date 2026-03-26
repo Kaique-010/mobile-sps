@@ -31,7 +31,9 @@ def _normalizar_crt(regime_trib):
     return "3"
 
 def construir_nfe_pynfe(dto):
-    homolog_text = 'NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL' if int(dto.ambiente) == 2 else None
+    is_homologacao = int(dto.ambiente) == 2
+    homolog_text = "NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL" if is_homologacao else None
+    homolog_xprod_primeiro_item = "NOTA FISCAL EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL"
     crt = _normalizar_crt(getattr(dto.emitente, "regime_trib", None))
 
     emitente = Emitente(
@@ -112,7 +114,7 @@ def construir_nfe_pynfe(dto):
     if chave_ref and len(chave_ref) == 44 and chave_ref.isdigit():
         nota_fiscal._chave_referenciada = chave_ref
 
-    for item in dto.itens:
+    for idx, item in enumerate(dto.itens):
         cst_icms_raw = str(getattr(item, "cst_icms", "") or "").strip()
         if crt == "1":
             csosn = cst_icms_raw if len(cst_icms_raw) == 3 else "102"
@@ -135,9 +137,13 @@ def construir_nfe_pynfe(dto):
         mva_st = Decimal(str(getattr(item, "mva_st", None) or 0))
         fcp_valor = Decimal(str(getattr(item, "valor_fcp", None) or 0))
 
+        descricao_item = item.descricao
+        if is_homologacao and idx == 0:
+            descricao_item = homolog_xprod_primeiro_item
+
         nota_fiscal.adicionar_produto_servico(
             codigo=str(item.codigo),
-            descricao=item.descricao,
+            descricao=descricao_item,
             ncm=item.ncm or "99999999",
             cfop=item.cfop or "5102",
             unidade_comercial=item.unidade,

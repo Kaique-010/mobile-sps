@@ -1058,6 +1058,8 @@
             const motivo = data?.mensagem || data?.motivo || '';
             if (status === 100) {
               showToast(`Autorizada com sucesso. Chave: ${chave}${protocolo ? ` | Protocolo: ${protocolo}` : ''}`, { variant: 'success' });
+              const w = window.open(`/api/imprimir/${slug}/${id}/`, '_blank');
+              if (w) w.focus();
             } else if ([103, 105].includes(status)) {
               showToast(motivo || 'Enviado para SEFAZ. Aguardando processamento. Consulte em seguida.', { variant: 'warning', delay: 4000 });
             } else if (status === 204) {

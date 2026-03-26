@@ -767,6 +767,11 @@
         const respEmit = await authFetch(`/api/emitir/${slug}/${notaId}/`, { method: 'GET' });
         const dataEmit = await respEmit.json();
         if (respEmit.ok) {
+          const status = Number(dataEmit?.status);
+          if (status === 100) {
+            const w = window.open(`/api/imprimir/${slug}/${notaId}/`, '_blank');
+            if (w) w.focus();
+          }
           showToast('Emitida com sucesso. Chave: ' + (dataEmit?.chave || dataEmit?.chave_acesso || ''), { variant: 'success' });
           window.location.href = `/web/${slug}/notas-fiscais/`;
         } else {

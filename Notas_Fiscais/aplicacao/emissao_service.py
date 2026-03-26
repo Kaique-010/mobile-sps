@@ -99,14 +99,23 @@ class EmissaoService:
             id_token = str(getattr(filial_obj, "empr_id_toke", "") or "").strip()
             csc = str(getattr(filial_obj, "empr_csn_toke", "") or "").strip()
 
-            if uf == "PR":
-                if tp_amb == 1:
-                    csc = "R94XGP4QKW4DFEUD215P5BADXKQV0UDQIQZQ"
-                    id_token = "3"
-                else:
-                    csc = "TBPHFPLCMUIB4K4CGY3SJW1RE8YWQWFQ4D56"
-                    id_token = "1"
+            csc_source = "filial"
+            if (not id_token or not csc) and uf == "PR" and tp_amb != 1:
+                csc = "TBPHFPLCMUIB4K4CGY3SJW1RE8YWQWFQ4D56"
+                id_token = "1"
+                csc_source = "fallback_pr_homologacao"
             if not id_token or not csc:
+                logger.info(
+                    "NFC-e CSC/IDToken ausente empresa=%s filial=%s uf=%s tpAmb=%s id_token=%s csc_len=%s csc_tail=%s source=%s",
+                    nota.empresa,
+                    nota.filial,
+                    uf,
+                    tp_amb,
+                    id_token or "",
+                    len(csc or ""),
+                    (csc or "")[-4:] if csc else "",
+                    csc_source,
+                )
                 raise ErroDominio(
                     "Filial sem CSC/ID Token configurado para NFC-e (modelo 65).",
                     codigo="nfce_csc_nao_configurado",
@@ -115,6 +124,21 @@ class EmissaoService:
                         "filial": nota.filial,
                     },
                 )
+            logger.info(
+                "NFC-e CSC/IDToken selecionado empresa=%s filial=%s uf=%s tpAmb=%s id_token=%s csc_len=%s csc_tail=%s source=%s",
+                nota.empresa,
+                nota.filial,
+                uf,
+                tp_amb,
+                id_token,
+                len(csc),
+                csc[-4:],
+                csc_source,
+            )
+            print(
+                f"DEBUG: NFC-e CSC/IDToken selecionado empresa={nota.empresa} filial={nota.filial} uf={uf} tpAmb={tp_amb} "
+                f"id_token={id_token} csc_len={len(csc)} csc_tail={csc[-4:]} source={csc_source}"
+            )
             nfe_obj._nfce_csc = {
                 "id_token": id_token,
                 "csc": csc,

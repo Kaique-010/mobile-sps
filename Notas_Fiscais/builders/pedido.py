@@ -93,19 +93,6 @@ class PedidoNFeBuilder:
         if not c:
             # Se for NFC-e, permite sem cliente (consumidor final)
             if str(self.context.get('modelo')) == '65':
-                # Pega a UF da filial/origem como padrão
-                uf_dest = (c.enti_esta or "").strip()
-                if not uf_dest:
-                    # Fallback: use filial's UF for same-state sales, or raise a clear error
-                    uf_dest = self._uf_origem()  # or raise Exception("Cliente sem UF cadastrada.")
-
-                doc = c.enti_cnpj if c.enti_cnpj else c.enti_cpf
-                ind_ie = "1"
-                ie = c.enti_insc_esta
-                if not ie or ie.upper() == "ISENTO":
-                    ind_ie = "2" if ie and ie.upper() == "ISENTO" else "9"
-                
-                
                 return {
                     "documento": "",
                     "nome": "",
@@ -116,7 +103,7 @@ class PedidoNFeBuilder:
                     "bairro": "",
                     "municipio": "",
                     "cod_municipio": "",
-                    "uf": uf,
+                    "uf": self._uf_origem(),
                     "cep": "",
                 }
             raise Exception("Cliente não encontrado no pedido.")
@@ -127,6 +114,10 @@ class PedidoNFeBuilder:
         if not ie or ie.upper() == "ISENTO":
             ind_ie = "2" if ie and ie.upper() == "ISENTO" else "9"
         
+        if str(self.context.get('modelo')) == '65':
+            ind_ie = "9"
+            ie = ""
+
         return {
             "documento": doc or "",
             "nome": c.enti_nome,

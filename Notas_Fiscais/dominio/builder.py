@@ -91,13 +91,16 @@ class NotaBuilder:
             doc = doc.zfill(11)
 
         raw_ie = self._somente_digitos(d.enti_insc_esta)
-        # Se tem CNPJ e IE válida (pelo menos 2 dígitos)
-        if len(doc) == 14 and raw_ie and len(raw_ie) > 1:
-            ind_ie = "1"
-            ie_val = raw_ie[:14]
-        else:
+        if str(getattr(self.nota, "modelo", "") or "").strip() == "65":
             ind_ie = "9"
             ie_val = None
+        else:
+            if len(doc) == 14 and raw_ie and len(raw_ie) > 1:
+                ind_ie = "1"
+                ie_val = raw_ie[:14]
+            else:
+                ind_ie = "9"
+                ie_val = None
 
         return DestinatarioDTO(
             documento=doc,

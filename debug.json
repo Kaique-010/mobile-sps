@@ -1,99 +1,99 @@
 {
-  "debug_id": "c156cece-bd85-46b1-a65b-e7249cd73546",
-  "timestamp_inicio": "2026-03-20T18:22:10.422716Z",
+  "debug_id": "7b72c54e-6816-4171-a4b8-477bbbb09d26",
+  "timestamp_inicio": "2026-03-26T17:18:59.136943Z",
   "ambiente": {
     "debug": true,
-    "database_alias": "saveweb002"
+    "database_alias": "saveweb001"
   },
   "tabelas_tributacao": {
     "versao": "Padrão"
   },
   "nota": {
-    "id": 2,
-    "modelo": "55",
-    "serie": "920",
-    "numero": "2",
+    "id": 97,
+    "modelo": "65",
+    "serie": "005",
+    "numero": "10",
     "empresa": "1",
     "filial": "1",
-    "destinatario_id": "1",
+    "destinatario_id": "5",
     "uf_origem": "PR",
     "uf_destino": "PR",
-    "regime": "5"
+    "regime": "1"
   },
   "itens": [
     {
-      "id": 2,
-      "produto_id": "1",
-      "descricao_produto": "SOJA EM GRÃOS",
-      "ncm_produto": "1201****",
-      "cfop_inicial": "5101",
+      "id": 113,
+      "produto_id": "3",
+      "descricao_produto": "CANECA DE TESTES",
+      "ncm_produto": "8419****",
+      "cfop_inicial": "5102",
       "quantidade": "1.0000",
-      "unitario": "388.6300",
+      "unitario": "25.0000",
       "desconto": "0.0000",
       "logs": [
         {
-          "id": "8818914b-5905-4a78-9e25-ef55147ba741",
-          "timestamp": "2026-03-20T18:22:10.572217Z",
+          "id": "64e1f504-cd33-420d-895c-20e202ad9704",
+          "timestamp": "2026-03-26T17:18:59.260392Z",
           "tipo": "antes_calculo_item",
           "mensagem": "Início do cálculo de impostos para o item.",
           "dados": {
             "uf_origem": "PR",
             "uf_destino": "PR",
-            "regime": "5",
+            "regime": "1",
             "tipo_operacao": "VENDA"
           }
         }
       ],
       "fonte_tributacao": "NCM",
-      "cfop_resolvido": "5101",
+      "cfop_resolvido": "5102",
       "cfop_flags": {
-        "exig_icms": true,
-        "exig_ipi": true,
-        "exig_pis_cofins": true,
+        "exig_icms": false,
+        "exig_ipi": false,
+        "exig_pis_cofins": false,
         "exig_cbs": false,
         "exig_ibs": false,
         "gera_st": false
       },
-      "ncm_resolvido": "1201****",
+      "ncm_resolvido": "8419****",
       "bases": {
-        "raiz": "388.63",
-        "icms": "388.63",
+        "raiz": "25.00",
+        "icms": null,
         "st": null
       },
       "aliquotas": {
-        "ipi": "0.00",
-        "icms": "0.00",
+        "ipi": null,
+        "icms": null,
         "st": null,
-        "pis": "0.00",
-        "cofins": "0.00",
-        "cbs": "0.00",
-        "ibs": "0.00"
+        "pis": null,
+        "cofins": null,
+        "cbs": null,
+        "ibs": null
       },
       "valores_calculados": {
-        "ipi": "0",
-        "icms": "0",
+        "ipi": null,
+        "icms": null,
         "st": null,
-        "pis": "0",
-        "cofins": "0",
-        "cbs": "0",
-        "ibs": "0"
+        "pis": null,
+        "cofins": null,
+        "cbs": null,
+        "ibs": null
       },
       "extras": {
         "mva_st": null
       },
       "csts": {
-        "ipi": "99",
-        "icms": "101",
+        "ipi": null,
+        "icms": null,
         "st": null,
-        "pis": "49",
-        "cofins": "49",
-        "cbs": "400",
-        "ibs": "400"
+        "pis": null,
+        "cofins": null,
+        "cbs": null,
+        "ibs": null
       },
       "condicionais_aplicadas": {
-        "icms_habilitado_cfop": true,
-        "ipi_habilitado_cfop": true,
-        "pis_cofins_habilitado_cfop": true,
+        "icms_habilitado_cfop": false,
+        "ipi_habilitado_cfop": false,
+        "pis_cofins_habilitado_cfop": false,
         "cbs_habilitado_cfop": false,
         "ibs_habilitado_cfop": false
       }
@@ -101,8 +101,8 @@
   ],
   "logs": [
     {
-      "id": "6371a154-a3ca-4aa1-a1bb-70d841756c1d",
-      "timestamp": "2026-03-20T18:22:10.521095Z",
+      "id": "5cb5b8e6-e756-4182-830e-dfc8efd0baa8",
+      "timestamp": "2026-03-26T17:18:59.235376Z",
       "tipo": "contexto_nota",
       "mensagem": "Contexto fiscal inicial da nota.",
       "dados": {
@@ -110,5 +110,5 @@
       }
     }
   ],
-  "timestamp_fim": "2026-03-20T18:22:11.029807Z"
+  "timestamp_fim": "2026-03-26T17:18:59.616365Z"
 }

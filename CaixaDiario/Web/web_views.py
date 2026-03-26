@@ -911,9 +911,11 @@ def venda_emitir(request, slug=None):
                     'ok': True,
                     'tipo': 'nfce',
                     'status': 'Autorizada',
+                    'nota_id': int(getattr(nota, 'id', 0) or 0),
                     'chave': chave,
                     'xml': nota.xml_autorizado,
                     'url_danfe': url,
+                    'impressao_url': f"/api/imprimir/{slug}/{int(getattr(nota, 'id', 0) or 0)}/",
                     'mensagem': 'Nota já autorizada.'
                 })
             
@@ -938,9 +940,11 @@ def venda_emitir(request, slug=None):
                     'ok': True,
                     'tipo': 'nfce',
                     'status': 'Autorizada',
+                    'nota_id': int(getattr(nota, 'id', 0) or 0),
                     'chave': chave,
                     'xml': resp.get('xml_protocolo') or resp.get('xml'),
                     'url_danfe': url,
+                    'impressao_url': f"/api/imprimir/{slug}/{int(getattr(nota, 'id', 0) or 0)}/",
                 })
             else:
                 return JsonResponse({
