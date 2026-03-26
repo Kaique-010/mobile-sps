@@ -84,10 +84,24 @@ class LicencaMiddleware:
             request.slug = slug
             set_licenca_slug(slug)
             set_current_request(request)
+            self._session_set(request, "slug", slug)
 
             # Empresa e filial: /web/home/<slug>/<emp>/<fil>/
             self._apply_empresa_filial_safe(request, parts, pos_emp=3, pos_fil=4)
 
+            return self._safe(request)
+
+        # ---------------------------
+        # 1b. WEB: /web/<slug>/<app>/...
+        # ---------------------------
+        if len(parts) >= 3 and parts[0] == "web" and parts[1] not in ("home", "login"):
+            slug = parts[1]
+            lic = self._get_licenca(slug)
+            if lic:
+                request.slug = slug
+                set_licenca_slug(slug)
+                set_current_request(request)
+                self._session_set(request, "slug", slug)
             return self._safe(request)
 
         # ---------------------------

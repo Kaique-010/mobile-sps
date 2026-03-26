@@ -21,6 +21,12 @@ urlpatterns = [
     # Listagem
     path('ctes/', web.CteListView.as_view(), name='cte_list'),
     path('ctes/novo/', web.CteCreateView.as_view(), name='cte_create'),
+
+    # MDF-e
+    path('mdfes/', web.MdfeListView.as_view(), name='mdfe_list'),
+    path('mdfes/novo/', web.MdfeCreateView.as_view(), name='mdfe_create'),
+    path('mdfes/<int:pk>/gerar-xml/', web.MdfeGerarXmlView.as_view(), name='mdfe_gerar_xml'),
+    path('mdfes/<int:pk>/encerrar/', web.MdfeEncerrarView.as_view(), name='mdfe_encerrar'),
     
     # Abas de Edição
     path('ctes/<str:pk>/emissao/', web.CteEmissaoView.as_view(), name='cte_emissao'),

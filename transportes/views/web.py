@@ -6,9 +6,10 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse, HttpResponseRedirect
 from django.db import transaction
+from datetime import datetime
 
 from core.utils import get_licenca_db_config
-from transportes.models import Cte
+from transportes.models import Cte, Mdfe
 from transportes.forms.emissao import CteEmissaoForm
 from transportes.forms.tipo import CteTipoForm
 from transportes.forms.rota import CteRotaForm
@@ -20,6 +21,9 @@ from transportes.services.rascunho_service import RascunhoService
 from transportes.services.emissao_service import EmissaoService
 from transportes.services.sefaz_gateway import SefazGateway
 from transportes.services.numeracao_service import NumeracaoService
+from transportes.services.numeracao_service import NumeracaoMdfeService
+from transportes.services.mdfe_emissao_service import MdfeEmissaoService
+from transportes.forms.mdfe import MdfeForm
 from Entidades.models import Entidades
 from transportes.models import Veiculos
 
@@ -112,6 +116,101 @@ class CteListView(CteBaseMixin, ListView):
                 cte.destinatario = EntidadeDisplay(nome)
 
         return context
+
+
+class MdfeBaseMixin(LoginRequiredMixin):
+    login_url = reverse_lazy("web_login")
+
+    def get_queryset(self):
+        slug = get_licenca_db_config(self.request)
+        return Mdfe.objects.using(slug).all()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["slug"] = get_licenca_db_config(self.request)
+        return context
+
+
+class MdfeListView(MdfeBaseMixin, ListView):
+    model = Mdfe
+    template_name = "transportes/mdfe_list.html"
+    context_object_name = "mdfes"
+    ordering = ["-mdf_id"]
+    paginate_by = 50
+
+
+class MdfeCreateView(MdfeBaseMixin, CreateView):
+    model = Mdfe
+    form_class = MdfeForm
+    template_name = "transportes/mdfe_form.html"
+
+    def form_valid(self, form):
+        slug = get_licenca_db_config(self.request)
+        try:
+            empresa_id = self.request.session.get("empresa_id")
+            filial_id = self.request.session.get("filial_id")
+
+            if not empresa_id:
+                raise ValueError("Empresa não encontrada na sessão.")
+
+            self.object = form.save(commit=False)
+            self.object.mdf_empr = empresa_id
+            self.object.mdf_fili = filial_id or 1
+            self.object.mdf_emis = self.object.mdf_emis or datetime.now().date()
+            self.object.mdf_seri = self.object.mdf_seri or 1
+            self.object.mdf_stat = 0
+            self.object.mdf_canc = False
+            self.object.mdf_fina = False
+
+            numerador = NumeracaoMdfeService(empresa_id, self.object.mdf_fili, serie=self.object.mdf_seri, slug=slug)
+            self.object.mdf_nume = numerador.proximo_numero()
+
+            self.object.save(using=slug)
+
+            messages.success(self.request, "MDF-e criado com sucesso.")
+            return HttpResponseRedirect(reverse("transportes:mdfe_list", kwargs={"slug": slug}))
+        except Exception as e:
+            logger.error(f"Erro ao criar MDF-e: {e}")
+            messages.error(self.request, f"Erro ao criar MDF-e: {e}")
+            return self.form_invalid(form)
+
+    def get_success_url(self):
+        slug = get_licenca_db_config(self.request)
+        return reverse("transportes:mdfe_list", kwargs={"slug": slug})
+
+
+class MdfeGerarXmlView(LoginRequiredMixin, View):
+    login_url = reverse_lazy("web_login")
+
+    def post(self, request, slug, pk):
+        try:
+            mdfe = get_object_or_404(Mdfe.objects.using(slug), pk=pk)
+            resultado = MdfeEmissaoService(mdfe, slug=slug).gerar_xml_assinado()
+            messages.success(request, f"XML gerado e assinado. Chave: {resultado.get('chave')}")
+        except Exception as e:
+            logger.error(f"Erro ao gerar XML do MDF-e: {e}")
+            messages.error(request, f"Erro ao gerar XML do MDF-e: {e}")
+        return redirect("transportes:mdfe_list", slug=slug)
+
+
+class MdfeEncerrarView(LoginRequiredMixin, View):
+    login_url = reverse_lazy("web_login")
+
+    def post(self, request, slug, pk):
+        try:
+            from datetime import date
+
+            mdfe = get_object_or_404(Mdfe.objects.using(slug), pk=pk)
+            mdfe.mdf_fina = True
+            mdfe.mdf_data_ence = date.today()
+            mdfe.mdf_esta_ence = (mdfe.mdf_esta_dest or mdfe.mdf_esta_ence or "").strip() or None
+            mdfe.mdf_cida_ence = mdfe.mdf_cida_ence or mdfe.mdf_cida_carr
+            mdfe.save(using=slug)
+            messages.success(request, "MDF-e encerrado com sucesso.")
+        except Exception as e:
+            logger.error(f"Erro ao encerrar MDF-e: {e}")
+            messages.error(request, f"Erro ao encerrar MDF-e: {e}")
+        return redirect("transportes:mdfe_list", slug=slug)
 
 class CteCreateView(CteBaseMixin, CreateView):
     model = Cte

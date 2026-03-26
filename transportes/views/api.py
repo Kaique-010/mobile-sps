@@ -8,12 +8,15 @@ from django.http import JsonResponse
 from decimal import Decimal
 
 from core.utils import get_licenca_db_config
-from transportes.models import Cte
+from transportes.models import Cte, Mdfe, MdfeDocumento
 from transportes.serializers.completo import CteCompletoSerializer
+from transportes.serializers.mdfe import MdfeSerializer, MdfeDocumentoSerializer
 from transportes.services.icms_service import ICMSCalculationService
 from transportes.services.st_service import STService
 from transportes.services.difal_service import DIFALService
 from transportes.services.emissao_service import EmissaoService
+from transportes.services.mdfe_emissao_service import MdfeEmissaoService
+from transportes.services.numeracao_service import NumeracaoMdfeService
 from Entidades.models import Entidades
 from Licencas.models import Filiais
 from CFOP.models import CFOP
@@ -79,6 +82,143 @@ class CteViewSet(viewsets.ModelViewSet):
         Retorna JSON com os valores calculados.
         """
         return calcular_impostos_cte(request, pk)
+
+
+class MdfeViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ["mdf_nume", "mdf_chav"]
+    ordering_fields = ["mdf_id", "mdf_nume", "mdf_emis"]
+    ordering = ["-mdf_id"]
+
+    def get_queryset(self):
+        slug = get_licenca_db_config(self.request)
+        return Mdfe.objects.using(slug).all()
+
+    def get_serializer_class(self):
+        return MdfeSerializer
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["banco"] = get_licenca_db_config(self.request)
+        return context
+
+    def perform_create(self, serializer):
+        slug = get_licenca_db_config(self.request)
+        empresa_id = getattr(self.request, "empresa", None) or 1
+        filial_id = getattr(self.request, "filial", None) or 1
+
+        from datetime import date
+
+        serie = serializer.validated_data.get("mdf_seri") or 1
+        numerador = NumeracaoMdfeService(empresa_id, filial_id, serie=serie, slug=slug)
+        numero = numerador.proximo_numero()
+
+        serializer.save(
+            mdf_empr=empresa_id,
+            mdf_fili=filial_id,
+            mdf_seri=serie,
+            mdf_nume=numero,
+            mdf_emis=serializer.validated_data.get("mdf_emis") or date.today(),
+            mdf_stat=0,
+            mdf_canc=False,
+            mdf_fina=False,
+        )
+
+    def perform_update(self, serializer):
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        slug = get_licenca_db_config(self.request)
+        instance.delete(using=slug)
+
+    @action(detail=True, methods=["post"], url_path="gerar-xml")
+    def gerar_xml(self, request, pk=None):
+        slug = get_licenca_db_config(request)
+        mdfe = self.get_object()
+        try:
+            resultado = MdfeEmissaoService(mdfe, slug=slug).gerar_xml_assinado()
+            return Response(resultado, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(f"Erro ao gerar XML do MDF-e: {e}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=["post"], url_path="encerrar")
+    def encerrar(self, request, pk=None):
+        slug = get_licenca_db_config(request)
+        mdfe = self.get_object()
+        try:
+            from datetime import date
+
+            uf = (request.data.get("uf") or mdfe.mdf_esta_dest or "").strip()
+            cmun = request.data.get("cmun") or request.data.get("municipio_id") or mdfe.mdf_cida_carr
+
+            mdfe.mdf_fina = True
+            mdfe.mdf_data_ence = date.today()
+            mdfe.mdf_esta_ence = uf or mdfe.mdf_esta_ence
+            mdfe.mdf_cida_ence = cmun or mdfe.mdf_cida_ence
+            mdfe.save(using=slug)
+            return Response({"ok": True}, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(f"Erro ao encerrar MDF-e: {e}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=["post"], url_path="encerrar-automatico")
+    def encerrar_automatico(self, request, pk=None):
+        slug = get_licenca_db_config(request)
+        mdfe = self.get_object()
+        try:
+            from datetime import date
+
+            uf = (mdfe.mdf_esta_dest or "").strip()
+            cmun = mdfe.mdf_cida_carr
+
+            mdfe.mdf_fina = True
+            mdfe.mdf_data_ence = date.today()
+            mdfe.mdf_esta_ence = uf or mdfe.mdf_esta_ence
+            mdfe.mdf_cida_ence = cmun or mdfe.mdf_cida_ence
+            mdfe.save(using=slug)
+            return Response({"ok": True}, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(f"Erro ao encerrar MDF-e (automático): {e}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=["get", "post"], url_path="documentos")
+    def documentos(self, request, pk=None):
+        slug = get_licenca_db_config(request)
+        mdfe = self.get_object()
+
+        if request.method == "GET":
+            qs = MdfeDocumento.objects.using(slug).filter(mdfe_id=mdfe.mdf_id).order_by("id")
+            ser = MdfeDocumentoSerializer(qs, many=True, context={"banco": slug})
+            return Response({"results": ser.data}, status=status.HTTP_200_OK)
+
+        itens = request.data.get("documentos")
+        if itens is None:
+            itens = request.data.get("itens")
+        if not isinstance(itens, list):
+            return Response({"error": "Informe uma lista em 'documentos'."}, status=status.HTTP_400_BAD_REQUEST)
+
+        ser = MdfeDocumentoSerializer(data=itens, many=True, context={"banco": slug})
+        ser.is_valid(raise_exception=True)
+
+        MdfeDocumento.objects.using(slug).filter(mdfe_id=mdfe.mdf_id).delete()
+        objs = []
+        for item in ser.validated_data:
+            objs.append(
+                MdfeDocumento(
+                    mdfe_id=mdfe.mdf_id,
+                    tipo_doc=item.get("tipo_doc"),
+                    chave=item.get("chave"),
+                    cmun_descarga=item.get("cmun_descarga"),
+                    xmun_descarga=item.get("xmun_descarga"),
+                )
+            )
+        MdfeDocumento.objects.using(slug).bulk_create(objs)
+
+        qs = MdfeDocumento.objects.using(slug).filter(mdfe_id=mdfe.mdf_id).order_by("id")
+        out = MdfeDocumentoSerializer(qs, many=True, context={"banco": slug})
+        return Response({"results": out.data}, status=status.HTTP_200_OK)
 
 # Funções auxiliares para uso em AJAX/Web
 

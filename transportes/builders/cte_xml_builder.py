@@ -568,6 +568,26 @@ class CteXmlBuilder:
         imp = self._add(parent, "imp")
         icms = self._add(imp, "ICMS")
 
+        simples_codes = {"101","102","103","201","202","203","300","400","500","900"}
+        if cst in simples_codes:
+            icms_group = self._add(icms, "ICMSSN")
+            self._add(icms_group, "CST", "90")
+            self._add(icms_group, "indSN", "1")
+            if self.cte.valor_icms_uf_dest and float(self.cte.valor_icms_uf_dest) > 0:
+                icms_uf_dest = self._add(imp, "ICMSUFDest")
+                self._add(icms_uf_dest, "vBCUFDest", self._fmt(self.cte.valor_bc_uf_dest))
+                self._add(icms_uf_dest, "vBCFCPUFDest", self._fmt(self.cte.valor_bc_uf_dest))
+                self._add(icms_uf_dest, "pFCPUFDest", "0.00")
+                self._add(icms_uf_dest, "pICMSUFDest", self._fmt(self.cte.aliquota_interna_dest))
+                self._add(icms_uf_dest, "pICMSInter", self._fmt(self.cte.aliquota_interestadual))
+                self._add(icms_uf_dest, "pICMSInterPart", "100.00")
+                self._add(icms_uf_dest, "vFCPUFDest", "0.00")
+                self._add(icms_uf_dest, "vICMSUFDest", self._fmt(self.cte.valor_icms_uf_dest))
+                self._add(icms_uf_dest, "vICMSUFRemet", "0.00")
+            self._build_ibscbs(imp)
+            self._build_inf_trib_fed(imp)
+            return imp
+
         if cst == "00":
             icms_group = self._add(icms, "ICMS00")
         elif cst == "20":

@@ -20,7 +20,7 @@ class ICMSCalculationService:
 
         if regra.isento:
             return {
-                "cst": regra.csosn if regra.simples_nacional else regra.cst,
+                "cst": "90" if regra.simples_nacional else regra.cst,
                 "base": Decimal(0),
                 "aliquota": Decimal(0),
                 "valor": Decimal(0),
@@ -39,7 +39,7 @@ class ICMSCalculationService:
         valor_icms = base_reduzida * (aliquota / 100)
 
         return {
-            "cst": regra.csosn if regra.simples_nacional else regra.cst,
+            "cst": "90" if regra.simples_nacional else regra.cst,
             "base": round(base_reduzida, 2),
             "aliquota": aliquota,
             "valor": round(valor_icms, 2),

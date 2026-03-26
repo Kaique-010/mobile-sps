@@ -105,6 +105,20 @@ class CteTributacaoForm(forms.ModelForm):
             except Exception as e:
                 logger.warning(f"Erro ao carregar CFOP inicial: {e}")
 
+        try:
+            filial = None
+            if self.instance and self.instance.pk:
+                filial = Filiais.objects.using(db_alias).filter(pk=self.instance.filial).first()
+            regime = str(getattr(filial, "empr_regi_trib", "") or "").strip() or "3"
+            from CFOP.cst_utils import get_csts_por_regime
+            cst_choices = get_csts_por_regime(regime)
+            self.fields['cst_icms'].widget = forms.Select(
+                choices=[('', '---------')] + cst_choices.get('icms', []),
+                attrs={'class': 'form-select'}
+            )
+        except Exception:
+            pass
+
     def clean_cfop(self):
         cfop_obj = self.cleaned_data.get('cfop')
         if cfop_obj:

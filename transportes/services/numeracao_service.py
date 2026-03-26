@@ -1,4 +1,4 @@
-from transportes.models import Cte
+from transportes.models import Cte, Mdfe
 from django.db.models import Max
 
 class NumeracaoService:
@@ -20,4 +20,21 @@ class NumeracaoService:
             serie=self.serie
         ).aggregate(Max('numero'))['numero__max']
         
+        return int(max_num or 0) + 1
+
+
+class NumeracaoMdfeService:
+    def __init__(self, empresa_id, filial_id, serie=1, slug=None):
+        self.empresa_id = empresa_id
+        self.filial_id = filial_id
+        self.serie = int(serie or 1)
+        self.slug = slug
+
+    def proximo_numero(self) -> int:
+        max_num = (
+            Mdfe.objects.using(self.slug)
+            .filter(mdf_empr=self.empresa_id, mdf_fili=self.filial_id, mdf_seri=self.serie)
+            .aggregate(Max("mdf_nume"))
+            .get("mdf_nume__max")
+        )
         return int(max_num or 0) + 1

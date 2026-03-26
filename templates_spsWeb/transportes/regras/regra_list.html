@@ -50,7 +50,7 @@
                             <span class="badge bg-light text-dark border">Não</span>
                             {% endif %}
                         </td>
-                        <td>{{ regra.cfop|default:"Todos" }}</td>
+                        <td>{% if regra.cfop %}{{ regra.cfop_display }}{% else %}Todos{% endif %}</td>
                         <td>
                             {{ regra.aliquota }}%
                             {% if regra.reducao_base %}

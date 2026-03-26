@@ -1,0 +1,110 @@
+{% extends 'transportes/base_cte.html' %}
+
+{% block title %}Novo MDF-e{% endblock %}
+
+{% block cte_content %}
+<div class="card shadow-sm">
+    <div class="card-header py-3 border-bottom">
+        <div class="d-flex justify-content-between align-items-center">
+            <h4 class="mb-0 fw-bold text-secondary"><i class="fas fa-plus me-2"></i>Novo MDF-e</h4>
+            <a href="{% url 'transportes:mdfe_list' slug=slug %}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </a>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <form method="post" novalidate>
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+
+            <div class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label">Série</label>
+                    {{ form.mdf_seri }}
+                    {% if form.mdf_seri.errors %}<div class="text-danger small">{{ form.mdf_seri.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Tipo Emitente</label>
+                    {{ form.mdf_tipo_emit }}
+                    {% if form.mdf_tipo_emit.errors %}<div class="text-danger small">{{ form.mdf_tipo_emit.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Tipo Transportador</label>
+                    {{ form.mdf_tipo_tran }}
+                    {% if form.mdf_tipo_tran.errors %}<div class="text-danger small">{{ form.mdf_tipo_tran.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">UF Origem</label>
+                    {{ form.mdf_esta_orig }}
+                    {% if form.mdf_esta_orig.errors %}<div class="text-danger small">{{ form.mdf_esta_orig.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">UF Destino</label>
+                    {{ form.mdf_esta_dest }}
+                    {% if form.mdf_esta_dest.errors %}<div class="text-danger small">{{ form.mdf_esta_dest.errors }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Município Carregamento (IBGE)</label>
+                    {{ form.mdf_cida_carr }}
+                    {% if form.mdf_cida_carr.errors %}<div class="text-danger small">{{ form.mdf_cida_carr.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-8">
+                    <label class="form-label">Nome Carregamento</label>
+                    {{ form.mdf_nome_carr }}
+                    {% if form.mdf_nome_carr.errors %}<div class="text-danger small">{{ form.mdf_nome_carr.errors }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Tipo Carga</label>
+                    {{ form.mdf_pred_carg }}
+                    {% if form.mdf_pred_carg.errors %}<div class="text-danger small">{{ form.mdf_pred_carg.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-9">
+                    <label class="form-label">Produto Predominante</label>
+                    {{ form.mdf_pred_xprod }}
+                    {% if form.mdf_pred_xprod.errors %}<div class="text-danger small">{{ form.mdf_pred_xprod.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">NCM</label>
+                    {{ form.mdf_pred_ncm }}
+                    {% if form.mdf_pred_ncm.errors %}<div class="text-danger small">{{ form.mdf_pred_ncm.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">EAN</label>
+                    {{ form.mdf_pred_ean }}
+                    {% if form.mdf_pred_ean.errors %}<div class="text-danger small">{{ form.mdf_pred_ean.errors }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Transportadora (ID)</label>
+                    {{ form.mdf_tran }}
+                    {% if form.mdf_tran.errors %}<div class="text-danger small">{{ form.mdf_tran.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Motorista (ID)</label>
+                    {{ form.mdf_moto }}
+                    {% if form.mdf_moto.errors %}<div class="text-danger small">{{ form.mdf_moto.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Veículo (Seq)</label>
+                    {{ form.mdf_veic }}
+                    {% if form.mdf_veic.errors %}<div class="text-danger small">{{ form.mdf_veic.errors }}</div>{% endif %}
+                </div>
+            </div>
+
+            <div class="mt-4 d-flex justify-content-end">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Salvar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

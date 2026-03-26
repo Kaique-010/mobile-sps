@@ -148,7 +148,9 @@ class OrdemServicoViewSet(BaseClienteViewSet):
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         
-        cache_key = self._cache_key('lista')
+        status_param = (request.query_params.get('status') or '').strip()
+        status_override = None if status_param else "1,22"
+        cache_key = self._cache_key('lista', status_override=status_override)
         if not self._should_refresh():
             cached = cache.get(cache_key)
             if cached is not None:
@@ -390,6 +392,9 @@ class OrdemServicoViewSet(BaseClienteViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
+
+        if not (self.request.query_params.get('status') or '').strip():
+            queryset = queryset.filter(orde_stat_orde__in=[2, 22])
         
         queryset = self._aplicar_filtros(queryset, incluir_status=True)
         queryset = self._blindar_datas(queryset)
@@ -578,6 +583,7 @@ class OrdemServicoViewSet(BaseClienteViewSet):
                     return tratar_sucesso(cached)
 
             queryset = super().get_queryset()
+            queryset = queryset.filter(orde_enti=request.cliente_id)
             queryset = self._aplicar_filtros(queryset, incluir_status=False)
             queryset = queryset.filter(orde_stat_orde=22)
             queryset = self._blindar_datas(queryset).order_by('-orde_nume')
@@ -593,6 +599,37 @@ class OrdemServicoViewSet(BaseClienteViewSet):
         except (ErroDominio, ValueError) as e:
             return tratar_erro(e)
     
+    @action(detail=False, methods=['get'], url_path='todas_ordens')
+    def listar_todas_ordens(self, request, *args, **kwargs):
+        try:
+            cache_key = self._cache_key('estoque', status_override='1,22')
+            if not self._should_refresh():
+                cached = cache.get(cache_key)
+                if cached is not None:
+                    try:
+                        self.logger.info(f"[CACHE HIT][OS estoque] key={cache_key} size={len(cached)}")
+                    except Exception:
+                        pass
+                    return tratar_sucesso(cached)
+
+            queryset = super().get_queryset()
+            queryset = queryset.filter(orde_enti=request.cliente_id)
+            queryset = self._aplicar_filtros(queryset, incluir_status=False)
+            queryset = queryset.filter(orde_stat_orde__in=[1, 2, 3, 4, 5, 6, 21, 22])
+            queryset = self._blindar_datas(queryset).order_by('-orde_nume')
+            self._prefetch_related_objects(queryset)
+            serializer = self.get_serializer(queryset, many=True)
+            data = serializer.data
+            self._inject_arquivos_no_payload(queryset, data)
+            cache.set(cache_key, data)
+            try:
+                self.logger.info(f"[CACHE SET][OS estoque] key={cache_key} size={len(data)}")
+            except Exception:
+                pass
+            return tratar_sucesso(data)
+        except (ErroDominio, ValueError) as e:
+            return tratar_erro(e)
+            
     
     @action(detail=False, methods=['get'], url_path='imagensantes')
     def listar_imagens_antes(self, request, *args, **kwargs):

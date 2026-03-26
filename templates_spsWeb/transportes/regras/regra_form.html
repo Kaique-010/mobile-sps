@@ -111,12 +111,12 @@
             <hr>
 
             <div class="row g-3">
-                <div class="col-md-3">
+                <div class="col-md-3" id="cst-field-wrapper">
                     <label for="{{ form.cst.id_for_label }}" class="form-label">CST</label>
                     {{ form.cst }}
                     {{ form.cst.errors }}
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-3" id="csosn-field-wrapper">
                     <label for="{{ form.csosn.id_for_label }}" class="form-label">CSOSN (Simples)</label>
                     {{ form.csosn }}
                     {{ form.csosn.errors }}
@@ -130,4 +130,27 @@
         </form>
     </div>
 </div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const simplesEl = document.getElementById("{{ form.simples_nacional.id_for_label }}");
+    const cstWrapper = document.getElementById("cst-field-wrapper");
+    const csosnWrapper = document.getElementById("csosn-field-wrapper");
+    const cstEl = document.getElementById("{{ form.cst.id_for_label }}");
+    const csosnEl = document.getElementById("{{ form.csosn.id_for_label }}");
+
+    function refreshCstCsosn() {
+      const isSimples = !!(simplesEl && simplesEl.checked);
+
+      if (cstWrapper) cstWrapper.style.display = isSimples ? "none" : "";
+      if (csosnWrapper) csosnWrapper.style.display = isSimples ? "" : "none";
+
+      if (cstEl) cstEl.required = !isSimples;
+      if (csosnEl) csosnEl.required = isSimples;
+    }
+
+    if (simplesEl) simplesEl.addEventListener("change", refreshCstCsosn);
+    refreshCstCsosn();
+  });
+</script>
 {% endblock %}

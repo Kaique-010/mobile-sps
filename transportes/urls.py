@@ -10,6 +10,7 @@ app_name = 'transportes'
 # Router para API
 router = DefaultRouter()
 router.register(r'ctes', api.CteViewSet, basename='api-cte')
+router.register(r'mdfes', api.MdfeViewSet, basename='api-mdfe')
 
 urlpatterns = [
     # API URLs

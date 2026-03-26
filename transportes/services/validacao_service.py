@@ -1,12 +1,28 @@
 from transportes.models import Cte
 from transportes.models import CteDocumento
 from Licencas.models import Filiais
+import re
 
 
 class ValidacaoService:
     def __init__(self, cte: Cte):
         self.cte = cte
         self.errors = []
+
+    def _chave_valida(self, chave_44: str) -> bool:
+        chave = re.sub(r"\D", "", str(chave_44 or ""))
+        if not chave.isdigit() or len(chave) != 44:
+            return False
+        soma = 0
+        peso = 2
+        for digito in reversed(chave[:43]):
+            soma += int(digito) * peso
+            peso += 1
+            if peso > 9:
+                peso = 2
+        resto = soma % 11
+        dv_calc = 0 if resto < 2 else 11 - resto
+        return str(dv_calc) == chave[-1]
 
     def validar_emissao(self) -> bool:
         """Valida se o CTe pode ser emitido"""
@@ -53,9 +69,22 @@ class ValidacaoService:
             
             
         # Validação de Documentos
-        docs_count = CteDocumento.objects.using(db_alias).filter(cte_id=self.cte.pk).count()
-        if docs_count == 0:
+        docs = CteDocumento.objects.using(db_alias).filter(cte_id=self.cte.pk)
+        if not docs.exists():
             self.errors.append("Pelo menos um documento (NFe/Outros) deve ser vinculado ao CTe.")
+        else:
+            chaves_validas = 0
+            for doc in docs:
+                raw = getattr(doc, "chave_nfe", None)
+                if not raw:
+                    continue
+                chave = re.sub(r"\D", "", str(raw))
+                if len(chave) > 44:
+                    chave = chave[:44]
+                if self._chave_valida(chave):
+                    chaves_validas += 1
+            if chaves_validas == 0:
+                self.errors.append("Nenhuma chave de NF-e válida foi informada nos Documentos (44 dígitos com DV correto).")
             
         # Validação de Carga
         if not self.cte.produto_predominante:
