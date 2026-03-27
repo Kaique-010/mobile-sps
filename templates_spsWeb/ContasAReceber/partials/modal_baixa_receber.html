@@ -14,6 +14,7 @@
   <div class="modal-content">
     <h5>Baixa de Título (Recebimento)</h5>
     <form id="form-baixa-rec">
+      {% csrf_token %}
       <div class="modal-grid">
         <div>
           <label>Data do Recebimento *</label>

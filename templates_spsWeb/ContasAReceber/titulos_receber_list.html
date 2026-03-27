@@ -203,7 +203,9 @@
     {% block extra_js %}
     <script>
       function getCSRFToken() {
-        const name = 'csrftoken=';
+        const input = document.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (input && input.value) return input.value;
+        const name = 'mobile_sps_csrftoken=';
         const cookies = document.cookie.split(';');
         for (let c of cookies) {
           c = c.trim();

@@ -17,12 +17,15 @@ class AdiantamentosUpdateView(UpdateView):
     def get_object(self, queryset=None):
         queryset = queryset or self.get_queryset()
         empresa = self.request.session.get('empresa_id')
+        filial = self.request.session.get('filial_id')
         entidade = self.kwargs.get('adia_enti')
         documento = self.kwargs.get('adia_docu')
         serie = self.kwargs.get('adia_seri')
 
         if empresa:
             queryset = queryset.filter(adia_empr=int(empresa))
+        if filial:
+            queryset = queryset.filter(adia_fili=int(filial))
 
         queryset = queryset.filter(
             adia_enti=entidade,

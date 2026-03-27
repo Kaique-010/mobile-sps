@@ -63,7 +63,11 @@ class AdiantamentosService:
 
     @staticmethod
     def update(adiantamento, validated_data, using):
-        for key, value in validated_data.items():
+        dados = dict(validated_data or {})
+        for k in ("adia_empr", "adia_fili", "adia_enti", "adia_docu", "adia_seri"):
+            dados.pop(k, None)
+
+        for key, value in dados.items():
             setattr(adiantamento, key, value)
         adiantamento.save(using=using)
         return adiantamento
