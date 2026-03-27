@@ -23,8 +23,10 @@ from OrdemdeServico.models import (
     Ordemservicopecas,
     Ordemservicoservicos,
     OrdemServicoFaseSetor,
+    OrdemServicoVoltagem,
     WorkflowSetor
 )
+from Produtos.models import Marca
 from Pedidos.rest.serializers import PedidoVendaSerializer, PedidosGeralSerializer, ItemPedidoVendaSerializer
 from Orcamentos.rest.serializers import OrcamentosSerializer, ItemOrcamentoSerializer
 from O_S.REST.serializers import OrdemServicoGeralSerializer, OsSerializer
@@ -342,6 +344,26 @@ class OrdemServicoViewSet(BaseClienteViewSet):
         except Exception:
             setores_nomes = {}
 
+        # 3.1 Prefetch Voltagem (Nome)
+        try:
+            volt_ids = set(obj.orde_volt for obj in objects if obj.orde_volt is not None)
+            voltagens_nomes = {}
+            if volt_ids:
+                volts_qs = OrdemServicoVoltagem.objects.using(banco).filter(osvo_codi__in=volt_ids)
+                voltagens_nomes = {v.osvo_codi: v.osvo_nome for v in volts_qs}
+        except Exception:
+            voltagens_nomes = {}
+
+        # 3.2 Prefetch Marca (Nome)
+        try:
+            marca_ids = set(obj.orde_marc for obj in objects if obj.orde_marc is not None)
+            marcas_nomes = {}
+            if marca_ids:
+                marcas_qs = Marca.objects.using(banco).filter(codigo__in=marca_ids)
+                marcas_nomes = {m.codigo: m.nome for m in marcas_qs}
+        except Exception:
+            marcas_nomes = {}
+
         # 4. Prefetch Próximos Setores (Workflow)
         try:
             # Coletar IDs de origem (setor atual da OS)
@@ -382,6 +404,12 @@ class OrdemServicoViewSet(BaseClienteViewSet):
             
             if obj.orde_seto in setores_nomes:
                 obj._prefetched_setor_nome = setores_nomes[obj.orde_seto]
+
+            if voltagens_nomes:
+                obj._prefetched_voltagem_nome = voltagens_nomes.get(obj.orde_volt)
+
+            if marcas_nomes:
+                obj._prefetched_marca_nome = marcas_nomes.get(obj.orde_marc)
             
             # Próximos setores
             origem = obj.orde_seto if obj.orde_seto else 0

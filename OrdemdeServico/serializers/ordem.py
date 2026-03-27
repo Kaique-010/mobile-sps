@@ -3,7 +3,7 @@ from datetime import datetime, date
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from Entidades.models import Entidades
-from ..models import Ordemservico, Ordemservicoservicos, OrdemServicoFaseSetor
+from ..models import Ordemservico, Ordemservicoservicos, OrdemServicoFaseSetor, OrdemServicoVoltagem
 from .base import BancoModelSerializer, SafeDateField, SafeTimeField, SafeDateTimeField
 from .itens import OrdemServicoPecasSerializer, OrdemServicoServicosSerializer
 
@@ -14,6 +14,8 @@ class OrdemServicoSerializer(BancoModelSerializer):
     servicos = OrdemServicoServicosSerializer(source='servicos_lista', many=True, required=False)
     setor_nome = serializers.SerializerMethodField(read_only=True)
     cliente_nome = serializers.SerializerMethodField(read_only=True)
+    voltagem_nome = serializers.SerializerMethodField(read_only=True)
+    marca_nome = serializers.SerializerMethodField(read_only=True)
     proximos_setores = serializers.SerializerMethodField(read_only=True)
     pode_avancar = serializers.SerializerMethodField(read_only=True)
     
@@ -168,6 +170,39 @@ class OrdemServicoSerializer(BancoModelSerializer):
             return setor.osfs_nome if setor else None
         except Exception as e:
             logger.error(f"Erro ao buscar setor da ordem {obj.orde_nume}: {str(e)}")
+            return None
+
+    def get_voltagem_nome(self, obj):
+        if hasattr(obj, '_prefetched_voltagem_nome'):
+            return obj._prefetched_voltagem_nome
+
+        banco = self.context.get('banco')
+        if not banco:
+            return None
+
+        try:
+            if obj.orde_volt is None:
+                return None
+            voltagem = OrdemServicoVoltagem.objects.using(banco).filter(osvo_codi=obj.orde_volt).first()
+            return voltagem.osvo_nome if voltagem else None
+        except Exception:
+            return None
+
+    def get_marca_nome(self, obj):
+        if hasattr(obj, '_prefetched_marca_nome'):
+            return obj._prefetched_marca_nome
+
+        banco = self.context.get('banco')
+        if not banco:
+            return None
+
+        try:
+            if obj.orde_marc is None:
+                return None
+            from Produtos.models import Marca
+            marca = Marca.objects.using(banco).filter(codigo=obj.orde_marc).first()
+            return marca.nome if marca else None
+        except Exception:
             return None
 
     def get_proximos_setores(self, obj):

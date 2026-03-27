@@ -481,6 +481,7 @@ class OrdemServicoSerializer(BancoModelSerializer):
     servicos = OrdemServicoServicosSerializer(source='servicos_lista', many=True, required=False)
     setor_nome = serializers.SerializerMethodField(read_only=True)
     cliente_nome = serializers.SerializerMethodField(read_only=True)
+    voltagem_nome = serializers.SerializerMethodField(read_only=True)
     proximos_setores = serializers.SerializerMethodField(read_only=True)
     pode_avancar = serializers.SerializerMethodField(read_only=True)
     
@@ -690,6 +691,23 @@ class OrdemServicoSerializer(BancoModelSerializer):
             return setor.osfs_nome if setor else None
         except Exception as e:
             logger.error(f"Erro ao buscar setor da ordem {obj.orde_nume}: {str(e)}")
+            return None
+
+    def get_voltagem_nome(self, obj):
+        val = getattr(obj, "_prefetched_voltagem_nome", None)
+        if val is not None:
+            return val
+
+        banco = self.context.get('banco')
+        if not banco:
+            return None
+
+        try:
+            if obj.orde_volt is None:
+                return None
+            voltagem = OrdemServicoVoltagem.objects.using(banco).filter(osvo_codi=obj.orde_volt).first()
+            return voltagem.osvo_nome if voltagem else None
+        except Exception:
             return None
 
     def get_proximos_setores(self, obj):
