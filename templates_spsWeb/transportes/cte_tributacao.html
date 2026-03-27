@@ -13,7 +13,49 @@
         </h4>
 
         <!-- Navegação de Abas -->
-        <ul class="nav nav-tabs card-header-tabs">
+        <div class="d-md-none mb-3">
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown"
+                    aria-expanded="false">
+                    <i class="fas fa-layer-group"></i> Tributação
+                </button>
+                <ul class="dropdown-menu w-100">
+                    <li>
+                        <a class="dropdown-item" href="{% url 'transportes:cte_emissao' slug=slug pk=object.pk %}">
+                            <i class="fas fa-file-alt"></i> Dados Gerais
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="{% url 'transportes:cte_tipo' slug=slug pk=object.pk %}">
+                            <i class="fas fa-tags"></i> Tipo
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="{% url 'transportes:cte_rota' slug=slug pk=object.pk %}">
+                            <i class="fas fa-map-marker-alt"></i> Rota
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="{% url 'transportes:cte_seguro' slug=slug pk=object.pk %}">
+                            <i class="fas fa-shield-alt"></i> Seguro
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="{% url 'transportes:cte_carga' slug=slug pk=object.pk %}">
+                            <i class="fas fa-box"></i> Carga
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item active fw-bold"
+                            href="{% url 'transportes:cte_tributacao' slug=slug pk=object.pk %}">
+                            <i class="fas fa-percentage"></i> Tributação
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <ul class="nav nav-tabs card-header-tabs d-none d-md-flex">
             <li class="nav-item">
                 <a class="nav-link" href="{% url 'transportes:cte_emissao' slug=slug pk=object.pk %}">
                     <i class="fas fa-file-alt"></i> Dados Gerais

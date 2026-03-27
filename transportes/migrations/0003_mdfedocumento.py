@@ -11,6 +11,23 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.SeparateDatabaseAndState(
+            database_operations=[],
+            state_operations=[
+                migrations.CreateModel(
+                    name="Mdfe",
+                    fields=[
+                        ("mdf_id", models.AutoField(primary_key=True, serialize=False, db_column="mdf_id", verbose_name="ID MDFe")),
+                    ],
+                    options={
+                        "managed": False,
+                        "db_table": "mdfe",
+                        "verbose_name": "MDFe",
+                        "verbose_name_plural": "MDFes",
+                    },
+                ),
+            ],
+        ),
         migrations.CreateModel(
             name="MdfeDocumento",
             fields=[
@@ -27,4 +44,3 @@ class Migration(migrations.Migration):
             },
         ),
     ]
-

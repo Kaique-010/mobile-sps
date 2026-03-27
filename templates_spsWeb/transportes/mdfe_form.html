@@ -1,12 +1,40 @@
 {% extends 'transportes/base_cte.html' %}
-
-{% block title %}Novo MDF-e{% endblock %}
+{% load static %}
+{% block title %}{% if object %}MDF-e {{ object.mdf_nume }} / {{ object.mdf_seri }}{% else %}Novo MDF-e{% endif %}{% endblock %}
 
 {% block cte_content %}
+<style>
+    .h5 {
+        margin-top: 50px;
+        margin-bottom: 40px;
+        font-size: 18px;
+        font-weight: bold;
+        align-items: center;
+        text-align: center;
+        text-decoration: underline;
+    }
+    .autocomplete-wrapper {
+        position: relative;
+    }
+    .autocomplete-dropdown {
+        position: absolute;
+        top: calc(100% + 2px);
+        left: 0;
+        right: 0;
+        z-index: 1050;
+        display: none;
+        max-height: 260px;
+        overflow-y: auto;
+    }
+</style>
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
 <div class="card shadow-sm">
     <div class="card-header py-3 border-bottom">
         <div class="d-flex justify-content-between align-items-center">
-            <h4 class="mb-0 fw-bold text-secondary"><i class="fas fa-plus me-2"></i>Novo MDF-e</h4>
+            <h4 class="mb-0 fw-bold text-secondary">
+                <i class="fas fa-truck me-2"></i>
+                {% if object %}MDF-e {{ object.mdf_nume }} / {{ object.mdf_seri }}{% else %}Novo MDF-e{% endif %}
+            </h4>
             <a href="{% url 'transportes:mdfe_list' slug=slug %}" class="btn btn-outline-secondary btn-sm">
                 <i class="fas fa-arrow-left"></i> Voltar
             </a>
@@ -14,6 +42,41 @@
     </div>
 
     <div class="card-body">
+        {% if object %}
+        <ul class="nav nav-tabs mb-3">
+            <li class="nav-item">
+                <a class="nav-link {% if active_tab == 'dados' %}active{% endif %}"
+                    href="{% url 'transportes:mdfe_dados' slug=slug pk=object.mdf_id %}">
+                    Dados
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if active_tab == 'documentos' %}active{% endif %}"
+                    href="{% url 'transportes:mdfe_documentos' slug=slug pk=object.mdf_id %}">
+                    Documentos
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if active_tab == 'antt' %}active{% endif %}"
+                    href="{% url 'transportes:mdfe_antt' slug=slug pk=object.mdf_id %}">
+                    ANTT
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if active_tab == 'contratantes' %}active{% endif %}"
+                    href="{% url 'transportes:mdfe_contratantes' slug=slug pk=object.mdf_id %}">
+                    Contratantes
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if active_tab == 'seguro' %}active{% endif %}"
+                    href="{% url 'transportes:mdfe_seguro' slug=slug pk=object.mdf_id %}">
+                    Seguro
+                </a>
+            </li>
+        </ul>
+        {% endif %}
+
         <form method="post" novalidate>
             {% csrf_token %}
 
@@ -23,79 +86,118 @@
             </div>
             {% endif %}
 
-            <div class="row g-3">
+            {% if active_tab == 'dados' %}
+            <div class="row g-3 m-2">
+                <div class="col-md-2">
+                    <label class="form-label">Data de Emissão</label>
+                    {{ form.mdf_emis }}
+                    {% if form.mdf_emis.errors %}<div class="text-danger small">{{ form.mdf_emis.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Transportadora (ID)</label>
+                    {{ form.mdf_tran.as_hidden }}
+                    <div class="autocomplete-wrapper">
+                        <input id="input_transportadora" type="text" class="form-control" autocomplete="off" placeholder="Digite para buscar" value="{{ transportadora_nome|default:'' }}">
+                        <div id="dropdown_transportadora" class="list-group autocomplete-dropdown"></div>
+                    </div>
+                    {% if form.mdf_tran.errors %}<div class="text-danger small">{{ form.mdf_tran.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Número de MDF-e</label>
+                    {{ form.mdf_nume }}
+                    {% if form.mdf_nume.errors %}<div class="text-danger small">{{ form.mdf_nume.errors }}</div>{% endif %}
+                </div>
                 <div class="col-md-2">
                     <label class="form-label">Série</label>
                     {{ form.mdf_seri }}
                     {% if form.mdf_seri.errors %}<div class="text-danger small">{{ form.mdf_seri.errors }}</div>{% endif %}
                 </div>
-                <div class="col-md-2">
+            </div>
+            <div class="h5"> Informações do Emitente</div>
+            <div class="row g-3 m-2">
+                <div class="col-md-3">
                     <label class="form-label">Tipo Emitente</label>
                     {{ form.mdf_tipo_emit }}
-                    {% if form.mdf_tipo_emit.errors %}<div class="text-danger small">{{ form.mdf_tipo_emit.errors }}</div>{% endif %}
+                    {% if form.mdf_tipo_emit.errors %}<div class="text-danger small">{{ form.mdf_tipo_emit.errors }}
+                    </div>{%endif %}
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <label class="form-label">Tipo Transportador</label>
                     {{ form.mdf_tipo_tran }}
-                    {% if form.mdf_tipo_tran.errors %}<div class="text-danger small">{{ form.mdf_tipo_tran.errors }}</div>{% endif %}
+                    {% if form.mdf_tipo_tran.errors %}<div class="text-danger small">{{ form.mdf_tipo_tran.errors }}
+                    </div>{% endif %}
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">UF Origem</label>
                     {{ form.mdf_esta_orig }}
-                    {% if form.mdf_esta_orig.errors %}<div class="text-danger small">{{ form.mdf_esta_orig.errors }}</div>{% endif %}
+                    {% if form.mdf_esta_orig.errors %}<div class="text-danger small">{{ form.mdf_esta_orig.errors }}
+                    </div>{% endif %}
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">UF Destino</label>
                     {{ form.mdf_esta_dest }}
-                    {% if form.mdf_esta_dest.errors %}<div class="text-danger small">{{ form.mdf_esta_dest.errors }}</div>{% endif %}
+                    {% if form.mdf_esta_dest.errors %}<div class="text-danger small">{{ form.mdf_esta_dest.errors }}
+                    </div>{% endif %}
                 </div>
 
                 <div class="col-md-4">
                     <label class="form-label">Município Carregamento (IBGE)</label>
-                    {{ form.mdf_cida_carr }}
-                    {% if form.mdf_cida_carr.errors %}<div class="text-danger small">{{ form.mdf_cida_carr.errors }}</div>{% endif %}
-                </div>
-                <div class="col-md-8">
-                    <label class="form-label">Nome Carregamento</label>
-                    {{ form.mdf_nome_carr }}
-                    {% if form.mdf_nome_carr.errors %}<div class="text-danger small">{{ form.mdf_nome_carr.errors }}</div>{% endif %}
+                    {{ form.mdf_cida_carr.as_hidden }}
+                    {{ form.mdf_nome_carr.as_hidden }}
+                    <div class="autocomplete-wrapper">
+                        <input id="input_cmun_carga_nome" type="text" class="form-control" autocomplete="off" placeholder="Digite o nome do município">
+                        <div id="dropdown_cmun_carga" class="list-group autocomplete-dropdown"></div>
+                    </div>
+                    {% if form.mdf_cida_carr.errors %}<div class="text-danger small">{{ form.mdf_cida_carr.errors }}
+                    </div>{% endif %}
                 </div>
 
+                <div class="h5"> Informações da Carga</div>
                 <div class="col-md-3">
                     <label class="form-label">Tipo Carga</label>
                     {{ form.mdf_pred_carg }}
-                    {% if form.mdf_pred_carg.errors %}<div class="text-danger small">{{ form.mdf_pred_carg.errors }}</div>{% endif %}
+                    {% if form.mdf_pred_carg.errors %}<div class="text-danger small">{{ form.mdf_pred_carg.errors }}
+                    </div>{% endif %}
                 </div>
                 <div class="col-md-9">
                     <label class="form-label">Produto Predominante</label>
                     {{ form.mdf_pred_xprod }}
-                    {% if form.mdf_pred_xprod.errors %}<div class="text-danger small">{{ form.mdf_pred_xprod.errors }}</div>{% endif %}
+                    {% if form.mdf_pred_xprod.errors %}<div class="text-danger small">{{ form.mdf_pred_xprod.errors }}
+                    </div>
+                    {% endif %}
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">NCM</label>
                     {{ form.mdf_pred_ncm }}
-                    {% if form.mdf_pred_ncm.errors %}<div class="text-danger small">{{ form.mdf_pred_ncm.errors }}</div>{% endif %}
+                    {% if form.mdf_pred_ncm.errors %}<div class="text-danger small">{{ form.mdf_pred_ncm.errors }}</div>
+                    {% endif %}
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">EAN</label>
                     {{ form.mdf_pred_ean }}
-                    {% if form.mdf_pred_ean.errors %}<div class="text-danger small">{{ form.mdf_pred_ean.errors }}</div>{% endif %}
+                    {% if form.mdf_pred_ean.errors %}<div class="text-danger small">{{ form.mdf_pred_ean.errors }}</div>
+                    {% endif %}
                 </div>
 
-                <div class="col-md-2">
-                    <label class="form-label">Transportadora (ID)</label>
-                    {{ form.mdf_tran }}
-                    {% if form.mdf_tran.errors %}<div class="text-danger small">{{ form.mdf_tran.errors }}</div>{% endif %}
-                </div>
+
                 <div class="col-md-2">
                     <label class="form-label">Motorista (ID)</label>
-                    {{ form.mdf_moto }}
+                    {{ form.mdf_moto.as_hidden }}
+                    <div class="autocomplete-wrapper">
+                        <input id="input_motorista" type="text" class="form-control" autocomplete="off" placeholder="Digite para buscar" value="{{ motorista_nome|default:'' }}">
+                        <div id="dropdown_motorista" class="list-group autocomplete-dropdown"></div>
+                    </div>
                     {% if form.mdf_moto.errors %}<div class="text-danger small">{{ form.mdf_moto.errors }}</div>{% endif %}
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">Veículo (Seq)</label>
-                    {{ form.mdf_veic }}
+                    {{ form.mdf_veic.as_hidden }}
+                    <div class="autocomplete-wrapper">
+                        <input id="input_veiculo" type="text" class="form-control" autocomplete="off" placeholder="Digite para buscar" value="{{ veiculo_nome|default:'' }}">
+                        <div id="dropdown_veiculo" class="list-group autocomplete-dropdown"></div>
+                    </div>
                     {% if form.mdf_veic.errors %}<div class="text-danger small">{{ form.mdf_veic.errors }}</div>{% endif %}
+
                 </div>
             </div>
 
@@ -104,7 +206,742 @@
                     <i class="fas fa-save"></i> Salvar
                 </button>
             </div>
+            {% endif %}
+
+            {% if active_tab == 'documentos' %}
+            {{ documentos_formset.management_form }}
+
+            <div id="documentos-container">
+                {% for dform in documentos_formset %}
+                <div class="documento-item card mb-3">
+                    <div class="card-body">
+                        <div class="row g-3 align-items-end">
+                            {% for hidden in dform.hidden_fields %}
+                            {{ hidden }}
+                            {% endfor %}
+
+                            <div class="col-md-2">
+                                <label class="form-label fw-semibold">{{ dform.tipo_doc.label }}</label>
+                                {{ dform.tipo_doc }}
+                                {% if dform.tipo_doc.errors %}
+                                <div class="text-danger small">{{ dform.tipo_doc.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">{{ dform.chave.label }}</label>
+                                {{ dform.chave }}
+                                {% if dform.chave.errors %}
+                                <div class="text-danger small">{{ dform.chave.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">{{ dform.cmun_descarga.label }}</label>
+                                {{ dform.cmun_descarga.as_hidden }}
+                                <div class="autocomplete-wrapper">
+                                    <input type="text" class="form-control ibge-mun-descarga-search" autocomplete="off" placeholder="Digite o nome do município">
+                                    <div class="list-group autocomplete-dropdown ibge-dropdown"></div>
+                                </div>
+                                {% if dform.cmun_descarga.errors %}
+                                <div class="text-danger small">{{ dform.cmun_descarga.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">{{ dform.xmun_descarga.label }}</label>
+                                {{ dform.xmun_descarga }}
+                                {% if dform.xmun_descarga.errors %}
+                                <div class="text-danger small">{{ dform.xmun_descarga.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-12 text-end">
+                                {% if documentos_formset.can_delete %}
+                                <div class="form-check d-inline-block me-2">
+                                    {{ dform.DELETE }}
+                                    <label class="form-check-label text-danger" for="{{ dform.DELETE.id_for_label }}">
+                                        Excluir
+                                    </label>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <button type="button" class="btn btn-outline-primary" id="add-documento">
+                    <i class="fas fa-plus"></i> Adicionar Documento
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Salvar
+                </button>
+            </div>
+
+            <div id="empty-form-documento" style="display:none;">
+                <div class="documento-item card mb-3 bg-light">
+                    <div class="card-body">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-2">
+                                <label class="form-label fw-semibold">Tipo</label>
+                                {{ documentos_formset.empty_form.tipo_doc }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Chave</label>
+                                {{ documentos_formset.empty_form.chave }}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">cMun Descarga</label>
+                                {{ documentos_formset.empty_form.cmun_descarga.as_hidden }}
+                                <div class="autocomplete-wrapper">
+                                    <input type="text" class="form-control ibge-mun-descarga-search" autocomplete="off" placeholder="Digite o nome do município">
+                                    <div class="list-group autocomplete-dropdown ibge-dropdown"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">xMun Descarga</label>
+                                {{ documentos_formset.empty_form.xmun_descarga }}
+                            </div>
+                            <div class="col-12 text-end">
+                                <div class="form-check d-inline-block me-2">
+                                    {{ documentos_formset.empty_form.DELETE }}
+                                    <label class="form-check-label text-danger">Excluir</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if active_tab == 'antt' %}
+            {% if antt_form.non_field_errors %}
+            <div class="alert alert-danger">{{ antt_form.non_field_errors }}</div>
+            {% endif %}
+
+            <div class="row g-3 m-2">
+                <div class="col-md-3">
+                    <label class="form-label">{{ antt_form.mdfe_antt_rntrc.label }}</label>
+                    {{ antt_form.mdfe_antt_rntrc }}
+                    {% if antt_form.mdfe_antt_rntrc.errors %}<div class="text-danger small">{{ antt_form.mdfe_antt_rntrc.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ antt_form.mdfe_antt_ciot.label }}</label>
+                    {{ antt_form.mdfe_antt_ciot }}
+                    {% if antt_form.mdfe_antt_ciot.errors %}<div class="text-danger small">{{ antt_form.mdfe_antt_ciot.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ antt_form.mdfe_antt_cpf.label }}</label>
+                    {{ antt_form.mdfe_antt_cpf }}
+                    {% if antt_form.mdfe_antt_cpf.errors %}<div class="text-danger small">{{ antt_form.mdfe_antt_cpf.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ antt_form.mdfe_antt_cnpj.label }}</label>
+                    {{ antt_form.mdfe_antt_cnpj }}
+                    {% if antt_form.mdfe_antt_cnpj.errors %}<div class="text-danger small">{{ antt_form.mdfe_antt_cnpj.errors }}</div>{% endif %}
+                </div>
+            </div>
+
+            <div class="mt-4 d-flex justify-content-end">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Salvar
+                </button>
+            </div>
+            {% endif %}
+
+            {% if active_tab == 'contratantes' %}
+            {{ contratantes_formset.management_form }}
+
+            <div id="contratantes-container">
+                {% for cform in contratantes_formset %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="row g-3 align-items-end">
+                            {% for hidden in cform.hidden_fields %}
+                            {{ hidden }}
+                            {% endfor %}
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">{{ cform.mdfe_cont_cont.label }}</label>
+                                {{ cform.mdfe_cont_cont }}
+                                {% if cform.mdfe_cont_cont.errors %}
+                                <div class="text-danger small">{{ cform.mdfe_cont_cont.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">{{ cform.mdfe_cont_cnpj_cpf.label }}</label>
+                                {{ cform.mdfe_cont_cnpj_cpf }}
+                                {% if cform.mdfe_cont_cnpj_cpf.errors %}
+                                <div class="text-danger small">{{ cform.mdfe_cont_cnpj_cpf.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-2 text-end">
+                                {% if contratantes_formset.can_delete %}
+                                <div class="form-check d-inline-block me-2">
+                                    {{ cform.DELETE }}
+                                    <label class="form-check-label text-danger" for="{{ cform.DELETE.id_for_label }}">
+                                        Excluir
+                                    </label>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <button type="button" class="btn btn-outline-primary" id="add-contratante">
+                    <i class="fas fa-plus"></i> Adicionar Contratante
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Salvar
+                </button>
+            </div>
+
+            <div id="empty-form-contratante" style="display:none;">
+                <div class="card mb-3 bg-light">
+                    <div class="card-body">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Contratante</label>
+                                {{ contratantes_formset.empty_form.mdfe_cont_cont }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">CNPJ/CPF</label>
+                                {{ contratantes_formset.empty_form.mdfe_cont_cnpj_cpf }}
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <div class="form-check d-inline-block me-2">
+                                    {{ contratantes_formset.empty_form.DELETE }}
+                                    <label class="form-check-label text-danger">Excluir</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if active_tab == 'seguro' %}
+            {{ seguros_formset.management_form }}
+
+            <div id="seguros-container">
+                {% for sform in seguros_formset %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="row g-3 align-items-end">
+                            {% for hidden in sform.hidden_fields %}
+                            {{ hidden }}
+                            {% endfor %}
+
+                            <div class="col-md-2">
+                                <label class="form-label fw-semibold">{{ sform.mdfe_segu_resp.label }}</label>
+                                {{ sform.mdfe_segu_resp }}
+                                {% if sform.mdfe_segu_resp.errors %}
+                                <div class="text-danger small">{{ sform.mdfe_segu_resp.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label fw-semibold">{{ sform.mdfe_segu_cnpj_resp.label }}</label>
+                                {{ sform.mdfe_segu_cnpj_resp }}
+                                {% if sform.mdfe_segu_cnpj_resp.errors %}
+                                <div class="text-danger small">{{ sform.mdfe_segu_cnpj_resp.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label fw-semibold">{{ sform.mdfe_segu_cpf_resp.label }}</label>
+                                {{ sform.mdfe_segu_cpf_resp }}
+                                {% if sform.mdfe_segu_cpf_resp.errors %}
+                                <div class="text-danger small">{{ sform.mdfe_segu_cpf_resp.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">{{ sform.mdfe_segu_nome_segu.label }}</label>
+                                {{ sform.mdfe_segu_nome_segu }}
+                                {% if sform.mdfe_segu_nome_segu.errors %}
+                                <div class="text-danger small">{{ sform.mdfe_segu_nome_segu.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">{{ sform.mdfe_segu_cnpj_segu.label }}</label>
+                                {{ sform.mdfe_segu_cnpj_segu }}
+                                {% if sform.mdfe_segu_cnpj_segu.errors %}
+                                <div class="text-danger small">{{ sform.mdfe_segu_cnpj_segu.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">{{ sform.mdfe_segu_apol.label }}</label>
+                                {{ sform.mdfe_segu_apol }}
+                                {% if sform.mdfe_segu_apol.errors %}
+                                <div class="text-danger small">{{ sform.mdfe_segu_apol.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">{{ sform.mdfe_segu_aver.label }}</label>
+                                {{ sform.mdfe_segu_aver }}
+                                {% if sform.mdfe_segu_aver.errors %}
+                                <div class="text-danger small">{{ sform.mdfe_segu_aver.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6 text-end">
+                                {% if seguros_formset.can_delete %}
+                                <div class="form-check d-inline-block me-2">
+                                    {{ sform.DELETE }}
+                                    <label class="form-check-label text-danger" for="{{ sform.DELETE.id_for_label }}">
+                                        Excluir
+                                    </label>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <button type="button" class="btn btn-outline-primary" id="add-seguro">
+                    <i class="fas fa-plus"></i> Adicionar Seguro
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Salvar
+                </button>
+            </div>
+
+            <div id="empty-form-seguro" style="display:none;">
+                <div class="card mb-3 bg-light">
+                    <div class="card-body">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-2">
+                                <label class="form-label fw-semibold">Responsável</label>
+                                {{ seguros_formset.empty_form.mdfe_segu_resp }}
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label fw-semibold">CNPJ Resp</label>
+                                {{ seguros_formset.empty_form.mdfe_segu_cnpj_resp }}
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label fw-semibold">CPF Resp</label>
+                                {{ seguros_formset.empty_form.mdfe_segu_cpf_resp }}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Seguradora</label>
+                                {{ seguros_formset.empty_form.mdfe_segu_nome_segu }}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">CNPJ Seg</label>
+                                {{ seguros_formset.empty_form.mdfe_segu_cnpj_segu }}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Apólice</label>
+                                {{ seguros_formset.empty_form.mdfe_segu_apol }}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Averbação</label>
+                                {{ seguros_formset.empty_form.mdfe_segu_aver }}
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <div class="form-check d-inline-block me-2">
+                                    {{ seguros_formset.empty_form.DELETE }}
+                                    <label class="form-check-label text-danger">Excluir</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
         </form>
     </div>
 </div>
+<script>
+    /**
+     * Função genérica para Autocomplete
+     */
+    window.setupAutocomplete = function (inputId, hiddenId, dropdownId, searchUrl, extraParamsCallback, onSelectCallback) {
+        const input = document.getElementById(inputId);
+        const hidden = document.getElementById(hiddenId);
+        const dropdown = document.getElementById(dropdownId);
+
+        if (!input || !hidden || !dropdown) return;
+
+        let timeout = null;
+        let controller = null;
+
+        input.addEventListener('input', function () {
+            const term = this.value;
+            if (timeout) clearTimeout(timeout);
+            if (controller) controller.abort();
+
+            hidden.value = '';
+            const minChars = (/^\d+$/.test(term) ? 1 : 3);
+            if (term.length < minChars) {
+                dropdown.innerHTML = '';
+                dropdown.style.display = 'none';
+                return;
+            }
+
+            timeout = setTimeout(() => {
+                controller = new AbortController();
+
+                let url = `${searchUrl}?term=${encodeURIComponent(term)}`;
+                if (extraParamsCallback) {
+                    const extra = extraParamsCallback();
+                    if (extra === false) return; // Abort
+                    if (extra) {
+                        for (const key in extra) {
+                            url += `&${key}=${encodeURIComponent(extra[key])}`;
+                        }
+                    }
+                }
+
+                fetch(url, { signal: controller.signal })
+                    .then(response => response.json())
+                    .then(data => {
+                        dropdown.innerHTML = '';
+                        if (data.results && data.results.length > 0) {
+                            dropdown.style.display = 'block';
+                            data.results.forEach(item => {
+                                const a = document.createElement('a');
+                                a.className = 'list-group-item list-group-item-action';
+                                a.href = '#';
+                                a.textContent = item.text || item.label || item.nome;
+                                a.addEventListener('click', function (e) {
+                                    e.preventDefault();
+                                    input.value = a.textContent;
+                                    hidden.value = item.id;
+                                    dropdown.innerHTML = '';
+                                    dropdown.style.display = 'none';
+                                    if (onSelectCallback) onSelectCallback(item);
+                                });
+                                dropdown.appendChild(a);
+                            });
+                        } else {
+                            dropdown.style.display = 'none';
+                        }
+                    })
+                    .catch(err => {
+                        if (err.name !== 'AbortError') console.error(err);
+                    });
+            }, 300);
+        });
+
+        // Hide dropdown when clicking outside
+        document.addEventListener('click', function (e) {
+            if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.style.display = 'none';
+            }
+        });
+    };
+
+     {% if active_tab == 'dados' %}
+     if (typeof setupAutocomplete === 'function') {
+            setupAutocomplete(
+                'input_transportadora',
+                "{{ form.mdf_tran.auto_id }}",
+                'dropdown_transportadora',
+                "{% url 'transportes:autocomplete_transportadoras' slug=slug %}",
+                null,
+                function() {
+                    const inputVeiculo = document.getElementById('input_veiculo');
+                    const hiddenVeiculo = document.getElementById("{{ form.mdf_veic.auto_id }}");
+                    if (inputVeiculo) inputVeiculo.value = '';
+                    if (hiddenVeiculo) hiddenVeiculo.value = '';
+                }
+            );
+
+            setupAutocomplete(
+                'input_motorista',
+                "{{ form.mdf_moto.auto_id }}",
+                'dropdown_motorista',
+                "{% url 'transportes:autocomplete_entidades' slug=slug %}"
+            );
+
+            setupAutocomplete(
+                'input_veiculo',
+                "{{ form.mdf_veic.auto_id }}",
+                'dropdown_veiculo',
+                "{% url 'transportes:autocomplete_veiculos' slug=slug %}",
+                function() {
+                    const transportadoraId = document.getElementById("{{ form.mdf_tran.auto_id }}").value;
+                    if (!transportadoraId) {
+                        alert('Selecione a transportadora primeiro!');
+                        return false;
+                    }
+                    return { transportadora_id: transportadoraId };
+                }
+            );
+        }
+
+     {% if not object %}
+        const serieEl = document.getElementById('id_mdf_seri');
+        const numeroEl = document.getElementById('id_mdf_nume');
+        if (serieEl && numeroEl) {
+            const urlBase = "{% url 'transportes:api_mdfe_proximo_numero' slug=slug %}";
+            const atualizarNumero = function () {
+                const serie = serieEl.value;
+                fetch(`${urlBase}?serie=${encodeURIComponent(serie)}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data && data.numero) {
+                            numeroEl.value = data.numero;
+                        }
+                    });
+            };
+            serieEl.addEventListener('change', atualizarNumero);
+            atualizarNumero();
+        }
+     {% endif %}
+     {% endif %}
+
+    if ("{{ active_tab }}" === "documentos") {
+        const container = document.getElementById('documentos-container');
+        const addButton = document.getElementById('add-documento');
+        const totalForms = document.getElementById('id_documentos-TOTAL_FORMS');
+        const emptyFormTemplateEl = document.getElementById('empty-form-documento');
+        if (container && addButton && totalForms && emptyFormTemplateEl) {
+            const emptyFormTemplate = emptyFormTemplateEl.innerHTML;
+            addButton.addEventListener('click', function () {
+                const formIdx = totalForms.value;
+                const newFormHtml = emptyFormTemplate.replace(/__prefix__/g, formIdx);
+                const div = document.createElement('div');
+                div.innerHTML = newFormHtml;
+                const newForm = div.firstElementChild;
+                container.appendChild(newForm);
+                totalForms.value = parseInt(formIdx) + 1;
+                inicializarIbgeNosDocumentos(newForm);
+            });
+        }
+        inicializarIbgeNosDocumentos(container);
+    }
+    const IBGE_CACHE = {
+        estadosPorSigla: null,
+        municipiosPorUfId: new Map(),
+        municipiosAll: null,
+    };
+    function normalizeText(value) {
+        return String(value || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .trim();
+    }
+    function ibgeGetEstados() {
+        if (IBGE_CACHE.estadosPorSigla) return Promise.resolve(IBGE_CACHE.estadosPorSigla);
+        return fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome')
+            .then(r => r.json())
+            .then(data => {
+                const map = {};
+                (Array.isArray(data) ? data : []).forEach(uf => {
+                    if (uf && uf.sigla && uf.id) map[uf.sigla] = uf.id;
+                });
+                IBGE_CACHE.estadosPorSigla = map;
+                return map;
+            })
+            .catch(() => {
+                IBGE_CACHE.estadosPorSigla = {};
+                return {};
+            });
+    }
+    function ibgeGetMunicipiosPorUfSigla(ufSigla) {
+        const sigla = String(ufSigla || '').trim().toUpperCase();
+        if (!sigla) return Promise.resolve([]);
+        return ibgeGetEstados().then(map => {
+            const ufId = map[sigla];
+            if (!ufId) return [];
+            if (IBGE_CACHE.municipiosPorUfId.has(ufId)) return IBGE_CACHE.municipiosPorUfId.get(ufId);
+            const promise = fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${encodeURIComponent(ufId)}/municipios?orderBy=nome`)
+                .then(r => r.json())
+                .then(data => {
+                    const list = (Array.isArray(data) ? data : []).map(m => ({
+                        id: m.id,
+                        nome: m.nome,
+                        uf: sigla,
+                        _n: normalizeText(m.nome),
+                    }));
+                    return list;
+                })
+                .catch(() => []);
+            IBGE_CACHE.municipiosPorUfId.set(ufId, promise);
+            return promise;
+        });
+    }
+    function ibgeGetMunicipiosAll() {
+        if (IBGE_CACHE.municipiosAll) return IBGE_CACHE.municipiosAll;
+        IBGE_CACHE.municipiosAll = fetch('https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome')
+            .then(r => r.json())
+            .then(data => {
+                return (Array.isArray(data) ? data : []).map(m => {
+                    const uf = (((m || {}).microrregiao || {}).mesorregiao || {}).UF || {};
+                    const sigla = uf.sigla || '';
+                    return { id: m.id, nome: m.nome, uf: sigla, _n: normalizeText(m.nome) };
+                });
+            })
+            .catch(() => []);
+        return IBGE_CACHE.municipiosAll;
+    }
+    function ibgeBuscarMunicipios(term, ufSigla, callback) {
+        const q = normalizeText(term);
+        if (!q || q.length < 2) {
+            callback([]);
+            return;
+        }
+        const src = ufSigla ? ibgeGetMunicipiosPorUfSigla(ufSigla) : ibgeGetMunicipiosAll();
+        Promise.resolve(src).then(list => {
+            const itens = (list || [])
+                .filter(m => m._n.includes(q))
+                .slice(0, 12)
+                .map(m => ({ id: m.id, nome: m.nome, uf: m.uf }));
+            callback(itens);
+        });
+    }
+    function attachIbgeAutocomplete(inputEl, dropdownEl, getUfSigla, onPick, onType) {
+        let timer = null;
+        function render(items) {
+            dropdownEl.innerHTML = '';
+            if (!items || !items.length) {
+                dropdownEl.style.display = 'none';
+                return;
+            }
+            items.forEach(it => {
+                const a = document.createElement('a');
+                a.href = '#';
+                a.className = 'list-group-item list-group-item-action';
+                a.textContent = `${it.nome}${it.uf ? ' - ' + it.uf : ''} (${it.id})`;
+                a.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    onPick(it);
+                    dropdownEl.style.display = 'none';
+                });
+                dropdownEl.appendChild(a);
+            });
+            dropdownEl.style.display = 'block';
+        }
+        inputEl.addEventListener('input', function () {
+            clearTimeout(timer);
+            const term = this.value;
+            if (onType) onType(term);
+            timer = setTimeout(() => {
+                const ufSigla = getUfSigla ? getUfSigla() : '';
+                ibgeBuscarMunicipios(term, ufSigla, render);
+            }, 250);
+        });
+        document.addEventListener('click', function (e) {
+            if (!dropdownEl.contains(e.target) && e.target !== inputEl) {
+                dropdownEl.style.display = 'none';
+            }
+        });
+    }
+    (function () {
+        const nomeEl = document.getElementById('input_cmun_carga_nome');
+        const dropEl = document.getElementById('dropdown_cmun_carga');
+        const codeEl = document.getElementById('{{ form.mdf_cida_carr.auto_id }}');
+        const nomeHiddenEl = document.getElementById('{{ form.mdf_nome_carr.auto_id }}');
+        if (nomeEl && dropEl && codeEl) {
+            const ufEl = document.getElementById('{{ form.mdf_esta_orig.auto_id }}');
+            const getUfSigla = function () {
+                if (ufEl && ufEl.value) return ufEl.value;
+                return "{{ object.mdf_esta_orig|default:'' }}";
+            };
+            attachIbgeAutocomplete(nomeEl, dropEl, getUfSigla, function (item) {
+                codeEl.value = item.id;
+                nomeEl.value = `${item.nome}${item.uf ? ' - ' + item.uf : ''}`;
+                if (nomeHiddenEl) nomeHiddenEl.value = item.nome;
+            }, function () {
+                codeEl.value = '';
+                if (nomeHiddenEl) nomeHiddenEl.value = '';
+            });
+            if (codeEl.value) {
+                fetch('https://servicodados.ibge.gov.br/api/v1/localidades/municipios/' + encodeURIComponent(codeEl.value))
+                    .then(r => r.json())
+                    .then(m => {
+                        const uf = ((((m || {}).microrregiao || {}).mesorregiao || {}).UF || {}).sigla || '';
+                        if (m && m.nome) {
+                            nomeEl.value = m.nome + (uf ? ' - ' + uf : '');
+                            if (nomeHiddenEl) nomeHiddenEl.value = m.nome;
+                        }
+                    })
+                    .catch(() => {});
+            }
+        }
+    })();
+    function inicializarIbgeNosDocumentos(scopeEl) {
+        const rows = scopeEl.querySelectorAll ? scopeEl.querySelectorAll('.documento-item') : [];
+        rows.forEach(row => {
+            const searchInput = row.querySelector('.ibge-mun-descarga-search');
+            const codeInput = row.querySelector('input[id$="-cmun_descarga"]');
+            const nomeField = row.querySelector('input[id$="-xmun_descarga"]');
+            const dd = row.querySelector('.ibge-dropdown');
+            if (!searchInput || !codeInput || !nomeField || !dd) return;
+            const ufDestino = "{{ object.mdf_esta_dest|default:'' }}";
+            const getUfSigla = function () { return ufDestino; };
+            attachIbgeAutocomplete(searchInput, dd, getUfSigla, function (item) {
+                codeInput.value = item.id;
+                nomeField.value = item.nome;
+                searchInput.value = item.nome + (item.uf ? ' - ' + item.uf : '');
+                nomeField.readOnly = true;
+            }, function () {
+                codeInput.value = '';
+                nomeField.value = '';
+                nomeField.readOnly = false;
+            });
+            if (!searchInput.value && nomeField.value) {
+                searchInput.value = nomeField.value + (ufDestino ? ' - ' + ufDestino : '');
+            }
+            if (!searchInput.value && codeInput.value) {
+                fetch('https://servicodados.ibge.gov.br/api/v1/localidades/municipios/' + encodeURIComponent(codeInput.value))
+                    .then(r => r.json())
+                    .then(m => {
+                        const uf = ((((m || {}).microrregiao || {}).mesorregiao || {}).UF || {}).sigla || '';
+                        if (m && m.nome) searchInput.value = m.nome + (uf ? ' - ' + uf : '');
+                        if (m && m.nome && !nomeField.value) nomeField.value = m.nome;
+                    })
+                    .catch(() => {});
+            }
+        });
+    }
+
+    if ("{{ active_tab }}" === "contratantes") {
+        const container = document.getElementById('contratantes-container');
+        const addButton = document.getElementById('add-contratante');
+        const totalForms = document.getElementById('id_contratantes-TOTAL_FORMS');
+        const emptyFormTemplateEl = document.getElementById('empty-form-contratante');
+        if (container && addButton && totalForms && emptyFormTemplateEl) {
+            const emptyFormTemplate = emptyFormTemplateEl.innerHTML;
+            addButton.addEventListener('click', function () {
+                const formIdx = totalForms.value;
+                const newFormHtml = emptyFormTemplate.replace(/__prefix__/g, formIdx);
+                const div = document.createElement('div');
+                div.innerHTML = newFormHtml;
+                const newForm = div.firstElementChild;
+                container.appendChild(newForm);
+                totalForms.value = parseInt(formIdx) + 1;
+            });
+        }
+    }
+
+    if ("{{ active_tab }}" === "seguro") {
+        const container = document.getElementById('seguros-container');
+        const addButton = document.getElementById('add-seguro');
+        const totalForms = document.getElementById('id_seguros-TOTAL_FORMS');
+        const emptyFormTemplateEl = document.getElementById('empty-form-seguro');
+        if (container && addButton && totalForms && emptyFormTemplateEl) {
+            const emptyFormTemplate = emptyFormTemplateEl.innerHTML;
+            addButton.addEventListener('click', function () {
+                const formIdx = totalForms.value;
+                const newFormHtml = emptyFormTemplate.replace(/__prefix__/g, formIdx);
+                const div = document.createElement('div');
+                div.innerHTML = newFormHtml;
+                const newForm = div.firstElementChild;
+                container.appendChild(newForm);
+                totalForms.value = parseInt(formIdx) + 1;
+            });
+        }
+    }
+    </script>
 {% endblock %}

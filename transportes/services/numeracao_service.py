@@ -38,3 +38,10 @@ class NumeracaoMdfeService:
             .get("mdf_nume__max")
         )
         return int(max_num or 0) + 1
+
+
+class SequencialService:
+    @staticmethod
+    def proximo_id(model, field_name: str, slug=None) -> int:
+        max_id = model.objects.using(slug).aggregate(Max(field_name)).get(f"{field_name}__max")
+        return int(max_id or 0) + 1

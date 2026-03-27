@@ -43,6 +43,12 @@
         .card-header-tabs {
             margin-bottom: -1px;
         }
+
+        @media (max-width: 767.98px) {
+            .main-content {
+                padding: 12px;
+            }
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -70,11 +76,30 @@
                     class="{% if request.resolver_match.url_name == 'mdfe_create' %}active{% endif %}">
                     <i class="fas fa-plus"></i> Novo MDF-e
                 </a>
-                <!-- Adicionar mais links conforme necessário -->
+                 <a href="/web/login/transportes/veiculos/"
+                    class="{% if request.resolver_match.url_name == 'veiculos_list' %}active{% endif %}">
+                    <i class="fas fa-list"></i> Listagem de Veículos
+                </a>
             </div>
 
             <!-- Main Content -->
-            <div class="col-md-10 main-content">
+            <div class="col-12 col-md-10 main-content">
+                <div class="d-md-none mb-3">
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{% url 'transportes:cte_list' slug=slug %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-list"></i> CT-e
+                        </a>
+                        <a href="{% url 'transportes:cte_create' slug=slug %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-plus"></i> Novo CT-e
+                        </a>
+                        <a href="{% url 'transportes:mdfe_list' slug=slug %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-list"></i> MDF-e
+                        </a>
+                        <a href="{% url 'transportes:mdfe_create' slug=slug %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-plus"></i> Novo MDF-e
+                        </a>
+                    </div>
+                </div>
                 <!-- Messages -->
                 {% if messages %}
                 {% for message in messages %}

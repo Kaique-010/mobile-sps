@@ -114,7 +114,7 @@ class MDFeBuilder:
         grupos = {}
         for doc in docs:
             cmun = (doc.cmun_descarga or self.mdfe.mdf_cida_carr or "").strip()
-            xmun = (doc.xmun_descarga or self.mdfe.mdf_nome_carr or "").strip()
+            xmun = (doc.xmun_descarga or "").strip()
             if not cmun or not xmun:
                 continue
             grupos.setdefault((cmun, xmun), []).append(doc)

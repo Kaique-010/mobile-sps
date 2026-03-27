@@ -321,17 +321,17 @@ class RegraICMS(models.Model):
 
 
 TIPO_EMITENTE = (
-    (1, 'Transportadora'),
-    (2, 'Trasnporte de carga Própria'),
+    ('1', 'Transportadora'),
+    ('2', 'Trasnporte de carga Própria'),
 )
 
 TIPO_CARGA = (
-    (1, 'Granel sólido'),
-    (2, 'Granel liquido'),
-    (3, 'Frigorificada'),
-    (4, 'Conteinerizada'),
-    (5, 'Perigosa'),
-    (6, 'Outra'),
+    ('1', 'Granel sólido'),
+    ('2', 'Granel liquido'),
+    ('3', 'Frigorificada'),
+    ('4', 'Conteinerizada'),
+    ('5', 'Perigosa'),
+    ('6', 'Outra'),
 )
 
 TIPO_TRANSPORTADOR = (
@@ -341,39 +341,39 @@ TIPO_TRANSPORTADOR = (
 )
 # MDFe
 class Mdfe(models.Model):
-    mdf_id = models.AutoField(primary_key=True, db_column='mdfe_id', verbose_name='ID MDFe')
-    mdf_empr = models.IntegerField(blank=True, null=True, db_column='mdfe_empr', verbose_name='ID Empresa')
-    mdf_fili = models.IntegerField(blank=True, null=True, db_column='mdfe_fili', verbose_name='ID Filial')
-    mdf_nume = models.IntegerField(blank=True, null=True, db_column='mdfe_nume', verbose_name='Número do MDFe')
-    mdf_seri = models.IntegerField(blank=True, null=True, db_column='mdfe_seri', verbose_name='Série')
-    mdf_tran = models.IntegerField(blank=True, null=True, db_column='mdfe_tran', verbose_name='ID Transportadora')
-    mdf_moto = models.IntegerField(blank=True, null=True, db_column='mdfe_moto', verbose_name='ID Motorista')
-    mdf_veic = models.IntegerField(blank=True, null=True, db_column='mdfe_veic', verbose_name='ID Veículo')
-    mdf_emis = models.DateField(blank=True, null=True, db_column='mdfe_emis', verbose_name='Data de Emissão')
-    mdf_xml_mdf = models.TextField(blank=True, null=True, db_column='mdfe_xml_mdf', verbose_name='XML MDFe')
-    mdf_prot_mdf = models.CharField(max_length=100, blank=True, null=True, db_column='mdfe_prot_mdf', verbose_name='Protocolo MDFe')
-    mdf_stat = models.IntegerField(blank=True, null=True, db_column='mdfe_stat', verbose_name='Status')
-    mdf_canc = models.BooleanField(blank=True, null=True, db_column='mdfe_canc', verbose_name='Cancelado')
-    mdf_fina = models.BooleanField(blank=True, null=True, db_column='mdfe_fina', verbose_name='Finalizado')
-    mdf_chav = models.CharField(max_length=50, blank=True, null=True, db_column='mdfe_chav', verbose_name='Chave MDFe')
-    mdf_data_ence = models.DateField(blank=True, null=True, db_column='mdfe_data_ence', verbose_name='Data de Encerramento')
-    mdf_prot_ence = models.CharField(max_length=100, blank=True, null=True, db_column='mdfe_prot_ence', verbose_name='Protocolo de Encerramento')
-    mdf_esta_ence = models.CharField(max_length=3, blank=True, null=True, db_column='mdfe_esta_ence', verbose_name='Estado de Encerramento')
-    mdf_cida_ence = models.DecimalField(max_digits=65535, decimal_places=65535, blank=True, null=True, db_column='mdfe_cida_ence', verbose_name='Cidade de Encerramento')
-    mdf_esta_orig = models.CharField(max_length=2, blank=True, null=True, db_column='mdfe_esta_orig', verbose_name='Estado Origem')
-    mdf_esta_dest = models.CharField(max_length=2, blank=True, null=True, db_column='mdfe_esta_dest', verbose_name='Estado Destino')
-    mdf_cida_carr = models.CharField(max_length=7, blank=True, null=True, db_column='mdfe_cida_carr', verbose_name='Cidade do carregamento')
-    mdf_nome_carr = models.CharField(max_length=60, blank=True, null=True, db_column='mdfe_nome_carr', verbose_name='Nome do carregamento')
-    mdf_nume_lote = models.IntegerField(blank=True, null=True, db_column='mdfe_nume_lote', verbose_name='Número do Lote')
-    mdf_esta_pass = models.CharField(max_length=60, blank=True, null=True, db_column='mdfe_esta_pass', verbose_name='Estados do Passagem')
-    mdf_tipo_emit = models.CharField(max_length=1, blank=True, null=True, db_column='mdfe_tipo_emit', verbose_name='Tipo de Emitente', choices=TIPO_EMITENTE)
-    mdf_pred_carg = models.CharField(max_length=2, blank=True, null=True, db_column='mdfe_pred_carg', verbose_name='Tipo da Carga', choices=TIPO_CARGA)
-    mdf_pred_xprod = models.CharField(max_length=120, blank=True, null=True, db_column='mdfe_pred_xprod', verbose_name='Descrição do Produto')
-    mdf_pred_ncm = models.CharField(max_length=8, blank=True, null=True, db_column='mdfe_pred_ncm', verbose_name='NCM')
-    mdf_pred_ean = models.CharField(max_length=14, blank=True, null=True, db_column='mdfe_pred_ean', verbose_name='EAN')
-    mdf_cep_loca_carg = models.CharField(max_length=8, blank=True, null=True, db_column='mdfe_cep_loca_carg', verbose_name='CEP do Local de Carga')
-    mdf_cep_loca_desc = models.CharField(max_length=8, blank=True, null=True, db_column='mdfe_cep_loca_desc', verbose_name='Descrição do Local de Carga')
-    mdf_tipo_tran = models.IntegerField(blank=True, null=True, verbose_name='Tipo de Transportador', choices=TIPO_TRANSPORTADOR)
+    mdf_id = models.AutoField(primary_key=True, db_column='mdf_id', verbose_name='ID MDFe')
+    mdf_empr = models.IntegerField(blank=True, null=True, db_column='mdf_empr', verbose_name='ID Empresa')
+    mdf_fili = models.IntegerField(blank=True, null=True, db_column='mdf_fili', verbose_name='ID Filial')
+    mdf_nume = models.IntegerField(blank=True, null=True, db_column='mdf_nume', verbose_name='Número do MDFe')
+    mdf_seri = models.IntegerField(blank=True, null=True, db_column='mdf_seri', verbose_name='Série')
+    mdf_tran = models.IntegerField(blank=True, null=True, db_column='mdf_tran', verbose_name='ID Transportadora')
+    mdf_moto = models.IntegerField(blank=True, null=True, db_column='mdf_moto', verbose_name='ID Motorista')
+    mdf_veic = models.IntegerField(blank=True, null=True, db_column='mdf_veic', verbose_name='ID Veículo')
+    mdf_emis = models.DateField(blank=True, null=True, db_column='mdf_emis', verbose_name='Data de Emissão')
+    mdf_xml_mdf = models.TextField(blank=True, null=True, db_column='mdf_xml_mdf', verbose_name='XML MDFe')
+    mdf_prot_mdf = models.CharField(max_length=100, blank=True, null=True, db_column='mdf_prot_mdf', verbose_name='Protocolo MDFe')
+    mdf_stat = models.IntegerField(blank=True, null=True, db_column='mdf_stat', verbose_name='Status')
+    mdf_canc = models.BooleanField(blank=True, null=True, db_column='mdf_canc', verbose_name='Cancelado')
+    mdf_fina = models.BooleanField(blank=True, null=True, db_column='mdf_fina', verbose_name='Finalizado')
+    mdf_chav = models.CharField(max_length=50, blank=True, null=True, db_column='mdf_chav', verbose_name='Chave MDFe')
+    mdf_data_ence = models.DateField(blank=True, null=True, db_column='mdf_data_ence', verbose_name='Data de Encerramento')
+    mdf_prot_ence = models.CharField(max_length=100, blank=True, null=True, db_column='mdf_prot_ence', verbose_name='Protocolo de Encerramento')
+    mdf_esta_ence = models.CharField(max_length=3, blank=True, null=True, db_column='mdf_esta_ence', verbose_name='Estado de Encerramento')
+    mdf_cida_ence = models.CharField(max_length=7, blank=True, null=True, db_column='mdf_cida_ence', verbose_name='Cidade de Encerramento')
+    mdf_esta_orig = models.CharField(max_length=2, blank=True, null=True, db_column='mdf_esta_orig', verbose_name='Estado Origem')
+    mdf_esta_dest = models.CharField(max_length=2, blank=True, null=True, db_column='mdf_esta_dest', verbose_name='Estado Destino')
+    mdf_cida_carr = models.CharField(max_length=7, blank=True, null=True, db_column='mdf_cida_carr', verbose_name='Cidade do carregamento')
+    mdf_nume_lote = models.IntegerField(blank=True, null=True, db_column='mdf_nume_lote', verbose_name='Número do Lote')
+    mdf_esta_pass = models.CharField(max_length=60, blank=True, null=True, db_column='mdf_esta_pass', verbose_name='Estados do Passagem')
+    mdf_tipo_emit = models.CharField(max_length=1, blank=True, null=True, db_column='mdf_tipo_emit', verbose_name='Tipo de Emitente', choices=TIPO_EMITENTE)
+    mdf_pred_carg = models.CharField(max_length=2, blank=True, null=True, db_column='mdf_pred_carg', verbose_name='Tipo da Carga', choices=TIPO_CARGA)
+    mdf_pred_xprod = models.CharField(max_length=120, blank=True, null=True, db_column='mdf_pred_xprod', verbose_name='Descrição do Produto')
+    mdf_pred_ncm = models.CharField(max_length=8, blank=True, null=True, db_column='mdf_pred_ncm', verbose_name='NCM')
+    mdf_pred_ean = models.CharField(max_length=14, blank=True, null=True, db_column='mdf_pred_ean', verbose_name='EAN')
+    mdf_cep_loca_carg = models.CharField(max_length=8, blank=True, null=True, db_column='mdf_cep_loca_carg', verbose_name='CEP do Local de Carga')
+    mdf_cep_loca_desc = models.CharField(max_length=8, blank=True, null=True, db_column='mdf_cep_loca_desc', verbose_name='Descrição do Local de Carga')
+    mdf_tipo_tran = models.IntegerField(blank=True, null=True, db_column='mdf_tipo_tran', verbose_name='Tipo de Transportador', choices=TIPO_TRANSPORTADOR)
+    mdf_nome_carr = models.CharField(max_length=60, blank=True, null=True, db_column='mdf_nome_carr', verbose_name='Nome do local de  Carregamento')
     class Meta:
         managed = False
         db_table = 'mdfe'
@@ -407,7 +407,7 @@ class Mdfeantt(models.Model):
     mdfe_antt_ciot = models.IntegerField(blank=True, null=True, db_column='mdfe_antt_ciot', verbose_name='CIOT')
     mdfe_antt_cpf = models.CharField(max_length=11, blank=True, null=True, db_column='mdfe_antt_cpf', verbose_name='CPF')
     mdfe_antt_cnpj = models.CharField(max_length=14, blank=True, null=True, db_column='mdfe_antt_cnpj', verbose_name='CNPJ')
-    mdfe_antt_mdfe = models.ForeignKey('Mdfe', models.DO_NOTHING, db_column='mdfe_antt_mdfe', verbose_name='ID MDFe')
+    mdfe_antt_mdfe = models.ForeignKey('Mdfe', models.DO_NOTHING, db_column='mdfe_antt_mdfe_id', verbose_name='ID MDFe')
 
     class Meta:
         managed = False
@@ -417,7 +417,7 @@ class Mdfeantt(models.Model):
 
 class Mdfecontratante(models.Model):
     mdfe_cont_id = models.IntegerField(primary_key=True, db_column='mdfe_cont_id', verbose_name='ID Contratante')
-    mdfe_cont_mdfe = models.ForeignKey('Mdfe', models.DO_NOTHING, db_column='mdfe_cont_mdfe', verbose_name='ID MDFe')
+    mdfe_cont_mdfe = models.ForeignKey('Mdfe', models.DO_NOTHING, db_column='mdfe_cont_mdfe_id', verbose_name='ID MDFe')
     mdfe_cont_cont = models.IntegerField(blank=True, null=True, db_column='mdfe_cont_cont', verbose_name='ID Contratante')
     mdfe_cont_cnpj_cpf = models.CharField(max_length=255, blank=True, null=True, db_column='mdfe_cont_cnpj_cpf', verbose_name='CNPJ ou CPF do Contratante')
 
@@ -435,7 +435,7 @@ RESPONSAVEL_SEGURO = (
 
 class Mdfeseguro(models.Model):
     mdfe_segu_id = models.IntegerField(primary_key=True, db_column='mdfe_segu_id', verbose_name='ID Seguro')
-    mdfe_segu_mdfe = models.ForeignKey('Mdfe', models.DO_NOTHING, db_column='mdfe_segu_mdfe', verbose_name='ID MDFe')
+    mdfe_segu_mdfe = models.ForeignKey('Mdfe', models.DO_NOTHING, db_column='mdfe_segu_mdfe_id', verbose_name='ID MDFe')
     mdfe_segu_resp = models.IntegerField(blank=True, null=True, db_column='mdfe_segu_resp', verbose_name='ID Responsável', choices=RESPONSAVEL_SEGURO)
     mdfe_segu_cnpj_resp = models.CharField(max_length=14, blank=True, null=True, db_column='mdfe_segu_cnpj_resp', verbose_name='CNPJ do Responsável')
     mdfe_segu_cpf_resp = models.CharField(max_length=11, blank=True, null=True, db_column='mdfe_segu_cpf_resp', verbose_name='CPF do Responsável')

@@ -6,10 +6,12 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse, HttpResponseRedirect
 from django.db import transaction
+from django.db.models import Q
+from django.forms import inlineformset_factory
 from datetime import datetime
 
 from core.utils import get_licenca_db_config
-from transportes.models import Cte, Mdfe
+from transportes.models import Cte, Mdfe, MdfeDocumento, Mdfeantt, Mdfecontratante, Mdfeseguro
 from transportes.forms.emissao import CteEmissaoForm
 from transportes.forms.tipo import CteTipoForm
 from transportes.forms.rota import CteRotaForm
@@ -23,7 +25,7 @@ from transportes.services.sefaz_gateway import SefazGateway
 from transportes.services.numeracao_service import NumeracaoService
 from transportes.services.numeracao_service import NumeracaoMdfeService
 from transportes.services.mdfe_emissao_service import MdfeEmissaoService
-from transportes.forms.mdfe import MdfeForm
+from transportes.forms.mdfe import MdfeForm, MdfeDocumentoForm, MdfeAnttForm, MdfeContratanteForm, MdfeSeguroForm
 from Entidades.models import Entidades
 from transportes.models import Veiculos
 
@@ -128,6 +130,7 @@ class MdfeBaseMixin(LoginRequiredMixin):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["slug"] = get_licenca_db_config(self.request)
+        context["active_tab"] = getattr(self, "active_tab", "dados")
         return context
 
 
@@ -138,11 +141,38 @@ class MdfeListView(MdfeBaseMixin, ListView):
     ordering = ["-mdf_id"]
     paginate_by = 50
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        f = self.request.GET.get("f", "").strip()
+        if f == "sem_chave":
+            qs = qs.filter(Q(mdf_chav__isnull=True) | Q(mdf_chav=""))
+        elif f == "abertos":
+            qs = qs.filter(~Q(mdf_chav__isnull=True) & ~Q(mdf_chav="")).filter(Q(mdf_fina=False) | Q(mdf_fina__isnull=True))
+        elif f == "encerrados":
+            qs = qs.filter(mdf_fina=True)
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        base_qs = super().get_queryset()
+        context["filtro"] = self.request.GET.get("f", "")
+        context["total_mdfes"] = base_qs.count()
+        context["total_sem_chave"] = base_qs.filter(Q(mdf_chav__isnull=True) | Q(mdf_chav="")).count()
+        context["total_abertos"] = base_qs.filter(~Q(mdf_chav__isnull=True) & ~Q(mdf_chav="")).filter(Q(mdf_fina=False) | Q(mdf_fina__isnull=True)).count()
+        context["total_encerrados"] = base_qs.filter(mdf_fina=True).count()
+        return context
+
 
 class MdfeCreateView(MdfeBaseMixin, CreateView):
     model = Mdfe
     form_class = MdfeForm
     template_name = "transportes/mdfe_form.html"
+    active_tab = "dados"
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["request"] = self.request
+        return kwargs
 
     def form_valid(self, form):
         slug = get_licenca_db_config(self.request)
@@ -167,8 +197,10 @@ class MdfeCreateView(MdfeBaseMixin, CreateView):
 
             self.object.save(using=slug)
 
-            messages.success(self.request, "MDF-e criado com sucesso.")
-            return HttpResponseRedirect(reverse("transportes:mdfe_list", kwargs={"slug": slug}))
+            messages.success(self.request, "MDF-e criado com sucesso! Continue preenchendo as abas.")
+            return HttpResponseRedirect(
+                reverse("transportes:mdfe_dados", kwargs={"slug": slug, "pk": self.object.mdf_id})
+            )
         except Exception as e:
             logger.error(f"Erro ao criar MDF-e: {e}")
             messages.error(self.request, f"Erro ao criar MDF-e: {e}")
@@ -176,7 +208,319 @@ class MdfeCreateView(MdfeBaseMixin, CreateView):
 
     def get_success_url(self):
         slug = get_licenca_db_config(self.request)
-        return reverse("transportes:mdfe_list", kwargs={"slug": slug})
+        return reverse("transportes:mdfe_dados", kwargs={"slug": slug, "pk": self.object.mdf_id})
+
+
+MdfeDocumentoFormSet = inlineformset_factory(
+    Mdfe,
+    MdfeDocumento,
+    form=MdfeDocumentoForm,
+    fields=["tipo_doc", "chave", "cmun_descarga", "xmun_descarga"],
+    extra=1,
+    can_delete=True,
+)
+
+MdfeContratanteFormSet = inlineformset_factory(
+    Mdfe,
+    Mdfecontratante,
+    form=MdfeContratanteForm,
+    fields=["mdfe_cont_cont", "mdfe_cont_cnpj_cpf"],
+    extra=1,
+    can_delete=True,
+)
+
+MdfeSeguroFormSet = inlineformset_factory(
+    Mdfe,
+    Mdfeseguro,
+    form=MdfeSeguroForm,
+    fields=[
+        "mdfe_segu_resp",
+        "mdfe_segu_cnpj_resp",
+        "mdfe_segu_cpf_resp",
+        "mdfe_segu_nome_segu",
+        "mdfe_segu_cnpj_segu",
+        "mdfe_segu_apol",
+        "mdfe_segu_aver",
+    ],
+    extra=1,
+    can_delete=True,
+)
+
+
+class MdfeUpdateBaseView(MdfeBaseMixin, UpdateView):
+    model = Mdfe
+    template_name = "transportes/mdfe_form.html"
+
+    def form_valid(self, form):
+        slug = get_licenca_db_config(self.request)
+        try:
+            self.object = form.save(commit=False)
+            self.object.save(using=slug)
+            messages.success(self.request, "Dados salvos com sucesso!")
+            return HttpResponseRedirect(self.get_success_url())
+        except Exception as e:
+            messages.error(self.request, f"Erro ao salvar: {e}")
+            return self.form_invalid(form)
+
+
+class MdfeDadosView(MdfeUpdateBaseView):
+    form_class = MdfeForm
+    active_tab = "dados"
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["request"] = self.request
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        slug = get_licenca_db_config(self.request)
+
+        if getattr(self.object, "mdf_tran", None):
+            tran = (
+                Entidades.objects.using(slug)
+                .filter(enti_clie=self.object.mdf_tran)
+                .values_list("enti_clie", "enti_nome")
+                .first()
+            )
+            if tran:
+                context["transportadora_nome"] = f"{tran[0]} - {tran[1]}"
+
+        if getattr(self.object, "mdf_moto", None):
+            moto = (
+                Entidades.objects.using(slug)
+                .filter(enti_clie=self.object.mdf_moto)
+                .values_list("enti_clie", "enti_nome")
+                .first()
+            )
+            if moto:
+                context["motorista_nome"] = f"{moto[0]} - {moto[1]}"
+
+        if getattr(self.object, "mdf_veic", None) and getattr(self.object, "mdf_tran", None):
+            veic = (
+                Veiculos.objects.using(slug)
+                .filter(
+                    veic_empr=self.object.mdf_empr,
+                    veic_tran=self.object.mdf_tran,
+                    veic_sequ=self.object.mdf_veic,
+                )
+                .values_list("veic_plac", "veic_marc", "veic_espe")
+                .first()
+            )
+            if veic:
+                marca = veic[1] or ""
+                espe = veic[2] or ""
+                context["veiculo_nome"] = f"{veic[0]} - {marca} {espe}".strip()
+
+        return context
+
+    def get_success_url(self):
+        slug = get_licenca_db_config(self.request)
+        return reverse("transportes:mdfe_documentos", kwargs={"slug": slug, "pk": self.object.mdf_id})
+
+
+class MdfeDocumentosView(MdfeUpdateBaseView):
+    form_class = forms.modelform_factory(Mdfe, fields=[])
+    template_name = "transportes/mdfe_form.html"
+    active_tab = "documentos"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        slug = get_licenca_db_config(self.request)
+        qs = MdfeDocumento.objects.using(slug).filter(mdfe_id=self.object.mdf_id)
+        if self.request.POST:
+            context["documentos_formset"] = MdfeDocumentoFormSet(
+                self.request.POST, instance=self.object, queryset=qs, prefix="documentos"
+            )
+        else:
+            context["documentos_formset"] = MdfeDocumentoFormSet(
+                instance=self.object, queryset=qs, prefix="documentos"
+            )
+        return context
+
+    def form_valid(self, form):
+        context = self.get_context_data()
+        formset = context["documentos_formset"]
+        slug = get_licenca_db_config(self.request)
+
+        if not formset.is_valid():
+            messages.error(self.request, "Erro ao salvar documentos. Verifique os campos.")
+            return self.render_to_response(self.get_context_data(form=form))
+
+        instances = formset.save(commit=False)
+        for instance in instances:
+            instance.mdfe = self.object
+            instance.save(using=slug)
+        for obj in formset.deleted_objects:
+            obj.delete(using=slug)
+        messages.success(self.request, "Documentos salvos com sucesso!")
+        return HttpResponseRedirect(self.get_success_url())
+
+    def get_success_url(self):
+        slug = get_licenca_db_config(self.request)
+        return reverse("transportes:mdfe_antt", kwargs={"slug": slug, "pk": self.object.mdf_id})
+
+
+class MdfeAnttView(MdfeUpdateBaseView):
+    form_class = forms.modelform_factory(Mdfe, fields=[])
+    template_name = "transportes/mdfe_form.html"
+    active_tab = "antt"
+
+    def _get_antt_initial(self, slug):
+        try:
+            empresa_id = self.request.session.get("empresa_id") or getattr(self.object, "mdf_empr", None)
+            transportadora_id = getattr(self.object, "mdf_tran", None)
+            veiculo_seq = getattr(self.object, "mdf_veic", None)
+            rntr = None
+            cnpj = None
+            if empresa_id and transportadora_id and veiculo_seq:
+                from transportes.models import Veiculos
+                row = (
+                    Veiculos.objects.using(slug)
+                    .filter(veic_empr=empresa_id, veic_tran=transportadora_id, veic_sequ=veiculo_seq)
+                    .values_list("veic_rntr", flat=True)
+                    .first()
+                )
+                rntr = row or None
+            if transportadora_id:
+                from Entidades.models import Entidades
+                cnpj = (
+                    Entidades.objects.using(slug)
+                    .filter(enti_clie=transportadora_id)
+                    .values_list("enti_cnpj", flat=True)
+                    .first()
+                ) or None
+            initial = {}
+            if rntr:
+                initial["mdfe_antt_rntrc"] = rntr
+            if cnpj:
+                initial["mdfe_antt_cnpj"] = cnpj
+            return initial
+        except Exception:
+            return {}
+
+    def _get_antt_instance(self, slug):
+        return (
+            Mdfeantt.objects.using(slug)
+            .filter(mdfe_antt_mdfe_id=self.object.mdf_id)
+            .order_by("mdfe_antt_id")
+            .first()
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        slug = get_licenca_db_config(self.request)
+        instance = self._get_antt_instance(slug)
+        if self.request.POST:
+            context["antt_form"] = MdfeAnttForm(self.request.POST, instance=instance, prefix="antt")
+        else:
+            context["antt_form"] = MdfeAnttForm(instance=instance, initial=self._get_antt_initial(slug), prefix="antt")
+        return context
+
+    def form_valid(self, form):
+        slug = get_licenca_db_config(self.request)
+        antt_form = self.get_context_data()["antt_form"]
+
+        if not antt_form.is_valid():
+            messages.error(self.request, "Erro ao salvar ANTT. Verifique os campos.")
+            return self.render_to_response(self.get_context_data(form=form))
+
+        instance = antt_form.save(commit=False)
+        if not getattr(instance, "mdfe_antt_id", None):
+            from transportes.services.numeracao_service import SequencialService
+            instance.mdfe_antt_id = SequencialService.proximo_id(Mdfeantt, "mdfe_antt_id", slug=slug)
+        instance.mdfe_antt_mdfe = self.object
+        instance.save(using=slug)
+        messages.success(self.request, "ANTT salvo com sucesso!")
+        return HttpResponseRedirect(self.get_success_url())
+
+    def get_success_url(self):
+        slug = get_licenca_db_config(self.request)
+        return reverse("transportes:mdfe_contratantes", kwargs={"slug": slug, "pk": self.object.mdf_id})
+
+
+class MdfeContratantesView(MdfeUpdateBaseView):
+    form_class = forms.modelform_factory(Mdfe, fields=[])
+    template_name = "transportes/mdfe_form.html"
+    active_tab = "contratantes"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        slug = get_licenca_db_config(self.request)
+        qs = Mdfecontratante.objects.using(slug).filter(mdfe_cont_mdfe_id=self.object.mdf_id)
+        if self.request.POST:
+            context["contratantes_formset"] = MdfeContratanteFormSet(
+                self.request.POST, instance=self.object, queryset=qs, prefix="contratantes"
+            )
+        else:
+            context["contratantes_formset"] = MdfeContratanteFormSet(
+                instance=self.object, queryset=qs, prefix="contratantes"
+            )
+        return context
+
+    def form_valid(self, form):
+        context = self.get_context_data()
+        formset = context["contratantes_formset"]
+        slug = get_licenca_db_config(self.request)
+
+        if not formset.is_valid():
+            messages.error(self.request, "Erro ao salvar contratantes. Verifique os campos.")
+            return self.render_to_response(self.get_context_data(form=form))
+
+        instances = formset.save(commit=False)
+        for instance in instances:
+            instance.mdfe_cont_mdfe = self.object
+            instance.save(using=slug)
+        for obj in formset.deleted_objects:
+            obj.delete(using=slug)
+        messages.success(self.request, "Contratantes salvos com sucesso!")
+        return HttpResponseRedirect(self.get_success_url())
+
+    def get_success_url(self):
+        slug = get_licenca_db_config(self.request)
+        return reverse("transportes:mdfe_seguro", kwargs={"slug": slug, "pk": self.object.mdf_id})
+
+
+class MdfeSeguroView(MdfeUpdateBaseView):
+    form_class = forms.modelform_factory(Mdfe, fields=[])
+    template_name = "transportes/mdfe_form.html"
+    active_tab = "seguro"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        slug = get_licenca_db_config(self.request)
+        qs = Mdfeseguro.objects.using(slug).filter(mdfe_segu_mdfe_id=self.object.mdf_id)
+        if self.request.POST:
+            context["seguros_formset"] = MdfeSeguroFormSet(
+                self.request.POST, instance=self.object, queryset=qs, prefix="seguros"
+            )
+        else:
+            context["seguros_formset"] = MdfeSeguroFormSet(
+                instance=self.object, queryset=qs, prefix="seguros"
+            )
+        return context
+
+    def form_valid(self, form):
+        context = self.get_context_data()
+        formset = context["seguros_formset"]
+        slug = get_licenca_db_config(self.request)
+
+        if not formset.is_valid():
+            messages.error(self.request, "Erro ao salvar seguro. Verifique os campos.")
+            return self.render_to_response(self.get_context_data(form=form))
+
+        instances = formset.save(commit=False)
+        for instance in instances:
+            instance.mdfe_segu_mdfe = self.object
+            instance.save(using=slug)
+        for obj in formset.deleted_objects:
+            obj.delete(using=slug)
+        messages.success(self.request, "Seguro salvo com sucesso!")
+        return HttpResponseRedirect(self.get_success_url())
+
+    def get_success_url(self):
+        slug = get_licenca_db_config(self.request)
+        return reverse("transportes:mdfe_seguro", kwargs={"slug": slug, "pk": self.object.mdf_id})
 
 
 class MdfeGerarXmlView(LoginRequiredMixin, View):
@@ -193,6 +537,53 @@ class MdfeGerarXmlView(LoginRequiredMixin, View):
         return redirect("transportes:mdfe_list", slug=slug)
 
 
+class MdfeImprimirDamdfeView(LoginRequiredMixin, View):
+    login_url = reverse_lazy("web_login")
+
+    def get(self, request, slug, pk):
+        mdfe = get_object_or_404(Mdfe.objects.using(slug), pk=pk)
+        if not mdfe.mdf_chav:
+            messages.error(request, "MDF-e ainda não possui chave para impressão.")
+            return redirect("transportes:mdfe_list", slug=slug)
+        if not mdfe.mdf_xml_mdf:
+            messages.error(request, "MDF-e ainda não possui XML para impressão. Gere o XML primeiro.")
+            return redirect("transportes:mdfe_list", slug=slug)
+
+        try:
+            from brazilfiscalreport.damdfe import Damdfe
+        except Exception:
+            messages.error(request, "Impressão indisponível: dependência DAMDFE não instalada no servidor.")
+            return redirect("transportes:mdfe_list", slug=slug)
+
+        try:
+            xml_content = mdfe.mdf_xml_mdf
+            if isinstance(xml_content, bytes):
+                xml_content = xml_content.decode("utf-8", errors="ignore")
+
+            try:
+                damdfe = Damdfe(xml_content)
+            except TypeError:
+                damdfe = Damdfe(xml=xml_content)
+
+            try:
+                pdf_content = damdfe.output(dest="S")
+            except TypeError:
+                pdf_content = damdfe.output("damdfe.pdf", dest="S")
+
+            if isinstance(pdf_content, bytearray):
+                pdf_content = bytes(pdf_content)
+            elif isinstance(pdf_content, str):
+                pdf_content = pdf_content.encode("latin-1", errors="ignore")
+
+            response = HttpResponse(pdf_content, content_type="application/pdf")
+            response["Content-Disposition"] = f'inline; filename="mdfe-{mdfe.mdf_nume or mdfe.mdf_id}.pdf"'
+            return response
+        except Exception as e:
+            logger.error(f"Erro ao gerar DAMDFE para MDFe {pk}: {e}")
+            messages.error(request, f"Erro ao gerar PDF: {e}")
+            return redirect("transportes:mdfe_list", slug=slug)
+
+
 class MdfeEncerrarView(LoginRequiredMixin, View):
     login_url = reverse_lazy("web_login")
 
@@ -201,10 +592,13 @@ class MdfeEncerrarView(LoginRequiredMixin, View):
             from datetime import date
 
             mdfe = get_object_or_404(Mdfe.objects.using(slug), pk=pk)
+            if not mdfe.mdf_chav:
+                messages.error(request, "MDF-e ainda não possui chave. Não é possível encerrar.")
+                return redirect("transportes:mdfe_list", slug=slug)
             mdfe.mdf_fina = True
             mdfe.mdf_data_ence = date.today()
             mdfe.mdf_esta_ence = (mdfe.mdf_esta_dest or mdfe.mdf_esta_ence or "").strip() or None
-            mdfe.mdf_cida_ence = mdfe.mdf_cida_ence or mdfe.mdf_cida_carr
+            mdfe.mdf_cida_ence = (str(mdfe.mdf_cida_ence or "").strip() or str(mdfe.mdf_cida_carr or "").strip() or None)
             mdfe.save(using=slug)
             messages.success(request, "MDF-e encerrado com sucesso.")
         except Exception as e:
@@ -500,7 +894,6 @@ class CteEmitirView(CteBaseMixin, View):
             return HttpResponseRedirect(success_url)
 
 from django.http import JsonResponse, HttpResponseRedirect, HttpResponse
-from brazilfiscalreport.dacte.dacte import Dacte
 from lxml import etree
 import io
 
@@ -514,21 +907,30 @@ class CteImprimirDacteView(CteBaseMixin, View):
             return HttpResponseRedirect(reverse('transportes:cte_list', kwargs={'slug': slug}))
             
         try:
-            # Parse do XML
+            try:
+                from brazilfiscalreport.dacte import Dacte
+            except Exception:
+                messages.error(request, "Impressão indisponível: dependência DACTE não instalada no servidor.")
+                return HttpResponseRedirect(reverse('transportes:cte_list', kwargs={'slug': slug}))
+
             xml_content = cte.xml_cte
-            # Se for string, converte para bytes
-            if isinstance(xml_content, str):
-                xml_content = xml_content.encode('utf-8')
-                
-            # Gera DACTE
-            dacte = Dacte(xml_content)
-            
-            # output(dest='S') retorna string/bytes do PDF
-            # Em versoes mais novas do fpdf/pyfpdf pode retornar bytearray ou string
-            pdf_content = dacte.output(dest='S')
-            
-            if isinstance(pdf_content, str):
-                pdf_content = pdf_content.encode('latin-1') # PDF binary safe encoding
+            if isinstance(xml_content, bytes):
+                xml_content = xml_content.decode("utf-8", errors="ignore")
+
+            try:
+                dacte = Dacte(xml_content)
+            except TypeError:
+                dacte = Dacte(xml=xml_content)
+
+            try:
+                pdf_content = dacte.output(dest="S")
+            except TypeError:
+                pdf_content = dacte.output("dacte.pdf", dest="S")
+
+            if isinstance(pdf_content, bytearray):
+                pdf_content = bytes(pdf_content)
+            elif isinstance(pdf_content, str):
+                pdf_content = pdf_content.encode("latin-1", errors="ignore")
             
             response = HttpResponse(pdf_content, content_type='application/pdf')
             response['Content-Disposition'] = f'inline; filename="cte-{cte.numero}.pdf"'

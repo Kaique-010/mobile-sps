@@ -269,6 +269,24 @@ def get_cte_rota_info(request, pk, slug=None):
         'uf': entidade.enti_esta
     })
 
+@login_required
+def get_mdfe_proximo_numero(request, slug=None):
+    slug = get_licenca_db_config(request) or slug
+    empresa_id = request.session.get("empresa_id")
+    filial_id = request.session.get("filial_id") or 1
+    serie_raw = request.GET.get("serie") or request.GET.get("mdf_seri") or 1
+    try:
+        serie = int(str(serie_raw).strip() or 1)
+    except Exception:
+        serie = 1
+
+    if not empresa_id:
+        return JsonResponse({"error": "Empresa não encontrada na sessão."}, status=400)
+
+    numerador = NumeracaoMdfeService(empresa_id, filial_id, serie=serie, slug=slug)
+    numero = numerador.proximo_numero()
+    return JsonResponse({"serie": serie, "numero": numero})
+
 
 @login_required(login_url='/web/login/')
 def calcular_impostos_cte(request, pk, slug=None):

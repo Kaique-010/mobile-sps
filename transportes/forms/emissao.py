@@ -42,6 +42,36 @@ class CteEmissaoForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
+        self._aplicar_defaults_radio()
+
+    def _aplicar_defaults_radio(self):
+        campos = [
+            "tomador_servico",
+            "tipo_servico",
+            "tipo_cte",
+            "forma_emissao",
+            "tipo_frete",
+        ]
+
+        for nome in campos:
+            field = self.fields.get(nome)
+            if not field:
+                continue
+
+            choices = list(field.choices)
+            if choices and (choices[0][0] == "" or choices[0][0] is None):
+                choices = choices[1:]
+                field.choices = choices
+
+            if self.is_bound:
+                continue
+
+            valor_instance = getattr(self.instance, nome, None)
+            if valor_instance is not None:
+                continue
+
+            if choices:
+                field.initial = choices[0][0]
 
     def clean(self):
         cleaned_data = super().clean()

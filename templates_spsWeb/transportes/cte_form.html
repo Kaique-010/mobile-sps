@@ -1,10 +1,11 @@
 {% extends 'transportes/base_cte.html' %}
-
+{% load static %}
 {% block title %}
 {% if object %}Editar CT-e {{ object.numero|default:object.id }}{% else %}Novo CT-e{% endif %}
 {% endblock %}
 
 {% block cte_content %}
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
 <script>
     /**
      * Função genérica para Autocomplete

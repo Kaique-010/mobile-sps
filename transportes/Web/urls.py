@@ -25,7 +25,13 @@ urlpatterns = [
     # MDF-e
     path('mdfes/', web.MdfeListView.as_view(), name='mdfe_list'),
     path('mdfes/novo/', web.MdfeCreateView.as_view(), name='mdfe_create'),
+    path('mdfes/<int:pk>/dados/', web.MdfeDadosView.as_view(), name='mdfe_dados'),
+    path('mdfes/<int:pk>/documentos/', web.MdfeDocumentosView.as_view(), name='mdfe_documentos'),
+    path('mdfes/<int:pk>/antt/', web.MdfeAnttView.as_view(), name='mdfe_antt'),
+    path('mdfes/<int:pk>/contratantes/', web.MdfeContratantesView.as_view(), name='mdfe_contratantes'),
+    path('mdfes/<int:pk>/seguro/', web.MdfeSeguroView.as_view(), name='mdfe_seguro'),
     path('mdfes/<int:pk>/gerar-xml/', web.MdfeGerarXmlView.as_view(), name='mdfe_gerar_xml'),
+    path('mdfes/<int:pk>/imprimir/', web.MdfeImprimirDamdfeView.as_view(), name='mdfe_imprimir'),
     path('mdfes/<int:pk>/encerrar/', web.MdfeEncerrarView.as_view(), name='mdfe_encerrar'),
     
     # Abas de Edição
@@ -46,6 +52,7 @@ urlpatterns = [
     # APIs para AJAX nos Templates
     path('api/ctes/<str:pk>/rota-info/', api.get_cte_rota_info, name='api_cte_rota_info'),
     path('api/ctes/<str:pk>/calcular-impostos/', api.calcular_impostos_cte, name='api_cte_calcular_impostos'),
+    path('api/mdfes/proximo-numero/', api.get_mdfe_proximo_numero, name='api_mdfe_proximo_numero'),
 
     # Regras ICMS
     path('regras/', regras.RegraICMSListView.as_view(), name='regra_list'),
