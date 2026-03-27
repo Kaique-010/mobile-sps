@@ -12,12 +12,12 @@ urlpatterns = [
     path('', AdiantamentosListView.as_view(), name='adiantamentos_list'),
     path('novo/', AdiantamentosCreateView.as_view(), name='adiantamento_criar'),
     path(
-        'editar/<int:adia_enti>/<int:adia_docu>/<str:adia_seri>/',
+        'editar/<int:adia_empr>/<int:adia_fili>/<int:adia_enti>/<int:adia_docu>/<str:adia_seri>/',
         AdiantamentosUpdateView.as_view(),
         name='adiantamento_editar',
     ),
     path(
-        'excluir/<int:adia_enti>/<int:adia_docu>/<str:adia_seri>/',
+        'excluir/<int:adia_empr>/<int:adia_fili>/<int:adia_enti>/<int:adia_docu>/<str:adia_seri>/<str:adia_tipo>/',
         AdiantamentosDeleteView.as_view(),
         name='adiantamento_excluir',
     ),

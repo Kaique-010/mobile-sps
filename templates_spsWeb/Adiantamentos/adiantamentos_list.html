@@ -43,12 +43,12 @@
 </style>
 <link rel="stylesheet" href="{% static 'css/list.css' %}">
 <div class="container page-container">
-  <div class="page-header-custom">
-    <div class="container align-items-center">
-      <h2 class="page-title">
-        <i class="bi bi-coin"></i> Adiantamentos
-      </h2>
-    </div>
+    <div class="page-header-custom">
+        <div class="container align-items-center">
+            <h2 class="page-title">
+                <i class="bi bi-coin"></i> Adiantamentos
+            </h2>
+        </div>
         <div class="page-actions w-100 d-flex justify-content-end">
             <a href="{% url 'adiantamentos_web:adiantamento_criar' slug=request.resolver_match.kwargs.slug %}"
                 class="btn btn-outline-primary">
@@ -88,9 +88,9 @@
                     <td class="text-end">{{ ad.adia_sald }}</td>
                     <td class="text-end">
                         <div class="d-grid gap-1 d-md-flex justify-content-md-end">
-                            <a href="{% url 'adiantamentos_web:adiantamento_editar' slug=request.resolver_match.kwargs.slug adia_enti=ad.adia_enti adia_docu=ad.adia_docu adia_seri=ad.adia_seri %}"
+                            <a href="{% url 'adiantamentos_web:adiantamento_editar' slug=request.resolver_match.kwargs.slug adia_empr=ad.adia_empr adia_fili=ad.adia_fili adia_enti=ad.adia_enti adia_docu=ad.adia_docu adia_seri=ad.adia_seri %}"
                                 class="btn btn-sm btn-outline-secondary">Editar</a>
-                            <a href="{% url 'adiantamentos_web:adiantamento_excluir' slug=request.resolver_match.kwargs.slug adia_enti=ad.adia_enti adia_docu=ad.adia_docu adia_seri=ad.adia_seri %}"
+                            <a href="{% url 'adiantamentos_web:adiantamento_excluir' slug=request.resolver_match.kwargs.slug adia_empr=ad.adia_empr adia_fili=ad.adia_fili adia_enti=ad.adia_enti adia_docu=ad.adia_docu adia_seri=ad.adia_seri adia_tipo=ad.adia_tipo %}"
                                 class="btn btn-sm btn-outline-danger">Excluir</a>
                         </div>
                     </td>

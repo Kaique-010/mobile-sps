@@ -1,18 +1,42 @@
 {% extends "base.html" %}
 
 {% block content %}
+{% load static %}
+<style>
+    .autocomplete-wrapper {
+        position: relative;
+    }
+
+    .autocomplete-input {
+        width: 100%;
+    }
+
+    h3 {
+        font-size: 24px;
+        font-weight: bold;
+        color: antiquewhite;
+        margin-bottom: 60px;
+        margin-top: 60px;
+        text-align: center;
+    }
+</style>
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
+
 <div class="container mt-4">
-    <h2>Editar Adiantamento</h2>
+    <h3><i class="bi bi-plus"></i> Editar Adiantamento</h3>
 
     <form method="post">
         {% csrf_token %}
         {{ form.non_field_errors }}
 
-        <div class="row">
-            <div class="col-md-2">
+        <div class="row mb-4 mt-3">
+            <div class="col-md-9 position-relative"></div>  
+            <div class="col-md-3">
                 {{ form.adia_tipo.label_tag }} {{ form.adia_tipo }}
             </div>
-            <div class="col-md-4 position-relative">
+        </div>
+         <div class="row mb-4 mt-3">
+            <div class="col-md-6 position-relative">
                 <label for="autocomplete-entidade">Entidade</label>
                 <div class="autocomplete-wrapper">
                     <input type="text" class="form-control autocomplete-input" id="autocomplete-entidade"
@@ -30,17 +54,13 @@
             <div class="col-md-2">
                 {{ form.adia_valo.label_tag }} {{ form.adia_valo }}
             </div>
-        </div>
-
-        <div class="row mt-3">
-            <div class="col-md-4 position-relative">
+         </div>
+         <div class="row mb-4 mt-3">
+            <div class="col-md-6 position-relative">
                 <label for="autocomplete-banco">Banco</label>
                 <div class="autocomplete-wrapper">
-                    <input type="text"
-                           class="form-control autocomplete-input"
-                           id="autocomplete-banco"
-                           value="{{ form.adia_banc.value|default:'' }}"
-                           placeholder="Digite o código ou nome do banco...">
+                    <input type="text" class="form-control autocomplete-input" id="autocomplete-banco"
+                        value="{{ form.adia_banc.value|default:'' }}" placeholder="Digite o código ou nome do banco...">
                 </div>
                 {{ form.adia_banc.as_hidden }}
             </div>
@@ -54,17 +74,18 @@
                 {{ form.adia_obse.label_tag }} {{ form.adia_obse }}
             </div>
         </div>
+       
 
         <div class="mt-3">
-            <button type="submit" class="btn btn-primary">Salvar</button>
+            <button type="submit" class="btn btn-outline-primary">Salvar</button>
             <a href="{% url 'adiantamentos_web:adiantamentos_list' slug=request.resolver_match.kwargs.slug %}"
-                class="btn btn-secondary">Cancelar</a>
+                class="btn btn-outline-danger">Cancelar</a>
         </div>
     </form>
 </div>
 <script>
-    const slugTplAdtoEdit = '{{ request.resolver_match.kwargs.slug|default:"" }}';
-    const slugAdtoEdit = slugTplAdtoEdit || (function () {
+    const slugTplAdto = '{{ request.resolver_match.kwargs.slug|default:"" }}';
+    const slugAdto = slugTplAdto || (function () {
         try {
             const p = location.pathname.split('/');
             return p.length > 2 ? p[2] : '';
@@ -73,42 +94,42 @@
         }
     })();
 
-    const entInputEdit = document.getElementById('autocomplete-entidade');
-    const entHiddenEdit = document.getElementById('{{ form.adia_enti.id_for_label }}');
+    const entInput = document.getElementById('autocomplete-entidade');
+    const entHidden = document.getElementById('{{ form.adia_enti.id_for_label }}');
 
-    if (entInputEdit && entHiddenEdit) {
-        let entControllerEdit = null;
-        let entDdEdit = null;
-        let entDebounceIdEdit = null;
+    if (entInput && entHidden) {
+        let entController = null;
+        let entDd = null;
+        let entDebounceId = null;
 
-        function entDropdownEdit() {
-            if (entDdEdit) return entDdEdit;
-            entDdEdit = document.createElement('div');
-            entDdEdit.className = 'list-group position-absolute w-100';
-            entDdEdit.style.marginTop = '4px';
-            entInputEdit.parentElement.appendChild(entDdEdit);
-            return entDdEdit;
+        function entDropdown() {
+            if (entDd) return entDd;
+            entDd = document.createElement('div');
+            entDd.className = 'list-group position-absolute w-100';
+            entDd.style.marginTop = '4px';
+            entInput.parentElement.appendChild(entDd);
+            return entDd;
         }
 
-        entInputEdit.addEventListener('input', function () {
-            clearTimeout(entDebounceIdEdit);
-            entDebounceIdEdit = setTimeout(async () => {
-                const term = entInputEdit.value.trim();
+        entInput.addEventListener('input', function () {
+            clearTimeout(entDebounceId);
+            entDebounceId = setTimeout(async () => {
+                const term = entInput.value.trim();
                 if (term.length < 2) {
-                    if (entDdEdit) entDdEdit.innerHTML = '';
+                    if (entDd) entDd.innerHTML = '';
                     return;
                 }
 
                 try {
-                    if (entControllerEdit) entControllerEdit.abort();
-                    entControllerEdit = new AbortController();
+                    if (entController) entController.abort();
+                    entController = new AbortController();
 
-                    const r = await fetch(`/web/${slugAdtoEdit}/adiantamentos/autocomplete/entidades/?q=${encodeURIComponent(term)}`, {
-                        signal: entControllerEdit.signal
+                    const r = await fetch(`/web/${slugAdto}/adiantamentos/autocomplete/entidades/?q=${encodeURIComponent(term)}`, {
+                        signal: entController.signal
                     });
                     const j = await r.json();
                     const results = j.results || [];
-                    const d = entDropdownEdit();
+                    const d = entDropdown();
                     d.innerHTML = '';
 
                     if (results.length === 0) {
@@ -126,8 +147,8 @@
                         a.textContent = it.text || it.id || '';
                         a.addEventListener('click', ev => {
                             ev.preventDefault();
-                            entHiddenEdit.value = it.id || '';
-                            entInputEdit.value = it.text || it.id || '';
+                            entHidden.value = it.id || '';
+                            entInput.value = it.text || it.id || '';
                             d.innerHTML = '';
                         });
                         d.appendChild(a);
@@ -141,48 +162,48 @@
         });
 
         document.addEventListener('click', e => {
-            if (entDdEdit && !entInputEdit.parentElement.contains(e.target)) {
-                entDdEdit.innerHTML = '';
+            if (entDd && !entInput.parentElement.contains(e.target)) {
+                entDd.innerHTML = '';
             }
         });
     }
 
-    const bancoInputEdit = document.getElementById('autocomplete-banco');
-    const bancoHiddenEdit = document.getElementById('{{ form.adia_banc.id_for_label }}');
+    const bancoInput = document.getElementById('autocomplete-banco');
+    const bancoHidden = document.getElementById('{{ form.adia_banc.id_for_label }}');
 
-    if (bancoInputEdit && bancoHiddenEdit) {
-        let bancoControllerEdit = null;
-        let bancoDdEdit = null;
-        let bancoDebounceIdEdit = null;
+    if (bancoInput && bancoHidden) {
+        let bancoController = null;
+        let bancoDd = null;
+        let bancoDebounceId = null;
 
-        function bancoDropdownEdit() {
-            if (bancoDdEdit) return bancoDdEdit;
-            bancoDdEdit = document.createElement('div');
-            bancoDdEdit.className = 'list-group position-absolute w-100';
-            bancoDdEdit.style.marginTop = '4px';
-            bancoInputEdit.parentElement.appendChild(bancoDdEdit);
-            return bancoDdEdit;
+        function bancoDropdown() {
+            if (bancoDd) return bancoDd;
+            bancoDd = document.createElement('div');
+            bancoDd.className = 'list-group position-absolute w-100';
+            bancoDd.style.marginTop = '4px';
+            bancoInput.parentElement.appendChild(bancoDd);
+            return bancoDd;
         }
 
-        bancoInputEdit.addEventListener('input', function () {
-            clearTimeout(bancoDebounceIdEdit);
-            bancoDebounceIdEdit = setTimeout(async () => {
-                const term = bancoInputEdit.value.trim();
+        bancoInput.addEventListener('input', function () {
+            clearTimeout(bancoDebounceId);
+            bancoDebounceId = setTimeout(async () => {
+                const term = bancoInput.value.trim();
                 if (term.length < 2) {
-                    if (bancoDdEdit) bancoDdEdit.innerHTML = '';
+                    if (bancoDd) bancoDd.innerHTML = '';
                     return;
                 }
 
                 try {
-                    if (bancoControllerEdit) bancoControllerEdit.abort();
-                    bancoControllerEdit = new AbortController();
+                    if (bancoController) bancoController.abort();
+                    bancoController = new AbortController();
 
-                    const r = await fetch(`/web/${slugAdtoEdit}/adiantamentos/autocomplete/bancos/?q=${encodeURIComponent(term)}`, {
-                        signal: bancoControllerEdit.signal
+                    const r = await fetch(`/web/${slugAdto}/adiantamentos/autocomplete/bancos/?q=${encodeURIComponent(term)}`, {
+                        signal: bancoController.signal
                     });
                     const j = await r.json();
                     const results = j.results || [];
-                    const d = bancoDropdownEdit();
+                    const d = bancoDropdown();
                     d.innerHTML = '';
 
                     if (results.length === 0) {
@@ -200,8 +221,8 @@
                         a.textContent = it.text || it.id || '';
                         a.addEventListener('click', ev => {
                             ev.preventDefault();
-                            bancoHiddenEdit.value = it.id || '';
-                            bancoInputEdit.value = it.text || it.id || '';
+                            bancoHidden.value = it.id || '';
+                            bancoInput.value = it.text || it.id || '';
                             d.innerHTML = '';
                         });
                         d.appendChild(a);
@@ -215,8 +236,8 @@
         });
 
         document.addEventListener('click', e => {
-            if (bancoDdEdit && !bancoInputEdit.parentElement.contains(e.target)) {
-                bancoDdEdit.innerHTML = '';
+            if (bancoDd && !bancoInput.parentElement.contains(e.target)) {
+                bancoDd.innerHTML = '';
             }
         });
     }

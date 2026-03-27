@@ -35,7 +35,7 @@ def autocomplete_bancos(request, slug=None):
 
     qs = Entidades.objects.using(banco).filter(
         enti_empr=str(empresa_id),
-        enti_tien='B',
+        enti_tien__in=['B', 'C'],
         enti_tipo_enti__isnull=False,
     )
 

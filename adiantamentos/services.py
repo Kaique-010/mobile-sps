@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.db import connections
 from decimal import Decimal
 from .models import Adiantamentos
 from Entidades.models import Entidades
@@ -67,14 +68,68 @@ class AdiantamentosService:
         for k in ("adia_empr", "adia_fili", "adia_enti", "adia_docu", "adia_seri"):
             dados.pop(k, None)
 
+        updated = Adiantamentos.objects.using(using).filter(
+            adia_empr=adiantamento.adia_empr,
+            adia_fili=adiantamento.adia_fili,
+            adia_enti=adiantamento.adia_enti,
+            adia_docu=adiantamento.adia_docu,
+            adia_seri=adiantamento.adia_seri,
+        ).update(**dados)
+        if updated != 1:
+            raise ValueError(f"Atualização bloqueada: esperado 1 registro e encontrei {updated}.")
         for key, value in dados.items():
             setattr(adiantamento, key, value)
-        adiantamento.save(using=using)
         return adiantamento
 
     @staticmethod
+    @transaction.atomic
     def delete(adiantamento, using):
-        adiantamento.delete(using=using)
+        with connections[using].cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT COUNT(*)
+                FROM adiantamentos
+                WHERE adia_empr = %s
+                  AND adia_fili = %s
+                  AND adia_enti = %s
+                  AND adia_docu = %s
+                  AND adia_seri = %s
+                  AND adia_tipo = %s
+                """,
+                [
+                    adiantamento.adia_empr,
+                    adiantamento.adia_fili,
+                    adiantamento.adia_enti,
+                    adiantamento.adia_docu,
+                    adiantamento.adia_seri,
+                    adiantamento.adia_tipo,
+                ],
+            )
+            total = (cursor.fetchone() or [0])[0]
+            if total != 1:
+                raise ValueError(f"Exclusão bloqueada: esperado 1 registro e encontrei {total}.")
+            cursor.execute(
+                """
+                DELETE FROM adiantamentos
+                WHERE adia_empr = %s
+                  AND adia_fili = %s
+                  AND adia_enti = %s
+                  AND adia_docu = %s
+                  AND adia_seri = %s
+                  AND adia_tipo = %s
+                """,
+                [
+                    adiantamento.adia_empr,
+                    adiantamento.adia_fili,
+                    adiantamento.adia_enti,
+                    adiantamento.adia_docu,
+                    adiantamento.adia_seri,
+                    adiantamento.adia_tipo,
+                ],
+            )
+            deleted = cursor.rowcount
+        if deleted != 1:
+            raise ValueError(f"Exclusão bloqueada: esperado 1 registro e excluí {deleted}.")
 
     @staticmethod
     @transaction.atomic

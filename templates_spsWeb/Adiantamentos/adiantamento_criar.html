@@ -1,18 +1,42 @@
 {% extends "base.html" %}
 
 {% block content %}
+{% load static %}
+<style>
+    .autocomplete-wrapper {
+        position: relative;
+    }
+
+    .autocomplete-input {
+        width: 100%;
+    }
+
+    h3 {
+        font-size: 24px;
+        font-weight: bold;
+        color: antiquewhite;
+        margin-bottom: 60px;
+        margin-top: 60px;
+        text-align: center;
+    }
+</style>
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
+
 <div class="container mt-4">
-    <h2>Novo Adiantamento</h2>
+    <h3><i class="bi bi-plus"></i> Novo Adiantamento</h3>
 
     <form method="post">
         {% csrf_token %}
         {{ form.non_field_errors }}
 
-        <div class="row">
-            <div class="col-md-2">
+        <div class="row mb-4 mt-3">
+            <div class="col-md-9 position-relative"></div>  
+            <div class="col-md-3">
                 {{ form.adia_tipo.label_tag }} {{ form.adia_tipo }}
             </div>
-            <div class="col-md-4 position-relative">
+        </div>
+         <div class="row mb-4 mt-3">
+            <div class="col-md-6 position-relative">
                 <label for="autocomplete-entidade">Entidade</label>
                 <div class="autocomplete-wrapper">
                     <input type="text" class="form-control autocomplete-input" id="autocomplete-entidade"
@@ -30,10 +54,9 @@
             <div class="col-md-2">
                 {{ form.adia_valo.label_tag }} {{ form.adia_valo }}
             </div>
-        </div>
-
-        <div class="row mt-3">
-            <div class="col-md-4 position-relative">
+         </div>
+         <div class="row mb-4 mt-3">
+            <div class="col-md-6 position-relative">
                 <label for="autocomplete-banco">Banco</label>
                 <div class="autocomplete-wrapper">
                     <input type="text" class="form-control autocomplete-input" id="autocomplete-banco"
@@ -51,11 +74,12 @@
                 {{ form.adia_obse.label_tag }} {{ form.adia_obse }}
             </div>
         </div>
+       
 
         <div class="mt-3">
-            <button type="submit" class="btn btn-primary">Salvar</button>
+            <button type="submit" class="btn btn-outline-primary">Salvar</button>
             <a href="{% url 'adiantamentos_web:adiantamentos_list' slug=request.resolver_match.kwargs.slug %}"
-                class="btn btn-secondary">Cancelar</a>
+                class="btn btn-outline-danger">Cancelar</a>
         </div>
     </form>
 </div>
