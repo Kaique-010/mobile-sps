@@ -217,6 +217,8 @@
                             {% include 'parciais/navcentraldeajuda.html' %}
 
                             {% include 'parciais/navutilitarios.html' %}
+                            
+                            {% include 'parciais/navobras.html' %}
 
                         </ul>
                     </div>
@@ -333,7 +335,10 @@
                 // Aliases para Transportes
                 'transportes': ['transportes', 'transportadora', 'transportadora dashboard', 'transportadora_dashboard'],
                 // Aliases para Visitas
-                'controledevisitas': ['controledevisitas', 'visitas', 'visita', 'visitas dashboard', 'visitas_dashboard', 'controle_de_visitas', 'controle de visitas', 'ControleDeVisitas']
+                'controledevisitas': ['controledevisitas', 'visitas', 'visita', 'visitas dashboard', 'visitas_dashboard', 'controle_de_visitas', 'controle de visitas', 'ControleDeVisitas'],
+                // Aliases para Obras/Gestão de Obras
+                'gestao-obras': ['gestao-obras', 'gestaoobras', 'obras', 'obra', 'gestaoObras', 'GestaoObras', 'gestao_obras'],
+                'obras': ['obras', 'gestao-obras', 'gestaoobras', 'obra']
             };
             const normalize = (s) => String(s || '').toLowerCase().trim();
             const tokenMatch = (value) => {

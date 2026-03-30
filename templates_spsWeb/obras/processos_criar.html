@@ -1,0 +1,58 @@
+{% extends 'obras/base_obras.html' %}
+{% block title %}{% if form.instance.pk %}Editar Processo{% else %}Novo Processo{% endif %} - Obra {{ obra.obra_codi }}{% endblock %}
+{% block obras_content %}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div>
+        <h5 class="mb-0">{% if form.instance.pk %}Editar Processo{% else %}Novo Processo{% endif %}</h5>
+        <div class="text-muted small">{{ obra.obra_codi }} - {{ obra.obra_nome }}</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary btn-sm"
+            href="{% url 'gestaoobras:obras_processos_list' slug=slug obra_id=obra.id %}">Voltar</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post" class="row g-3">
+            {% csrf_token %}
+            {{ form.proc_empr }}{{ form.proc_fili }}{{ form.proc_obra }}{{ form.proc_resp }}
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="{{ form.proc_codi.id_for_label }}">Código</label>
+                {{ form.proc_codi }}
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="{{ form.proc_titu.id_for_label }}">Título</label>
+                {{ form.proc_titu }}
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="{{ form.proc_etap.id_for_label }}">Etapa</label>
+                {{ form.proc_etap }}
+            </div>
+            <div class="col-12">
+                <label class="form-label" for="{{ form.proc_desc.id_for_label }}">Descrição</label>
+                {{ form.proc_desc }}
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="{{ form.responsavel_busca.id_for_label }}">Responsável</label>
+                {{ form.responsavel_busca }}
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="{{ form.proc_prio.id_for_label }}">Prioridade</label>
+                {{ form.proc_prio }}
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="{{ form.proc_stat.id_for_label }}">Status</label>
+                {{ form.proc_stat }}
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="{{ form.proc_dlim.id_for_label }}">Data Limite</label>
+                {{ form.proc_dlim }}
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

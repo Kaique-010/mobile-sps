@@ -1,0 +1,79 @@
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Financeiro (últimos)</span>
+        <div class="d-flex gap-2">
+            <a class="btn btn-sm btn-outline-secondary"
+                href="{% url 'gestaoobras:obras_financeiro_list' slug=slug obra_id=obra.id %}">Ver todos</a>
+            <a class="btn btn-sm btn-primary"
+                href="{% url 'gestaoobras:obras_financeiro_create' slug=slug obra_id=obra.id %}">Novo</a>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <form method="get" class="p-2 border-bottom">
+            <input type="hidden" name="tab" value="detalhes">
+            <div class="row g-2 align-items-end">
+                <div class="col-12 col-md-4">
+                    <label class="form-label mb-1">Status</label>
+                    <select name="fin_status" class="form-select form-select-sm">
+                        <option value="" {% if fin_status|default:'' == '' %}selected{% endif %}>Todos</option>
+                        <option value="AB" {% if fin_status == 'AB' %}selected{% endif %}>Aberto</option>
+                        <option value="PG" {% if fin_status == 'PG' %}selected{% endif %}>Pago</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label mb-1">De</label>
+                    <input type="date" name="fin_dini" class="form-control form-control-sm" value="{{ fin_dini|default:'' }}">
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label mb-1">Até</label>
+                    <input type="date" name="fin_dfim" class="form-control form-control-sm" value="{{ fin_dfim|default:'' }}">
+                </div>
+                <div class="col-12 col-md-2">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm w-100">Filtrar</button>
+                </div>
+            </div>
+        </form>
+        <div class="table-scroll">
+            <table class="table table-sm mb-0">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Tipo</th>
+                        <th>Categoria</th>
+                        <th>Valor</th>
+                        <th>Status</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for l in lancamentos %}
+                    <tr>
+                        <td>
+                            {% if l.lfin_dcom %}
+                            <span class="js-deadline" data-deadline="{{ l.lfin_dcom|date:'Y-m-d' }}"
+                                data-deadline-done="{% if l.lfin_dpag %}1{% else %}0{% endif %}">
+                                {{ l.lfin_dcom|date:'d/m/Y' }}
+                            </span>
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td>{{ l.get_lfin_tipo_display }}</td>
+                        <td>{{ l.lfin_cate }}</td>
+                        <td>{{ l.lfin_valo }}</td>
+                        <td>{% if l.lfin_dpag %}Pago em {{ l.lfin_dpag|date:'d/m/Y' }}{% else %}Aberto{% endif %}</td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-primary"
+                                href="{% url 'gestaoobras:obras_financeiro_edit' slug=slug obra_id=obra.id lancamento_id=l.id %}">Editar</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-3">Sem lançamentos</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

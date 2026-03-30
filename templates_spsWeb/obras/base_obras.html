@@ -1,0 +1,219 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Gestão de Obras{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/form.css' %}">
+    <style>
+        .sidebar {
+            height: 70vh;
+            background-color: #2c2f31;
+            color: white;
+            padding-top: 20px;
+            border-radius: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5)
+        }
+
+        .sidebar a {
+            color: #adb5bd;
+            text-decoration: none;
+            padding: 10px 20px;
+            display: block
+        }
+
+        .sidebar a:hover,
+        .sidebar a.active {
+            color: white
+        }
+
+        .main-content {
+            padding: 15px
+        }
+
+        .card-header-tabs {
+            margin-bottom: -1px
+        }
+
+        @media (max-width:767.98px) {
+            .main-content {
+                padding: 12px
+            }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-2 sidebar d-none d-md-block">
+                <h4 class="text-left mb-4"><i class="fas fa-helmet-safety"></i> Obras</h4>
+                <a href="{% url 'gestaoobras:obras_list' slug=slug %}"
+                    class="{% if request.resolver_match.url_name == 'obras_list' %}active{% endif %}">
+                    <i class="fas fa-list"></i> Listagem de Obras
+                </a>
+                <a href="{% url 'gestaoobras:obras_create' slug=slug %}"
+                    class="{% if request.resolver_match.url_name == 'obras_create' %}active{% endif %}">
+                    <i class="fas fa-plus"></i> Nova Obra
+                </a>
+            </div>
+            <div class="col-12 col-md-10 main-content">
+                <div class="d-md-none mb-3">
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{% url 'gestaoobras:obras_list' slug=slug %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-list"></i> Obras
+                        </a>
+                        <a href="{% url 'gestaoobras:obras_create' slug=slug %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-plus"></i> Nova Obra
+                        </a>
+                    </div>
+                </div>
+                {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+                {% endif %}
+                {% block obras_content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+    <script>
+        (function () {
+            let slug = "{{ slug|escapejs }}";
+            if (!slug) {
+                const m = (window.location.pathname || '').match(/\/web\/([^\/]+)\//);
+                if (m && m[1]) slug = m[1];
+            }
+            const urlPrimary = `/api/${encodeURIComponent(slug)}/gestao-obras/autocompletes/entidades/`;
+            const urlFallback = `/api/${encodeURIComponent(slug)}/gestaoobras/autocompletes/entidades/`;
+
+            function ensureDropdown(inputEl) {
+                const parent = inputEl.parentElement;
+                if (!parent) return null;
+                if (getComputedStyle(parent).position === 'static') parent.style.position = 'relative';
+                const id = `${inputEl.id || inputEl.name || 'autocomplete'}_dropdown`;
+                let dropdown = document.getElementById(id);
+                if (dropdown) return dropdown;
+                dropdown = document.createElement('div');
+                dropdown.id = id;
+                dropdown.className = 'autocomplete-dropdown list-group position-absolute w-100';
+                dropdown.style.zIndex = '1000';
+                parent.appendChild(dropdown);
+                return dropdown;
+            }
+
+            function bindEntidadeAutocomplete(inputEl) {
+                if (!inputEl || inputEl.dataset.bound === '1') return;
+                inputEl.dataset.bound = '1';
+                inputEl.setAttribute('autocomplete', 'off');
+
+                const hiddenId = inputEl.getAttribute('data-hidden-target') || '';
+                const hiddenEl = hiddenId ? document.getElementById(hiddenId) : null;
+                const dropdownEl = ensureDropdown(inputEl);
+                if (!hiddenEl || !dropdownEl) return;
+
+                let debounce = null;
+                let controller = null;
+
+                function clearDropdown() {
+                    dropdownEl.innerHTML = '';
+                }
+
+                async function fetchAndRender(term) {
+                    try {
+                        if (controller) controller.abort();
+                        controller = new AbortController();
+                        let resp = await fetch(`${urlPrimary}?term=${encodeURIComponent(term)}`, {
+                            signal: controller.signal,
+                            credentials: 'same-origin',
+                        });
+                        if (!resp.ok && resp.status === 403) {
+                            resp = await fetch(`${urlFallback}?term=${encodeURIComponent(term)}`, {
+                                signal: controller.signal,
+                                credentials: 'same-origin',
+                            });
+                        }
+                        const data = await resp.json();
+                        const results = data && data.results ? data.results : [];
+                        clearDropdown();
+                        if (!results.length) return;
+                        results.forEach((item) => {
+                            const a = document.createElement('a');
+                            a.className = 'list-group-item list-group-item-action';
+                            a.href = '#';
+                            a.textContent = item.text;
+                            a.addEventListener('click', (ev) => {
+                                ev.preventDefault();
+                                inputEl.value = item.text;
+                                hiddenEl.value = item.id;
+                                clearDropdown();
+                            });
+                            dropdownEl.appendChild(a);
+                        });
+                    } catch (e) {
+                        if (e && e.name === 'AbortError') return;
+                        clearDropdown();
+                        const div = document.createElement('div');
+                        div.className = 'list-group-item text-muted';
+                        div.textContent = 'Erro ao buscar';
+                        dropdownEl.appendChild(div);
+                    }
+                }
+
+                inputEl.addEventListener('input', (e) => {
+                    const term = (e.target.value || '').trim();
+                    clearTimeout(debounce);
+                    if (!term) {
+                        clearDropdown();
+                        hiddenEl.value = '';
+                        return;
+                    }
+                    const minChars = (/^\d+$/.test(term) ? 1 : 3);
+                    if (term.length < minChars) {
+                        clearDropdown();
+                        hiddenEl.value = '';
+                        return;
+                    }
+                    debounce = setTimeout(() => fetchAndRender(term), 250);
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (!dropdownEl.contains(e.target) && e.target !== inputEl) clearDropdown();
+                });
+
+                (async function prefill() {
+                    if (!hiddenEl.value) return;
+                    if (inputEl.value) return;
+                    await fetchAndRender(hiddenEl.value);
+                    const match = dropdownEl.querySelector('.list-group-item');
+                    if (match) {
+                        inputEl.value = match.textContent || '';
+                        clearDropdown();
+                    }
+                })();
+            }
+
+            document.addEventListener('DOMContentLoaded', () => {
+                document.querySelectorAll('input.autocomplete-entidades').forEach(bindEntidadeAutocomplete);
+            });
+            if (document.readyState !== 'loading') {
+                document.querySelectorAll('input.autocomplete-entidades').forEach(bindEntidadeAutocomplete);
+            }
+        })();
+    </script>
+</body>
+
+</html>
+{% endblock %}

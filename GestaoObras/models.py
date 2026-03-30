@@ -15,20 +15,8 @@ class Obra(models.Model):
     obra_codi = models.IntegerField()
     obra_nome = models.CharField(max_length=150)
     obra_desc = models.TextField(blank=True, null=True)
-    obra_clie = models.ForeignKey(
-        "Entidades.Entidades",
-        on_delete=models.PROTECT,
-        related_name="obras_cliente",
-        db_column="obra_clie",
-    )
-    obra_resp = models.ForeignKey(
-        "Entidades.Entidades",
-        on_delete=models.PROTECT,
-        related_name="obras_responsavel",
-        db_column="obra_resp",
-        blank=True,
-        null=True,
-    )
+    obra_clie = models.IntegerField(db_column="obra_clie")
+    obra_resp = models.IntegerField(db_column="obra_resp", blank=True, null=True)
     obra_dini = models.DateField()
     obra_dpre = models.DateField(blank=True, null=True)
     obra_dfim = models.DateField(blank=True, null=True)
@@ -41,7 +29,7 @@ class Obra(models.Model):
 
     class Meta:
         db_table = "gestao_obras"
-        ordering = ("-obra_codi",)
+        ordering = ("obra_codi",)
         unique_together = (("obra_empr", "obra_fili", "obra_codi"),)
 
     def __str__(self):
@@ -75,6 +63,9 @@ class ObraEtapa(models.Model):
         db_table = "gestao_obras_etapas"
         ordering = ("etap_obra", "etap_orde")
         unique_together = (("etap_empr", "etap_fili", "etap_codi"),)
+    
+    def __str__(self):
+        return f"{self.etap_codi} - {self.etap_nome}"
 
 
 class ObraMaterialMovimento(models.Model):
@@ -109,6 +100,9 @@ class ObraMaterialMovimento(models.Model):
         db_table = "gestao_obras_movimentos_materiais"
         ordering = ("-movm_data", "-movm_codi")
         unique_together = (("movm_empr", "movm_fili", "movm_codi"),)
+    
+    def __str__(self):
+        return f"{self.movm_codi} - {self.movm_prod}"
 
 
 class ObraLancamentoFinanceiro(models.Model):
@@ -141,6 +135,9 @@ class ObraLancamentoFinanceiro(models.Model):
         db_table = "gestao_obras_lancamentos_financeiros"
         ordering = ("-lfin_dcom", "-lfin_codi")
         unique_together = (("lfin_empr", "lfin_fili", "lfin_codi"),)
+    
+    def __str__(self):
+        return f"{self.lfin_codi} - {self.lfin_cate}"
 
 
 class ObraProcesso(models.Model):
@@ -170,13 +167,7 @@ class ObraProcesso(models.Model):
     )
     proc_titu = models.CharField(max_length=120)
     proc_desc = models.TextField(blank=True, null=True)
-    proc_resp = models.ForeignKey(
-        "Entidades.Entidades",
-        on_delete=models.SET_NULL,
-        related_name="processos_obra_responsavel",
-        blank=True,
-        null=True,
-    )
+    proc_resp = models.IntegerField(blank=True, null=True)
     proc_dlim = models.DateField(blank=True, null=True)
     proc_prio = models.CharField(max_length=2, choices=PRIORIDADE_CHOICES, default="ME")
     proc_stat = models.CharField(max_length=2, choices=STATUS_CHOICES, default="AB")
@@ -187,3 +178,6 @@ class ObraProcesso(models.Model):
         db_table = "gestao_obras_processos"
         ordering = ("-proc_codi",)
         unique_together = (("proc_empr", "proc_fili", "proc_codi"),)
+    
+    def __str__(self):
+        return f"{self.proc_codi} - {self.proc_titu}"

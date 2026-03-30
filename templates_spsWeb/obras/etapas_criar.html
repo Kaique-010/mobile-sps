@@ -1,0 +1,68 @@
+{% extends 'obras/base_obras.html' %}
+{% block title %}{% if form.instance.pk %}Editar Etapa{% else %}Nova Etapa{% endif %} - Obra {{ obra.obra_codi }}{% endblock %}
+{% block obras_content %}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div>
+        <h5 class="mb-0">{% if form.instance.pk %}Editar Etapa{% else %}Nova Etapa{% endif %}</h5>
+        <div class="text-muted small">{{ obra.obra_codi }} - {{ obra.obra_nome }}</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary btn-sm"
+            href="{% url 'gestaoobras:obras_etapas_list' slug=slug obra_id=obra.id %}">Voltar</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post" class="row g-3">
+            {% csrf_token %}
+            {{ form.etap_empr }}{{ form.etap_fili }}{{ form.etap_obra }}{% if not form.instance.pk %}{{ form.etap_codi.as_hidden }}{% endif %}
+            {% if form.instance.pk %}
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="{{ form.etap_codi.id_for_label }}">Código</label>
+                {{ form.etap_codi }}
+            </div>
+            {% endif %}
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="{{ form.etap_nome.id_for_label }}">Nome</label>
+                {{ form.etap_nome }}
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="{{ form.etap_orde.id_for_label }}">Ordem</label>
+                {{ form.etap_orde }}
+            </div>
+            <div class="col-12">
+                <label class="form-label" for="{{ form.etap_desc.id_for_label }}">Descrição</label>
+                {{ form.etap_desc }}
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="{{ form.etap_situ.id_for_label }}">Situação</label>
+                {{ form.etap_situ }}
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="{{ form.etap_perc.id_for_label }}">%</label>
+                {{ form.etap_perc }}
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="{{ form.etap_dinp.id_for_label }}">Início Prev.</label>
+                {{ form.etap_dinp }}
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="{{ form.etap_dfip.id_for_label }}">Fim Prev.</label>
+                {{ form.etap_dfip }}
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="{{ form.etap_dinr.id_for_label }}">Início Real</label>
+                {{ form.etap_dinr }}
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="{{ form.etap_dfir.id_for_label }}">Fim Real</label>
+                {{ form.etap_dfir }}
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

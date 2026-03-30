@@ -64,6 +64,8 @@ class AuditoriaMiddleware:
                 'assistente_spart': 'Assistente_Spart',
                 'assistente': 'Assistente_Spart',
                 'auditoria': 'auditoria',
+                'gestao-obras': 'GestaoObras',
+                'gestaoobras': 'GestaoObras',
                 'boletos': 'boletos',
                 'caixadiario': 'CaixaDiario',
                 'caixa-diario': 'CaixaDiario',
@@ -152,6 +154,11 @@ class AuditoriaMiddleware:
                 'saldo': 'ignore',
                 'resumo': 'ignore',
                 'abertos': 'ignore',
+                'obras': 'Obra',
+                'etapas': 'ObraEtapa',
+                'materiais': 'ObraMaterialMovimento',
+                'financeiro': 'ObraLancamentoFinanceiro',
+                'processos': 'ObraProcesso',
             }
             
             # Usar o nome real do app
@@ -336,6 +343,8 @@ class AuditoriaMiddleware:
                          'assistente': ['assistente_spart'],
                          'assistente_spart': ['assistente'],
                          'cfops': ['cfop'],
+                        'gestao-obras': ['gestaoobras'],
+                        'gestaoobras': ['gestao-obras'],
                     }
                     candidates = {app_slug}
                     for alt in aliases.get(app_slug, []):

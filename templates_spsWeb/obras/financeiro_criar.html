@@ -1,0 +1,64 @@
+{% extends 'obras/base_obras.html' %}
+{% block title %}{% if form.instance.pk %}Editar Lançamento Financeiro{% else %}Lançamento Financeiro{% endif %} - Obra {{ obra.obra_codi }}{% endblock %}
+{% block obras_content %}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div>
+        <h5 class="mb-0">{% if form.instance.pk %}Editar Lançamento Financeiro{% else %}Lançamento Financeiro{% endif %}</h5>
+        <div class="text-muted small">{{ obra.obra_codi }} - {{ obra.obra_nome }}</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary btn-sm"
+            href="{% url 'gestaoobras:obras_financeiro_list' slug=slug obra_id=obra.id %}">Voltar</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post" class="row g-3">
+            {% csrf_token %}
+            {{ form.lfin_empr }}{{ form.lfin_fili }}{{ form.lfin_obra }}{% if not form.instance.pk %}{{ form.lfin_codi.as_hidden }}{% endif %}
+            {% if form.instance.pk %}
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="{{ form.lfin_codi.id_for_label }}">Código</label>
+                {{ form.lfin_codi }}
+            </div>
+            {% endif %}
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="{{ form.lfin_dcom.id_for_label }}">Data</label>
+                {{ form.lfin_dcom }}
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="{{ form.lfin_tipo.id_for_label }}">Tipo</label>
+                {{ form.lfin_tipo }}
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="{{ form.lfin_etap.id_for_label }}">Etapa</label>
+                {{ form.lfin_etap }}
+            </div>
+            <div class="col-12 col-md-4">
+                <label class="form-label" for="{{ form.lfin_cate.id_for_label }}">Categoria</label>
+                {{ form.lfin_cate }}
+            </div>
+            <div class="col-12 col-md-5">
+                <label class="form-label" for="{{ form.lfin_desc.id_for_label }}">Descrição</label>
+                {{ form.lfin_desc }}
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="{{ form.lfin_valo.id_for_label }}">Valor</label>
+                {{ form.lfin_valo }}
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="{{ form.lfin_dpag.id_for_label }}">Data Pag.</label>
+                {{ form.lfin_dpag }}
+            </div>
+            <div class="col-12">
+                <label class="form-label" for="{{ form.lfin_obse.id_for_label }}">Observação</label>
+                {{ form.lfin_obse }}
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

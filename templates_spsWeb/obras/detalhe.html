@@ -1,0 +1,215 @@
+{% extends 'obras/base_obras.html' %}
+{% block title %}Obra {{ obra.obra_codi }}{% endblock %}
+{% block extra_css %}
+<style>
+    .table-scroll {
+        max-height: 340px;
+        overflow: auto
+    }
+
+    .table-scroll thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: var(--bs-body-bg)
+    }
+
+    .dashboard-card {
+        transition: transform .2s, box-shadow .2s;
+        border-radius: 10px;
+        overflow: hidden
+    }
+
+    .dashboard-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, .12)
+    }
+
+    .card-icon {
+        font-size: 1.6rem;
+        opacity: .25;
+        position: absolute;
+        right: 15px;
+        bottom: 12px
+    }
+
+    .kpi-card .card-body {
+        min-height: 70px
+    }
+
+    @media (min-width:768px) {
+        .kpi-card .card-body {
+            min-height: 90px
+        }
+    }
+
+    @media (max-width:767.98px) {
+        .kpi-row {
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory
+        }
+
+        .kpi-col {
+            flex: 0 0 200px;
+            max-width: 200px;
+            scroll-snap-align: start
+        }
+    }
+
+    .dash-investimento-card {
+        background: linear-gradient(135deg, #7aa6c2 0%, #3a556a 100%);
+        color: #fff
+    }
+
+    .dash-despesa-card {
+        background: linear-gradient(135deg, #e9a1a1 0%, #8b2f2f 100%);
+        color: #fff
+    }
+
+    .dash-receita-card {
+        background: linear-gradient(135deg, #a6d0a6 0%, #356d35 100%);
+        color: #fff
+    }
+
+    .dash-saldo-card {
+        background: linear-gradient(135deg, #b7d0a6 0%, #567749 100%);
+        color: #fff
+    }
+
+    .dash-etapa-card {
+        background: linear-gradient(135deg, #d2b4de 0%, #7d3c98 100%);
+        color: #fff
+    }
+
+    .dash-processos-card {
+        background: linear-gradient(135deg, #f5cba7 0%, #a04000 100%);
+        color: #fff
+    }
+
+    .dash-materiais-card {
+        background: linear-gradient(135deg, #aed6f1 0%, #2e86c1 100%);
+        color: #fff
+    }
+</style>
+{% endblock %}
+{% block obras_content %}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div>
+        <h5 class="mb-0">{{ obra.obra_codi }} - {{ obra.obra_nome }}</h5>
+        <div class="text-muted small">Cliente: {{ obra.obra_clie }} | Status: {{ obra.get_obra_stat_display }} |
+            Orçamento:
+            {{obra.obra_orca }} | Custo: {{ obra.obra_cust }}</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary btn-sm" href="{% url 'gestaoobras:obras_list' slug=slug %}">Voltar</a>
+        <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#statusModal">
+            Status
+        </button>
+    </div>
+</div>
+<div class="modal fade" id="statusModal" tabindex="-1" aria-labelledby="statusModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="statusModalLabel">Alterar Status da Obra</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'gestaoobras:obras_status_update' slug=slug obra_id=obra.id %}">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <div class="list-group">
+                        <label class="list-group-item"><input class="form-check-input me-1" type="radio"
+                                name="novo_status" value="PL" {% if obra.obra_stat == 'PL' %}checked{% endif %} required> Planejada</label>
+                        <label class="list-group-item"><input class="form-check-input me-1" type="radio"
+                                name="novo_status" value="EA" {% if obra.obra_stat == 'EA' %}checked{% endif %} required> Em andamento</label>
+                        <label class="list-group-item"><input class="form-check-input me-1" type="radio"
+                                name="novo_status" value="PA" {% if obra.obra_stat == 'PA' %}checked{% endif %} required> Paralisada</label>
+                        <label class="list-group-item"><input class="form-check-input me-1" type="radio"
+                                name="novo_status" value="CO" {% if obra.obra_stat == 'CO' %}checked{% endif %} required> Concluída</label>
+                        <label class="list-group-item"><input class="form-check-input me-1" type="radio"
+                                name="novo_status" value="CA" {% if obra.obra_stat == 'CA' %}checked{% endif %} required> Cancelada</label>
+                    </div>
+                    <small class="text-muted d-block mt-2">Se definido como Concluída, a Data Fim será preenchida
+                        automaticamente.</small>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
+                    <button type="submit" class="btn btn-primary">Avançar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<ul class="nav nav-tabs mb-3" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab == 'detalhes' %}active{% endif %}" data-bs-toggle="tab"
+            data-bs-target="#tab-detalhes" type="button" role="tab">Detalhes</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab == 'dashboard' %}active{% endif %}" data-bs-toggle="tab"
+            data-bs-target="#tab-dashboard" type="button" role="tab">Dashboard da Obra</button>
+    </li>
+</ul>
+
+<div class="tab-content">
+    <div class="tab-pane fade {% if active_tab == 'detalhes' %}show active{% endif %}" id="tab-detalhes"
+        role="tabpanel">
+        {% include 'obras/partials/_obra_tab_detalhes.html' %}
+    </div>
+    <div class="tab-pane fade {% if active_tab == 'dashboard' %}show active{% endif %}" id="tab-dashboard"
+        role="tabpanel">
+        {% include 'obras/partials/_obra_tab_dashboard.html' %}
+    </div>
+</div>
+<script>
+    (function () {
+        function parseISODate(iso) {
+            if (!iso) return null;
+            const m = String(iso).trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (!m) return null;
+            const y = Number(m[1]);
+            const mo = Number(m[2]) - 1;
+            const d = Number(m[3]);
+            const dt = new Date(y, mo, d);
+            if (Number.isNaN(dt.getTime())) return null;
+            return dt;
+        }
+
+        function startOfToday() {
+            const now = new Date();
+            return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        }
+
+        function applyDeadlines() {
+            const today = startOfToday();
+            const els = document.querySelectorAll('[data-deadline]');
+            els.forEach(function (el) {
+                const done = String(el.getAttribute('data-deadline-done') || '0') === '1';
+                const dt = parseISODate(el.getAttribute('data-deadline'));
+                if (!dt) return;
+
+                el.classList.remove('text-danger', 'text-success', 'fw-bold');
+                if (done) return;
+
+                if (dt < today) {
+                    el.classList.add('text-danger', 'fw-bold');
+                } else {
+                    el.classList.add('text-success', 'fw-bold');
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            applyDeadlines();
+            const tabButtons = document.querySelectorAll('[data-bs-toggle="tab"]');
+            tabButtons.forEach(function (btn) {
+                btn.addEventListener('shown.bs.tab', function () {
+                    applyDeadlines();
+                });
+            });
+        });
+    })();
+</script>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends 'obras/base_obras.html' %}
+{% block title %}Etapas - Obra {{ obra.obra_codi }}{% endblock %}
+{% block obras_content %}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+  <div>
+    <h5 class="mb-0">Etapas</h5>
+    <div class="text-muted small">{{ obra.obra_codi }} - {{ obra.obra_nome }}</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'gestaoobras:obras_detail' slug=slug obra_id=obra.id %}">Voltar</a>
+    <a class="btn btn-primary btn-sm" href="{% url 'gestaoobras:obras_etapas_create' slug=slug obra_id=obra.id %}">Nova Etapa</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-striped mb-0">
+      <thead>
+        <tr><th>Código</th><th>Nome</th><th>Situação</th><th>Ordem</th><th>%</th></tr>
+      </thead>
+      <tbody>
+        {% for e in etapas %}
+        <tr>
+          <td>{{ e.etap_codi }}</td>
+          <td>{{ e.etap_nome }}</td>
+          <td>{{ e.get_etap_situ_display }}</td>
+          <td>{{ e.etap_orde }}</td>
+          <td>{{ e.etap_perc }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center text-muted py-3">Nenhuma etapa encontrada.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,207 @@
+{% extends 'obras/base_obras.html' %}
+{% block title %}Financeiro - Obra {{ obra.obra_codi }}{% endblock %}
+{% block extra_css %}
+<style>
+    .dashboard-card {
+        transition: transform .2s, box-shadow .2s;
+        border-radius: 10px;
+        overflow: hidden
+    }
+
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, .1)
+    }
+
+    .financeiro-investimento-card {
+        background: linear-gradient(135deg, #a1c1e0 0%, #2b577c 100%);
+        color: #fff
+    }
+
+    .financeiro-despesa-card {
+        background: linear-gradient(135deg, #e0b4a1 0%, #7c3f2b 100%);
+        color: #fff
+    }
+
+    .financeiro-etapa-card {
+        background: linear-gradient(135deg, #a0a3c5 0%, #3b3e70 100%);
+        color: #fff
+    }
+
+    .financeiro-saldo-card {
+        background: linear-gradient(135deg, #b7d0a6 0%, #567749 100%);
+        color: #fff
+    }
+
+    .card-icon {
+        font-size: 2.2rem;
+        opacity: .25;
+        position: absolute;
+        right: 15px;
+        bottom: 12px
+    }
+
+    @media (max-width:767.98px) {
+        .kpi-row {
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory
+        }
+
+        .kpi-col {
+            flex: 0 0 260px;
+            max-width: 260px;
+            scroll-snap-align: start
+        }
+    }
+
+    .kpi-card .card-body {
+        min-height: 120px
+    }
+
+    @media (min-width:768px) {
+        .kpi-card .card-body {
+            min-height: 140px
+        }
+    }
+</style>
+{% endblock %}
+{% block obras_content %}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div>
+        <h5 class="mb-0">Financeiro</h5>
+        <div class="text-muted small">{{ obra.obra_codi }} - {{ obra.obra_nome }}</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary btn-sm"
+            href="{% url 'gestaoobras:obras_detail' slug=slug obra_id=obra.id %}">Voltar</a>
+        <a class="btn btn-primary btn-sm"
+            href="{% url 'gestaoobras:obras_financeiro_create' slug=slug obra_id=obra.id %}?tipo=DE">Despesa</a>
+        <a class="btn btn-outline-primary btn-sm"
+            href="{% url 'gestaoobras:obras_financeiro_create' slug=slug obra_id=obra.id %}?tipo=RE">Receita</a>
+    </div>
+</div>
+
+{% if mov_id %}
+<div class="alert alert-info py-2 mb-3">
+    Filtrando por movimento: {{ mov_id }}.
+    <a class="ms-2" href="{% url 'gestaoobras:obras_financeiro_list' slug=slug obra_id=obra.id %}">Limpar</a>
+</div>
+{% endif %}
+
+<div class="row g-3 kpi-row mb-3">
+    <div class="col-12 col-md-3 kpi-col">
+        <div class="card h-100 border-0 dashboard-card position-relative financeiro-investimento-card kpi-card">
+            <div class="card-body d-flex flex-column justify-content-between p-3">
+                <div>
+                    <h6 class="text-uppercase small fw-bold mb-2" style="opacity:.9;">Total Investimento</h6>
+                    <h2 class="fw-bold mb-0 display-6">R$ {{ total_investimento|default:0|floatformat:2 }}</h2>
+                </div>
+                <i class="fas fa-piggy-bank card-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-3 kpi-col">
+        <div class="card h-100 border-0 dashboard-card position-relative financeiro-despesa-card kpi-card">
+            <div class="card-body d-flex flex-column justify-content-between p-3">
+                <div>
+                    <h6 class="text-uppercase small fw-bold mb-2" style="opacity:.9;">Total Despesa</h6>
+                    <h2 class="fw-bold mb-0 display-6">R$ {{ total_despesa|default:0|floatformat:2 }}</h2>
+                </div>
+                <i class="fas fa-arrow-down card-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-3 kpi-col">
+        <div class="card h-100 border-0 dashboard-card position-relative financeiro-etapa-card kpi-card">
+            <div class="card-body d-flex flex-column justify-content-between p-3">
+                <div>
+                    <h6 class="text-uppercase small fw-bold mb-2" style="opacity:.9;">Etapa Maior Gasto</h6>
+                    {% if etapa_maior_gasto %}
+                    <div class="fw-bold mb-0">{{ etapa_maior_gasto.lfin_etap__etap_codi }} - {{ etapa_maior_gasto.lfin_etap__etap_nome }}</div>
+                    <div class="small" style="opacity:.9;">R$ {{ etapa_maior_gasto.total|default:0|floatformat:2 }}</div>
+                    {% else %}
+                    <div class="fw-bold mb-0">-</div>
+                    {% endif %}
+                </div>
+                <i class="fas fa-layer-group card-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-3 kpi-col">
+        <div class="card h-100 border-0 dashboard-card position-relative financeiro-saldo-card kpi-card">
+            <div class="card-body d-flex flex-column justify-content-between p-3">
+                <div>
+                    <h6 class="text-uppercase small fw-bold mb-2" style="opacity:.9;">Saldo</h6>
+                    <h2 class="fw-bold mb-0 display-6">R$ {{ saldo|default:0|floatformat:2 }}</h2>
+                    <div class="small" style="opacity:.9;">
+                        {% if percentual_usado != None %}
+                        {{ percentual_usado|floatformat:2 }}% do total
+                        {% else %}
+                        -% do total
+                        {% endif %}
+                    </div>
+                </div>
+                <i class="fas fa-balance-scale card-icon"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form method="get" class="row g-2 mb-3">
+    {% if mov_id %}
+    <input type="hidden" name="mov_id" value="{{ mov_id }}">
+    {% endif %}
+    <div class="col-12 col-md-3">
+        <select name="tipo" class="form-select">
+            <option value="">Todos os tipos</option>
+            <option value="DE" {% if tipo == 'DE' %}selected{% endif %}>Despesa</option>
+            <option value="RE" {% if tipo == 'RE' %}selected{% endif %}>Receita</option>
+        </select>
+    </div>
+    <div class="col-12 col-md-5">
+        <select name="etapa_id" class="form-select">
+            <option value="">Todas as etapas</option>
+            {% for e in etapas %}
+            <option value="{{ e.id }}" {% if etapa_id|default:'' == e.id|stringformat:'s' %}selected{% endif %}>{{ e.etap_codi }} - {{ e.etap_nome }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-12 col-md-2">
+        <button type="submit" class="btn btn-outline-secondary w-100">Filtrar</button>
+    </div>
+</form>
+
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-striped mb-0">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Tipo</th>
+                    <th>Categoria</th>
+                    <th>Descrição</th>
+                    <th>Valor</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for l in lancamentos %}
+                <tr>
+                    <td>{% if l.lfin_dcom %}<span class="text-success fw-bold">{{ l.lfin_dcom|date:'d/m/Y' }}</span>{% else %}-{% endif %}</td>
+                    <td>{{ l.get_lfin_tipo_display }}</td>
+                    <td>{{ l.lfin_cate }}</td>
+                    <td>{{ l.lfin_desc }}</td>
+                    <td>{{ l.lfin_valo }}</td>
+                    <td>{% if l.lfin_dpag %}Pago em {{ l.lfin_dpag|date:'d/m/Y' }}{% else %}Aberto{% endif %}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-3">Nenhum lançamento encontrado.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

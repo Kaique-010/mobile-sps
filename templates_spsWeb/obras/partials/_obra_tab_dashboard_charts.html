@@ -1,0 +1,169 @@
+<div class="row g-3">
+    <div class="col-12 col-lg-4">
+        <div class="card h-100">
+            <div class="card-header">
+                Financeiro
+            </div>
+            <div class="card-body">
+                <div style="height:200px">
+                    <canvas id="obraDashChartFinanceiro"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-lg-4">
+        <div class="card h-80">
+            <div class="card-header">
+                Processos
+            </div>
+            <div class="card-body">
+                <div style="height:200px">
+                    <canvas id="obraDashChartProcessos"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-lg-4">
+        <div class="card h-80">
+            <div class="card-header">
+                Materiais
+            </div>
+            <div class="card-body">
+                <div style="height:200px">
+                    <canvas id="obraDashChartMateriais"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    function num(v) {
+        const s0 = String(v || '').trim().replace(/R\$\s*/i, '');
+        const hasComma = s0.includes(',');
+        const hasDot = s0.includes('.');
+        let s = s0;
+        if (hasComma && hasDot) s = s.replace(/\./g, '');
+        s = s.replace(',', '.');
+        const n = Number(s);
+        return Number.isFinite(n) ? n : 0;
+    }
+
+    let rendered = false;
+    function renderCharts() {
+        if (rendered) return;
+        rendered = true;
+        if (typeof Chart === 'undefined') return;
+
+        const investimento = num("{{ dash_total_investimento|default:0|floatformat:2 }}");
+        const despesa = num("{{ dash_total_despesa|default:0|floatformat:2 }}");
+        const receita = num("{{ dash_total_receita|default:0|floatformat:2 }}");
+        const saldoCalc = Math.max(0, investimento - despesa - receita);
+
+        const elFin = document.getElementById('obraDashChartFinanceiro');
+if (elFin) {
+    new Chart(elFin, {
+        type: 'doughnut',
+        data: {
+            labels: ['Investimento', 'Despesa', 'Receita', 'Saldo'],
+            datasets: [{
+                data: [investimento, despesa, receita, saldoCalc],
+                backgroundColor: ['#2e86c1', '#8b2f2f', '#356d35', '#567749'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '65%',
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        label: function (ctx) {
+                            const v = ctx.parsed;
+                            const lbl = ctx.label || '';
+                            return `${lbl}: R$ ${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+        const procTotal = Number("{{ dash_processos_total|default:0 }}") || 0;
+        const procAbertos = Number("{{ dash_processos_abertos|default:0 }}") || 0;
+        const procFechados = Math.max(0, procTotal - procAbertos);
+        const elProc = document.getElementById('obraDashChartProcessos');
+        if (elProc) {
+            new Chart(elProc, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Abertos', 'Fechados'],
+                    datasets: [{
+                        data: [procAbertos, procFechados],
+                        backgroundColor: ['#a04000', '#6c757d'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        }
+
+        const movLabels = [{% for t in dash_movimentos_por_tipo %}"{{ t.movm_tipo|escapejs }}"{% if not forloop.last %}, {% endif %}{% endfor %}];
+        const movValues = [{% for t in dash_movimentos_por_tipo %}{{ t.total|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+        const elMov = document.getElementById('obraDashChartMateriais');
+        if (elMov) {
+            new Chart(elMov, {
+                type: 'bar',
+                data: {
+                    labels: movLabels.length ? movLabels : ['-'],
+                    datasets: [{
+                        label: 'Movimentos',
+                        data: movLabels.length ? movValues : [0],
+                        backgroundColor: '#2e86c1',
+                        borderWidth: 0,
+                        maxBarThickness: 18,
+                        categoryPercentage: 0.6,
+                        barPercentage: 0.6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                    }
+                }
+            });
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const btnDash = document.querySelector('[data-bs-target="#tab-dashboard"]');
+        if (btnDash) {
+            btnDash.addEventListener('shown.bs.tab', function () {
+                renderCharts();
+            });
+        }
+
+        setTimeout(function () {
+            const dashPane = document.getElementById('tab-dashboard');
+            if (dashPane && dashPane.classList.contains('active')) {
+                renderCharts();
+            }
+        }, 100);
+    });
+
+})();
+</script>

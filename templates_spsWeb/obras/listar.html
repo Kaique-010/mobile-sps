@@ -1,0 +1,426 @@
+{% extends 'obras/base_obras.html' %}
+{% block title %}Listagem de Obras{% endblock %}
+{% block extra_css %}
+<style>
+  .dashboard-card {
+    transition: transform .2s, box-shadow .2s;
+    border-radius: 10px;
+    overflow: hidden
+  }
+
+  .dashboard-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, .1)
+  }
+
+  .obras-total-card {
+    background: linear-gradient(135deg, #a1c1e0 0%, #2b577c 100%);
+    color: #fff
+  }
+
+  .obras-planejadas-card {
+    background: linear-gradient(135deg, #b7d0a6 0%, #567749 100%);
+    color: #fff
+  }
+
+  .obras-andamento-card {
+    background: linear-gradient(135deg, #a7c4aa 0%, #5d8260 100%);
+    color: #fff
+  }
+
+  .obras-paralisadas-card {
+    background: linear-gradient(135deg, #e0b4a1 0%, #7c3f2b 100%);
+    color: #fff
+  }
+
+  .obras-concluidas-card {
+    background: linear-gradient(135deg, #a0a3c5 0%, #3b3e70 100%);
+    color: #fff
+  }
+
+  .obras-canceladas-card {
+    background: linear-gradient(135deg, #c7c7c7 0%, #6b6b6b 100%);
+    color: #fff
+  }
+
+  .obras-orcamento-card {
+    background: linear-gradient(135deg, #89cff0 0%, #1e5a8a 100%);
+    color: #fff
+  }
+
+  .obras-realizado-card {
+    background: linear-gradient(135deg, #f7c5a8 0%, #8a4b26 100%);
+    color: #fff
+  }
+
+  .obras-percentual-card {
+    background: linear-gradient(135deg, #b3e5c3 0%, #3f7f55 100%);
+    color: #fff
+  }
+
+  .card-icon {
+    font-size: 2.2rem;
+    opacity: .25;
+    position: absolute;
+    right: 15px;
+    bottom: 12px
+  }
+
+  @media (max-width:767.98px) {
+    .kpi-row {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory
+    }
+
+    .kpi-col {
+      flex: 0 0 260px;
+      max-width: 260px;
+      scroll-snap-align: start
+    }
+  }
+
+  .card-link {
+    display: block;
+    text-decoration: none
+  }
+</style>
+{% endblock %}
+{% block obras_content %}
+<div class="card-body">
+  <div class="d-md-none">
+    <button class="btn btn-outline-secondary w-100 mb-2" type="button" data-bs-toggle="collapse"
+      data-bs-target="#kpiCollapseObras" aria-expanded="false" aria-controls="kpiCollapseObras">
+      <i class="fas fa-chart-bar"></i> Filtros
+    </button>
+    <div class="collapse show" id="kpiCollapseObras">
+      <div class="row g-3 kpi-row mb-3">
+        <div class="col-md-3 kpi-col">
+          <div class="card h-100 border-0 dashboard-card position-relative obras-orcamento-card">
+            <div class="card-body d-flex flex-column justify-content-between p-3">
+              <div>
+                <h6 class="text-uppercase small fw-bold mb-2" style="opacity:.9;">Total em Orçamento</h6>
+                <h2 class="fw-bold mb-0 display-6">R$ {{ total_orcamento|default:0|floatformat:2 }}</h2>
+              </div>
+              <i class="fas fa-coins card-icon"></i>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3 kpi-col">
+          <div class="card h-100 border-0 dashboard-card position-relative obras-realizado-card">
+            <div class="card-body d-flex flex-column justify-content-between p-3">
+              <div>
+                <h6 class="text-uppercase small fw-bold mb-2" style="opacity:.9;">Total Realizado</h6>
+                <h2 class="fw-bold mb-0 display-6">R$ {{ total_custo|default:0|floatformat:2 }}</h2>
+              </div>
+              <i class="fas fa-money-bill-wave card-icon"></i>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3 kpi-col">
+          <div class="card h-100 border-0 dashboard-card position-relative obras-percentual-card">
+            <div class="card-body d-flex flex-column justify-content-between p-3">
+              <div>
+                <h6 class="text-uppercase small fw-bold mb-2" style="opacity:.9;">Percentual Usado</h6>
+                <h2 class="fw-bold mb-0 display-6">{{ percentual_custo|default:0|floatformat:2 }}%</h2>
+              </div>
+              <i class="fas fa-percent card-icon"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="row g-3 kpi-row">
+        <div class="col-md-3 kpi-col">
+          <a href="{% url 'gestaoobras:obras_list' slug=slug %}" class="card-link">
+            <div class="card h-100 border-0 dashboard-card position-relative obras-total-card">
+              <div class="card-body d-flex flex-column justify-content-between p-3">
+                <div>
+                  <h6 class="text-uppercase small fw-bold mb-2" style="opacity:.9;">Total</h6>
+                  <h2 class="fw-bold mb-0 display-6">{{ total_obras }}</h2>
+                </div>
+                <i class="fas fa-building card-icon"></i>
+              </div>
+            </div>
+          </a>
+        </div>
+        <div class="col-md-3 kpi-col">
+          <a href="{% url 'gestaoobras:obras_list' slug=slug %}?f=planejadas" class="card-link">
+            <div class="card h-100 border-0 dashboard-card position-relative obras-planejadas-card">
+              <div class="card-body d-flex flex-column justify-content-between p-3">
+                <div>
+                  <h6 class="text-uppercase small fw-bold mb-2" style="opacity:.9;">Planejadas</h6>
+                  <h2 class="fw-bold mb-0 display-6">{{ total_planejadas }}</h2>
+                </div>
+                <i class="fas fa-lightbulb card-icon"></i>
+              </div>
+            </div>
+          </a>
+        </div>
+        <div class="col-md-3 kpi-col">
+          <a href="{% url 'gestaoobras:obras_list' slug=slug %}?f=em-andamento" class="card-link">
+            <div class="card h-100 border-0 dashboard-card position-relative obras-andamento-card">
+              <div class="card-body d-flex flex-column justify-content-between p-3">
+                <div>
+                  <h6 class="text-uppercase small fw-bold mb-2" style="opacity:.9;">Em andamento</h6>
+                  <h2 class="fw-bold mb-0 display-6">{{ total_em_andamento }}</h2>
+                </div>
+                <i class="fas fa-spinner card-icon"></i>
+              </div>
+            </div>
+          </a>
+        </div>
+        <div class="col-md-3 kpi-col">
+          <a href="{% url 'gestaoobras:obras_list' slug=slug %}?f=paralisadas" class="card-link">
+            <div class="card h-100 border-0 dashboard-card position-relative obras-paralisadas-card">
+              <div class="card-body d-flex flex-column justify-content-between p-3">
+                <div>
+                  <h6 class="text-uppercase small fw-bold mb-2" style="opacity:.9;">Paralisadas</h6>
+                  <h2 class="fw-bold mb-0 display-6">{{ total_paralisadas }}</h2>
+                </div>
+                <i class="fas fa-pause card-icon"></i>
+              </div>
+            </div>
+          </a>
+        </div>
+        <div class="col-md-3 kpi-col">
+          <a href="{% url 'gestaoobras:obras_list' slug=slug %}?f=concluidas" class="card-link">
+            <div class="card h-100 border-0 dashboard-card position-relative obras-concluidas-card">
+              <div class="card-body d-flex flex-column justify-content-between p-3">
+                <div>
+                  <h6 class="text-uppercase small fw-bold mb-2" style="opacity:.9;">Concluídas</h6>
+                  <h2 class="fw-bold mb-0 display-6">{{ total_concluidas }}</h2>
+                </div>
+                <i class="fas fa-flag-checkered card-icon"></i>
+              </div>
+            </div>
+          </a>
+        </div>
+        <div class="col-md-3 kpi-col">
+          <a href="{% url 'gestaoobras:obras_list' slug=slug %}?f=canceladas" class="card-link">
+            <div class="card h-100 border-0 dashboard-card position-relative obras-canceladas-card">
+              <div class="card-body d-flex flex-column justify-content-between p-3">
+                <div>
+                  <h6 class="text-uppercase small fw-bold mb-2" style="opacity:.9;">Canceladas</h6>
+                  <h2 class="fw-bold mb-0 display-6">{{ total_canceladas }}</h2>
+                </div>
+                <i class="fas fa-ban card-icon"></i>
+              </div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="d-none d-md-block">
+    <div class="row g-3 mb-3">
+      <div class="col-md-4">
+        <div class="card h-100 border-0 dashboard-card position-relative obras-orcamento-card">
+          <div class="card-body d-flex flex-column justify-content-between p-3">
+            <div>
+              <h6 class="text-uppercase small fw-bold mb-2" style="opacity:.9;">Total em Orçamento</h6>
+              <h2 class="fw-bold mb-0 display-6">R$ {{ total_orcamento|default:0|floatformat:2 }}</h2>
+            </div>
+            <i class="fas fa-coins card-icon"></i>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card h-100 border-0 dashboard-card position-relative obras-realizado-card">
+          <div class="card-body d-flex flex-column justify-content-between p-3">
+            <div>
+              <h6 class="text-uppercase small fw-bold mb-2" style="opacity:.9;">Total Realizado</h6>
+              <h2 class="fw-bold mb-0 display-6">R$ {{ total_custo|default:0|floatformat:2 }}</h2>
+            </div>
+            <i class="fas fa-money-bill-wave card-icon"></i>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card h-100 border-0 dashboard-card position-relative obras-percentual-card">
+          <div class="card-body d-flex flex-column justify-content-between p-3">
+            <div>
+              <h6 class="text-uppercase small fw-bold mb-2" style="opacity:.9;">Percentual Usado</h6>
+              <h2 class="fw-bold mb-0 display-6">{{ percentual_custo|default:0|floatformat:2 }}%</h2>
+            </div>
+            <i class="fas fa-percent card-icon"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row g-3">
+      <div class="col-md-2">
+        <a href="{% url 'gestaoobras:obras_list' slug=slug %}" class="card-link">
+          <div class="card h-100 border-0 dashboard-card position-relative obras-total-card">
+            <div class="card-body d-flex flex-column justify-content-between p-3">
+              <div>
+                <h6 class="text-uppercase small fw-bold mb-2" style="opacity:.9;">Total</h6>
+                <h2 class="fw-bold mb-0 display-6">{{ total_obras }}</h2>
+              </div>
+              <i class="fas fa-building card-icon"></i>
+            </div>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-2">
+        <a href="{% url 'gestaoobras:obras_list' slug=slug %}?f=planejadas" class="card-link">
+          <div class="card h-100 border-0 dashboard-card position-relative obras-planejadas-card">
+            <div class="card-body d-flex flex-column justify-content-between p-3">
+              <div>
+                <h6 class="text-uppercase small fw-bold mb-2" style="opacity:.9;">Planejadas</h6>
+                <h2 class="fw-bold mb-0 display-6">{{ total_planejadas }}</h2>
+              </div>
+              <i class="fas fa-lightbulb card-icon"></i>
+            </div>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-2">
+        <a href="{% url 'gestaoobras:obras_list' slug=slug %}?f=em-andamento" class="card-link">
+          <div class="card h-100 border-0 dashboard-card position-relative obras-andamento-card">
+            <div class="card-body d-flex flex-column justify-content-between p-3">
+              <div>
+                <h6 class="text-uppercase small fw-bold mb-2" style="opacity:.9;">Em andamento</h6>
+                <h2 class="fw-bold mb-0 display-6">{{ total_em_andamento }}</h2>
+              </div>
+              <i class="fas fa-spinner card-icon"></i>
+            </div>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-2">
+        <a href="{% url 'gestaoobras:obras_list' slug=slug %}?f=paralisadas" class="card-link">
+          <div class="card h-100 border-0 dashboard-card position-relative obras-paralisadas-card">
+            <div class="card-body d-flex flex-column justify-content-between p-3">
+              <div>
+                <h6 class="text-uppercase small fw-bold mb-2" style="opacity:.9;">Paralisadas</h6>
+                <h2 class="fw-bold mb-0 display-6">{{ total_paralisadas }}</h2>
+              </div>
+              <i class="fas fa-pause card-icon"></i>
+            </div>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-2">
+        <a href="{% url 'gestaoobras:obras_list' slug=slug %}?f=concluidas" class="card-link">
+          <div class="card h-100 border-0 dashboard-card position-relative obras-concluidas-card">
+            <div class="card-body d-flex flex-column justify-content-between p-3">
+              <div>
+                <h6 class="text-uppercase small fw-bold mb-2" style="opacity:.9;">Concluídas</h6>
+                <h2 class="fw-bold mb-0 display-6">{{ total_concluidas }}</h2>
+              </div>
+              <i class="fas fa-flag-checkered card-icon"></i>
+            </div>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-2">
+        <a href="{% url 'gestaoobras:obras_list' slug=slug %}?f=canceladas" class="card-link">
+          <div class="card h-100 border-0 dashboard-card position-relative obras-canceladas-card">
+            <div class="card-body d-flex flex-column justify-content-between p-3">
+              <div>
+                <h6 class="text-uppercase small fw-bold mb-2" style="opacity:.9;">Canceladas</h6>
+                <h2 class="fw-bold mb-0 display-6">{{ total_canceladas }}</h2>
+              </div>
+              <i class="fas fa-ban card-icon"></i>
+            </div>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="card">
+  <div class="card-header">
+    <i class="fas fa-list"></i> Obras
+  </div>
+  <div class="card-body p-0">
+    {% if obras_alertas %}
+    <div class="alert alert-warning m-3">
+      <i class="fas fa-triangle-exclamation"></i> Obras próximas do orçamento:
+      <ul class="mb-0">
+        {% for nome in obras_alertas %}
+        <li>{{ nome }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+    <div class="d-block d-md-none p-2">
+      {% for o in obras %}
+      <div class="card mb-2">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div class="fw-bold">
+              <a href="{% url 'gestaoobras:obras_detail' slug=slug obra_id=o.id %}">{{ o.obra_codi }}</a>
+            </div>
+            <div class="badge bg-secondary">
+              {% if o.get_obra_stat_display %}{{ o.get_obra_stat_display }}{% else %}{{ o.obra_stat }}{% endif %}
+            </div>
+          </div>
+          <div class="mb-1">
+            <a class="text-decoration-none" href="{% url 'gestaoobras:obras_detail' slug=slug obra_id=o.id %}">{{ o.obra_nome }}</a>
+          </div>
+          <div class="text-muted small mb-2">
+            {% if o.obra_cliente_nome %}
+            {{ o.obra_cliente_nome }} <span class="text-muted">({{ o.obra_clie }})</span>
+            {% else %}
+            {{ o.obra_clie }}
+            {% endif %}
+          </div>
+          <div class="d-flex justify-content-between">
+            <div>Orçado: <span class="fw-bold">R$ {{ o.obra_orca|default:0|floatformat:2 }}</span></div>
+            <div>Realizado: <span class="fw-bold {{ o.orcamento_class }}">R$ {{ o.obra_cust|default:0|floatformat:2 }}</span></div>
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <div class="text-center text-muted py-3">Nenhuma obra encontrada.</div>
+      {% endfor %}
+    </div>
+    <div class="d-none d-md-block">
+      <table class="table table-striped mb-0">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Nome</th>
+            <th>Status</th>
+            <th>Cliente</th>
+            <th>Orçado</th>
+            <th>Realizado </th>
+            <th>Inicio</th>
+            <th>Fim</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for o in obras %}
+          <tr>
+            <td>
+              <a href="{% url 'gestaoobras:obras_detail' slug=slug obra_id=o.id %}">{{ o.obra_codi }}</a>
+            </td>
+            <td>
+              <a class="text-decoration-none"
+                href="{% url 'gestaoobras:obras_detail' slug=slug obra_id=o.id %}">{{o.obra_nome }}</a>
+            </td>
+            <td>{% if o.get_obra_stat_display %}{{ o.get_obra_stat_display }}{% else %}{{ o.obra_stat }}{% endif %}</td>
+            <td>
+              {% if o.obra_cliente_nome %}
+              {{ o.obra_cliente_nome }} <span class="text-muted">({{ o.obra_clie }})</span>
+              {% else %}
+              {{ o.obra_clie }}
+              {% endif %}
+            </td>
+            <td>{{ o.obra_orca }}</td>
+            <td><span class="{{ o.orcamento_class }}">{{ o.obra_cust }}</span></td>
+            <td>{{ o.obra_dini }}</td>
+            <td>{{ o.obra_dfim }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center">Nenhuma obra encontrada.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

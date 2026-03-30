@@ -1,0 +1,664 @@
+{% extends 'obras/base_obras.html' %}
+{% block title %}
+{% if form %}{% if form.instance.pk %}Editar Movimento de Materiais{% else %}Movimento de Materiais{% endif %}{% else
+%}Movimento de Materiais{% endif %} - Obra {{ obra.obra_codi }}
+{% endblock %}
+{% block extra_css %}
+<style>
+    .autocomplete-dropdown {
+        max-height: 260px;
+        overflow: auto
+    }
+
+    .autocomplete-float {
+        position: fixed;
+        z-index: 5000;
+        display: none;
+    }
+</style>
+{% endblock %}
+{% block obras_content %}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div>
+        <h5 class="mb-0">{% if form %}{% if form.instance.pk %}Editar Movimento de Materiais{% else %}Movimento de
+            Materiais{% endif %}{% else %}Movimento de Materiais{% endif %}</h5>
+        <div class="text-muted small">{{ obra.obra_codi }} - {{ obra.obra_nome }}</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary btn-sm"
+            href="{% url 'gestaoobras:obras_materiais_list' slug=slug obra_id=obra.id %}">Voltar</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if cab_form and itens_formset %}
+        <form method="post" class="row g-3">
+            {% csrf_token %}
+            {{ cab_form.movm_empr }}{{ cab_form.movm_fili }}{{ cab_form.movm_obra }}{{ cab_form.movm_codi.as_hidden }}
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="{{ cab_form.movm_data.id_for_label }}">Data</label>
+                {{ cab_form.movm_data }}
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="{{ cab_form.movm_tipo.id_for_label }}">Tipo</label>
+                {{ cab_form.movm_tipo }}
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="{{ cab_form.movm_etap.id_for_label }}">Etapa</label>
+                {{ cab_form.movm_etap }}
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="{{ cab_form.movm_docu.id_for_label }}">Documento</label>
+                {{ cab_form.movm_docu }}
+            </div>
+            <div class="col-12 col-md-3">
+                <div class="form-check mt-4">
+                    {{ cab_form.gerar_financeiro }}
+                    <label class="form-check-label" for="{{ cab_form.gerar_financeiro.id_for_label }}">Gerar
+                        Financeiro</label>
+                </div>
+                <input type="hidden" name="fin_tipo" id="id_fin_tipo">
+                <input type="hidden" name="fin_parcelas" id="id_fin_parcelas" value="1">
+                <input type="hidden" name="fin_primeiro_venc" id="id_fin_primeiro_venc">
+                <input type="hidden" name="fin_intervalo" id="id_fin_intervalo" value="30">
+            </div>
+            <div class="col-12 col-md-3 d-flex align-items-end justify-content-end">
+                <div class="border rounded px-3 py-2 w-100">
+                    <div class="d-flex justify-content-between small">
+                        <span class="text-muted">Itens</span>
+                        <span id="movTotItens">0</span>
+                    </div>
+                    <div class="d-flex justify-content-between small">
+                        <span class="text-muted">Qtd</span>
+                        <span id="movTotQuan">0</span>
+                    </div>
+                    <div class="d-flex justify-content-between small">
+                        <span class="text-muted">Total</span>
+                        <span id="movTotValor">R$ 0,00</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                {{ itens_formset.management_form }}
+                {% if itens_formset.non_form_errors %}
+                <div class="alert alert-danger py-2 mb-2">{{ itens_formset.non_form_errors }}</div>
+                {% endif %}
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width: 22%;">Produto</th>
+                                <th>Descrição</th>
+                                <th style="width: 10%;">Unid.</th>
+                                <th style="width: 14%;">Quantidade</th>
+                                <th style="width: 14%;">Custo Unit.</th>
+                            </tr>
+                        </thead>
+                        <tbody id="itens-body">
+                            {% for f in itens_formset %}
+                            <tr data-item-row="1">
+                                <td class="position-relative">
+                                    {{ f.movm_prod }}
+                                    <div class="autocomplete-dropdown list-group position-absolute w-100 produto-dropdown"
+                                        style="z-index: 1000; top: 100%; left: 0;"></div>
+                                    {{ f.movm_prod.errors }}
+                                </td>
+                                <td>
+                                    {{ f.movm_desc }}
+                                    {{ f.movm_desc.errors }}
+                                </td>
+                                <td>
+                                    {{ f.movm_unid }}
+                                    {{ f.movm_unid.errors }}
+                                </td>
+                                <td>
+                                    {{ f.movm_quan }}
+                                    {{ f.movm_quan.errors }}
+                                </td>
+                                <td>
+                                    {{ f.movm_cuni }}
+                                    {{ f.movm_cuni.errors }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="d-flex gap-2 mt-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="add-item">Adicionar Item</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="remove-item">Remover
+                        Último</button>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <label class="form-label" for="{{ cab_form.movm_obse.id_for_label }}">Observação</label>
+                {{ cab_form.movm_obse }}
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">Salvar</button>
+            </div>
+        </form>
+        {% else %}
+        <form method="post" class="row g-3">
+            {% csrf_token %}
+            {{ form.movm_empr }}{{ form.movm_fili }}{{ form.movm_obra }}{% if not form.instance.pk %}{{
+            form.movm_codi.as_hidden }}{% endif %}
+            {% if form.instance.pk %}
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="{{ form.movm_codi.id_for_label }}">Código</label>
+                {{ form.movm_codi }}
+            </div>
+            {% endif %}
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="{{ form.movm_data.id_for_label }}">Data</label>
+                {{ form.movm_data }}
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="{{ form.movm_tipo.id_for_label }}">Tipo</label>
+                {{ form.movm_tipo }}
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="{{ form.movm_etap.id_for_label }}">Etapa</label>
+                {{ form.movm_etap }}
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="{{ form.movm_prod.id_for_label }}">Produto</label>
+                {{ form.movm_prod }}
+                <div id="produto-dropdown" class="autocomplete-dropdown list-group position-absolute w-100"
+                    style="z-index: 1000; top: 100%; left: 0;"></div>
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="{{ form.movm_desc.id_for_label }}">Descrição</label>
+                {{ form.movm_desc }}
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="{{ form.movm_unid.id_for_label }}">Unid.</label>
+                {{ form.movm_unid }}
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="{{ form.movm_quan.id_for_label }}">Quantidade</label>
+                {{ form.movm_quan }}
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label" for="{{ form.movm_cuni.id_for_label }}">Custo Unit.</label>
+                {{ form.movm_cuni }}
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="{{ form.movm_docu.id_for_label }}">Documento</label>
+                {{ form.movm_docu }}
+            </div>
+            <div class="col-12">
+                <div class="form-check">
+                    {{ form.gerar_financeiro }}
+                    <label class="form-check-label" for="{{ form.gerar_financeiro.id_for_label }}">Gerar
+                        Financeiro</label>
+                </div>
+                <input type="hidden" name="fin_tipo" id="id_fin_tipo">
+                <input type="hidden" name="fin_parcelas" id="id_fin_parcelas" value="1">
+                <input type="hidden" name="fin_primeiro_venc" id="id_fin_primeiro_venc">
+                <input type="hidden" name="fin_intervalo" id="id_fin_intervalo" value="30">
+            </div>
+            <div class="col-12">
+                <label class="form-label" for="{{ form.movm_obse.id_for_label }}">Observação</label>
+                {{ form.movm_obse }}
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">Salvar</button>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+</div>
+<div class="card mt-3">
+    <div class="card-body">
+        <div class="row g-2 small">
+            <div class="col-12 col-md-6"><span class="text-muted">Produto:</span> <span id="produtoInfoNome">-</span>
+            </div>
+            <div class="col-12 col-md-3"><span class="text-muted">Unidade:</span> <span id="produtoInfoUnid">-</span>
+            </div>
+            <div class="col-12 col-md-3"><span class="text-muted">NCM:</span> <span id="produtoInfoNcm">-</span></div>
+            <div class="col-12 col-md-6"><span class="text-muted">GTIN:</span> <span id="produtoInfoGtin">-</span></div>
+            <div class="col-12 col-md-6"><span class="text-muted">Código Barras:</span> <span
+                    id="produtoInfoCoba">-</span></div>
+            <div class="col-12 col-md-6"><span class="text-muted">Local:</span> <span id="produtoInfoLoca">-</span>
+            </div>
+            <div class="col-12 col-md-6"><span class="text-muted">Serviço:</span> <span id="produtoInfoServ">-</span>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="modalFinanceiro" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Configurar Financeiro</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Natureza</label>
+                    <select class="form-select" id="mf_tipo">
+                        <option value="DE">Pago (Despesa)</option>
+                        <option value="CR">Recebido (Receita)</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Parcelas</label>
+                    <input type="number" min="1" step="1" class="form-control" id="mf_parcelas" value="1">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Primeiro vencimento</label>
+                    <input type="date" class="form-control" id="mf_primeiro_venc">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Intervalo (dias)</label>
+                    <input type="number" min="1" step="1" class="form-control" id="mf_intervalo" value="30">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="mf_confirmar">Confirmar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+    (function () {
+        const url = "{% url 'gestaoobras:obras_autocomplete_produtos' slug=slug %}";
+        const slug = "{{ slug|escapejs }}";
+        const cadastroRapidoUrl = `/api/${encodeURIComponent(slug)}/produtos/produtos/cadastro_rapido/`;
+        const inputEl = document.getElementById("{{ form.movm_prod.id_for_label|escapejs }}");
+        const descEl = document.getElementById("{{ form.movm_desc.id_for_label|escapejs }}");
+        const unidEl = document.getElementById("{{ form.movm_unid.id_for_label|escapejs }}");
+
+        const infoNome = document.getElementById("produtoInfoNome");
+        const infoUnid = document.getElementById("produtoInfoUnid");
+        const infoNcm = document.getElementById("produtoInfoNcm");
+        const infoGtin = document.getElementById("produtoInfoGtin");
+        const infoCoba = document.getElementById("produtoInfoCoba");
+        const infoLoca = document.getElementById("produtoInfoLoca");
+        const infoServ = document.getElementById("produtoInfoServ");
+
+        function setInfo(item) {
+            infoNome.textContent = (item && item.prod_nome) ? item.prod_nome : "-";
+            infoUnid.textContent = (item && (item.unid_codi || item.unid_desc)) ? `${item.unid_codi || ""}${item.unid_codi && item.unid_desc ? " - " : ""}${item.unid_desc || ""}` : "-";
+            infoNcm.textContent = (item && item.prod_ncm) ? item.prod_ncm : "-";
+            infoGtin.textContent = (item && item.prod_gtin) ? item.prod_gtin : "-";
+            infoCoba.textContent = (item && item.prod_coba) ? item.prod_coba : "-";
+            infoLoca.textContent = (item && item.prod_loca) ? item.prod_loca : "-";
+            if (item && item.prod_e_serv) {
+                infoServ.textContent = (item.prod_codi_serv || item.prod_desc_serv) ? `${item.prod_codi_serv || ""}${item.prod_codi_serv && item.prod_desc_serv ? " - " : ""}${item.prod_desc_serv || ""}` : "Sim";
+            } else {
+                infoServ.textContent = "-";
+            }
+        }
+
+        const dropdownFloat = document.createElement("div");
+        dropdownFloat.className = "autocomplete-dropdown list-group shadow autocomplete-float";
+        dropdownFloat.id = "produto-dropdown-floating";
+        dropdownFloat.style.background = "var(--bs-body-bg)";
+        document.body.appendChild(dropdownFloat);
+
+        const acState = {
+            input: null,
+            debounce: null,
+            controller: null,
+        };
+
+        function hideDropdown() {
+            dropdownFloat.innerHTML = "";
+            dropdownFloat.style.display = "none";
+        }
+
+        function positionDropdown(input) {
+            const r = input.getBoundingClientRect();
+            dropdownFloat.style.left = `${Math.max(0, r.left)}px`;
+            dropdownFloat.style.top = `${Math.max(0, r.bottom)}px`;
+            dropdownFloat.style.width = `${Math.max(240, r.width)}px`;
+        }
+
+        function clearSelection() {
+            setInfo(null);
+        }
+
+        function getCsrfToken() {
+            const input = document.querySelector("input[name='csrfmiddlewaretoken']");
+            if (input && input.value) return String(input.value);
+            const m = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+            return m ? decodeURIComponent(m[1]) : "";
+        }
+
+        async function cadastrarProdutoRapido(term, input) {
+            const row = input.closest("tr");
+            const rowDesc = row ? row.querySelector("input[name$='-movm_desc']") : descEl;
+            const rowUnid = row ? row.querySelector("input[name$='-movm_unid']") : unidEl;
+            const unme = ((rowUnid && rowUnid.value) ? String(rowUnid.value).trim() : "UN") || "UN";
+            const empresa = (document.querySelector("input[name$='movm_empr']") || {}).value || "";
+            const filial = (document.querySelector("input[name$='movm_fili']") || {}).value || "";
+
+            const resp = await fetch(cadastroRapidoUrl, {
+                method: "POST",
+                credentials: "same-origin",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": getCsrfToken(),
+                    "X-Requested-With": "XMLHttpRequest",
+                    "X-Empresa": empresa ? String(empresa) : "",
+                    "X-Filial": filial ? String(filial) : "",
+                },
+                body: JSON.stringify({ prod_nome: term, unme }),
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok) {
+                const msg = (data && (data.detail || data.error)) ? (data.detail || data.error) : "Falha ao cadastrar produto.";
+                if (window.showToast) window.showToast(msg, { variant: "danger", delay: 3500 });
+                return;
+            }
+
+            const codigo = data && (data.prod_codi || data.prod_codi_nume) ? String(data.prod_codi || data.prod_codi_nume) : "";
+            if (codigo) input.value = codigo;
+            if (rowDesc && data && data.prod_nome) rowDesc.value = data.prod_nome;
+
+            try {
+                const r2 = await fetch(`${url}?term=${encodeURIComponent(codigo || term)}`, { credentials: "same-origin" });
+                const d2 = await r2.json();
+                const results = (d2 && d2.results) ? d2.results : [];
+                const item = results.find((x) => String(x.id) === String(codigo)) || results[0] || null;
+                if (item) {
+                    if (item.id) input.value = item.id;
+                    if (rowDesc && item.prod_nome) rowDesc.value = item.prod_nome;
+                    if (rowUnid && item.unid_codi) rowUnid.value = item.unid_codi;
+                    setInfo(item);
+                }
+            } catch (e) { }
+
+            hideDropdown();
+            if (window.showToast) window.showToast("Produto cadastrado.", { variant: "success", delay: 2500 });
+            const qty = row ? row.querySelector("input[name$='-movm_quan']") : document.getElementById("{{ form.movm_quan.id_for_label|escapejs }}");
+            if (qty) qty.focus();
+        }
+
+        async function fetchAndRender(term, input) {
+            try {
+                if (acState.controller) acState.controller.abort();
+                acState.controller = new AbortController();
+                const resp = await fetch(`${url}?term=${encodeURIComponent(term)}`, {
+                    signal: acState.controller.signal,
+                    credentials: "same-origin",
+                });
+                const data = await resp.json();
+                const results = (data && data.results) ? data.results : [];
+                dropdownFloat.innerHTML = "";
+                if (!results.length) {
+                    positionDropdown(input);
+                    dropdownFloat.style.display = "block";
+                    const div = document.createElement("div");
+                    div.className = "list-group-item d-flex align-items-center justify-content-between gap-2";
+                    const span = document.createElement("span");
+                    span.className = "text-muted";
+                    span.textContent = "Nenhum produto encontrado.";
+                    const btn = document.createElement("button");
+                    btn.type = "button";
+                    btn.className = "btn btn-sm btn-outline-primary";
+                    btn.textContent = "Cadastrar rápido";
+                    btn.addEventListener("mousedown", (ev) => ev.preventDefault());
+                    btn.addEventListener("click", async (ev) => {
+                        ev.preventDefault();
+                        btn.disabled = true;
+                        try {
+                            await cadastrarProdutoRapido(term, input);
+                        } finally {
+                            btn.disabled = false;
+                        }
+                    });
+                    div.appendChild(span);
+                    div.appendChild(btn);
+                    dropdownFloat.appendChild(div);
+                    return;
+                }
+                positionDropdown(input);
+                dropdownFloat.style.display = "block";
+                results.forEach((item) => {
+                    const a = document.createElement("a");
+                    a.className = "list-group-item list-group-item-action";
+                    a.href = "#";
+                    a.textContent = item.text || "";
+                    a.addEventListener("mousedown", (ev) => ev.preventDefault());
+                    a.addEventListener("click", (ev) => {
+                        ev.preventDefault();
+                        const row = input.closest("tr");
+                        const rowDesc = row ? row.querySelector("input[name$='-movm_desc']") : descEl;
+                        const rowUnid = row ? row.querySelector("input[name$='-movm_unid']") : unidEl;
+                        input.value = item.id || "";
+                        if (rowDesc && item.prod_nome) rowDesc.value = item.prod_nome;
+                        if (rowUnid && item.unid_codi) rowUnid.value = item.unid_codi;
+                        setInfo(item);
+                        hideDropdown();
+                        const qty = row ? row.querySelector("input[name$='-movm_quan']") : document.getElementById("{{ form.movm_quan.id_for_label|escapejs }}");
+                        if (qty) qty.focus();
+                    });
+                    dropdownFloat.appendChild(a);
+                });
+            } catch (e) {
+                if (e && e.name === "AbortError") return;
+                hideDropdown();
+            }
+        }
+
+        function bindAutocomplete(input) {
+            if (!input || input.__acBound) return;
+            input.__acBound = true;
+
+            input.addEventListener("focus", () => {
+                acState.input = input;
+            });
+
+            input.addEventListener("input", (e) => {
+                const term = (e.target.value || "").trim();
+                clearTimeout(acState.debounce);
+                clearSelection();
+                acState.input = input;
+                if (!term) {
+                    hideDropdown();
+                    return;
+                }
+                const minChars = (/^\d+$/.test(term) ? 1 : 3);
+                if (term.length < minChars) {
+                    hideDropdown();
+                    return;
+                }
+                acState.debounce = setTimeout(() => fetchAndRender(term, input), 250);
+            });
+
+            input.addEventListener("blur", () => {
+                setTimeout(() => {
+                    if (document.activeElement && dropdownFloat.contains(document.activeElement)) return;
+                    hideDropdown();
+                }, 150);
+            });
+        }
+
+        bindAutocomplete(inputEl);
+        document.querySelectorAll("input[name$='-movm_prod']").forEach((inp) => bindAutocomplete(inp));
+
+        window.addEventListener(
+            "scroll",
+            () => {
+                if (acState.input && dropdownFloat.style.display === "block") positionDropdown(acState.input);
+            },
+            true
+        );
+        window.addEventListener("resize", () => {
+            if (acState.input && dropdownFloat.style.display === "block") positionDropdown(acState.input);
+        });
+        document.addEventListener("click", (e) => {
+            if (!dropdownFloat.contains(e.target) && e.target !== acState.input) hideDropdown();
+        });
+
+        const addBtn = document.getElementById("add-item");
+        const removeBtn = document.getElementById("remove-item");
+        const body = document.getElementById("itens-body");
+        const totalEl = document.getElementById("id_itens-TOTAL_FORMS");
+
+        function reindexRow(row, index) {
+            row.querySelectorAll("[name],[id],[for]").forEach((el) => {
+                ["name", "id", "for"].forEach((attr) => {
+                    const v = el.getAttribute(attr);
+                    if (!v) return;
+                    el.setAttribute(attr, v.replace(/itens-(\d+)-/g, `itens-${index}-`));
+                });
+            });
+        }
+
+        function clearRow(row) {
+            row.querySelectorAll("input").forEach((inp) => {
+                inp.value = "";
+            });
+            row.querySelectorAll(".produto-dropdown").forEach((dd) => dd.innerHTML = "");
+        }
+
+        function parsePtDecimal(v) {
+            if (v === null || v === undefined) return 0;
+            const s0 = String(v).trim();
+            if (!s0) return 0;
+            let s = s0.replace(/\s+/g, "");
+            if (s.includes(",") && s.includes(".")) s = s.replace(/\./g, "");
+            s = s.replace(",", ".");
+            const n = Number(s);
+            return Number.isFinite(n) ? n : 0;
+        }
+
+        function formatBRL(n) {
+            const v = Number.isFinite(n) ? n : 0;
+            return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+        }
+
+        function updateTotals() {
+            if (!body) return;
+            const elItens = document.getElementById("movTotItens");
+            const elQuan = document.getElementById("movTotQuan");
+            const elValor = document.getElementById("movTotValor");
+            if (!elItens || !elQuan || !elValor) return;
+
+            const rows = Array.from(body.querySelectorAll("tr[data-item-row='1']"));
+            let totalQtd = 0;
+            let totalValor = 0;
+            rows.forEach((row) => {
+                const q = parsePtDecimal(row.querySelector("input[name$='-movm_quan']")?.value);
+                const c = parsePtDecimal(row.querySelector("input[name$='-movm_cuni']")?.value);
+                totalQtd += q;
+                totalValor += q * c;
+            });
+            elItens.textContent = String(rows.length);
+            elQuan.textContent = totalQtd.toLocaleString("pt-BR");
+            elValor.textContent = formatBRL(totalValor);
+        }
+
+        if (body && body.dataset.totalsBound !== "1") {
+            body.dataset.totalsBound = "1";
+            body.addEventListener("input", (e) => {
+                const t = e.target;
+                if (!(t instanceof HTMLElement)) return;
+                if (t.matches("input[name$='-movm_quan'], input[name$='-movm_cuni']")) updateTotals();
+            });
+        }
+
+        if (addBtn && body && totalEl && addBtn.dataset.bound !== "1") {
+            addBtn.dataset.bound = "1";
+            addBtn.addEventListener("click", () => {
+                const rows = body.querySelectorAll("tr[data-item-row='1']");
+                const last = rows[rows.length - 1];
+                const clone = last.cloneNode(true);
+                const newIndex = rows.length;
+                reindexRow(clone, newIndex);
+                clearRow(clone);
+                body.appendChild(clone);
+                totalEl.value = String(newIndex + 1);
+                const prod = clone.querySelector("input[name$='-movm_prod']");
+                bindAutocomplete(prod);
+                if (prod) prod.focus();
+                updateTotals();
+            });
+        }
+
+        if (removeBtn && body && totalEl && removeBtn.dataset.bound !== "1") {
+            removeBtn.dataset.bound = "1";
+            removeBtn.addEventListener("click", () => {
+                const rows = body.querySelectorAll("tr[data-item-row='1']");
+                if (rows.length <= 1) {
+                    clearRow(rows[0]);
+                    setInfo(null);
+                    updateTotals();
+                    return;
+                }
+                rows[rows.length - 1].remove();
+                totalEl.value = String(rows.length - 1);
+                updateTotals();
+            });
+        }
+
+        const gerarFin = document.querySelector("input[name$='gerar_financeiro']");
+        const tipoSel = document.querySelector("select[name$='movm_tipo']");
+        const finTipo = document.getElementById("id_fin_tipo");
+        const finParc = document.getElementById("id_fin_parcelas");
+        const finPrimeiro = document.getElementById("id_fin_primeiro_venc");
+        const finInter = document.getElementById("id_fin_intervalo");
+
+        const mf = {
+            modalEl: document.getElementById("modalFinanceiro"),
+            tipo: document.getElementById("mf_tipo"),
+            parcelas: document.getElementById("mf_parcelas"),
+            primeiro: document.getElementById("mf_primeiro_venc"),
+            intervalo: document.getElementById("mf_intervalo"),
+            confirmar: document.getElementById("mf_confirmar"),
+        };
+        let bsModal = null;
+        if (mf.modalEl && typeof bootstrap !== "undefined") {
+            bsModal = new bootstrap.Modal(mf.modalEl);
+        }
+
+        function defaultTipo() {
+            const v = (tipoSel && tipoSel.value) || "SA";
+            return v === "EN" ? "CR" : "DE";
+        }
+        function preencherPadroes() {
+            if (mf.tipo) mf.tipo.value = defaultTipo();
+            if (mf.parcelas) mf.parcelas.value = "1";
+            if (mf.intervalo) mf.intervalo.value = "30";
+            const dataInput = document.querySelector("input[name$='movm_data']");
+            if (mf.primeiro) mf.primeiro.value = dataInput ? dataInput.value : "";
+        }
+        function aplicar() {
+            if (finTipo && mf.tipo) finTipo.value = mf.tipo.value;
+            if (finParc && mf.parcelas) finParc.value = mf.parcelas.value || "1";
+            if (finPrimeiro && mf.primeiro) finPrimeiro.value = mf.primeiro.value || "";
+            if (finInter && mf.intervalo) finInter.value = mf.intervalo.value || "30";
+        }
+        if (gerarFin && bsModal) {
+            gerarFin.addEventListener("change", (e) => {
+                if (e.target.checked) {
+                    preencherPadroes();
+                    bsModal.show();
+                } else {
+                    if (finTipo) finTipo.value = "";
+                    if (finParc) finParc.value = "1";
+                    if (finPrimeiro) finPrimeiro.value = "";
+                    if (finInter) finInter.value = "30";
+                }
+            });
+            if (mf.confirmar) {
+                mf.confirmar.addEventListener("click", () => {
+                    aplicar();
+                    bsModal.hide();
+                });
+            }
+        }
+        updateTotals();
+    })();
+</script>
+{% endblock %}

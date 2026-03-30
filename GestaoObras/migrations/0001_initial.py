@@ -8,7 +8,6 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ("Entidades", "0005_auto_20251128_2101"),
     ]
 
     operations = [
@@ -37,14 +36,8 @@ class Migration(migrations.Migration):
                 ("obra_ativ", models.BooleanField(default=True)),
                 ("obra_crea", models.DateTimeField(auto_now_add=True)),
                 ("obra_alte", models.DateTimeField(auto_now=True)),
-                (
-                    "obra_clie",
-                    models.ForeignKey(db_column="obra_clie", on_delete=django.db.models.deletion.PROTECT, related_name="obras_cliente", to="Entidades.entidades"),
-                ),
-                (
-                    "obra_resp",
-                    models.ForeignKey(blank=True, db_column="obra_resp", null=True, on_delete=django.db.models.deletion.PROTECT, related_name="obras_responsavel", to="Entidades.entidades"),
-                ),
+                ("obra_clie", models.IntegerField(db_column="obra_clie")),
+                ("obra_resp", models.IntegerField(blank=True, null=True, db_column="obra_resp")),
             ],
             options={"db_table": "gestao_obras", "ordering": ("-obra_codi",), "unique_together": {("obra_empr", "obra_fili", "obra_codi")}},
         ),
@@ -128,7 +121,7 @@ class Migration(migrations.Migration):
                 ("proc_alte", models.DateTimeField(auto_now=True)),
                 ("proc_etap", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="processos", to="GestaoObras.obraetapa")),
                 ("proc_obra", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="processos", to="GestaoObras.obra")),
-                ("proc_resp", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="processos_obra_responsavel", to="Entidades.entidades")),
+                ("proc_resp", models.IntegerField(blank=True, null=True)),
             ],
             options={"db_table": "gestao_obras_processos", "ordering": ("-proc_codi",), "unique_together": {("proc_empr", "proc_fili", "proc_codi")}},
         ),

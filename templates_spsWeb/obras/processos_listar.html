@@ -1,0 +1,62 @@
+{% extends 'obras/base_obras.html' %}
+{% block title %}Processos - Obra {{ obra.obra_codi }}{% endblock %}
+{% block obras_content %}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+  <div>
+    <h5 class="mb-0">Processos</h5>
+    <div class="text-muted small">{{ obra.obra_codi }} - {{ obra.obra_nome }}</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'gestaoobras:obras_detail' slug=slug obra_id=obra.id %}">Voltar</a>
+    <a class="btn btn-primary btn-sm" href="{% url 'gestaoobras:obras_processos_create' slug=slug obra_id=obra.id %}">Novo Processo</a>
+  </div>
+</div>
+
+<form method="get" class="row g-2 mb-3">
+  <div class="col-12 col-md-5">
+    <select name="etapa_id" class="form-select">
+      <option value="">Todas as etapas</option>
+      {% for e in etapas %}
+      <option value="{{ e.id }}" {% if etapa_id|default:'' == e.id|stringformat:'s' %}selected{% endif %}>{{ e.etap_codi }} - {{ e.etap_nome }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-12 col-md-3">
+    <select name="status" class="form-select">
+      <option value="">Todos os status</option>
+      <option value="AB" {% if status == 'AB' %}selected{% endif %}>Aberto</option>
+      <option value="EA" {% if status == 'EA' %}selected{% endif %}>Em andamento</option>
+      <option value="CO" {% if status == 'CO' %}selected{% endif %}>Concluído</option>
+      <option value="BL" {% if status == 'BL' %}selected{% endif %}>Bloqueado</option>
+    </select>
+  </div>
+  <div class="col-12 col-md-2">
+    <button type="submit" class="btn btn-outline-secondary w-100">Filtrar</button>
+  </div>
+</form>
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-striped mb-0">
+      <thead>
+        <tr><th>Código</th><th>Título</th><th>Etapa</th><th>Prioridade</th><th>Status</th><th>Resp</th><th>Limite</th></tr>
+      </thead>
+      <tbody>
+        {% for p in processos %}
+        <tr>
+          <td>{{ p.proc_codi }}</td>
+          <td>{{ p.proc_titu }}</td>
+          <td>{{ p.proc_etap_id }}</td>
+          <td>{{ p.proc_prio }}</td>
+          <td>{{ p.get_proc_stat_display }}</td>
+          <td>{{ p.proc_resp }}</td>
+          <td>{% if p.proc_dlim %}{{ p.proc_dlim|date:'d/m/Y' }}{% else %}-{% endif %}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-center text-muted py-3">Nenhum processo encontrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -56,4 +56,5 @@ urlpatterns = [
     path("<slug:slug>/bens/", include("bens.Web.urls")),
     path("<slug:slug>/transportes/", include("transportes.Web.urls")),
     path("<slug:slug>/auditoria/", include("auditoria.Web.urls")),
+    path("<slug:slug>/gestao-obras/", include("GestaoObras.web.web_urls")),
 ]

@@ -1,0 +1,117 @@
+<div class="row g-2 kpi-row mb-3">
+    <div class="col-6 col-md-3 kpi-col">
+        <div class="card h-100 border-0 dashboard-card position-relative dash-investimento-card kpi-card">
+            <div class="card-body d-flex flex-column justify-content-between p-2">
+                <div>
+                    <div class="text-uppercase small fw-bold mb-1" style="opacity:.9;">Investimento</div>
+                    <div class="h5 fw-bold mb-0">R$ {{ dash_total_investimento|default:0|floatformat:2 }}</div>
+                </div>
+                <i class="fas fa-piggy-bank card-icon"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6 col-md-3 kpi-col">
+        <div class="card h-100 border-0 dashboard-card position-relative dash-despesa-card kpi-card">
+            <div class="card-body d-flex flex-column justify-content-between p-2">
+                <div>
+                    <div class="text-uppercase small fw-bold mb-1" style="opacity:.9;">Despesa</div>
+                    <div class="h5 fw-bold mb-0">R$ {{ dash_total_despesa|default:0|floatformat:2 }}</div>
+                </div>
+                <i class="fas fa-arrow-down card-icon"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6 col-md-3 kpi-col">
+        <div class="card h-100 border-0 dashboard-card position-relative dash-receita-card kpi-card">
+            <div class="card-body d-flex flex-column justify-content-between p-2">
+                <div>
+                    <div class="text-uppercase small fw-bold mb-1" style="opacity:.9;">Receita</div>
+                    <div class="h5 fw-bold mb-0">R$ {{ dash_total_receita|default:0|floatformat:2 }}</div>
+                </div>
+                <i class="fas fa-arrow-up card-icon"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6 col-md-3 kpi-col">
+        <div class="card h-100 border-0 dashboard-card position-relative dash-saldo-card kpi-card">
+            <div class="card-body d-flex flex-column justify-content-between p-2">
+                <div>
+                    <div class="text-uppercase small fw-bold mb-1" style="opacity:.9;">Saldo</div>
+                    <div class="h5 fw-bold mb-0">R$ {{ dash_saldo|default:0|floatformat:2 }}</div>
+                    <div class="small" style="opacity:.9;">
+                        {% if dash_percentual_usado != None %}
+                        {{ dash_percentual_usado|floatformat:2 }}% usado
+                        {% else %}
+                        -% usado
+                        {% endif %}
+                    </div>
+                </div>
+                <i class="fas fa-balance-scale card-icon"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6 col-md-3 kpi-col">
+        <div class="card h-100 border-0 dashboard-card position-relative dash-etapa-card kpi-card">
+            <div class="card-body d-flex flex-column justify-content-between p-2">
+                <div>
+                    <div class="text-uppercase small fw-bold mb-1" style="opacity:.9;">Maior Gasto</div>
+                    {% if dash_etapa_maior_gasto %}
+                    <div class="fw-bold mb-0">{{ dash_etapa_maior_gasto.lfin_etap__etap_codi }} - {{ dash_etapa_maior_gasto.lfin_etap__etap_nome }}</div>
+                    <div class="small" style="opacity:.9;">R$ {{ dash_etapa_maior_gasto.total|default:0|floatformat:2 }}</div>
+                    {% else %}
+                    <div class="fw-bold mb-0">-</div>
+                    {% endif %}
+                </div>
+                <i class="fas fa-layer-group card-icon"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6 col-md-3 kpi-col">
+        <div class="card h-100 border-0 dashboard-card position-relative dash-processos-card kpi-card">
+            <div class="card-body d-flex flex-column justify-content-between p-2">
+                <div>
+                    <div class="text-uppercase small fw-bold mb-1" style="opacity:.9;">Processos</div>
+                    <div class="fw-bold mb-0">{{ dash_processos_abertos|default:0 }} abertos</div>
+                    <div class="small" style="opacity:.9;">{{ dash_processos_total|default:0 }} no total</div>
+                </div>
+                <i class="fas fa-tasks card-icon"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6 col-md-3 kpi-col">
+        <div class="card h-100 border-0 dashboard-card position-relative dash-materiais-card kpi-card">
+            <div class="card-body d-flex flex-column justify-content-between p-2">
+                <div>
+                    <div class="text-uppercase small fw-bold mb-1" style="opacity:.9;">Materiais</div>
+                    <div class="fw-bold mb-0">{{ dash_movimentos_total|default:0 }} movimentos</div>
+                    <div class="small" style="opacity:.9;">
+                        {% for t in dash_movimentos_por_tipo %}
+                        {{ t.movm_tipo }}: {{ t.total }}{% if not forloop.last %} | {% endif %}
+                        {% empty %}
+                        -
+                        {% endfor %}
+                    </div>
+                </div>
+                <i class="fas fa-boxes card-icon"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6 col-md-3 kpi-col">
+        <div class="card h-100 border-0 dashboard-card position-relative dash-investimento-card kpi-card">
+            <div class="card-body d-flex flex-column justify-content-between p-2">
+                <div>
+                    <div class="text-uppercase small fw-bold mb-1" style="opacity:.9;">Etapas</div>
+                    <div class="fw-bold mb-0">{{ dash_etapas_total|default:0 }} cadastradas</div>
+                </div>
+                <i class="fas fa-project-diagram card-icon"></i>
+            </div>
+        </div>
+    </div>
+</div>

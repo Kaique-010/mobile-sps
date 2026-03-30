@@ -1,0 +1,100 @@
+{% extends 'obras/base_obras.html' %}
+{% block title %}Nova Obra{% endblock %}
+{% block obras_content %}
+<div class="card">
+  <div class="card-header">
+    <i class="fas fa-plus"></i> Nova Obra
+  </div>
+  <div class="card-body">
+    <form method="post" class="row g-3">
+      {% csrf_token %}
+      {% if form.errors %}
+      <div class="col-12">
+        <div class="alert alert-danger">
+          <div class="fw-bold mb-2">Erros no formulário</div>
+          <ul class="mb-0">
+            {% for field, errors in form.errors.items %}
+              {% for err in errors %}
+              <li>{{ field }}: {{ err }}</li>
+              {% endfor %}
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+      {% endif %}
+      {{ form.obra_clie }}{{ form.obra_resp }}
+      {% if form.instance.pk %}
+      <div class="col-12 col-md-3">
+        <label class="form-label" for="{{ form.obra_codi.id_for_label }}">Código</label>
+        {{ form.obra_codi }}
+      </div>
+      {% endif %}
+      <div class="col-12 col-md-2">
+        <label class="form-label" for="{{ form.obra_empr.id_for_label }}">Empresa</label>
+        {{ form.obra_empr }}
+      </div>
+      <div class="col-12 col-md-2">
+        <label class="form-label" for="{{ form.obra_fili.id_for_label }}">Filial</label>
+        {{ form.obra_fili }}
+      </div>
+       <div class="col-12 col-md-5"></div>
+      <div class="col-12 col-md-3">
+        <label class="form-label" for="{{ form.obra_stat.id_for_label }}">Status</label>
+        {{ form.obra_stat }}
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label" for="{{ form.obra_dini.id_for_label }}">Data Início</label>
+        {{ form.obra_dini }}
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label" for="{{ form.obra_dpre.id_for_label }}">Previsão Fim</label>
+        {{ form.obra_dpre }}
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label" for="{{ form.obra_dfim.id_for_label }}">Data Fim</label>
+        {{ form.obra_dfim }}
+      </div>
+      <div class="col-12">
+        <label class="form-label" for="{{ form.obra_nome.id_for_label }}">Descrição Dada a Obra</label>
+        {{ form.obra_nome }}
+      </div>
+
+      <div class="col-12 col-md-6">
+        <label class="form-label" for="{{ form.cliente_busca.id_for_label }}">Cliente</label>
+        {{ form.cliente_busca }}
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label" for="{{ form.responsavel_busca.id_for_label }}">Responsável</label>
+        {{ form.responsavel_busca }}
+      </div>
+
+      <div class="col-12 col-md-4">
+        <label class="form-label" for="{{ form.obra_orca.id_for_label }}">Orçamento(Valor Do CAPEX)</label>
+        {{ form.obra_orca }}
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label" for="{{ form.obra_cust.id_for_label }}">Custo(Valor Realizado)</label>
+        {{ form.obra_cust }}
+      </div>
+      <div class="col-12 col-md-4 d-flex align-items-center">
+        <div class="form-check mt-4">
+          {{ form.obra_ativ }}
+          <label class="form-check-label" for="{{ form.obra_ativ.id_for_label }}">Ativa</label>
+        </div>
+      </div>
+      <div class="col-12">
+        <label class="form-label" for="{{ form.obra_desc.id_for_label }}">Descrição</label>
+        {{ form.obra_desc }}
+      </div>
+      <div class="col-12 d-flex gap-2">
+        <button type="submit" class="btn btn-outline-primary">
+          <i class="fas fa-save"></i> Salvar
+        </button>
+        <button type="button" class="btn btn-outline-secondary" title="Disponível após salvar a obra" disabled>
+          Status
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

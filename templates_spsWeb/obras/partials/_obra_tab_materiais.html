@@ -1,0 +1,46 @@
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Materiais (últimos)</span>
+        <div class="d-flex gap-2">
+            <a class="btn btn-sm btn-outline-secondary"
+                href="{% url 'gestaoobras:obras_materiais_list' slug=slug obra_id=obra.id %}">Ver todos</a>
+            <a class="btn btn-sm btn-primary"
+                href="{% url 'gestaoobras:obras_materiais_create' slug=slug obra_id=obra.id %}">Novo</a>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-scroll">
+            <table class="table table-sm mb-0">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Tipo</th>
+                        <th>Prod</th>
+                        <th>Desc</th>
+                        <th>Qtd</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in movimentos %}
+                    <tr>
+                        <td>{% if m.movm_data %}{{ m.movm_data|date:'d/m/Y' }}{% else %}-{% endif %}</td>
+                        <td>{{ m.get_movm_tipo_display }}</td>
+                        <td>{{ m.movm_prod }}</td>
+                        <td>{{ m.movm_desc }}</td>
+                        <td>{{ m.movm_quan }}</td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-primary"
+                                href="{% url 'gestaoobras:obras_materiais_edit' slug=slug obra_id=obra.id movimento_id=m.id %}">Editar</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-3">Sem movimentos</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
