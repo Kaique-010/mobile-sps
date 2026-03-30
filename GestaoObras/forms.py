@@ -138,6 +138,12 @@ class ObraMaterialMovimentoForm(BaseBootstrapModelForm):
         label="Gerar Financeiro",
         widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
     )
+    movimentar_estoque = forms.BooleanField(
+        required=False,
+        label="Movimentar Estoque",
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        initial=True,
+    )
     movm_quan = forms.CharField(required=True, widget=forms.TextInput(attrs={"inputmode": "decimal"}))
     movm_cuni = forms.CharField(required=False, widget=forms.TextInput(attrs={"inputmode": "decimal"}))
 
@@ -148,6 +154,18 @@ class ObraMaterialMovimentoForm(BaseBootstrapModelForm):
                 self.fields["movm_obra"].queryset = Obra.objects.using(self.banco).all()
             if "movm_etap" in self.fields:
                 self.fields["movm_etap"].queryset = ObraEtapa.objects.using(self.banco).all()
+            try:
+                from GestaoObras.models import ObraMaterialEstoqueSaldo
+
+                if getattr(self.instance, "pk", None):
+                    existe = (
+                        ObraMaterialEstoqueSaldo.objects.using(self.banco)
+                        .filter(omes_movm_id=self.instance.pk)
+                        .exists()
+                    )
+                    self.fields["movimentar_estoque"].initial = bool(existe)
+            except Exception:
+                pass
 
     def clean_movm_quan(self):
         val = (self.cleaned_data.get("movm_quan") or "").strip()
@@ -205,6 +223,12 @@ class ObraMaterialMovimentoCabecalhoForm(BaseBootstrapModelForm):
         required=False,
         label="Gerar Financeiro",
         widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
+    movimentar_estoque = forms.BooleanField(
+        required=False,
+        label="Movimentar Estoque",
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        initial=True,
     )
 
     def __init__(self, *args, **kwargs):

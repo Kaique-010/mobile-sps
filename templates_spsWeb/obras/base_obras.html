@@ -59,10 +59,29 @@
                     class="{% if request.resolver_match.url_name == 'obras_list' %}active{% endif %}">
                     <i class="fas fa-list"></i> Listagem de Obras
                 </a>
+                <a href="{% url 'gestaoobras:estoque_geral' slug=slug %}"
+                    class="{% if request.resolver_match.url_name == 'estoque_geral' %}active{% endif %}">
+                    <i class="fas fa-warehouse"></i> Materiais em Estoque
+                </a>
                 <a href="{% url 'gestaoobras:obras_create' slug=slug %}"
                     class="{% if request.resolver_match.url_name == 'obras_create' %}active{% endif %}">
                     <i class="fas fa-plus"></i> Nova Obra
                 </a>
+                {% if obra %}
+                <hr class="border-secondary my-2">
+                <a href="{% url 'gestaoobras:obras_detail' slug=slug obra_id=obra.id %}"
+                    class="{% if request.resolver_match.url_name == 'obras_detail' %}active{% endif %}">
+                    <i class="fas fa-circle-info"></i> Detalhe
+                </a>
+                <a href="{% url 'gestaoobras:obras_materiais_list' slug=slug obra_id=obra.id %}"
+                    class="{% if request.resolver_match.url_name == 'obras_materiais_list' %}active{% endif %}">
+                    <i class="fas fa-boxes-stacked"></i> Materiais
+                </a>
+                <a href="{% url 'gestaoobras:obras_estoque_list' slug=slug obra_id=obra.id %}"
+                    class="{% if request.resolver_match.url_name == 'obras_estoque_list' %}active{% endif %}">
+                    <i class="fas fa-warehouse"></i> Estoque da Obra
+                </a>
+                {% endif %}
             </div>
             <div class="col-12 col-md-10 main-content">
                 <div class="d-md-none mb-3">
@@ -70,9 +89,27 @@
                         <a href="{% url 'gestaoobras:obras_list' slug=slug %}" class="btn btn-outline-secondary btn-sm">
                             <i class="fas fa-list"></i> Obras
                         </a>
+                        <a href="{% url 'gestaoobras:estoque_geral' slug=slug %}"
+                            class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-warehouse"></i> Estoque
+                        </a>
                         <a href="{% url 'gestaoobras:obras_create' slug=slug %}" class="btn btn-outline-primary btn-sm">
                             <i class="fas fa-plus"></i> Nova Obra
                         </a>
+                        {% if obra %}
+                        <a href="{% url 'gestaoobras:obras_detail' slug=slug obra_id=obra.id %}"
+                            class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-circle-info"></i> Detalhe
+                        </a>
+                        <a href="{% url 'gestaoobras:obras_materiais_list' slug=slug obra_id=obra.id %}"
+                            class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-boxes-stacked"></i> Materiais
+                        </a>
+                        <a href="{% url 'gestaoobras:obras_estoque_list' slug=slug obra_id=obra.id %}"
+                            class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-warehouse"></i> Estoque da Obra
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
                 {% if messages %}

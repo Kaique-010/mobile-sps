@@ -1,12 +1,102 @@
 from django.db.models import F, Sum, Max
 from django.db import transaction
-from GestaoObras.models import Obra, ObraEtapa, ObraLancamentoFinanceiro, ObraMaterialMovimento
+from decimal import Decimal
+from GestaoObras.models import Obra, ObraEtapa, ObraLancamentoFinanceiro, ObraMaterialMovimento, ObraMaterialEstoqueSaldo
 from contas_a_pagar.models import Titulospagar
 from contas_a_receber.models import Titulosreceber
 from datetime import date, timedelta, datetime
 
 
 class ObrasService:
+    @staticmethod
+    def recalcular_saldo_estoque_produto(*, banco: str, obra: Obra, produto: str):
+        try:
+            prod = (produto or "").strip()
+            if not prod:
+                return
+            qs = (
+                ObraMaterialEstoqueSaldo.objects.using(banco)
+                .filter(omes_empr=obra.obra_empr, omes_fili=obra.obra_fili, omes_obra_id=obra.id, omes_prod=prod)
+                .order_by("omes_data_movi", "id")
+            )
+            itens = list(qs)
+            saldo = Decimal("0")
+            for it in itens:
+                quan = getattr(it, "omes_quan", None) or Decimal("0")
+                tipo = (getattr(it, "omes_tipo", "") or "").strip().upper()
+                delta = quan if tipo == "EN" else (-quan)
+                saldo = saldo + delta
+                it.omes_sald_atua = saldo
+            if itens:
+                ObraMaterialEstoqueSaldo.objects.using(banco).bulk_update(itens, ["omes_sald_atua"])
+        except Exception:
+            return
+
+    @staticmethod
+    def sincronizar_estoque_movimento_material(*, banco: str, obra: Obra, movimento: ObraMaterialMovimento, movimentar_estoque: bool = True, usuario_id=None):
+        try:
+            mov_id = getattr(movimento, "id", None)
+            if not mov_id:
+                return
+            produto = (getattr(movimento, "movm_prod", "") or "").strip()
+            if not produto:
+                return
+
+            if not movimentar_estoque:
+                ObraMaterialEstoqueSaldo.objects.using(banco).filter(omes_movm_id=mov_id).delete()
+                ObrasService.recalcular_saldo_estoque_produto(banco=banco, obra=obra, produto=produto)
+                return
+
+            tipo = (getattr(movimento, "movm_tipo", "") or "").strip().upper()
+            if tipo not in {"EN", "SA"}:
+                return
+            quan = getattr(movimento, "movm_quan", None) or Decimal("0")
+            if quan < 0:
+                quan = -quan
+            unit = getattr(movimento, "movm_cuni", None) or Decimal("0")
+            total = quan * unit
+            desc = (getattr(movimento, "movm_desc", "") or "").strip()[:255]
+            unid = (getattr(movimento, "movm_unid", "") or "").strip()[:6] or "UN"
+            docu = (getattr(movimento, "movm_docu", None) or None)
+            data_movi = getattr(movimento, "movm_data", None) or date.today()
+            etap_id = getattr(movimento, "movm_etap_id", None)
+            obse = (getattr(movimento, "movm_obse", "") or "").strip()
+            ref = f"movm_id={mov_id} movm_codi={getattr(movimento, 'movm_codi', '')}"
+            obse_final = (f"{ref}\n{obse}".strip())[:2000]
+
+            defaults = {
+                "omes_empr": obra.obra_empr,
+                "omes_fili": obra.obra_fili,
+                "omes_obra_id": obra.id,
+                "omes_etap_id": etap_id,
+                "omes_tipo": tipo,
+                "omes_prod": produto,
+                "omes_desc": desc,
+                "omes_quan": quan,
+                "omes_unid": unid,
+                "omes_valo_unit": unit,
+                "omes_data_movi": data_movi,
+                "omes_docu": docu,
+                "omes_valo_tota": total,
+                "omes_obse": obse_final or None,
+                "omes_usua": usuario_id if usuario_id not in ("", None) else None,
+            }
+
+            obj, _created = ObraMaterialEstoqueSaldo.objects.using(banco).get_or_create(
+                omes_movm_id=mov_id,
+                defaults=defaults,
+            )
+            atualizar = False
+            for k, v in defaults.items():
+                if getattr(obj, k, None) != v:
+                    setattr(obj, k, v)
+                    atualizar = True
+            if atualizar:
+                obj.save(using=banco)
+            ObrasService.recalcular_saldo_estoque_produto(banco=banco, obra=obra, produto=produto)
+        except Exception:
+            return
+
     @staticmethod
     def consolidar_custo_obra(obra: Obra, banco: str = None) -> Obra:
         qs_mov = ObraMaterialMovimento.objects
@@ -63,6 +153,8 @@ class ObrasService:
         if existentes:
             raise ValueError(f"Código(s) já utilizado(s): {', '.join(str(x) for x in existentes)}")
 
+        movimentar_estoque = bool(cabecalho.get("movimentar_estoque", True))
+        usuario_id = cabecalho.get("usuario_id")
         with transaction.atomic(using=banco):
             for idx, item in enumerate(itens):
                 dados = {
@@ -83,6 +175,13 @@ class ObrasService:
                 }
                 mov = ObraMaterialMovimento.objects.using(banco).create(**dados)
                 movimentos.append(mov)
+                ObrasService.sincronizar_estoque_movimento_material(
+                    banco=banco,
+                    obra=obra,
+                    movimento=mov,
+                    movimentar_estoque=movimentar_estoque,
+                    usuario_id=usuario_id,
+                )
                 if gerar_financeiro:
                     ObrasService.gerar_financeiro_do_movimento_material(banco=banco, obra=obra, movimento=mov, opcoes=opcoes_financeiro)
         return movimentos

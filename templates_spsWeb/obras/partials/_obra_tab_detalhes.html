@@ -1,14 +1,116 @@
-<div class="row g-3">
-    <div class="col-12 col-lg-6">
-        {% include 'obras/partials/_obra_tab_etapas.html' %}
+<div class="accordion" id="obraDetalhesAccordion">
+    <div class="accordion-item">
+        <h2 class="accordion-header" id="headingEtapas">
+            <button class="accordion-button {% if open_sec != 'etapas' %}collapsed{% endif %}" type="button"
+                data-bs-toggle="collapse" data-bs-target="#collapseEtapas" aria-expanded="{% if open_sec == 'etapas' %}true{% else %}false{% endif %}"
+                aria-controls="collapseEtapas">
+                Etapas
+            </button>
+        </h2>
+        <div id="collapseEtapas" class="accordion-collapse collapse {% if open_sec == 'etapas' %}show{% endif %}"
+            aria-labelledby="headingEtapas" data-bs-parent="#obraDetalhesAccordion">
+            <div class="accordion-body p-0">
+                {% include 'obras/partials/_obra_tab_etapas.html' %}
+            </div>
+        </div>
     </div>
-    <div class="col-12 col-lg-6">
-        {% include 'obras/partials/_obra_tab_materiais.html' %}
+
+    <div class="accordion-item">
+        <h2 class="accordion-header" id="headingMateriais">
+            <button class="accordion-button {% if open_sec != 'materiais' %}collapsed{% endif %}" type="button"
+                data-bs-toggle="collapse" data-bs-target="#collapseMateriais" aria-expanded="{% if open_sec == 'materiais' %}true{% else %}false{% endif %}"
+                aria-controls="collapseMateriais">
+                Materiais
+            </button>
+        </h2>
+        <div id="collapseMateriais" class="accordion-collapse collapse {% if open_sec == 'materiais' %}show{% endif %}"
+            aria-labelledby="headingMateriais" data-bs-parent="#obraDetalhesAccordion">
+            <div class="accordion-body p-0">
+                {% include 'obras/partials/_obra_tab_materiais.html' %}
+            </div>
+        </div>
     </div>
-    <div class="col-12 col-lg-6">
-        {% include 'obras/partials/_obra_tab_financeiro.html' %}
+
+    <div class="accordion-item">
+        <h2 class="accordion-header" id="headingEstoque">
+            <button class="accordion-button {% if open_sec != 'estoque' %}collapsed{% endif %}" type="button"
+                data-bs-toggle="collapse" data-bs-target="#collapseEstoque" aria-expanded="{% if open_sec == 'estoque' %}true{% else %}false{% endif %}"
+                aria-controls="collapseEstoque">
+                Estoque (fluxo)
+            </button>
+        </h2>
+        <div id="collapseEstoque" class="accordion-collapse collapse {% if open_sec == 'estoque' %}show{% endif %}"
+            aria-labelledby="headingEstoque" data-bs-parent="#obraDetalhesAccordion">
+            <div class="accordion-body p-0">
+                <div class="card border-0 rounded-0">
+                    <div class="card-body p-0">
+                        <div class="table-scroll">
+                            <table class="table table-sm mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Tipo</th>
+                                        <th>Prod</th>
+                                        <th>Qtd</th>
+                                        <th>Saldo</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for e in estoque_movimentos %}
+                                    <tr>
+                                        <td>{% if e.omes_data_movi %}{{ e.omes_data_movi|date:'d/m/Y' }}{% else %}-{% endif %}</td>
+                                        <td>
+                                            <span class="badge {% if e.omes_tipo == 'EN' %}bg-success{% else %}bg-danger{% endif %}">
+                                                {{ e.get_omes_tipo_display }}
+                                            </span>
+                                        </td>
+                                        <td>{{ e.omes_prod }}</td>
+                                        <td>{{ e.omes_quan }}</td>
+                                        <td>{{ e.omes_sald_atua }}</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-3">Sem movimentações de estoque</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="col-12 col-lg-6">
-        {% include 'obras/partials/_obra_tab_processos.html' %}
+
+    <div class="accordion-item">
+        <h2 class="accordion-header" id="headingFinanceiro">
+            <button class="accordion-button {% if open_sec != 'financeiro' %}collapsed{% endif %}" type="button"
+                data-bs-toggle="collapse" data-bs-target="#collapseFinanceiro" aria-expanded="{% if open_sec == 'financeiro' %}true{% else %}false{% endif %}"
+                aria-controls="collapseFinanceiro">
+                Financeiro
+            </button>
+        </h2>
+        <div id="collapseFinanceiro" class="accordion-collapse collapse {% if open_sec == 'financeiro' %}show{% endif %}"
+            aria-labelledby="headingFinanceiro" data-bs-parent="#obraDetalhesAccordion">
+            <div class="accordion-body p-0">
+                {% include 'obras/partials/_obra_tab_financeiro.html' %}
+            </div>
+        </div>
+    </div>
+
+    <div class="accordion-item">
+        <h2 class="accordion-header" id="headingProcessos">
+            <button class="accordion-button {% if open_sec != 'processos' %}collapsed{% endif %}" type="button"
+                data-bs-toggle="collapse" data-bs-target="#collapseProcessos" aria-expanded="{% if open_sec == 'processos' %}true{% else %}false{% endif %}"
+                aria-controls="collapseProcessos">
+                Processos
+            </button>
+        </h2>
+        <div id="collapseProcessos" class="accordion-collapse collapse {% if open_sec == 'processos' %}show{% endif %}"
+            aria-labelledby="headingProcessos" data-bs-parent="#obraDetalhesAccordion">
+            <div class="accordion-body p-0">
+                {% include 'obras/partials/_obra_tab_processos.html' %}
+            </div>
+        </div>
     </div>
 </div>

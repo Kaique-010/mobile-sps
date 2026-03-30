@@ -58,6 +58,11 @@
                     <label class="form-check-label" for="{{ cab_form.gerar_financeiro.id_for_label }}">Gerar
                         Financeiro</label>
                 </div>
+                <div class="form-check mt-2">
+                    {{ cab_form.movimentar_estoque }}
+                    <label class="form-check-label" for="{{ cab_form.movimentar_estoque.id_for_label }}">Movimentar
+                        Estoque</label>
+                </div>
                 <input type="hidden" name="fin_tipo" id="id_fin_tipo">
                 <input type="hidden" name="fin_parcelas" id="id_fin_parcelas" value="1">
                 <input type="hidden" name="fin_primeiro_venc" id="id_fin_primeiro_venc">
@@ -195,6 +200,11 @@
                     {{ form.gerar_financeiro }}
                     <label class="form-check-label" for="{{ form.gerar_financeiro.id_for_label }}">Gerar
                         Financeiro</label>
+                </div>
+                <div class="form-check mt-2">
+                    {{ form.movimentar_estoque }}
+                    <label class="form-check-label" for="{{ form.movimentar_estoque.id_for_label }}">Movimentar
+                        Estoque</label>
                 </div>
                 <input type="hidden" name="fin_tipo" id="id_fin_tipo">
                 <input type="hidden" name="fin_parcelas" id="id_fin_parcelas" value="1">

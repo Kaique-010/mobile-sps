@@ -2,20 +2,31 @@ from django.shortcuts import render, get_object_or_404
 from datetime import date
 from decimal import Decimal
 from django.db.models import Sum, Count
+from django.db.utils import ProgrammingError, OperationalError
 from core.utils import get_licenca_db_config
-from GestaoObras.models import Obra, ObraEtapa, ObraMaterialMovimento, ObraLancamentoFinanceiro, ObraProcesso
+from GestaoObras.models import Obra, ObraEtapa, ObraMaterialMovimento, ObraLancamentoFinanceiro, ObraProcesso, ObraMaterialEstoqueSaldo
 
 
 def detalhe_obra(request, slug, obra_id: int):
     banco = get_licenca_db_config(request)
     obra = get_object_or_404(Obra.objects.using(banco), pk=obra_id)
     active_tab = (request.GET.get("tab") or "detalhes").strip().lower()
+    open_sec = (request.GET.get("sec") or "etapas").strip().lower()
     etapas = ObraEtapa.objects.using(banco).filter(etap_obra_id=obra.id).order_by("etap_orde", "id")
     movimentos = (
         ObraMaterialMovimento.objects.using(banco)
         .filter(movm_obra_id=obra.id)
         .order_by("-movm_data", "-movm_codi")[:20]
     )
+    estoque_movimentos = []
+    try:
+        estoque_movimentos = list(
+            ObraMaterialEstoqueSaldo.objects.using(banco)
+            .filter(omes_obra_id=obra.id)
+            .order_by("-omes_data_movi", "-id")[:20]
+        )
+    except (ProgrammingError, OperationalError):
+        estoque_movimentos = []
 
     dash_total_investimento = obra.obra_orca or Decimal("0")
     fin_qs_all = ObraLancamentoFinanceiro.objects.using(banco).filter(lfin_obra_id=obra.id)
@@ -85,8 +96,10 @@ def detalhe_obra(request, slug, obra_id: int):
             "slug": slug,
             "obra": obra,
             "active_tab": active_tab,
+            "open_sec": open_sec,
             "etapas": etapas,
             "movimentos": movimentos,
+            "estoque_movimentos": estoque_movimentos,
             "lancamentos": lancamentos,
             "processos": processos,
             "fin_status": fin_status,

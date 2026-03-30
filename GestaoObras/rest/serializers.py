@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from GestaoObras.models import Obra, ObraEtapa, ObraLancamentoFinanceiro, ObraMaterialMovimento, ObraProcesso
+from GestaoObras.models import Obra, ObraEtapa, ObraLancamentoFinanceiro, ObraMaterialMovimento, ObraProcesso, ObraMaterialEstoqueSaldo
 
 
 class ObraSerializer(serializers.ModelSerializer):
@@ -94,4 +94,29 @@ class ObraProcessoSerializer(serializers.ModelSerializer):
             "id", "codigo_do_processo", "processo_empresa", "processo_filial",
             "proc_obra", "proc_etap", "proc_titu", "proc_desc", "proc_resp",
             "proc_dlim", "proc_prio", "proc_stat",
+        ]
+
+
+class ObraMaterialEstoqueSaldoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ObraMaterialEstoqueSaldo
+        fields = [
+            "id",
+            "omes_empr",
+            "omes_fili",
+            "omes_obra",
+            "omes_etap",
+            "omes_movm",
+            "omes_tipo",
+            "omes_prod",
+            "omes_desc",
+            "omes_quan",
+            "omes_unid",
+            "omes_valo_unit",
+            "omes_data_movi",
+            "omes_docu",
+            "omes_valo_tota",
+            "omes_sald_atua",
+            "omes_obse",
+            "omes_usua",
         ]

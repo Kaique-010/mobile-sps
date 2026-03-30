@@ -9,12 +9,14 @@ from GestaoObras.models import (
     ObraEtapa,
     ObraLancamentoFinanceiro,
     ObraMaterialMovimento,
+    ObraMaterialEstoqueSaldo,
     ObraProcesso,
 )
 from .serializers import (
     ObraEtapaSerializer,
     ObraLancamentoFinanceiroSerializer,
     ObraMaterialMovimentoSerializer,
+    ObraMaterialEstoqueSaldoSerializer,
     ObraProcessoSerializer,
     ObraSerializer,
 )
@@ -152,3 +154,31 @@ class ObraProcessoViewSet(BaseMultiDBModelViewSet):
         if etapa_id:
             qs = qs.filter(proc_etap_id=etapa_id)
         return qs.order_by("-proc_codi")
+
+
+class ObraMaterialEstoqueSaldoViewSet(BaseMultiDBModelViewSet):
+    serializer_class = ObraMaterialEstoqueSaldoSerializer
+    empr_field = "omes_empr"
+    fili_field = "omes_fili"
+
+    def get_queryset(self):
+        banco = self.get_banco()
+        empresa = self.request.query_params.get("omes_empr") or self.request.query_params.get("empr")
+        filial = self.request.query_params.get("omes_fili") or self.request.query_params.get("fili")
+        obra_id = self.request.query_params.get("omes_obra") or self.request.query_params.get("obra_id")
+        etapa_id = self.request.query_params.get("omes_etap") or self.request.query_params.get("etapa_id")
+        produto = (self.request.query_params.get("omes_prod") or self.request.query_params.get("prod") or "").strip()
+        tipo = (self.request.query_params.get("omes_tipo") or "").strip().upper()
+
+        qs = ObraMaterialEstoqueSaldo.objects.using(banco)
+        if empresa and filial:
+            qs = qs.filter(omes_empr=empresa, omes_fili=filial)
+        if obra_id:
+            qs = qs.filter(omes_obra_id=obra_id)
+        if etapa_id:
+            qs = qs.filter(omes_etap_id=etapa_id)
+        if produto:
+            qs = qs.filter(omes_prod__icontains=produto)
+        if tipo in {"EN", "SA"}:
+            qs = qs.filter(omes_tipo=tipo)
+        return qs.order_by("-omes_data_movi", "-id")

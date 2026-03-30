@@ -1,0 +1,104 @@
+{% extends 'obras/base_obras.html' %}
+{% block title %}Materiais em Estoque{% endblock %}
+{% block obras_content %}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div>
+        <h5 class="mb-0">Materiais em Estoque</h5>
+        <div class="text-muted small">Estoque geral</div>
+    </div>
+</div>
+
+{% if erro_estoque %}
+<div class="alert alert-warning">{{ erro_estoque }}</div>
+{% endif %}
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-12 col-md-10">
+        <input type="text" name="produto" class="form-control" placeholder="Produto (código)"
+            value="{{ produto|default:'' }}">
+    </div>
+    <div class="col-12 col-md-2">
+        <button type="submit" class="btn btn-outline-secondary w-100">Filtrar</button>
+    </div>
+</form>
+
+<div class="row g-3">
+    <div class="col-12 col-lg-5">
+        <div class="card">
+            <div class="card-header">Saldo atual por produto</div>
+            <div class="card-body p-0">
+                <table class="table table-striped mb-0">
+                    <thead>
+                        <tr>
+                            <th>Produto</th>
+                            <th>Descrição</th>
+                            <th class="text-end">Entradas</th>
+                            <th class="text-end">Saídas</th>
+                            <th class="text-end">Saldo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in saldos %}
+                        <tr>
+                            <td>{{ s.prod }}</td>
+                            <td>{{ s.desc }}</td>
+                            <td class="text-end">{{ s.total_en }}</td>
+                            <td class="text-end">{{ s.total_sa }}</td>
+                            <td class="text-end">{{ s.saldo_atual }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-3">Sem dados</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-lg-7">
+        <div class="card">
+            <div class="card-header">Movimentações de estoque (últimas)</div>
+            <div class="card-body p-0">
+                <table class="table table-striped mb-0">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Tipo</th>
+                            <th>Produto</th>
+                            <th>Descrição</th>
+                            <th class="text-end">Qtd</th>
+                            <th>Obra</th>
+                            <th>Doc</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m in movimentos %}
+                        <tr>
+                            <td>{% if m.omes_data_movi %}{{ m.omes_data_movi|date:'d/m/Y' }}{% else %}-{% endif %}</td>
+                            <td>{{ m.get_omes_tipo_display }}</td>
+                            <td>{{ m.omes_prod }}</td>
+                            <td>{{ m.omes_desc }}</td>
+                            <td class="text-end">{{ m.omes_quan }}</td>
+                            <td>
+                                {% if m.omes_obra_id %}
+                                <a href="{% url 'gestaoobras:obras_detail' slug=slug obra_id=m.omes_obra_id %}">Ver</a>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>{{ m.omes_docu|default:'-' }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-3">Nenhuma movimentação encontrada.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

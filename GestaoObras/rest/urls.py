@@ -4,6 +4,7 @@ from .views import (
     ObraViewSet,
     ObraEtapaViewSet,
     ObraMaterialMovimentoViewSet,
+    ObraMaterialEstoqueSaldoViewSet,
     ObraLancamentoFinanceiroViewSet,
     ObraProcessoViewSet,
 )
@@ -13,6 +14,7 @@ router = DefaultRouter()
 router.register("obras", ObraViewSet, basename="gestao-obras")
 router.register("etapas", ObraEtapaViewSet, basename="gestao-obras-etapas")
 router.register("movimentos-materiais", ObraMaterialMovimentoViewSet, basename="gestao-obras-movimentos")
+router.register("estoque-materiais", ObraMaterialEstoqueSaldoViewSet, basename="gestao-obras-estoque-materiais")
 router.register("lancamentos-financeiros", ObraLancamentoFinanceiroViewSet, basename="gestao-obras-financeiro")
 router.register("processos", ObraProcessoViewSet, basename="gestao-obras-processos")
 

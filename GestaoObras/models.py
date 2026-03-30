@@ -1,4 +1,5 @@
 from django.db import models
+from datetime import date
 
 
 class Obra(models.Model):
@@ -181,3 +182,48 @@ class ObraProcesso(models.Model):
     
     def __str__(self):
         return f"{self.proc_codi} - {self.proc_titu}"
+
+class ObraMaterialEstoqueSaldo(models.Model):
+    TIPO_CHOICES = [
+        ("EN", "Entrada"),
+        ("SA", "Saída"),
+    ]
+
+    omes_empr = models.IntegerField()
+    omes_fili = models.IntegerField()
+    omes_obra = models.ForeignKey(Obra, on_delete=models.CASCADE, related_name="estoque_materiais")
+    omes_etap = models.ForeignKey(
+        ObraEtapa,
+        on_delete=models.SET_NULL,
+        related_name="estoque_materiais",
+        blank=True,
+        null=True,
+    )
+    omes_movm = models.ForeignKey(
+        ObraMaterialMovimento,
+        on_delete=models.SET_NULL,
+        related_name="estoque_materiais",
+        blank=True,
+        null=True,
+    )
+    omes_tipo = models.CharField(max_length=2, choices=TIPO_CHOICES)
+    omes_prod = models.CharField(max_length=20)
+    omes_desc = models.CharField(max_length=255)
+    omes_quan = models.DecimalField(max_digits=15, decimal_places=3)
+    omes_unid = models.CharField(max_length=6, default="UN")
+    omes_valo_unit = models.DecimalField(max_digits=15, decimal_places=6, default=0)
+    omes_data_movi = models.DateField(default=date.today)
+    omes_docu = models.CharField(max_length=30, blank=True, null=True)
+    omes_valo_tota = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    omes_sald_atua = models.DecimalField(max_digits=15, decimal_places=3, default=0)
+    omes_obse = models.TextField(blank=True, null=True)
+    omes_crea = models.DateTimeField(auto_now_add=True)
+    omes_alte = models.DateTimeField(auto_now=True)
+    omes_usua = models.IntegerField(blank=True, null=True)
+
+    class Meta:
+        db_table = "gestao_obras_material_estoque_saldos"
+        ordering = ("-omes_data_movi", "-id")
+    
+    def __str__(self):
+        return f"{self.omes_prod} - {self.omes_desc}"

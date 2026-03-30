@@ -1,9 +1,11 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.forms.utils import ErrorList
+from django.db.utils import ProgrammingError, OperationalError
+from django.db.models import Sum, Q
 from core.utils import get_licenca_db_config
 from GestaoObras.web.forms import ObraMaterialMovimentoForm, ObraMaterialMovimentoCabecalhoForm, ObraMaterialMovimentoItemFormSet
-from GestaoObras.models import Obra, ObraEtapa, ObraMaterialMovimento
+from GestaoObras.models import Obra, ObraEtapa, ObraMaterialMovimento, ObraMaterialEstoqueSaldo
 from GestaoObras.services.obras_service import ObrasService
 
 
@@ -19,6 +21,156 @@ def listar_materiais(request, slug, obra_id: int):
         request,
         "obras/materiais_listar.html",
         {"slug": slug, "obra": obra, "movimentos": qs, "etapas": etapas, "etapa_id": etapa_id},
+    )
+
+def listar_estoque_geral(request, slug):
+    banco = get_licenca_db_config(request)
+    empresa = request.GET.get("empr") or request.headers.get("X-Empresa")
+    filial = request.GET.get("fili") or request.headers.get("X-Filial")
+    produto = (request.GET.get("produto") or "").strip()
+
+    movimentos = []
+    saldos = []
+    erro_estoque = None
+
+    try:
+        base_qs = ObraMaterialEstoqueSaldo.objects.using(banco).all()
+        if empresa and filial:
+            base_qs = base_qs.filter(omes_empr=empresa, omes_fili=filial)
+        if produto:
+            base_qs = base_qs.filter(omes_prod__icontains=produto)
+
+        movimentos = list(base_qs.order_by("-omes_data_movi", "-id")[:500])
+
+        resumo_qs = (
+            base_qs.values("omes_prod", "omes_desc", "omes_unid")
+            .annotate(
+                total_en=Sum("omes_quan", filter=Q(omes_tipo="EN")),
+                total_sa=Sum("omes_quan", filter=Q(omes_tipo="SA")),
+            )
+            .order_by("omes_prod")[:5000]
+        )
+        for r in resumo_qs:
+            en = r.get("total_en") or 0
+            sa = r.get("total_sa") or 0
+            saldos.append(
+                {
+                    "prod": r.get("omes_prod") or "",
+                    "desc": r.get("omes_desc") or "",
+                    "unid": r.get("omes_unid") or "",
+                    "total_en": en,
+                    "total_sa": sa,
+                    "saldo_atual": en - sa,
+                }
+            )
+    except (ProgrammingError, OperationalError):
+        erro_estoque = "Tabela de estoque ainda não disponível no banco."
+
+    return render(
+        request,
+        "obras/estoque_geral.html",
+        {
+            "slug": slug,
+            "movimentos": movimentos,
+            "saldos": saldos,
+            "produto": produto,
+            "erro_estoque": erro_estoque,
+        },
+    )
+
+
+def listar_estoque_materiais(request, slug, obra_id: int):
+    banco = get_licenca_db_config(request)
+    obra = get_object_or_404(Obra.objects.using(banco), pk=obra_id)
+
+    etapa_id = (request.GET.get("etapa_id") or "").strip()
+    tipo = (request.GET.get("tipo") or "").strip().upper()
+    produto = (request.GET.get("produto") or "").strip()
+
+    qs = ObraMaterialEstoqueSaldo.objects.using(banco).filter(omes_obra_id=obra.id).order_by("-omes_data_movi", "-id")
+    if etapa_id:
+        qs = qs.filter(omes_etap_id=etapa_id)
+    if tipo in {"EN", "SA"}:
+        qs = qs.filter(omes_tipo=tipo)
+    if produto:
+        qs = qs.filter(omes_prod__icontains=produto)
+
+    etapas = ObraEtapa.objects.using(banco).filter(etap_obra_id=obra.id).order_by("etap_orde", "id")
+
+    movimentos = []
+    saldos = []
+    erro_estoque = None
+    try:
+        movs = list(
+            ObraMaterialMovimento.objects.using(banco)
+            .filter(movm_obra_id=obra.id, movm_tipo__in=["EN", "SA"])
+            .order_by("-movm_data", "-movm_codi")[:200]
+        )
+        mov_ids = [m.id for m in movs if getattr(m, "id", None)]
+        if mov_ids:
+            existentes = set(
+                ObraMaterialEstoqueSaldo.objects.using(banco)
+                .filter(omes_movm_id__in=mov_ids)
+                .values_list("omes_movm_id", flat=True)
+            )
+            for m in movs:
+                if m.id not in existentes:
+                    ObrasService.sincronizar_estoque_movimento_material(
+                        banco=banco,
+                        obra=obra,
+                        movimento=m,
+                        movimentar_estoque=True,
+                        usuario_id=request.session.get("usua_codi"),
+                    )
+
+        movimentos = list(qs[:500])
+        base_saldos_qs = ObraMaterialEstoqueSaldo.objects.using(banco).filter(omes_obra_id=obra.id)
+        if produto:
+            base_saldos_qs = base_saldos_qs.filter(omes_prod__icontains=produto)
+        base_saldos_qs = base_saldos_qs.order_by("-omes_data_movi", "-id").values(
+            "omes_prod",
+            "omes_desc",
+            "omes_unid",
+            "omes_tipo",
+            "omes_quan",
+            "omes_sald_atua",
+        )[:5000]
+        resumo = {}
+        for r in base_saldos_qs:
+            prod = (r.get("omes_prod") or "").strip()
+            if not prod:
+                continue
+            if prod not in resumo:
+                resumo[prod] = {
+                    "prod": prod,
+                    "desc": r.get("omes_desc") or "",
+                    "unid": r.get("omes_unid") or "",
+                    "saldo_atual": r.get("omes_sald_atua") or 0,
+                    "total_en": 0,
+                    "total_sa": 0,
+                }
+            if (r.get("omes_tipo") or "").strip().upper() == "EN":
+                resumo[prod]["total_en"] = resumo[prod]["total_en"] + (r.get("omes_quan") or 0)
+            else:
+                resumo[prod]["total_sa"] = resumo[prod]["total_sa"] + (r.get("omes_quan") or 0)
+        saldos = sorted(resumo.values(), key=lambda x: x["prod"])
+    except (ProgrammingError, OperationalError):
+        erro_estoque = "Tabela de estoque ainda não disponível no banco."
+
+    return render(
+        request,
+        "obras/estoque_listar.html",
+        {
+            "slug": slug,
+            "obra": obra,
+            "etapas": etapas,
+            "movimentos": movimentos,
+            "saldos": saldos,
+            "etapa_id": etapa_id,
+            "tipo": tipo,
+            "produto": produto,
+            "erro_estoque": erro_estoque,
+        },
     )
 
 
@@ -66,6 +218,8 @@ def criar_movimento_material(request, slug, obra_id: int):
                             "movm_etap_id": cab.get("movm_etap").id if cab.get("movm_etap") else None,
                             "movm_docu": cab.get("movm_docu"),
                             "movm_obse": cab.get("movm_obse"),
+                            "movimentar_estoque": bool(cab.get("movimentar_estoque")),
+                            "usuario_id": request.session.get("usua_codi"),
                         },
                         itens=itens,
                         gerar_financeiro=bool(cab.get("gerar_financeiro")),
@@ -108,6 +262,13 @@ def editar_movimento_material(request, slug, obra_id: int, movimento_id: int):
                 if not exists:
                     obj.movm_etap_id = None
             obj.save(using=banco)
+            ObrasService.sincronizar_estoque_movimento_material(
+                banco=banco,
+                obra=obra,
+                movimento=obj,
+                movimentar_estoque=bool(form.cleaned_data.get("movimentar_estoque")),
+                usuario_id=request.session.get("usua_codi"),
+            )
             if form.cleaned_data.get("gerar_financeiro"):
                 ObrasService.gerar_financeiro_do_movimento_material(banco=banco, obra=obra, movimento=obj)
             ObrasService.consolidar_custo_obra(obra=obra, banco=banco)
