@@ -422,7 +422,7 @@ class OrdemServicoViewSet(BaseClienteViewSet):
         queryset = super().get_queryset()
 
         if not (self.request.query_params.get('status') or '').strip():
-            queryset = queryset.filter(orde_stat_orde__in=[2, 22])
+            queryset = queryset.filter(orde_stat_orde__in=[0, 1, 3])
         
         queryset = self._aplicar_filtros(queryset, incluir_status=True)
         queryset = self._blindar_datas(queryset)
@@ -630,7 +630,7 @@ class OrdemServicoViewSet(BaseClienteViewSet):
     @action(detail=False, methods=['get'], url_path='todas_ordens')
     def listar_todas_ordens(self, request, *args, **kwargs):
         try:
-            status_list = [1, 2, 3, 4, 5, 6, 21, 22]
+            status_list = [0, 1, 3]
             status_override = ",".join(str(s) for s in status_list)
             cache_key = self._cache_key('todas', status_override=status_override)
             if not self._should_refresh():

@@ -38,7 +38,7 @@ class ClienteDashboardViewSet(viewsets.ViewSet):
                     FROM ordemservico 
                     WHERE orde_enti = %s 
                       AND orde_seto IS NOT NULL AND orde_seto != 0
-                      AND orde_stat_orde IN (1, 22)
+                      AND orde_stat_orde IN (0, 1, 3)
                       AND (EXTRACT(YEAR FROM orde_data_aber) BETWEEN 2020 AND 2100)
                 """
                 cursor.execute(query_count, [cliente_id])
@@ -52,7 +52,7 @@ class ClienteDashboardViewSet(viewsets.ViewSet):
                     FROM ordemservico 
                     WHERE orde_enti = %s 
                       AND orde_seto IS NOT NULL AND orde_seto != 0
-                      AND orde_stat_orde IN (1, 22)
+                      AND orde_stat_orde IN (0, 1, 3)
                       AND (EXTRACT(YEAR FROM orde_data_aber) BETWEEN 2020 AND 2100)
                 """
                 cursor.execute(query_sum, [cliente_id])
@@ -85,7 +85,7 @@ class ClienteDashboardViewSet(viewsets.ViewSet):
 
                 where_clauses = [
                     "os_clie = %s",
-                    "os_stat_os IN (0, 1, 2, 3, 5, 21)"
+                    "os_stat_os IN (0, 1, 3)"
                 ]
                 
                 if has_os_data_aber:
@@ -127,7 +127,7 @@ class ClienteDashboardViewSet(viewsets.ViewSet):
         # Filtros de negocio (igual ao viewset)
         qs = qs.filter(orde_seto__isnull=False).exclude(orde_seto=0)
         
-        qs = qs.filter(orde_stat_orde__in=[1, 22])
+        qs = qs.filter(orde_stat_orde__in=[0, 1, 3])
 
         # Blindagem total via SQL puro — sem Case/When que avalia campos inválidos
         # CAST para TEXT impede psycopg2 de converter datas inválidas
@@ -167,8 +167,8 @@ class ClienteDashboardViewSet(viewsets.ViewSet):
         )
         
         # Filtros de negocio para Os (baseado no viewset)
-        # Status equivalentes em Os: 0=Aberta, 1=Orcamento, 2=Aguardando, 3=Cancelada (talvez nao), 5=Reprovada, 21=Atraso
-        qs = qs.filter(os_stat_os__in=[0, 1, 2, 3, 5, 21])
+        # Status equivalentes em Os: 0=Aberta, 1=Orcamento, 2=Aguardando, 21=Atraso
+        qs = qs.filter(os_stat_os__in=[0, 1, 3])
 
         # Blindagem total via SQL puro para Os
         # CAST para TEXT impede psycopg2 de converter datas inválidas
