@@ -96,6 +96,7 @@ INSTALLED_APPS = [
     'Licencas',
     'Produtos',
     'Entidades',
+    'GestaoObras',
     'Pedidos',
     'Orcamentos',
     'dashboards',
