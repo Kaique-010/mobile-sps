@@ -19,6 +19,25 @@
   [data-bs-theme="dark"] .login-header .subtitle {
     color: var(--bs-secondary-color);
   }
+
+  .login-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: login-spin 0.8s linear infinite;
+  }
+
+  @keyframes login-spin {
+    from {
+      transform: rotate(0deg);
+    }
+
+    to {
+      transform: rotate(360deg);
+    }
+  }
 </style>
 
 <div class="login-wrapper container min-vh-80 d-flex align-items-center justify-content-center">
@@ -51,7 +70,10 @@
           </select>
           <label for="filial">Filial</label>
         </div>
-        <button type="submit" class="btn btn-success w-100">Continuar</button>
+        <button type="submit" class="btn btn-success w-100 d-flex align-items-center justify-content-center gap-2" aria-busy="false">
+          <span id="selBtnText">Continuar</span>
+          <span class="login-spinner d-none js-sel-spinner" aria-hidden="true"></span>
+        </button>
       </form>
     </div>
 
@@ -82,6 +104,7 @@
     el.textContent = msg;
     el.classList.remove('d-none');
     L.error('Alerta mostrado:', msg);
+    setLoading(false);
   };
 
   const slug = localStorage.getItem('slug');
@@ -127,6 +150,21 @@
     } catch (e) {
       return resp;
     }
+  };
+
+  const form = document.getElementById('selForm');
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const spinnerEl = submitBtn.querySelector('.js-sel-spinner');
+  const btnTextEl = document.getElementById('selBtnText');
+  let isLoading = false;
+
+  const setLoading = (loading) => {
+    isLoading = loading;
+    const disabled = !!loading;
+    submitBtn.disabled = disabled;
+    submitBtn.setAttribute('aria-busy', loading ? 'true' : 'false');
+    if (spinnerEl) spinnerEl.classList.toggle('d-none', !loading);
+    if (btnTextEl) btnTextEl.textContent = loading ? 'Carregando...' : 'Continuar';
   };
 
   const carregarEmpresas = async () => {
@@ -205,7 +243,12 @@
     }
   }
 
-  document.getElementById('selForm').addEventListener('submit', (e) => {
+  form.addEventListener('submit', (e) => {
+    if (isLoading) {
+      e.preventDefault();
+      return;
+    }
+    setLoading(true);
     const empresaId = document.getElementById('empresa').value;
     const filialId = document.getElementById('filial').value;
     const empresaNome = document.querySelector('#empresa option:checked')?.textContent || '';
