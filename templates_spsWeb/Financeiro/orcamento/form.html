@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  <div class="card shadow-sm">
+    <div class="card-header">
+      <h4 class="mb-0">Novo Orçamento</h4>
+    </div>
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">{{ form.descricao.label }}</label>
+            {{ form.descricao }}
+            {% if form.descricao.errors %}<div class="text-danger small">{{ form.descricao.errors }}</div>{% endif %}
+          </div>
+
+          <div class="col-md-2">
+            <label class="form-label">{{ form.ano.label }}</label>
+            {{ form.ano }}
+            {% if form.ano.errors %}<div class="text-danger small">{{ form.ano.errors }}</div>{% endif %}
+          </div>
+
+          <div class="col-md-2">
+            <label class="form-label">{{ form.tipo.label }}</label>
+            {{ form.tipo }}
+            {% if form.tipo.errors %}<div class="text-danger small">{{ form.tipo.errors }}</div>{% endif %}
+          </div>
+
+          <div class="col-md-2">
+            <label class="form-label">{{ form.cenario.label }}</label>
+            {{ form.cenario }}
+            {% if form.cenario.errors %}<div class="text-danger small">{{ form.cenario.errors }}</div>{% endif %}
+          </div>
+
+          <div class="col-md-12">
+            <div class="form-check mt-2">
+              {{ form.ativo }}
+              <label class="form-check-label">{{ form.ativo.label }}</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 d-flex gap-2">
+          <button type="submit" class="btn btn-primary">Salvar orçamento</button>
+          <a href="javascript:history.back()" class="btn btn-secondary">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

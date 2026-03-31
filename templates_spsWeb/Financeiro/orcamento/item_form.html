@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+
+<div class="container py-4">
+  <div class="card shadow-sm">
+    <div class="card-header">
+      <h4 class="mb-0">Itens do Orçamento</h4>
+      <small>
+        {{ orcamento.orca_desc }} | Ano {{ orcamento.orca_ano }}
+      </small>
+    </div>
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">{{ form.centro_custo.label }}</label>
+            {{ form.centro_custo }}
+            <div class="position-relative">
+              {{ form.centro_custo_display }}
+              <div id="dropdown_cc" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
+            </div>
+            {% if form.centro_custo.errors %}<div class="text-danger small">{{ form.centro_custo.errors }}</div>{% endif %}
+          </div>
+
+          <div class="col-md-2">
+            <label class="form-label">{{ form.ano.label }}</label>
+            {{ form.ano }}
+            {% if form.ano.errors %}<div class="text-danger small">{{ form.ano.errors }}</div>{% endif %}
+          </div>
+
+          <div class="col-md-2">
+            <label class="form-label">{{ form.mes.label }}</label>
+            {{ form.mes }}
+            {% if form.mes.errors %}<div class="text-danger small">{{ form.mes.errors }}</div>{% endif %}
+          </div>
+
+          <div class="col-md-2">
+            <label class="form-label">{{ form.valor_previsto.label }}</label>
+            {{ form.valor_previsto }}
+            {% if form.valor_previsto.errors %}<div class="text-danger small">{{ form.valor_previsto.errors }}</div>{% endif %}
+          </div>
+
+          <div class="col-md-12">
+            <div class="d-flex align-items-center gap-2">
+              <div class="form-check form-switch">
+                {{ form.replicar_ano_todo }}
+                <label class="form-check-label" for="{{ form.replicar_ano_todo.id_for_label }}">{{ form.replicar_ano_todo.label }}</label>
+              </div>
+              {% if form.replicar_ano_todo.errors %}<div class="text-danger small">{{ form.replicar_ano_todo.errors }}</div>{% endif %}
+            </div>
+            <div class="mt-2">
+              <div class="form-label mb-1">{{ form.meses.label }}</div>
+              <div class="row g-2">
+                {% for w in form.meses %}
+                <div class="col-4 col-sm-3 col-md-2">
+                  <div class="form-check form-switch">
+                    {{ w.tag }}
+                    <label class="form-check-label" for="{{ w.id_for_label }}">{{ w.choice_label }}</label>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+              {% if form.meses.errors %}<div class="text-danger small mt-1">{{ form.meses.errors }}</div>{% endif %}
+              <div class="text-body-secondary small mt-1">Se marcar meses, aplica o mesmo valor em todos os meses selecionados.</div>
+            </div>
+          </div>
+
+          <div class="col-md-12">
+            <label class="form-label">{{ form.observacao.label }}</label>
+            {{ form.observacao }}
+            {% if form.observacao.errors %}<div class="text-danger small">{{ form.observacao.errors }}</div>{% endif %}
+          </div>
+        </div>
+
+        <div class="mt-4 d-flex gap-2">
+          <button type="submit" class="btn btn-success">Salvar item</button>
+          <a href="javascript:history.back()" class="btn btn-secondary">Voltar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<script>
+  (function () {
+    const input = document.getElementById("id_centro_custo_display");
+    const hidden = document.getElementById("id_centro_custo");
+    const dropdown = document.getElementById("dropdown_cc");
+    if (!input || !hidden || !dropdown) return;
+
+    const endpoint = "{% url 'financeiro_web:autocomplete_centrosdecustos' slug=slug %}";
+    let timer = null;
+
+    function clearDropdown() {
+      dropdown.innerHTML = "";
+      dropdown.style.display = "none";
+    }
+
+    function showDropdown() {
+      dropdown.style.display = "block";
+    }
+
+    function renderItems(items) {
+      dropdown.innerHTML = "";
+      if (!items || !items.length) {
+        clearDropdown();
+        return;
+      }
+      for (const it of items) {
+        const a = document.createElement("a");
+        a.href = "#";
+        a.className = "list-group-item list-group-item-action";
+        a.textContent = it.label;
+        a.dataset.value = it.value;
+        a.addEventListener("click", function (e) {
+          e.preventDefault();
+          hidden.value = String(it.value);
+          input.value = it.label;
+          hidden.dispatchEvent(new Event("change", { bubbles: true }));
+          clearDropdown();
+        });
+        dropdown.appendChild(a);
+      }
+      showDropdown();
+    }
+
+    async function fetchItems(q) {
+      const url = endpoint + "?term=" + encodeURIComponent(q || "");
+      const resp = await fetch(url, { credentials: "same-origin" });
+      if (!resp.ok) return [];
+      const data = await resp.json();
+      return data && data.results ? data.results : [];
+    }
+
+    input.addEventListener("input", function () {
+      const q = (input.value || "").trim();
+      if (!q) {
+        hidden.value = "";
+        hidden.dispatchEvent(new Event("change", { bubbles: true }));
+        clearDropdown();
+        return;
+      }
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(async function () {
+        const items = await fetchItems(q);
+        renderItems(items);
+      }, 250);
+    });
+
+    input.addEventListener("focus", function () {
+      const q = (input.value || "").trim();
+      if (q) {
+        if (timer) window.clearTimeout(timer);
+        timer = window.setTimeout(async function () {
+          const items = await fetchItems(q);
+          renderItems(items);
+        }, 50);
+      }
+    });
+
+    document.addEventListener("click", function (e) {
+      if (!dropdown.contains(e.target) && e.target !== input) {
+        clearDropdown();
+      }
+    });
+  })();
+</script>
+<script>
+  (function () {
+    const toggle = document.getElementById("id_replicar_ano_todo");
+    if (!toggle) return;
+
+    function monthInputs() {
+      return Array.from(document.querySelectorAll('input[name="meses"]'));
+    }
+
+    function setAllMonths(checked) {
+      for (const el of monthInputs()) {
+        el.checked = !!checked;
+      }
+    }
+
+    toggle.addEventListener("change", function () {
+      setAllMonths(toggle.checked);
+    });
+
+    if (toggle.checked) setAllMonths(true);
+  })();
+</script>
+<script>
+  (function () {
+    const hidden = document.getElementById("id_centro_custo");
+    const anoEl = document.getElementById("id_ano");
+    const mesEl = document.getElementById("id_mes");
+    const valorEl = document.getElementById("id_valor_previsto");
+    const obsEl = document.getElementById("id_observacao");
+    const replicarEl = document.getElementById("id_replicar_ano_todo");
+    if (!hidden || !anoEl || !mesEl || !valorEl || !obsEl) return;
+
+    const endpoint = "{% url 'financeiro_web:orcamento_item_buscar' slug=slug orcamento_id=orcamento.orca_id %}";
+    let timer = null;
+    let lastKey = "";
+
+    function monthsChecked() {
+      const meses = Array.from(document.querySelectorAll('input[name="meses"]'));
+      return meses.some((el) => el && el.checked);
+    }
+
+    async function fetchExisting() {
+      const centro = (hidden.value || "").trim();
+      const ano = (anoEl.value || "").trim();
+      const mes = (mesEl.value || "").trim();
+
+      if (replicarEl && replicarEl.checked) return;
+      if (monthsChecked()) return;
+      if (!centro || !ano || !mes) return;
+
+      const key = centro + "|" + ano + "|" + mes;
+      lastKey = key;
+
+      const url =
+        endpoint +
+        "?centro_custo_id=" + encodeURIComponent(centro) +
+        "&ano=" + encodeURIComponent(ano) +
+        "&mes=" + encodeURIComponent(mes);
+
+      const resp = await fetch(url, { credentials: "same-origin" });
+      if (!resp.ok) return;
+      const data = await resp.json();
+      if (lastKey !== key) return;
+
+      if (data && data.found) {
+        if (typeof data.valor_previsto !== "undefined" && data.valor_previsto !== null) {
+          valorEl.value = String(data.valor_previsto);
+        }
+        if (typeof data.observacao !== "undefined" && data.observacao !== null) {
+          obsEl.value = String(data.observacao);
+        }
+      }
+    }
+
+    function schedule() {
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(fetchExisting, 200);
+    }
+
+    hidden.addEventListener("change", schedule);
+    anoEl.addEventListener("change", schedule);
+    mesEl.addEventListener("change", schedule);
+  })();
+</script>
+{% endblock %}

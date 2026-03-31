@@ -1,0 +1,779 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+
+<div class="container py-4">
+  <style>
+    .orcamento-page .card {
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: 14px;
+    }
+
+    .orc-btn-label-xs { display: none; }
+
+    .orc-gradient-soft {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.10), rgba(13, 202, 240, 0.08));
+    }
+
+    .orc-icon-pill {
+      width: 30px;
+      height: 30px;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.22), rgba(13, 202, 240, 0.18));
+      border: 1px solid rgba(99, 102, 241, 0.20);
+      overflow: hidden;
+      flex: 0 0 auto;
+    }
+    .orc-icon-pill i { font-size: 1.1rem; }
+
+    .orc-kpi-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .orc-kpi-card { overflow: hidden; }
+    .orc-kpi-card .fs-4 { font-size: clamp(0.90rem, 2.3vw, 1.05rem); white-space: nowrap; }
+
+    .orc-kpi-col {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+
+    .orcamento-chart-wrap {
+      position: relative;
+      height: 320px;
+    }
+
+    @media (max-width: 576px) {
+      .orcamento-header {
+        text-align: center;
+        width: 100%;
+        margin-bottom: 10px;
+      }
+
+      .orcamento-actions {
+        width: 100%;
+        display: flex;
+        gap: 10px;
+        justify-content: space-between;
+      }
+
+      .orcamento-actions .btn {
+        flex: 1 1 0;
+        padding: 0.30rem 0.45rem;
+        font-size: 0.82rem;
+      }
+
+      .orcamento-actions .btn .orc-btn-label {
+        display: none;
+      }
+      .orcamento-actions .btn .orc-btn-label-xs {
+        display: inline;
+        font-size: 0.72rem;
+        margin-left: 0.25rem;
+      }
+
+      .orcamento-filter .form-label {
+        font-size: 0.75rem;
+        margin-bottom: 0.25rem;
+      }
+
+      .orcamento-filter .form-control,
+      .orcamento-filter .form-select {
+        font-size: 0.85rem;
+        padding-top: 0.35rem;
+        padding-bottom: 0.35rem;
+      }
+
+      .orc-kpi-row {
+        gap: 10px;
+      }
+
+      .orc-kpi-card .fs-4 {
+        font-size: clamp(0.86rem, 2.8vw, 0.96rem) !important;
+      }
+
+      .orc-kpi-card .text-body-secondary {
+        font-size: 0.72rem;
+      }
+
+      .orc-icon-pill {
+        width: 22px;
+        height: 22px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.16), rgba(13, 202, 240, 0.12));
+      }
+      .orc-icon-pill i { font-size: 0.85rem; }
+
+      .orcamento-chart-wrap {
+        height: 220px;
+      }
+    }
+
+    @media (max-width: 540px) {
+      .orc-kpi-row { gap: 8px; }
+      .orc-icon-pill { display: none; }
+      .orc-kpi-card .card-body { padding: 0.45rem; }
+      .orc-kpi-card .text-body-secondary { font-size: 0.66rem; }
+      .orc-kpi-card .fs-4 { font-size: clamp(0.82rem, 3vw, 0.92rem) !important; }
+    }
+
+    @media (max-width: 420px) {
+      .orcamento-actions .btn {
+        padding: 0.28rem 0.4rem;
+        font-size: 0.78rem;
+      }
+      .orc-icon-pill { display: none; }
+      .orc-kpi-card .card-body { padding: 0.45rem; }
+      .orc-kpi-card .fs-4 { font-size: 0.9rem !important; }
+      .orc-kpi-card .text-body-secondary { font-size: 0.68rem; }
+    }
+
+    .orcamento-table-scroll thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: var(--bs-body-bg);
+    }
+
+    .orc-mobile-item-card {
+      cursor: default;
+    }
+
+    .orc-mobile-item-card.orc-clickable {
+      cursor: pointer;
+    }
+  </style>
+
+  <div class="orcamento-page">
+    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2 mb-3">
+      <div class="orcamento-header">
+        <h3 class="mb-0">Orçamento</h3>
+        <div class="text-body-secondary small">
+          Orçado x realizado • {{ ano }}{% if centro_custo_display %} • {{ centro_custo_display }}{% endif %}
+        </div>
+      </div>
+      <div class="orcamento-actions d-flex gap-2 flex-wrap justify-content-md-end">
+        <a href="{% url 'financeiro_web:orcamento_create' slug=slug %}" class="btn btn-outline-success btn-sm">
+          <i class="bi bi-plus-circle me-1"></i><span class="orc-btn-label">Criar Orçamento</span><span class="orc-btn-label-xs">Orçamento</span>
+        </a>
+        {% if orcamento_id %}
+        <a href="{% url 'financeiro_web:orcamento_item_create' slug=slug orcamento_id=orcamento_id %}"
+          class="btn btn-outline-primary btn-sm">
+          <i class="bi bi-plus-square me-1"></i><span class="orc-btn-label">Criar Item</span><span class="orc-btn-label-xs">Item</span>
+        </a>
+        {% endif %}
+        <a href="?ano={{ ano }}&mes={{ mes }}{% if orcamento_id %}&orcamento_id={{ orcamento_id }}{% endif %}{% if centro_custo_id %}&centro_custo_id={{ centro_custo_id }}{% endif %}&dbcr={{ dbcr }}&expandir={% if expandir %}0{% else %}1{% endif %}"
+          class="btn btn-outline-info btn-sm">
+          {% if expandir %}<i class="bi bi-arrows-collapse me-1"></i><span class="orc-btn-label">Ver Resumido</span><span class="orc-btn-label-xs">Resumir</span>{% else %}<i
+            class="bi bi-arrows-expand me-1"></i><span class="orc-btn-label">Ver Expandido</span><span class="orc-btn-label-xs">Expandir</span>{% endif %}
+        </a>
+      </div>
+    </div>
+
+    <div class="card shadow-sm mb-3 orcamento-filter orc-gradient-soft">
+      <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+          <div class="col-12 col-lg-4">
+            <label class="form-label">Orçamento</label>
+            <select name="orcamento_id" class="form-select form-select-sm">
+              <option value="">(Ativo)</option>
+              {% for o in orcamentos %}
+              <option value="{{ o.orca_id }}" {% if orcamento_id == o.orca_id %}selected{% endif %}>
+                {{ o.orca_desc }} | {{ o.orca_ano }} | {{ o.orca_tipo }} | {{ o.orca_cena }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-12 col-lg-3">
+            <label class="form-label">Centro de Custo</label>
+            <input type="hidden" name="centro_custo_id" id="id_centro_custo_id" value="{{ centro_custo_id|default:'' }}">
+            <div class="position-relative">
+              <input
+                type="text"
+                name="centro_custo_display"
+                id="id_centro_custo_display"
+                class="form-control form-control-sm"
+                value="{{ centro_custo_display|default:'' }}"
+                placeholder="Buscar centro de custo..."
+                autocomplete="off"
+              >
+              <div id="dropdown_cc_filter" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
+            </div>
+          </div>
+          <div class="col-6 col-lg-1">
+            <label class="form-label">Ano</label>
+            <input name="ano" class="form-control form-control-sm" value="{{ ano }}">
+          </div>
+          <div class="col-6 col-lg-1">
+            <label class="form-label">Mês</label>
+            <input name="mes" class="form-control form-control-sm" value="{{ mes }}">
+          </div>
+          <div class="col-6 col-lg-2">
+            <label class="form-label">Natureza</label>
+            <select name="dbcr" class="form-select form-select-sm">
+              <option value="A" {% if dbcr == "A" %}selected{% endif %}>Ambos</option>
+              <option value="C" {% if dbcr == "C" %}selected{% endif %}>Entradas</option>
+              <option value="D" {% if dbcr == "D" %}selected{% endif %}>Saídas</option>
+            </select>
+          </div>
+          <div class="col-6 col-lg-1 d-grid">
+            <input type="hidden" name="expandir" value="{% if expandir %}1{% else %}0{% endif %}">
+            <button type="submit" class="btn btn-outline-primary btn-sm">
+              <i class="bi bi-funnel me-1"></i> Filtrar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="orc-kpi-row mb-3">
+      <div class="orc-kpi-col">
+        <div class="card shadow-sm orc-kpi-card orc-gradient-soft">
+          <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between gap-2">
+              <div>
+                <div class="text-body-secondary small">Orçado (mês)</div>
+                <div class="fs-4 fw-semibold">R$ {{ kpis.orcado_mes }}</div>
+              </div>
+              <div class="orc-icon-pill">
+                <i class="bi bi-clipboard-data"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="orc-kpi-col">
+        <div class="card shadow-sm orc-kpi-card orc-gradient-soft">
+          <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between gap-2">
+              <div>
+                <div class="text-body-secondary small">Realizado (mês)</div>
+                <div class="fs-4 fw-semibold">R$ {{ kpis.realizado_mes }}</div>
+              </div>
+              <div class="orc-icon-pill">
+                <i class="bi bi-cash-stack"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="orc-kpi-col">
+        <div class="card shadow-sm orc-kpi-card orc-gradient-soft">
+          <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between gap-2">
+              <div>
+                <div class="text-body-secondary small">Saldo (mês)</div>
+                <div class="fs-4 fw-semibold">R$ {{ kpis.saldo_mes }}</div>
+              </div>
+              <div class="orc-icon-pill">
+                <i class="bi bi-wallet2"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="orc-kpi-col">
+        <div class="card shadow-sm orc-kpi-card orc-gradient-soft">
+          <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between gap-2">
+              <div>
+                <div class="text-body-secondary small">Execução (mês)</div>
+                <div class="fs-4 fw-semibold">{{ kpis.percentual_mes }}%</div>
+              </div>
+              <div class="orc-icon-pill">
+                <i class="bi bi-speedometer2"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm mb-3 orc-gradient-soft">
+      <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2 orc-gradient-soft">
+        <div class="fw-semibold">
+          <i class="bi bi-graph-up me-1"></i> Evolução ({{ ano }})
+        </div>
+        <div class="text-body-secondary small">Orçado x realizado com tendência</div>
+      </div>
+      <div class="card-body">
+        <div class="orcamento-chart-wrap">
+          <canvas id="chart_orcado_realizado"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm orc-gradient-soft">
+      <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2 orc-gradient-soft">
+        <div class="fw-semibold">
+          <i class="bi bi-list-check me-1"></i> Detalhamento por Centro de Custo
+        </div>
+        <div class="text-body-secondary small">{% if expandir %}Expandido{% else %}Resumido{% endif %}</div>
+      </div>
+      <div class="card-body p-0">
+        <div class="d-none d-sm-block table-responsive orcamento-table-scroll">
+          <table class="table table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Centro de Custo</th>
+                <th style="width: 80px;">Tipo</th>
+                <th class="text-end">Previsto</th>
+                <th class="text-end">Realizado</th>
+                <th class="text-end">Saldo</th>
+                <th style="width: 90px;" class="text-end">%</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in dados %}
+              <tr
+                {% if expandir %}
+                class="js-realizado-row"
+                style="cursor: pointer;"
+                data-cecu-id="{{ item.centro_custo_id }}"
+                data-cecu-label="{{ item.centro_custo_label|default:item.centro_custo_nome }}"
+                data-cecu-tipo="{{ item.tipo }}"
+                {% endif %}
+              >
+                <td>{{ item.centro_custo_label|default:item.centro_custo_nome }}</td>
+                <td>{{ item.tipo }}</td>
+                <td class="text-end">R$ {{ item.previsto }}</td>
+                <td class="text-end">R$ {{ item.realizado }}</td>
+                <td class="text-end">R$ {{ item.saldo }}</td>
+                <td class="text-end">
+                  {% if item.percentual > 100 %}
+                  <span class="badge bg-danger">{{ item.percentual }}%</span>
+                  {% elif item.percentual > 80 %}
+                  <span class="badge bg-warning text-dark">{{ item.percentual }}%</span>
+                  {% else %}
+                  <span class="badge bg-success">{{ item.percentual }}%</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="6" class="p-4 text-center text-body-secondary">Nenhum dado encontrado.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="d-block d-sm-none p-3">
+          {% for item in dados %}
+          <div
+            class="card shadow-sm mb-2 orc-gradient-soft orc-mobile-item-card {% if expandir %}orc-clickable js-realizado-row{% endif %}"
+            {% if expandir %}
+            data-cecu-id="{{ item.centro_custo_id }}"
+            data-cecu-label="{{ item.centro_custo_label|default:item.centro_custo_nome }}"
+            data-cecu-tipo="{{ item.tipo }}"
+            {% endif %}
+          >
+            <div class="card-body py-2">
+              <div class="d-flex align-items-start justify-content-between gap-2">
+                <div class="fw-semibold small">{{ item.centro_custo_label|default:item.centro_custo_nome }}</div>
+                <span class="badge bg-secondary">{{ item.tipo }}</span>
+              </div>
+              <div class="row g-2 mt-2">
+                <div class="col-6">
+                  <div class="text-body-secondary small">Previsto</div>
+                  <div class="fw-semibold small">R$ {{ item.previsto }}</div>
+                </div>
+                <div class="col-6 text-end">
+                  <div class="text-body-secondary small">Realizado</div>
+                  <div class="fw-semibold small">R$ {{ item.realizado }}</div>
+                </div>
+                <div class="col-6">
+                  <div class="text-body-secondary small">Saldo</div>
+                  <div class="fw-semibold small">R$ {{ item.saldo }}</div>
+                </div>
+                <div class="col-6 text-end">
+                  <div class="text-body-secondary small">%</div>
+                  {% if item.percentual > 100 %}
+                  <span class="badge bg-danger">{{ item.percentual }}%</span>
+                  {% elif item.percentual > 80 %}
+                  <span class="badge bg-warning text-dark">{{ item.percentual }}%</span>
+                  {% else %}
+                  <span class="badge bg-success">{{ item.percentual }}%</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+          {% empty %}
+          <div class="p-4 text-center text-body-secondary">Nenhum dado encontrado.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modalRealizado" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title fw-semibold" id="modalRealizadoTitle">Detalhamento do Realizado</div>
+          <div class="text-body-secondary small" id="modalRealizadoSubtitle"></div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="modalRealizadoLoading" class="text-body-secondary">Carregando...</div>
+        <div id="modalRealizadoEmpty" class="text-body-secondary" style="display:none;">Nenhum lançamento encontrado.</div>
+        <div id="modalRealizadoWrap" style="display:none;">
+          <div class="d-flex justify-content-between flex-wrap gap-2 mb-2">
+            <div class="text-body-secondary small" id="modalRealizadoCount"></div>
+            <div class="fw-semibold" id="modalRealizadoTotal"></div>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle">
+              <thead>
+                <tr>
+                  <th style="width: 120px;">Data</th>
+                  <th style="width: 60px;">D/C</th>
+                  <th class="text-end" style="width: 140px;">Valor</th>
+                  <th>Histórico</th>
+                  <th style="width: 220px;">Nome</th>
+                  <th class="text-end" style="width: 110px;">Ctrl</th>
+                </tr>
+              </thead>
+              <tbody id="modalRealizadoBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ mensal_json|json_script:"mensal-data" }}
+<script>
+  (function () {
+    const el = document.getElementById("mensal-data");
+    const canvas = document.getElementById("chart_orcado_realizado");
+    if (!el || !canvas || typeof Chart === "undefined") return;
+
+    const raw = JSON.parse(el.textContent || "{}");
+    const orcado = Array.isArray(raw.orcado) ? raw.orcado : [];
+    const realizado = Array.isArray(raw.realizado) ? raw.realizado : [];
+    const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+    function trend(values) {
+      const n = Math.min(12, values.length || 0);
+      if (!n) return [];
+      let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+      for (let i = 0; i < n; i++) {
+        const x = i + 1;
+        const y = Number(values[i] || 0);
+        sumX += x;
+        sumY += y;
+        sumXY += x * y;
+        sumXX += x * x;
+      }
+      const denom = (n * sumXX - sumX * sumX) || 1;
+      const a = (n * sumXY - sumX * sumY) / denom;
+      const b = (sumY - a * sumX) / n;
+      const out = [];
+      for (let i = 0; i < n; i++) {
+        out.push(a * (i + 1) + b);
+      }
+      return out;
+    }
+
+    const realizadoTrend = trend(realizado);
+
+    if (typeof ChartDataLabels !== "undefined") {
+      Chart.register(ChartDataLabels);
+    }
+    new Chart(canvas, {
+      type: "line",
+      data: {
+        labels: meses,
+        datasets: [
+          {
+            label: "Orçado",
+            data: orcado,
+            borderColor: "#2a62ff",
+            backgroundColor: "rgba(42, 98, 255, 0.15)",
+            tension: 0.25,
+            fill: false,
+            pointRadius: 2,
+          },
+          {
+            label: "Realizado",
+            data: realizado,
+            borderColor: "#22c55e",
+            backgroundColor: "rgba(34, 197, 94, 0.15)",
+            tension: 0.25,
+            fill: false,
+            pointRadius: 2,
+          },
+          {
+            label: "Tendência (realizado)",
+            data: realizadoTrend,
+            borderColor: "#eab308",
+            borderDash: [6, 6],
+            tension: 0,
+            fill: false,
+            pointRadius: 0,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          legend: { display: true },
+          datalabels: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function (ctx) {
+                const v = Number(ctx.parsed.y || 0);
+                return ctx.dataset.label + ": R$ " + v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+              },
+            },
+          },
+        },
+        scales: {
+          y: {
+            ticks: {
+              callback: function (value) {
+                const v = Number(value || 0);
+                return "R$ " + v.toLocaleString("pt-BR");
+              },
+            },
+          },
+        },
+      },
+    });
+  })();
+</script>
+<script>
+  (function () {
+    const ano = "{{ ano }}";
+    const mes = "{{ mes }}";
+    const dbcr = "{{ dbcr }}";
+    const endpoint = "{% url 'financeiro_web:orcamento_realizado_detalhe' slug=slug %}";
+
+    function fmtMoney(v) {
+      const n = Number(v || 0);
+      return "R$ " + n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function fmtDate(iso) {
+      if (!iso) return "";
+      const s = String(iso);
+      const parts = s.split("-");
+      if (parts.length === 3) return parts[2] + "/" + parts[1] + "/" + parts[0];
+      return s;
+    }
+
+    function init() {
+      const rows = document.querySelectorAll(".js-realizado-row[data-cecu-id]");
+      if (!rows.length) return true;
+
+      const modalEl = document.getElementById("modalRealizado");
+      if (!modalEl) return true;
+      if (modalEl.dataset.bound === "1") return true;
+
+      if (typeof bootstrap === "undefined" || !bootstrap.Modal) return false;
+      const modal = new bootstrap.Modal(modalEl);
+
+      const titleEl = document.getElementById("modalRealizadoTitle");
+      const subEl = document.getElementById("modalRealizadoSubtitle");
+      const loadingEl = document.getElementById("modalRealizadoLoading");
+      const emptyEl = document.getElementById("modalRealizadoEmpty");
+      const wrapEl = document.getElementById("modalRealizadoWrap");
+      const bodyEl = document.getElementById("modalRealizadoBody");
+      const countEl = document.getElementById("modalRealizadoCount");
+      const totalEl = document.getElementById("modalRealizadoTotal");
+
+      async function openDetalhe(cecuId, cecuLabel) {
+        if (titleEl) titleEl.textContent = "Detalhamento do Realizado";
+        if (subEl) subEl.textContent = cecuLabel + " • " + String(mes).padStart(2, "0") + "/" + ano + " • " + (dbcr === "C" ? "Entradas" : dbcr === "D" ? "Saídas" : "Ambos");
+        if (loadingEl) loadingEl.style.display = "block";
+        if (emptyEl) emptyEl.style.display = "none";
+        if (wrapEl) wrapEl.style.display = "none";
+        if (bodyEl) bodyEl.innerHTML = "";
+        if (countEl) countEl.textContent = "";
+        if (totalEl) totalEl.textContent = "";
+
+        modal.show();
+
+        const url =
+          endpoint +
+          "?centro_custo_id=" + encodeURIComponent(String(cecuId)) +
+          "&ano=" + encodeURIComponent(String(ano)) +
+          "&mes=" + encodeURIComponent(String(mes)) +
+          "&dbcr=" + encodeURIComponent(String(dbcr)) +
+          "&limite=400";
+
+        const resp = await fetch(url, { credentials: "same-origin" });
+        if (!resp.ok) {
+          if (loadingEl) loadingEl.style.display = "none";
+          if (emptyEl) {
+            emptyEl.textContent = "Falha ao carregar.";
+            emptyEl.style.display = "block";
+          }
+          return;
+        }
+        const data = await resp.json();
+        const list = data && Array.isArray(data.rows) ? data.rows : [];
+
+        if (loadingEl) loadingEl.style.display = "none";
+        if (!list.length) {
+          if (emptyEl) emptyEl.style.display = "block";
+          return;
+        }
+
+        let total = 0;
+        for (const r of list) {
+          const valor = Number(r.laba_valo || 0);
+          total += valor;
+          const tr = document.createElement("tr");
+          tr.innerHTML =
+            "<td>" + fmtDate(r.data_ref) + "</td>" +
+            "<td>" + (r.laba_dbcr || "") + "</td>" +
+            "<td class=\"text-end\">" + fmtMoney(valor) + "</td>" +
+            "<td>" + (r.laba_hist || "") + "</td>" +
+            "<td>" + (r.laba_nomi || "") + "</td>" +
+            "<td class=\"text-end\">" + (r.laba_ctrl || "") + "</td>";
+          bodyEl.appendChild(tr);
+        }
+
+        if (countEl) countEl.textContent = list.length + " lançamento(s)";
+        if (totalEl) totalEl.textContent = "Total: " + fmtMoney(total);
+        if (wrapEl) wrapEl.style.display = "block";
+      }
+
+      rows.forEach((tr) => {
+        tr.addEventListener("click", function () {
+          const cecuId = tr.getAttribute("data-cecu-id");
+          const cecuLabel = tr.getAttribute("data-cecu-label") || "";
+          if (!cecuId) return;
+          openDetalhe(cecuId, cecuLabel);
+        });
+      });
+
+      modalEl.dataset.bound = "1";
+      return true;
+    }
+
+    function boot() {
+      if (init()) return;
+      let tries = 0;
+      const timer = window.setInterval(function () {
+        tries += 1;
+        if (init() || tries >= 25) {
+          window.clearInterval(timer);
+        }
+      }, 200);
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", boot);
+    } else {
+      boot();
+    }
+    window.addEventListener("load", boot, { once: true });
+  })();
+</script>
+<script>
+  (function () {
+    const input = document.getElementById("id_centro_custo_display");
+    const hidden = document.getElementById("id_centro_custo_id");
+    const dropdown = document.getElementById("dropdown_cc_filter");
+    if (!input || !hidden || !dropdown) return;
+
+    const endpoint = "{% url 'financeiro_web:autocomplete_centrosdecustos' slug=slug %}";
+    let timer = null;
+    let lastCommitted = input.value || "";
+
+    function clearDropdown() {
+      dropdown.innerHTML = "";
+      dropdown.style.display = "none";
+    }
+
+    function showDropdown() {
+      dropdown.style.display = "block";
+    }
+
+    function renderItems(items) {
+      dropdown.innerHTML = "";
+      if (!items || !items.length) {
+        clearDropdown();
+        return;
+      }
+      for (const it of items) {
+        const a = document.createElement("a");
+        a.href = "#";
+        a.className = "list-group-item list-group-item-action";
+        a.textContent = it.label;
+        a.dataset.value = it.value;
+        a.addEventListener("click", function (e) {
+          e.preventDefault();
+          hidden.value = String(it.value);
+          input.value = it.label;
+          lastCommitted = it.label;
+          clearDropdown();
+        });
+        dropdown.appendChild(a);
+      }
+      showDropdown();
+    }
+
+    async function fetchItems(q) {
+      const url = endpoint + "?term=" + encodeURIComponent(q || "");
+      const resp = await fetch(url, { credentials: "same-origin" });
+      if (!resp.ok) return [];
+      const data = await resp.json();
+      return data && data.results ? data.results : [];
+    }
+
+    input.addEventListener("input", function () {
+      const q = (input.value || "").trim();
+      if (!q) {
+        hidden.value = "";
+        lastCommitted = "";
+        clearDropdown();
+        return;
+      }
+      if (q !== lastCommitted) {
+        hidden.value = "";
+      }
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(async function () {
+        const items = await fetchItems(q);
+        renderItems(items);
+      }, 250);
+    });
+
+    input.addEventListener("focus", function () {
+      const q = (input.value || "").trim();
+      if (q) {
+        if (timer) window.clearTimeout(timer);
+        timer = window.setTimeout(async function () {
+          const items = await fetchItems(q);
+          renderItems(items);
+        }, 50);
+      }
+    });
+
+    document.addEventListener("click", function (e) {
+      if (!dropdown.contains(e.target) && e.target !== input) {
+        clearDropdown();
+      }
+    });
+  })();
+</script>
+{% endblock %}

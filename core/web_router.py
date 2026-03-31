@@ -1,5 +1,6 @@
 from django.urls import include, path
 from . import views
+from Financeiro.Web.views import OrcamentoDashboardTemplateView
 
 urlpatterns = [
     path("", views.index, name="index"),
@@ -31,6 +32,7 @@ urlpatterns = [
     path("<slug:slug>/contas-a-pagar/", include("contas_a_pagar.Web.web_urls")),
     path("<slug:slug>/contas-a-receber/", include("contas_a_receber.Web.web_urls")),
     path("<slug:slug>/lancamentos-bancarios/", include("Lancamentos_Bancarios.Web.web_urls")),
+    path("<slug:slug>/orcamento/dashboard/", OrcamentoDashboardTemplateView.as_view(), name="orcamento_dashboard"),
     path("<slug:slug>/fluxo-de-caixa/", include("Financeiro.web_urls")),
     path("<slug:slug>/gerencial/", include("Gerencial.web_urls")),
     path("<slug:slug>/dre/", include("DRE.web_urls")),
