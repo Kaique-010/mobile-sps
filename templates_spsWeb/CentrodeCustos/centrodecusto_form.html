@@ -67,6 +67,8 @@
         else if (tag.indexOf('warning') >= 0) cls = 'text-bg-warning';
         else if (tag.indexOf('info') >= 0) cls = 'text-bg-info';
         t.classList.add(cls);
+        var autoshow = t.getAttribute('data-autoshow');
+        if (autoshow === 'false') return;
         if (window.bootstrap && bootstrap.Toast) {
           new bootstrap.Toast(t).show();
         } else {

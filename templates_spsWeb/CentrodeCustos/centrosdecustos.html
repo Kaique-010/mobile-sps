@@ -29,7 +29,7 @@
   <div class="position-fixed top-0 end-0 p-3" style="z-index:1080">
     {% for message in messages %}
     <div class="toast align-items-center border-0" role="alert" aria-live="assertive" aria-atomic="true"
-      data-bs-delay="4000" data-tag="{{ message.tags }}">
+      data-bs-delay="4000" data-tag="{{ message.tags }}" data-autoshow="false">
       <div class="d-flex">
         <div class="toast-body">{{ message }}</div>
         <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
@@ -113,6 +113,8 @@
       else if (tag.indexOf('warning') >= 0) cls = 'text-bg-warning';
       else if (tag.indexOf('info') >= 0) cls = 'text-bg-info';
       t.classList.add(cls);
+      var autoshow = t.getAttribute('data-autoshow');
+      if (autoshow === 'false') return;
       if (window.bootstrap && bootstrap.Toast) {
         new bootstrap.Toast(t).show();
       } else {
@@ -122,3 +124,5 @@
   } catch (e) { }
 </script>
 {% endblock %}
+
+{% block auto_messages %}{% endblock %}
