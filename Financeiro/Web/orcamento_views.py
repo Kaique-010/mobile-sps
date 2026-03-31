@@ -13,7 +13,7 @@ from Financeiro.orcamento_financeiro_service import OrcamentoCadastroService
 class OrcamentoCreateView(CreateView):
     model = Orcamento
     form_class = OrcamentoForm
-    template_name = "financeiro/orcamento/form.html"
+    template_name = "Financeiro/orcamento/form.html"
 
     def get_service(self):
         db_alias = get_licenca_db_config(self.request)
@@ -56,7 +56,7 @@ from Financeiro.models import Orcamento
 
 
 class OrcamentoItemCreateView(FormView):
-    template_name = "financeiro/orcamento/item_form.html"
+    template_name = "Financeiro/orcamento/item_form.html"
     form_class = OrcamentoItemForm
 
     def dispatch(self, request, *args, **kwargs):
