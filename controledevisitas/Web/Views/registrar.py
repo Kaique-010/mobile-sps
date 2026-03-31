@@ -79,16 +79,32 @@ class ControleVisitaCreateView(VendedorEntidadeMixin, FormView):
         except Exception:
             filial_id = int(self.request.session.get('filial_id', 1) or 1)
         try:
-            cliente = Entidades.objects.using(self.db_alias).get(enti_clie=dados['ctrl_cliente_id'])
+            cliente = (
+                Entidades.objects.using(self.db_alias)
+                .filter(enti_empr=empresa_id, enti_clie=dados['ctrl_cliente_id'])
+                .first()
+            )
         except Exception:
+            try:
+                cliente = Entidades.objects.using(self.db_alias).filter(enti_clie=dados['ctrl_cliente_id']).first()
+            except Exception:
+                cliente = None
+        if not cliente:
             messages.error(self.request, 'Cliente inválido')
             return self.form_invalid(form)
         vendedor = None
         if dados.get('ctrl_vendedor_id'):
             try:
-                vendedor = Entidades.objects.using(self.db_alias).get(enti_clie=dados['ctrl_vendedor_id'])
+                vendedor = (
+                    Entidades.objects.using(self.db_alias)
+                    .filter(enti_empr=empresa_id, enti_clie=dados['ctrl_vendedor_id'])
+                    .first()
+                )
             except Exception:
-                vendedor = None
+                try:
+                    vendedor = Entidades.objects.using(self.db_alias).filter(enti_clie=dados['ctrl_vendedor_id']).first()
+                except Exception:
+                    vendedor = None
         if not vendedor:
             vendedor = self.get_entidade_vendedor()
         etapa = None
@@ -172,7 +188,12 @@ class ControleVisitaEditView(FormView):
         return super().dispatch(request, *args, **kwargs)
 
     def get_object(self):
-        return Controlevisita.objects.using(self.db_alias).select_related('ctrl_cliente','ctrl_vendedor','ctrl_etapa').get(ctrl_id=self.ctrl_id)
+        return (
+            Controlevisita.objects.using(self.db_alias)
+            .select_related('ctrl_etapa')
+            .prefetch_related('ctrl_cliente', 'ctrl_vendedor')
+            .get(ctrl_id=self.ctrl_id)
+        )
 
     def get_initial(self):
         v = self.get_object()
@@ -208,16 +229,46 @@ class ControleVisitaEditView(FormView):
         vendedor = None
         cliente = None
         etapa = None
+        try:
+            empresa_id = int(self.empresa_id)
+        except Exception:
+            empresa_id = None
         if dados.get('ctrl_cliente_id'):
-            try:
-                cliente = Entidades.objects.using(self.db_alias).get(enti_clie=dados['ctrl_cliente_id'])
-            except Exception:
-                cliente = None
+            if empresa_id is None:
+                try:
+                    cliente = Entidades.objects.using(self.db_alias).filter(enti_clie=dados['ctrl_cliente_id']).first()
+                except Exception:
+                    cliente = None
+            else:
+                try:
+                    cliente = (
+                        Entidades.objects.using(self.db_alias)
+                        .filter(enti_empr=empresa_id, enti_clie=dados['ctrl_cliente_id'])
+                        .first()
+                    )
+                except Exception:
+                    try:
+                        cliente = Entidades.objects.using(self.db_alias).filter(enti_clie=dados['ctrl_cliente_id']).first()
+                    except Exception:
+                        cliente = None
         if dados.get('ctrl_vendedor_id'):
-            try:
-                vendedor = Entidades.objects.using(self.db_alias).get(enti_clie=dados['ctrl_vendedor_id'])
-            except Exception:
-                vendedor = None
+            if empresa_id is None:
+                try:
+                    vendedor = Entidades.objects.using(self.db_alias).filter(enti_clie=dados['ctrl_vendedor_id']).first()
+                except Exception:
+                    vendedor = None
+            else:
+                try:
+                    vendedor = (
+                        Entidades.objects.using(self.db_alias)
+                        .filter(enti_empr=empresa_id, enti_clie=dados['ctrl_vendedor_id'])
+                        .first()
+                    )
+                except Exception:
+                    try:
+                        vendedor = Entidades.objects.using(self.db_alias).filter(enti_clie=dados['ctrl_vendedor_id']).first()
+                    except Exception:
+                        vendedor = None
         if dados.get('ctrl_etapa_id'):
             from controledevisitas.models import Etapavisita
             try:

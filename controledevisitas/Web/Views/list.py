@@ -23,9 +23,14 @@ class ControleVisitaListView(ModuloRequeridoMixin, VendedorEntidadeMixin, ListVi
         
         empresa_id = int(self.request.session.get('empresa_id', 1))
         filial_id = int(self.request.session.get('filial_id', 1))
-        qs = Controlevisita.objects.using(self.db_alias).select_related('ctrl_cliente', 'ctrl_vendedor', 'ctrl_etapa').filter(
-            ctrl_empresa_id=empresa_id,
-            ctrl_filial=filial_id,
+        qs = (
+            Controlevisita.objects.using(self.db_alias)
+            .select_related('ctrl_etapa')
+            .prefetch_related('ctrl_cliente', 'ctrl_vendedor')
+            .filter(
+                ctrl_empresa_id=empresa_id,
+                ctrl_filial=filial_id,
+            )
         )
         qs = self.filter_por_vendedor(qs, 'ctrl_vendedor')
         logger.info(f'Queryset: {qs.query}')
@@ -142,11 +147,16 @@ class ProximasVisitasDashboardView(ModuloRequeridoMixin, VendedorEntidadeMixin, 
         filial_id = self.request.session.get('filial_id', 1)
         ctx = super().get_context_data(**kwargs)
         hoje = date.today()
-        visitas = Controlevisita.objects.using(self.db_alias).select_related('ctrl_cliente','ctrl_vendedor').filter(
-            ctrl_prox_visi__gte=hoje,
-            ctrl_empresa_id=empresa_id,
-            ctrl_filial=filial_id,
-        ).order_by('ctrl_prox_visi')
+        visitas = (
+            Controlevisita.objects.using(self.db_alias)
+            .prefetch_related('ctrl_cliente', 'ctrl_vendedor', 'ctrl_etapa')
+            .filter(
+                ctrl_prox_visi__gte=hoje,
+                ctrl_empresa_id=empresa_id,
+                ctrl_filial=filial_id,
+            )
+            .order_by('ctrl_prox_visi')
+        )
         visitas = self.filter_por_vendedor(visitas, 'ctrl_vendedor')
         cliente = (self.request.GET.get('cliente') or '').strip()
         vendedor = (self.request.GET.get('vendedor') or '').strip()
@@ -300,11 +310,16 @@ class ControleVisitaResumoView(ModuloRequeridoMixin, VendedorEntidadeMixin, Temp
         ctx = super().get_context_data(**kwargs)
         empresa_id = self.request.session.get('empresa_id', 1)
         filial_id = self.request.session.get('filial_id', 1)
-        visita = Controlevisita.objects.using(self.db_alias).select_related('ctrl_cliente', 'ctrl_vendedor', 'ctrl_etapa').get(
-            ctrl_id=self.ctrl_id,
-            ctrl_empresa_id=int(empresa_id),
-            ctrl_filial=int(filial_id)
-        )  
+        visita = (
+            Controlevisita.objects.using(self.db_alias)
+            .select_related('ctrl_etapa')
+            .prefetch_related('ctrl_cliente', 'ctrl_vendedor')
+            .get(
+                ctrl_id=self.ctrl_id,
+                ctrl_empresa_id=int(empresa_id),
+                ctrl_filial=int(filial_id)
+            )
+        )
         itens = list(ItensVisita.objects.using(self.db_alias).filter(item_visita=visita).order_by('-item_data'))
         prod_ids = [i.item_prod for i in itens if i.item_prod]
         produtos = Produtos.objects.using(self.db_alias).filter(prod_codi__in=prod_ids)

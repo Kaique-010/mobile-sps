@@ -69,29 +69,43 @@ class ControleVisitaViewSet(BancoContextMixin, ModuloRequeridoMixin, VendedorEnt
         if not banco:
             logger.error("Banco de dados não encontrado.")
             raise NotFound("Banco de dados não encontrado.")
-        
-        empresa_id = self.request.headers.get("X-Empresa")
-        if not empresa_id:
-            empresa_id = self.request.session.get("empresa_id")
-            
-        if not empresa_id and self.request.user.is_authenticated:
-            empresa_user = getattr(self.request.user, 'empresa', None)
-            if hasattr(empresa_user, 'id'):
-                empresa_id = empresa_user.id
-            elif hasattr(self.request.user, 'empresa_id'):
-                empresa_id = self.request.user.empresa_id
 
-        filial_id = self.request.headers.get("X-Filial")
-        if not filial_id:
-            filial_id = self.request.session.get("filial_id")
+        def _pick_int(*values):
+            for v in values:
+                if v is None:
+                    continue
+                if isinstance(v, str) and not v.strip():
+                    continue
+                try:
+                    return int(v)
+                except Exception:
+                    continue
+            return None
+
+        empresa_id = _pick_int(
+            self.request.headers.get("X-Empresa"),
+            self.request.query_params.get("empresa_id"),
+            self.request.query_params.get("empr"),
+            self.request.session.get("empresa_id"),
+        )
+        if empresa_id is None and self.request.user.is_authenticated:
+            empresa_user = getattr(self.request.user, 'empresa', None)
+            empresa_id = _pick_int(getattr(empresa_user, 'id', None), getattr(self.request.user, 'empresa_id', None))
+
+        filial_id = _pick_int(
+            self.request.headers.get("X-Filial"),
+            self.request.query_params.get("filial_id"),
+            self.request.query_params.get("fili"),
+            self.request.session.get("filial_id"),
+        )
         
         # Base queryset com select_related para otimização
-        queryset = Controlevisita.objects.using(banco).select_related(
-            'ctrl_cliente',
-            'ctrl_vendedor', 
-            'ctrl_empresa',
-            'ctrl_etapa'
-        ).all()
+        queryset = (
+            Controlevisita.objects.using(banco)
+            .select_related('ctrl_empresa', 'ctrl_etapa')
+            .prefetch_related('ctrl_cliente', 'ctrl_vendedor')
+            .all()
+        )
 
         user = self.request.user
         
@@ -113,7 +127,7 @@ class ControleVisitaViewSet(BancoContextMixin, ModuloRequeridoMixin, VendedorEnt
         
         # Filtros por headers
         if empresa_id:
-            queryset = queryset.filter(ctrl_empresa=empresa_id)
+            queryset = queryset.filter(ctrl_empresa_id=empresa_id)
         if filial_id:
             queryset = queryset.filter(ctrl_filial=filial_id)
         
@@ -159,7 +173,7 @@ class ControleVisitaViewSet(BancoContextMixin, ModuloRequeridoMixin, VendedorEnt
             context['banco'] = 'default'
         
         # Pegar empresa_id com fallback robusto (Header -> Session -> User -> Body)
-        empresa_id = self.request.headers.get("X-Empresa")
+        empresa_id = self.request.headers.get("X-Empresa") or self.request.query_params.get("empresa_id") or self.request.query_params.get("empr")
         
         if not empresa_id:
             empresa_id = self.request.session.get("empresa_id")
@@ -181,7 +195,7 @@ class ControleVisitaViewSet(BancoContextMixin, ModuloRequeridoMixin, VendedorEnt
                 pass
                 
         # Pegar filial_id com fallback robusto
-        filial_id = self.request.headers.get("X-Filial")
+        filial_id = self.request.headers.get("X-Filial") or self.request.query_params.get("filial_id") or self.request.query_params.get("fili")
         
         if not filial_id:
             filial_id = self.request.session.get("filial_id")
