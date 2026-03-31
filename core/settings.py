@@ -595,6 +595,14 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'America/Sao_Paulo'
 
+
+CELERY_BEAT_SCHEDULE = {
+    'verificar-trials-expirados-diario': {
+        'task': 'planos.tasks.verificar_trials_expirados',
+        'schedule': 86400,  # 24h em segundos — sem precisar importar nada
+    },
+}
+
 # ============================================================================
 # CONFIGURAÇÕES DE UPLOAD
 # ============================================================================

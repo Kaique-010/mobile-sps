@@ -24,13 +24,17 @@ from parametros_admin.utils import  get_modulos_globais, get_codigos_modulos_lib
 from Licencas.permissions import UsuariosPermission
 import time
 import logging
+from django.utils import timezone
+import re
+from django.db.models import Q
 
 logger = logging.getLogger(__name__)
 
 
 def get_banco_por_docu(docu):
     from core.licenca_context import get_licencas_map
-    match = next((x for x in get_licencas_map() if x['cnpj'] == docu), None)
+    docu_digits = re.sub(r"\D", "", str(docu or ""))
+    match = next((x for x in get_licencas_map() if re.sub(r"\D", "", str(x.get('cnpj') or "")) == docu_digits), None)
     return match['slug'] if match else None
 
 
@@ -50,12 +54,20 @@ class LoginView(APIView):
         filial_id = data.get("filial_id", 1)    
         
         if not docu:
-            return Response({'error': 'CNPJ não informado. deve e obrigatoriamente ser informado.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'CPF/CNPJ não informado. Deve ser obrigatoriamente informado.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        docu_digits = re.sub(r"\D", "", str(docu))
+        if len(docu_digits) not in (11, 14):
+            return Response({'error': 'CPF/CNPJ inválido.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        slug_from_docu = get_banco_por_docu(docu_digits)
+        if not slug_from_docu:
+            return Response({'error': 'CPF/CNPJ inválido ou licença não encontrada.'}, status=404)
 
         # Log: Buscar configuração do banco
         db_start = time.time()
         try:
-            banco = get_licenca_db_config(request)
+            banco = get_licenca_db_config(slug_from_docu)
         except Exception as e:
             logger.error(f"[LOGIN] Erro ao obter config do banco: {e}")
             return Response({'error': f'Erro na configuração da licença: {str(e)}'}, status=500)
@@ -64,23 +76,50 @@ class LoginView(APIView):
         logger.debug(f"[LOGIN] get_licenca_db_config: {db_time:.2f}ms")
         
         if not banco:
-            return Response({'error': 'CNPJ inválido ou licença não encontrada.'}, status=404)
+            return Response({'error': 'CPF/CNPJ inválido ou licença não encontrada.'}, status=404)
 
         # Log: Buscar licença
         licenca_start = time.time()
         try:
-            licenca = Licencas.objects.using(banco).filter(lice_docu=docu).first()
+            licenca = Licencas.objects.using(banco).filter(lice_docu=docu_digits).first()
         except Exception:
             licenca = None
             
         # LicencaWeb fica no banco default (gerenciador)
-        licenca_web = LicencaWeb.objects.using('default').filter(cnpj=docu).first()
+        licenca_web = LicencaWeb.objects.using('default').select_related('plano').filter(Q(cnpj=docu_digits) | Q(cnpj=str(docu))).first()
         
+        if licenca_web:
+            try:
+                plano = licenca_web.plano
+            except Exception:
+                plano = None
+                logger.warning(f"[LOGIN] plano órfão ou deletado para licença {licenca_web.slug} — bloqueio ignorado")
+
+            if plano and plano.plan_trial:
+                if plano.plan_ativ and plano.plan_data_expi:
+                    if timezone.now() > plano.plan_data_expi:
+                        plano.plan_ativ = False
+                        plano.save(update_fields=['plan_ativ'])
+                        logger.warning(f"[LOGIN] Trial expirado on-the-fly — licença {licenca_web.slug}")
+
+                if not plano.plan_ativ:
+                    logger.warning(f"[LOGIN] Trial desativado — licença {licenca_web.slug}, deseja prosseguir com o contrato?")
+                    
+                    return Response(
+                        {
+                            'error': 'Seu período de trial expirou. Entre em contato com o suporte.',
+                            'plan_data_expi': plano.plan_data_expi,
+                            'code': 'trial_expirado',
+                        },
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+                    
+            
         licenca_time = (time.time() - licenca_start) * 1000
         logger.debug(f"[LOGIN] Buscar licença: {licenca_time:.2f}ms")
         
         if not licenca and not licenca_web:
-            return Response({'error': 'CNPJ inválido ou licença bloqueada.'}, status=403)
+            return Response({'error': 'CPF/CNPJ inválido ou licença bloqueada.'}, status=403)
 
         # Log: Buscar usuário
         user_start = time.time()
@@ -109,7 +148,6 @@ class LoginView(APIView):
         # Os módulos reais serão carregados após seleção da empresa/filial
         modulos_login = []  # Não retornar módulos no login
 
-        slug_from_docu = get_banco_por_docu(docu)
         jwt_start = time.time()
         refresh = RefreshToken.for_user(usuario)
         refresh['username'] = usuario.usua_nome
@@ -133,7 +171,7 @@ class LoginView(APIView):
         except Exception:
              logger.exception("[LOGIN] cycle_key falhou")
         request.session["usua_codi"] = usuario.usua_codi
-        request.session["docu"] = docu
+        request.session["docu"] = docu_digits
         request.session["slug"] = slug_from_docu if slug_from_docu else request.session.get('slug')
         request.session.modified = True
         request.session["usua_codi"] = usuario.usua_codi
@@ -143,7 +181,7 @@ class LoginView(APIView):
             logger.exception("[LOGIN] falha ao salvar sessão após login")
         logger.debug("[LOGIN] sessão gravada: %s", {k: request.session.get(k) for k in ['usua_codi','docu','slug','empresa_id','filial_id']})
         try:
-            request.session["docu"] = docu
+            request.session["docu"] = docu_digits
             if slug_from_docu:
                 request.session["slug"] = slug_from_docu
         except Exception:

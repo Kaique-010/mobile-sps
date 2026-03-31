@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from django.utils.text import slugify
 from core.utils import get_db_from_slug
 import logging
+import json
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
@@ -72,12 +73,18 @@ class PlanoService:
         empresa = Empresas.objects.using(db_alias).get(empr_codi=empresa_id) 
         filial = Filiais.objects.using(db_alias).get(empr_codi=filial_id) 
         
-        usuario = Usuarios.objects.using(db_alias).create(
+        usuario1 = Usuarios.objects.using(db_alias).create(
+            usua_nome='admin',
+            usua_seto=1
+        )
+        usuario2 = Usuarios.objects.using(db_alias).create(
             usua_nome='web',
             usua_seto=1
         )
-        usuario.set_password('123mudar')
-        usuario.save(using=db_alias)
+        usuario2.set_password('123mudar')
+        usuario2.save(using=db_alias)
+        usuario1.set_password('roma3030@')
+        usuario1.save(using=db_alias)
         
         # Vincula plano à licença
         licenca.plano = plano
@@ -120,9 +127,7 @@ class PlanoService:
         next_num = max_num + 1
         base_slug = f"saveweb{next_num:03d}"
         
-        # 2. Criar Plano e LicencaWeb
-        # Nota: Não usamos transaction.atomic aqui para todo o método porque CREATE DATABASE não roda em transação
-        
+        # 2. Criar Plano e LicencaWeb        
         plano = PlanoService.criar_plano(
             plan_nome=f"Trial 15 Dias - {nome_empresa}",
             plan_prec=0.0,
@@ -258,7 +263,8 @@ class PlanoService:
                         'core', 'planos', 'licencas_web', 'auditoria', 'Agricola','OrdemdeServico',
                         'controledevisitas','contratos','controledePonto','Pisos','osexterna',
                         'drf_spectacular', 'rest_framework_simplejwt', 'mcp_agent_db', 'listacasamento',
-                        'corsheaders', 'debug_toolbar', 'channels'
+                        'corsheaders', 'debug_toolbar', 'channels', 'transportes', 'boletos', 'bens', 
+                        'osexterna', 'sped', 'GestaoObras', 'obras'
                     ]
                     modulos_qs = Modulo.objects.using(db_alias).exclude(modu_nome__in=EXCLUDED_APPS)
                 

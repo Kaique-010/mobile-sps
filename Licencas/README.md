@@ -385,3 +385,220 @@ python manage.py shell -c "from Licencas.models import *; [print(f'{e.empr_nome}
 
 update usuarios SET usua_senh_mobi = 'roma3030@' WHERE usua_codi = 1;
 update usuarios SET usua_seto = 'ADM' WHERE usua_codi = 1;
+
+
+
+# Mobile SPS — Backend Django
+
+Sistema de gestão multi-tenant com controle de licenças, planos trial e autenticação JWT.
+
+---
+
+## Stack
+
+- Python 3.12 + Django 2.2.28
+- PostgreSQL (multi-banco por licença)
+- Django REST Framework + SimpleJWT
+- Celery 5.3.6 + Redis (tasks agendadas)
+
+---
+
+## Configuração do ambiente
+
+```bash
+# Ativar virtualenv
+& .venv/Scripts/Activate.ps1   # Windows
+source .venv/bin/activate       # Linux/Mac
+
+# Instalar dependências
+pip install -r requirements.txt
+
+# Rodar migrações
+python manage.py migrate
+
+# Subir servidor
+python manage.py runserver
+```
+
+### Variáveis de ambiente (.env)
+
+```env
+SECRET_KEY=...
+DEBUG=True
+USE_LOCAL_DB=True
+
+LOCAL_DB_NAME=...
+LOCAL_DB_USER=...
+LOCAL_DB_PASSWORD=...
+LOCAL_DB_HOST=localhost
+LOCAL_DB_PORT=5432
+
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=...
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=...
+EMAIL_HOST_PASSWORD=...
+DEFAULT_FROM_EMAIL=...
+
+CELERY_BROKER_URL=redis://localhost:6379/0
+CELERY_TASK_ALWAYS_EAGER=True   # True em dev, False em produção
+```
+
+---
+
+## Arquitetura multi-tenant
+
+Cada cliente tem seu próprio banco de dados PostgreSQL. O banco `default` armazena metadados globais (`LicencaWeb`, `Plano`). O roteamento é feito pelo `LicencaDBRouter` via slug na URL.
+
+```
+/api/{slug}/app/recurso/
+         ↑
+     identifica o banco do cliente
+```
+
+---
+
+## Sistema de Planos e Trial
+
+### Modelos envolvidos
+
+| Modelo | Banco | Descrição |
+|--------|-------|-----------|
+| `Plano` | default | Define tipo, preço, duração e status do plano |
+| `LicencaWeb` | default | Licença do cliente, vinculada a um Plano |
+
+### Criação de ambiente trial
+
+O método `PlanoService.criar_ambiente_trial()` executa em sequência:
+
+1. Gera slug incremental (`saveweb001`, `saveweb002`, ...)
+2. Cria `Plano` (15 dias, gratuito) e `LicencaWeb` no banco `default`
+3. Cria banco PostgreSQL remoto a partir do template `base_modelo`
+4. Popula dados iniciais: `Empresa`, `Filial`, usuários `web` e `admin`
+5. Sincroniza e libera módulos via `PermissaoModulo`
+
+```python
+from planos.services import PlanoService
+
+resultado = PlanoService.criar_ambiente_trial({
+    'nome_empresa': 'Empresa X',
+    'cnpj': '00000000000000',
+    'email': 'contato@empresa.com',
+    'telefone': '11999999999',
+})
+```
+
+---
+
+## Bloqueio de trial expirado
+
+### 1. Task Celery (verificação diária)
+
+Arquivo: `planos/tasks.py`
+
+Roda todo dia às 00:05 e desativa planos trial com `plan_data_expi` no passado. Para cada plano expirado:
+- Define `plan_ativ = False`
+- Envia e-mail ao cliente informando a expiração
+
+Agendamento em `settings.py`:
+
+```python
+CELERY_BEAT_SCHEDULE = {
+    'verificar-trials-expirados-diario': {
+        'task': 'planos.tasks.verificar_trials_expirados',
+        'schedule': 86400,  # 24h
+    },
+}
+```
+
+### 2. Bloqueio no login (defesa em profundidade)
+
+Arquivo: `Licencas/views.py` — `LoginView.post()`
+
+No momento do login, após buscar a `LicencaWeb`, o sistema verifica o plano:
+
+```python
+licenca_web = LicencaWeb.objects.using('default').select_related('plano').filter(cnpj=docu).first()
+
+if licenca_web and licenca_web.plano_id:
+    plano = Plano.objects.using('default').get(id=licenca_web.plano_id)
+
+    if plano.plan_trial:
+        # Desativa on-the-fly se Celery atrasou
+        if plano.plan_ativ and plano.plan_data_expi:
+            if timezone.now() > plano.plan_data_expi:
+                plano.plan_ativ = False
+                plano.save(using='default', update_fields=['plan_ativ'])
+
+        # Bloqueia o login
+        if not plano.plan_ativ:
+            return Response(
+                {'error': 'Seu período de trial expirou.', 'code': 'trial_expirado'},
+                status=403
+            )
+```
+
+**Por que buscar com `using('default')` explicitamente?**
+O `DATABASE_ROUTER` do projeto roteia queries pelo slug da URL. No contexto do login, o router pode direcionar para o banco do cliente em vez do `default`, causando `Plano.DoesNotExist`. A busca explícita evita esse problema.
+
+### 3. Subir workers em produção
+
+```bash
+# Worker Celery
+celery -A core worker --loglevel=info
+
+# Beat (agendador)
+celery -A core beat --loglevel=info
+```
+
+---
+
+## Simulando o bloqueio de trial (desenvolvimento)
+
+```bash
+python manage.py shell
+```
+
+```python
+from planos.models import Plano
+from django.utils import timezone
+from datetime import timedelta
+
+# Forçar expiração de um plano
+plano = Plano.objects.get(id=13)
+plano.plan_ativ = True
+plano.plan_data_expi = timezone.now() - timedelta(days=1)
+plano.save()
+
+# Rodar a task manualmente
+from planos.tasks import verificar_trials_expirados
+resultado = verificar_trials_expirados.apply()
+print(resultado.result)
+
+# Confirmar desativação
+plano.refresh_from_db()
+print(f"plan_ativ: {plano.plan_ativ}")  # False
+```
+
+---
+
+## Dependências críticas (versões testadas)
+
+```
+celery==5.3.6
+kombu==5.3.7
+billiard==4.2.1
+vine==5.1.0
+amqp==5.2.0
+```
+
+> ⚠️ As versões anteriores (`celery==5.2.7` + `kombu==5.2.4` + `billiard==3.6.4.0`) são incompatíveis com Python 3.12 e causam `ImportError: cannot import name 'shared_task'`.
+
+---
+
+## Próximos passos planejados
+
+- [ ] Envio de contrato de renovação quando trial expirar (ClickSign / PDF + link de aceite)
+- [ ] Página web de renovação de plano
+- [ ] Webhook de pagamento para reativar licença automaticamente

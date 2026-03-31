@@ -37,9 +37,9 @@ def carregar_licencas_dict():
             for row in rows:
                 total_rows += 1
 
-                slug, cnpj, db_name, db_host, db_port, modulos, db_user, db_password = row                # Normaliza CNPJ
+                slug, cnpj, db_name, db_host, db_port, modulos, db_user, db_password = row                # Normaliza CPF/CNPJ
                 norm_doc = _normalize_doc(cnpj or "")
-                if not (norm_doc.isdigit() and len(norm_doc) == 14):
+                if not (norm_doc.isdigit() and len(norm_doc) in (11, 14)):
             
                     continue
 

@@ -251,9 +251,9 @@
       <form id="loginForm">
         <div class="mb-3">
           <label for="docu" class="form-label d-flex align-items-center gap-2">
-            <i class="bi bi-building"></i><span>CNPJ</span>
+            <i class="bi bi-building"></i><span>CPF/CNPJ</span>
           </label>
-          <input type="text" class="form-control" id="docu" name="docu" placeholder="00.000.000/0000-00" required maxlength="14">
+          <input type="text" class="form-control" id="docu" name="docu" placeholder="000.000.000-00 ou 00.000.000/0000-00" required maxlength="18">
         </div>
         <div class="mb-3">
           <label for="username" class="form-label d-flex align-items-center gap-2">
@@ -299,12 +299,12 @@
     el.classList.remove('d-none');
   };
 
-  const findSlugByCNPJ = async (cnpj) => {
+  const findSlugByDocu = async (docu) => {
     try {
       const resp = await fetch('/api/licencas/mapa/');
       const data = await resp.json();
-      const cleaned = (cnpj || '').replace(/\D/g, '');
-      const match = data.find(x => x.cnpj === cleaned);
+      const cleaned = (docu || '').replace(/\D/g, '');
+      const match = data.find(x => String(x?.cnpj || '').replace(/\D/g, '') === cleaned);
       return match ? match.slug : null;
     } catch (e) {
       console.error('Erro ao buscar mapa de licenças', e);
@@ -317,13 +317,15 @@
     document.getElementById('alert').classList.add('d-none');
 
     const docu = document.getElementById('docu').value.trim();
+    const docuDigits = (docu || '').replace(/\D/g, '');
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value;
 
-    if (!docu) return showError('Informe o CNPJ.');
+    if (!docuDigits) return showError('Informe o CPF/CNPJ.');
+    if (![11, 14].includes(docuDigits.length)) return showError('CPF/CNPJ inválido.');
 
-    const slug = await findSlugByCNPJ(docu);
-    if (!slug) return showError('CNPJ inválido ou não mapeado.');
+    const slug = await findSlugByDocu(docuDigits);
+    if (!slug) return showError('CPF/CNPJ inválido ou não mapeado.');
 
     try {
       const resp = await fetch(`/api/${slug}/licencas/login/`, {
@@ -346,7 +348,7 @@
       localStorage.setItem('usuario', JSON.stringify(data.usuario));
       localStorage.setItem('licenca', JSON.stringify(data.licenca));
       localStorage.setItem('slug', slug);
-      localStorage.setItem('docu', docu);
+      localStorage.setItem('docu', docuDigits);
 
       // Avança para seleção de empresa/filial
       window.location.href = '/web/selecionar-empresa/';

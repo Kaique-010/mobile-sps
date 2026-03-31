@@ -64,5 +64,6 @@ def get_licenca_db_config(request_or_slug):
 
 
 def get_modulos_por_docu(docu):
-    licenca = next((x for x in get_licencas_map() if x['cnpj'] == docu), None)
+    docu_digits = limpar_cnpj(str(docu or ""))
+    licenca = next((x for x in get_licencas_map() if limpar_cnpj(str(x.get('cnpj') or "")) == docu_digits), None)
     return licenca.get('modulos', []) if licenca else []
