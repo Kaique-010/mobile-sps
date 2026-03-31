@@ -17,7 +17,24 @@
       {% if messages %} {% for message in messages %}
       <div class="alert alert-{{ message.tags }}">{{ message }}</div>
       {% endfor %} {% endif %}
-      <form method="post" enctype="multipart/form-data">
+      {% if form.non_field_errors or form.errors %}
+      <div class="alert alert-danger" role="alert">
+        <div class="fw-semibold mb-1">Existem campos obrigatórios ou inválidos. Corrija os itens abaixo e tente novamente.</div>
+        {% if form.non_field_errors %}
+        <div class="mb-2">{{ form.non_field_errors|striptags }}</div>
+        {% endif %}
+        <ul class="mb-0">
+          {% for field in form %}
+          {% for error in field.errors %}
+          <li>
+            {{ field.label }}: {{ error }}
+          </li>
+          {% endfor %}
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+      <form method="post" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
 
         <div class="row">
@@ -32,6 +49,13 @@
                    Sim
                 </label>
               </div>
+              {% if form.is_transportadora.errors %}
+              <div class="text-danger">
+                {% for error in form.is_transportadora.errors %}
+                <p>{{ error }}</p>
+                {% endfor %}
+              </div>
+              {% endif %}
             </div>
           </div>
 
@@ -81,6 +105,13 @@
                 <div class="form-group">
                   <label for="{{  form.enti_tipo_enti.id_for_label }}">Tipo da Entidade</label>
                   {{ form.enti_tipo_enti }}
+                  {% if form.enti_tipo_enti.errors %}
+                  <div class="text-danger">
+                    {% for error in form.enti_tipo_enti.errors %}
+                    <p>{{ error }}</p>
+                    {% endfor %}
+                  </div>
+                  {% endif %}
                 </div>
               </div>
             </div>
@@ -287,8 +318,8 @@
 
 
     <div class="container-buttons">
-      <button type="submit" class="btn btn-primary">Salvar</button>
-      <a href="{% url 'entidades_web' slug=slug %}" class="btn btn-secondary">Voltar Para a Lista de Pessoas</a>
+      <button type="submit" class="btn btn-outline-primary">Salvar</button>
+      <a href="{% url 'entidades_web' slug=slug %}" class="btn btn-outline-secondary">Voltar Para a Lista de Pessoas</a>
     </div>
 
     </form>
@@ -298,32 +329,75 @@
 </div>
 
 <script>
-  document.getElementById("id_enti_cep").addEventListener("blur", buscarCEP);
-  function buscarCEP() {
-    var cep = document.getElementById("id_enti_cep").value;
-
-    if (cep.length === 8) {
-      var url = "https://viacep.com.br/ws/" + cep + "/json/";
-
-      fetch(url)
-        .then((response) => response.json())
-        .then((data) => {
-          if (!data.erro) {
-            document.getElementById("id_enti_ende").value = data.logradouro;
-            document.getElementById("id_enti_cida").value = data.localidade;
-            document.getElementById("id_enti_esta").value = data.uf;
-            document.getElementById("id_enti_codi_cida").value = data.ibge;
-          } else {
-            alert("CEP não encontrado!");
-          }
-        })
-        .catch((error) => {
-          alert("Erro ao buscar o CEP. Tente novamente.");
-          console.error(error);
-        });
-    } else {
-      alert("CEP inválido. O CEP deve conter 8 dígitos.");
+  document.addEventListener("DOMContentLoaded", () => {
+    const cepEl = document.getElementById("id_enti_cep");
+    if (cepEl) {
+      cepEl.addEventListener("blur", buscarCEP);
     }
-  }
+
+    function buscarCEP() {
+      const raw = document.getElementById("id_enti_cep")?.value || "";
+      const cep = raw.replace(/\D/g, "");
+      if (!cep) return;
+
+      if (cep.length === 8) {
+        const url = "https://viacep.com.br/ws/" + cep + "/json/";
+
+        fetch(url)
+          .then((response) => response.json())
+          .then((data) => {
+            if (!data.erro) {
+              const endeEl = document.getElementById("id_enti_ende");
+              const cidaEl = document.getElementById("id_enti_cida");
+              const estaEl = document.getElementById("id_enti_esta");
+              const ibgeEl = document.getElementById("id_enti_codi_cida");
+              if (endeEl) endeEl.value = data.logradouro || "";
+              if (cidaEl) cidaEl.value = data.localidade || "";
+              if (estaEl) estaEl.value = data.uf || "";
+              if (ibgeEl) ibgeEl.value = data.ibge || "";
+            } else {
+              alert("CEP não encontrado!");
+            }
+          })
+          .catch((error) => {
+            alert("Erro ao buscar o CEP. Tente novamente.");
+            console.error(error);
+          });
+      } else {
+        alert("CEP inválido. O CEP deve conter 8 dígitos.");
+      }
+    }
+
+    const tabMenu = document.getElementById("tabMenu");
+    if (tabMenu) {
+      const links = tabMenu.querySelectorAll('[data-bs-toggle="tab"]');
+      let firstErrorLink = null;
+
+      links.forEach((link) => {
+        const targetSel = link.getAttribute("href") || link.getAttribute("data-bs-target");
+        if (!targetSel) return;
+        const pane = document.querySelector(targetSel);
+        if (!pane) return;
+
+        const hasErrors = pane.querySelector(".alert-danger, .text-danger, .invalid-feedback, .is-invalid");
+        if (hasErrors) {
+          link.classList.add("text-danger", "fw-semibold");
+          if (!firstErrorLink) firstErrorLink = link;
+        }
+      });
+
+      if (firstErrorLink) {
+        const activePane = document.querySelector(".tab-pane.active");
+        const activeHasErrors = activePane?.querySelector(".alert-danger, .text-danger, .invalid-feedback, .is-invalid");
+        if (!activeHasErrors) {
+          if (window.bootstrap?.Tab) {
+            new window.bootstrap.Tab(firstErrorLink).show();
+          } else {
+            firstErrorLink.click();
+          }
+        }
+      }
+    }
+  });
 </script>
 {% endblock %}

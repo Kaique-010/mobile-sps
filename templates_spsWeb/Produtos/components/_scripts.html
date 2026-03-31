@@ -364,5 +364,29 @@
         }
       });
     }
+
+    const tabsEl = document.getElementById('produtoTabs');
+    if (tabsEl) {
+      const links = tabsEl.querySelectorAll('[data-bs-toggle="tab"]');
+
+      links.forEach((link) => {
+        const targetSel = link.getAttribute('href') || link.getAttribute('data-bs-target');
+        if (!targetSel) return;
+        const pane = document.querySelector(targetSel);
+        if (!pane) return;
+
+        const hasErrors = pane.querySelector('.alert-danger, .text-danger, .invalid-feedback, .is-invalid');
+        const existingBadge = link.querySelector('.tab-error-badge');
+        if (existingBadge) existingBadge.remove();
+
+        if (hasErrors) {
+          link.classList.add('text-danger', 'fw-semibold');
+          const badge = document.createElement('span');
+          badge.className = 'badge bg-danger ms-2 tab-error-badge';
+          badge.textContent = '!';
+          link.appendChild(badge);
+        }
+      });
+    }
   });
 </script>

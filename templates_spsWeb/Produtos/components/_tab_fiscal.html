@@ -1,6 +1,10 @@
 <div class="tab-pane fade" id="fiscal">
   <h5 class="form-section-title text-center mb-5">Tributação (Fiscal)</h5>
 
+  {% if fiscal_form.non_field_errors %}
+  <div class="alert alert-danger" role="alert">{{ fiscal_form.non_field_errors|striptags }}</div>
+  {% endif %}
+
   <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
     <i class="bi bi-info-circle-fill fs-4 me-3"></i>
     <div>
@@ -22,14 +26,23 @@
     <div class="col-md-4">
       <label for="{{ fiscal_form.uf_origem.id_for_label }}">UF Origem</label>
       {{ fiscal_form.uf_origem }}
+      {% if fiscal_form.uf_origem.errors %}
+      <div class="alert alert-danger mt-1">{{ fiscal_form.uf_origem.errors|striptags }}</div>
+      {% endif %}
     </div>
     <div class="col-md-4">
       <label for="{{ fiscal_form.uf_destino.id_for_label }}">UF Destino</label>
       {{ fiscal_form.uf_destino }}
+      {% if fiscal_form.uf_destino.errors %}
+      <div class="alert alert-danger mt-1">{{ fiscal_form.uf_destino.errors|striptags }}</div>
+      {% endif %}
     </div>
     <div class="col-md-4">
       <label for="{{ fiscal_form.tipo_entidade.id_for_label }}">Tipo Entidade</label>
       {{ fiscal_form.tipo_entidade }}
+      {% if fiscal_form.tipo_entidade.errors %}
+      <div class="alert alert-danger mt-1">{{ fiscal_form.tipo_entidade.errors|striptags }}</div>
+      {% endif %}
     </div>
   </div>
 
@@ -40,10 +53,16 @@
         <div class="col-md-8">
           <label for="{{ fiscal_form.cst_icms.id_for_label }}">{{ fiscal_form.cst_icms.label }}</label>
           {{ fiscal_form.cst_icms }}
+          {% if fiscal_form.cst_icms.errors %}
+          <div class="alert alert-danger mt-1">{{ fiscal_form.cst_icms.errors|striptags }}</div>
+          {% endif %}
         </div>
         <div class="col-md-4">
           <label for="{{ fiscal_form.aliq_icms.id_for_label }}">{{ fiscal_form.aliq_icms.label }}</label>
           {{ fiscal_form.aliq_icms }}
+          {% if fiscal_form.aliq_icms.errors %}
+          <div class="alert alert-danger mt-1">{{ fiscal_form.aliq_icms.errors|striptags }}</div>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -53,10 +72,16 @@
         <div class="col-md-8">
           <label for="{{ fiscal_form.cst_ipi.id_for_label }}">{{ fiscal_form.cst_ipi.label }}</label>
           {{ fiscal_form.cst_ipi }}
+          {% if fiscal_form.cst_ipi.errors %}
+          <div class="alert alert-danger mt-1">{{ fiscal_form.cst_ipi.errors|striptags }}</div>
+          {% endif %}
         </div>
         <div class="col-md-4">
           <label for="{{ fiscal_form.aliq_ipi.id_for_label }}">{{ fiscal_form.aliq_ipi.label }}</label>
           {{ fiscal_form.aliq_ipi }}
+          {% if fiscal_form.aliq_ipi.errors %}
+          <div class="alert alert-danger mt-1">{{ fiscal_form.aliq_ipi.errors|striptags }}</div>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -70,11 +95,23 @@
           <label for="{{ fiscal_form.cst_pis.id_for_label }}">CST PIS</label>
           {{ fiscal_form.cst_pis }}
           <div class="mt-1">{{ fiscal_form.aliq_pis }}</div>
+          {% if fiscal_form.cst_pis.errors %}
+          <div class="alert alert-danger mt-1">{{ fiscal_form.cst_pis.errors|striptags }}</div>
+          {% endif %}
+          {% if fiscal_form.aliq_pis.errors %}
+          <div class="alert alert-danger mt-1">{{ fiscal_form.aliq_pis.errors|striptags }}</div>
+          {% endif %}
         </div>
         <div class="col-md-6">
           <label for="{{ fiscal_form.cst_cofins.id_for_label }}">CST COFINS</label>
           {{ fiscal_form.cst_cofins }}
           <div class="mt-1">{{ fiscal_form.aliq_cofins }}</div>
+          {% if fiscal_form.cst_cofins.errors %}
+          <div class="alert alert-danger mt-1">{{ fiscal_form.cst_cofins.errors|striptags }}</div>
+          {% endif %}
+          {% if fiscal_form.aliq_cofins.errors %}
+          <div class="alert alert-danger mt-1">{{ fiscal_form.aliq_cofins.errors|striptags }}</div>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -85,11 +122,23 @@
           <label for="{{ fiscal_form.cst_ibs.id_for_label }}">CST IBS</label>
           {{ fiscal_form.cst_ibs }}
           <div class="mt-1">{{ fiscal_form.aliq_ibs }}</div>
+          {% if fiscal_form.cst_ibs.errors %}
+          <div class="alert alert-danger mt-1">{{ fiscal_form.cst_ibs.errors|striptags }}</div>
+          {% endif %}
+          {% if fiscal_form.aliq_ibs.errors %}
+          <div class="alert alert-danger mt-1">{{ fiscal_form.aliq_ibs.errors|striptags }}</div>
+          {% endif %}
         </div>
         <div class="col-md-6">
           <label for="{{ fiscal_form.cst_cbs.id_for_label }}">CST CBS</label>
           {{ fiscal_form.cst_cbs }}
           <div class="mt-1">{{ fiscal_form.aliq_cbs }}</div>
+          {% if fiscal_form.cst_cbs.errors %}
+          <div class="alert alert-danger mt-1">{{ fiscal_form.cst_cbs.errors|striptags }}</div>
+          {% endif %}
+          {% if fiscal_form.aliq_cbs.errors %}
+          <div class="alert alert-danger mt-1">{{ fiscal_form.aliq_cbs.errors|striptags }}</div>
+          {% endif %}
         </div>
       </div>
     </div>
