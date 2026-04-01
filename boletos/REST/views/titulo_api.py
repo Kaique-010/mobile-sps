@@ -3,7 +3,6 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 
-from ...services.boleto_service import BoletoService
 from ...services.validation_service import validate_boleto, build_barcode_data, linha_digitavel_from_barcode, validate_caixa_config
 from ...models import Titulosreceber
 
@@ -29,7 +28,7 @@ class GerarBoletoAPIView(APIView):
             cx = validate_caixa_config(banco_cfg)
             if not cx['ok']:
                 return Response({"erro": "configuracao_caixa_invalida", "detalhes": cx['errors']}, status=status.HTTP_400_BAD_REQUEST)
-        caminho_pdf = BoletoService().gerar_pdf(titulo, cedente, sacado, banco_cfg, caminho)
+        caminho_pdf = gerar_pdf(titulo, cedente, sacado, banco_cfg, caminho)
         v = validate_boleto(cedente, sacado, banco_cfg, titulo)
         codigo = build_barcode_data(banco_cfg, titulo)
         linha = linha_digitavel_from_barcode(codigo)

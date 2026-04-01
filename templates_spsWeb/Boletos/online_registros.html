@@ -91,8 +91,8 @@
               <td>{{ t.titu_linh_digi|default:'-' }}</td>
               <td>{% if t.titu_url_bole %}<code>{{ t.titu_url_bole|truncatechars:40 }}</code>{% else %}-{% endif %}</td>
               <td>
-                {% if t.titu_url_bole %}
-                  <button type="button" class="btn btn-sm btn-success" onclick="imprimirComQr('{{ t.titu_titu }}','{{ t.titu_linh_digi|default:'' }}','{{ t.titu_url_bole }}')">Imprimir c/ QR Pix</button>
+                {% if t.titu_linh_digi %}
+                  <button type="button" class="btn btn-sm btn-primary" onclick="imprimirBoleto('{{ t.titu_titu }}','{{ t.titu_linh_digi|default:'' }}','{{ t.titu_url_bole|default:'' }}')">Imprimir</button>
                 {% endif %}
               </td>
             </tr>
@@ -151,10 +151,14 @@ async function enviarSelecionados(action) {
     window.location.reload();
   }
 }
-function imprimirComQr(titulo, linha, pixData) {
-  const url = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(pixData)}`;
+function imprimirBoleto(titulo, linha, pixData) {
+  const pix = (pixData || '').trim();
+  const temPix = !!pix;
+  const qr = temPix ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(pix)}` : '';
   const w = window.open('', '_blank');
-  w.document.write(`<html><body><h3>Boleto ${titulo}</h3><p>${linha || ''}</p><img src="${url}"/><p><small>${pixData}</small></p></body></html>`);
+  const linhaHtml = (linha || '').trim() ? `<p><b>Linha digitável</b></p><p style="font-size:16px;letter-spacing:0.3px;">${linha}</p>` : '';
+  const pixHtml = temPix ? `<p><b>QR/Pix</b></p><img src="${qr}"/><p style="word-break:break-all;"><small>${pix}</small></p>` : '';
+  w.document.write(`<html><body><h3>Boleto ${titulo}</h3>${linhaHtml}${pixHtml}</body></html>`);
   w.document.close();
   w.focus();
   w.print();

@@ -79,37 +79,20 @@ class SicrediCobrancaService:
         scope = self._clean(getattr(self.carteira, "cart_webs_scop", ""))
         user_key = self._clean(getattr(self.carteira, "cart_webs_user_key", ""))
 
-        logger.info(
-            "[sicredi] token_request carteira=(empr=%s,fili=%s,banc=%s,codi=%s,nome=%s) urls=(base=%s,token=%s,api=%s) auth=(client_id=%s,has_secret=%s,secret_len=%s) headers=(has_x_api_key=%s) scope=%s ssl_lib=%s env_overrides=(token_url=%s,api_base=%s)",
-            getattr(self.carteira, "cart_empr", None),
-            getattr(self.carteira, "cart_fili", None),
-            getattr(self.carteira, "cart_banc", None),
-            getattr(self.carteira, "cart_codi", None),
-            getattr(self.carteira, "cart_nome", None),
-            self._base_url(),
-            self._token_url(),
-            self._api_base(),
-            self._mask(client_id),
-            bool(client_secret),
-            len(client_secret) if client_secret else 0,
-            bool(user_key),
-            scope or "",
-            self._clean(getattr(self.carteira, "cart_webs_ssl_lib", "")),
-            bool(self._clean(os.getenv("SICREDI_TOKEN_URL"))),
-            bool(self._clean(os.getenv("SICREDI_COBRANCA_BASE_URL"))),
-        )
-
         if not client_id or not client_secret:
             raise SicrediAPIError("Carteira sem client_id/client_secret configurados.")
 
         headers = {
             "Content-Type": "application/x-www-form-urlencoded",
+            "context": "COBRANCA",  # <-- ESSE ERA O PROBLEMA
         }
         if user_key:
             headers["x-api-key"] = user_key
 
         payload = {
-            "grant_type": "client_credentials",
+            "grant_type": "password",  # <-- E ESSE TAMBÉM, MUDA DE client_credentials PRA password
+            "username": client_id,
+            "password": client_secret,
         }
         if scope:
             payload["scope"] = scope
@@ -117,7 +100,7 @@ class SicrediCobrancaService:
         errors = []
         for url in self._token_url_candidates():
             try:
-                response = requests.post(url, data=payload, headers=headers, auth=(client_id, client_secret), timeout=30)
+                response = requests.post(url, data=payload, headers=headers, timeout=30)
             except Exception as ex:
                 errors.append(f"{url} EXC {type(ex).__name__}")
                 continue
@@ -128,47 +111,59 @@ class SicrediCobrancaService:
                     return token
                 errors.append(f"{url} 200 sem_access_token")
                 continue
-            body = (response.text or "").strip()
-            if len(body) > 2000:
-                body = body[:2000]
+            body = (response.text or "").strip()[:2000]
             logger.warning("[sicredi] token_response_error status=%s url=%s body=%s", response.status_code, url, body)
-            if response.status_code in (400, 401):
-                retry_payload = dict(payload)
-                retry_payload["client_id"] = client_id
-                retry_payload["client_secret"] = client_secret
-                try:
-                    retry = requests.post(url, data=retry_payload, headers=headers, timeout=30)
-                except Exception as ex:
-                    errors.append(f"{url} RETRY EXC {type(ex).__name__}")
-                    continue
-                if retry.status_code < 400:
-                    data = retry.json()
-                    token = data.get("access_token")
-                    if token:
-                        return token
-                    errors.append(f"{url} RETRY 200 sem_access_token")
-                    continue
-                retry_body = (retry.text or "").strip()
-                if len(retry_body) > 2000:
-                    retry_body = retry_body[:2000]
-                logger.warning("[sicredi] token_retry_error status=%s url=%s body=%s", retry.status_code, url, retry_body)
-                errors.append(f"{url} RETRY {retry.status_code}")
-            else:
-                errors.append(f"{url} {response.status_code}")
+            errors.append(f"{url} {response.status_code}")
+
         raise SicrediAPIError("Falha ao obter token Sicredi: " + " | ".join(errors))
 
         # Unreachable
 
     def _headers(self, token: str) -> dict:
+        client_id = self._clean(getattr(self.carteira, "cart_webs_clie_id", ""))
+        # username = beneficiario(5) + cooperativa(4) = 9 dígitos
+        cooperativa = client_id[-4:] if len(client_id) >= 4 else client_id
+        # posto vem do cart_codi_cede (ex: "04271") -> 2 primeiros dígitos
+        cedente = self._clean(getattr(self.carteira, "cart_codi_cede", ""))
+        posto = cedente[:2] if len(cedente) >= 2 else "01"
+
         headers = {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
+            "context": "COBRANCA",
+            "cooperativa": cooperativa,
+            "posto": posto,
         }
         user_key = self._clean(getattr(self.carteira, "cart_webs_user_key", ""))
         if user_key:
             headers["x-api-key"] = user_key
         return headers
 
+    def _routing_params(self) -> dict:
+        client_id = self._clean(getattr(self.carteira, "cart_webs_clie_id", ""))
+        cooperativa = client_id[-4:] if len(client_id) >= 4 else client_id
+        cedente = self._clean(getattr(self.carteira, "cart_codi_cede", ""))
+        posto = cedente[:2] if len(cedente) >= 2 else "01"
+        params = {
+            "cooperativa": cooperativa,
+            "posto": posto,
+        }
+        if cedente:
+            params["codigoBeneficiario"] = cedente
+        return params
+
+
+    def _cooperativa(self) -> str:
+        """Extrai os últimos 4 dígitos do client_id (username = beneficiario + cooperativa)."""
+        client_id = self._clean(getattr(self.carteira, "cart_webs_clie_id", ""))
+        return client_id[-4:] if len(client_id) >= 4 else client_id
+    
+    def _posto(self) -> str:
+        """Extrai os últimos 4 dígitos do client_id (username = beneficiario + posto)."""
+        client_id = self._clean(getattr(self.carteira, "cart_webs_clie_id", ""))
+        return client_id[-4:] if len(client_id) >= 4 else client_id
+    
+    
     def registrar_boleto(self, payload: dict) -> dict:
         token = self.get_access_token()
         url = f"{self._api_base()}/boletos"
@@ -180,15 +175,28 @@ class SicrediCobrancaService:
     def consultar_boleto(self, nosso_numero: str, params: Optional[dict] = None) -> dict:
         token = self.get_access_token()
         url = f"{self._api_base()}/boletos/{nosso_numero}"
-        r = requests.get(url, params=params or {}, headers=self._headers(token), timeout=30)
+        merged_params = {**self._routing_params(), **(params or {})}
+        r = requests.get(url, params=merged_params, headers=self._headers(token), timeout=30)
+        if r.status_code == 404 and "without destination" in (r.text or "").lower():
+            url2 = f"{self._api_base()}/boletos"
+            params2 = {**merged_params, "nossoNumero": nosso_numero}
+            r = requests.get(url2, params=params2, headers=self._headers(token), timeout=30)
         if r.status_code >= 400:
             raise SicrediAPIError(f"Falha ao consultar boleto: HTTP {r.status_code} - {r.text}")
-        return r.json() if r.text else {}
+        data = r.json() if r.text else {}
+        if isinstance(data, list) and data:
+            return data[0]
+        return data
 
     def baixar_boleto(self, nosso_numero: str, payload: Optional[dict] = None) -> dict:
         token = self.get_access_token()
         url = f"{self._api_base()}/boletos/{nosso_numero}/baixa"
-        r = requests.patch(url, json=payload or {}, headers=self._headers(token), timeout=30)
+        params = self._routing_params()
+        r = requests.patch(url, params=params, json=payload or {}, headers=self._headers(token), timeout=30)
+        if r.status_code == 404 and "without destination" in (r.text or "").lower():
+            url2 = f"{self._api_base()}/boletos/baixa"
+            params2 = {**params, "nossoNumero": nosso_numero}
+            r = requests.patch(url2, params=params2, json=payload or {}, headers=self._headers(token), timeout=30)
         if r.status_code >= 400:
             raise SicrediAPIError(f"Falha ao baixar boleto: HTTP {r.status_code} - {r.text}")
         return r.json() if r.text else {"ok": True}
@@ -196,7 +204,14 @@ class SicrediCobrancaService:
     def alterar_boleto(self, nosso_numero: str, payload: dict) -> dict:
         token = self.get_access_token()
         url = f"{self._api_base()}/boletos/{nosso_numero}"
-        r = requests.patch(url, json=payload, headers=self._headers(token), timeout=30)
+        params = self._routing_params()
+        r = requests.patch(url, params=params, json=payload, headers=self._headers(token), timeout=30)
+        if r.status_code == 404 and "without destination" in (r.text or "").lower():
+            url2 = f"{self._api_base()}/boletos"
+            params2 = {**params, "nossoNumero": nosso_numero}
+            r = requests.patch(url2, params=params2, json=payload, headers=self._headers(token), timeout=30)
+        if r.status_code in (404, 405) and "without destination" in (r.text or "").lower():
+            r = requests.put(url, params=params, json=payload, headers=self._headers(token), timeout=30)
         if r.status_code >= 400:
             raise SicrediAPIError(f"Falha ao alterar boleto: HTTP {r.status_code} - {r.text}")
         return r.json() if r.text else {"ok": True}

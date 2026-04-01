@@ -1,6 +1,7 @@
 from datetime import date, datetime
 import logging
 
+from django.db import IntegrityError
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -27,9 +28,14 @@ def _extract(data, *paths):
         for key in path.split('.'):
             if isinstance(cur, dict) and key in cur:
                 cur = cur[key]
-            else:
-                ok = False
-                break
+                continue
+            if isinstance(cur, (list, tuple)) and key.isdigit():
+                idx = int(key)
+                if 0 <= idx < len(cur):
+                    cur = cur[idx]
+                    continue
+            ok = False
+            break
         if ok and cur not in (None, ''):
             return cur
     return None
@@ -177,6 +183,9 @@ class BoletoOnlineView(View):
         return render(request, self.template_name, self._ctx(request))
 
     def post(self, request, *args, **kwargs):
+        
+      
+        
         db = get_licenca_db_config(request) or 'default'
         empresa = request.session.get('empresa_id')
         filial = request.session.get('filial_id')
@@ -186,6 +195,18 @@ class BoletoOnlineView(View):
         entidade_id = request.POST.get('entidade_banco')
         selected = request.POST.getlist('titulos[]')
         cliente_filter = request.POST.get('cliente')
+        
+        ESPECIE_MAP = {
+            'DMI': 'DUPLICATA_MERCANTIL_INDICACAO',
+            'DM':  'DUPLICATA_MERCANTIL_INDICACAO',
+            'DS':  'DUPLICATA_SERVICO',
+            'NP':  'NOTA_PROMISSORIA',
+            'NR':  'NOTA_PROMISSORIA_RURAL',
+            'RC':  'RECIBO',
+            'LC':  'LETRA_CAMBIO',
+            'ND':  'NOTA_DEBITO',
+            'DR':  'DUPLICATA_RURAL',
+        }
         def _parse_date(v):
             s = str(v or '').strip()
             if not s:
@@ -204,6 +225,21 @@ class BoletoOnlineView(View):
             return JsonResponse({'ok': False, 'erro': 'entidade_banco_obrigatoria'}, status=400)
         if not carteira_id:
             return JsonResponse({'ok': False, 'erro': 'carteira_obrigatoria'}, status=400)
+
+        def _titulo_key_filter(obj):
+            base = {
+                'titu_empr': getattr(obj, 'titu_empr', empresa),
+                'titu_clie': getattr(obj, 'titu_clie', None),
+                'titu_titu': getattr(obj, 'titu_titu', None),
+                'titu_seri': getattr(obj, 'titu_seri', None),
+                'titu_parc': getattr(obj, 'titu_parc', None),
+            }
+            fili_val = getattr(obj, 'titu_fili', None)
+            if fili_val is not None:
+                base['titu_fili'] = fili_val
+            elif filial:
+                base['titu_fili'] = filial
+            return base
 
         entidade_banco = Entidades.objects.using(db).filter(enti_empr=empresa, enti_tien='B', enti_clie=entidade_id).first()
         if not entidade_banco:
@@ -243,7 +279,7 @@ class BoletoOnlineView(View):
             getattr(carteira, "cart_fili", None),
             str(getattr(carteira, "cart_webs_ssl_lib", "") or ""),
             _mask(getattr(carteira, "cart_webs_clie_id", "") or ""),
-            bool(str(getattr(carteira, "cart_webs_clie_secr", "") or "").strip()),
+            bool(str(getattr(carteira, "cart_webs_clie_secr", "") or "").strip()),  
             bool(str(getattr(carteira, "cart_webs_user_key", "") or "").strip()),
             str(getattr(carteira, "cart_webs_scop", "") or ""),
         )
@@ -260,9 +296,12 @@ class BoletoOnlineView(View):
                 error_count += 1
                 results.append({'titulo': item, 'ok': False, 'erro': 'selecao_invalida'})
                 continue
-            titulo = Titulosreceber.objects.using(db).filter(
+            titulo_qs = Titulosreceber.objects.using(db).filter(
                 titu_empr=empresa, titu_titu=titu, titu_seri=seri, titu_parc=parc, titu_clie=clie
-            ).first()
+            )
+            if filial:
+                titulo_qs = titulo_qs.filter(titu_fili=filial)
+            titulo = titulo_qs.first()
             if not titulo:
                 error_count += 1
                 results.append({'titulo': f'{titu}/{parc}', 'ok': False, 'erro': 'titulo_nao_encontrado'})
@@ -279,8 +318,9 @@ class BoletoOnlineView(View):
                 results.append({'titulo': titulo.titu_titu, 'ok': False, 'erro': 'titulo_fora_do_cliente_filtrado'})
                 continue
 
-            if titulo.titu_cobr_banc is None:
-                titulo.titu_cobr_banc = entidade_id_int
+            cobr_banc_value = titulo.titu_cobr_banc
+            if cobr_banc_value is None:
+                cobr_banc_value = entidade_id_int
             elif entidade_id_int is not None and int(titulo.titu_cobr_banc) not in (entidade_id_int, bank_code_int):
                 error_count += 1
                 results.append({'titulo': titulo.titu_titu, 'ok': False, 'erro': 'titulo_com_banco_diferente_do_selecionado'})
@@ -290,8 +330,9 @@ class BoletoOnlineView(View):
                 results.append({'titulo': titulo.titu_titu, 'ok': False, 'erro': 'titulo_com_banco_diferente_do_selecionado'})
                 continue
 
-            if titulo.titu_cobr_cart is None:
-                titulo.titu_cobr_cart = carteira_id_int
+            cobr_cart_value = titulo.titu_cobr_cart
+            if cobr_cart_value is None:
+                cobr_cart_value = carteira_id_int
             elif int(titulo.titu_cobr_cart) != carteira_id_int:
                 error_count += 1
                 results.append({'titulo': titulo.titu_titu, 'ok': False, 'erro': 'titulo_com_carteira_diferente_da_selecionada'})
@@ -299,23 +340,81 @@ class BoletoOnlineView(View):
 
             try:
                 if action == 'registrar':
+                    cliente = Entidades.objects.using(db).filter(
+                        enti_empr=empresa,
+                        enti_clie=titulo.titu_clie
+                    ).only('enti_nome', 'enti_cpf', 'enti_cnpj', 'enti_cep', 'enti_ende', 'enti_cida', 'enti_esta').first()
+                    if not cliente:
+                        error_count += 1
+                        results.append({'titulo': titulo.titu_titu, 'ok': False, 'erro': 'cliente_nao_encontrado'})
+                        continue
+
+                    cpf = str(getattr(cliente, 'enti_cpf', '') or '').strip()
+                    cnpj = str(getattr(cliente, 'enti_cnpj', '') or '').strip()
+                    
+                    if cnpj:
+                        doc = ''.join(c for c in cnpj if c.isdigit())
+                        tipo_pessoa = 'PESSOA_JURIDICA'
+                    else:
+                        doc = ''.join(c for c in cpf if c.isdigit())
+                        tipo_pessoa = 'PESSOA_FISICA'
+                    espe_raw = str(getattr(carteira, 'cart_espe', '') or '').strip().upper()
+                    especie = ESPECIE_MAP.get(espe_raw, 'DUPLICATA_MERCANTIL_INDICACAO')
+                    cedente = str(getattr(carteira, 'cart_codi_cede', '') or '').strip()
+                    codigo_beneficiario = cedente
                     payload = {
                         'seuNumero': f'{titulo.titu_titu}/{titulo.titu_parc}',
                         'valor': float(titulo.titu_valo or 0),
                         'dataVencimento': titulo.titu_venc.isoformat() if titulo.titu_venc else date.today().isoformat(),
-                        'pagador': {'codigo': str(titulo.titu_clie)},
+                        'codigoBeneficiario': codigo_beneficiario,
+                        'especieDocumento': especie,
+                        'tipoDocumento': '1',
+                        'numeroDocumento': titulo.titu_titu,
+                        'tipoPessoa': tipo_pessoa,
+                        'pagador': {
+                            'codigo': str(titulo.titu_clie),
+                            'nome': getattr(cliente, 'enti_nome', '') or '',
+                            'tipoPessoa': tipo_pessoa,
+                            'documento': doc,
+                             'cep': ''.join(c for c in str(getattr(cliente, 'enti_cep', '') or '') if c.isdigit()),
+                            'endereco': str(getattr(cliente, 'enti_ende', '') or '').strip(),
+                            'cidade': str(getattr(cliente, 'enti_cida', '') or '').strip(),
+                            'uf': str(getattr(cliente, 'enti_esta', '') or '').strip(),
+                        },
                     }
                     retorno = service.registrar_boleto(payload)
-                    titulo.titu_noss_nume = _extract(retorno, 'nossoNumero', 'codigoBarras.nossoNumero', 'beneficiario.tituloNossoNumero')
-                    titulo.titu_linh_digi = _extract(retorno, 'linhaDigitavel', 'codigoBarras.linhaDigitavel')
-                    titulo.titu_url_bole = _extract(retorno, 'linkBoleto', 'urlBoleto', 'pix.qrCode', 'pix.copiaECola')
-                    titulo.save(using=db)
+                    updates = {
+                        'titu_cobr_banc': cobr_banc_value,
+                        'titu_cobr_cart': cobr_cart_value,
+                        'titu_noss_nume': _extract(retorno, 'nossoNumero', 'codigoBarras.nossoNumero', 'beneficiario.tituloNossoNumero'),
+                        'titu_linh_digi': _extract(retorno, 'linhaDigitavel', 'codigoBarras.linhaDigitavel'),
+                        'titu_url_bole': _extract(retorno, 'linkBoleto', 'urlBoleto', 'boletoUrl', 'pdf', 'links.0.href', 'pix.qrCode', 'pix.copiaECola'),
+                    }
+                    try:
+                        updated = Titulosreceber.objects.using(db).filter(**_titulo_key_filter(titulo)).update(**updates)
+                    except IntegrityError as e:
+                        error_count += 1
+                        results.append({'titulo': titulo.titu_titu, 'ok': False, 'erro': f'falha_ao_atualizar_titulo: {str(e)}'})
+                        continue
+                    if not updated:
+                        error_count += 1
+                        results.append({'titulo': titulo.titu_titu, 'ok': False, 'erro': 'titulo_nao_atualizado'})
+                        continue
                 elif action == 'consultar':
+                    if not titulo.titu_noss_nume:
+                        error_count += 1
+                        results.append({'titulo': titulo.titu_titu, 'ok': False, 'erro': 'titulo_sem_nosso_numero'})
+                        continue
                     retorno = service.consultar_boleto(titulo.titu_noss_nume)
+                    updates = {
+                        'titu_linh_digi': _extract(retorno, 'linhaDigitavel', 'codigoBarras.linhaDigitavel'),
+                        'titu_url_bole': _extract(retorno, 'linkBoleto', 'urlBoleto', 'boletoUrl', 'pdf', 'links.0.href', 'pix.qrCode', 'pix.copiaECola'),
+                    }
+                    Titulosreceber.objects.using(db).filter(**_titulo_key_filter(titulo)).update(**{k: v for k, v in updates.items() if v})
                 elif action == 'baixar':
                     retorno = service.baixar_boleto(titulo.titu_noss_nume, payload={})
                 elif action == 'cancelar':
-                    retorno = service.alterar_boleto(titulo.titu_noss_nume, payload={'situacao': 'BAIXADO'})
+                    retorno = service.baixar_boleto(titulo.titu_noss_nume, payload={})
                 elif action == 'alterar':
                     nova = _parse_date(request.POST.get('nova_data_vencimento'))
                     if not nova:
