@@ -1,20 +1,19 @@
 {% extends 'base.html' %}
-{% block title %}Boletos Online Sicredi{% endblock %}
+{% block title %}Registros Online de Boletos{% endblock %}
 {% block content %}
 <div class="container py-3">
-  <h3>Boletos Online (Sicredi)</h3>
+  <h3>Registros Online de Boletos</h3>
   <form method="get" class="row g-2 mb-3">
     <div class="col-md-3">
       <label>Banco</label>
-      <select class="form-select" name="banco">
-        <option value="">Todos</option>
-        {% for b in bancos %}
-          <option value="{{ b.enti_banc }}" {% if filtro.banco == b.enti_banc|stringformat:'s' %}selected{% endif %}>{{ b.enti_banc }} - {{ b.enti_nome }}</option>
+      <select class="form-select" name="banco" id="bancoSel">
+        {% for cod, nome in supported_banks.items %}
+          <option value="{{ cod }}" {% if filtro.banco == cod|stringformat:'s' %}selected{% endif %}>{{ cod }} - {{ nome }}</option>
         {% endfor %}
       </select>
     </div>
     <div class="col-md-3">
-      <label>Carteira Sicredi</label>
+      <label>Carteira</label>
       <select class="form-select" name="carteira" id="carteiraSel">
         <option value="">Selecione</option>
         {% for c in carteiras %}
@@ -106,11 +105,12 @@ function selecionados() {
 async function enviarSelecionados(action) {
   const titulos = selecionados();
   const carteira = document.getElementById('carteiraSel').value;
-  if (!carteira) { alert('Selecione a carteira Sicredi.'); return; }
+  if (!carteira) { alert('Selecione a carteira.'); return; }
   if (!titulos.length) { alert('Selecione ao menos um título.'); return; }
   const fd = new FormData();
   fd.append('action', action);
   fd.append('carteira', carteira);
+  fd.append('banco', document.getElementById('bancoSel').value);
   titulos.forEach(t => fd.append('titulos[]', t));
   if (action === 'alterar') {
     const nova = prompt('Nova data de vencimento (YYYY-MM-DD):');

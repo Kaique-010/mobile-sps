@@ -9,7 +9,10 @@ from Entidades.models import Entidades
 from contas_a_receber.models import Titulosreceber
 
 from ...models import Carteira
-from ...services.sicredi_api_service import SicrediCobrancaService, SicrediAPIError
+from ...services.boleto_online_factory import (
+    SUPPORTED_BANKS,
+    get_online_boleto_service,
+)
 
 
 def _extract(data, *paths):
@@ -35,14 +38,16 @@ class BoletoOnlineView(View):
         empresa = request.session.get('empresa_id')
         filial = request.session.get('filial_id')
 
-        banco_id = request.GET.get('banco')
+        banco_id = request.GET.get('banco') or '748'
         carteira_id = request.GET.get('carteira')
         cliente_id = request.GET.get('cliente')
 
         bancos_qs = Entidades.objects.using(db).filter(enti_empr=empresa, enti_tien='B').order_by('enti_nome')
-        carteiras_qs = Carteira.objects.using(db).filter(cart_empr=empresa, cart_banc=748)
+        carteiras_qs = Carteira.objects.using(db).filter(cart_empr=empresa)
         if filial:
             carteiras_qs = carteiras_qs.filter(cart_fili=filial)
+        if banco_id:
+            carteiras_qs = carteiras_qs.filter(cart_banc=banco_id)
         if carteira_id:
             carteiras_qs = carteiras_qs.filter(cart_codi=carteira_id)
 
@@ -72,6 +77,7 @@ class BoletoOnlineView(View):
             'enviados': enviados,
             'clientes_map': clientes_map,
             'filtro': {'banco': banco_id or '', 'carteira': carteira_id or '', 'cliente': cliente_id or ''},
+            'supported_banks': SUPPORTED_BANKS,
         }
 
     def get(self, request, *args, **kwargs):
@@ -84,19 +90,20 @@ class BoletoOnlineView(View):
 
         action = request.POST.get('action')
         carteira_id = request.POST.get('carteira')
+        banco_id = request.POST.get('banco') or '748'
         selected = request.POST.getlist('titulos[]')
 
         if not carteira_id:
             return JsonResponse({'ok': False, 'erro': 'carteira_obrigatoria'}, status=400)
 
-        carteira_qs = Carteira.objects.using(db).filter(cart_empr=empresa, cart_banc=748, cart_codi=carteira_id)
+        carteira_qs = Carteira.objects.using(db).filter(cart_empr=empresa, cart_banc=banco_id, cart_codi=carteira_id)
         if filial:
             carteira_qs = carteira_qs.filter(cart_fili=filial)
         carteira = carteira_qs.first()
         if not carteira:
             return JsonResponse({'ok': False, 'erro': 'carteira_nao_encontrada'}, status=404)
 
-        service = SicrediCobrancaService(carteira)
+        service, service_error = get_online_boleto_service(banco_id, carteira)
 
         results = []
         for item in selected:
@@ -135,7 +142,7 @@ class BoletoOnlineView(View):
                     })
 
                 results.append({'titulo': titulo.titu_titu, 'ok': True, 'retorno': retorno})
-            except SicrediAPIError as exc:
+            except service_error as exc:
                 results.append({'titulo': titulo.titu_titu, 'ok': False, 'erro': str(exc)})
 
         return JsonResponse({'ok': True, 'results': results})
