@@ -1,5 +1,6 @@
 from datetime import date
 
+from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views import View
@@ -9,10 +10,7 @@ from Entidades.models import Entidades
 from contas_a_receber.models import Titulosreceber
 
 from ...models import Carteira
-from ...services.boleto_online_factory import (
-    SUPPORTED_BANKS,
-    get_online_boleto_service,
-)
+from ...services.boleto_online_factory import get_online_boleto_service
 
 
 def _extract(data, *paths):
@@ -30,6 +28,10 @@ def _extract(data, *paths):
     return None
 
 
+def _resolve_bank_code(entidade_banco):
+    return str(getattr(entidade_banco, 'enti_banc', '') or '').strip()
+
+
 class BoletoOnlineView(View):
     template_name = 'Boletos/online_registros.html'
 
@@ -38,16 +40,23 @@ class BoletoOnlineView(View):
         empresa = request.session.get('empresa_id')
         filial = request.session.get('filial_id')
 
-        banco_id = request.GET.get('banco') or '748'
+        entidade_id = request.GET.get('entidade_banco')
         carteira_id = request.GET.get('carteira')
         cliente_id = request.GET.get('cliente')
 
-        bancos_qs = Entidades.objects.using(db).filter(enti_empr=empresa, enti_tien='B').order_by('enti_nome')
+        entidades_banco_qs = Entidades.objects.using(db).filter(enti_empr=empresa, enti_tien='B').order_by('enti_nome')
+
+        entidade_banco = None
+        bank_code = None
+        if entidade_id:
+            entidade_banco = entidades_banco_qs.filter(enti_clie=entidade_id).first()
+            bank_code = _resolve_bank_code(entidade_banco)
+
         carteiras_qs = Carteira.objects.using(db).filter(cart_empr=empresa)
         if filial:
             carteiras_qs = carteiras_qs.filter(cart_fili=filial)
-        if banco_id:
-            carteiras_qs = carteiras_qs.filter(cart_banc=banco_id)
+        if bank_code:
+            carteiras_qs = carteiras_qs.filter(cart_banc=bank_code)
         if carteira_id:
             carteiras_qs = carteiras_qs.filter(cart_codi=carteira_id)
 
@@ -56,8 +65,8 @@ class BoletoOnlineView(View):
         titulos = Titulosreceber.objects.using(db).filter(titu_empr=empresa, titu_aber='A', titu_form_reci='53')
         if filial:
             titulos = titulos.filter(titu_fili=filial)
-        if banco_id:
-            titulos = titulos.filter(titu_cobr_banc=banco_id)
+        if bank_code and entidade_id:
+            titulos = titulos.filter(Q(titu_cobr_banc=bank_code) | Q(titu_cobr_banc=entidade_id))
         if carteira_id:
             titulos = titulos.filter(titu_cobr_cart=carteira_id)
         if cliente_id:
@@ -66,18 +75,16 @@ class BoletoOnlineView(View):
         pendentes = titulos.filter(titu_noss_nume__isnull=True)[:200]
         enviados = titulos.exclude(titu_noss_nume__isnull=True)[:200]
 
-        clientes_map = {c.enti_clie: c.enti_nome for c in clientes_qs[:1000]}
-
         return {
             'slug': self.kwargs.get('slug'),
-            'bancos': bancos_qs,
+            'entidades_banco': entidades_banco_qs[:200],
+            'entidade_banco': entidade_banco,
+            'bank_code': bank_code or '',
             'carteiras': carteiras_qs.order_by('cart_codi')[:200],
             'clientes': clientes_qs[:200],
             'pendentes': pendentes,
             'enviados': enviados,
-            'clientes_map': clientes_map,
-            'filtro': {'banco': banco_id or '', 'carteira': carteira_id or '', 'cliente': cliente_id or ''},
-            'supported_banks': SUPPORTED_BANKS,
+            'filtro': {'entidade_banco': entidade_id or '', 'carteira': carteira_id or '', 'cliente': cliente_id or ''},
         }
 
     def get(self, request, *args, **kwargs):
@@ -90,20 +97,30 @@ class BoletoOnlineView(View):
 
         action = request.POST.get('action')
         carteira_id = request.POST.get('carteira')
-        banco_id = request.POST.get('banco') or '748'
+        entidade_id = request.POST.get('entidade_banco')
         selected = request.POST.getlist('titulos[]')
 
+        if not entidade_id:
+            return JsonResponse({'ok': False, 'erro': 'entidade_banco_obrigatoria'}, status=400)
         if not carteira_id:
             return JsonResponse({'ok': False, 'erro': 'carteira_obrigatoria'}, status=400)
 
-        carteira_qs = Carteira.objects.using(db).filter(cart_empr=empresa, cart_banc=banco_id, cart_codi=carteira_id)
+        entidade_banco = Entidades.objects.using(db).filter(enti_empr=empresa, enti_tien='B', enti_clie=entidade_id).first()
+        if not entidade_banco:
+            return JsonResponse({'ok': False, 'erro': 'entidade_banco_nao_encontrada'}, status=404)
+
+        bank_code = _resolve_bank_code(entidade_banco)
+        if not bank_code:
+            return JsonResponse({'ok': False, 'erro': 'codigo_banco_invalido_na_entidade'}, status=400)
+
+        carteira_qs = Carteira.objects.using(db).filter(cart_empr=empresa, cart_banc=bank_code, cart_codi=carteira_id)
         if filial:
             carteira_qs = carteira_qs.filter(cart_fili=filial)
         carteira = carteira_qs.first()
         if not carteira:
-            return JsonResponse({'ok': False, 'erro': 'carteira_nao_encontrada'}, status=404)
+            return JsonResponse({'ok': False, 'erro': 'carteira_nao_encontrada_para_entidade'}, status=404)
 
-        service, service_error = get_online_boleto_service(banco_id, carteira)
+        service, service_error = get_online_boleto_service(bank_code, carteira)
 
         results = []
         for item in selected:

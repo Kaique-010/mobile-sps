@@ -4,15 +4,17 @@
 <div class="container py-3">
   <h3>Registros Online de Boletos</h3>
   <form method="get" class="row g-2 mb-3">
-    <div class="col-md-3">
-      <label>Banco</label>
-      <select class="form-select" name="banco" id="bancoSel">
-        {% for cod, nome in supported_banks.items %}
-          <option value="{{ cod }}" {% if filtro.banco == cod|stringformat:'s' %}selected{% endif %}>{{ cod }} - {{ nome }}</option>
+    <div class="col-md-4">
+      <label>Banco (Entidade)</label>
+      <select class="form-select" name="entidade_banco" id="entidadeBancoSel">
+        <option value="">Selecione</option>
+        {% for e in entidades_banco %}
+          <option value="{{ e.enti_clie }}" {% if filtro.entidade_banco == e.enti_clie|stringformat:'s' %}selected{% endif %}>{{ e.enti_clie }} - {{ e.enti_nome }} ({{ e.enti_banc }})</option>
         {% endfor %}
       </select>
+      {% if bank_code %}<small class="text-muted">Código banco da entidade: {{ bank_code }}</small>{% endif %}
     </div>
-    <div class="col-md-3">
+    <div class="col-md-4">
       <label>Carteira</label>
       <select class="form-select" name="carteira" id="carteiraSel">
         <option value="">Selecione</option>
@@ -21,7 +23,7 @@
         {% endfor %}
       </select>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-2">
       <label>Cliente</label>
       <select class="form-select" name="cliente">
         <option value="">Todos</option>
@@ -105,12 +107,14 @@ function selecionados() {
 async function enviarSelecionados(action) {
   const titulos = selecionados();
   const carteira = document.getElementById('carteiraSel').value;
+  const entidadeBanco = document.getElementById('entidadeBancoSel').value;
+  if (!entidadeBanco) { alert('Selecione o Banco (Entidade).'); return; }
   if (!carteira) { alert('Selecione a carteira.'); return; }
   if (!titulos.length) { alert('Selecione ao menos um título.'); return; }
   const fd = new FormData();
   fd.append('action', action);
   fd.append('carteira', carteira);
-  fd.append('banco', document.getElementById('bancoSel').value);
+  fd.append('entidade_banco', entidadeBanco);
   titulos.forEach(t => fd.append('titulos[]', t));
   if (action === 'alterar') {
     const nova = prompt('Nova data de vencimento (YYYY-MM-DD):');
@@ -119,7 +123,7 @@ async function enviarSelecionados(action) {
   }
   const res = await fetch('', { method: 'POST', body: fd, headers: {'X-CSRFToken': csrfToken()}, credentials: 'same-origin' });
   const data = await res.json();
-  if (!res.ok || !data.ok) { alert('Erro ao processar ação.'); return; }
+  if (!res.ok || !data.ok) { alert((data && data.erro) ? data.erro : 'Erro ao processar ação.'); return; }
   alert('Ação concluída.');
   window.location.reload();
 }
