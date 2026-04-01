@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+{% block title %}Registros Online de Boletos{% endblock %}
+{% block content %}
+<div class="container py-3">
+  <h3>Registros Online de Boletos</h3>
+  <form method="get" class="row g-2 mb-3">
+    <div class="col-md-3">
+      <label>Banco</label>
+      <select class="form-select" name="banco" id="bancoSel">
+        {% for cod, nome in supported_banks.items %}
+          <option value="{{ cod }}" {% if filtro.banco == cod|stringformat:'s' %}selected{% endif %}>{{ cod }} - {{ nome }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label>Carteira</label>
+      <select class="form-select" name="carteira" id="carteiraSel">
+        <option value="">Selecione</option>
+        {% for c in carteiras %}
+          <option value="{{ c.cart_codi }}" {% if filtro.carteira == c.cart_codi|stringformat:'s' %}selected{% endif %}>{{ c.cart_codi }} - {{ c.cart_nome }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4">
+      <label>Cliente</label>
+      <select class="form-select" name="cliente">
+        <option value="">Todos</option>
+        {% for c in clientes %}
+          <option value="{{ c.enti_clie }}" {% if filtro.cliente == c.enti_clie|stringformat:'s' %}selected{% endif %}>{{ c.enti_nome }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2 d-flex align-items-end"><button class="btn btn-primary w-100">Filtrar</button></div>
+  </form>
+
+  <ul class="nav nav-tabs" role="tablist">
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-pend">Pendentes de registro</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-env">Já enviados</button></li>
+  </ul>
+
+  <div class="tab-content border border-top-0 p-3">
+    <div class="tab-pane fade show active" id="tab-pend">
+      <div class="mb-2">
+        <button class="btn btn-success btn-sm" onclick="enviarSelecionados('registrar')">Enviar selecionados (API)</button>
+      </div>
+      <table class="table table-sm table-striped">
+        <thead><tr><th></th><th>Título</th><th>Cliente</th><th>Venc.</th><th>Valor</th><th>Banco/Cart.</th></tr></thead>
+        <tbody>
+          {% for t in pendentes %}
+            <tr>
+              <td><input type="checkbox" class="sel-pend" value="{{ t.titu_titu }}|{{ t.titu_seri }}|{{ t.titu_parc }}|{{ t.titu_clie }}"></td>
+              <td>{{ t.titu_titu }}/{{ t.titu_parc }}</td>
+              <td>{{ t.titu_clie }}</td>
+              <td>{{ t.titu_venc|date:'d/m/Y' }}</td>
+              <td>R$ {{ t.titu_valo }}</td>
+              <td>{{ t.titu_cobr_banc }} / {{ t.titu_cobr_cart }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6" class="text-center">Sem pendências.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="tab-pane fade" id="tab-env">
+      <div class="mb-2 d-flex gap-2 flex-wrap">
+        <button class="btn btn-outline-primary btn-sm" onclick="enviarSelecionados('consultar')">Consultar</button>
+        <button class="btn btn-outline-warning btn-sm" onclick="enviarSelecionados('alterar')">Alterar vencimento</button>
+        <button class="btn btn-outline-danger btn-sm" onclick="enviarSelecionados('cancelar')">Cancelar</button>
+        <button class="btn btn-outline-secondary btn-sm" onclick="enviarSelecionados('baixar')">Baixar</button>
+      </div>
+      <table class="table table-sm table-striped">
+        <thead><tr><th></th><th>Título</th><th>Nosso Nº</th><th>Linha Digitável</th><th>QR/Pix</th><th>Ações</th></tr></thead>
+        <tbody>
+          {% for t in enviados %}
+            <tr>
+              <td><input type="checkbox" class="sel-pend" value="{{ t.titu_titu }}|{{ t.titu_seri }}|{{ t.titu_parc }}|{{ t.titu_clie }}"></td>
+              <td>{{ t.titu_titu }}/{{ t.titu_parc }}</td>
+              <td>{{ t.titu_noss_nume }}</td>
+              <td>{{ t.titu_linh_digi|default:'-' }}</td>
+              <td>{% if t.titu_url_bole %}<code>{{ t.titu_url_bole|truncatechars:40 }}</code>{% else %}-{% endif %}</td>
+              <td>
+                {% if t.titu_url_bole %}
+                  <button class="btn btn-sm btn-success" onclick="imprimirComQr('{{ t.titu_titu }}','{{ t.titu_linh_digi|default:'' }}','{{ t.titu_url_bole }}')">Imprimir c/ QR Pix</button>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6" class="text-center">Nenhum enviado ainda.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+function csrfToken() {
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  return m ? m[1] : '';
+}
+function selecionados() {
+  return Array.from(document.querySelectorAll('.sel-pend:checked')).map(i => i.value);
+}
+async function enviarSelecionados(action) {
+  const titulos = selecionados();
+  const carteira = document.getElementById('carteiraSel').value;
+  if (!carteira) { alert('Selecione a carteira.'); return; }
+  if (!titulos.length) { alert('Selecione ao menos um título.'); return; }
+  const fd = new FormData();
+  fd.append('action', action);
+  fd.append('carteira', carteira);
+  fd.append('banco', document.getElementById('bancoSel').value);
+  titulos.forEach(t => fd.append('titulos[]', t));
+  if (action === 'alterar') {
+    const nova = prompt('Nova data de vencimento (YYYY-MM-DD):');
+    if (!nova) return;
+    fd.append('nova_data_vencimento', nova);
+  }
+  const res = await fetch('', { method: 'POST', body: fd, headers: {'X-CSRFToken': csrfToken()}, credentials: 'same-origin' });
+  const data = await res.json();
+  if (!res.ok || !data.ok) { alert('Erro ao processar ação.'); return; }
+  alert('Ação concluída.');
+  window.location.reload();
+}
+function imprimirComQr(titulo, linha, pixData) {
+  const url = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(pixData)}`;
+  const w = window.open('', '_blank');
+  w.document.write(`<html><body><h3>Boleto ${titulo}</h3><p>${linha || ''}</p><img src="${url}"/><p><small>${pixData}</small></p></body></html>`);
+  w.document.close();
+  w.focus();
+  w.print();
+}
+</script>
+{% endblock %}
