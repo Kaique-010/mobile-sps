@@ -19,8 +19,10 @@ def limpar_cnpj(cnpj):
 
 def get_licenca_db_config(request_or_slug):
     if hasattr(request_or_slug, 'path'):
-        path_parts = request_or_slug.path.strip('/').split('/')
-        slug = path_parts[1] if len(path_parts) > 1 else None  # /api/<slug>/...
+        slug = getattr(request_or_slug, "slug", None)
+        if not slug:
+            path_parts = request_or_slug.path.strip('/').split('/')
+            slug = path_parts[1] if len(path_parts) > 1 else None  # /api/<slug>/... ou /web/<slug>/...
     else:
         # Assume que é o slug passado diretamente como string
         slug = str(request_or_slug)
@@ -30,7 +32,22 @@ def get_licenca_db_config(request_or_slug):
 
     licenca = next((lic for lic in get_licencas_map() if lic["slug"] == slug), None)
     if not licenca:
-        raise Exception(f"Licença com slug '{slug}' não encontrada.")
+        alt_slug = None
+        try:
+            alt_slug = get_licenca_slug()
+        except Exception:
+            alt_slug = None
+        if not alt_slug and hasattr(request_or_slug, "session"):
+            try:
+                alt_slug = request_or_slug.session.get("slug")
+            except Exception:
+                alt_slug = None
+        if alt_slug and hasattr(request_or_slug, "user") and getattr(request_or_slug.user, "is_authenticated", False):
+            licenca = next((lic for lic in get_licencas_map() if lic["slug"] == alt_slug), None)
+            if licenca:
+                slug = alt_slug
+        if not licenca:
+            raise Exception(f"Licença com slug '{slug}' não encontrada.")
 
     if slug in settings.DATABASES:
         return slug

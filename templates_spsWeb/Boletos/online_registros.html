@@ -33,6 +33,14 @@
         {% endfor %}
       </select>
     </div>
+    <div class="col-md-1">
+      <label>De</label>
+      <input type="text" class="form-control" name="data_ini" placeholder="AAAA-MM-DD" value="{{ filtro.data_ini|default:'' }}">
+    </div>
+    <div class="col-md-1">
+      <label>Até</label>
+      <input type="text" class="form-control" name="data_fim" placeholder="AAAA-MM-DD" value="{{ filtro.data_fim|default:'' }}">
+    </div>
     <div class="col-md-2 d-flex align-items-end"><button type="submit" class="btn btn-primary w-100">Filtrar</button></div>
   </form>
 
@@ -128,9 +136,20 @@ async function enviarSelecionados(action) {
   }
   const res = await fetch('', { method: 'POST', body: fd, headers: {'X-CSRFToken': csrfToken()}, credentials: 'same-origin' });
   const data = await res.json();
-  if (!res.ok || !data.ok) { alert((data && data.erro) ? data.erro : 'Erro ao processar ação.'); return; }
-  alert('Ação concluída.');
-  window.location.reload();
+  if (!res.ok) { alert((data && data.erro) ? data.erro : 'Erro ao processar ação.'); return; }
+  const results = (data && data.results) ? data.results : [];
+  const okItems = results.filter(r => r && r.ok);
+  const errItems = results.filter(r => r && r.ok === false);
+  if (errItems.length) {
+    const first = errItems[0];
+    const detalhe = first.erro ? `\n\nPrimeiro erro: ${first.titulo || ''} - ${first.erro}` : '';
+    alert(`Processado com erros.\nSucesso: ${okItems.length}\nFalhas: ${errItems.length}${detalhe}`);
+  } else {
+    alert(`Ação concluída.\nSucesso: ${okItems.length}`);
+  }
+  if (okItems.length) {
+    window.location.reload();
+  }
 }
 function imprimirComQr(titulo, linha, pixData) {
   const url = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(pixData)}`;
@@ -140,5 +159,19 @@ function imprimirComQr(titulo, linha, pixData) {
   w.focus();
   w.print();
 }
+document.addEventListener('DOMContentLoaded', () => {
+  const form = document.querySelector('form[method="get"]');
+  const banco = document.getElementById('entidadeBancoSel');
+  const carteira = document.getElementById('carteiraSel');
+  if (form && banco) {
+    banco.addEventListener('change', () => {
+      if (carteira) carteira.value = '';
+      form.submit();
+    });
+  }
+  if (form && carteira) {
+    carteira.addEventListener('change', () => form.submit());
+  }
+});
 </script>
 {% endblock %}

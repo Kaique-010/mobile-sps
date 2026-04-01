@@ -1048,7 +1048,7 @@
                 const preData = await preRes.json();
                 if (preRes.ok && preData && preData.ok && preData.carteira) {
                     const codigoOriginal = container.dataset.codigoOriginal || String(preData.carteira.cart_codi || codigo || '');
-                    url = new URL('{% url "carteira_editar" slug=slug codigo=0 %}'.replace('0', encodeURIComponent(codigoOriginal)), window.location.origin);
+                    url = new URL('{% url "carteira_editar" slug=slug codigo=0 %}'.replace('/0/editar/', '/' + encodeURIComponent(codigoOriginal) + '/editar/'), window.location.origin);
                     container.dataset.existe = '1';
                 } else {
                     url = new URL('{% url "carteira_criar" slug=slug %}', window.location.origin);
@@ -1057,7 +1057,7 @@
             } catch (e) {
                 if (existe) {
                     const codigoOriginal = container.dataset.codigoOriginal || codigo || '';
-                    url = new URL('{% url "carteira_editar" slug=slug codigo=0 %}'.replace('0', encodeURIComponent(codigoOriginal)), window.location.origin);
+                    url = new URL('{% url "carteira_editar" slug=slug codigo=0 %}'.replace('/0/editar/', '/' + encodeURIComponent(codigoOriginal) + '/editar/'), window.location.origin);
                 } else {
                     url = new URL('{% url "carteira_criar" slug=slug %}', window.location.origin);
                 }
