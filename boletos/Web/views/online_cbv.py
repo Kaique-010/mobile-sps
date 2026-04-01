@@ -99,6 +99,7 @@ class BoletoOnlineView(View):
         carteira_id = request.POST.get('carteira')
         entidade_id = request.POST.get('entidade_banco')
         selected = request.POST.getlist('titulos[]')
+        cliente_filter = request.POST.get('cliente')
 
         if not entidade_id:
             return JsonResponse({'ok': False, 'erro': 'entidade_banco_obrigatoria'}, status=400)
@@ -132,6 +133,27 @@ class BoletoOnlineView(View):
                 titu_empr=empresa, titu_titu=titu, titu_seri=seri, titu_parc=parc, titu_clie=clie
             ).first()
             if not titulo:
+                continue
+
+
+            if str(getattr(titulo, 'titu_form_reci', '') or '') != '53':
+                results.append({'titulo': titulo.titu_titu, 'ok': False, 'erro': 'titulo_nao_e_boleto_forma_53'})
+                continue
+
+            if cliente_filter and str(titulo.titu_clie) != str(cliente_filter):
+                results.append({'titulo': titulo.titu_titu, 'ok': False, 'erro': 'titulo_fora_do_cliente_filtrado'})
+                continue
+
+            if titulo.titu_cobr_banc in (None, ''):
+                titulo.titu_cobr_banc = bank_code
+            elif str(titulo.titu_cobr_banc) not in (str(bank_code), str(entidade_id)):
+                results.append({'titulo': titulo.titu_titu, 'ok': False, 'erro': 'titulo_com_banco_diferente_do_selecionado'})
+                continue
+
+            if titulo.titu_cobr_cart in (None, ''):
+                titulo.titu_cobr_cart = carteira_id
+            elif str(titulo.titu_cobr_cart) != str(carteira_id):
+                results.append({'titulo': titulo.titu_titu, 'ok': False, 'erro': 'titulo_com_carteira_diferente_da_selecionada'})
                 continue
 
             try:

@@ -3,6 +3,7 @@
 {% block content %}
 <div class="container py-3">
   <h3>Registros Online de Boletos</h3>
+  <input type="hidden" id="csrfTokenOnline" value="{{ csrf_token }}">
   <form method="get" class="row g-2 mb-3">
     <div class="col-md-4">
       <label>Banco (Entidade)</label>
@@ -32,7 +33,7 @@
         {% endfor %}
       </select>
     </div>
-    <div class="col-md-2 d-flex align-items-end"><button class="btn btn-primary w-100">Filtrar</button></div>
+    <div class="col-md-2 d-flex align-items-end"><button type="submit" class="btn btn-primary w-100">Filtrar</button></div>
   </form>
 
   <ul class="nav nav-tabs" role="tablist">
@@ -43,7 +44,7 @@
   <div class="tab-content border border-top-0 p-3">
     <div class="tab-pane fade show active" id="tab-pend">
       <div class="mb-2">
-        <button class="btn btn-success btn-sm" onclick="enviarSelecionados('registrar')">Enviar selecionados (API)</button>
+        <button type="button" class="btn btn-success btn-sm" onclick="enviarSelecionados('registrar')">Enviar selecionados (API)</button>
       </div>
       <table class="table table-sm table-striped">
         <thead><tr><th></th><th>Título</th><th>Cliente</th><th>Venc.</th><th>Valor</th><th>Banco/Cart.</th></tr></thead>
@@ -66,10 +67,10 @@
 
     <div class="tab-pane fade" id="tab-env">
       <div class="mb-2 d-flex gap-2 flex-wrap">
-        <button class="btn btn-outline-primary btn-sm" onclick="enviarSelecionados('consultar')">Consultar</button>
-        <button class="btn btn-outline-warning btn-sm" onclick="enviarSelecionados('alterar')">Alterar vencimento</button>
-        <button class="btn btn-outline-danger btn-sm" onclick="enviarSelecionados('cancelar')">Cancelar</button>
-        <button class="btn btn-outline-secondary btn-sm" onclick="enviarSelecionados('baixar')">Baixar</button>
+        <button type="button" class="btn btn-outline-primary btn-sm" onclick="enviarSelecionados('consultar')">Consultar</button>
+        <button type="button" class="btn btn-outline-warning btn-sm" onclick="enviarSelecionados('alterar')">Alterar vencimento</button>
+        <button type="button" class="btn btn-outline-danger btn-sm" onclick="enviarSelecionados('cancelar')">Cancelar</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="enviarSelecionados('baixar')">Baixar</button>
       </div>
       <table class="table table-sm table-striped">
         <thead><tr><th></th><th>Título</th><th>Nosso Nº</th><th>Linha Digitável</th><th>QR/Pix</th><th>Ações</th></tr></thead>
@@ -83,7 +84,7 @@
               <td>{% if t.titu_url_bole %}<code>{{ t.titu_url_bole|truncatechars:40 }}</code>{% else %}-{% endif %}</td>
               <td>
                 {% if t.titu_url_bole %}
-                  <button class="btn btn-sm btn-success" onclick="imprimirComQr('{{ t.titu_titu }}','{{ t.titu_linh_digi|default:'' }}','{{ t.titu_url_bole }}')">Imprimir c/ QR Pix</button>
+                  <button type="button" class="btn btn-sm btn-success" onclick="imprimirComQr('{{ t.titu_titu }}','{{ t.titu_linh_digi|default:'' }}','{{ t.titu_url_bole }}')">Imprimir c/ QR Pix</button>
                 {% endif %}
               </td>
             </tr>
@@ -98,6 +99,8 @@
 
 <script>
 function csrfToken() {
+  const hidden = document.getElementById('csrfTokenOnline');
+  if (hidden && hidden.value) return hidden.value;
   const m = document.cookie.match(/csrftoken=([^;]+)/);
   return m ? m[1] : '';
 }
@@ -115,6 +118,8 @@ async function enviarSelecionados(action) {
   fd.append('action', action);
   fd.append('carteira', carteira);
   fd.append('entidade_banco', entidadeBanco);
+  const clienteSel = document.querySelector('select[name="cliente"]');
+  if (clienteSel && clienteSel.value) fd.append('cliente', clienteSel.value);
   titulos.forEach(t => fd.append('titulos[]', t));
   if (action === 'alterar') {
     const nova = prompt('Nova data de vencimento (YYYY-MM-DD):');
