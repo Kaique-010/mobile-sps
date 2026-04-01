@@ -1,5 +1,20 @@
 from django.db import models
 
+FORMA_PAGAMENTO = [
+    ('00', 'DUPLICATA'),
+    ('01', 'CHEQUE'),
+    ('02', 'PROMISSÓRIA'),
+    ('03', 'RECIBO'),
+    ('50', 'CHEQUE PRÉ'),
+    ('51', 'CARTÃO DE CRÉDITO'),
+    ('52', 'CARTÃO DE DÉBITO'),
+    ('53', 'BOLETO BANCÁRIO'),
+    ('54', 'DINHEIRO'),
+    ('55', 'DEPÓSITO EM CONTA'),
+    ('56', 'VENDA À VISTA'),
+    ('60', 'PIX'),
+]
+
 class Titulospagar(models.Model):
     titu_empr = models.IntegerField()
     titu_fili = models.IntegerField()
@@ -45,7 +60,7 @@ class Titulospagar(models.Model):
     titu_dico_pag_for = models.CharField(max_length=2, blank=True, null=True)
     titu_coco_pag_for = models.BooleanField(blank=True, null=True)
     titu_fatu_cte = models.BooleanField(blank=True, null=True)
-    titu_form_reci = models.CharField(max_length=2, blank=True, null=True)
+    titu_form_reci = models.CharField(max_length=2, choices=FORMA_PAGAMENTO, blank=True, null=True, default='54')
     titu_fatu = models.BooleanField(blank=True, null=True)
     titu_nume_fatu = models.IntegerField(blank=True, null=True)
     titu_tipo_oper = models.IntegerField(blank=True, null=True)

@@ -7,7 +7,7 @@ class TitulosPagarForm(forms.ModelForm):
         model = Titulospagar
         fields = [
             'titu_forn','titu_titu','titu_seri','titu_parc',
-            'titu_emis','titu_venc','titu_valo', 'titu_cecu'
+            'titu_emis','titu_venc','titu_form_reci','titu_valo', 'titu_cecu'
         ]
         widgets = {
             'titu_forn': forms.NumberInput(attrs={'class': 'form-control'}),
@@ -16,6 +16,7 @@ class TitulosPagarForm(forms.ModelForm):
             'titu_parc': forms.TextInput(attrs={'class': 'form-control'}),
             'titu_emis': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'titu_venc': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'titu_form_reci': forms.Select(attrs={'class': 'form-select'}),
             'titu_valo': forms.NumberInput(attrs={'type': 'number', 'step': '0.01', 'class': 'form-control'}),
             'titu_cecu': forms.HiddenInput(),
         }

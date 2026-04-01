@@ -7,12 +7,12 @@ FORMA_RECEBIMENTO = [
     ('02', 'PROMISSÓRIA'),
     ('03', 'RECIBO'),
     ('50', 'CHEQUE PRÉ'),
-    ('51', 'CARTAO DE CRÉDITO'),
-    ('52', 'CARTAO DE DÉBITO'),
+    ('51', 'CARTÃO DE CRÉDITO'),
+    ('52', 'CARTÃO DE DÉBITO'),
     ('53', 'BOLETO BANCÁRIO'),
     ('54', 'DINHEIRO'),
     ('55', 'DEPÓSITO EM CONTA'),
-    ('56', 'VENDA À VISTA '),
+    ('56', 'VENDA À VISTA'),
     ('60', 'PIX'),
 ]
 
