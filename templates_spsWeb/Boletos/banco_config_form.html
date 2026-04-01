@@ -590,9 +590,17 @@
                     <input type="text" class="form-control" id="websClientSecret" name="cart_webs_clie_secr">
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">KeyUser</label>
-                    <input type="text" class="form-control" id="websKeyUser" name="cart_webs_user_key">
+                    <label class="form-label">Token/API Key</label>
+                    <input type="text" class="form-control" id="websKeyUser" name="cart_webs_user_key"
+                        placeholder="Código do Token de Acesso">
                 </div>
+                <div class="col-md-3">
+                    <label class="form-label">Ambiente/Base URL</label>
+                    <input type="text" class="form-control" id="websAmbiente" name="cart_webs_ssl_lib"
+                        placeholder="sandbox | producao | https://api...">
+                </div>
+            </div>
+            <div class="row g-3 mt-2">
                 <div class="col-md-3">
                     <label class="form-label">Scope</label>
                     <input type="text" class="form-control" id="websScope" name="cart_webs_scop">
