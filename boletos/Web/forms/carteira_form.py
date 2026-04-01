@@ -15,7 +15,7 @@ class CarteiraForm(forms.ModelForm):
             'cart_cnab', 'cart_mult', 'cart_juro', 'cart_desc',
             'cart_codi_tran', 'cart_codi_cede',
             'cart_webs_clie_id', 'cart_webs_clie_secr', 'cart_webs_user_key',
-            'cart_webs_scop', 'cart_webs_indi_pix', 'cart_webs_chav_pix',
+            'cart_webs_ssl_lib', 'cart_webs_scop', 'cart_webs_indi_pix', 'cart_webs_chav_pix',
             'cart_webs_crt', 'cart_webs_key', 'cart_mens_loca','cart_espe_moed',
             'cart_espe', 'cart_acei', 'cart_nume_arqu', 'cart_bole', 'cart_tipo_docu', 'cart_baix', 'cart_prot', 'cart_nega'
         ]
@@ -35,7 +35,8 @@ class CarteiraForm(forms.ModelForm):
             'cart_codi_cede': forms.TextInput(attrs={'class': 'form-control','placeholder':'Código do Cedente'}),
             'cart_webs_clie_id': forms.TextInput(attrs={'class': 'form-control','placeholder':'ID do Cliente'}),
             'cart_webs_clie_secr': forms.TextInput(attrs={'class': 'form-control','placeholder':'Segredo do Cliente'}),
-            'cart_webs_user_key': forms.TextInput(attrs={'class': 'form-control','placeholder':'Chave do Usuário'}),
+            'cart_webs_user_key': forms.TextInput(attrs={'class': 'form-control','placeholder':'Token/API Key'}),
+            'cart_webs_ssl_lib': forms.TextInput(attrs={'class': 'form-control','placeholder':'sandbox | producao | https://...'}),
             'cart_webs_scop': forms.TextInput(attrs={'class': 'form-control','placeholder':'Escopo'}),
             'cart_webs_indi_pix': forms.CheckboxInput(attrs={'class': 'form-check-input','placeholder':'Indica se é PIX'}),
             'cart_webs_chav_pix': forms.TextInput(attrs={'class': 'form-control','placeholder':'Chave PIX'}),
