@@ -10,6 +10,7 @@ from .views.carteira_cbv import (
     CarteiraNextCodeView,
 )
 from .views.logo_cbv import LogoView
+from .views.online_cbv import BoletoOnlineView
 
 urlpatterns = [
     path("titulo/<int:pk>/gerar/", GerarBoletoWebView.as_view(), name="boleto_web_gerar"),
@@ -25,4 +26,5 @@ urlpatterns = [
     path("carteiras/<int:codigo>/editar/", CarteiraUpdateView.as_view(), name="carteira_editar"),
     path("carteiras/lookup/", CarteiraLookupView.as_view(), name="carteira_lookup"),
     path("carteiras/proximo/", CarteiraNextCodeView.as_view(), name="carteira_proximo"),
+    path("online/", BoletoOnlineView.as_view(), name="boletos_online"),
 ]

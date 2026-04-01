@@ -221,6 +221,7 @@ class Carteira(models.Model):
             'cart_webs_clie_id': self.cart_webs_clie_id,
             'cart_webs_clie_secr': self.cart_webs_clie_secr,
             'cart_webs_user_key': self.cart_webs_user_key,
+            'cart_webs_ssl_lib': self.cart_webs_ssl_lib,
             'cart_webs_scop': self.cart_webs_scop,
             'cart_webs_indi_pix': bool(self.cart_webs_indi_pix) if self.cart_webs_indi_pix is not None else False,
             'cart_webs_chav_pix': self.cart_webs_chav_pix,
