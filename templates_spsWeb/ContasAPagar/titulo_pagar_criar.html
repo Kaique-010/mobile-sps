@@ -139,6 +139,15 @@
           <div class="field-group">
             <div class="row g-3">
               <div class="col-md-4">
+                <label class="form-label" for="{{ form.titu_form_reci.id_for_label }}">
+                  Forma de Pagamento
+                </label>
+                {{ form.titu_form_reci }}
+                {% if form.titu_form_reci.errors %}
+                <div class="invalid-feedback d-block">{{ form.titu_form_reci.errors|striptags }}</div>
+                {% endif %}
+              </div>
+              <div class="col-md-8">
                 <label class="form-label" for="{{ form.titu_cecu.id_for_label }}">
                   Centro de Custo
                 </label>
