@@ -97,9 +97,27 @@ class BaseOAuthBoletoService:
 
     def baixar_boleto(self, nosso_numero, payload=None):
         token = self._token()
+        return self._baixar_boleto_com_token(token, nosso_numero, payload=payload)
+
+    def _baixar_boleto_com_token(self, token, nosso_numero, payload=None):
         r = requests.patch(f"{self.boletos_url()}/{nosso_numero}/baixa", json=payload or {}, headers=self._headers(token), timeout=30)
         if r.status_code >= 400:
             raise OnlineBankAPIError(f'Erro ao baixar boleto ({self.bank_name}): HTTP {r.status_code} - {r.text}')
+        return r.json() if r.text else {'ok': True}
+
+    def cancelar_boleto(self, nosso_numero, payload=None):
+        """
+        Padrão multi-banco:
+        - tenta endpoint explícito de cancelamento
+        - fallback para baixa para manter compatibilidade
+        """
+        token = self._token()
+        cancel_url = f"{self.boletos_url()}/{nosso_numero}/cancelamento"
+        r = requests.patch(cancel_url, json=payload or {}, headers=self._headers(token), timeout=30)
+        if r.status_code in (404, 405):
+            return self._baixar_boleto_com_token(token, nosso_numero, payload=payload)
+        if r.status_code >= 400:
+            raise OnlineBankAPIError(f'Erro ao cancelar boleto ({self.bank_name}): HTTP {r.status_code} - {r.text}')
         return r.json() if r.text else {'ok': True}
 
     def alterar_boleto(self, nosso_numero, payload):

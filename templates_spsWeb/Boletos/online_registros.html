@@ -153,12 +153,20 @@ async function enviarSelecionados(action) {
 }
 function imprimirBoleto(titulo, linha, pixData) {
   const pix = (pixData || '').trim();
+  if (/^https?:\/\//i.test(pix)) {
+    const wPdf = window.open(pix, '_blank');
+    if (wPdf) {
+      wPdf.focus();
+      setTimeout(() => wPdf.print(), 700);
+      return;
+    }
+  }
   const temPix = !!pix;
   const qr = temPix ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(pix)}` : '';
   const w = window.open('', '_blank');
   const linhaHtml = (linha || '').trim() ? `<p><b>Linha digitável</b></p><p style="font-size:16px;letter-spacing:0.3px;">${linha}</p>` : '';
   const pixHtml = temPix ? `<p><b>QR/Pix</b></p><img src="${qr}"/><p style="word-break:break-all;"><small>${pix}</small></p>` : '';
-  w.document.write(`<html><body><h3>Boleto ${titulo}</h3>${linhaHtml}${pixHtml}</body></html>`);
+  w.document.write(`<html><body style="font-family:Arial,sans-serif;padding:16px;"><h3>Boleto ${titulo}</h3>${linhaHtml}${pixHtml}</body></html>`);
   w.document.close();
   w.focus();
   w.print();

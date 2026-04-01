@@ -190,6 +190,9 @@ class SicrediCobrancaService:
 
     def baixar_boleto(self, nosso_numero: str, payload: Optional[dict] = None) -> dict:
         token = self.get_access_token()
+        return self._baixar_boleto_com_token(token, nosso_numero, payload=payload)
+
+    def _baixar_boleto_com_token(self, token: str, nosso_numero: str, payload: Optional[dict] = None) -> dict:
         url = f"{self._api_base()}/boletos/{nosso_numero}/baixa"
         params = self._routing_params()
         r = requests.patch(url, params=params, json=payload or {}, headers=self._headers(token), timeout=30)
@@ -214,4 +217,15 @@ class SicrediCobrancaService:
             r = requests.put(url, params=params, json=payload, headers=self._headers(token), timeout=30)
         if r.status_code >= 400:
             raise SicrediAPIError(f"Falha ao alterar boleto: HTTP {r.status_code} - {r.text}")
+        return r.json() if r.text else {"ok": True}
+
+    def cancelar_boleto(self, nosso_numero: str, payload: Optional[dict] = None) -> dict:
+        token = self.get_access_token()
+        params = self._routing_params()
+        url = f"{self._api_base()}/boletos/{nosso_numero}/cancelamento"
+        r = requests.patch(url, params=params, json=payload or {}, headers=self._headers(token), timeout=30)
+        if r.status_code in (404, 405):
+            return self._baixar_boleto_com_token(token, nosso_numero, payload=payload)
+        if r.status_code >= 400:
+            raise SicrediAPIError(f"Falha ao cancelar boleto: HTTP {r.status_code} - {r.text}")
         return r.json() if r.text else {"ok": True}

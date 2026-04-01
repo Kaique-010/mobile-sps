@@ -412,9 +412,20 @@ class BoletoOnlineView(View):
                     }
                     Titulosreceber.objects.using(db).filter(**_titulo_key_filter(titulo)).update(**{k: v for k, v in updates.items() if v})
                 elif action == 'baixar':
+                    if not titulo.titu_noss_nume:
+                        error_count += 1
+                        results.append({'titulo': titulo.titu_titu, 'ok': False, 'erro': 'titulo_sem_nosso_numero'})
+                        continue
                     retorno = service.baixar_boleto(titulo.titu_noss_nume, payload={})
                 elif action == 'cancelar':
-                    retorno = service.baixar_boleto(titulo.titu_noss_nume, payload={})
+                    if not titulo.titu_noss_nume:
+                        error_count += 1
+                        results.append({'titulo': titulo.titu_titu, 'ok': False, 'erro': 'titulo_sem_nosso_numero'})
+                        continue
+                    if hasattr(service, 'cancelar_boleto'):
+                        retorno = service.cancelar_boleto(titulo.titu_noss_nume, payload={})
+                    else:
+                        retorno = service.baixar_boleto(titulo.titu_noss_nume, payload={})
                 elif action == 'alterar':
                     nova = _parse_date(request.POST.get('nova_data_vencimento'))
                     if not nova:
