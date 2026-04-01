@@ -275,8 +275,9 @@ def baixar_titulo_receber(
         valor_acumulado = valor_ja_recebido + valor_liquido
         tipo_baixa = 'T' if valor_acumulado >= valor_titulo else 'P'
 
+        adiantamento_usado = None
         if dados.get('forma_pagamento') == 'A':
-            AdiantamentosService.usar_adiantamento_by_context(
+            adiantamento_usado = AdiantamentosService.usar_adiantamento_by_context(
                 empresa=titulo.titu_empr,
                 filial=titulo.titu_fili,
                 entidade=titulo.titu_clie,
@@ -323,6 +324,7 @@ def baixar_titulo_receber(
             bare_even=titulo.titu_even,
             bare_port=titulo.titu_port,
             bare_situ=titulo.titu_situ,
+            bare_id_adto=int(adiantamento_usado.adia_docu) if adiantamento_usado else None,
             bare_usua_baix=usuario_id,
             bare_data_baix=dados['data_recebimento'],
         )
@@ -367,7 +369,7 @@ def excluir_baixa_receber(
         )
 
         valor_baixa = baixa.bare_valo_pago or baixa.bare_sub_tota or Decimal('0')
-        if baixa.bare_form == 'A' and valor_baixa > 0:
+        if baixa.bare_form in ('A', 'P') and valor_baixa > 0:
             AdiantamentosService.estornar_adiantamento_by_context(
                 empresa=titulo.titu_empr,
                 filial=titulo.titu_fili,

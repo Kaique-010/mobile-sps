@@ -304,8 +304,9 @@ def baixar_titulo_pagar(
         tipo_baixa        = 'T' if valor_acumulado >= valor_titulo else 'P'
 
         # 4. Adiantamento
+        adiantamento_usado = None
         if dados.get('forma_pagamento') == 'A':
-            AdiantamentosService.usar_adiantamento_by_context(
+            adiantamento_usado = AdiantamentosService.usar_adiantamento_by_context(
                 empresa=titulo.titu_empr,
                 filial=titulo.titu_fili,
                 entidade=titulo.titu_forn,
@@ -353,6 +354,7 @@ def baixar_titulo_pagar(
             bapa_even     =titulo.titu_even,
             bapa_port     =titulo.titu_port,
             bapa_situ     =titulo.titu_situ,
+            bapa_id_adto  = int(adiantamento_usado.adia_docu) if adiantamento_usado else None,
         )
 
         # 6. Atualizar status do título
@@ -415,7 +417,7 @@ def excluir_baixa_titulo(
 
         # 2. Estornar adiantamento se necessário
         valor_baixa = baixa.bapa_valo_pago or baixa.bapa_sub_tota or Decimal('0')
-        if baixa.bapa_form == 'A' and valor_baixa > 0:
+        if baixa.bapa_form in ('A', 'P') and valor_baixa > 0:
             AdiantamentosService.estornar_adiantamento_by_context(
                 empresa=titulo.titu_empr,
                 filial=titulo.titu_fili,

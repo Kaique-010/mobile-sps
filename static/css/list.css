@@ -69,6 +69,14 @@ a.btn.btn-outline-danger:hover {
   color: #fff;
 }
 
+a.btn.btn-outline-info {
+  margin-bottom: 20px;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 4px;
+}
+
 button.btn.btn-outline-success {
   color: #439472;
   border-color: #a4fcff;
