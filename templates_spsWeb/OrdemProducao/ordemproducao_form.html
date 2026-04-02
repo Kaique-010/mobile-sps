@@ -1,0 +1,51 @@
+{% extends 'index.html' %}
+{% block title %}Ordem Produção Joias{% endblock %}
+{% block content %}
+<div class="container-fluid mt-3">
+  <h4>{% if object %}Editar{% else %}Nova{% endif %} Ordem de Produção - Joias</h4>
+
+  <form method="post" class="mt-3">
+    {% csrf_token %}
+
+    <ul class="nav nav-tabs mb-3" role="tablist">
+      <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-geral" type="button">Dados Gerais</button></li>
+      <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-comercial" type="button">Comercial</button></li>
+      <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-producao" type="button">Produção</button></li>
+    </ul>
+
+    <div class="tab-content border rounded p-3 bg-white">
+      <div class="tab-pane fade show active" id="tab-geral">
+        <div class="row g-3">
+          <div class="col-md-3">{{ form.orpr_nuca.label_tag }}{{ form.orpr_nuca }}</div>
+          <div class="col-md-3">{{ form.orpr_tipo.label_tag }}{{ form.orpr_tipo }}</div>
+          <div class="col-md-3">{{ form.orpr_clie.label_tag }}{{ form.orpr_clie }}</div>
+          <div class="col-md-3">{{ form.orpr_vend.label_tag }}{{ form.orpr_vend }}</div>
+          <div class="col-md-3">{{ form.orpr_entr.label_tag }}{{ form.orpr_entr }}</div>
+          <div class="col-md-3">{{ form.orpr_prev.label_tag }}{{ form.orpr_prev }}</div>
+          <div class="col-md-2">{{ form.orpr_stat.label_tag }}{{ form.orpr_stat }}</div>
+        </div>
+      </div>
+      <div class="tab-pane fade" id="tab-comercial">
+        <div class="row g-3">
+          <div class="col-md-3">{{ form.orpr_valo.label_tag }}{{ form.orpr_valo }}</div>
+          <div class="col-md-3">{{ form.orpr_gara.label_tag }}{{ form.orpr_gara }}</div>
+          <div class="col-md-3">{{ form.orpr_cort.label_tag }}{{ form.orpr_cort }}</div>
+          <div class="col-12">{{ form.orpr_desc.label_tag }}{{ form.orpr_desc }}</div>
+        </div>
+      </div>
+      <div class="tab-pane fade" id="tab-producao">
+        <div class="row g-3">
+          <div class="col-md-4">{{ form.orpr_prod.label_tag }}{{ form.orpr_prod }}</div>
+          <div class="col-md-4">{{ form.orpr_quan.label_tag }}{{ form.orpr_quan }}</div>
+          <div class="col-md-4">{{ form.orpr_gram_clie.label_tag }}{{ form.orpr_gram_clie }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-3 d-flex gap-2">
+      <button class="btn btn-primary" type="submit">Salvar</button>
+      <a class="btn btn-outline-secondary" href="{% url 'ordem_producao_web:ordemproducao_list' slug=slug %}">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

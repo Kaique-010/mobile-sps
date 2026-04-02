@@ -1,0 +1,17 @@
+{% extends 'index.html' %}
+{% block title %}Excluir Ordem{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <div class="card">
+    <div class="card-body">
+      <h5>Excluir ordem #{{ object.orpr_codi }}?</h5>
+      <p>Esta ação não pode ser desfeita.</p>
+      <form method="post">
+        {% csrf_token %}
+        <button class="btn btn-danger" type="submit">Excluir</button>
+        <a class="btn btn-outline-secondary" href="{% url 'ordem_producao_web:ordemproducao_list' slug=slug %}">Cancelar</a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
