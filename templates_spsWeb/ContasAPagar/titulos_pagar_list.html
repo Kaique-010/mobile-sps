@@ -4,11 +4,14 @@
 
 {% block content %}
 <style>
+  .page-header-custom .card .kpi-title-short { display: none; }
   @media (max-width: 768px) {
     .page-header-custom .card { padding: 8px }
-    .page-header-custom .card .card-title { font-size: 10px }
+    .page-header-custom .card .card-title { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .page-header-custom .card .card-title i { font-size: 10px }
     .page-header-custom .card .card-text { font-size: 10px }
+    .page-header-custom .card .kpi-title-full { display: none; }
+    .page-header-custom .card .kpi-title-short { display: inline; }
   }
 </style>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
@@ -27,7 +30,7 @@
         <div class="col">
           <div class="card totalpago" style="box-shadow: 2px 2px 4px 4px rgba(142, 196, 212, 0.733);">
             <div class="card-body">
-              <h5 class="card-title"><i class="bi bi-cash-stack me-1"></i> Total Pago</h5>
+              <h5 class="card-title"><i class="bi bi-cash-stack me-1"></i> <span class="kpi-title-full">Total Pago</span><span class="kpi-title-short">Pago</span></h5>
               <p class="card-text">{{ total_pago|brl }}</p>
             </div>
           </div>
@@ -35,7 +38,7 @@
         <div class="col">
           <div class="card totalaberto" style="box-shadow: 2px 2px 4px 4px rgba(254, 255, 186, 0.733);">
             <div class="card-body">
-              <h5 class="card-title"><i class="bi bi-wallet2 me-1"></i> Total em Aberto</h5>
+              <h5 class="card-title"><i class="bi bi-wallet2 me-1"></i> <span class="kpi-title-full">Total em Aberto</span><span class="kpi-title-short">Em Aberto</span></h5>
               <p class="card-text">{{ total_em_aberto|brl }}</p>
             </div>
           </div>
@@ -43,7 +46,7 @@
         <div class="col">
           <div class="card totalaberto" style="box-shadow: 2px 2px 4px 4px rgba(182, 250, 239, 0.733);">
             <div class="card-body">
-              <h5 class="card-title"><i class="bi bi-graph-up me-1"></i> % Pago sobre o Total</h5>
+              <h5 class="card-title"><i class="bi bi-graph-up me-1"></i> <span class="kpi-title-full">% Pago sobre o Total</span><span class="kpi-title-short">% Pago</span></h5>
               <p class="card-text">{{ percent_pago|floatformat:1 }}%</p>
             </div>
           </div>
@@ -51,7 +54,7 @@
         <div class="col">
           <div class="card totalaberto" style="box-shadow: 2px 2px 4px 4px rgba(250, 167, 167, 0.733);">
             <div class="card-body">
-              <h5 class="card-title"><i class="bi bi-graph-down me-1"></i> % A Pagar sobre o Total</h5>
+              <h5 class="card-title"><i class="bi bi-graph-down me-1"></i> <span class="kpi-title-full">% A Pagar sobre o Total</span><span class="kpi-title-short">% A Pagar</span></h5>
               <p class="card-text">{{ percent_a_pagar|floatformat:1 }}%</p>
             </div>
           </div>
@@ -65,68 +68,82 @@
   </div>
   <div class="card">
     <div class="card-body">
-      <form method="get" class="row g-3 mb-3">
-        {% csrf_token %}
-        <div class="col-md-3">
-          <label class="form-label">Empresa</label>
-          <select name="titu_empr" class="form-select" onchange="this.form.submit()">
-            {% for emp in empresas %}
-            <option value="{{ emp.empr_codi }}" {% if filters.titu_empr|add:"0" == emp.empr_codi|add:"0" %}selected{% endif %}>
-              {{ emp.empr_nome }}
-            </option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">Filial</label>
-          <select name="titu_fili" class="form-select" onchange="this.form.submit()">
-            {% for fil in filiais %}
-            <option value="{{ fil.empr_empr }}" {% if filters.titu_fili|add:"0" == fil.empr_empr|add:"0" %}selected{% endif %}>
-              {{ fil.empr_nome }}
-            </option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="col-md-2">
-          <label class="form-label">Fornecedor (ID)</label>
-          <input type="text" name="titu_forn" value="{{ filters.titu_forn }}" class="form-control"
-            placeholder="ID">
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Fornecedor (Nome)</label>
-          <input type="text" name="fornecedor_nome" value="{{ filters.fornecedor_nome }}" class="form-control"
-            placeholder="Nome do fornecedor">
-        </div>
-        <div class="col-md-2">
-          <label class="form-label">Status</label>
-          <select name="titu_aber" class="form-select">
-            <option value="">Todos</option>
-            <option value="A" {% if filters.titu_aber == 'A' %}selected{% endif %}>Aberto</option>
-            <option value="P" {% if filters.titu_aber == 'P' %}selected{% endif %}>Parcial</option>
-            <option value="T" {% if filters.titu_aber == 'T' %}selected{% endif %}>Total</option>
-          </select>
-        </div>
-        <div class="col-md-2">
-          <label class="form-label">Venc. Inicial</label>
-          <input type="date" name="venc_ini" value="{{ filters.venc_ini }}" class="form-control">
-        </div>
-        <div class="col-md-2">
-          <label class="form-label">Venc. Final</label>
-          <input type="date" name="venc_fim" value="{{ filters.venc_fim }}" class="form-control">
-        </div>
-        <div class="col-md-2">
-          <label class="form-label">Série</label>
-          <input type="text" name="titu_seri" value="{{ filters.titu_seri }}" class="form-control" placeholder="Ex.: PEV, ORS">
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Centro de Custo (Nome)</label>
-          <input type="text" name="nome_centro_custo" value="{{ filters.nome_centro_custo }}" class="form-control" placeholder="Nome do Centro de Custo">
-        </div>
-        <div class="col-12">
-          <button type="submit" class="btn btn-outline-primary" id="btn-filtrar">Filtrar</button>
-          <a href="?" class="btn btn-outline-secondary">Limpar</a>
-        </div>
-      </form>
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="fw-semibold">Filtros</div>
+        <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#filtrosPagarCollapse" aria-expanded="true" aria-controls="filtrosPagarCollapse" id="btnToggleFiltrosPagar">
+          <i class="bi bi-funnel"></i>
+        </button>
+      </div>
+      <div class="collapse show" id="filtrosPagarCollapse">
+        <form method="get" class="mb-3">
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-4">
+              <label class="form-label">Empresa</label>
+              <select name="titu_empr" class="form-select" onchange="this.form.submit()">
+                {% for emp in empresas %}
+                <option value="{{ emp.empr_codi }}" {% if filters.titu_empr|add:"0" == emp.empr_codi|add:"0" %}selected{% endif %}>
+                  {{ emp.empr_nome }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-4">
+              <label class="form-label">Filial</label>
+              <select name="titu_fili" class="form-select" onchange="this.form.submit()">
+                {% for fil in filiais %}
+                <option value="{{ fil.empr_empr }}" {% if filters.titu_fili|add:"0" == fil.empr_empr|add:"0" %}selected{% endif %}>
+                  {{ fil.empr_nome }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-4">
+              <label class="form-label">Status</label>
+              <select name="titu_aber" class="form-select">
+                <option value="">Todos</option>
+                <option value="A" {% if filters.titu_aber == 'A' %}selected{% endif %}>Aberto</option>
+                <option value="P" {% if filters.titu_aber == 'P' %}selected{% endif %}>Parcial</option>
+                <option value="T" {% if filters.titu_aber == 'T' %}selected{% endif %}>Total</option>
+              </select>
+            </div>
+          </div>
+          <div class="row g-3 mt-0">
+            <div class="col-4">
+              <label class="form-label">Fornecedor (ID)</label>
+              <input type="text" name="titu_forn" value="{{ filters.titu_forn }}" class="form-control" placeholder="ID">
+            </div>
+            <div class="col-4">
+              <label class="form-label">Venc. Inicial</label>
+              <input type="date" name="venc_ini" value="{{ filters.venc_ini }}" class="form-control">
+            </div>
+            <div class="col-4">
+              <label class="form-label">Venc. Final</label>
+              <input type="date" name="venc_fim" value="{{ filters.venc_fim }}" class="form-control">
+            </div>
+          </div>
+          <div class="row g-3 mt-0">
+            <div class="col-8">
+              <label class="form-label">Fornecedor (Nome)</label>
+              <input type="text" name="fornecedor_nome" value="{{ filters.fornecedor_nome }}" class="form-control" placeholder="Nome do fornecedor">
+            </div>
+            <div class="col-4">
+              <label class="form-label">Série</label>
+              <input type="text" name="titu_seri" value="{{ filters.titu_seri }}" class="form-control" placeholder="Ex.: PEV, ORS">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Centro de Custo (Nome)</label>
+              <input type="text" name="nome_centro_custo" value="{{ filters.nome_centro_custo }}" class="form-control" placeholder="Nome do Centro de Custo">
+            </div>
+          </div>
+          <div class="row g-3 mt-0">
+            <div class="col-12">
+              <button type="submit" class="btn btn-outline-primary" id="btn-filtrar">Filtrar</button>
+              <a href="?" class="btn btn-outline-secondary">Limpar</a>
+            </div>
+          </div>
+        </form>
+      </div>
     
     
 
@@ -234,6 +251,30 @@
         // Fallback: retorna até 10 caracteres sem tentar Date.toISOString
         return s.slice(0, 10);
       }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        const collapseEl = document.getElementById('filtrosPagarCollapse');
+        const btn = document.getElementById('btnToggleFiltrosPagar');
+        if (!collapseEl || !btn) return;
+
+        const mql = window.matchMedia('(max-width: 768px)');
+        const apply = () => {
+          const shouldShow = !mql.matches;
+          collapseEl.classList.toggle('show', shouldShow);
+          btn.setAttribute('aria-expanded', shouldShow ? 'true' : 'false');
+        };
+
+        apply();
+        if (mql.addEventListener) mql.addEventListener('change', apply);
+        else if (mql.addListener) mql.addListener(apply);
+
+        if (typeof window.bootstrap === 'undefined') {
+          btn.addEventListener('click', () => {
+            collapseEl.classList.toggle('show');
+            btn.setAttribute('aria-expanded', collapseEl.classList.contains('show') ? 'true' : 'false');
+          });
+        }
+      });
 
       async function excluirContaPagar(btn) {
         const empr = btn.dataset.empr;

@@ -27,15 +27,39 @@
   {% endfor %}
   {% endif %}
 
-  <form class="row g-3 mb-3" method="get">
-    <div class="col-md-4">
-      <input type="text" name="q" value="{{ request.GET.q }}" class="form-control"
-        placeholder="Buscar por identificação ou raça...">
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="fw-semibold">Filtros</div>
+        <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#filtrosAnimalCollapse" aria-expanded="true" aria-controls="filtrosAnimalCollapse" id="btnToggleFiltrosAnimal">
+          <i class="bi bi-funnel"></i>
+        </button>
+      </div>
+      <div class="collapse show" id="filtrosAnimalCollapse">
+        <form class="row g-3" method="get" id="animalFiltrosForm">
+          <div class="col-12 col-md-6">
+            <label class="form-label">Buscar</label>
+            <input type="text" name="q" value="{{ request.GET.q }}" class="form-control" placeholder="Identificação ou raça">
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label">Raça</label>
+            <select name="raca" class="form-select" onchange="document.getElementById('animalFiltrosForm').submit()">
+              <option value="">Todas</option>
+              {% for r in racas %}
+              <option value="{{ r }}" {% if request.GET.raca == r %}selected{% endif %}>{{ r }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-12 col-md-2 d-flex align-items-end">
+            <button class="btn btn-outline-primary w-100" type="submit">Filtrar</button>
+          </div>
+          <div class="col-12">
+            <a class="btn btn-outline-secondary" href="?">Limpar</a>
+          </div>
+        </form>
+      </div>
     </div>
-    <div class="col-md-2">
-      <button class="btn btn-outline-secondary w-100" type="submit">Filtrar</button>
-    </div>
-  </form>
+  </div>
 
   <div class="table-responsive d-none d-md-block">
     <table class="table table-hover align-left">
@@ -99,16 +123,38 @@
     <ul class="pagination justify-content-center">
       {% if page_obj.has_previous %}
       <li class="page-item"><a class="page-link"
-          href="?page={{ page_obj.previous_page_number }}&q={{ request.GET.q }}">Anterior</a></li>
+          href="?page={{ page_obj.previous_page_number }}&q={{ request.GET.q }}&raca={{ request.GET.raca }}">Anterior</a></li>
       {% endif %}
       <li class="page-item disabled"><span class="page-link">Página {{ page_obj.number }} de {{
           page_obj.paginator.num_pages }}</span></li>
       {% if page_obj.has_next %}
       <li class="page-item"><a class="page-link"
-          href="?page={{ page_obj.next_page_number }}&q={{ request.GET.q }}">Próxima</a></li>
+          href="?page={{ page_obj.next_page_number }}&q={{ request.GET.q }}&raca={{ request.GET.raca }}">Próxima</a></li>
       {% endif %}
     </ul>
   </nav>
   {% endif %}
 </div>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const collapseEl = document.getElementById('filtrosAnimalCollapse');
+    const btn = document.getElementById('btnToggleFiltrosAnimal');
+    if (!collapseEl || !btn) return;
+    const mql = window.matchMedia('(max-width: 768px)');
+    const apply = () => {
+      const shouldShow = !mql.matches;
+      collapseEl.classList.toggle('show', shouldShow);
+      btn.setAttribute('aria-expanded', shouldShow ? 'true' : 'false');
+    };
+    apply();
+    if (mql.addEventListener) mql.addEventListener('change', apply);
+    else if (mql.addListener) mql.addListener(apply);
+    if (typeof window.bootstrap === 'undefined') {
+      btn.addEventListener('click', () => {
+        collapseEl.classList.toggle('show');
+        btn.setAttribute('aria-expanded', collapseEl.classList.contains('show') ? 'true' : 'false');
+      });
+    }
+  });
+</script>
 {% endblock %}

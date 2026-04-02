@@ -1,6 +1,9 @@
 {% extends 'base.html' %}
 {% block content %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
 <div class="container py-3">
+
   <h4>Orçamentos Criados Hoje</h4>
   <div class="table-responsive">
     <table class="table table-sm align-middle">

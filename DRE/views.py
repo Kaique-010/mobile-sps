@@ -15,37 +15,52 @@ class DREGerencialDinamicoView(ModuloRequeridoMixin, APIView):
         data_fim = request.GET.get("data_fim")
         empresa = request.GET.get("empr")
         filial = request.GET.get("fili")
+        slug = get_licenca_slug()
 
         if not all([data_ini, data_fim, empresa, filial]):
             return Response({"erro": "Parâmetros obrigatórios faltando"}, status=400)
 
-        slug = get_licenca_slug()
-
         with connections[slug].cursor() as cursor:
             cursor.execute("""
-                WITH faturamento AS (
-                    SELECT empresa, filial, SUM(w16_vnf_tota) AS receita_bruta
-                    FROM nfevv
-                    WHERE status_nfe = 100 
-                    AND b09_demi BETWEEN %s AND %s
-                    AND cfop_pred::text !~ '^(12|52|22|62)'
-                    GROUP BY empresa, filial
-                ),
-                devolucoes AS (
-                    SELECT empresa, filial, SUM(w07_vprod_tota) AS total_devolvido
-                    FROM nfevv
-                    WHERE status_nfe = 100 
-                    AND b09_demi BETWEEN %s AND %s
-                    AND cfop_pred::text ~ '^(12|52|22|62)'
-                    GROUP BY empresa, filial
-                ),
+                WITH 
+                    params AS (
+                        SELECT %s::int AS empresa, %s::int AS filial
+                    ),
+                    faturamento AS (
+                        SELECT
+                            n.empresa,
+                            n.filial,
+                            SUM(i.total_item) AS receita_bruta
+                        FROM nf_nota n
+                        JOIN nf_nota_item i ON i.nota_id = n.id
+                        JOIN params p ON p.empresa = n.empresa AND p.filial = n.filial
+                        WHERE n.status = 100
+                          AND n.data_emissao BETWEEN %s AND %s
+                          AND n.finalidade <> 4
+                          AND i.cfop::text !~ '^(12|52|22|62)'
+                        GROUP BY n.empresa, n.filial
+                    ),
+                    devolucoes AS (
+                        SELECT
+                            n.empresa,
+                            n.filial,
+                            SUM(i.total_item) AS total_devolvido
+                        FROM nf_nota n
+                        JOIN nf_nota_item i ON i.nota_id = n.id
+                        JOIN params p ON p.empresa = n.empresa AND p.filial = n.filial
+                        WHERE n.status = 100
+                          AND n.data_emissao BETWEEN %s AND %s
+                          AND (n.finalidade = 4 OR i.cfop::text ~ '^(12|52|22|62)')
+                        GROUP BY n.empresa, n.filial
+                    ),
                 recebimentos AS (
                     SELECT 
                         bare_empr AS empresa,
                         bare_fili AS filial,
                         SUM(bare_pago) AS total_recebido
                     FROM baretitulos
-                    where bare_dpag BETWEEN %s AND %s
+                    JOIN params p ON p.empresa = bare_empr AND p.filial = bare_fili
+                    WHERE bare_dpag BETWEEN %s AND %s
                     GROUP BY bare_empr, bare_fili
                 ),
                 despesas AS (
@@ -54,29 +69,32 @@ class DREGerencialDinamicoView(ModuloRequeridoMixin, APIView):
                         bapa_fili AS filial,
                         SUM(bapa_pago) AS total_despesas
                     FROM bapatitulos
+                    JOIN params p ON p.empresa = bapa_empr AND p.filial = bapa_fili
                     WHERE bapa_dpag BETWEEN %s AND %s
                     GROUP BY bapa_empr, bapa_fili
                 )
-                SELECT f.empresa, f.filial,
-                       COALESCE(f.receita_bruta, 0) AS receita_bruta,
-                       COALESCE(d.total_devolvido, 0) AS deducoes,
-                       (COALESCE(f.receita_bruta, 0) - COALESCE(d.total_devolvido, 0)) AS receita_liquida,
-                       (COALESCE(f.receita_bruta, 0) * 0.403) AS cmv,
-                       ((COALESCE(f.receita_bruta, 0) - COALESCE(d.total_devolvido, 0)) - (COALESCE(f.receita_bruta, 0) * 0.403)) AS lucro_bruto,
-                       COALESCE(r.total_recebido, 0) AS total_recebido,
-                       COALESCE(dp.total_despesas, 0) AS total_despesas,
-                       ((COALESCE(f.receita_bruta, 0) - COALESCE(d.total_devolvido, 0)) - (COALESCE(f.receita_bruta, 0) * 0.403) - COALESCE(dp.total_despesas, 0)) AS resultado_operacional
-                FROM faturamento f
-                LEFT JOIN devolucoes d ON d.empresa = f.empresa AND d.filial = f.filial
-                LEFT JOIN recebimentos r ON r.empresa = f.empresa AND r.filial = f.filial
-                LEFT JOIN despesas dp ON dp.empresa = f.empresa AND dp.filial = f.filial
-                WHERE f.empresa = %s AND f.filial = %s
+                SELECT
+                    p.empresa,
+                    p.filial,
+                    COALESCE(f.receita_bruta, 0) AS receita_bruta,
+                    COALESCE(d.total_devolvido, 0) AS deducoes,
+                    (COALESCE(f.receita_bruta, 0) - COALESCE(d.total_devolvido, 0)) AS receita_liquida,
+                    (COALESCE(f.receita_bruta, 0) * 0.403) AS cmv,
+                    ((COALESCE(f.receita_bruta, 0) - COALESCE(d.total_devolvido, 0)) - (COALESCE(f.receita_bruta, 0) * 0.403)) AS lucro_bruto,
+                    COALESCE(r.total_recebido, 0) AS total_recebido,
+                    COALESCE(dp.total_despesas, 0) AS total_despesas,
+                    (COALESCE(r.total_recebido, 0) - COALESCE(dp.total_despesas, 0)) AS resultado_operacional
+                FROM params p
+                LEFT JOIN faturamento f ON f.empresa = p.empresa AND f.filial = p.filial
+                LEFT JOIN devolucoes d ON d.empresa = p.empresa AND d.filial = p.filial
+                LEFT JOIN recebimentos r ON r.empresa = p.empresa AND r.filial = p.filial
+                LEFT JOIN despesas dp ON dp.empresa = p.empresa AND dp.filial = p.filial
             """, [
-                data_ini, data_fim,  # faturamento
-                data_ini, data_fim,  # devoluções
-                data_ini, data_fim,  # recebimentos
-                data_ini, data_fim,  # despesas
-                empresa, filial      # filtro final
+                empresa, filial,
+                data_ini, data_fim,
+                data_ini, data_fim,
+                data_ini, data_fim,
+                data_ini, data_fim,
             ])
 
             row = cursor.fetchone()

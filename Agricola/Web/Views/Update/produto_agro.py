@@ -10,6 +10,11 @@ class ProdutoAgroUpdateView(BaseUpdateView):
     empresa_field = 'prod_empr_agro'
     filial_field = 'prod_fili_agro'
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['slug'] = self.kwargs.get('slug')
+        return kwargs
+
     def get_success_url(self):
         from django.urls import reverse
         return reverse('AgricolaWeb:produto_agro_list', kwargs={'slug': self.kwargs['slug']})

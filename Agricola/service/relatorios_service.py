@@ -4,7 +4,7 @@ from ..models import LoteProdutos, ProdutoAgro, MovimentacaoEstoque, EstoqueFaze
 class RelatorioService:
     
     @staticmethod
-    def total_produtos_por_lote(empresa, filial, produto_id=None, lote_ident=None, using='default'):
+    def total_produtos_por_lote(empresa, filial, produto_id=None, lote_ident=None, mostrar_sem_saldo=False, using='default'):
         """
         Retorna lista de lotes agrupados por produto com totais.
         """
@@ -35,12 +35,16 @@ class RelatorioService:
             if produto:
                 l['produto_nome'] = produto.prod_nome_agro
                 l['produto_unidade'] = produto.prod_unmd_agro
-                resultado.append(l)
+                total_quantidade = l.get('total_quantidade') or 0
+                if mostrar_sem_saldo:
+                    resultado.append(l)
+                elif total_quantidade > 0:
+                    resultado.append(l)
                 
         return resultado
 
     @staticmethod
-    def total_produtos_sem_lote(empresa, filial, produto_id=None, using='default'):
+    def total_produtos_sem_lote(empresa, filial, produto_id=None, mostrar_sem_saldo=False, using='default'):
         """
         Retorna produtos que têm estoque mas não estão associados a nenhum lote (ou cujo saldo de lotes é menor que o estoque total).
         Neste caso, vamos simplificar: Produtos que não têm registros na tabela de Lotes.
@@ -65,14 +69,16 @@ class RelatorioService:
             lote_fili=filial
         ).values_list('lote_prod', flat=True).distinct()
         
-        # Converter para o mesmo tipo se necessário (assumindo que lote_prod guarda o ID como string)
-        # Ajuste: lote_prod é CharField, ID é AutoField (int).
-        # Vamos tentar filtrar excluindo os que estão na lista.
-        
-        # Precisamos garantir que a comparação de tipos funcione
-        produtos_com_lote_ids_str = [str(pid) for pid in produtos_com_lote_ids if pid]
-        
-        produtos_sem_lote = produtos_query.exclude(id__in=produtos_com_lote_ids_str)
+        # Converter para inteiros quando possível, já que id do ProdutoAgro é int
+        ids_int = []
+        for pid in produtos_com_lote_ids:
+            s = str(pid).strip()
+            if s.isdigit():
+                try:
+                    ids_int.append(int(s))
+                except Exception:
+                    pass
+        produtos_sem_lote = produtos_query.exclude(id__in=ids_int)
         
         # Para esses produtos, vamos buscar o estoque total na tabela EstoqueFazenda
         resultado = []
@@ -84,6 +90,15 @@ class RelatorioService:
                 estq_prod=str(prod.id) # estq_prod também é CharField
             ).aggregate(total=Sum('estq_quant'))['total'] or 0
             
+            if mostrar_sem_saldo:
+                resultado.append({
+                    'produto_id': prod.id,
+                    'produto_nome': prod.prod_nome_agro,
+                    'produto_unidade': prod.prod_unmd_agro,
+                    'estoque_total': estoque
+                })
+                continue
+
             if estoque > 0:
                 resultado.append({
                     'produto_id': prod.id,

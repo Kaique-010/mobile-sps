@@ -14,7 +14,8 @@
             </h2>
         </div>
         <div class="container d-flex justify-content-end">
-            <a class="btn btn-success" href="{% url 'AgricolaWeb:produto_agro_create' slug=view.kwargs.slug %}">Novo Produto</a>
+            <a class="btn btn-success" href="{% url 'AgricolaWeb:produto_agro_create' slug=view.kwargs.slug %}">Novo
+                Produto</a>
         </div>
     </div>
 
@@ -27,15 +28,41 @@
     {% endfor %}
     {% endif %}
 
-    <form class="row g-3 mb-3" method="get">
-        <div class="col-md-4">
-            <input type="text" name="q" value="{{ request.GET.q }}" class="form-control"
-                placeholder="Buscar por nome ou código...">
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="fw-semibold">Filtros</div>
+                <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#filtrosProdutoAgroCollapse" aria-expanded="true" aria-controls="filtrosProdutoAgroCollapse" id="btnToggleFiltrosProdutoAgro">
+                    <i class="bi bi-funnel"></i>
+                </button>
+            </div>
+            <div class="collapse show" id="filtrosProdutoAgroCollapse">
+                <form class="row g-3" method="get">
+                    <div class="col-12 col-md-4">
+                        <label class="form-label">Código</label>
+                        <input type="text" name="codigo" value="{{ request.GET.codigo }}" class="form-control" placeholder="Código do produto">
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label">Nome</label>
+                        <input type="text" name="nome" value="{{ request.GET.nome }}" class="form-control" placeholder="Nome do produto">
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label">Categoria</label>
+                        <select name="categoria" class="form-select">
+                            <option value="">Todas</option>
+                            {% for c in categorias %}
+                            <option value="{{ c }}" {% if request.GET.categoria == c %}selected{% endif %}>{{ c }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <button class="btn btn-primary" type="submit">Filtrar</button>
+                        <a class="btn btn-secondary" href="?">Limpar</a>
+                    </div>
+                </form>
+            </div>
         </div>
-        <div class="col-md-2">
-            <button class="btn btn-outline-secondary w-100" type="submit">Filtrar</button>
-        </div>
-    </form>
+    </div>
 
     <div class="table-responsive d-none d-md-block">
         <table class="table table-hover align-left">
@@ -54,7 +81,7 @@
                 <tr>
                     <td>{{ produto.prod_codi_agro }}</td>
                     <td>{{ produto.prod_nome_agro }}</td>
-                    <td>{{ produto.prod_cate_agro.cate_nome }}</td>
+                    <td>{{ produto.prod_cate_agro }}</td>
                     <td>{{ produto.prod_unmd_agro }}</td>
                     <td>R$ {{ produto.prod_cust_medi|floatformat:2 }}</td>
                     <td class="text-end">
@@ -80,7 +107,7 @@
             <div class="card-body">
                 <h5 class="card-title">{{ produto.prod_nome_agro }} ({{ produto.prod_codi_agro }})</h5>
                 <p class="card-text">
-                    <strong>Categoria:</strong> {{ produto.prod_cate_agro.cate_nome }}<br>
+                    <strong>Categoria:</strong> {{ produto.prod_cate_agro }}<br>
                     <strong>Unidade:</strong> {{ produto.prod_unmd_agro }}<br>
                     <strong>Custo:</strong> R$ {{ produto.prod_cust_medi|floatformat:2 }}
                 </p>
@@ -104,10 +131,32 @@
                     page_obj.paginator.num_pages }}</span></li>
             {% if page_obj.has_next %}
             <li class="page-item"><a class="page-link"
-                    href="?page={{ page_obj.next_page_number }}&q={{ request.GET.q }}">Próxima</a></li>
+                    href="?page={{ page_obj.next_page_number }}&codigo={{ request.GET.codigo }}&nome={{ request.GET.nome }}&categoria={{ request.GET.categoria }}">Próxima</a></li>
             {% endif %}
         </ul>
     </nav>
     {% endif %}
 </div>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const collapseEl = document.getElementById('filtrosProdutoAgroCollapse');
+    const btn = document.getElementById('btnToggleFiltrosProdutoAgro');
+    if (!collapseEl || !btn) return;
+    const mql = window.matchMedia('(max-width: 768px)');
+    const apply = () => {
+      const shouldShow = !mql.matches;
+      collapseEl.classList.toggle('show', shouldShow);
+      btn.setAttribute('aria-expanded', shouldShow ? 'true' : 'false');
+    };
+    apply();
+    if (mql.addEventListener) mql.addEventListener('change', apply);
+    else if (mql.addListener) mql.addListener(apply);
+    if (typeof window.bootstrap === 'undefined') {
+      btn.addEventListener('click', () => {
+        collapseEl.classList.toggle('show');
+        btn.setAttribute('aria-expanded', collapseEl.classList.contains('show') ? 'true' : 'false');
+      });
+    }
+  });
+</script>
 {% endblock %}

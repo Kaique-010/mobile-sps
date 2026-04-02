@@ -9,6 +9,10 @@ class ProdutoAgroCreateView(BaseCreateView):
     model = ProdutoAgro
     form_class = ProdutoAgroForm
     template_name = 'Agricola/produto_agro_form.html'
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['slug'] = self.kwargs.get('slug')
+        return kwargs
     def get_success_url(self):
         from django.urls import reverse
         return reverse('AgricolaWeb:produto_agro_list', kwargs={'slug': self.kwargs['slug']})
@@ -16,14 +20,7 @@ class ProdutoAgroCreateView(BaseCreateView):
     filial_field = 'prod_fili_agro'
     
     def execute_create(self, form, db_name):
-        data = form.cleaned_data.copy()
-        
-        # Obtém empresa e filial do contexto da view (setados em form_valid ou via mixin)
-        # O BaseCreateView geralmente seta self.object com os campos preenchidos
-        # mas aqui estamos pegando de self.object antes de salvar?
-        # Sim, o BaseCreateView padrão seta self.object = form.save(commit=False).
-        # E o método form_valid do BaseCreateView chama execute_create.
-        
+        data = form.cleaned_data.copy()        
         empresa = getattr(self.object, 'prod_empr_agro')
         filial = getattr(self.object, 'prod_fili_agro')
         

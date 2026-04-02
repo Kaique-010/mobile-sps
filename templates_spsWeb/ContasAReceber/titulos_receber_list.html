@@ -4,13 +4,20 @@
 
 {% block content %}
 <style>
+  .page-header-custom .card .kpi-title-short {
+    display: none;
+  }
+
   @media (max-width: 768px) {
     .page-header-custom .card {
       padding: 8px
     }
 
     .page-header-custom .card .card-title {
-      font-size: 10px
+      font-size: 10px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .page-header-custom .card .card-title i {
@@ -19,6 +26,14 @@
 
     .page-header-custom .card .card-text {
       font-size: 10px
+    }
+
+    .page-header-custom .card .kpi-title-full {
+      display: none;
+    }
+
+    .page-header-custom .card .kpi-title-short {
+      display: inline;
     }
   }
 </style>
@@ -36,7 +51,8 @@
         <div class="col">
           <div class="card totalrecebido" style="box-shadow: 2px 2px 4px 4px rgba(164, 252, 178, 0.733);">
             <div class="card-body">
-              <h5 class="card-title"><i class="bi bi-cash-coin me-1"></i> Total Recebido</h5>
+              <h5 class="card-title"><i class="bi bi-cash-coin me-1"></i> <span class="kpi-title-full">Total
+                  Recebido</span><span class="kpi-title-short">Recebido</span></h5>
               <p class="card-text">{{ total_recebido|brl }}</p>
             </div>
           </div>
@@ -44,7 +60,8 @@
         <div class="col">
           <div class="card totalaberto" style="box-shadow: 2px 2px 4px 4px rgba(254, 255, 186, 0.733);">
             <div class="card-body">
-              <h5 class="card-title"><i class="bi bi-wallet me-1"></i> Total em Aberto</h5>
+              <h5 class="card-title"><i class="bi bi-wallet me-1"></i> <span class="kpi-title-full">Total em
+                  Aberto</span><span class="kpi-title-short">Em Aberto</span></h5>
               <p class="card-text">{{ total_em_aberto|brl }}</p>
             </div>
           </div>
@@ -52,7 +69,8 @@
         <div class="col">
           <div class="card totalrecebido" style="box-shadow: 2px 2px 4px 4px rgba(164, 252, 248, 0.733);">
             <div class="card-body">
-              <h5 class="card-title"><i class="bi bi-graph-up-arrow me-1"></i> % Recebido sobre o Total</h5>
+              <h5 class="card-title"><i class="bi bi-graph-up-arrow me-1"></i> <span class="kpi-title-full">% Recebido
+                  sobre o Total</span><span class="kpi-title-short">% Receb.</span></h5>
               <p class="card-text">{{ percent_recebido|floatformat:1 }}%</p>
             </div>
           </div>
@@ -60,7 +78,8 @@
         <div class="col">
           <div class="card totalaberto" style="box-shadow: 2px 2px 4px 4px rgba(250, 167, 167, 0.733);">
             <div class="card-body">
-              <h5 class="card-title"><i class="bi bi-graph-down-arrow me-1"></i> % a Receber sobre o Total</h5>
+              <h5 class="card-title"><i class="bi bi-graph-down-arrow me-1"></i> <span class="kpi-title-full">% a
+                  Receber sobre o Total</span><span class="kpi-title-short">% a Rec.</span></h5>
               <p class="card-text">{{ percent_a_receber|floatformat:1 }}%</p>
             </div>
           </div>
@@ -75,69 +94,87 @@
 
   <div class="card">
     <div class="card-body">
-      <form method="get" class="row g-3 mb-3">
-         <div class="col-md-3">
-          <label class="form-label">Empresa</label>
-          <select name="titu_empr" class="form-select" onchange="this.form.submit()">
-            {% for emp in empresas %}
-            <option value="{{ emp.empr_codi }}" {% if filters.titu_empr|add:"0" == emp.empr_codi|add:"0" %}selected{% endif %}>
-              {{ emp.empr_nome }}
-            </option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">Filial</label>
-          <select name="titu_fili" class="form-select" onchange="this.form.submit()">
-            {% for fil in filiais %}
-            <option value="{{ fil.empr_empr }}" {% if filters.titu_fili|add:"0" == fil.empr_empr|add:"0" %}selected{% endif %}>
-              {{ fil.empr_nome }}
-            </option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">Cliente (ID)</label>
-          <input type="text" name="titu_clie" value="{{ filters.titu_clie }}" class="form-control"
-            placeholder="ID do cliente">
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">Cliente (Nome)</label>
-          <input type="text" name="cliente_nome" value="{{ filters.cliente_nome }}" class="form-control"
-            placeholder="Nome do cliente">
-        </div>
-        <div class="col-md-2">
-          <label class="form-label">Status</label>
-          <select name="titu_aber" class="form-select">
-            <option value="">Todos</option>
-            <option value="A" {% if filters.titu_aber == 'A' %}selected{% endif %}>Aberto</option>
-            <option value="P" {% if filters.titu_aber == 'P' %}selected{% endif %}>Parcial</option>
-            <option value="T" {% if filters.titu_aber == 'T' %}selected{% endif %}>Total</option>
-          </select>
-        </div>
-        <div class="col-md-2">
-          <label class="form-label">Venc. Inicial</label>
-          <input type="date" name="venc_ini" value="{{ filters.venc_ini }}" class="form-control">
-        </div>
-        <div class="col-md-2">
-          <label class="form-label">Venc. Final</label>
-          <input type="date" name="venc_fim" value="{{ filters.venc_fim }}" class="form-control">
-        </div>
-        <div class="col-md-2">
-          <label class="form-label">Série</label>
-          <input type="text" name="titu_seri" value="{{ filters.titu_seri }}" class="form-control"
-            placeholder="Ex.: PEV, ORS">
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Centro de Custo (Nome)</label>
-          <input type="text" name="nome_centro_custo" value="{{ filters.nome_centro_custo }}" class="form-control"
-            placeholder="Nome do Centro de Custo">
-        </div>
-        <div class="col-12">
-          <button type="submit" class="btn btn-primary">Filtrar</button>
-          <a href="?" class="btn btn-secondary">Limpar</a>
-        </div>
-      </form>
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="fw-semibold">Filtros</div>
+        <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse"
+          data-bs-target="#filtrosReceberCollapse" aria-expanded="true" aria-controls="filtrosReceberCollapse"
+          id="btnToggleFiltrosReceber">
+          <i class="bi bi-funnel"></i>
+        </button>
+      </div>
+      <div class="collapse show" id="filtrosReceberCollapse">
+        <form method="get" class="mb-3">
+          <div class="row g-3">
+            <div class="col-4">
+               <label class="form-label">Empresa</label>
+             <select name="titu_empr" class="form-select" onchange="this.form.submit()">
+                {% for emp in empresas %}
+                <option value="{{ emp.empr_codi }}" {% if filters.titu_empr|add:"0" == emp.empr_codi|add:"0" %}selected{% endif %}>
+                  {{ emp.empr_nome }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-4">
+              <label class="form-label">Filial</label>
+              <select name="titu_fili" class="form-select" onchange="this.form.submit()">
+                {% for fil in filiais %}
+                <option value="{{ fil.empr_empr }}" {% if filters.titu_fili|add:"0" == fil.empr_empr|add:"0" %}selected{%endif %}>
+                  {{ fil.empr_nome }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-4">
+              <label class="form-label">Status</label>
+              <select name="titu_aber" class="form-select">
+                <option value="">Todos</option>
+                <option value="A" {% if filters.titu_aber == 'A' %}selected{% endif %}>Aberto</option>
+                <option value="P" {% if filters.titu_aber == 'P' %}selected{% endif %}>Parcial</option>
+                <option value="T" {% if filters.titu_aber == 'T' %}selected{% endif %}>Total</option>
+              </select>
+            </div>
+          </div>
+          <div class="row g-3 mt-0">
+            <div class="col-4">
+              <label class="form-label">Cliente (ID)</label>
+              <input type="text" name="titu_clie" value="{{ filters.titu_clie }}" class="form-control"
+                placeholder="ID do cliente">
+            </div>
+            <div class="col-4">
+              <label class="form-label">Venc. Inicial</label>
+              <input type="date" name="venc_ini" value="{{ filters.venc_ini }}" class="form-control">
+            </div>
+            <div class="col-4">
+              <label class="form-label">Venc. Final</label>
+              <input type="date" name="venc_fim" value="{{ filters.venc_fim }}" class="form-control">
+            </div>
+          </div>
+          <div class="row g-3 mt-0">
+            <div class="col-8">
+              <label class="form-label">Cliente (Nome)</label>
+              <input type="text" name="cliente_nome" value="{{ filters.cliente_nome }}" class="form-control"
+                placeholder="Nome do cliente">
+            </div>
+            <div class="col-4">
+              <label class="form-label">Série</label>
+              <input type="text" name="titu_seri" value="{{ filters.titu_seri }}" class="form-control"
+                placeholder="Ex.: PEV, ORS">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Centro de Custo (Nome)</label>
+              <input type="text" name="nome_centro_custo" value="{{ filters.nome_centro_custo }}" class="form-control"
+                placeholder="Nome do Centro de Custo">
+            </div>
+          </div>
+          <div class="row g-3 mt-0">
+            <div class="col-12">
+              <button type="submit" class="btn btn-primary">Filtrar</button>
+              <a href="?" class="btn btn-secondary">Limpar</a>
+            </div>
+          </div>
+        </form>
+      </div>
 
 
       <div class="row" id="titulos-grid-receber">
@@ -202,6 +239,30 @@
 
     {% block extra_js %}
     <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const collapseEl = document.getElementById('filtrosReceberCollapse');
+        const btn = document.getElementById('btnToggleFiltrosReceber');
+        if (!collapseEl || !btn) return;
+
+        const mql = window.matchMedia('(max-width: 768px)');
+        const apply = () => {
+          const shouldShow = !mql.matches;
+          collapseEl.classList.toggle('show', shouldShow);
+          btn.setAttribute('aria-expanded', shouldShow ? 'true' : 'false');
+        };
+
+        apply();
+        if (mql.addEventListener) mql.addEventListener('change', apply);
+        else if (mql.addListener) mql.addListener(apply);
+
+        if (typeof window.bootstrap === 'undefined') {
+          btn.addEventListener('click', () => {
+            collapseEl.classList.toggle('show');
+            btn.setAttribute('aria-expanded', collapseEl.classList.contains('show') ? 'true' : 'false');
+          });
+        }
+      });
+
       function getCSRFToken() {
         const input = document.querySelector('input[name="csrfmiddlewaretoken"]');
         if (input && input.value) return input.value;
@@ -382,7 +443,7 @@
           if (form) form.reset();
           document.getElementById('historico-rec').value = `Baixa do título ${contextoBaixa.titu}`;
           const dataRecebimento = document.getElementById('data_recebimento');
-            if (dataRecebimento) dataRecebimento.value =  new Date().toISOString().slice(0, 10);
+          if (dataRecebimento) dataRecebimento.value = new Date().toISOString().slice(0, 10);
           const valorRecebido = document.getElementById('valor_recebido');
           if (valorRecebido) valorRecebido.value = (parseFloat(contextoBaixa.valo || '0') || 0).toFixed(2);
           modal.style.display = 'block';

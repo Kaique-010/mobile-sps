@@ -11,18 +11,32 @@ class RelatorioProdutosPorLoteView(BaseReportView):
         
         produto_id = self.request.GET.get('produto_id')
         lote_ident = self.request.GET.get('lote_ident')
+        mostrar_sem_saldo = self.request.GET.get('mostrar_sem_saldo') in ['1', 'true', 'on', 'True']
         
         context['dados'] = RelatorioService.total_produtos_por_lote(
             self.empresa, 
             self.filial, 
             produto_id=produto_id,
             lote_ident=lote_ident,
+            mostrar_sem_saldo=mostrar_sem_saldo,
             using=self.db_name
         )
+        dados_para_alerta = context['dados']
+        if not mostrar_sem_saldo:
+            dados_para_alerta = RelatorioService.total_produtos_por_lote(
+                self.empresa,
+                self.filial,
+                produto_id=produto_id,
+                lote_ident=lote_ident,
+                mostrar_sem_saldo=True,
+                using=self.db_name
+            )
+        context['tem_negativos'] = any((item.get('total_quantidade', 0) or 0) < 0 for item in dados_para_alerta)
         
         context['filtros'] = {
             'produto_id': produto_id,
-            'lote_ident': lote_ident
+            'lote_ident': lote_ident,
+            'mostrar_sem_saldo': mostrar_sem_saldo
         }
         
         return context
@@ -35,16 +49,29 @@ class RelatorioProdutosSemLoteView(BaseReportView):
         context = super().get_context_data(**kwargs)
         
         produto_id = self.request.GET.get('produto_id')
+        mostrar_sem_saldo = self.request.GET.get('mostrar_sem_saldo') in ['1', 'true', 'on', 'True']
         
         context['dados'] = RelatorioService.total_produtos_sem_lote(
             self.empresa, 
             self.filial, 
             produto_id=produto_id,
+            mostrar_sem_saldo=mostrar_sem_saldo,
             using=self.db_name
         )
+        dados_para_alerta = context['dados']
+        if not mostrar_sem_saldo:
+            dados_para_alerta = RelatorioService.total_produtos_sem_lote(
+                self.empresa,
+                self.filial,
+                produto_id=produto_id,
+                mostrar_sem_saldo=True,
+                using=self.db_name
+            )
+        context['tem_negativos'] = any((item.get('estoque_total', 0) or 0) < 0 for item in dados_para_alerta)
         
         context['filtros'] = {
-            'produto_id': produto_id
+            'produto_id': produto_id,
+            'mostrar_sem_saldo': mostrar_sem_saldo
         }
         
         return context

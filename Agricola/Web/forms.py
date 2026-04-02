@@ -4,6 +4,7 @@ from ..models import (
     EstoqueFazenda, MovimentacaoEstoque, HistoricoMovimentacao,
     AplicacaoInsumos, Animal, EventoAnimal, LoteProdutos
 )
+from core.utils import get_db_from_slug
 
 # ====== Fazenda ======
 class FazendaForm(forms.ModelForm):
@@ -55,8 +56,28 @@ class CategoriaProdutoForm(forms.ModelForm):
 # ====== Produto Agro ======
 class ProdutoAgroForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
+        slug = kwargs.pop('slug', None)
+        self.db_alias = get_db_from_slug(slug)
         super().__init__(*args, **kwargs)
         self.fields['prod_codi_agro'].required = False
+        if 'class' not in self.fields['prod_codi_agro'].widget.attrs:
+            self.fields['prod_codi_agro'].widget.attrs['class'] = 'form-control'
+        # Carrega categorias e monta choices pois o campo é CharField, não FK
+        try:
+            categorias_qs = CategoriaProduto.objects.using(self.db_alias).all()
+            choices = [(c.cate_nome, c.cate_nome) for c in categorias_qs]
+            current = getattr(self.instance, 'prod_cate_agro', None)
+            if current and current not in [c[0] for c in choices]:
+                choices.insert(0, (current, current))
+            self.fields['prod_cate_agro'] = forms.ChoiceField(
+                choices=choices,
+                required=False,
+                label='Categoria',
+                widget=forms.Select(attrs={'class': 'form-select'})
+            )
+        except Exception:
+            # Mantém campo como TextInput caso não consiga carregar categorias
+            self.fields['prod_cate_agro'].widget = forms.TextInput(attrs={'class': 'form-control'})
 
     class Meta:
         model = ProdutoAgro
@@ -77,7 +98,6 @@ class ProdutoAgroForm(forms.ModelForm):
             'prod_desc_agro': 'Descrição',
             'prod_cust_unit': 'Custo Unitário',
         }
-        exclude = ['prod_cate_agro']
 
 # ====== Estoque Fazenda ======
 class EstoqueFazendaForm(forms.ModelForm):

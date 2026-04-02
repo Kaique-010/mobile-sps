@@ -10,12 +10,43 @@
     <div class="page-header-custom">
         <div class="container align-items-center">
             <h2 class="page-title">
-                <i class="bi bi-boxes"></i> Estoque em Fazendas
+                <i class="bi bi-boxes"></i> Estoque Atual em Fazendas
             </h2>
         </div>
-        <div class="container d-flex justify-content-end">
-            <a class="btn btn-success" href="{% url 'AgricolaWeb:estoque_fazenda_create' slug=view.kwargs.slug %}">Novo
-                Estoque</a>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="text-muted small">Total de Produtos em Estoque</div>
+                    <div class="fs-4 fw-semibold">{{ resumo.total_produtos|default:0 }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="text-muted small">Valor Total de Custo em Estoque</div>
+                    <div class="fs-4 fw-semibold">R$ {{ resumo.total_valor_custo|default:0|floatformat:2 }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="text-muted small">Total de Fazendas com Estoque</div>
+                    <div class="fs-4 fw-semibold">{{ resumo.total_fazendas|default:0 }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="text-muted small">Custo por Fazenda</div>
+                    <div class="fs-4 fw-semibold">R$ {{ resumo.custo_por_fazenda|default:0|floatformat:2 }}</div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -28,15 +59,28 @@
     {% endfor %}
     {% endif %}
 
-    <form class="row g-3 mb-3" method="get">
-        <div class="col-md-4">
-            <input type="text" name="q" value="{{ request.GET.q }}" class="form-control"
-                placeholder="Buscar por produto ou fazenda...">
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-filter"></i> Filtros</h5>
+            <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="collapse"
+                data-bs-target="#estoqueFazendaFiltros" aria-expanded="true" aria-controls="estoqueFazendaFiltros"
+                id="btnToggleEstoqueFazenda">
+                <i class="bi bi-funnel"></i>
+            </button>
         </div>
-        <div class="col-md-2">
-            <button class="btn btn-outline-secondary w-100" type="submit">Filtrar</button>
+        <div class="card-body collapse show" id="estoqueFazendaFiltros">
+            <form class="row g-3" method="get">
+                <div class="col-12 col-md-6">
+                    <input type="text" name="q" value="{{ request.GET.q }}" class="form-control"
+                        placeholder="Buscar por produto (nome/código/ID) ou fazenda (nome/ID)...">
+                </div>
+                <div class="col-12 col-md-6 d-flex gap-2 justify-content-md-end">
+                    <button class="btn btn-primary" type="submit">Filtrar</button>
+                    <a class="btn btn-secondary" href="?">Limpar</a>
+                </div>
+            </form>
         </div>
-    </form>
+    </div>
 
     <div class="table-responsive d-none d-md-block">
         <table class="table table-hover align-left">
@@ -47,7 +91,7 @@
                     <th>Produto</th>
                     <th>Quantidade</th>
                     <th>Custo Médio</th>
-                    <th class="text-end">Ações</th>
+
                 </tr>
             </thead>
             <tbody>
@@ -58,12 +102,7 @@
                     <td>{{ estoque.prod_obj.prod_nome_agro|default:estoque.estq_prod }}</td>
                     <td>{{ estoque.estq_quant }} {{ estoque.prod_obj.prod_unmd_agro|default:"" }}</td>
                     <td>R$ {{ estoque.estq_cust_medi|floatformat:2 }}</td>
-                    <td class="text-end">
-                        <a class="btn btn-sm btn-outline-primary"
-                            href="{% url 'AgricolaWeb:estoque_fazenda_update' slug=view.kwargs.slug pk=estoque.pk %}">Editar</a>
-                        <a class="btn btn-sm btn-outline-danger"
-                            href="{% url 'AgricolaWeb:estoque_fazenda_delete' slug=view.kwargs.slug pk=estoque.pk %}">Excluir</a>
-                    </td>
+
                 </tr>
                 {% empty %}
                 <tr>
@@ -111,4 +150,27 @@
     </nav>
     {% endif %}
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const collapseEl = document.getElementById('estoqueFazendaFiltros');
+        const btn = document.getElementById('btnToggleEstoqueFazenda');
+        if (!collapseEl || !btn) return;
+        const mql = window.matchMedia('(max-width: 768px)');
+        const apply = () => {
+            const shouldShow = !mql.matches;
+            collapseEl.classList.toggle('show', shouldShow);
+            btn.setAttribute('aria-expanded', shouldShow ? 'true' : 'false');
+        };
+        apply();
+        if (mql.addEventListener) mql.addEventListener('change', apply);
+        else if (mql.addListener) mql.addListener(apply);
+        if (typeof window.bootstrap === 'undefined') {
+            btn.addEventListener('click', () => {
+                collapseEl.classList.toggle('show');
+                btn.setAttribute('aria-expanded', collapseEl.classList.contains('show') ? 'true' : 'false');
+            });
+        }
+    });
+</script>
 {% endblock %}
