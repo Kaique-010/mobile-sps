@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% block title %}Ourives{% endblock %}
+{% block content %}
+{% load static %}
+<style>
+  body {
+    background-color: linear-gradient(180deg,
+        rgba(232, 204, 114, 0.06) 0%,
+        rgba(255, 255, 255, 0.699) 60%);
+  }
+
+  .container {
+    font-family: 'Jost', 'Segoe UI', sans-serif;
+  }
+
+  h4,
+  h6 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.50rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: #d4b97a;
+    margin-bottom: 50px;
+    margin-top: 50px;
+  }
+
+  label {
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: #9a7d4a;
+    margin-bottom: 6px;
+  }
+
+  .form-control,
+  .form-select {
+    border: 0.5px solid #d4b97a;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #fff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .form-control:focus,
+  .form-select:focus {
+    border-color: #c4973a;
+    box-shadow: 0 0 0 3px rgba(196, 151, 58, 0.12);
+  }
+
+  .btn-outline-primary {
+    border-color: #c4973a;
+    color: #7a5c1e;
+  }
+
+  .btn-outline-primary:hover {
+    background-color: #c4973a;
+    border-color: #c4973a;
+    color: #fff8e7;
+  }
+
+  .table {
+    font-size: 15px;
+  }
+
+  .table thead th {
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #9a7d4a;
+    border-bottom: 0.5px solid #d4b97a;
+  }
+</style>
+<link rel="stylesheet" href="{% static 'css/form.css' %}?v=20260313">
+
+<div class="container mt-3">
+  <h4>{% if object %}Editar{% else %}Novo{% endif %} Ourives</h4>
+  <form method="post" class="mt-3">
+    {% csrf_token %}
+    {% if form.errors %}
+    <div class="alert alert-danger">
+      {{ form.non_field_errors }}
+      <ul class="mb-0">
+        {% for field in form %}
+        {% for error in field.errors %}
+        <li>{{ field.label }}: {{ error }}</li>
+        {% endfor %}
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <div class="row g-3">
+      <div class="col-md-6">{{ form.ouri_nome.label_tag }}{{ form.ouri_nome }}</div>
+      <div class="col-md-4">{{ form.ouri_cpfe.label_tag }}{{ form.ouri_cpfe }}</div>
+      <div class="col-md-2">
+        <div class="form-check form-switch mt-4">
+          {{ form.ouri_situ }}
+          <label class="form-check-label" for="{{ form.ouri_situ.id_for_label }}">{{ form.ouri_situ.label }}</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-3 d-flex gap-2 mt-4">
+      <button class="btn btn-outline-primary" type="submit">Salvar</button>
+      <a class="btn btn-outline-danger" href="{% url 'ordem_producao_web:ordemproducao_list' slug=slug %}">Voltar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

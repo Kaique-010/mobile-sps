@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% block title %}Matéria-prima{% endblock %}
+{% block content %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/form.css' %}?v=20260313">
+
+<div class="container py-4">
+  <div class="card shadow-lg border-0">
+    <div class="card-header text-center py-3">
+      <h3 class="mb-0">Matéria-prima Prevista</h3>
+    </div>
+    <div class="card-body p-4">
+      <div class="mb-3">
+        <div class="row g-2">
+          <div class="col-md-2"><span class="text-muted">Ordem:</span> <strong>{{ ordem.orpr_codi }}</strong></div>
+          <div class="col-md-2"><span class="text-muted">Empresa:</span> <strong>{{ ordem.orpr_empr }}</strong></div>
+          <div class="col-md-2"><span class="text-muted">Filial:</span> <strong>{{ ordem.orpr_fili }}</strong></div>
+        </div>
+      </div>
+
+      <form method="post">
+        {% csrf_token %}
+        {% if form.errors %}
+        <div class="alert alert-danger">
+          {{ form.non_field_errors }}
+          <ul class="mb-0">
+            {% for field in form %}
+            {% for error in field.errors %}
+            <li>{{ field.label }}: {{ error }}</li>
+            {% endfor %}
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+
+        <div class="row g-3">
+          <div class="col-md-8 position-relative">
+            <label class="form-label" for="autocomplete-produto">Matéria-prima</label>
+            {{ form.orpr_prod_prod }}
+            <input id="autocomplete-produto" class="form-control" autocomplete="off" />
+            <div id="produto-dropdown" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
+          </div>
+          <div class="col-md-4">{{ form.orpr_quan_prev.label_tag }}{{ form.orpr_quan_prev }}</div>
+        </div>
+
+        <div class="mt-4 d-flex gap-2">
+          <button class="btn btn-outline-success" type="submit">Salvar</button>
+          <a class="btn btn-outline-secondary"
+            href="{% url 'ordem_producao_web:ordemproducao_update' slug=slug orpr_codi=ordem.orpr_codi %}">Voltar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const input = document.getElementById('autocomplete-produto');
+    const hidden = document.getElementById('{{ form.orpr_prod_prod.id_for_label }}');
+    const dropdown = document.getElementById('produto-dropdown');
+    if (!input || !hidden || !dropdown) return;
+
+    let controller = null;
+    input.addEventListener('input', function () {
+      const query = input.value.trim();
+      if (!query) {
+        hidden.value = '';
+        dropdown.innerHTML = '';
+        return;
+      }
+      if (controller) controller.abort();
+      controller = new AbortController();
+      clearTimeout(input._autocompleteTimer);
+      input._autocompleteTimer = setTimeout(async () => {
+        try {
+          const res = await fetch("{% url 'ordem_producao_web:autocomplete_produtos' slug=slug %}?term=" + encodeURIComponent(query), { signal: controller.signal });
+          if (!res.ok) return;
+          const data = await res.json();
+          dropdown.innerHTML = '';
+          if (data.results && data.results.length > 0) {
+            data.results.forEach(item => {
+              const a = document.createElement('a');
+              a.href = '#';
+              a.className = 'list-group-item list-group-item-action';
+              a.textContent = item.text;
+              a.addEventListener('click', (ev) => {
+                ev.preventDefault();
+                input.value = item.text;
+                hidden.value = item.id;
+                dropdown.innerHTML = '';
+              });
+              dropdown.appendChild(a);
+            });
+          } else {
+            dropdown.innerHTML = '<div class="list-group-item">Nenhum resultado encontrado</div>';
+          }
+        } catch (e) {
+          if (e.name !== 'AbortError') {
+            console.error('Autocomplete error:', e);
+          }
+        }
+      }, 300);
+    });
+
+    document.addEventListener('click', function (e) {
+      if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.innerHTML = '';
+      }
+    });
+  });
+</script>
+{% endblock %}

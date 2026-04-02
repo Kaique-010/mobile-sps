@@ -19,6 +19,18 @@ class OrdemproducaoViewSet(BaseMultiDBModelViewSet):
     def dashboard(self, request):
         return Response(OrdemProducaoService.dashboard(using=self.get_banco()))
 
+    @action(detail=False, methods=["get"], url_path="dashboard-detalhado")
+    def dashboard_detalhado(self, request, slug=None):
+        filtros = {
+            "data_ini": request.query_params.get("data_ini") or None,
+            "data_fim": request.query_params.get("data_fim") or None,
+            "empr": request.query_params.get("empr") or None,
+            "fili": request.query_params.get("fili") or None,
+            "tipo": request.query_params.get("tipo") or None,
+            "status": request.query_params.get("status") or None,
+        }
+        return Response(OrdemProducaoService.dashboard_detalhado(using=self.get_banco(), filtros=filtros))
+
     @action(detail=True, methods=['post'])
     def iniciar_producao(self, request, pk=None):
         OrdemProducaoService.iniciar_producao(ordem=self.get_object(), using=self.get_banco())

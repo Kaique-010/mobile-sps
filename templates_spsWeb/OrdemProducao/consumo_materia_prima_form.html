@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}Consumo Matéria-prima{% endblock %}
+{% block content %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/form.css' %}?v=20260313">
+
+<div class="container py-4">
+  <div class="card shadow-lg border-0">
+    <div class="card-header text-center py-3">
+      <h3 class="mb-0">Consumo de Matéria-prima</h3>
+    </div>
+    <div class="card-body p-4">
+      <div class="mb-3">
+        <div class="row g-2">
+          <div class="col-md-2"><span class="text-muted">Ordem:</span> <strong>{{ ordem.orpr_codi }}</strong></div>
+          <div class="col-md-2"><span class="text-muted">Empresa:</span> <strong>{{ ordem.orpr_empr }}</strong></div>
+          <div class="col-md-2"><span class="text-muted">Filial:</span> <strong>{{ ordem.orpr_fili }}</strong></div>
+        </div>
+        <div class="mt-2"><span class="text-muted">Produto:</span> <strong>{{ produto_label }}</strong></div>
+      </div>
+
+      <form method="post">
+        {% csrf_token %}
+        {% if form.errors %}
+          <div class="alert alert-danger">
+            {{ form.non_field_errors }}
+            <ul class="mb-0">
+              {% for field in form %}
+                {% for error in field.errors %}
+                  <li>{{ field.label }}: {{ error }}</li>
+                {% endfor %}
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+
+        <div class="row g-3">
+          <div class="col-md-4">{{ form.consumido.label_tag }}{{ form.consumido }}</div>
+        </div>
+
+        <div class="mt-4 d-flex gap-2">
+          <button class="btn btn-outline-success" type="submit">Salvar</button>
+          <a class="btn btn-outline-secondary" href="{% url 'ordem_producao_web:ordemproducao_update' slug=slug orpr_codi=ordem.orpr_codi %}">Voltar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

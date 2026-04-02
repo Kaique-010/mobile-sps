@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block title %}Movimentação{% endblock %}
+{% block content %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/form.css' %}?v=20260313">
+
+<div class="container py-4">
+  <div class="card shadow-lg border-0">
+    <div class="card-header text-center py-3">
+      <h3 class="mb-0">{% if object %}Editar{% else %}Nova{% endif %} Movimentação de Etapa</h3>
+    </div>
+    <div class="card-body p-4">
+      {% if ordem %}
+      <div class="mb-3">
+        <div class="row g-2">
+          <div class="col-md-2"><span class="text-muted">Ordem:</span> <strong>{{ ordem.orpr_codi }}</strong></div>
+          <div class="col-md-2"><span class="text-muted">Empresa:</span> <strong>{{ ordem.orpr_empr }}</strong></div>
+          <div class="col-md-2"><span class="text-muted">Filial:</span> <strong>{{ ordem.orpr_fili }}</strong></div>
+        </div>
+      </div>
+      {% endif %}
+
+      <form method="post">
+        {% csrf_token %}
+        {% if form.errors %}
+          <div class="alert alert-danger">
+            {{ form.non_field_errors }}
+            <ul class="mb-0">
+              {% for field in form %}
+                {% for error in field.errors %}
+                  <li>{{ field.label }}: {{ error }}</li>
+                {% endfor %}
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+
+        <div class="row g-3">
+          <div class="col-md-6">{{ form.moet_etap.label_tag }}{{ form.moet_etap }}</div>
+          <div class="col-md-6">{{ form.moet_ouri.label_tag }}{{ form.moet_ouri }}</div>
+          <div class="col-md-3">{{ form.moet_dain.label_tag }}{{ form.moet_dain }}</div>
+          <div class="col-md-3">{{ form.moet_dafi.label_tag }}{{ form.moet_dafi }}</div>
+          <div class="col-md-3">{{ form.moet_peso.label_tag }}{{ form.moet_peso }}</div>
+          <div class="col-md-3">
+            <div class="form-check form-switch mt-4">
+              {{ form.moet_situ }}
+              <label class="form-check-label" for="{{ form.moet_situ.id_for_label }}">{{ form.moet_situ.label }}</label>
+            </div>
+          </div>
+          <div class="col-12">{{ form.moet_obse.label_tag }}{{ form.moet_obse }}</div>
+        </div>
+
+        <div class="mt-4 d-flex gap-2">
+          <button class="btn btn-outline-success" type="submit">Salvar</button>
+          {% if ordem %}
+          <a class="btn btn-outline-secondary" href="{% url 'ordem_producao_web:ordemproducao_update' slug=slug orpr_codi=ordem.orpr_codi %}">Voltar</a>
+          {% else %}
+          <a class="btn btn-outline-secondary" href="{% url 'ordem_producao_web:ordemproducao_list' slug=slug %}">Voltar</a>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

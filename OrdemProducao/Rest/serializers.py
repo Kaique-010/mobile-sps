@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from ..models import Ordemproducao, Ordemprodfotos, Ordemproditens, Ordemprodmate, Ordemprodetapa
+from ..models import Ordemproducao, Ordemprodfotos, Ordemproditens, Ordemprodmate, Etapa
 from ..services import OrdemProducaoService, OrdemProducaoFilhosService
 
 
@@ -22,9 +22,12 @@ class OrdemprodmateSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+
+
+
 class OrdemprodetapaSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Ordemprodetapa
+        model = Etapa
         fields = '__all__'
 
 

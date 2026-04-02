@@ -1,51 +1,555 @@
-{% extends 'index.html' %}
+{% extends 'base.html' %}
 {% block title %}Ordem Produção Joias{% endblock %}
 {% block content %}
-<div class="container-fluid mt-3">
-  <h4>{% if object %}Editar{% else %}Nova{% endif %} Ordem de Produção - Joias</h4>
+{% load static %}
+<style>
+  body {
+    background-color: linear-gradient(180deg,
+        rgba(232, 204, 114, 0.06) 0%,
+        rgba(255, 255, 255, 0.699) 60%);
+  }
+
+  /* ── Container principal ── */
+  .container {
+    font-family: 'Jost', 'Segoe UI', sans-serif;
+  }
+
+  /* Título da página */
+  h4,
+  h6 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.50rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: #d4b97a;
+    margin-bottom: 50px;
+    margin-top: 50px;
+  }
+
+  /* ── Abas ── */
+  .nav-tabs {
+    border-bottom: 0.5px solid #d4b97a;
+    padding: 0 8px;
+    font-size: 15px;
+  }
+
+  .nav-tabs .nav-link {
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #9a7d4a;
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+  }
+
+  .nav-tabs .nav-link.active,
+  .nav-tabs .nav-link:hover {
+    color: #7a5c1e;
+    border-bottom: 2px solid #c4973a;
+    background: none;
+  }
+
+  /* ── Área de conteúdo das abas ── */
+  .tab-content.border {
+    border-color: #d4b97a !important;
+    border-radius: 0 0 8px 8px !important;
+    background-color: linear-gradient(180deg,
+        rgba(232, 204, 114, 0.07) 0%,
+        rgba(255, 255, 255, 0) 100%);
+  }
+
+  /* ── Labels ── */
+  label {
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: #9a7d4a;
+    margin-bottom: 6px;
+  }
+
+  /* ── Inputs e selects ── */
+  .form-control,
+  .form-select {
+    border: 0.5px solid #d4b97a;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #fff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .form-control:focus,
+  .form-select:focus {
+    border-color: #c4973a;
+    box-shadow: 0 0 0 3px rgba(196, 151, 58, 0.12);
+  }
+
+  /* ── Botão Salvar ── */
+  .btn-outline-primary {
+    border-color: #c4973a;
+    color: #7a5c1e;
+  }
+
+  .btn-outline-primary:hover {
+    background-color: #c4973a;
+    border-color: #c4973a;
+    color: #fff8e7;
+  }
+
+  /* ── Tabelas ── */
+  .table {
+    font-size: 15px;
+  }
+
+  .table thead th {
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #9a7d4a;
+    border-bottom: 0.5px solid #d4b97a;
+  }
+
+  .btn-responsive {
+    width: 100%;
+  }
+
+  @media (min-width: 576px) {
+    .btn-responsive {
+      width: auto;
+    }
+  }
+
+  @media (max-width: 767.98px) {
+    h4,
+    h6 {
+      margin-top: 24px;
+      margin-bottom: 24px;
+      font-size: 1.25rem;
+    }
+
+    .nav-tabs {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .nav-tabs .nav-link {
+      white-space: nowrap;
+      padding: 0.5rem 0.6rem;
+      font-size: 12px;
+    }
+
+    .tab-content.border {
+      padding: 1rem !important;
+    }
+
+    .nav-tabs {
+      scrollbar-color: #9a7d4a transparent;
+      scrollbar-width: thin;
+    }
+
+    .nav-tabs::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    .nav-tabs::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .nav-tabs::-webkit-scrollbar-thumb {
+      background-color: #9a7d4a;
+      border-radius: 10px;
+      border: 1px solid rgba(212, 185, 122, 0.6);
+    }
+
+    .nav-tabs::-webkit-scrollbar-thumb:hover {
+      background-color: #7a5c1e;
+    }
+  }
+</style>
+
+
+<link rel="stylesheet" href="{% static 'css/form.css' %}?v=20260313">
+
+<div class="container mt-3">
+  <h4> <i class="bi bi-x-diamond-fill fs-4"></i>{% if object %}Editar{% else %}Nova{% endif %} Ordem de Confecção -
+    Joias</h4>
 
   <form method="post" class="mt-3">
     {% csrf_token %}
+    {% if form.errors %}
+    <div class="alert alert-danger">
+      {{ form.non_field_errors }}
+      <ul class="mb-0">
+        {% for field in form %}
+        {% for error in field.errors %}
+        <li>{{ field.label }}: {{ error }}</li>
+        {% endfor %}
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
 
     <ul class="nav nav-tabs mb-3" role="tablist">
-      <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-geral" type="button">Dados Gerais</button></li>
-      <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-comercial" type="button">Comercial</button></li>
-      <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-producao" type="button">Produção</button></li>
+      <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-geral"
+          type="button">Dados Gerais</button></li>
+      <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-comercial"
+          type="button">Comercial</button></li>
+      <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-producao"
+          type="button">Produção</button></li>
+      {% if object %}
+      <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-materia"
+          type="button">Matéria-prima</button></li>
+      <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-mov"
+          type="button">Movimentações</button></li>
+      {% endif %}
     </ul>
 
-    <div class="tab-content border rounded p-3 bg-white">
+    <div class="tab-content border rounded p-3 ">
       <div class="tab-pane fade show active" id="tab-geral">
         <div class="row g-3">
-          <div class="col-md-3">{{ form.orpr_nuca.label_tag }}{{ form.orpr_nuca }}</div>
-          <div class="col-md-3">{{ form.orpr_tipo.label_tag }}{{ form.orpr_tipo }}</div>
-          <div class="col-md-3">{{ form.orpr_clie.label_tag }}{{ form.orpr_clie }}</div>
-          <div class="col-md-3">{{ form.orpr_vend.label_tag }}{{ form.orpr_vend }}</div>
-          <div class="col-md-3">{{ form.orpr_entr.label_tag }}{{ form.orpr_entr }}</div>
-          <div class="col-md-3">{{ form.orpr_prev.label_tag }}{{ form.orpr_prev }}</div>
-          <div class="col-md-2">{{ form.orpr_stat.label_tag }}{{ form.orpr_stat }}</div>
+          <div class="col-md-3 mb-4">{{ form.orpr_entr.label_tag }}{{ form.orpr_entr }}</div>
+          <div class="col-md-3 mb-4">{{ form.orpr_nuca.label_tag }}{{ form.orpr_nuca }}</div>
+          <div class="col-md-3 mb-4"></div>
+          <div class="col-md-3 mb-4">{{ form.orpr_tipo.label_tag }}{{ form.orpr_tipo }}</div>
+          <div class="col-md-6 mb-4 position-relative">
+            <label class="form-label" for="autocomplete-cliente">{{ form.orpr_clie.label }}</label>
+            {{ form.orpr_clie }}
+            <input id="autocomplete-cliente" class="form-control" autocomplete="off"
+              value="{{ cliente_nome|default:'' }}" />
+            <div id="cliente-dropdown" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
+          </div>
+          <div class="col-md-3 mb-4 position-relative">
+            <label class="form-label" for="autocomplete-vendedor">{{ form.orpr_vend.label }}</label>
+            {{ form.orpr_vend }}
+            <input id="autocomplete-vendedor" class="form-control" autocomplete="off"
+              value="{{ vendedor_nome|default:'' }}" />
+            <div id="vendedor-dropdown" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
+          </div>
+          <div class="col-md-3 mb-4">{{ form.orpr_prev.label_tag }}{{ form.orpr_prev }}</div>
+          <div class="col-md-10 mb-4 mt-4"></div>
+          <div class="col-md-2 mb-4 mt-4 text-center">
+            {{ form.orpr_stat.label_tag }}
+            <div class="d-flex align-items-center gap-2">
+              {{ form.orpr_stat }}
+              <span id="status-farol" class="badge bg-secondary"></span>
+            </div>
+          </div>
         </div>
       </div>
       <div class="tab-pane fade" id="tab-comercial">
         <div class="row g-3">
-          <div class="col-md-3">{{ form.orpr_valo.label_tag }}{{ form.orpr_valo }}</div>
-          <div class="col-md-3">{{ form.orpr_gara.label_tag }}{{ form.orpr_gara }}</div>
-          <div class="col-md-3">{{ form.orpr_cort.label_tag }}{{ form.orpr_cort }}</div>
-          <div class="col-12">{{ form.orpr_desc.label_tag }}{{ form.orpr_desc }}</div>
+          <div class="col-md-3 mb-4">{{ form.orpr_valo.label_tag }}{{ form.orpr_valo }}</div>
+          <div class="col-md-3 mb-4">
+            <div class="form-check form-switch mt-4">
+              {{ form.orpr_gara }}
+              <label class="form-check-label" for="{{ form.orpr_gara.id_for_label }}">{{ form.orpr_gara.label }}</label>
+            </div>
+          </div>
+          <div class="col-md-3 mb-4">
+            <div class="form-check form-switch mt-4">
+              {{ form.orpr_cort }}
+              <label class="form-check-label" for="{{ form.orpr_cort.id_for_label }}">{{ form.orpr_cort.label }}</label>
+            </div>
+          </div>
+          <div class="col-12 mb-4">{{ form.orpr_desc.label_tag }}{{ form.orpr_desc }}</div>
         </div>
       </div>
       <div class="tab-pane fade" id="tab-producao">
         <div class="row g-3">
-          <div class="col-md-4">{{ form.orpr_prod.label_tag }}{{ form.orpr_prod }}</div>
+          <div class="col-md-4 position-relative">
+            <label class="form-label" for="autocomplete-produto">{{ form.orpr_prod.label }}</label>
+            {{ form.orpr_prod }}
+            <input id="autocomplete-produto" class="form-control" autocomplete="off"
+              value="{{ produto_nome|default:'' }}" />
+            <div id="produto-dropdown" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
+          </div>
           <div class="col-md-4">{{ form.orpr_quan.label_tag }}{{ form.orpr_quan }}</div>
           <div class="col-md-4">{{ form.orpr_gram_clie.label_tag }}{{ form.orpr_gram_clie }}</div>
         </div>
       </div>
+      {% if object %}
+      <div class="tab-pane fade" id="tab-materia">
+        <div class="d-flex justify-content-end mb-2">
+          <a class="btn btn-sm btn-outline-primary"
+            href="{% url 'ordem_producao_web:ordem_materia_prev_create' slug=slug orpr_codi=object.orpr_codi %}">Adicionar
+            matéria-prima</a>
+        </div>
+        <div class="table-responsive d-none d-md-block">
+          <table class="table table-striped table-sm">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Produto</th>
+                <th class="text-end">Qtd prevista</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for m in materiais_previstos %}
+              <tr>
+                <td>{{ m.orpr_prod_prod.prod_codi }}</td>
+                <td>{{ m.orpr_prod_prod.prod_nome }}</td>
+                <td class="text-end">{{ m.orpr_quan_prev }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="3" class="text-center text-muted">Nenhuma matéria-prima prevista.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="d-md-none">
+          {% for m in materiais_previstos %}
+          <div class="card mb-2">
+            <div class="card-body">
+              <div class="fw-semibold">{{ m.orpr_prod_prod.prod_nome }}</div>
+              <div class="small text-muted">Código: {{ m.orpr_prod_prod.prod_codi }}</div>
+              <div class="small">Qtd prevista: {{ m.orpr_quan_prev }}</div>
+            </div>
+          </div>
+          {% empty %}
+          <div class="text-center text-muted">Nenhuma matéria-prima prevista.</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="tab-mov">
+        <div class="d-flex justify-content-end mb-2">
+          <a class="btn btn-sm btn-outline-primary"
+            href="{% url 'ordem_producao_web:ordem_mov_create' slug=slug orpr_codi=object.orpr_codi %}">Adicionar
+            movimentação</a>
+        </div>
+        <div class="table-responsive d-none d-md-block">
+          <table class="table table-striped table-sm">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Etapa</th>
+                <th>Ourives</th>
+                <th>Início</th>
+                <th>Fim</th>
+                <th class="text-end">Peso</th>
+                <th>Ativa</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for mov in movimentacoes_etapa %}
+              <tr>
+                <td>{{ mov.moet_codi }}</td>
+                <td>{{ mov.moet_etap.etap_nome }}</td>
+                <td>{{ mov.moet_ouri.ouri_nome }}</td>
+                <td>{{ mov.moet_dain|date:'d/m/Y H:i' }}</td>
+                <td>{{ mov.moet_dafi|date:'d/m/Y H:i' }}</td>
+                <td class="text-end">{{ mov.moet_peso }}</td>
+                <td>{% if mov.moet_situ %}Sim{% else %}Não{% endif %}</td>
+                <td class="text-end">
+                  <a class="btn btn-sm btn-outline-primary"
+                    href="{% url 'ordem_producao_web:ordem_mov_update' slug=slug moet_codi=mov.moet_codi %}">Editar</a>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="8" class="text-center text-muted">Nenhuma movimentação cadastrada.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="d-md-none">
+          {% for mov in movimentacoes_etapa %}
+          <div class="card mb-2">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start gap-2">
+                <div>
+                  <div class="fw-semibold">{{ mov.moet_etap.etap_nome }}</div>
+                  <div class="small text-muted">Código: {{ mov.moet_codi }}</div>
+                  <div class="small">Ourives: {{ mov.moet_ouri.ouri_nome }}</div>
+                  <div class="small">Início: {{ mov.moet_dain|date:'d/m/Y H:i' }}</div>
+                  <div class="small">Fim: {{ mov.moet_dafi|date:'d/m/Y H:i' }}</div>
+                  <div class="small">Peso: {{ mov.moet_peso }}</div>
+                  <div class="small">Ativa: {% if mov.moet_situ %}Sim{% else %}Não{% endif %}</div>
+                </div>
+                <div class="text-end">
+                  <a class="btn btn-sm btn-outline-primary"
+                    href="{% url 'ordem_producao_web:ordem_mov_update' slug=slug moet_codi=mov.moet_codi %}">Editar</a>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% empty %}
+          <div class="text-center text-muted">Nenhuma movimentação cadastrada.</div>
+          {% endfor %}
+        </div>
+
+        <div class="mt-3">
+          <h6>Saldo/Devolução (por produto)</h6>
+          <div class="table-responsive d-none d-md-block">
+            <table class="table table-striped table-sm">
+              <thead>
+                <tr>
+                  <th>Produto</th>
+                  <th class="text-end">Previsto</th>
+                  <th class="text-end">Usado</th>
+                  <th class="text-end">Diferença</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for s in movimentacoes_saldo %}
+                <tr>
+                  <td>{{ s.produto_label }}</td>
+                  <td class="text-end">{{ s.previsto }}</td>
+                  <td class="text-end">{{ s.usado }}</td>
+                  <td class="text-end">{{ s.saldo }}</td>
+                  <td class="text-end">
+                    <a class="btn btn-sm btn-outline-primary"
+                      href="{% url 'ordem_producao_web:ordem_materia_consumo' slug=slug orpr_codi=object.orpr_codi produto_codigo=s.produto_codigo %}">
+                      {% if s.usado and s.usado != 0 %}Editar consumo{% else %}Informar consumo{% endif %}
+                    </a>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="5" class="text-center text-muted">Nenhum saldo informado.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="d-md-none">
+            {% for s in movimentacoes_saldo %}
+            <div class="card mb-2">
+              <div class="card-body">
+                <div class="fw-semibold">{{ s.produto_label }}</div>
+                <div class="small">Previsto: {{ s.previsto }}</div>
+                <div class="small">Usado: {{ s.usado }}</div>
+                <div class="small">Diferença: {{ s.saldo }}</div>
+                <div class="d-flex gap-2 mt-3">
+                  <a class="btn btn-sm btn-outline-primary flex-fill"
+                    href="{% url 'ordem_producao_web:ordem_materia_consumo' slug=slug orpr_codi=object.orpr_codi produto_codigo=s.produto_codigo %}">
+                    {% if s.usado and s.usado != 0 %}Editar consumo{% else %}Informar consumo{% endif %}
+                  </a>
+                </div>
+              </div>
+            </div>
+            {% empty %}
+            <div class="text-center text-muted">Nenhum saldo informado.</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
     </div>
 
-    <div class="mt-3 d-flex gap-2">
-      <button class="btn btn-primary" type="submit">Salvar</button>
-      <a class="btn btn-outline-secondary" href="{% url 'ordem_producao_web:ordemproducao_list' slug=slug %}">Cancelar</a>
+    <div class="mt-3 d-flex flex-column flex-sm-row gap-2 mt-4">
+      <button class="btn btn-outline-primary btn-responsive" type="submit">Salvar</button>
+      <a class="btn btn-outline-danger btn-responsive"
+        href="{% url 'ordem_producao_web:ordemproducao_list' slug=slug %}">Cancelar</a>
     </div>
   </form>
 </div>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    function setupAutocomplete(inputId, hiddenId, dropdownId, url) {
+      const input = document.getElementById(inputId);
+      const hidden = document.getElementById(hiddenId);
+      const dropdown = document.getElementById(dropdownId);
+      if (!input || !hidden || !dropdown) return;
+
+      let controller = null;
+      input.addEventListener('input', function () {
+        const query = input.value.trim();
+        if (!query) {
+          hidden.value = '';
+          dropdown.innerHTML = '';
+          return;
+        }
+
+        if (controller) controller.abort();
+        controller = new AbortController();
+
+        clearTimeout(input._autocompleteTimer);
+        input._autocompleteTimer = setTimeout(async () => {
+          try {
+            const res = await fetch(url + '?term=' + encodeURIComponent(query), { signal: controller.signal });
+            if (!res.ok) return;
+            const data = await res.json();
+            dropdown.innerHTML = '';
+            if (data.results && data.results.length > 0) {
+              data.results.forEach(item => {
+                const a = document.createElement('a');
+                a.href = '#';
+                a.className = 'list-group-item list-group-item-action';
+                a.textContent = item.text;
+                a.addEventListener('click', (ev) => {
+                  ev.preventDefault();
+                  input.value = item.text;
+                  hidden.value = item.id;
+                  dropdown.innerHTML = '';
+                });
+                dropdown.appendChild(a);
+              });
+            } else {
+              dropdown.innerHTML = '<div class="list-group-item">Nenhum resultado encontrado</div>';
+            }
+          } catch (e) {
+            if (e.name !== 'AbortError') {
+              console.error('Autocomplete error:', e);
+            }
+          }
+        }, 300);
+      });
+
+      document.addEventListener('click', function (e) {
+        if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+          dropdown.innerHTML = '';
+        }
+      });
+    }
+
+    setupAutocomplete(
+      'autocomplete-cliente',
+      '{{ form.orpr_clie.id_for_label }}',
+      'cliente-dropdown',
+      "{% url 'ordem_producao_web:autocomplete_clientes' slug=slug %}"
+    );
+    setupAutocomplete(
+      'autocomplete-vendedor',
+      '{{ form.orpr_vend.id_for_label }}',
+      'vendedor-dropdown',
+      "{% url 'ordem_producao_web:autocomplete_vendedores' slug=slug %}"
+    );
+    setupAutocomplete(
+      'autocomplete-produto',
+      '{{ form.orpr_prod.id_for_label }}',
+      'produto-dropdown',
+      "{% url 'ordem_producao_web:autocomplete_produtos' slug=slug %}"
+    );
+
+    const statusSelect = document.getElementById('{{ form.orpr_stat.id_for_label }}');
+    const statusFarol = document.getElementById('status-farol');
+    function applyStatusFarol() {
+      if (!statusSelect || !statusFarol) return;
+      const value = statusSelect.value;
+      const selectedText = statusSelect.options[statusSelect.selectedIndex] ? statusSelect.options[statusSelect.selectedIndex].text : '';
+      let cls = 'bg-secondary';
+      if (value === '2') cls = 'bg-success';
+      else if (value === '1') cls = 'bg-warning text-dark';
+      else if (value === '9') cls = 'bg-danger';
+      else if (value === '3') cls = 'bg-primary';
+      statusFarol.className = 'badge ' + cls;
+      statusFarol.textContent = selectedText;
+    }
+    if (statusSelect) statusSelect.addEventListener('change', applyStatusFarol);
+    applyStatusFarol();
+  });
+</script>
 {% endblock %}

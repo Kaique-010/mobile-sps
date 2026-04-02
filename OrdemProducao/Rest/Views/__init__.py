@@ -2,8 +2,7 @@ from .ordemproducao import OrdemproducaoViewSet
 from .filhos import (
     OrdemprodfotosViewSet,
     OrdemproditensViewSet,
-    OrdemprodmateViewSet,
-    OrdemprodetapaViewSet,
+
 )
 
 __all__ = [
@@ -11,5 +10,5 @@ __all__ = [
     'OrdemprodfotosViewSet',
     'OrdemproditensViewSet',
     'OrdemprodmateViewSet',
-    'OrdemprodetapaViewSet',
+    'EtapaViewSet',
 ]

@@ -1,6 +1,8 @@
 {% extends 'obras/base_obras.html' %}
 {% block title %}Nova Obra{% endblock %}
 {% block obras_content %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/form.css' %}?v=20260313">
 <div class="card">
   <div class="card-header">
     <i class="fas fa-plus"></i> Nova Obra

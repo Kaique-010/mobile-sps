@@ -1,24 +1,238 @@
-{% extends 'index.html' %}
+{% extends 'base.html' %}
 {% block title %}Ordens de Produção Joias{% endblock %}
 {% block content %}
-<div class="container-fluid mt-3">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4>Ordens de Produção - Joias</h4>
-    <a class="btn btn-primary" href="{% url 'ordem_producao_web:ordemproducao_create' slug=slug %}">Nova Ordem</a>
+{% load static %}
+
+<style>
+  body {
+    background-color: linear-gradient(180deg,
+        rgba(232, 204, 114, 0.06) 0%,
+        rgba(255, 255, 255, 0.699) 60%);
+  }
+
+  .container {
+    font-family: 'Jost', 'Segoe UI', sans-serif;
+  }
+
+  h4,
+  h6 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.50rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: #d4b97a;
+    margin-bottom: 50px;
+    margin-top: 50px;
+  }
+
+
+  .nav-tabs {
+    border-bottom: 0.5px solid #d4b97a;
+    padding: 0 8px;
+    font-size: 15px;
+  }
+
+  .nav-tabs .nav-link {
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #9a7d4a;
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+  }
+
+  .nav-tabs .nav-link.active,
+  .nav-tabs .nav-link:hover {
+    color: #7a5c1e;
+    border-bottom: 2px solid #c4973a;
+    background: none;
+  }
+
+  .tab-content.border {
+    border-color: #d4b97a !important;
+    border-radius: 0 0 8px 8px !important;
+    background-color: linear-gradient(180deg,
+        rgba(232, 204, 114, 0.07) 0%,
+        rgba(255, 255, 255, 0) 100%);
+  }
+
+  label {
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: #9a7d4a;
+    margin-bottom: 6px;
+  }
+
+  .form-control,
+  .form-select {
+    border: 0.5px solid #d4b97a;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #fff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .form-control:focus,
+  .form-select:focus {
+    border-color: #c4973a;
+    box-shadow: 0 0 0 3px rgba(196, 151, 58, 0.12);
+  }
+
+  .btn-outline-primary {
+    border-color: #c4973a;
+    color: #7a5c1e;
+  }
+
+  .btn-outline-primary:hover {
+    background-color: #c4973a;
+    border-color: #c4973a;
+    color: #fff8e7;
+  }
+
+  .table {
+    font-size: 15px;
+  }
+
+  .table thead th {
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #9a7d4a;
+    border-bottom: 0.5px solid #d4b97a;
+  }
+
+  .kpi-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .kpi-grid {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(180px, 1fr);
+    gap: 12px;
+    padding-bottom: 8px;
+  }
+
+  .kpi-card .label {
+    color: #9a7d4a;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .kpi-card .value {
+    color: #d4b97a;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    margin-top: 4px;
+  }
+
+  .chart-card .card-header {
+    color: #9a7d4a;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 12px;
+    border-bottom: 0.5px solid rgba(212, 185, 122, 0.35);
+  }
+
+  .chart-wrapper {
+    position: relative;
+    height: 280px;
+  }
+
+  @media (min-width: 768px) {
+    .w-md-auto {
+      width: auto !important;
+    }
+  }
+
+  @media (max-width: 767.98px) {
+    h4,
+    h6 {
+      margin-top: 24px;
+      margin-bottom: 24px;
+      font-size: 1.25rem;
+    }
+
+    .nav-tabs {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .nav-tabs .nav-link {
+      white-space: nowrap;
+      padding: 0.5rem 0.6rem;
+      font-size: 12px;
+    }
+
+    .tab-content.border {
+      padding: 1rem !important;
+    }
+
+    .nav-tabs {
+      scrollbar-color: #9a7d4a transparent;
+      scrollbar-width: thin;
+    }
+
+    .nav-tabs::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    .nav-tabs::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .nav-tabs::-webkit-scrollbar-thumb {
+      background-color: #9a7d4a;
+      border-radius: 10px;
+      border: 1px solid rgba(212, 185, 122, 0.6);
+    }
+
+    .nav-tabs::-webkit-scrollbar-thumb:hover {
+      background-color: #7a5c1e;
+    }
+  }
+</style>
+
+<link rel="stylesheet" href="{% static 'css/form.css' %}?v=20260313">
+
+<div class="container mt-3">
+  <div class="mb-3">
+    <h4 class="text-center"><i class="bi bi-x-diamond-fill fs-4"></i>Ordens de Produção - Joias</h4>
+    <div class="d-flex justify-content-end">
+      <a class="btn btn-outline-primary" href="{% url 'ordem_producao_web:ordemproducao_create' slug=slug %}">Nova
+        Ordem</a>
+    </div>
   </div>
 
   <ul class="nav nav-tabs mb-3" role="tablist">
-    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-lista" type="button">Lista</button></li>
-    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-dashboard" type="button">Dashboard</button></li>
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-lista"
+        type="button">Lista</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-ourives"
+        type="button">Ourives</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-etapas"
+        type="button">Etapas</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-dashboard"
+        type="button">Dashboard</button></li>
+
   </ul>
 
-  <div class="tab-content">
+  <div class="tab-content border rounded p-3">
     <div class="tab-pane fade show active" id="tab-lista">
       <form method="get" class="row g-2 mb-3">
-        <div class="col-md-2">
+        <div class="col-12 col-md-2">
           <input class="form-control" name="status" value="{{ filtro_status }}" placeholder="Status" />
         </div>
-        <div class="col-md-3">
+        <div class="col-12 col-md-3">
           <select class="form-select" name="tipo">
             <option value="">Todos os tipos</option>
             {% for tipo, nome in tipo_ordem %}
@@ -26,43 +240,564 @@
             {% endfor %}
           </select>
         </div>
-        <div class="col-md-2"><button class="btn btn-outline-secondary">Filtrar</button></div>
+        <div class="col-12 col-md-2"><button class="btn btn-outline-secondary w-100 w-md-auto">Filtrar</button></div>
       </form>
 
-      <div class="table-responsive">
+      <div class="table-responsive d-none d-md-block">
         <table class="table table-striped table-sm">
-          <thead><tr><th>Código</th><th>Núm. Caixa</th><th>Cliente</th><th>Tipo</th><th>Status</th><th>Previsão</th><th></th></tr></thead>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Nº Cartão</th>
+              <th>Cliente</th>
+              <th>Vendedor(a)</th>
+              <th>Tipo</th>
+              <th>Status</th>
+              <th>Previsão</th>
+              <th></th>
+            </tr>
+          </thead>
           <tbody>
             {% for ordem in ordens %}
             <tr>
               <td>{{ ordem.orpr_codi }}</td>
               <td>{{ ordem.orpr_nuca }}</td>
-              <td>{{ ordem.orpr_clie }}</td>
+              <td>{{ ordem.cliente_nome|default:ordem.orpr_clie }}</td>
+              <td>{{ ordem.vendedor_nome|default:"" }}</td>
               <td>{{ ordem.get_orpr_tipo_display }}</td>
-              <td>{{ ordem.orpr_stat }}</td>
+              <td>
+                {% if ordem.orpr_stat == '2' %}
+                <span class="badge bg-success">{{ ordem.get_orpr_stat_display }}</span>
+                {% elif ordem.orpr_stat == '1' %}
+                <span class="badge bg-warning text-dark">{{ ordem.get_orpr_stat_display }}</span>
+                {% elif ordem.orpr_stat == '9' %}
+                <span class="badge bg-danger">{{ ordem.get_orpr_stat_display }}</span>
+                {% elif ordem.orpr_stat == '3' %}
+                <span class="badge bg-primary">{{ ordem.get_orpr_stat_display }}</span>
+                {% else %}
+                <span class="badge bg-secondary">{{ ordem.get_orpr_stat_display }}</span>
+                {% endif %}
+              </td>
               <td>{{ ordem.orpr_prev|date:'d/m/Y H:i' }}</td>
               <td class="text-end">
-                <a class="btn btn-sm btn-outline-primary" href="{% url 'ordem_producao_web:ordemproducao_update' slug=slug orpr_codi=ordem.orpr_codi %}">Editar</a>
-                <a class="btn btn-sm btn-outline-danger" href="{% url 'ordem_producao_web:ordemproducao_delete' slug=slug orpr_codi=ordem.orpr_codi %}">Excluir</a>
+                <a class="btn btn-sm btn-outline-primary"
+                  href="{% url 'ordem_producao_web:ordemproducao_update' slug=slug orpr_codi=ordem.orpr_codi %}">Editar</a>
+                <a class="btn btn-sm btn-outline-danger"
+                  href="{% url 'ordem_producao_web:ordemproducao_delete' slug=slug orpr_codi=ordem.orpr_codi %}">Excluir</a>
               </td>
             </tr>
             {% empty %}
-            <tr><td colspan="7" class="text-center text-muted">Nenhuma ordem encontrada.</td></tr>
+            <tr>
+              <td colspan="8" class="text-center text-muted">Nenhuma ordem encontrada.</td>
+            </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
+
+      <div class="d-md-none">
+        {% for ordem in ordens %}
+        <div class="card mb-2">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+              <div>
+                <div class="fw-semibold">#{{ ordem.orpr_codi }} - {{ ordem.get_orpr_tipo_display }}</div>
+                <div class="small text-muted">Cartão: {{ ordem.orpr_nuca }}</div>
+                <div class="small">Cliente: {{ ordem.cliente_nome|default:ordem.orpr_clie }}</div>
+                <div class="small">Vendedor(a): {{ ordem.vendedor_nome|default:"" }}</div>
+                <div class="small">Previsão: {{ ordem.orpr_prev|date:'d/m/Y H:i' }}</div>
+              </div>
+              <div class="text-end">
+                {% if ordem.orpr_stat == '2' %}
+                <span class="badge bg-success">{{ ordem.get_orpr_stat_display }}</span>
+                {% elif ordem.orpr_stat == '1' %}
+                <span class="badge bg-warning text-dark">{{ ordem.get_orpr_stat_display }}</span>
+                {% elif ordem.orpr_stat == '9' %}
+                <span class="badge bg-danger">{{ ordem.get_orpr_stat_display }}</span>
+                {% elif ordem.orpr_stat == '3' %}
+                <span class="badge bg-primary">{{ ordem.get_orpr_stat_display }}</span>
+                {% else %}
+                <span class="badge bg-secondary">{{ ordem.get_orpr_stat_display }}</span>
+                {% endif %}
+              </div>
+            </div>
+            <div class="d-flex gap-2 mt-3">
+              <a class="btn btn-sm btn-outline-primary flex-fill"
+                href="{% url 'ordem_producao_web:ordemproducao_update' slug=slug orpr_codi=ordem.orpr_codi %}">Editar</a>
+              <a class="btn btn-sm btn-outline-danger flex-fill"
+                href="{% url 'ordem_producao_web:ordemproducao_delete' slug=slug orpr_codi=ordem.orpr_codi %}">Excluir</a>
+            </div>
+          </div>
+        </div>
+        {% empty %}
+        <div class="text-center text-muted">Nenhuma ordem encontrada.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+
+    <div class="tab-pane fade" id="tab-ourives">
+      <div class="d-flex justify-content-end mb-2">
+        <a class="btn btn-sm btn-outline-primary" href="{% url 'ordem_producao_web:ourives_create' slug=slug %}">Novo
+          Ourives</a>
+      </div>
+      <div class="table-responsive d-none d-md-block">
+        <table class="table table-striped table-sm">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Nome</th>
+              <th>CPF</th>
+              <th>Ativo</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for o in ourives %}
+            <tr>
+              <td>{{ o.ouri_codi }}</td>
+              <td>{{ o.ouri_nome }}</td>
+              <td>{{ o.ouri_cpfe }}</td>
+              <td>{% if o.ouri_situ %}Sim{% else %}Não{% endif %}</td>
+              <td class="text-end">
+                <a class="btn btn-sm btn-outline-primary"
+                  href="{% url 'ordem_producao_web:ourives_update' slug=slug ouri_codi=o.ouri_codi %}">Editar</a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="text-center text-muted">Nenhum ourives cadastrado.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="d-md-none">
+        {% for o in ourives %}
+        <div class="card mb-2">
+          <div class="card-body">
+            <div class="fw-semibold">{{ o.ouri_nome }}</div>
+            <div class="small text-muted">Código: {{ o.ouri_codi }}</div>
+            <div class="small">CPF: {{ o.ouri_cpfe }}</div>
+            <div class="small">Ativo: {% if o.ouri_situ %}Sim{% else %}Não{% endif %}</div>
+            <div class="d-flex gap-2 mt-3">
+              <a class="btn btn-sm btn-outline-primary flex-fill"
+                href="{% url 'ordem_producao_web:ourives_update' slug=slug ouri_codi=o.ouri_codi %}">Editar</a>
+            </div>
+          </div>
+        </div>
+        {% empty %}
+        <div class="text-center text-muted">Nenhum ourives cadastrado.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="tab-etapas">
+      <div class="d-flex justify-content-end mb-2">
+        <a class="btn btn-sm btn-outline-primary" href="{% url 'ordem_producao_web:etapa_create' slug=slug %}">Nova
+          Etapa</a>
+      </div>
+      <div class="table-responsive d-none d-md-block">
+        <table class="table table-striped table-sm">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Nome</th>
+              <th>Ativa</th>
+              <th>Retorna saldo</th>
+              <th>Encerra ordem</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for e in etapas %}
+            <tr>
+              <td>{{ e.etap_codi }}</td>
+              <td>{{ e.etap_nome }}</td>
+              <td>{% if e.etap_situ %}Sim{% else %}Não{% endif %}</td>
+              <td>{% if e.etap_resa %}Sim{% else %}Não{% endif %}</td>
+              <td>{% if e.etap_ence %}Sim{% else %}Não{% endif %}</td>
+              <td class="text-end">
+                <a class="btn btn-sm btn-outline-primary"
+                  href="{% url 'ordem_producao_web:etapa_update' slug=slug etap_codi=e.etap_codi %}">Editar</a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="text-center text-muted">Nenhuma etapa cadastrada.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="d-md-none">
+        {% for e in etapas %}
+        <div class="card mb-2">
+          <div class="card-body">
+            <div class="fw-semibold">{{ e.etap_nome }}</div>
+            <div class="small text-muted">Código: {{ e.etap_codi }}</div>
+            <div class="small">Ativa: {% if e.etap_situ %}Sim{% else %}Não{% endif %}</div>
+            <div class="small">Retorna saldo: {% if e.etap_resa %}Sim{% else %}Não{% endif %}</div>
+            <div class="small">Encerra ordem: {% if e.etap_ence %}Sim{% else %}Não{% endif %}</div>
+            <div class="d-flex gap-2 mt-3">
+              <a class="btn btn-sm btn-outline-primary flex-fill"
+                href="{% url 'ordem_producao_web:etapa_update' slug=slug etap_codi=e.etap_codi %}">Editar</a>
+            </div>
+          </div>
+        </div>
+        {% empty %}
+        <div class="text-center text-muted">Nenhuma etapa cadastrada.</div>
+        {% endfor %}
+      </div>
     </div>
 
     <div class="tab-pane fade" id="tab-dashboard">
+      <div id="op-warning" class="alert alert-warning d-none">Necessário estar logado para carregar os dados.</div>
+
+      <div class="card p-4 mb-4" id="opFiltrosCard">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <div class="fw-semibold">Filtros</div>
+          <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse"
+            data-bs-target="#opFiltrosCollapse" aria-expanded="true" aria-controls="opFiltrosCollapse">
+            Mostrar/ocultar
+          </button>
+        </div>
+        <div class="collapse show" id="opFiltrosCollapse">
+          <form class="row g-3 mb-3" id="opFiltrosForm">
+            <div class="col-12 col-md-3">
+              <label class="form-label">Data inicial</label>
+              <input type="date" id="opDataInicial" class="form-control" />
+            </div>
+            <div class="col-12 col-md-3">
+              <label class="form-label">Data final</label>
+              <input type="date" id="opDataFinal" class="form-control" />
+            </div>
+            <div class="col-12 col-md-2">
+              <label class="form-label">Empresa</label>
+              <input type="text" id="opEmpresa" class="form-control" placeholder="ID empresa" />
+            </div>
+            <div class="col-12 col-md-2">
+              <label class="form-label">Filial</label>
+              <input type="text" id="opFilial" class="form-control" placeholder="ID filial" />
+            </div>
+            <div class="col-12 col-md-2">
+              <label class="form-label">Tipo</label>
+              <select class="form-select" id="opTipo">
+                <option value="">Todos</option>
+                {% for tipo, nome in tipo_ordem %}
+                <option value="{{ tipo }}">{{ nome }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12 col-md-2">
+              <label class="form-label">Status</label>
+              <select class="form-select" id="opStatus">
+                <option value="">Todos</option>
+                <option value="0">Em Aberto</option>
+                <option value="1">Em Andamento</option>
+                <option value="2">Finalizada</option>
+                <option value="3">Entregue</option>
+                <option value="9">Cancelada</option>
+              </select>
+            </div>
+            <div class="col-12 d-flex justify-content-end">
+              <button class="btn btn-outline-primary" id="opFiltrarBtn" type="submit">Filtrar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="kpi-scroll mb-4">
+        <div class="kpi-grid">
+          <div class="card kpi-card">
+            <div class="card-body">
+              <div class="label">Total</div>
+              <div class="value" id="kpi-op-total">{{ dashboard.total_ordens }}</div>
+            </div>
+          </div>
+          <div class="card kpi-card">
+            <div class="card-body">
+              <div class="label">Abertas</div>
+              <div class="value" id="kpi-op-abertas">{{ dashboard.ordens_abertas }}</div>
+            </div>
+          </div>
+          <div class="card kpi-card">
+            <div class="card-body">
+              <div class="label">Produção</div>
+              <div class="value" id="kpi-op-producao">{{ dashboard.ordens_producao }}</div>
+            </div>
+          </div>
+          <div class="card kpi-card">
+            <div class="card-body">
+              <div class="label">Finalizadas</div>
+              <div class="value" id="kpi-op-finalizadas">{{ dashboard.ordens_finalizadas }}</div>
+            </div>
+          </div>
+          <div class="card kpi-card">
+            <div class="card-body">
+              <div class="label">Entregues</div>
+              <div class="value" id="kpi-op-entregues">{{ dashboard.ordens_entregues }}</div>
+            </div>
+          </div>
+          <div class="card kpi-card">
+            <div class="card-body">
+              <div class="label">Canceladas</div>
+              <div class="value" id="kpi-op-canceladas">{{ dashboard.ordens_canceladas }}</div>
+            </div>
+          </div>
+          <div class="card kpi-card">
+            <div class="card-body">
+              <div class="label">Atrasadas</div>
+              <div class="value" id="kpi-op-atrasadas">{{ dashboard.ordens_atrasadas }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="row g-3">
-        <div class="col-md-2"><div class="card"><div class="card-body"><small>Total</small><h4>{{ dashboard.total_ordens }}</h4></div></div></div>
-        <div class="col-md-2"><div class="card"><div class="card-body"><small>Abertas</small><h4>{{ dashboard.ordens_abertas }}</h4></div></div></div>
-        <div class="col-md-2"><div class="card"><div class="card-body"><small>Produção</small><h4>{{ dashboard.ordens_producao }}</h4></div></div></div>
-        <div class="col-md-2"><div class="card"><div class="card-body"><small>Finalizadas</small><h4>{{ dashboard.ordens_finalizadas }}</h4></div></div></div>
-        <div class="col-md-2"><div class="card"><div class="card-body"><small>Atrasadas</small><h4>{{ dashboard.ordens_atrasadas }}</h4></div></div></div>
+        <div class="col-12 col-lg-6">
+          <div class="card chart-card">
+            <div class="card-header">Ordens por status</div>
+            <div class="card-body">
+              <div class="chart-wrapper"><canvas id="chartOpStatus"></canvas></div>
+            </div>
+          </div>
+        </div>
+        <div class="col-12 col-lg-6">
+          <div class="card chart-card">
+            <div class="card-header">Ordens por tipo</div>
+            <div class="card-body">
+              <div class="chart-wrapper"><canvas id="chartOpTipo"></canvas></div>
+            </div>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="card chart-card">
+            <div class="card-header">Entradas vs finalizações (por dia)</div>
+            <div class="card-body">
+              <div class="chart-wrapper"><canvas id="chartOpSerie"></canvas></div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const slugTpl = '{{ slug|default:"" }}';
+  const slug = slugTpl || (function () { try { const p = location.pathname.split('/'); return p.length > 2 ? p[2] : ''; } catch (e) { return ''; } })();
+
+  const CHART_COLORS = {
+    gold: 'rgba(196,151,58,1)',
+    brown: 'rgba(122,92,30,1)',
+    sand: 'rgba(212,185,122,1)',
+    slate: 'rgba(173,181,189,1)',
+    red: 'rgba(220,53,69,1)',
+    green: 'rgba(25,135,84,1)',
+    blue: 'rgba(13,110,253,1)',
+  };
+
+  function makeDelayedAnimation() {
+    let delayed = false;
+    return {
+      onComplete: () => { delayed = true; },
+      delay: (context) => {
+        let d = 0;
+        if (context.type === 'data' && context.mode === 'default' && !delayed) {
+          d = (context.dataIndex || 0) * 120 + (context.datasetIndex || 0) * 70;
+        }
+        return d;
+      },
+    };
+  }
+
+  function getGradient(ctx, chartArea, stops) {
+    const g = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+    stops.forEach(([pos, color]) => g.addColorStop(pos, color));
+    return g;
+  }
+
+  async function fetchDashboard(params) {
+    const s = new URLSearchParams(params);
+    const url = `/api/${slug}/ordemproducao/ordens/dashboard-detalhado/?${s.toString()}`;
+    const headers = { 'Accept': 'application/json' };
+    const token = localStorage.getItem('access') || sessionStorage.getItem('access');
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const r = await fetch(url, { headers, credentials: 'same-origin' });
+    if (!r.ok) throw new Error('Falha dashboard OP');
+    return r.json();
+  }
+
+  function setText(id, v) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = String(v ?? '0');
+  }
+
+  let chartStatus, chartTipo, chartSerie;
+  function renderCharts(data) {
+    const statusLabels = (data.status || []).map(x => x.label);
+    const statusValues = (data.status || []).map(x => Number(x.total || 0));
+    const tipoLabels = (data.tipos || []).map(x => x.label);
+    const tipoValues = (data.tipos || []).map(x => Number(x.total || 0));
+
+    const serieLabels = data.serie?.labels || [];
+    const serieEntradas = (data.serie?.entradas || []).map(v => Number(v || 0));
+    const serieFinalizadas = (data.serie?.finalizadas || []).map(v => Number(v || 0));
+
+    const c1 = document.getElementById('chartOpStatus')?.getContext('2d');
+    if (chartStatus) chartStatus.destroy();
+    if (c1) chartStatus = new Chart(c1, {
+      type: 'bar',
+      data: {
+        labels: statusLabels,
+        datasets: [{
+          label: 'Ordens',
+          data: statusValues,
+          backgroundColor: (ctx) => {
+            const chartArea = ctx.chart.chartArea;
+            if (!chartArea) return 'rgba(196,151,58,0.35)';
+            return getGradient(ctx.chart.ctx, chartArea, [
+              [0, 'rgba(196,151,58,0.12)'],
+              [0.55, 'rgba(196,151,58,0.28)'],
+              [1, 'rgba(196,151,58,0.50)'],
+            ]);
+          },
+          borderColor: 'rgba(196,151,58,0.95)',
+          borderWidth: 1.5,
+          borderRadius: 10,
+          borderSkipped: false,
+          maxBarThickness: 44,
+        }],
+      },
+      options: {
+        maintainAspectRatio: false,
+        responsive: true,
+        animation: makeDelayedAnimation(),
+        plugins: { legend: { display: false } },
+        scales: { x: { grid: { display: false } }, y: { beginAtZero: true } },
+      }
+    });
+
+    const c2 = document.getElementById('chartOpTipo')?.getContext('2d');
+    if (chartTipo) chartTipo.destroy();
+    if (c2) chartTipo = new Chart(c2, {
+      type: 'doughnut',
+      data: {
+        labels: tipoLabels,
+        datasets: [{
+          data: tipoValues,
+          backgroundColor: [
+            CHART_COLORS.gold.replace(',1)', ',0.60)'),
+            CHART_COLORS.sand.replace(',1)', ',0.55)'),
+            CHART_COLORS.brown.replace(',1)', ',0.55)'),
+            CHART_COLORS.slate.replace(',1)', ',0.45)'),
+          ],
+          borderColor: 'rgba(0,0,0,0)',
+          borderWidth: 0,
+        }]
+      },
+      options: {
+        maintainAspectRatio: false,
+        responsive: true,
+        animation: makeDelayedAnimation(),
+        plugins: {
+          legend: { position: 'bottom', labels: { color: 'rgba(212,185,122,0.95)', boxWidth: 10, boxHeight: 10 } },
+        },
+      }
+    });
+
+    const c3 = document.getElementById('chartOpSerie')?.getContext('2d');
+    if (chartSerie) chartSerie.destroy();
+    if (c3) chartSerie = new Chart(c3, {
+      type: 'line',
+      data: {
+        labels: serieLabels,
+        datasets: [
+          {
+            label: 'Entradas',
+            data: serieEntradas,
+            borderColor: CHART_COLORS.gold.replace(',1)', ',0.95)'),
+            backgroundColor: CHART_COLORS.gold.replace(',1)', ',0.12)'),
+            tension: 0.35,
+            pointRadius: 3.5,
+            fill: true,
+            borderWidth: 2,
+          },
+          {
+            label: 'Finalizadas',
+            data: serieFinalizadas,
+            borderColor: CHART_COLORS.green.replace(',1)', ',0.95)'),
+            backgroundColor: CHART_COLORS.green.replace(',1)', ',0.10)'),
+            tension: 0.35,
+            pointRadius: 3.5,
+            fill: true,
+            borderWidth: 2,
+          },
+        ],
+      },
+      options: {
+        maintainAspectRatio: false,
+        responsive: true,
+        animation: makeDelayedAnimation(),
+        plugins: { legend: { position: 'bottom', labels: { color: 'rgba(212,185,122,0.95)' } } },
+        scales: { x: { grid: { display: false } }, y: { beginAtZero: true } },
+      }
+    });
+  }
+
+  function collectParams() {
+    const di = document.getElementById('opDataInicial')?.value || '';
+    const df = document.getElementById('opDataFinal')?.value || '';
+    const empr = document.getElementById('opEmpresa')?.value || '';
+    const fili = document.getElementById('opFilial')?.value || '';
+    const tipo = document.getElementById('opTipo')?.value || '';
+    const status = document.getElementById('opStatus')?.value || '';
+    const p = {};
+    if (di) p.data_ini = di;
+    if (df) p.data_fim = df;
+    if (empr) p.empr = empr;
+    if (fili) p.fili = fili;
+    if (tipo) p.tipo = tipo;
+    if (status) p.status = status;
+    return p;
+  }
+
+  async function loadDashboard(params = {}) {
+    const warning = document.getElementById('op-warning');
+    try {
+      const data = await fetchDashboard(Object.assign({}, params));
+      if (warning) warning.classList.add('d-none');
+
+      setText('kpi-op-total', data.kpis?.total);
+      setText('kpi-op-abertas', data.kpis?.abertas);
+      setText('kpi-op-producao', data.kpis?.producao);
+      setText('kpi-op-finalizadas', data.kpis?.finalizadas);
+      setText('kpi-op-entregues', data.kpis?.entregues);
+      setText('kpi-op-canceladas', data.kpis?.canceladas);
+      setText('kpi-op-atrasadas', data.kpis?.atrasadas);
+
+      renderCharts(data);
+    } catch (e) {
+      if (warning) warning.classList.remove('d-none');
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('opFiltrosForm');
+    if (form) form.addEventListener('submit', (e) => { e.preventDefault(); loadDashboard(collectParams()); });
+
+    ['opDataInicial', 'opDataFinal', 'opEmpresa', 'opFilial', 'opTipo', 'opStatus'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('change', () => loadDashboard(collectParams()));
+    });
+
+    const tabBtn = document.querySelector('[data-bs-target="#tab-dashboard"]');
+    if (tabBtn) tabBtn.addEventListener('shown.bs.tab', () => loadDashboard(collectParams()));
+  });
+</script>
 {% endblock %}
