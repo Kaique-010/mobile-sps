@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-3">
+  <h4 class="mb-3">Registrar Ponto</h4>
+
+  <form method="post" class="card card-body">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+
+    <div class="mb-3">
+      <label class="form-label">{{ form.colaborador_id.label }}</label>
+      {{ form.colaborador_id }}
+      {{ form.colaborador_id.errors }}
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">{{ form.tipo.label }}</label>
+      {{ form.tipo }}
+      {{ form.tipo.errors }}
+    </div>
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary">Registrar</button>
+      <a href="{% url 'controledePonto_web:registro_ponto_list' %}" class="btn btn-outline-secondary">Voltar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
