@@ -67,31 +67,39 @@ def get_ncm_master_db(default_db: str = "default") -> str:
         except Exception:
             return default_db
 
+def _resolver_slug_request(request):
+    parts = request.path.strip('/').split('/')
+    slug = None
+
+    if parts and parts[0] == 'api':
+        slug = parts[1] if len(parts) > 1 else None
+        if slug in ("emitir", "imprimir", "calcular") and len(parts) > 2:
+            slug = parts[2]
+    elif parts and parts[0] == 'web' and len(parts) > 1:
+        slug = parts[1]
+
+    query_slug = request.GET.get('slug') or request.GET.get('slugs')
+    if query_slug:
+        candidatos = [item.strip() for item in str(query_slug).split(',') if item.strip()]
+        if candidatos:
+            slug = candidatos[0]
+
+    if slug:
+        return slug
+
+    try:
+        from core.middleware import get_licenca_slug
+        return get_licenca_slug() or request.session.get('slug')
+    except Exception:
+        return request.session.get('slug')
+
+
 def get_licenca_db_config(request):
     try:
-        parts = request.path.strip('/').split('/')
-        slug = None
-        if parts and parts[0] == 'api':
-            slug = parts[1] if len(parts) > 1 else None
-            if slug in ("emitir", "imprimir", "calcular") and len(parts) > 2:
-                slug = parts[2]
-        elif parts and parts[0] == 'web':
-            if len(parts) > 2:
-                slug_candidate = parts[1]
-                try:
-                    from core.licenca_context import get_licencas_map
-                    if any(l.get('slug') == slug_candidate for l in get_licencas_map()):
-                        slug = slug_candidate
-                except Exception:
-                    pass
-        if not slug:
-            try:
-                from core.middleware import get_licenca_slug
-                slug = get_licenca_slug() or request.session.get('slug')
-            except Exception:
-                slug = request.session.get('slug')
+        slug = _resolver_slug_request(request)
         if not slug:
             return 'default'
+
         try:
             return get_db_from_slug(slug)
         except Exception:

@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Listagem de Registros de Ponto</h4>
+    <a href="{% url 'controledePonto_web:registro_ponto_registrar' %}" class="btn btn-primary">Novo Registro</a>
+  </div>
+
+  <form method="get" class="row g-2 mb-3">
+    <div class="col-md-3">
+      <input type="number" class="form-control" name="colaborador_id" placeholder="Filtrar por colaborador" value="{{ filtro_colaborador_id }}">
+    </div>
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-outline-secondary w-100">Filtrar</button>
+    </div>
+  </form>
+
+  <div class="table-responsive">
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Colaborador</th>
+          <th>Documento</th>
+          <th>Tipo</th>
+          <th>Data/Hora</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for registro in registros %}
+        <tr>
+          <td>{{ registro.id }}</td>
+          <td>{{ registro.colaborador_id }}</td>
+          <td>{{ registro.documento }}</td>
+          <td>{{ registro.tipo }}</td>
+          <td>{{ registro.data_hora|date:'d/m/Y H:i:s' }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-center">Nenhum registro encontrado.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

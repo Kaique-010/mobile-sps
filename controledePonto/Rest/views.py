@@ -3,13 +3,12 @@ from rest_framework.decorators import action
 from datetime import date, timedelta, datetime
 from rest_framework.response import Response
 from controledePonto.models import RegistroPonto
-from controledePonto.repositorios import RepositorioPontoModelo
-from controledePonto.Rest.aplicacoes.casos_uso.pontos_uso import CasosDeUsoPonto
+from controledePonto.services import RegistroPontoService
 from controledePonto.Rest.serializers import RegistroPontoInputSerializer, RegistroPontoOutputSerializer
 from controledePonto.Rest.permissoes import NaoEAdminNemMobile
 
 from core.decorator import modulo_necessario, ModuloRequeridoMixin
-from core.registry import get_licenca_db_config
+from core.utils import get_licenca_db_config
 from core.excecoes import ErroDominio
 from core.dominio_handler import tratar_erro, tratar_sucesso
 
@@ -50,9 +49,9 @@ class RegistroPontoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         serializer = RegistroPontoInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        uc = CasosDeUsoPonto(RepositorioPontoModelo(banco=banco))
+        service = RegistroPontoService(banco=banco)
         try:
-            registro = uc.registrar_ponto(
+            registro = service.registrar(
                 colaborador_id=serializer.validated_data['colaborador_id'],
                 tipo=serializer.validated_data['tipo'],
             )
@@ -77,7 +76,7 @@ class RegistroPontoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='banco-de-horas')
     def banco_de_horas(self, request, *args, **kwargs):
         banco = self._get_banco(request)
-        uc = CasosDeUsoPonto(RepositorioPontoModelo(banco=banco))
+        service = RegistroPontoService(banco=banco)
         colaborador_id = request.query_params.get('colaborador_id')
         if colaborador_id is None:
             return tratar_erro(ErroDominio('colaborador_id é obrigatório'))
@@ -93,14 +92,14 @@ class RegistroPontoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         except ValueError:
             return tratar_erro(ErroDominio('data deve ser no formato YYYY-MM-DD'))
         try:
-            total_trabalhado = uc.total_por_dia(colaborador_id, data)
+            total_trabalhado = service.total_por_dia(colaborador_id, data)
         except ValueError:
             return tratar_erro(ErroDominio('colaborador_id não existe'))
         try:
-            jornada = uc.jornada(colaborador_id)
+            jornada = service.casos_uso.jornada(data)
         except ValueError:
             return tratar_erro(ErroDominio('colaborador_id não existe'))
-        banco_de_horas = uc.banco_de_horas(total_trabalhado, jornada)
+        banco_de_horas = service.casos_uso.banco_de_horas(total_trabalhado, jornada)
         return tratar_sucesso({
             'total_trabalhado': str(total_trabalhado),
             'jornada': str(jornada),
@@ -111,7 +110,7 @@ class RegistroPontoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='total-por-dia')
     def total_por_dia(self, request, *args, **kwargs):
         banco = self._get_banco(request)
-        uc = CasosDeUsoPonto(RepositorioPontoModelo(banco=banco))
+        service = RegistroPontoService(banco=banco)
         colaborador_id = request.query_params.get('colaborador_id')
         if colaborador_id is None:
             return tratar_erro(ErroDominio('colaborador_id é obrigatório'))
@@ -127,7 +126,7 @@ class RegistroPontoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         except ValueError:
             return tratar_erro(ErroDominio('data deve ser no formato YYYY-MM-DD'))
         try:
-            total_trabalhado = uc.total_por_dia(colaborador_id, data)
+            total_trabalhado = service.total_por_dia(colaborador_id, data)
         except ValueError:
             return tratar_erro(ErroDominio('colaborador_id não existe'))
         return tratar_sucesso({

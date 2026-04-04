@@ -48,6 +48,7 @@ urlpatterns = [
     path("<slug:slug>/importador/", include("importador.urls")),
     path("<slug:slug>/notificacoes/", include("notificacoes.Web.web_urls")),
     path("<slug:slug>/coleta-estoque/", include("coletaestoque.Web.web_urls")),
+    path("<slug:slug>/controle-de-ponto/", include("controledePonto.Web.web_urls")),
     path("<slug:slug>/controle-de-visitas/", include("controledevisitas.Web.web_urls")),
     path("<slug:slug>/agricola/", include("Agricola.Web.web_urls")),
     path("<slug:slug>/central-de-ajuda/", include("centraldeajuda.urls")),
