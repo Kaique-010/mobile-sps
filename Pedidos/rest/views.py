@@ -58,12 +58,9 @@ class PedidoVendaViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
                 raise ValidationError("Empresa, filial e número são obrigatórios")
 
             banco = get_licenca_db_config(self.request)
-            pedido = get_object_or_404(
-                PedidoVenda.objects.using(banco),
-                pedi_empr=empresa,
-                pedi_fili=filial,
-                pedi_nume=numero
-            )
+            base_qs = PedidoVenda.objects.using(banco)
+            base_qs = self.filter_por_vendedor(base_qs, 'pedi_vend')
+            pedido = get_object_or_404(base_qs, pedi_empr=empresa, pedi_fili=filial, pedi_nume=numero)
 
             return pedido
 

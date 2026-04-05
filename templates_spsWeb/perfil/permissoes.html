@@ -1,8 +1,13 @@
 {% extends 'base.html' %}
 {% block title %}Permissões do Perfil{% endblock %}
 {% block content %}
-<div class="container">
-<h2>Permissões do Perfil: {{ perfil.perf_nome }}</h2>
+<div class="container-fluid">
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Permissões do Perfil: {{ perfil.perf_nome }}</h4>
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'perfil_sincronizar_api' slug=slug %}">
+        Sincronizar perfis e permissões
+    </a>
+</div>
 
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
@@ -14,7 +19,7 @@
     {% csrf_token %}
     <div class="row">
         <div class="col-lg-4 mb-4">
-            <div class="card" style="position: sticky; top: 1rem;">
+            <div class="card shadow-sm border-0" style="position: sticky; top: 1rem;">
                 <div class="card-body">
                     <div class="mb-2">
                         <input type="text" id="filter-model" class="form-control" placeholder="Filtrar por modelo">
@@ -52,7 +57,7 @@
                     </div>
                     <div class="d-flex gap-2">
                         <button class="btn btn-primary" type="submit">Salvar</button>
-                        <a class="btn btn-secondary" href="{% url 'perfil_aplicar_defaults_api' slug=slug perfil_id=perfil.id %}">
+                        <a class="btn btn-outline-secondary" href="{% url 'perfil_aplicar_defaults_api' slug=slug perfil_id=perfil.id %}">
                             Aplicar defaults
                         </a>
                     </div>
@@ -60,25 +65,43 @@
             </div>
         </div>
         <div class="col-lg-8">
-            <div class="row g-3" id="recursos-grid">
-                {% for recurso in recursos %}
-                <div class="col-xl-6 col-xxl-4 recurso-block" data-model="{{ recurso.model|lower }}" data-app="{{ recurso.app_label|lower }}">
-                    <div class="card h-100">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <span>{{ recurso.app_label }} - {{ recurso.model }}</span>
-                            <div class="btn-group btn-group-sm">
-                                <button type="button" class="btn btn-outline-primary btn-select-model">Selecionar</button>
-                                <button type="button" class="btn btn-outline-secondary btn-clear-model">Limpar</button>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                {% for acao in recurso.acoes %}
-                                <div class="col-6 col-md-4 acao-item" data-acao="{{ acao|lower }}">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="perm_{{ recurso.id }}_{{ acao }}" id="perm_{{ recurso.id }}_{{ acao }}"
-                                            {% if recurso.id|stringformat:"s"|add:":"|add:acao in permissoes_atuais_keys %}checked{% endif %}>
-                                        <label class="form-check-label" for="perm_{{ recurso.id }}_{{ acao }}">{{ acao }}</label>
+            <div class="accordion" id="recursosAccordion">
+                {% for app_label, recursos_app in recursos_por_app %}
+                <div class="accordion-item mb-3 border-0 shadow-sm">
+                    <h2 class="accordion-header" id="heading-{{ forloop.counter }}">
+                        <button class="accordion-button {% if not forloop.first %}collapsed{% endif %}" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#collapse-{{ forloop.counter }}"
+                            aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}" aria-controls="collapse-{{ forloop.counter }}">
+                            {{ app_label }} <span class="ms-2 badge bg-secondary">{{ recursos_app|length }} modelos</span>
+                        </button>
+                    </h2>
+                    <div id="collapse-{{ forloop.counter }}" class="accordion-collapse collapse {% if forloop.first %}show{% endif %}"
+                        aria-labelledby="heading-{{ forloop.counter }}" data-bs-parent="#recursosAccordion">
+                        <div class="accordion-body">
+                            <div class="row g-3">
+                                {% for recurso in recursos_app %}
+                                <div class="col-xl-6 recurso-block" data-model="{{ recurso.model|lower }}" data-app="{{ recurso.app_label|lower }}">
+                                    <div class="card h-100">
+                                        <div class="card-header d-flex justify-content-between align-items-center">
+                                            <span>{{ recurso.model }}</span>
+                                            <div class="btn-group btn-group-sm">
+                                                <button type="button" class="btn btn-outline-primary btn-select-model">Selecionar</button>
+                                                <button type="button" class="btn btn-outline-secondary btn-clear-model">Limpar</button>
+                                            </div>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                {% for acao in recurso.acoes %}
+                                                <div class="col-6 col-md-4 acao-item" data-acao="{{ acao|lower }}">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" name="perm_{{ recurso.id }}_{{ acao }}" id="perm_{{ recurso.id }}_{{ acao }}"
+                                                            {% if recurso.id|stringformat:"s"|add:":"|add:acao in permissoes_atuais_keys %}checked{% endif %}>
+                                                        <label class="form-check-label" for="perm_{{ recurso.id }}_{{ acao }}">{{ acao }}</label>
+                                                    </div>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 {% endfor %}
