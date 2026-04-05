@@ -7,6 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter
 from django_filters import rest_framework as filters
+from core.mixins.vendedor_mixin import VendedorEntidadeMixin
 
 
 class PedidosGeralFilter(filters.FilterSet):
@@ -22,7 +23,7 @@ class PedidosGeralFilter(filters.FilterSet):
         fields = ['data_inicial', 'data_final', 'nome_vendedor', 'nome_cliente']
 
 
-class PedidosGeralViewSet(ModuloRequeridoMixin, viewsets.ReadOnlyModelViewSet):
+class PedidosGeralViewSet(ModuloRequeridoMixin, VendedorEntidadeMixin, viewsets.ReadOnlyModelViewSet):
     modulo_necessario = ['dashboards', 'dash']
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter]
@@ -34,6 +35,7 @@ class PedidosGeralViewSet(ModuloRequeridoMixin, viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         banco = get_licenca_db_config(self.request) or 'default'
         queryset = PedidosGeral.objects.using(banco).all().order_by('-data_pedido', '-numero_pedido')
+        queryset = self.filter_por_nome_vendedor(queryset, 'nome_vendedor')
 
         empresa = self.request.query_params.get('empresa')
         filial = self.request.query_params.get('filial')
