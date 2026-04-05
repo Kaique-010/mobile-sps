@@ -62,7 +62,7 @@ def sincronizar_permissoes_padrao():
     criados = 0
     for ct in cts:
         for acao in ACOES_PADRAO:
-            obj, created = PermissaoPerfil.objects.using(banco).get_or_create(
+            _, created = PermissaoPerfil.objects.using(banco).get_or_create(
                 perf_perf=perfil,
                 perf_ctype=ct,
                 perf_acao=acao
@@ -135,3 +135,25 @@ def bootstrap_inicial():
         aplicados += aplicar_permissoes_padrao_por_perfil(p)
     vinc = vincular_usuarios_padrao()
     return {'perfis_criados': criados_count, 'permissoes_criadas': aplicados, **vinc}
+
+
+def sincronizar_perfis_e_permissoes():
+    """
+    Sincronização completa de perfis:
+    1. Garante perfis padrão;
+    2. Reaplica permissões default por perfil;
+    3. Sincroniza permissões globais do superadmin;
+    4. Vincula usuários padrão quando não houver vínculo.
+    """
+    criados_count, perfis = criar_perfis_padrao()
+    aplicados_por_perfil = {}
+    for p in perfis:
+        aplicados_por_perfil[p.perf_nome] = aplicar_permissoes_padrao_por_perfil(p)
+    superadmin_novas = sincronizar_permissoes_padrao()
+    vinculos = vincular_usuarios_padrao().get('vinculos', 0)
+    return {
+        'perfis_criados': criados_count,
+        'permissoes_aplicadas_por_perfil': aplicados_por_perfil,
+        'permissoes_superadmin_criadas': superadmin_novas,
+        'vinculos_criados': vinculos,
+    }

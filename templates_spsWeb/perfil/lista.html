@@ -1,33 +1,45 @@
 {% extends 'base.html' %}
 {% block title %}Perfis{% endblock %}
 {% block content %}
-<h2>Perfis</h2>
-<table class="table">
-    <thead>
-        <tr>
-            <th>Perfil</th>
-            <th>Usuários</th>
-            <th>Heranças</th>
-            <th>Permissões</th>
-            <th>Ações</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for p in perfis %}
-        <tr>
-            <td>{{ p.perf_nome }}</td>
-            <td>{{ p.usuarios_count }}</td>
-            <td>{{ p.pais_count }}</td>
-            <td>{{ p.permissoes_count }}</td>
-            <td>
-                <a class="btn btn-sm btn-primary"
-                    href="{% url 'perfil_permissoes' slug=slug perfil_id=p.id %}">Permissões</a>
-                <a class="btn btn-sm btn-secondary"
-                    href="{% url 'perfil_aplicar_defaults_api' slug=slug perfil_id=p.id %}">Aplicar defaults</a>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-<a class="btn btn-outline-secondary" href="{% url 'perfil_bootstrap_api' slug=slug %}">Bootstrap inicial</a>
+<div class="container-fluid">
+    <div class="card shadow-sm border-0">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Perfis de acesso</h5>
+            <a class="btn btn-sm btn-outline-secondary" href="{% url 'perfil_bootstrap_api' slug=slug %}">
+                Sincronização inicial
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Perfil</th>
+                            <th>Usuários</th>
+                            <th>Heranças</th>
+                            <th>Permissões</th>
+                            <th class="text-end">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in perfis %}
+                        <tr>
+                            <td class="fw-semibold">{{ p.perf_nome }}</td>
+                            <td>{{ p.usuarios_count }}</td>
+                            <td>{{ p.pais_count }}</td>
+                            <td>{{ p.permissoes_count }}</td>
+                            <td class="text-end">
+                                <a class="btn btn-sm btn-outline-primary"
+                                    href="{% url 'perfil_permissoes' slug=slug perfil_id=p.id %}">Permissões</a>
+                                <a class="btn btn-sm btn-outline-secondary"
+                                    href="{% url 'perfil_aplicar_defaults_api' slug=slug perfil_id=p.id %}">Aplicar defaults</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
