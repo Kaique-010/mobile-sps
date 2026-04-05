@@ -4,7 +4,13 @@ from django.http import JsonResponse
 from django.db.models import Count, Q
 from .models import Perfil, PerfilHeranca, PermissaoPerfil, UsuarioPerfil
 from Licencas.models import Usuarios
-from .sync import listar_recursos, sincronizar_permissoes_padrao, criar_perfis_padrao, aplicar_permissoes_padrao_por_perfil, bootstrap_inicial
+from .sync import (
+    listar_recursos,
+    criar_perfis_padrao,
+    aplicar_permissoes_padrao_por_perfil,
+    bootstrap_inicial,
+    sincronizar_perfis_e_permissoes,
+)
 from .permission_service import salvar_permissoes, salvar_herancas
 from .services import tem_permissao
 from core.middleware import get_licenca_slug
@@ -33,6 +39,9 @@ class PerfilPermissaoView(View):
         banco = get_db_from_slug(get_licenca_slug())
         perfil = get_object_or_404(Perfil.objects.using(banco), id=perfil_id)
         recursos = listar_recursos()
+        recursos_por_app = {}
+        for recurso in recursos:
+            recursos_por_app.setdefault(recurso['app_label'], []).append(recurso)
 
         qs_perms = PermissaoPerfil.objects.using(banco).filter(perf_perf=perfil)
         permissoes_atuais = {(p.perf_ctype_id, p.perf_acao) for p in qs_perms}
@@ -46,6 +55,7 @@ class PerfilPermissaoView(View):
         return render(request, 'perfil/permissoes.html', {
             'perfil': perfil,
             'recursos': recursos,
+            'recursos_por_app': sorted(recursos_por_app.items(), key=lambda item: item[0].lower()),
             'permissoes_atuais': permissoes_atuais,
             'permissoes_atuais_keys': permissoes_atuais_keys,
             'slug': slug,
@@ -92,8 +102,8 @@ def verificar_api(request, slug=None):
 
 
 def sincronizar_api(request, slug=None):
-    criados = sincronizar_permissoes_padrao()
-    return JsonResponse({'criados': criados})
+    resultado = sincronizar_perfis_e_permissoes()
+    return JsonResponse(resultado)
 
 
 def perfis_defaults_api(request, slug=None):

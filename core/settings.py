@@ -164,10 +164,10 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'core.middleware.LicencaMiddleware',
     'core.middleware_restore_auth.RestoreUserMiddleware',
+    'perfilweb.middleware.PerfilPermissionMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'auditoria.middleware.AuditoriaMiddleware',
-    #'perfilweb.middleware.PerfilPermissionMiddleware',
 ]
 
 

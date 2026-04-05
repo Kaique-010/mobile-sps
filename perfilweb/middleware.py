@@ -2,7 +2,14 @@ from django.http import HttpResponseForbidden
 from django.urls import resolve
 from .services import verificar_por_url
 from .permission_map import PERMISSION_MAP
-from .services import tem_permissao, get_perfil_ativo, acoes_permitidas, listar_permissoes, normalizar_app_label
+from .services import (
+    tem_permissao,
+    get_perfil_ativo,
+    acoes_permitidas,
+    listar_permissoes,
+    normalizar_app_label,
+    EXCLUDED_DBS,
+)
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
 import logging
 from core.middleware import get_licenca_slug
@@ -17,6 +24,13 @@ from django.shortcuts import redirect
 
 
 class PerfilPermissionMiddleware:
+    WEB_APP_MAP = {
+        'contas-a-pagar': ('contas_a_pagar', 'titulospagar'),
+        'contas-a-receber': ('contas_a_receber', 'titulosreceber'),
+        'caixa-diario': ('CaixaDiario', 'caixageral'),
+        'dre': ('DRE', 'dre'),
+        'perfil': ('perfilweb', 'perfil'),
+    }
 
     def __init__(self, get_response):
         self.get_response = get_response
@@ -26,6 +40,10 @@ class PerfilPermissionMiddleware:
         usuario = request.user if getattr(request, 'user', None) and request.user.is_authenticated else None
 
         p = request.path or ""
+        # Escopo explícito: aplicar controle de perfil apenas nas camadas WEB/REST
+        if not (p.startswith('/web/') or p.startswith('/api/')):
+            return self.get_response(request)
+
         try:
             parts_init = p.strip('/').split('/')
             slug_res = None
@@ -144,11 +162,27 @@ class PerfilPermissionMiddleware:
             except Exception:
                 pass
         except Exception:
+            perfil_snap = None
             pass
+
+        # Modo de compatibilidade para clientes legados sem perfil vinculado:
+        # evita indisponibilidade de apps já em produção até finalizar o vínculo de perfis.
+        if usuario and not perfil_snap:
+            try:
+                self.logger.warning(
+                    "[perfil_mw] compat_allow_sem_perfil usuario=%s path=%s",
+                    getattr(usuario, 'usua_nome', None),
+                    request.path,
+                )
+            except Exception:
+                pass
+            return self.get_response(request)
 
         try:
             slug = get_licenca_slug()
             banco = get_db_from_slug(slug)
+            if banco in EXCLUDED_DBS:
+                return self.get_response(request)
             mods = getattr(request, 'modulos_disponiveis', [])
             self.logger.info(f"[perfil_mw] path={request.path} user={getattr(usuario,'usua_nome',None)} slug={slug} banco={banco} mods={mods}")
             try:
@@ -280,22 +314,17 @@ class PerfilPermissionMiddleware:
                     app_slug = parts[2]
                     oper = parts[3] if len(parts) > 3 else ''
                 if app_slug:
-                    app_map = {
-                        'contas-a-pagar': ('contas_a_pagar', 'titulospagar'),
-                        'contas-a-receber': ('contas_a_receber', 'titulosreceber'),
-                        'caixa-diario': ('CaixaDiario', 'caixageral'),
-                        'dre': ('DRE', 'dre'),  # sem modelo direto; manter visualizar
-                    }
-                    app_label, default_model = app_map.get(app_slug, (None, None))
+                    app_label, default_model = self.WEB_APP_MAP.get(app_slug, (None, None))
                     if app_label and default_model:
                         app_label = normalizar_app_label(app_label)
-                        method = request.method.upper()
                         if oper.startswith('novo'):
                             acao = 'criar'
                         elif oper.startswith('editar'):
                             acao = 'editar'
                         elif oper.startswith('excluir'):
                             acao = 'excluir'
+                        elif oper.startswith('api') or oper.startswith('sincronizar') or oper.startswith('bootstrap'):
+                            acao = 'editar'
                         elif oper.startswith('autocomplete'):
                             acao = 'visualizar'
                         else:
