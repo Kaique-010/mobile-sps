@@ -30,6 +30,24 @@ class GerarEntradaSerializer(serializers.Serializer):
     documento_id = serializers.IntegerField()
 
 
+class WizardIniciarSerializer(serializers.Serializer):
+    empresa = serializers.IntegerField()
+    filial = serializers.IntegerField()
+    documento_id = serializers.IntegerField()
+    data_entrada = serializers.DateField(required=False, allow_null=True)
+
+
+class WizardFinalizarSerializer(serializers.Serializer):
+    entradas = serializers.ListField(child=serializers.DictField(), required=True)
+    parcelas = serializers.ListField(child=serializers.DictField(), required=False)
+    forma_pagamento = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    documento_id = serializers.IntegerField(required=False, allow_null=True)
+
+
+class WizardItensSerializer(serializers.Serializer):
+    itens = serializers.ListField(child=serializers.DictField(), required=True)
+
+
 class NFeDocumentoSerializer(serializers.ModelSerializer):
     class Meta:
         model = NFeDocumento

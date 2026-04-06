@@ -81,80 +81,160 @@
                 <div class="fw-semibold mb-1">Exemplo de fluxo</div>
                 <div class="small">
                     1) Importe por chave ou XML<br />
-                    2) Verifique os itens<br />
-                    3) Clique em Processar (Estoque + CP). Itens não identificados ficam pendentes.
+                    2) Clique em Abrir e registre a entrada (nfev)<br />
+                    3) Mapeie produtos<br />
+                    4) Finalize (Estoque + CP)
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header d-flex align-items-center justify-content-between">
+            <div class="fw-semibold">Entradas registradas</div>
+            <div class="d-flex align-items-center gap-2">
+                <div class="text-body-secondary small" id="entradas-count"></div>
+                <button id="btn-recarregar-entradas" class="btn btn-sm btn-outline-secondary" type="button">
+                    <i class="bi bi-arrow-clockwise"></i> Recarregar
+                </button>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 90px;">ID</th>
+                            <th style="width: 100px;">NF</th>
+                            <th style="width: 80px;">Série</th>
+                            <th style="width: 140px;">Emissão</th>
+                            <th style="width: 140px;">Entrada</th>
+                            <th>Emitente</th>
+                            <th class="text-end" style="width: 160px;">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="entradas-tbody">
+                        <tr>
+                            <td colspan="7" class="text-center text-body-secondary py-4">Carregando...</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="itens-modal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="wizard-modal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
                 <div>
-                    <div class="modal-title h5 mb-0" id="itens-modal-title">Itens da NF-e</div>
-                    <div class="text-body-secondary small" id="itens-modal-subtitle"></div>
+                    <div class="modal-title h5 mb-0">Entrada via XML</div>
+                    <div class="text-body-secondary small" id="wizard-subtitle"></div>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
             <div class="modal-body">
-                <div class="table-responsive">
-                    <table class="table table-sm table-hover align-middle mb-0">
-                        <thead>
-                            <tr>
-                                <th style="width: 70px;">Item</th>
-                                <th style="width: 120px;">Cód.</th>
-                                <th>Descrição</th>
-                                <th style="width: 110px;" class="text-end">Qtd</th>
-                                <th style="width: 70px;">Un</th>
-                                <th style="width: 130px;" class="text-end">Unitário</th>
-                                <th style="width: 130px;" class="text-end">Total</th>
-                                <th style="width: 130px;" class="text-end">Desc.</th>
-                                <th style="width: 140px;" class="text-end">Líquido</th>
-                            </tr>
-                        </thead>
-                        <tbody id="itens-modal-tbody">
-                            <tr>
-                                <td colspan="9" class="text-center text-body-secondary py-4">Carregando...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="modal-footer d-flex justify-content-between">
-                <div class="text-body-secondary small" id="itens-modal-total"></div>
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="process-modal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-title h5 mb-0">Resultado do processamento</div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-            </div>
-            <div class="modal-body">
-                <div id="process-resumo" class="mb-3 text-body-secondary small"></div>
-                <div class="table-responsive">
-                    <table class="table table-sm table-hover align-middle mb-0">
-                        <thead>
-                            <tr>
-                                <th style="width: 80px;">#</th>
-                                <th>Descrição</th>
-                                <th style="width: 160px;">Motivo</th>
-                            </tr>
-                        </thead>
-                        <tbody id="process-pendentes">
-                            <tr>
-                                <td colspan="3" class="text-center text-body-secondary py-4">Sem pendências.</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <ul class="nav nav-tabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#wiz-entrada" type="button"
+                            role="tab">Entrada</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#wiz-produtos" type="button"
+                            role="tab" id="tab-produtos" disabled>Produtos</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#wiz-financeiro" type="button"
+                            role="tab" id="tab-financeiro" disabled>Financeiro</button>
+                    </li>
+                </ul>
+                <div class="tab-content pt-3">
+                    <div class="tab-pane fade show active" id="wiz-entrada" role="tabpanel">
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">Data de entrada</label>
+                                <input class="form-control" type="date" id="wizard-data-entrada" />
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">Empresa / Filial</label>
+                                <input class="form-control" id="wizard-empresa-filial" disabled />
+                            </div>
+                            <div class="col-12">
+                                <button class="btn btn-primary" type="button" id="wizard-btn-iniciar">
+                                    <i class="bi bi-check2-circle"></i> Registrar entrada (nfev)
+                                </button>
+                            </div>
+                            <div class="col-12">
+                                <div class="alert alert-info mb-0 small">
+                                    1) Registra cabeçalho na tabela nfev (data de entrada, emissão, emitente,
+                                    totais)<br />
+                                    2) Mapeie produtos<br />
+                                    3) Gere estoque + contas a pagar
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="wiz-produtos" role="tabpanel">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="text-body-secondary small" id="wizard-produtos-status">Sem itens carregados.
+                            </div>
+                            <button class="btn btn-outline-primary" type="button" id="wizard-btn-mapear">
+                                <i class="bi bi-box-seam"></i> Mapear itens
+                            </button>
+                        </div>
+                        <div class="alert alert-warning mb-0 small" id="wizard-map-alert" style="display:none;"></div>
+                    </div>
+                    <div class="tab-pane fade" id="wiz-financeiro" role="tabpanel">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="text-body-secondary small" id="wizard-fin-status">Prévia não carregada.</div>
+                            <button class="btn btn-success" type="button" id="wizard-btn-finalizar">
+                                <i class="bi bi-check2-square"></i> Finalizar (Estoque + CP)
+                            </button>
+                        </div>
+                        <div class="row g-2 align-items-end mb-3">
+                            <div class="col-12 col-md-3">
+                                <label class="form-label">Forma de pagamento</label>
+                                <select class="form-select" id="wizard-forma-pagamento">
+                                    <option value="00">DUPLICATA</option>
+                                    <option value="53">BOLETO BANCÁRIO</option>
+                                    <option value="54" selected>DINHEIRO</option>
+                                    <option value="55">DEPÓSITO EM CONTA</option>
+                                    <option value="60">PIX</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">Condição (dias)</label>
+                                <input class="form-control" id="wizard-condicao" placeholder="15 15 30 30" />
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="form-label">Data base</label>
+                                <input class="form-control" type="date" id="wizard-data-base" />
+                            </div>
+                            <div class="col-12 col-md-3 d-grid">
+                                <button class="btn btn-outline-primary" type="button" id="wizard-btn-gerar-parcelas">
+                                    <i class="bi bi-diagram-3"></i> Gerar parcelas
+                                </button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 140px;">Duplicata</th>
+                                        <th style="width: 160px;">Vencimento</th>
+                                        <th class="text-end" style="width: 160px;">Valor</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="wizard-fin-tbody">
+                                    <tr>
+                                        <td colspan="3" class="text-center text-body-secondary py-4">Sem dados.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="alert alert-info mb-0 small" id="wizard-resultado" style="display:none;"></div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -164,9 +244,27 @@
     </div>
 </div>
 
+{% include 'NotasDestinadas/modal_produtos.html' %}
+
 <script>
     (function () {
-        const slug = (window.sessionStorage && sessionStorage.getItem('slug')) || '';
+        const getSlugFromPath = () => {
+            try {
+                const parts = String(window.location.pathname || '').split('/').filter(Boolean);
+                const webIdx = parts.indexOf('web');
+                if (webIdx >= 0 && parts.length > webIdx + 1) return parts[webIdx + 1];
+                const apiIdx = parts.indexOf('api');
+                if (apiIdx >= 0 && parts.length > apiIdx + 1) return parts[apiIdx + 1];
+                return '';
+            } catch (e) {
+                return '';
+            }
+        };
+
+        const slug = String(localStorage.getItem('slug') || '').trim() || getSlugFromPath();
+        if (slug) {
+            try { localStorage.setItem('slug', slug); } catch (e) { }
+        }
         const access = localStorage.getItem('access') || '';
         const empresa = localStorage.getItem('empresa_id') || '1';
         const filial = localStorage.getItem('filial_id') || '1';
@@ -180,16 +278,41 @@
         const $btnRecarregar = document.getElementById('btn-recarregar');
         const $tbody = document.getElementById('docs-tbody');
         const $count = document.getElementById('docs-count');
-        const $modalEl = document.getElementById('itens-modal');
-        const $modalTitle = document.getElementById('itens-modal-title');
-        const $modalSubtitle = document.getElementById('itens-modal-subtitle');
-        const $modalTbody = document.getElementById('itens-modal-tbody');
-        const $modalTotal = document.getElementById('itens-modal-total');
-        const $processModalEl = document.getElementById('process-modal');
-        const $processResumo = document.getElementById('process-resumo');
-        const $processPendentes = document.getElementById('process-pendentes');
+        const $entradasTbody = document.getElementById('entradas-tbody');
+        const $entradasCount = document.getElementById('entradas-count');
+        const $btnRecarregarEntradas = document.getElementById('btn-recarregar-entradas');
+
+        const $wizModal = document.getElementById('wizard-modal');
+        const $wizSubtitle = document.getElementById('wizard-subtitle');
+        const $wizEmpresaFilial = document.getElementById('wizard-empresa-filial');
+        const $wizDataEntrada = document.getElementById('wizard-data-entrada');
+        const $wizBtnIniciar = document.getElementById('wizard-btn-iniciar');
+        const $tabProdutos = document.getElementById('tab-produtos');
+        const $tabFinanceiro = document.getElementById('tab-financeiro');
+        const $wizBtnMapear = document.getElementById('wizard-btn-mapear');
+        const $wizProdStatus = document.getElementById('wizard-produtos-status');
+        const $wizMapAlert = document.getElementById('wizard-map-alert');
+        const $wizFinStatus = document.getElementById('wizard-fin-status');
+        const $wizFinTbody = document.getElementById('wizard-fin-tbody');
+        const $wizBtnFinalizar = document.getElementById('wizard-btn-finalizar');
+        const $wizResultado = document.getElementById('wizard-resultado');
+        const $wizCondicao = document.getElementById('wizard-condicao');
+        const $wizDataBase = document.getElementById('wizard-data-base');
+        const $wizBtnGerarParcelas = document.getElementById('wizard-btn-gerar-parcelas');
+        const $wizFormaPagamento = document.getElementById('wizard-forma-pagamento');
 
         const apiBase = slug ? `/api/${slug}/fiscal/nfe/` : '';
+        const wizardBase = slug ? `/api/${slug}/fiscal/nfe/wizard/` : '';
+
+        const state = {
+            documentoId: null,
+            notaId: null,
+            numero: null,
+            serie: null,
+            entradas: [],
+            parcelas: null,
+            doc: null,
+        };
 
         const authHeaders = () => ({
             'Authorization': access ? `Bearer ${access}` : '',
@@ -204,10 +327,6 @@
             } catch (e) { }
         };
 
-        const renderEmpty = (text) => {
-            $tbody.innerHTML = `<tr><td colspan="4" class="text-center text-body-secondary py-4">${text}</td></tr>`;
-        };
-
         const fmtMoney = (value) => {
             const n = Number(value || 0);
             try {
@@ -217,25 +336,8 @@
             }
         };
 
-        const fmtQty = (value) => {
-            const n = Number(value || 0);
-            if (!isFinite(n)) return String(value || '');
-            try {
-                return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 6 }).format(n);
-            } catch (e) {
-                return String(value || '');
-            }
-        };
-
-        const openModal = (el) => {
-            try {
-                if (window.bootstrap && window.bootstrap.Modal) {
-                    window.bootstrap.Modal.getOrCreateInstance(el).show();
-                } else {
-                    el.classList.add('show');
-                    el.style.display = 'block';
-                }
-            } catch (e) { }
+        const renderEmpty = (text) => {
+            $tbody.innerHTML = `<tr><td colspan="4" class="text-center text-body-secondary py-4">${text}</td></tr>`;
         };
 
         const fetchDocs = async () => {
@@ -266,14 +368,9 @@
                         <td><div class="text-truncate" style="max-width: 320px;" title="${d.chave || ''}">${d.chave || '-'}</div></td>
                         <td><span class="badge text-bg-secondary">${(d.tipo || '-')}</span></td>
                         <td class="text-end">
-                            <div class="btn-group btn-group-sm" role="group">
-                                <button class="btn btn-outline-secondary btn-ver-itens" data-doc-id="${d.id}">
-                                    <i class="bi bi-list-ul"></i> Itens
-                                </button>
-                                <button class="btn btn-outline-primary btn-processar" data-doc-id="${d.id}">
-                                    <i class="bi bi-check2-square"></i> Processar (Estoque + CP)
-                                </button>
-                            </div>
+                            <button class="btn btn-sm btn-outline-primary btn-wizard" data-doc-id="${d.id}">
+                                <i class="bi bi-ui-checks-grid"></i> Abrir
+                            </button>
                         </td>
                     </tr>
                 `).join('');
@@ -283,116 +380,282 @@
             }
         };
 
-        const showItensModal = async (documentoId) => {
-            if (!$modalEl) return;
-            $modalTitle.textContent = 'Itens da NF-e';
-            $modalSubtitle.textContent = '';
-            $modalTotal.textContent = '';
-            $modalTbody.innerHTML = `<tr><td colspan="9" class="text-center text-body-secondary py-4">Carregando...</td></tr>`;
-
+        const fetchEntradas = async () => {
+            if (!wizardBase || !$entradasTbody) return;
+            $entradasTbody.innerHTML = `<tr><td colspan="7" class="text-center text-body-secondary py-4">Carregando...</td></tr>`;
             try {
-                const resp = await fetch(`${apiBase}documentos/${encodeURIComponent(documentoId)}/?empresa=${encodeURIComponent(empresa)}&filial=${encodeURIComponent(filial)}`, { headers: authHeaders() });
+                const resp = await fetch(`${wizardBase}entradas/?empresa=${encodeURIComponent(empresa)}&filial=${encodeURIComponent(filial)}`, { headers: authHeaders() });
                 const data = await resp.json().catch(() => null);
                 if (!resp.ok) {
-                    toast(data?.detail || 'Falha ao carregar itens do documento.', 'danger');
-                    $modalTbody.innerHTML = `<tr><td colspan="9" class="text-center text-body-secondary py-4">Falha ao carregar.</td></tr>`;
+                    $entradasTbody.innerHTML = `<tr><td colspan="7" class="text-center text-body-secondary py-4">Falha ao carregar.</td></tr>`;
+                    if (data?.detail) toast(data.detail, 'danger');
                     return;
                 }
+                const items = Array.isArray(data) ? data : [];
+                if ($entradasCount) $entradasCount.textContent = `${items.length} itens`;
+                if (!items.length) {
+                    $entradasTbody.innerHTML = `<tr><td colspan="7" class="text-center text-body-secondary py-4">Nenhuma entrada registrada.</td></tr>`;
+                    return;
+                }
+                $entradasTbody.innerHTML = items.map(n => `
+                    <tr>
+                        <td class="text-body-secondary">${n.id}</td>
+                        <td class="text-body-secondary">${n.numero_nota_fiscal || '-'}</td>
+                        <td class="text-body-secondary">${n.serie || '-'}</td>
+                        <td class="text-body-secondary">${n.data_emissao || '-'}</td>
+                        <td class="text-body-secondary">${n.data_entrada || '-'}</td>
+                        <td><div class="text-truncate" style="max-width: 520px;" title="${n.emitente || ''}">${n.emitente || '-'}</div></td>
+                        <td class="text-end">${fmtMoney(n.valor_total_nota)}</td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                $entradasTbody.innerHTML = `<tr><td colspan="7" class="text-center text-body-secondary py-4">Falha ao carregar.</td></tr>`;
+            }
+        };
 
-                const chave = data?.chave || '';
+        const openWizard = async (documentoId) => {
+            state.documentoId = Number(documentoId);
+            state.notaId = null;
+            state.numero = null;
+            state.serie = null;
+            state.entradas = [];
+            state.parcelas = null;
+            state.doc = null;
+            $tabProdutos.disabled = true;
+            $tabFinanceiro.disabled = true;
+            $wizProdStatus.textContent = 'Sem itens carregados.';
+            $wizFinStatus.textContent = 'Prévia não carregada.';
+            $wizMapAlert.style.display = 'none';
+            $wizResultado.style.display = 'none';
+            $wizFinTbody.innerHTML = `<tr><td colspan="3" class="text-center text-body-secondary py-4">Sem dados.</td></tr>`;
+
+            $wizEmpresaFilial.value = `${empresa} / ${filial}`;
+            $wizDataEntrada.value = new Date().toISOString().slice(0, 10);
+            if ($wizDataBase) $wizDataBase.value = new Date().toISOString().slice(0, 10);
+            if ($wizCondicao) $wizCondicao.value = '';
+            if ($wizFormaPagamento) $wizFormaPagamento.value = '54';
+
+            try {
+                const resp = await fetch(`${apiBase}documentos/${encodeURIComponent(state.documentoId)}/?empresa=${encodeURIComponent(empresa)}&filial=${encodeURIComponent(filial)}`, { headers: authHeaders() });
+                const data = await resp.json().catch(() => null);
+                if (!resp.ok) {
+                    toast(data?.detail || 'Falha ao carregar documento.', 'danger');
+                    return;
+                }
+                state.doc = data;
                 const ide = data?.ide || {};
                 const nNF = ide?.nNF || '';
                 const serie = ide?.serie || '';
                 const dhEmi = ide?.dhEmi || '';
-
-                $modalSubtitle.textContent = `${chave}${nNF ? ` • NF ${nNF}` : ''}${serie ? ` • Série ${serie}` : ''}${dhEmi ? ` • Emissão ${dhEmi}` : ''}`;
-
-                const itens = Array.isArray(data?.itens) ? data.itens : [];
-                if (!itens.length) {
-                    $modalTbody.innerHTML = `<tr><td colspan="9" class="text-center text-body-secondary py-4">Nenhum item encontrado.</td></tr>`;
-                } else {
-                    $modalTbody.innerHTML = itens.map(i => `
-                        <tr>
-                            <td class="text-body-secondary">${i.nItem || ''}</td>
-                            <td class="text-body-secondary">${i.cProd || ''}</td>
-                            <td>
-                                <div class="fw-semibold">${i.xProd || '-'}</div>
-                                <div class="text-body-secondary small">${(i.NCM || '') ? `NCM ${i.NCM}` : ''}${(i.CFOP || '') ? ` • CFOP ${i.CFOP}` : ''}</div>
-                            </td>
-                            <td class="text-end">${fmtQty(i.qCom)}</td>
-                            <td>${i.uCom || ''}</td>
-                            <td class="text-end">${fmtMoney(i.vUnCom)}</td>
-                            <td class="text-end">${fmtMoney(i.vProd)}</td>
-                            <td class="text-end">${fmtMoney(i.vDesc)}</td>
-                            <td class="text-end fw-semibold">${fmtMoney(i.vLiquido)}</td>
-                        </tr>
-                    `).join('');
-                }
-
-                const total = data?.total || {};
-                const vNF = total?.vNF || '';
-                const vProd = total?.vProd || '';
-                const vDesc = total?.vDesc || '';
-                $modalTotal.textContent = `${vNF ? `Total NF: ${fmtMoney(vNF)}` : ''}${vProd ? `${vNF ? ' • ' : ''}Produtos: ${fmtMoney(vProd)}` : ''}${vDesc ? ` • Descontos: ${fmtMoney(vDesc)}` : ''}`;
-
+                const chave = data?.chave || '';
+                $wizSubtitle.textContent = `${chave}${nNF ? ` • NF ${nNF}` : ''}${serie ? ` • Série ${serie}` : ''}${dhEmi ? ` • Emissão ${dhEmi}` : ''}`;
             } catch (e) {
-                toast(`Falha ao carregar itens: ${e}`, 'danger');
-                $modalTbody.innerHTML = `<tr><td colspan="9" class="text-center text-body-secondary py-4">Falha ao carregar.</td></tr>`;
+                toast(`Falha ao carregar documento: ${e}`, 'danger');
+                return;
             }
 
-            openModal($modalEl);
-        };
-
-        const showResultado = (data) => {
-            const status = data?.status || '';
-            const entradas = Array.isArray(data?.entradas_estoque) ? data.entradas_estoque : [];
-            const titulos = Array.isArray(data?.titulos) ? data.titulos : [];
-            const itensProcessados = Number(data?.itens_processados || 0);
-            const pendentes = Array.isArray(data?.itens_pendentes) ? data.itens_pendentes : [];
-
-            $processResumo.textContent = [
-                status ? `Status: ${status}` : '',
-                `Entradas estoque: ${entradas.length}`,
-                `Títulos: ${titulos.length}`,
-                `Itens processados: ${itensProcessados}`,
-                `Pendentes: ${pendentes.length}`,
-            ].filter(Boolean).join(' • ');
-
-            if (!pendentes.length) {
-                $processPendentes.innerHTML = `<tr><td colspan="3" class="text-center text-body-secondary py-4">Sem pendências.</td></tr>`;
-            } else {
-                $processPendentes.innerHTML = pendentes.map(p => `
-                    <tr>
-                        <td class="text-body-secondary">${p.index ?? ''}</td>
-                        <td>${p.descricao || p.forn_cod || '-'}</td>
-                        <td class="text-body-secondary">${p.motivo || '-'}</td>
-                    </tr>
-                `).join('');
-            }
-
-            openModal($processModalEl);
-        };
-
-        const processar = async (documentoId) => {
             try {
-                const resp = await fetch(`${apiBase}entrada/`, {
+                if (window.bootstrap && window.bootstrap.Modal) {
+                    window.bootstrap.Modal.getOrCreateInstance($wizModal).show();
+                }
+            } catch (e) { }
+        };
+
+        const iniciar = async () => {
+            if (!wizardBase || !state.documentoId) return;
+            const dataEntrada = String($wizDataEntrada.value || '').trim();
+            if (!dataEntrada) {
+                toast('Informe a data de entrada.', 'warning');
+                return;
+            }
+            try {
+                $wizBtnIniciar.disabled = true;
+                const resp = await fetch(`${wizardBase}iniciar/`, {
                     method: 'POST',
                     headers: authHeaders(),
                     body: JSON.stringify({
                         empresa: Number(empresa),
                         filial: Number(filial),
-                        documento_id: Number(documentoId)
+                        documento_id: Number(state.documentoId),
+                        data_entrada: dataEntrada
                     })
                 });
                 const data = await resp.json().catch(() => null);
                 if (!resp.ok) {
-                    toast(data?.detail || 'Falha ao processar entrada.', 'danger');
+                    toast(data?.detail || 'Falha ao registrar entrada (nfev).', 'danger');
                     return;
                 }
-                toast('Processamento concluído.', 'success');
-                showResultado(data);
+                state.notaId = Number(data?.nota_id);
+                state.numero = data?.numero_nota_fiscal;
+                state.serie = data?.serie;
+                $tabProdutos.disabled = false;
+                $tabFinanceiro.disabled = false;
+                toast('Entrada registrada na nfev.', 'success');
+                try { window.bootstrap.Tab.getOrCreateInstance($tabProdutos).show(); } catch (e) { }
+            } finally {
+                $wizBtnIniciar.disabled = false;
+            }
+        };
+
+        const mapearItens = async () => {
+            if (!state.notaId) {
+                toast('Registre a entrada primeiro.', 'warning');
+                return;
+            }
+            try {
+                $wizBtnMapear.disabled = true;
+                const resp = await fetch(`${wizardBase}${encodeURIComponent(state.notaId)}/preprocessar/`, { headers: authHeaders() });
+                const data = await resp.json().catch(() => null);
+                if (!resp.ok) {
+                    toast(data?.detail || 'Falha ao carregar itens.', 'danger');
+                    return;
+                }
+                const itens = Array.isArray(data?.itens) ? data.itens : [];
+                if (!itens.length) {
+                    toast('Nenhum item encontrado na nota.', 'warning');
+                    return;
+                }
+                if (typeof window.renderModalItens === 'function') {
+                    window.renderModalItens(empresa, filial, state.numero, itens);
+                } else {
+                    toast('Modal de itens não está disponível.', 'danger');
+                }
+            } finally {
+                $wizBtnMapear.disabled = false;
+            }
+        };
+
+        const carregarFinanceiro = async () => {
+            if (!state.notaId) return;
+            try {
+                const resp = await fetch(`${wizardBase}${encodeURIComponent(state.notaId)}/financeiro/`, { headers: authHeaders() });
+                const data = await resp.json().catch(() => null);
+                if (!resp.ok) return;
+                const dups = Array.isArray(data?.duplicatas) ? data.duplicatas : [];
+                const total = data?.valor_total_nota || '';
+                if (!dups.length) {
+                    const venc = data?.data_entrada || data?.data_emissao || '-';
+                    $wizFinTbody.innerHTML = `<tr><td>-</td><td>${venc}</td><td class="text-end">${fmtMoney(total)}</td></tr>`;
+                    $wizFinStatus.textContent = `1 título sugerido • Total ${fmtMoney(total)}`;
+                    state.parcelas = [{ numero: '1', vencimento: venc, valor: total }];
+                    return;
+                }
+                $wizFinTbody.innerHTML = dups.map(d => `
+                    <tr>
+                        <td><input class="form-control form-control-sm fin-numero" value="${d.numero || ''}" /></td>
+                        <td><input class="form-control form-control-sm fin-venc" type="date" value="${d.vencimento || ''}" /></td>
+                        <td><input class="form-control form-control-sm fin-valor text-end" value="${d.valor || ''}" /></td>
+                    </tr>
+                `).join('');
+                const soma = dups.reduce((acc, x) => acc + (Number(x.valor || 0) || 0), 0);
+                $wizFinStatus.textContent = `${dups.length} título(s) sugerido(s) • Soma ${fmtMoney(soma)}`;
+                state.parcelas = dups.map((d, idx) => ({ numero: String(d.numero || (idx + 1)), vencimento: d.vencimento || '', valor: d.valor || '' }));
+            } catch (e) { }
+        };
+
+        const parseCondicao = (text) => {
+            const parts = String(text || '').trim().split(/\s+/).filter(Boolean);
+            const dias = parts.map(x => Number(x)).filter(n => isFinite(n) && n >= 0);
+            return dias;
+        };
+
+        const addDays = (isoDate, days) => {
+            try {
+                const d = new Date(String(isoDate) + 'T00:00:00');
+                d.setDate(d.getDate() + Number(days || 0));
+                return d.toISOString().slice(0, 10);
             } catch (e) {
-                toast(`Falha ao processar: ${e}`, 'danger');
+                return isoDate;
+            }
+        };
+
+        const gerarParcelas = async () => {
+            if (!state.notaId) {
+                toast('Registre a entrada primeiro.', 'warning');
+                return;
+            }
+            const dias = parseCondicao($wizCondicao ? $wizCondicao.value : '');
+            if (!dias.length) {
+                toast('Informe a condição (dias).', 'warning');
+                return;
+            }
+            const base = ($wizDataBase && $wizDataBase.value) ? $wizDataBase.value : (new Date().toISOString().slice(0, 10));
+            let total = 0;
+            try {
+                const resp = await fetch(`${wizardBase}${encodeURIComponent(state.notaId)}/financeiro/`, { headers: authHeaders() });
+                const data = await resp.json().catch(() => null);
+                if (resp.ok) total = Number(data?.valor_total_nota || 0) || 0;
+            } catch (e) { }
+            const valorParcela = dias.length ? (total / dias.length) : total;
+            const parcelas = dias.map((d, idx) => ({
+                numero: String(idx + 1),
+                vencimento: addDays(base, d),
+                valor: String(valorParcela.toFixed(2))
+            }));
+            state.parcelas = parcelas;
+            $wizFinTbody.innerHTML = parcelas.map(p => `
+                <tr>
+                    <td><input class="form-control form-control-sm fin-numero" value="${p.numero}" /></td>
+                    <td><input class="form-control form-control-sm fin-venc" type="date" value="${p.vencimento}" /></td>
+                    <td><input class="form-control form-control-sm fin-valor text-end" value="${p.valor}" /></td>
+                </tr>
+            `).join('');
+            const soma = parcelas.reduce((acc, x) => acc + (Number(x.valor || 0) || 0), 0);
+            $wizFinStatus.textContent = `${parcelas.length} parcela(s) • Soma ${fmtMoney(soma)}`;
+        };
+
+        const readParcelasFromTable = () => {
+            if (!$wizFinTbody) return null;
+            const rows = Array.from($wizFinTbody.querySelectorAll('tr'));
+            const out = [];
+            for (const r of rows) {
+                const num = r.querySelector('.fin-numero');
+                const venc = r.querySelector('.fin-venc');
+                const val = r.querySelector('.fin-valor');
+                if (!venc || !val) continue;
+                const vencimento = String(venc.value || '').trim();
+                const valor = String(val.value || '').trim().replace(',', '.');
+                if (!vencimento || !valor) continue;
+                out.push({ numero: String((num && num.value) || '').trim(), vencimento, valor });
+            }
+            return out.length ? out : null;
+        };
+
+        const finalizar = async () => {
+            if (!state.notaId) return;
+            const entradas = Array.isArray(state.entradas) ? state.entradas : [];
+            if (!entradas.length) {
+                $wizMapAlert.textContent = 'Mapeie os itens antes de finalizar.';
+                $wizMapAlert.style.display = '';
+                toast('Mapeie os itens antes de finalizar.', 'warning');
+                return;
+            }
+            try {
+                $wizBtnFinalizar.disabled = true;
+                const parcelas = readParcelasFromTable() || state.parcelas;
+                const forma_pagamento = ($wizFormaPagamento && $wizFormaPagamento.value) ? String($wizFormaPagamento.value) : '';
+                const documento_id = state.documentoId ? Number(state.documentoId) : null;
+                const resp = await fetch(`${wizardBase}${encodeURIComponent(state.notaId)}/finalizar/`, {
+                    method: 'POST',
+                    headers: authHeaders(),
+                    body: JSON.stringify({ entradas, parcelas, forma_pagamento, documento_id })
+                });
+                const data = await resp.json().catch(() => null);
+                if (!resp.ok) {
+                    toast(data?.detail || 'Falha ao finalizar.', resp.status === 409 ? 'warning' : 'danger');
+                    return;
+                }
+                const status = data?.status || 'sucesso';
+                const entradasEstoque = Array.isArray(data?.entradas_estoque) ? data.entradas_estoque : [];
+                const titulos = Array.isArray(data?.titulos) ? data.titulos : [];
+                const pendentes = Array.isArray(data?.itens_pendentes) ? data.itens_pendentes : [];
+                $wizResultado.textContent = `Status: ${status} • Entradas estoque: ${entradasEstoque.length} • Títulos: ${titulos.length} • Pendentes: ${pendentes.length}`;
+                $wizResultado.style.display = '';
+                toast('Finalizado com sucesso.', 'success');
+                await fetchDocs();
+                await fetchEntradas();
+            } finally {
+                $wizBtnFinalizar.disabled = false;
             }
         };
 
@@ -447,20 +710,13 @@
         };
 
         document.addEventListener('click', (ev) => {
-            const btnProcessar = ev.target && ev.target.closest && ev.target.closest('.btn-processar');
-            if (btnProcessar) {
-                const docId = btnProcessar.getAttribute('data-doc-id');
+            const btnWizard = ev.target && ev.target.closest && ev.target.closest('.btn-wizard');
+            if (btnWizard) {
+                const docId = btnWizard.getAttribute('data-doc-id');
                 if (!docId) return;
-                btnProcessar.disabled = true;
-                processar(docId).finally(() => { btnProcessar.disabled = false; });
+                btnWizard.disabled = true;
+                openWizard(docId).finally(() => { btnWizard.disabled = false; });
                 return;
-            }
-            const btnItens = ev.target && ev.target.closest && ev.target.closest('.btn-ver-itens');
-            if (btnItens) {
-                const docId = btnItens.getAttribute('data-doc-id');
-                if (!docId) return;
-                btnItens.disabled = true;
-                showItensModal(docId).finally(() => { btnItens.disabled = false; });
             }
         });
 
@@ -468,6 +724,86 @@
         if ($btnImportar) $btnImportar.addEventListener('click', importar);
         if ($btnLimpar) $btnLimpar.addEventListener('click', () => { if ($xml) $xml.value = ''; if ($file) $file.value = ''; });
         if ($btnRecarregar) $btnRecarregar.addEventListener('click', fetchDocs);
+        if ($btnRecarregarEntradas) $btnRecarregarEntradas.addEventListener('click', fetchEntradas);
+        if ($wizBtnIniciar) $wizBtnIniciar.addEventListener('click', iniciar);
+        if ($wizBtnMapear) $wizBtnMapear.addEventListener('click', mapearItens);
+        if ($wizBtnFinalizar) $wizBtnFinalizar.addEventListener('click', finalizar);
+        if ($wizBtnGerarParcelas) $wizBtnGerarParcelas.addEventListener('click', gerarParcelas);
+        if ($tabFinanceiro) $tabFinanceiro.addEventListener('shown.bs.tab', carregarFinanceiro);
+        if ($tabProdutos) $tabProdutos.addEventListener('shown.bs.tab', () => { if ($wizMapAlert) $wizMapAlert.style.display = 'none'; });
+
+        window.confirmarProcessamento = async function () {
+            try {
+                state.entradas = Array.isArray(window.__itensSelecionados) ? window.__itensSelecionados : [];
+                const mapeados = state.entradas.filter(it => it && it.prod && String(it.prod).trim()).length;
+                $wizProdStatus.textContent = `${mapeados}/${state.entradas.length} item(ns) mapeado(s).`;
+                if (!mapeados) {
+                    $wizMapAlert.textContent = 'Nenhum item foi mapeado.';
+                    $wizMapAlert.style.display = '';
+                } else {
+                    $wizMapAlert.style.display = 'none';
+                }
+                const modalEl = document.getElementById('itens-modal');
+                if (modalEl && window.bootstrap && window.bootstrap.Modal) {
+                    const inst = window.bootstrap.Modal.getInstance(modalEl) || window.bootstrap.Modal.getOrCreateInstance(modalEl);
+                    inst.hide();
+                }
+                try { window.bootstrap.Tab.getOrCreateInstance($tabFinanceiro).show(); } catch (e) { }
+            } catch (e) { }
+        };
+
+        window.autoMapearTodos = async function () {
+            if (!state.notaId) {
+                toast('Registre a entrada primeiro.', 'warning');
+                return;
+            }
+            const modal = document.getElementById('itens-modal');
+            if (!modal) return;
+            const itens = Array.isArray(window.__itensSelecionados) ? window.__itensSelecionados : [];
+            try {
+                const resp = await fetch(`${wizardBase}${encodeURIComponent(state.notaId)}/auto-mapear/`, {
+                    method: 'POST',
+                    headers: authHeaders(),
+                    body: JSON.stringify({ itens })
+                });
+                const data = await resp.json().catch(() => null);
+                if (!resp.ok) {
+                    toast(data?.detail || 'Falha ao auto-mapear.', 'danger');
+                    return;
+                }
+                const out = Array.isArray(data?.itens) ? data.itens : [];
+                renderModalItens(empresa, filial, state.numero, out);
+            } catch (e) {
+                toast('Falha ao auto-mapear.', 'danger');
+            }
+        };
+
+        window.criarProdutosFaltantes = async function () {
+            if (!state.notaId) {
+                toast('Registre a entrada primeiro.', 'warning');
+                return;
+            }
+            const itens = Array.isArray(window.__itensSelecionados) ? window.__itensSelecionados : [];
+            try {
+                const resp = await fetch(`${wizardBase}${encodeURIComponent(state.notaId)}/criar-produtos/`, {
+                    method: 'POST',
+                    headers: authHeaders(),
+                    body: JSON.stringify({ itens })
+                });
+                const data = await resp.json().catch(() => null);
+                if (!resp.ok) {
+                    toast(data?.detail || 'Falha ao criar produtos.', 'danger');
+                    return;
+                }
+                const out = Array.isArray(data?.itens) ? data.itens : [];
+                const criados = Array.isArray(data?.criados) ? data.criados : [];
+                if (criados.length) toast(`${criados.length} produto(s) criado(s).`, 'success');
+                renderModalItens(empresa, filial, state.numero, out.map(i => ({ ...i, produto_sugerido: i.prod || i.produto_sugerido || null })));
+            } catch (e) {
+                toast('Falha ao criar produtos.', 'danger');
+            }
+        };
+
         if ($file) $file.addEventListener('change', () => {
             const f = $file.files && $file.files[0];
             if (!f) return;
@@ -490,6 +826,7 @@
         });
 
         fetchDocs();
+        fetchEntradas();
     })();
 </script>
 {% endblock %}

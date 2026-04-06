@@ -313,22 +313,34 @@ class NotasDestinadasViewSet(viewsets.ModelViewSet):
             if not nota:
                 return Response({'error': 'Nota fiscal não encontrada'}, status=404)
             item = request.data.get('item') or {}
-            cod = item.get('forn_cod') or item.get('cProd')
+            cod = (item.get('forn_cod') or item.get('cProd') or '').strip()
             nome = item.get('descricao') or item.get('xProd')
             un = item.get('unidade') or item.get('uCom')
             ncm = item.get('ncm') or ''
             ean = item.get('ean') or ''
-            if not cod or not nome or not un:
-                return Response({'error': 'Campos obrigatórios: cod, nome, un'}, status=400)
+            if not nome or not un:
+                return Response({'error': 'Campos obrigatórios: nome, un'}, status=400)
             un_obj = UnidadeMedida.objects.using(banco).filter(unid_codi=un).first()
             if not un_obj:
                 return Response({'error': 'Unidade não encontrada'}, status=404)
-            existente = Produtos.objects.using(banco).filter(prod_codi=cod, prod_empr=str(nota.empresa)).first()
-            if existente:
-                return Response({'produto': existente.prod_codi, 'status': 'ja_existente'})
+            empresa_str = str(nota.empresa)
+            if cod:
+                existente = Produtos.objects.using(banco).filter(prod_codi=cod, prod_empr=empresa_str).first()
+                if existente:
+                    return Response({'produto': existente.prod_codi, 'status': 'ja_existente'})
+            else:
+                ultimo = Produtos.objects.using(banco).filter(prod_empr=empresa_str).order_by('-prod_codi').first()
+                try:
+                    proximo = int(getattr(ultimo, 'prod_codi', '0')) + 1 if (ultimo and str(getattr(ultimo, 'prod_codi', '')).isdigit()) else 1
+                except Exception:
+                    proximo = 1
+                while Produtos.objects.using(banco).filter(prod_codi=str(proximo), prod_empr=empresa_str).exists():
+                    proximo += 1
+                cod = str(proximo)
             novo = Produtos.objects.using(banco).create(
-                prod_empr=str(nota.empresa),
+                prod_empr=empresa_str,
                 prod_codi=cod,
+                prod_codi_nume=cod,
                 prod_nome=nome,
                 prod_unme=un_obj,
                 prod_ncm=ncm or '',

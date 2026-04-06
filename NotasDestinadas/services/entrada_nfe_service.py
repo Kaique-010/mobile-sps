@@ -7,6 +7,7 @@ import xml.etree.ElementTree as ET
 from decimal import Decimal
 from datetime import datetime, date
 from typing import List, Dict, Optional, Any
+from django.core.exceptions import ValidationError
 from django.db import transaction
 import re
 
@@ -198,7 +199,9 @@ class EntradaNFeService:
         nota_entrada,
         entradas: List[Dict[str, Any]],
         banco: str = 'default',
-        usuario_id: int = 0
+        usuario_id: int = 0,
+        duplicatas_override: Optional[List[Dict[str, Any]]] = None,
+        forma_pagamento: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Confirma o processamento da nota com produtos mapeados
@@ -217,23 +220,6 @@ class EntradaNFeService:
         
         try:
             with transaction.atomic(using=banco):
-                # 1. Verifica se já existe título para esta nota
-                titulo_existente = Titulospagar.objects.using(banco).filter(
-                    titu_empr=nota_entrada.empresa,
-                    titu_fili=nota_entrada.filial,
-                    titu_seri=nota_entrada.serie,
-                    titu_titu=str(nota_entrada.numero_nota_fiscal)
-                ).first()
-                
-                if titulo_existente:
-                    logger.warning(f"Título já existe para nota {nota_entrada.numero_nota_fiscal}")
-                    return {
-                        'status': 'titulo_existente',
-                        'titulospagar': {
-                            'titu_titu': titulo_existente.titu_titu
-                        }
-                    }
-                
                 # 2. Busca fornecedor
                 fornecedor = None                    
                 if nota_entrada.emitente_cnpj:
@@ -242,8 +228,6 @@ class EntradaNFeService:
                     cnpj_limpo = re.sub(r'\D', '', nota_entrada.emitente_cpf)
                 else:
                     cnpj_limpo = ''
-                    cnpj_limpo = re.sub(r'\D', '', nota_entrada.emitente_cnpj)
-                    cnpj_limpo = re.sub(r'\D', '', nota_entrada.emitente_cnpj)
                 fornecedor = Entidades.objects.using(banco).filter(
                     Q(enti_cnpj=cnpj_limpo) | Q(enti_cpf=cnpj_limpo),
                     enti_empr=int(nota_entrada.empresa)
@@ -255,6 +239,28 @@ class EntradaNFeService:
                             Q(enti_cnpj=cnpj_mask) | Q(enti_cpf=cnpj_mask),
                             enti_empr=int(nota_entrada.empresa)
                         ).first()
+
+                if not fornecedor:
+                    fornecedor = EntradaNFeService._criar_fornecedor_da_nota(nota_entrada=nota_entrada, banco=banco)
+                    if fornecedor:
+                        try:
+                            nota_entrada.cliente = int(getattr(fornecedor, "enti_clie", 0) or 0) or None
+                            nota_entrada.save(using=banco)
+                        except Exception:
+                            pass
+
+                if not fornecedor:
+                    raise ValidationError("Fornecedor da nota não encontrado e não foi possível cadastrar automaticamente.")
+
+                fornecedor_id = int(getattr(fornecedor, "enti_clie", 0) or 0)
+                serie = str(getattr(nota_entrada, "serie", "") or "").strip() or "1"
+                numero_nf = str(getattr(nota_entrada, "numero_nota_fiscal", "") or "").strip()
+                if not numero_nf:
+                    raise ValidationError("Número da nota não encontrado.")
+
+                forma = (forma_pagamento or "").strip() or "54"
+                if len(forma) != 2:
+                    forma = "54"
                 
                 # 3. Processa cada item
                 for idx, entrada in enumerate(entradas):
@@ -321,26 +327,68 @@ class EntradaNFeService:
                 valor_nota = float(nota_entrada.valor_total_nota or 0)
                 
                 # Busca duplicatas no XML
-                duplicatas = EntradaNFeService._extrair_duplicatas(nota_entrada.xml_nfe)
+                duplicatas = duplicatas_override if duplicatas_override is not None else EntradaNFeService._extrair_duplicatas(nota_entrada.xml_nfe)
                 
                 if duplicatas:
                     # Cria título para cada duplicata
-                    for dup in duplicatas:
+                    for idx_dup, dup in enumerate(duplicatas, start=1):
+                        parc = str(dup.get('numero') or '').strip() or str(idx_dup)
+                        existe_titulo = Titulospagar.objects.using(banco).filter(
+                            titu_empr=int(nota_entrada.empresa),
+                            titu_fili=int(nota_entrada.filial),
+                            titu_forn=int(fornecedor_id),
+                            titu_titu=str(nota_entrada.numero_nota_fiscal),
+                            titu_seri=str(serie),
+                            titu_parc=str(parc),
+                        ).first()
+                        if existe_titulo:
+                            logger.warning(f"Título já existe para nota {nota_entrada.numero_nota_fiscal} parc={parc}")
+                            return {
+                                'status': 'titulo_existente',
+                                'titulospagar': {
+                                    'titu_titu': existe_titulo.titu_titu,
+                                    'titu_seri': existe_titulo.titu_seri,
+                                    'titu_parc': existe_titulo.titu_parc,
+                                }
+                            }
                         titulo = Titulospagar.objects.using(banco).create(
                             titu_empr=int(nota_entrada.empresa),
                             titu_fili=int(nota_entrada.filial),
                             titu_forn=int(fornecedor.enti_clie) if fornecedor else None,
                             titu_tipo='Entrada',  # Entrada
                             titu_titu=str(nota_entrada.numero_nota_fiscal),
+                            titu_seri=str(serie),
+                            titu_parc=str(parc),
                             titu_valo=dup['valor'],
                             titu_venc=dup['vencimento'],
                             titu_emis=nota_entrada.data_emissao or date.today(),
                             titu_aber='A',  # Aberto
                             titu_usua_lanc=usuario_id,
+                            titu_form_reci=str(forma),
                             titu_hist=f"NF-e {nota_entrada.numero_nota_fiscal} - {dup['numero']}"
                         )
                         titulos_criados.append(titulo)
                 else:
+                    base_venc = nota_entrada.data_saida_entrada or nota_entrada.data_emissao or date.today()
+                    parc = "1"
+                    existe_titulo = Titulospagar.objects.using(banco).filter(
+                        titu_empr=int(nota_entrada.empresa),
+                        titu_fili=int(nota_entrada.filial),
+                        titu_forn=int(fornecedor_id),
+                        titu_titu=str(nota_entrada.numero_nota_fiscal),
+                        titu_seri=str(serie),
+                        titu_parc=str(parc),
+                    ).first()
+                    if existe_titulo:
+                        logger.warning(f"Título já existe para nota {nota_entrada.numero_nota_fiscal}")
+                        return {
+                            'status': 'titulo_existente',
+                            'titulospagar': {
+                                'titu_titu': existe_titulo.titu_titu,
+                                'titu_seri': existe_titulo.titu_seri,
+                                'titu_parc': existe_titulo.titu_parc,
+                            }
+                        }
                     # Cria título único com valor total
                     titulo = Titulospagar.objects.using(banco).create(
                         titu_empr=int(nota_entrada.empresa),
@@ -348,11 +396,14 @@ class EntradaNFeService:
                         titu_forn=int(fornecedor.enti_clie) if fornecedor else None,
                         titu_tipo='Entrada',  # Entrada
                         titu_titu=str(nota_entrada.numero_nota_fiscal),
+                        titu_seri=str(serie),
+                        titu_parc=str(parc),
                         titu_valo=valor_nota,
-                        titu_venc=(nota_entrada.data_emissao or date.today()),
+                        titu_venc=base_venc,
                         titu_emis=nota_entrada.data_emissao or date.today(),
                         titu_aber='A',  # Aberto
                         titu_usua_lanc=usuario_id,
+                        titu_form_reci=str(forma),
                         titu_hist=f"NF-e {nota_entrada.numero_nota_fiscal}"
                     )
                     titulos_criados.append(titulo)
@@ -399,6 +450,68 @@ class EntradaNFeService:
             pass
         
         return duplicatas
+
+    @staticmethod
+    def _criar_fornecedor_da_nota(*, nota_entrada, banco: str):
+        from Entidades.models import Entidades
+        from Entidades.utils import proxima_entidade
+
+        empresa = int(getattr(nota_entrada, "empresa", 0) or 0)
+        filial = int(getattr(nota_entrada, "filial", 0) or 0)
+        if not empresa:
+            return None
+
+        cnpj = re.sub(r"\D", "", str(getattr(nota_entrada, "emitente_cnpj", "") or ""))
+        cpf = re.sub(r"\D", "", str(getattr(nota_entrada, "emitente_cpf", "") or ""))
+        doc = cnpj or cpf
+
+        nome = (getattr(nota_entrada, "emitente_razao_social", "") or "").strip() or (getattr(nota_entrada, "emitente_nome_fantasia", "") or "").strip() or "FORNECEDOR"
+        fant = (getattr(nota_entrada, "emitente_nome_fantasia", "") or "").strip() or nome
+        ie = (getattr(nota_entrada, "emitente_ie", "") or "").strip() or None
+
+        cep_raw = str(getattr(nota_entrada, "emitente_cep", "") or "")
+        cep = re.sub(r"\D", "", cep_raw)[:8] or "00000000"
+        ende = (getattr(nota_entrada, "emitente_logradouro", "") or "").strip()[:60] or "SEM ENDERECO"
+        nume = (getattr(nota_entrada, "emitente_numero", "") or "").strip()[:10] or "S/N"
+        bair = (getattr(nota_entrada, "emitente_bairro", "") or "").strip()[:60] or "CENTRO"
+        cida = (getattr(nota_entrada, "emitente_nome_municipio", "") or "").strip()[:60] or "NAO INFORMADO"
+        uf = (getattr(nota_entrada, "emitente_uf", "") or "").strip().upper()[:2] or "ZZ"
+        fone = re.sub(r"\D", "", str(getattr(nota_entrada, "emitente_fone", "") or ""))[:14] or None
+
+        if doc:
+            qs = Entidades.objects.using(banco).filter(enti_empr=empresa)
+            if len(doc) == 14:
+                ex = qs.filter(enti_cnpj=doc).first()
+            else:
+                ex = qs.filter(enti_cpf=doc).first()
+            if ex:
+                return ex
+
+        proximo = proxima_entidade(empresa, filial, banco)
+        try:
+            return Entidades.objects.using(banco).create(
+                enti_empr=empresa,
+                enti_clie=int(proximo),
+                enti_nome=nome[:100],
+                enti_tipo_enti="FO",
+                enti_fant=fant[:100],
+                enti_cnpj=doc if len(doc) == 14 else None,
+                enti_cpf=doc if len(doc) == 11 else None,
+                enti_insc_esta=ie[:14] if ie else None,
+                enti_cep=cep,
+                enti_ende=ende,
+                enti_nume=nume,
+                enti_cida=cida,
+                enti_esta=uf,
+                enti_bair=bair,
+                enti_comp=None,
+                enti_fone=fone,
+                enti_emai=None,
+                enti_tien="E",
+                enti_situ="1",
+            )
+        except Exception:
+            return None
 
     @staticmethod
     def _get_text(element, path: str, ns: dict = None, converter=None):

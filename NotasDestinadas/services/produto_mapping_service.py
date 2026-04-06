@@ -92,19 +92,29 @@ class ProdutoMappingService:
             ncm = (item.get('ncm') or '').strip()
             ean = (item.get('ean') or '').strip()
             
-            if not forn_cod or not descricao:
-                logger.error("Código e descrição são obrigatórios para criar produto")
+            if not descricao:
+                logger.error("Descrição é obrigatória para criar produto")
                 return None
             
-            # Verifica se já existe
-            existe = Produtos.objects.using(banco).filter(
-                prod_codi=forn_cod,
-                prod_empr=str(empresa)
-            ).first()
-            
-            if existe:
-                logger.info(f"Produto {forn_cod} já existe")
-                return existe.prod_codi
+            empresa_str = str(empresa)
+            if forn_cod:
+                existe = Produtos.objects.using(banco).filter(
+                    prod_codi=forn_cod,
+                    prod_empr=empresa_str
+                ).first()
+                
+                if existe:
+                    logger.info(f"Produto {forn_cod} já existe")
+                    return existe.prod_codi
+            else:
+                ultimo = Produtos.objects.using(banco).filter(prod_empr=empresa_str).order_by('-prod_codi').first()
+                try:
+                    proximo = int(getattr(ultimo, 'prod_codi', '0')) + 1 if (ultimo and str(getattr(ultimo, 'prod_codi', '')).isdigit()) else 1
+                except Exception:
+                    proximo = 1
+                while Produtos.objects.using(banco).filter(prod_codi=str(proximo), prod_empr=empresa_str).exists():
+                    proximo += 1
+                forn_cod = str(proximo)
             
             # Busca unidade de medida
             un_obj = UnidadeMedida.objects.using(banco).filter(
@@ -121,15 +131,14 @@ class ProdutoMappingService:
             
             # Cria o produto
             produto = Produtos.objects.using(banco).create(
-                prod_empr=str(empresa),
+                prod_empr=empresa_str,
                 prod_codi=forn_cod,
+                prod_codi_nume=forn_cod,
                 prod_nome=descricao[:120],  # Limita tamanho
                 prod_unme=un_obj,
                 prod_ncm=ncm[:8] if ncm else '',
                 prod_coba=ean if ean and ean != 'SEM GTIN' else '',
-                prod_ativo=True,
-                prod_tipo='P',  # Produto
-                prod_orig='0',  # Nacional
+                prod_gtin=ean if ean and ean != 'SEM GTIN' else 'SEM GTIN',
             )
             
             logger.info(f"Produto {produto.prod_codi} criado automaticamente")

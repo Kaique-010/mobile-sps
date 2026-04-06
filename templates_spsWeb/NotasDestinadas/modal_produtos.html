@@ -120,7 +120,7 @@
                     <input type="hidden" id="criar-item-index">
                     <div class="mb-2">
                         <label class="form-label">Código *</label>
-                        <input type="text" class="form-control" id="criar-cod" required>
+                        <input type="text" class="form-control" id="criar-cod" placeholder="(Automático)">
                     </div>
                     <div class="mb-2">
                         <label class="form-label">Descrição *</label>
@@ -294,23 +294,21 @@
     }
 
     async function autoMapearTodos() {
-        // Esta função seria chamada no backend para sugerir todos automaticamente
-        alert('Função de auto-mapeamento em desenvolvimento. Use as sugestões individuais por enquanto.');
+        try {
+            if (typeof window.autoMapearTodos === 'function' && window.autoMapearTodos !== autoMapearTodos) {
+                return await window.autoMapearTodos();
+            }
+        } catch (e) { }
+        alert('Auto-mapeamento não disponível nesta tela.');
     }
 
     async function criarProdutosFaltantes() {
-        const pendentes = window.__itensSelecionados.filter(it => !it.prod || !it.prod.trim());
-
-        if (pendentes.length === 0) {
-            alert('Todos os itens já estão mapeados!');
-            return;
-        }
-
-        if (!confirm(`Deseja criar automaticamente ${pendentes.length} produto(s) faltante(s)?`)) {
-            return;
-        }
-
-        alert('Função em desenvolvimento. Por favor, crie os produtos manualmente.');
+        try {
+            if (typeof window.criarProdutosFaltantes === 'function' && window.criarProdutosFaltantes !== criarProdutosFaltantes) {
+                return await window.criarProdutosFaltantes();
+            }
+        } catch (e) { }
+        alert('Criação automática não disponível nesta tela.');
     }
 
     function limparMapeamento() {
