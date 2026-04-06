@@ -1,6 +1,7 @@
 import logging
 
 from django.http import Http404
+import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils.timezone import now
 from rest_framework import viewsets, status, filters
@@ -26,18 +27,44 @@ from ..services import baixar_titulo_receber, excluir_baixa_receber, reabrir_tit
 
 logger = logging.getLogger(__name__)
 
+class TitulosreceberFilter(django_filters.FilterSet):
+    titu_empr = django_filters.NumberFilter(field_name='titu_empr')
+    titu_clie = django_filters.CharFilter(field_name='titu_clie', lookup_expr='exact')
+    titu_situ = django_filters.CharFilter(field_name='titu_situ', lookup_expr='exact')
+    titu_aber = django_filters.CharFilter(field_name='titu_aber', lookup_expr='exact')
+    titu_venc__gte = django_filters.DateFilter(
+        field_name='titu_venc',
+        lookup_expr='gte',
+        input_formats=[
+            '%Y-%m-%d',
+            '%Y-%m-%dT%H:%M:%S.%fZ',
+            '%Y-%m-%dT%H:%M:%SZ',
+            '%Y-%m-%dT%H:%M:%S.%f%z',
+            '%Y-%m-%dT%H:%M:%S%z',
+        ],
+    )
+    titu_venc__lte = django_filters.DateFilter(
+        field_name='titu_venc',
+        lookup_expr='lte',
+        input_formats=[
+            '%Y-%m-%d',
+            '%Y-%m-%dT%H:%M:%S.%fZ',
+            '%Y-%m-%dT%H:%M:%SZ',
+            '%Y-%m-%dT%H:%M:%S.%f%z',
+            '%Y-%m-%dT%H:%M:%S%z',
+        ],
+    )
+
+    class Meta:
+        model = Titulosreceber
+        fields = []
+
 class TitulosreceberViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
     """CRUD de títulos a receber com ações de baixa, histórico e exclusão de baixas."""
     modulo_requerido = 'Financeiro'
     serializer_class = TitulosreceberSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = {
-        'titu_empr': ['exact'],
-        'titu_clie': ['exact', 'icontains'],
-        'titu_situ': ['exact'],
-        'titu_venc': ['gte', 'lte'],
-        'titu_aber': ['exact', 'icontains'],
-    }
+    filterset_class = TitulosreceberFilter
     search_fields = ['titu_titu', 'titu_clie', 'titu_aber']  
     ordering_fields = ['titu_venc', 'titu_valo']
     ordering = ['-titu_venc']
@@ -56,19 +83,23 @@ class TitulosreceberViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             'titu_form_reci','titu_aber'
         )
 
-        hoje = now().date()
-        inicio_mes = hoje.replace(day=1)
-
-        if inicio_mes.month == 12:
-            fim_mes = inicio_mes.replace(year=inicio_mes.year + 1, month=1, day=1)
-        else:
-            fim_mes = inicio_mes.replace(month=inicio_mes.month + 1, day=1)
-
-
-        queryset = queryset.filter(
-            titu_venc__gte=inicio_mes,
-            titu_venc__lt=fim_mes
+        params = self.request.query_params
+        possui_filtro_venc = any(
+            k in params for k in ('titu_venc__gte', 'titu_venc__lte', 'titu_venc__gt', 'titu_venc__lt')
         )
+        if not possui_filtro_venc:
+            hoje = now().date()
+            inicio_mes = hoje.replace(day=1)
+
+            if inicio_mes.month == 12:
+                fim_mes = inicio_mes.replace(year=inicio_mes.year + 1, month=1, day=1)
+            else:
+                fim_mes = inicio_mes.replace(month=inicio_mes.month + 1, day=1)
+
+            queryset = queryset.filter(
+                titu_venc__gte=inicio_mes,
+                titu_venc__lt=fim_mes
+            )
 
         cliente_nome = self.request.query_params.get('cliente_nome')
         empresa_id = self.request.query_params.get('titu_empr')
