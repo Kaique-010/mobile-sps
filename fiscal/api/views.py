@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 from core.utils import get_licenca_db_config
 from fiscal.api.serializers import (
     GerarDevolucaoSerializer,
+    GerarEntradaSerializer,
     ImportarXMLSerializer,
     NFeDocumentoSerializer,
     NFeDocumentoDetailSerializer,
@@ -60,10 +61,15 @@ class DocumentosView(APIView):
         qs = NFeDocumento.objects.using(banco).all().order_by("-criado_em")
         empresa = request.query_params.get("empresa")
         filial = request.query_params.get("filial")
+        tipo = request.query_params.get("tipo")
         if empresa is not None:
             qs = qs.filter(empresa=int(empresa))
         if filial is not None:
             qs = qs.filter(filial=int(filial))
+        if tipo:
+            tipo = str(tipo).strip().lower()
+            if tipo in ("entrada", "saida"):
+                qs = qs.filter(tipo=tipo)
 
         data = NFeDocumentoSerializer(qs[:200], many=True).data
         return Response(data)
@@ -119,6 +125,54 @@ class GerarDevolucaoView(APIView):
                 "finalidade": nota.finalidade,
                 "tipo_operacao": nota.tipo_operacao,
             },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class GerarEntradaView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = GerarEntradaSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        banco = get_licenca_db_config(request) or "default"
+        empresa = serializer.validated_data["empresa"]
+        filial = serializer.validated_data["filial"]
+        documento_id = serializer.validated_data["documento_id"]
+
+        doc = (
+            NFeDocumento.objects.using(banco)
+            .filter(pk=int(documento_id), empresa=int(empresa), filial=int(filial))
+            .first()
+        )
+        if not doc:
+            return Response({"detail": "Documento não encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+        xml = (doc.xml_original or "").strip()
+        if not xml:
+            return Response({"detail": "Documento não possui XML."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            from fiscal.services.entrada_xml_service import EntradaXMLService
+
+            usuario_id = getattr(getattr(request, "user", None), "usua_codi", 0) or getattr(
+                getattr(request, "user", None), "id", 0
+            )
+            service = EntradaXMLService(banco=banco)
+            result = service.processar(
+                empresa=int(empresa),
+                filial=int(filial),
+                documento_id=int(documento_id),
+                usuario_id=int(usuario_id or 0),
+            )
+        except ValidationError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            result,
             status=status.HTTP_201_CREATED,
         )
 

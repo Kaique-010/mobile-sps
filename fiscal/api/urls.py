@@ -1,6 +1,6 @@
 from django.urls import path
 
-from fiscal.api.views import DocumentoDetailView, DocumentosView, GerarDevolucaoView, ImportarXMLView
+from fiscal.api.views import DocumentoDetailView, DocumentosView, GerarDevolucaoView, GerarEntradaView, ImportarXMLView
 
 
 urlpatterns = [
@@ -8,5 +8,6 @@ urlpatterns = [
     path("nfe/documentos/", DocumentosView.as_view(), name="fiscal-nfe-documentos"),
     path("nfe/documentos/<int:documento_id>/", DocumentoDetailView.as_view(), name="fiscal-nfe-documento-detail"),
     path("nfe/devolucao/", GerarDevolucaoView.as_view(), name="fiscal-nfe-devolucao"),
+    path("nfe/entrada/", GerarEntradaView.as_view(), name="fiscal-nfe-entrada"),
 ]
 

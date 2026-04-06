@@ -24,6 +24,12 @@ class GerarDevolucaoSerializer(serializers.Serializer):
     emitir = serializers.BooleanField(required=False, default=False)
 
 
+class GerarEntradaSerializer(serializers.Serializer):
+    empresa = serializers.IntegerField()
+    filial = serializers.IntegerField()
+    documento_id = serializers.IntegerField()
+
+
 class NFeDocumentoSerializer(serializers.ModelSerializer):
     class Meta:
         model = NFeDocumento

@@ -257,25 +257,25 @@
               <th></th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="ordensTbody">
             {% for ordem in ordens %}
             <tr>
               <td>{{ ordem.orpr_codi }}</td>
               <td>{{ ordem.orpr_nuca }}</td>
               <td>{{ ordem.cliente_nome|default:ordem.orpr_clie }}</td>
               <td>{{ ordem.vendedor_nome|default:"" }}</td>
-              <td>{{ ordem.get_orpr_tipo_display }}</td>
+              <td>{{ ordem.tipo_label }}</td>
               <td>
                 {% if ordem.orpr_stat == '2' %}
-                <span class="badge bg-success">{{ ordem.get_orpr_stat_display }}</span>
+                <span class="badge bg-success">{{ ordem.status_label }}</span>
                 {% elif ordem.orpr_stat == '1' %}
-                <span class="badge bg-warning text-dark">{{ ordem.get_orpr_stat_display }}</span>
+                <span class="badge bg-warning text-dark">{{ ordem.status_label }}</span>
                 {% elif ordem.orpr_stat == '9' %}
-                <span class="badge bg-danger">{{ ordem.get_orpr_stat_display }}</span>
+                <span class="badge bg-danger">{{ ordem.status_label }}</span>
                 {% elif ordem.orpr_stat == '3' %}
-                <span class="badge bg-primary">{{ ordem.get_orpr_stat_display }}</span>
+                <span class="badge bg-primary">{{ ordem.status_label }}</span>
                 {% else %}
-                <span class="badge bg-secondary">{{ ordem.get_orpr_stat_display }}</span>
+                <span class="badge bg-secondary">{{ ordem.status_label }}</span>
                 {% endif %}
               </td>
               <td>{{ ordem.orpr_prev|date:'d/m/Y H:i' }}</td>
@@ -295,13 +295,13 @@
         </table>
       </div>
 
-      <div class="d-md-none">
+      <div class="d-md-none" id="ordensCards">
         {% for ordem in ordens %}
         <div class="card mb-2">
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-start gap-2">
               <div>
-                <div class="fw-semibold">#{{ ordem.orpr_codi }} - {{ ordem.get_orpr_tipo_display }}</div>
+                <div class="fw-semibold">#{{ ordem.orpr_codi }} - {{ ordem.tipo_label }}</div>
                 <div class="small text-muted">Cartão: {{ ordem.orpr_nuca }}</div>
                 <div class="small">Cliente: {{ ordem.cliente_nome|default:ordem.orpr_clie }}</div>
                 <div class="small">Vendedor(a): {{ ordem.vendedor_nome|default:"" }}</div>
@@ -309,15 +309,15 @@
               </div>
               <div class="text-end">
                 {% if ordem.orpr_stat == '2' %}
-                <span class="badge bg-success">{{ ordem.get_orpr_stat_display }}</span>
+                <span class="badge bg-success">{{ ordem.status_label }}</span>
                 {% elif ordem.orpr_stat == '1' %}
-                <span class="badge bg-warning text-dark">{{ ordem.get_orpr_stat_display }}</span>
+                <span class="badge bg-warning text-dark">{{ ordem.status_label }}</span>
                 {% elif ordem.orpr_stat == '9' %}
-                <span class="badge bg-danger">{{ ordem.get_orpr_stat_display }}</span>
+                <span class="badge bg-danger">{{ ordem.status_label }}</span>
                 {% elif ordem.orpr_stat == '3' %}
-                <span class="badge bg-primary">{{ ordem.get_orpr_stat_display }}</span>
+                <span class="badge bg-primary">{{ ordem.status_label }}</span>
                 {% else %}
-                <span class="badge bg-secondary">{{ ordem.get_orpr_stat_display }}</span>
+                <span class="badge bg-secondary">{{ ordem.status_label }}</span>
                 {% endif %}
               </div>
             </div>
@@ -352,7 +352,7 @@
               <th></th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="ourivesTbody">
             {% for o in ourives %}
             <tr>
               <td>{{ o.ouri_codi }}</td>
@@ -373,7 +373,7 @@
         </table>
       </div>
 
-      <div class="d-md-none">
+      <div class="d-md-none" id="ourivesCards">
         {% for o in ourives %}
         <div class="card mb-2">
           <div class="card-body">
@@ -410,7 +410,7 @@
               <th></th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="etapasTbody">
             {% for e in etapas %}
             <tr>
               <td>{{ e.etap_codi }}</td>
@@ -432,7 +432,7 @@
         </table>
       </div>
 
-      <div class="d-md-none">
+      <div class="d-md-none" id="etapasCards">
         {% for e in etapas %}
         <div class="card mb-2">
           <div class="card-body">
@@ -798,6 +798,85 @@
 
     const tabBtn = document.querySelector('[data-bs-target="#tab-dashboard"]');
     if (tabBtn) tabBtn.addEventListener('shown.bs.tab', () => loadDashboard(collectParams()));
+
+    let ordensPage = Number('{{ page_obj.number|default:"1" }}');
+    let ourivesPage = Number('{{ ourives_page.number|default:"1" }}');
+    let etapasPage = Number('{{ etapas_page.number|default:"1" }}');
+    let loading = false;
+
+    async function fetchPage(params) {
+      const s = new URLSearchParams(params);
+      const url = `${location.pathname}?${s.toString()}`;
+      const r = await fetch(url, { credentials: 'same-origin' });
+      if (!r.ok) return null;
+      const html = await r.text();
+      const parser = new DOMParser();
+      return parser.parseFromString(html, 'text/html');
+    }
+
+    function activeTabId() {
+      const el = document.querySelector('.tab-pane.active');
+      return el ? el.id : '';
+    }
+
+    async function loadMoreOrdens() {
+      if (loading) return;
+      loading = true;
+      const status = document.querySelector('input[name="status"]')?.value || '';
+      const tipo = document.querySelector('select[name="tipo"]')?.value || '';
+      const doc = await fetchPage({ page: ordensPage + 1, status, tipo });
+      loading = false;
+      if (!doc) return;
+      const newRows = doc.querySelectorAll('#ordensTbody tr');
+      if (newRows.length === 0) return;
+      const tbody = document.getElementById('ordensTbody');
+      newRows.forEach(tr => tbody.appendChild(tr));
+      const newCards = doc.querySelectorAll('#ordensCards > .card');
+      const cards = document.getElementById('ordensCards');
+      newCards.forEach(c => cards.appendChild(c));
+      ordensPage += 1;
+    }
+
+    async function loadMoreOurives() {
+      if (loading) return;
+      loading = true;
+      const doc = await fetchPage({ page_ourives: ourivesPage + 1 });
+      loading = false;
+      if (!doc) return;
+      const newRows = doc.querySelectorAll('#ourivesTbody tr');
+      if (newRows.length === 0) return;
+      const tbody = document.getElementById('ourivesTbody');
+      newRows.forEach(tr => tbody.appendChild(tr));
+      const newCards = doc.querySelectorAll('#ourivesCards > .card');
+      const cards = document.getElementById('ourivesCards');
+      newCards.forEach(c => cards.appendChild(c));
+      ourivesPage += 1;
+    }
+
+    async function loadMoreEtapas() {
+      if (loading) return;
+      loading = true;
+      const doc = await fetchPage({ page_etapas: etapasPage + 1 });
+      loading = false;
+      if (!doc) return;
+      const newRows = doc.querySelectorAll('#etapasTbody tr');
+      if (newRows.length === 0) return;
+      const tbody = document.getElementById('etapasTbody');
+      newRows.forEach(tr => tbody.appendChild(tr));
+      const newCards = doc.querySelectorAll('#etapasCards > .card');
+      const cards = document.getElementById('etapasCards');
+      newCards.forEach(c => cards.appendChild(c));
+      etapasPage += 1;
+    }
+
+    window.addEventListener('scroll', () => {
+      const nearBottom = (window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 200);
+      if (!nearBottom) return;
+      const tab = activeTabId();
+      if (tab === 'tab-lista') loadMoreOrdens();
+      else if (tab === 'tab-ourives') loadMoreOurives();
+      else if (tab === 'tab-etapas') loadMoreEtapas();
+    });
   });
 </script>
 {% endblock %}

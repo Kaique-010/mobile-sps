@@ -23,8 +23,30 @@ class ImportarXMLService:
         if not chave or len(chave) != 44:
             raise ValidationError("Chave da NF-e inválida ou não encontrada no XML.")
 
-        tipo = normalizado.get("tipo") or "entrada"
+        tipo = normalizado.get("tipo") or ""
+        tipo = str(tipo or "").strip().lower()
         if tipo not in ("entrada", "saida"):
+            tipo = ""
+
+        try:
+            filial_obj = (
+                Filiais.objects.using(self.banco)
+                .only("empr_docu")
+                .filter(empr_empr=int(empresa), empr_codi=int(filial))
+                .first()
+            )
+        except Exception:
+            filial_obj = None
+
+        filial_doc = _only_digits(getattr(filial_obj, "empr_docu", "") or "") if filial_obj else ""
+        dest_doc = _only_digits(((normalizado.get("destinatario") or {}).get("documento")) or "")
+        emit_doc = _only_digits(((normalizado.get("emitente") or {}).get("documento")) or "")
+
+        if filial_doc and dest_doc == filial_doc:
+            tipo = "entrada"
+        elif filial_doc and emit_doc == filial_doc:
+            tipo = "saida"
+        elif not tipo:
             tipo = "entrada"
 
         json_normalizado = dumps_json(normalizado)

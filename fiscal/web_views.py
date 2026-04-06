@@ -15,3 +15,19 @@ class DevolucoesView(TemplateView):
                 pass
         return super().dispatch(request, *args, **kwargs)
 
+
+class EntradasXMLView(TemplateView):
+    template_name = "Fiscal/entradas_xml.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        slug = (kwargs.get("slug") or get_licenca_slug() or "").strip().lower()
+        if slug:
+            try:
+                request.session["slug"] = slug
+            except Exception:
+                pass
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        return super().get_context_data(**kwargs)
+

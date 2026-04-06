@@ -27,6 +27,8 @@ logger = logging.getLogger(__name__)
 
 
 class OrdemProducaoService:
+    DATA_MINIMA = datetime.datetime(2000, 1, 1)
+
     @staticmethod
     def ensure_moveetapeso_table(*, using):
         try:
@@ -94,6 +96,14 @@ class OrdemProducaoService:
             qs = qs.filter(orpr_empr=int(empresa))
         if filial is not None:
             qs = qs.filter(orpr_fili=int(filial))
+        qs = qs.filter(
+            orpr_entr__gte=OrdemProducaoService.DATA_MINIMA,
+            orpr_prev__gte=OrdemProducaoService.DATA_MINIMA,
+        ).filter(
+            Q(orpr_fech__isnull=True) | Q(orpr_fech__gte=OrdemProducaoService.DATA_MINIMA)
+        ).filter(
+            Q(orpr_daen__isnull=True) | Q(orpr_daen__gte=OrdemProducaoService.DATA_MINIMA)
+        )
         return qs
     
     @staticmethod

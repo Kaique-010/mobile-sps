@@ -15,6 +15,9 @@ class OrdemproducaoViewSet(BaseMultiDBModelViewSet):
     ordering_fields = ['orpr_tipo', 'orpr_codi', 'orpr_entr', 'orpr_clie', 'orpr_prev']
     ordering = ['-orpr_codi']
 
+    def get_queryset(self):
+        return OrdemProducaoService.listar_ordens(using=self.get_banco())
+
     @action(detail=False, methods=['get'])
     def dashboard(self, request):
         return Response(OrdemProducaoService.dashboard(using=self.get_banco()))

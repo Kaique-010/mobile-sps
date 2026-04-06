@@ -29,11 +29,34 @@ def montar_db_config(lic):
 class Command(BaseCommand):
     help = "Atualiza apenas o campo prod_url em todos os bancos de licenças"
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--slug",
+            type=str,
+            help="Slug do tenant específico. Se omitido, roda em todos os tenants.",
+        )
+        parser.add_argument(
+            "--tenant",
+            type=str,
+            help="Alias de --slug (compatibilidade).",
+        )
+
     def handle(self, *args, **options):
+        slug = options.get("slug")
+        tenant = options.get("tenant")
+        if slug and tenant and slug != tenant:
+            raise CommandError("Use apenas um entre --slug e --tenant (ou informe o mesmo valor em ambos).")
+
+        slug_alvo = slug or tenant
         licencas = carregar_licencas_dict()
 
         if not licencas:
             raise CommandError("Nenhuma licença encontrada")
+
+        if slug_alvo:
+            licencas = [l for l in licencas if l.get("slug") == slug_alvo]
+            if not licencas:
+                raise CommandError(f"Nenhuma licença encontrada para slug={slug_alvo}")
 
         for lic in licencas:
             alias = f"tenant_{lic['slug']}"

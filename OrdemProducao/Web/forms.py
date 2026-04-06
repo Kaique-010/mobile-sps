@@ -12,6 +12,18 @@ class OrdemproducaoForm(forms.ModelForm):
             if field_name in self.fields:
                 self.fields[field_name].input_formats = dt_formats
 
+    def clean_orpr_entr(self):
+        v = self.cleaned_data.get("orpr_entr")
+        if v and v.year < 2000:
+            raise forms.ValidationError("A data de entrada deve ser a partir do ano 2000.")
+        return v
+
+    def clean_orpr_prev(self):
+        v = self.cleaned_data.get("orpr_prev")
+        if v and v.year < 2000:
+            raise forms.ValidationError("A data de previsão deve ser a partir do ano 2000.")
+        return v
+
     class Meta:
         model = Ordemproducao
         fields = [
@@ -141,6 +153,18 @@ class MoveetapaForm(forms.ModelForm):
         for field_name in ["moet_dain", "moet_dafi"]:
             if field_name in self.fields:
                 self.fields[field_name].input_formats = dt_formats
+
+    def clean_moet_dain(self):
+        v = self.cleaned_data.get("moet_dain")
+        if v and v.year < 2000:
+            raise forms.ValidationError("A data de início deve ser a partir do ano 2000.")
+        return v
+
+    def clean_moet_dafi(self):
+        v = self.cleaned_data.get("moet_dafi")
+        if v and v.year < 2000:
+            raise forms.ValidationError("A data de fim deve ser a partir do ano 2000.")
+        return v
 
     class Meta:
         model = Moveetapa
