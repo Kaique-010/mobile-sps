@@ -6,7 +6,7 @@ class UsuariosPermission(BasePermission):
             return False
 
         nome = getattr(request.user, "username", None) or getattr(request.user, "usua_nome", None)
-        return bool(nome and nome.lower() in ["admin", "mobile", "master"])
+        return bool(nome and nome.lower() in ["admin", "mobile", "master", "web", "lais"])
 
     def has_object_permission(self, request, view, obj):
         return self.has_permission(request, view)

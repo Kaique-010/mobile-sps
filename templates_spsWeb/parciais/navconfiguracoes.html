@@ -1,5 +1,5 @@
 {% if request.user.is_authenticated %}
-{% if request.user.usua_nome|lower == 'admin' or request.user.usua_nome|lower == 'mobile' or request.user.usua_nome|lower == 'web' %}
+{% if request.user.usua_nome|lower == 'admin' or request.user.usua_nome|lower == 'mobile' or request.user.usua_nome|lower == 'web' or request.user.usua_nome|lower == 'lais' %}
 <li class="nav-item">
     <a class="nav-link" data-slug-route="/web/{slug}/parametros-admin/" data-modulo="parametros_admin">
         <i class="bi bi-gear fs-3"></i> Parametrizações de Módulos

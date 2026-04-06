@@ -68,6 +68,16 @@ class Command(BaseCommand):
         except:
             pass
 
+        try:
+            post_migrate.disconnect(create_contenttypes, dispatch_uid="django.contrib.contenttypes.management.create_contenttypes")
+        except:
+            pass
+
+        try:
+            post_migrate.disconnect(create_contenttypes, sender=None)
+        except:
+            pass
+
         app_label = options["app_label"]
         target_license = options.get("license")
         licencas = carregar_licencas_dict()
@@ -84,7 +94,7 @@ class Command(BaseCommand):
 
         try:
             for i, lic in enumerate(licencas, 1):
-                alias = f"tenant_{lic['slug']}"
+                alias = lic["slug"]
                 self.stdout.write(f"[{i}/{len(licencas)}] Processando {alias}...")
 
                 connections.databases[alias] = montar_db_config(lic)
@@ -153,21 +163,106 @@ class Command(BaseCommand):
 
                 # 3️⃣ App alvo
                 self.stdout.write(self.style.SUCCESS(f"[{alias}] migrate {app_label}"))
-                try:
+                def _run_migrate_app():
                     call_command(
                         "migrate",
                         app_label,
                         database=alias,
-                        interactive=False,  
+                        interactive=False,
                         verbosity=1,
                         fake_initial=True,
                     )
-                except Exception as e:
-                    if "column \"name\" of relation \"django_content_type\" does not exist" in str(e):
-                         self.stdout.write(self.style.WARNING(f"[{alias}] Ignorando erro de coluna name ao migrar {app_label}: {e}"))
-                    else:
-                        self.stdout.write(self.style.ERROR(f"[{alias}] Erro crítico ao migrar {app_label}: {e}"))
-                        # Não damos raise para não parar o loop de licenças, mas registramos o erro
+
+                def _apply_cfop_fake_for_legacy_conflict(msg: str) -> bool:
+                    from django.db.migrations.recorder import MigrationRecorder
+
+                    recorder = MigrationRecorder(connections[alias])
+                    applied_migrations = recorder.applied_migrations()
+
+                    def _record(migration_name: str) -> bool:
+                        key = (app_label, migration_name)
+                        if key in applied_migrations:
+                            return False
+                        recorder.record_applied(app_label, migration_name)
+                        applied_migrations.add(key)
+                        return True
+
+                    to_record: list[str] = []
+
+                    if "relation" in msg and "already exists" in msg:
+                        if "produto_fiscal_padrao" in msg or "ncm_fiscal_padrao" in msg:
+                            to_record.append("0002_auto_20260113_1534")
+                        if "cfop_fiscal_padrao" in msg:
+                            to_record.append("0006_cfopfiscalpadrao")
+                        if "ncm_fiscal_padrao_ncm_id" in msg:
+                            to_record.append("0009_ncmfiscalpadrao_multi")
+
+                    if "column" in msg and "already exists" in msg:
+                        if "cfop_fiscal_padrao" in msg or "ncm_fiscal_padrao" in msg or "produto_fiscal_padrao" in msg:
+                            to_record.append("0007_fiscalpadrao_contexto")
+                        if "column \"cfop\"" in msg and "ncm_fiscal_padrao" in msg:
+                            to_record.append("0008_ncmfiscalpadrao_cfop")
+
+                    if not to_record:
+                        return False
+
+                    changed = False
+                    for migration_name in to_record:
+                        if _record(migration_name):
+                            changed = True
+                            self.stdout.write(self.style.WARNING(f"[{alias}] Marcando {app_label}.{migration_name} como FAKED (registro direto)."))
+
+                    return changed
+
+                if app_label.lower() == "cfop":
+                    attempts = 0
+                    while True:
+                        try:
+                            _run_migrate_app()
+                            break
+                        except Exception as e:
+                            msg = str(e)
+                            if "column \"name\" of relation \"django_content_type\" does not exist" in msg:
+                                self.stdout.write(self.style.WARNING(f"[{alias}] Ignorando erro de coluna name ao migrar {app_label}: {e}"))
+                                break
+
+                            applied_fix = _apply_cfop_fake_for_legacy_conflict(msg)
+                            if applied_fix and attempts < 3:
+                                attempts += 1
+                                self.stdout.write(self.style.WARNING(f"[{alias}] Reexecutando migrate {app_label} após ajustes..."))
+                                continue
+
+                            self.stdout.write(self.style.ERROR(f"[{alias}] Erro crítico ao migrar {app_label}: {e}"))
+                            break
+                else:
+                    try:
+                        _run_migrate_app()
+                    except Exception as e:
+                        msg = str(e)
+                        if "column \"name\" of relation \"django_content_type\" does not exist" in msg:
+                            self.stdout.write(self.style.WARNING(f"[{alias}] Ignorando erro de coluna name ao migrar {app_label}: {e}"))
+                        else:
+                            self.stdout.write(self.style.ERROR(f"[{alias}] Erro crítico ao migrar {app_label}: {e}"))
+
+                if app_label.lower() == "cfop":
+                    try:
+                        with connections[alias].cursor() as cursor:
+                            cursor.execute(
+                                """
+                                SELECT column_name
+                                FROM information_schema.columns
+                                WHERE table_name = 'ncm_fiscal_padrao'
+                                  AND column_name IN ('uf_origem', 'uf_destino', 'tipo_entidade')
+                                """
+                            )
+                            cols = {r[0] for r in cursor.fetchall()}
+                        missing = [c for c in ("uf_origem", "uf_destino", "tipo_entidade") if c not in cols]
+                        if missing:
+                            self.stdout.write(self.style.ERROR(f"[{alias}] ncm_fiscal_padrao ainda sem colunas: {', '.join(missing)}"))
+                        else:
+                            self.stdout.write(self.style.SUCCESS(f"[{alias}] ncm_fiscal_padrao com colunas de contexto OK"))
+                    except Exception as e:
+                        self.stdout.write(self.style.WARNING(f"[{alias}] Não foi possível validar colunas de ncm_fiscal_padrao: {e}"))
         except KeyboardInterrupt:
             self.stdout.write(self.style.ERROR("\n🛑 Operação interrompida pelo usuário."))
             sys.exit(0)

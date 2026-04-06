@@ -18,6 +18,23 @@ _thread_locals = threading.local()
 
 User = get_user_model()
 
+def _safe_model_to_dict(instance):
+    try:
+        fields = [f.name for f in getattr(instance, "_meta").fields]
+        return model_to_dict(instance, fields=fields)
+    except Exception:
+        data = {}
+        try:
+            for f in getattr(instance, "_meta").fields:
+                try:
+                    data[f.name] = getattr(instance, f.name)
+                except Exception:
+                    data[f.name] = None
+        except Exception:
+            pass
+        return data
+    
+    
 def resolver_usuario_no_banco(usuario, banco):
     if not usuario:
         return None
@@ -83,7 +100,7 @@ def capturar_dados_antes_salvar(sender, instance, **kwargs):
             # Armazenar no contexto da thread
             if not hasattr(_thread_locals, 'dados_antes'):
                 _thread_locals.dados_antes = {}
-            _thread_locals.dados_antes[f"{sender.__name__}_{instance.pk}"] = model_to_dict(dados_anteriores)
+            _thread_locals.dados_antes[f"{sender.__name__}_{instance.pk}"] = _safe_model_to_dict(dados_anteriores)
         except (sender.DoesNotExist, sender.MultipleObjectsReturned):
             # Ignorar se não existe ou se há múltiplos objetos com a mesma PK
             # Isso pode acontecer em modelos com chaves primárias compostas mal definidas
@@ -111,7 +128,7 @@ def log_criacao_atualizacao(sender, instance, created, **kwargs):
         if not licenca_slug:
             return
         
-        dados_depois = model_to_dict(instance)
+        dados_depois = _safe_model_to_dict(instance)
         dados_antes = None
         campos_alterados = None
         tipo_acao = 'POST' if created else 'PUT'
@@ -178,7 +195,7 @@ def log_exclusao(sender, instance, **kwargs):
         if not licenca_slug:
             return
         
-        dados_antes = model_to_dict(instance)
+        dados_antes = _safe_model_to_dict(instance)
         
         # Extrair empresa da URL se disponível
         empresa = None

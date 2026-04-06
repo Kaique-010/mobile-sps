@@ -81,6 +81,27 @@
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12);
   }
 
+  .password-wrapper {
+    position: relative;
+  }
+  .password-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: none;
+    background: transparent;
+    color: #667eea;
+    padding: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .password-toggle:focus {
+    outline: none;
+  }
+
   /* Botão Entrar: gradiente violeta/azul com leve elevação no hover */
   .btn-login {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -192,6 +213,10 @@
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.22);
   }
 
+  [data-bs-theme="dark"] .password-toggle {
+    color: #88a4e6;
+  }
+
   /* Botão Entrar: tons escuros coesos e sombra mais marcada no hover */
   [data-bs-theme="dark"] .btn-login {
     background: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
@@ -285,7 +310,12 @@
           <label for="password" class="form-label d-flex align-items-center gap-2">
             <i class="bi bi-shield-lock"></i><span>Senha</span>
           </label>
-          <input type="password" class="form-control" id="password" name="password" placeholder="••••" required>
+          <div class="password-wrapper">
+            <input type="password" class="form-control" id="password" name="password" placeholder="••••" required>
+            <button type="button" class="password-toggle" aria-label="Mostrar/ocultar senha" aria-pressed="false">
+              <i class="bi bi-eye"></i>
+            </button>
+          </div>
         </div>
         <button type="submit" class="btn-login w-100 d-flex align-items-center justify-content-center gap-2"
           aria-busy="false">
@@ -313,6 +343,21 @@
     if (docuParam) document.getElementById('docu').value = docuParam;
     if (userParam) document.getElementById('username').value = userParam;
     if (passParam) document.getElementById('password').value = passParam;
+
+    var pwd = document.getElementById('password');
+    var toggle = document.querySelector('.password-toggle');
+    if (pwd && toggle) {
+      toggle.addEventListener('click', function () {
+        var isText = pwd.type === 'text';
+        pwd.type = isText ? 'password' : 'text';
+        toggle.setAttribute('aria-pressed', (!isText).toString());
+        var icon = toggle.querySelector('i');
+        if (icon) {
+          icon.classList.toggle('bi-eye');
+          icon.classList.toggle('bi-eye-slash');
+        }
+      });
+    }
   });
 
   const showError = (msg) => {

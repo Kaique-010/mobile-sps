@@ -344,6 +344,8 @@ class AuditoriaMiddleware:
                     modulos = getattr(request, 'modulos_disponiveis', []) or get_modulos_disponiveis()
                     modulos_lower = {str(m).lower() for m in modulos}
                     app_slug = str(app_candidate).lower()
+                    app_slug_us = app_slug.replace('-', '_')
+                    app_slug_dash = app_slug.replace('_', '-')
 
                     aliases = {
                         'os': ['o_s', 'ordemdeservico'],
@@ -359,9 +361,11 @@ class AuditoriaMiddleware:
                         'gestao-obras': ['gestaoobras'],
                         'gestaoobras': ['gestao-obras'],
                     }
-                    candidates = {app_slug}
+                    candidates = {app_slug, app_slug_us, app_slug_dash}
                     for alt in aliases.get(app_slug, []):
                         candidates.add(alt)
+                        candidates.add(str(alt).replace('-', '_'))
+                        candidates.add(str(alt).replace('_', '-'))
 
                     allowed = any(c in modulos_lower for c in candidates)
                     if not allowed and not request.path.startswith('/api/auditoria/'):

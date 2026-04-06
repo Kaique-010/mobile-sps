@@ -29,7 +29,7 @@
             </li>
 
             {% if request.user.is_authenticated %}
-                {% if request.user.usua_nome|lower == 'admin' or request.user.usua_nome|lower == 'mobile' %}
+                {% if request.user.usua_nome|lower == 'admin' or request.user.usua_nome|lower == 'mobile' or request.user.usua_nome|lower == 'web'  or request.user.usua_nome|lower == 'lais' %}
                 <li class="nav-item">
                     <div class="d-flex align-items-center">
                         <a class="nav-link flex-grow-1" href="/web/login/" data-slug-route="/web/{slug}/perfil/">
@@ -97,7 +97,7 @@
                         </li>
 
                         {% if request.user.is_authenticated %}
-                            {% if request.user.usua_nome|lower == 'admin' or request.user.usua_nome|lower == 'mobile' %}
+                            {% if request.user.usua_nome|lower == 'admin' or request.user.usua_nome|lower == 'mobile'  or request.user.usua_nome|lower == 'lais'  or request.user.usua_nome|lower == 'web' %}
                             <li class="nav-item">
                                 <div class="d-flex align-items-center">
                                     <a class="nav-link flex-grow-1" href="/web/login/" data-slug-route="/web/{slug}/licencas/users/">

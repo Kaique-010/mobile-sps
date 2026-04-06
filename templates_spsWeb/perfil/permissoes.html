@@ -2,6 +2,14 @@
 {% block title %}Permissões do Perfil{% endblock %}
 {% block content %}
 <div class="container">
+{% if messages %}
+<div id="django-toast-data" style="display:none">
+    {% for message in messages %}
+    <div data-text="{{ message|escapejs }}" data-tags="{{ message.tags }}"></div>
+    {% endfor %}
+</div>
+{% endif %}
+<div id="toast-container" style="position: fixed; top: 16px; right: 16px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none;" aria-live="polite" aria-atomic="true"></div>
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h4 class="mb-0">Permissões do Perfil: {{ perfil.perf_nome }}</h4>
     <a class="btn btn-sm btn-outline-secondary" href="{% url 'perfil_sincronizar_api' slug=slug %}">
@@ -119,6 +127,73 @@
 </form>
 </div>
 <script>
+function showToast(text, variant) {
+  var container = document.getElementById('toast-container');
+  if (!container) return;
+  var el = document.createElement('div');
+  el.style.pointerEvents = 'auto';
+  el.style.minWidth = '260px';
+  el.style.maxWidth = '380px';
+  el.style.background = '#0e1523';
+  el.style.border = '1px solid rgba(226, 232, 240, 0.16)';
+  el.style.color = '#e2e8f0';
+  el.style.borderRadius = '12px';
+  el.style.padding = '10px 12px';
+  el.style.boxShadow = '0 10px 30px rgba(0, 0, 0, 0.35)';
+  el.style.display = 'flex';
+  el.style.alignItems = 'flex-start';
+  el.style.gap = '10px';
+  el.style.opacity = '0';
+  el.style.transform = 'translateY(-6px)';
+  el.style.transition = 'opacity 160ms ease, transform 160ms ease';
+  var dot = document.createElement('div');
+  dot.style.width = '10px';
+  dot.style.height = '10px';
+  dot.style.borderRadius = '999px';
+  dot.style.marginTop = '4px';
+  dot.style.background = variant === 'error' ? '#f87171' : '#64ffda';
+  var txt = document.createElement('div');
+  txt.style.fontSize = '0.92rem';
+  txt.style.lineHeight = '1.25rem';
+  txt.style.wordBreak = 'break-word';
+  txt.textContent = text || '';
+  el.appendChild(dot);
+  el.appendChild(txt);
+  container.appendChild(el);
+  requestAnimationFrame(function () {
+    el.style.opacity = '1';
+    el.style.transform = 'translateY(0)';
+  });
+  setTimeout(function () {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(-6px)';
+    setTimeout(function () {
+      if (el.parentNode) el.parentNode.removeChild(el);
+    }, 220);
+  }, 2600);
+}
+
+var toastKey = 'toast_perfil_permissoes_saved';
+var toastData = document.getElementById('django-toast-data');
+if (toastData) {
+  Array.prototype.forEach.call(toastData.querySelectorAll('[data-text]'), function (node) {
+    var msg = node.getAttribute('data-text') || '';
+    var tags = (node.getAttribute('data-tags') || '').toLowerCase();
+    var variant = tags.indexOf('error') !== -1 ? 'error' : '';
+    if (msg) showToast(msg, variant);
+  });
+} else if (sessionStorage.getItem(toastKey) === '1') {
+  sessionStorage.removeItem(toastKey);
+  showToast('Permissões salvas com sucesso');
+}
+
+var formEl = document.querySelector('form[method="post"]');
+if (formEl) {
+  formEl.addEventListener('submit', function () {
+    sessionStorage.setItem(toastKey, '1');
+  });
+}
+
 const fm = document.getElementById('filter-model');
 const fmod = document.getElementById('filter-modulo');
 const fa = document.getElementById('filter-acao');

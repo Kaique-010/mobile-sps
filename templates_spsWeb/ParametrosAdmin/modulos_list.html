@@ -122,6 +122,59 @@
         grid-template-columns: 1fr;
       }
     }
+
+    .toast-container {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .toast {
+      pointer-events: auto;
+      min-width: 260px;
+      max-width: 360px;
+      background: #0e1523;
+      border: 1px solid rgba(226, 232, 240, 0.16);
+      color: #e2e8f0;
+      border-radius: 12px;
+      padding: 10px 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      opacity: 0;
+      transform: translateY(-6px);
+      transition: opacity 160ms ease, transform 160ms ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .toast .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      margin-top: 4px;
+      background: #64ffda;
+      flex: 0 0 auto;
+    }
+
+    .toast.error .dot {
+      background: #f87171;
+    }
+
+    .toast .text {
+      font-size: 0.92rem;
+      line-height: 1.25rem;
+      word-break: break-word;
+    }
   </style>
 </head>
 
@@ -149,10 +202,15 @@
         <li style="color:#64ffda">{{ message }}</li>
         {% endfor %}
       </ul>
+      <div id="django-toast-data" style="display:none">
+        {% for message in messages %}
+        <div data-text="{{ message|escapejs }}" data-tags="{{ message.tags }}"></div>
+        {% endfor %}
+      </div>
       {% endif %}
 
       <div class="grid">
-        {% for m in modulos %}
+        {% for m in modulos|dictsort:"nome" %}
         <div class="item" data-nome="{{ m.nome|lower }}">
           <div class="name">
             <i class="fa {{ m.icone|default:'fa-cube' }}"></i>
@@ -168,7 +226,7 @@
             </span>
           </div>
           <div class="actions">
-            <form method="post" action="{% url 'parametros_admin_toggle' modulo_slug=m.slug slug=slug %}">
+            <form method="post" action="{% url 'parametros_admin_toggle_modulo' modulo_slug=m.slug slug=slug %}">
               {% csrf_token %}
               <input type="hidden" name="empresa_id" value="{{ empresa_id }}" />
               <input type="hidden" name="filial_id" value="{{ filial_id }}" />
@@ -183,8 +241,40 @@
       </div>
     </div>
   </div>
+  <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
   <script>
     (function () {
+      function showToast(text, variant) {
+        var container = document.getElementById('toast-container');
+        if (!container) return;
+        var el = document.createElement('div');
+        el.className = 'toast' + (variant ? (' ' + variant) : '');
+        el.innerHTML = '<div class="dot"></div><div class="text"></div>';
+        el.querySelector('.text').textContent = text || '';
+        container.appendChild(el);
+        requestAnimationFrame(function () { el.classList.add('show'); });
+        setTimeout(function () {
+          el.classList.remove('show');
+          setTimeout(function () {
+            if (el.parentNode) el.parentNode.removeChild(el);
+          }, 220);
+        }, 2600);
+      }
+
+      var toastKey = 'toast_parametros_admin_modulos_saved';
+      var toastData = document.getElementById('django-toast-data');
+      if (toastData) {
+        Array.prototype.forEach.call(toastData.querySelectorAll('[data-text]'), function (node) {
+          var msg = node.getAttribute('data-text') || '';
+          var tags = (node.getAttribute('data-tags') || '').toLowerCase();
+          var variant = tags.indexOf('error') !== -1 ? 'error' : '';
+          if (msg) showToast(msg, variant);
+        });
+      } else if (sessionStorage.getItem(toastKey) === '1') {
+        sessionStorage.removeItem(toastKey);
+        showToast('Módulos salvos com sucesso');
+      }
+
       var input = document.getElementById('filtroNome');
       if (!input) return;
       var grid = document.querySelector('.grid');
@@ -217,9 +307,14 @@
               'X-Requested-With': 'XMLHttpRequest'
             }
           })
-            .then(response => response.json())
+            .then(function (response) {
+              var ct = (response.headers.get('content-type') || '').toLowerCase();
+              if (ct.indexOf('application/json') !== -1) return response.json();
+              throw new Error('Resposta não é JSON');
+            })
             .then(data => {
               if (data.success) {
+                sessionStorage.removeItem(toastKey);
                 // Atualizar a UI sem recarregar
                 var item = form.closest('.item');
                 var badge = item.querySelector('.badge:first-child');
@@ -236,9 +331,20 @@
                   badge.classList.remove('ok');
                   button.textContent = 'Ativar';
                 }
+                showToast('Módulo atualizado com sucesso');
               }
             })
-            .catch(error => console.error('Erro:', error));
+            .catch(function () {
+              sessionStorage.setItem(toastKey, '1');
+              window.location.reload();
+            });
+        });
+      });
+
+      var syncForms = document.querySelectorAll('form[action*="sync"]');
+      syncForms.forEach(function (form) {
+        form.addEventListener('submit', function () {
+          sessionStorage.setItem(toastKey, '1');
         });
       });
     })();

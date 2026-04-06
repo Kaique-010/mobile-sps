@@ -27,7 +27,7 @@ class PermissaoModuloViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
     serializer_class = PermissaoModuloSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['perm_empr', 'perm_fili', 'perm_modu__modu_nome', 'perm_ativ']
-    search_fields = ['perm_modu__modu_nome', 'perm_obse']
+    search_fields = ['perm_modu__modu_nome']
     
     def get_queryset(self, slug=None):
         slug = get_licenca_slug()
@@ -41,10 +41,8 @@ class PermissaoModuloViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         return ctx
 
     def perform_create(self, serializer):
-        banco = get_licenca_db_config(self.request)
         serializer.save(
             perm_usua_libe=getattr(self.request.user, 'usua_codi', 0),
-            using=banco
         )
     
     # Adicionar estes métodos na PermissaoModuloViewSet
@@ -414,6 +412,8 @@ class PermissaoModuloViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
 
 
 class AtualizaPermissoesModulosView(APIView):
+    permission_classes = [IsAuthenticated, PermissaoAdministrador]
+
     def get(self, request, slug=None):
         empresa_id = request.GET.get('empr')
         filial_id = request.GET.get('fili')
@@ -463,7 +463,7 @@ class AtualizaPermissoesModulosView(APIView):
         data = request.data
         empresa_id = data.get("empresa_id")  # ✅ Corrigido
         filial_id = data.get("filial_id")    # ✅ Corrigido
-        usuario = data.get("usuario", "sistema")
+        usuario = data.get("usuario") or getattr(request.user, "usua_codi", 0)
         modulos_data = data.get("modulos", [])
 
         if not all([empresa_id, filial_id, modulos_data]):
@@ -497,10 +497,6 @@ class AtualizaPermissoesModulosView(APIView):
                         "perm_usua_libe": usuario
                     }
                 )
-
-                # Atualiza o campo modu_ativ no próprio Modulo (liga ou desliga)
-                modulo.modu_ativ = ativo
-                modulo.save(using=banco)
 
                 atualizados += 1
 

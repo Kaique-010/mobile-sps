@@ -24,7 +24,18 @@ class PermissaoModuloSerializer(serializers.ModelSerializer):
     class Meta:
         model = PermissaoModulo
         fields = '__all__'
-        read_only_fields = ['perm_codi', 'perm_data_libe']
+        read_only_fields = ['perm_codi', 'perm_data_alte']
+
+    def create(self, validated_data):
+        banco = self.context.get('banco') or 'default'
+        return PermissaoModulo.objects.using(banco).create(**validated_data)
+
+    def update(self, instance, validated_data):
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+        banco = self.context.get('banco') or getattr(getattr(instance, '_state', None), 'db', None) or 'default'
+        instance.save(using=banco)
+        return instance
 
 
     def get_empresa_nome(self, obj):
@@ -39,8 +50,8 @@ class PermissaoModuloSerializer(serializers.ModelSerializer):
         try:
             banco = self.context.get('banco')
             filial = Filiais.objects.using(banco).get(
-                empr_empr=obj.perm_fili,
-                empr_codi=obj.perm_empr
+                empr_empr=obj.perm_empr,
+                empr_codi=obj.perm_fili
             )
             return filial.empr_nome
         except Filiais.DoesNotExist:

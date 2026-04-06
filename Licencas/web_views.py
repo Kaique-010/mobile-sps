@@ -353,7 +353,7 @@ class FilialUpdateView(DBSlugMixin, UpdateView):
 
 
 class RoleRequiredMixin:
-    allowed_roles = ('admin', 'mobile')
+    allowed_roles = ('admin', 'mobile', 'web', 'lais', 'master')
 
     def dispatch(self, request, *args, **kwargs):
         import logging
