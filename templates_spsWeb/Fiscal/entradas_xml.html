@@ -5,12 +5,8 @@
 <link rel="stylesheet" href="{% static 'css/list.css' %}">
 <div class="container">
     <h3 class="mb-5 mt-2 text-center">Entradas via XML</h3>
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div class="text-body-secondary">Importar XML, processar itens e registrar estoque + contas a pagar</div>
-    </div>
-    <button id="btn-recarregar" class="btn btn-outline-secondary" type="button" style="margin: 10px 0;">
-        <i class="bi bi-arrow-clockwise"></i> Recarregar
-    </button>
+
+ 
 
     <div class="row g-3">
         <div class="col-12 col-lg-6">
@@ -37,20 +33,30 @@
                     </div>
                     <div class="mb-2">
                         <label for="xml-input" class="form-label">Cole aqui o XML completo</label>
-                        <textarea id="xml-input" class="form-control" rows="10"
+                        <textarea id="xml-input" class="form-control" rows="3"
                             placeholder="&lt;nfeProc&gt;...&lt;/nfeProc&gt;"></textarea>
                     </div>
                     <div class="d-flex gap-2">
                         <button id="btn-importar" class="btn btn-primary" type="button">
                             <i class="bi bi-upload"></i> Importar
                         </button>
-                        <button id="btn-limpar" class="btn btn-outline-secondary" type="button">Limpar</button>
+                        <button id="btn-limpar" class="btn btn-outline-secondary" type="button"><i class="bi bi-eraser"></i> Limpar</button>
                     </div>
                 </div>
             </div>
         </div>
 
+
         <div class="col-12 col-lg-6">
+            <div class="alert alert-info mt-3 mb-0">
+                <div class="fw-semibold mb-1">Exemplo de fluxo</div>
+                <div class="small">
+                    1) Importe por chave ou XML<br />
+                    2) Clique em Abrir e registre a entrada (nfev)<br />
+                    3) Mapeie produtos<br />
+                    4) Finalize (Estoque + CP)
+                </div>
+            </div>
             <div class="card">
                 <div class="card-header d-flex align-items-center justify-content-between">
                     <div class="fw-semibold">Documentos importados (Entrada)</div>
@@ -77,15 +83,7 @@
                 </div>
             </div>
 
-            <div class="alert alert-info mt-3 mb-0">
-                <div class="fw-semibold mb-1">Exemplo de fluxo</div>
-                <div class="small">
-                    1) Importe por chave ou XML<br />
-                    2) Clique em Abrir e registre a entrada (nfev)<br />
-                    3) Mapeie produtos<br />
-                    4) Finalize (Estoque + CP)
-                </div>
-            </div>
+
         </div>
     </div>
 
@@ -336,6 +334,17 @@
             }
         };
 
+        const limparTabelaEDados = () => {
+            try { if (typeof $chave !== 'undefined' && $chave) $chave.value = ''; } catch (e) { }
+            if ($file) $file.value = '';
+            if ($xml) $xml.value = '';
+            if ($tbody) $tbody.innerHTML = '';
+            if ($count) $count.textContent = '0 itens';
+        };
+        if ($btnLimpar) {
+            $btnLimpar.addEventListener('click', limparTabelaEDados);
+        }
+
         const renderEmpty = (text) => {
             $tbody.innerHTML = `<tr><td colspan="4" class="text-center text-body-secondary py-4">${text}</td></tr>`;
         };
@@ -365,7 +374,7 @@
                 $tbody.innerHTML = docs.map(d => `
                     <tr>
                         <td class="text-body-secondary">${d.id}</td>
-                        <td><div class="text-truncate" style="max-width: 320px;" title="${d.chave || ''}">${d.chave || '-'}</div></td>
+                        <td><div class="text-truncate" style="max-width: 150px;" title="${d.chave || ''}">${d.chave || '-'}</div></td>
                         <td><span class="badge text-bg-secondary">${(d.tipo || '-')}</span></td>
                         <td class="text-end">
                             <button class="btn btn-sm btn-outline-primary btn-wizard" data-doc-id="${d.id}">
