@@ -12,8 +12,21 @@ from datetime import date, datetime
 from pprint import pformat
 from decimal import Decimal
 from core.utils import get_licenca_db_config
+from django.contrib.auth import get_user_model
 
 logger = logging.getLogger(__name__)
+UserModel = get_user_model()
+
+def resolver_usuario_no_banco(usuario, banco):
+    if not usuario:
+        return None
+    pk = getattr(usuario, 'pk', None)
+    if pk is None:
+        return None
+    try:
+        return UserModel.objects.using(banco).filter(pk=pk).first()
+    except Exception:
+        return None
 
 def converter_para_json_serializavel(obj):
     """Converte objetos Python para tipos serializáveis em JSON"""
@@ -604,8 +617,9 @@ class AuditoriaMiddleware:
             
             # Criar o log no banco da licença
             try:
+                usuario_no_banco = resolver_usuario_no_banco(user, banco)
                 log = LogAcao.objects.using(banco).create(
-                    usuario=user,
+                    usuario=usuario_no_banco,
                     data_hora=timezone.now(),
                     tipo_acao=method,
                     url=url,

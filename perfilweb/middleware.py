@@ -265,7 +265,11 @@ class PerfilPermissionMiddleware:
                 if app_label and model_token:
                     # Normaliza app_label imediatamente para garantir consistência
                     app_label = normalizar_app_label(app_label)
-                    model_name = model_token.replace('-', '').replace('_', '')
+                    model_name = (model_token or '').strip().lower().replace('-', '_')
+                    while '__' in model_name:
+                        model_name = model_name.replace('__', '_')
+                    if obj_id and not str(obj_id).isdigit():
+                        obj_id = None
                     method = request.method.upper()
                     if method == 'GET':
                         acao = 'visualizar' if obj_id else 'listar'

@@ -120,17 +120,30 @@ def _cadeia_perfis(perfil):
 
 def normalizar_app_label(app_label):
     """Normaliza app_label para lowercase e remove caracteres especiais"""
-    norm = app_label.lower().replace('-', '_')
-    if norm == 'dashboards':
+    norm = (app_label or '').strip().lower()
+    norm = norm.replace('-', '_').replace(' ', '_')
+    while '__' in norm:
+        norm = norm.replace('__', '_')
+    if norm in {'dash', 'dashboards', 'dashboard', 'dash_board'}:
         return 'dash'
-    if norm == 'Entidades':
+    if norm == 'entidades':
         return 'entidades'
     return norm
 
 
+def _app_labels_equivalentes(app_norm):
+    if app_norm == 'dash':
+        return ['dash', 'dashboards', 'dashboard', 'dash_board']
+    return [app_norm]
+
+
 def _normalizar_model_name(model_name):
     """Normaliza model_name para lowercase"""
-    return model_name.lower()
+    norm = (model_name or '').strip().lower()
+    norm = norm.replace('-', '_').replace(' ', '_')
+    while '__' in norm:
+        norm = norm.replace('__', '_')
+    return norm
 
 
 def _buscar_contenttype(banco, app_label, model_name):
@@ -145,116 +158,101 @@ def _buscar_contenttype(banco, app_label, model_name):
     
     # Estratégia 1: Busca direta exata
     try:
-        ct = ContentType.objects.using(banco).get(
-            app_label__iexact=app_norm,
-            model__iexact=model_norm
-        )
-        logger.info(f"[perfil_services] ContentType ENCONTRADO (direto): id={ct.id} app={ct.app_label} model={ct.model}")
-        return ct, "busca_direta"
-    except ContentType.DoesNotExist:
-        # Fallback: se for 'dash', tenta 'dashboards' (caso o banco tenha o nome antigo/novo)
-        if app_norm == 'dash':
+        for app_try in _app_labels_equivalentes(app_norm):
             try:
                 ct = ContentType.objects.using(banco).get(
-                    app_label__iexact='dashboards',
+                    app_label__iexact=app_try,
                     model__iexact=model_norm
                 )
-                logger.info(f"[perfil_services] ContentType ENCONTRADO (alias dash->dashboards): id={ct.id} app={ct.app_label}")
-                return ct, "busca_direta_alias"
+                logger.info(f"[perfil_services] ContentType ENCONTRADO (direto): id={ct.id} app={ct.app_label} model={ct.model}")
+                return ct, f"busca_direta_{app_try}"
             except ContentType.DoesNotExist:
                 pass
-        
-        # Fallback: se for 'pedidos', tenta 'pedidovenda'
-        if app_norm == 'pedidos' and model_norm == 'pedidos':
-            try:
-                ct = ContentType.objects.using(banco).get(
-                    app_label__iexact='Pedidos',
-                    model__iexact='pedidovenda'
-                )
-                logger.info(f"[perfil_services] ContentType ENCONTRADO (alias pedidos->pedidovenda): id={ct.id} app={ct.app_label}")
-                return ct, "busca_direta_alias_pedidos"
-            except ContentType.DoesNotExist:
-                pass
-
-        if app_norm == 'contas_a_pagar':
-            # Alias para titulospagar
-            if model_norm in ['titulospagar', 'titulos_pagar', 'titulos-pagar']:
-                try:
-                    ct = ContentType.objects.using(banco).get(
-                        app_label__iexact='contas_a_pagar',
-                        model__iexact='titulospagar'
-                    )
-                    logger.info(f"[perfil_services] ContentType ENCONTRADO (alias contas_a_pagar->titulospagar): id={ct.id} app={ct.app_label}")
-                    return ct, "alias_titulospagar"
-                except ContentType.DoesNotExist:
-                    pass
-
-            # Alias para bapatitulos
-            if model_norm in ['bapatitulos', 'bapa_titulos', 'bapa-titulos']:
-                try:
-                    ct = ContentType.objects.using(banco).get(
-                        app_label__iexact='contas_a_pagar',
-                        model__iexact='bapatitulos'
-                    )
-                    logger.info(f"[perfil_services] ContentType ENCONTRADO (alias contas_a_pagar->bapatitulos): id={ct.id} app={ct.app_label}")
-                    return ct, "alias_bapatitulos"
-                except ContentType.DoesNotExist:
-                    pass
-
-        if app_norm == 'contas_a_receber':
-            # Alias para titulosreceber
-            if model_norm in ['titulosreceber', 'titulos_receber', 'titulos-receber']:
-                try:
-                    ct = ContentType.objects.using(banco).get(
-                        app_label__iexact='contas_a_receber',
-                        model__iexact='titulosreceber'
-                    )
-                    logger.info(f"[perfil_services] ContentType ENCONTRADO (alias contas_a_receber->titulosreceber): id={ct.id} app={ct.app_label}")
-                    return ct, "alias_titulosreceber"
-                except ContentType.DoesNotExist:
-                    pass
-
-            # Alias para baretitulos
-            if model_norm in ['baretitulos', 'bare_titulos', 'bare-titulos']:
-                try:
-                    ct = ContentType.objects.using(banco).get(
-                        app_label__iexact='contas_a_receber',
-                        model__iexact='baretitulos'
-                    )
-                    logger.info(f"[perfil_services] ContentType ENCONTRADO (alias contas_a_receber->baretitulos): id={ct.id} app={ct.app_label}")
-                    return ct, "alias_baretitulos"
-                except ContentType.DoesNotExist:
-                    pass
-
-        if app_norm == 'listacasamento':
-            # Alias para listacasamento
-            if model_norm in ['listacasamento', 'listascasamento', 'lista_casamento', 'listas_casamento']:
-                try:
-                    ct = ContentType.objects.using(banco).get(
-                        app_label__iexact='listacasamento',
-                        model__iexact='listacasamento'
-                    )
-                    logger.info(f"[perfil_services] ContentType ENCONTRADO (alias listacasamento->listacasamento): id={ct.id} app={ct.app_label}")
-                    return ct, "alias_listacasamento"
-                except ContentType.DoesNotExist:
-                    pass
-
-            # Alias para itenslistacasamento
-            if model_norm in ['itenslistacasamento', 'itenslistascasamento', 'itens_lista_casamento', 'itens_listas_casamento']:
-                try:
-                    ct = ContentType.objects.using(banco).get(
-                        app_label__iexact='listacasamento',
-                        model__iexact='itenslistacasamento'
-                    )
-                    logger.info(f"[perfil_services] ContentType ENCONTRADO (alias listacasamento->itenslistacasamento): id={ct.id} app={ct.app_label}")
-                    return ct, "alias_itenslistacasamento"
-                except ContentType.DoesNotExist:
-                    pass
-        
-        
-        logger.info(f"[perfil_services] ContentType não encontrado busca direta: app={app_norm} model={model_norm}")
     except Exception as e:
         logger.error(f"[perfil_services] Erro busca direta ContentType: {e}")
+
+    # Fallback: se for 'pedidos', tenta 'pedidovenda'
+    if app_norm == 'pedidos' and model_norm == 'pedidos':
+        try:
+            ct = ContentType.objects.using(banco).get(
+                app_label__iexact='Pedidos',
+                model__iexact='pedidovenda'
+            )
+            logger.info(f"[perfil_services] ContentType ENCONTRADO (alias pedidos->pedidovenda): id={ct.id} app={ct.app_label}")
+            return ct, "busca_direta_alias_pedidos"
+        except ContentType.DoesNotExist:
+            pass
+
+    if app_norm == 'contas_a_pagar':
+        if model_norm in ['titulospagar', 'titulos_pagar', 'titulos-pagar']:
+            try:
+                ct = ContentType.objects.using(banco).get(
+                    app_label__iexact='contas_a_pagar',
+                    model__iexact='titulospagar'
+                )
+                logger.info(f"[perfil_services] ContentType ENCONTRADO (alias contas_a_pagar->titulospagar): id={ct.id} app={ct.app_label}")
+                return ct, "alias_titulospagar"
+            except ContentType.DoesNotExist:
+                pass
+
+        if model_norm in ['bapatitulos', 'bapa_titulos', 'bapa-titulos']:
+            try:
+                ct = ContentType.objects.using(banco).get(
+                    app_label__iexact='contas_a_pagar',
+                    model__iexact='bapatitulos'
+                )
+                logger.info(f"[perfil_services] ContentType ENCONTRADO (alias contas_a_pagar->bapatitulos): id={ct.id} app={ct.app_label}")
+                return ct, "alias_bapatitulos"
+            except ContentType.DoesNotExist:
+                pass
+
+    if app_norm == 'contas_a_receber':
+        if model_norm in ['titulosreceber', 'titulos_receber', 'titulos-receber']:
+            try:
+                ct = ContentType.objects.using(banco).get(
+                    app_label__iexact='contas_a_receber',
+                    model__iexact='titulosreceber'
+                )
+                logger.info(f"[perfil_services] ContentType ENCONTRADO (alias contas_a_receber->titulosreceber): id={ct.id} app={ct.app_label}")
+                return ct, "alias_titulosreceber"
+            except ContentType.DoesNotExist:
+                pass
+
+        if model_norm in ['baretitulos', 'bare_titulos', 'bare-titulos']:
+            try:
+                ct = ContentType.objects.using(banco).get(
+                    app_label__iexact='contas_a_receber',
+                    model__iexact='baretitulos'
+                )
+                logger.info(f"[perfil_services] ContentType ENCONTRADO (alias contas_a_receber->baretitulos): id={ct.id} app={ct.app_label}")
+                return ct, "alias_baretitulos"
+            except ContentType.DoesNotExist:
+                pass
+
+    if app_norm == 'listacasamento':
+        if model_norm in ['listacasamento', 'listascasamento', 'lista_casamento', 'listas_casamento']:
+            try:
+                ct = ContentType.objects.using(banco).get(
+                    app_label__iexact='listacasamento',
+                    model__iexact='listacasamento'
+                )
+                logger.info(f"[perfil_services] ContentType ENCONTRADO (alias listacasamento->listacasamento): id={ct.id} app={ct.app_label}")
+                return ct, "alias_listacasamento"
+            except ContentType.DoesNotExist:
+                pass
+
+        if model_norm in ['itenslistacasamento', 'itenslistascasamento', 'itens_lista_casamento', 'itens_listas_casamento']:
+            try:
+                ct = ContentType.objects.using(banco).get(
+                    app_label__iexact='listacasamento',
+                    model__iexact='itenslistacasamento'
+                )
+                logger.info(f"[perfil_services] ContentType ENCONTRADO (alias listacasamento->itenslistacasamento): id={ct.id} app={ct.app_label}")
+                return ct, "alias_itenslistacasamento"
+            except ContentType.DoesNotExist:
+                pass
+
+    logger.info(f"[perfil_services] ContentType não encontrado busca direta: app={app_norm} model={model_norm}")
     
     # Estratégia 2: Buscar via apps.get_model com variações
     variações_model = [
@@ -264,22 +262,24 @@ def _buscar_contenttype(banco, app_label, model_name):
         model_name,  # Original
     ]
     
-    for var_model in variações_model:
-        try:
-            model_cls = apps.get_model(app_norm, var_model)
-            ct = ContentType.objects.db_manager(banco).get_for_model(model_cls, for_concrete_model=False)
-            logger.info(f"[perfil_services] ContentType ENCONTRADO (get_model): id={ct.id} app={ct.app_label} model={ct.model} tentativa={var_model}")
-            return ct, f"get_model_{var_model}"
-        except Exception:
-            pass
+    for app_try in _app_labels_equivalentes(app_norm):
+        for var_model in variações_model:
+            try:
+                model_cls = apps.get_model(app_try, var_model)
+                ct = ContentType.objects.db_manager(banco).get_for_model(model_cls, for_concrete_model=False)
+                logger.info(f"[perfil_services] ContentType ENCONTRADO (get_model): id={ct.id} app={ct.app_label} model={ct.model} tentativa={app_try}.{var_model}")
+                return ct, f"get_model_{app_try}_{var_model}"
+            except Exception:
+                pass
     
     # Estratégia 3: Buscar via AppConfig
     try:
         target_cfg = None
+        app_cands = set(_app_labels_equivalentes(app_norm))
         for cfg in apps.get_app_configs():
             label = (cfg.label or '').lower()
             name = (cfg.name.split('.')[-1] or '').lower()
-            if label == app_norm or name == app_norm:
+            if label in app_cands or name in app_cands:
                 target_cfg = cfg
                 break
         
@@ -292,6 +292,33 @@ def _buscar_contenttype(banco, app_label, model_name):
                     return ct, "appconfig"
     except Exception as e:
         logger.error(f"[perfil_services] Erro busca AppConfig: {e}")
+
+    if app_norm in {'dash', 'dre', 'gerencial', 'entidades', 'pedidos'}:
+        try:
+            canonical_app_label = (
+                ContentType.objects.using(banco)
+                .filter(app_label__iexact=app_norm)
+                .values_list('app_label', flat=True)
+                .first()
+            ) or app_norm
+            try:
+                ct, created = ContentType.objects.using(banco).get_or_create(
+                    app_label=canonical_app_label,
+                    model=model_norm,
+                    defaults={'name': f"{app_norm}.{model_norm}"},
+                )
+            except Exception:
+                ct, created = ContentType.objects.using(banco).get_or_create(
+                    app_label=canonical_app_label,
+                    model=model_norm,
+                )
+            if created:
+                logger.warning(f"[perfil_services] ContentType CRIADO (virtual): id={ct.id} app={ct.app_label} model={ct.model}")
+            else:
+                logger.info(f"[perfil_services] ContentType ENCONTRADO (virtual): id={ct.id} app={ct.app_label} model={ct.model}")
+            return ct, f"auto_create_virtual_{app_norm}"
+        except Exception as e:
+            logger.error(f"[perfil_services] Erro ao criar ContentType virtual ({app_norm}): {e}")
     
     # Estratégia 4: Listar todos os ContentTypes disponíveis para debug
     try:
@@ -338,6 +365,11 @@ def tem_permissao(perfil, app_label, model, acao):
         logger.info(f"[perfil_services] tem_permissao CACHE: perfil={perfil.perf_nome} app={app_norm} model={model_norm} acao={acao} permitido={permitido}")
         return permitido
 
+    if (getattr(perfil, 'perf_nome', '') or '').strip().lower() == 'superadmin':
+        cache.set(key, True, CACHE_TIMEOUT)
+        logger.info(f"[perfil_services] tem_permissao RESULTADO: perfil={perfil.perf_nome} app={app_norm} model={model_norm} acao={acao} permitido=True estrategia=superadmin_total")
+        return True
+
     logger.info(f"[perfil_services] tem_permissao VERIFICANDO: perfil={perfil.perf_nome} app={app_label}→{app_norm} model={model}→{model_norm} acao={acao} cadeia={cadeia}")
     
     ct_ids = []
@@ -345,23 +377,18 @@ def tem_permissao(perfil, app_label, model, acao):
     if ct1:
         ct_ids.append(ct1.id)
 
-    # Lógica DASH/DASHBOARDS: Tenta buscar o outro ContentType se existir, para unificar permissões
     if app_norm == 'dash':
-        other_label = 'dashboards'
-        # Se o encontrado foi dashboards, busca dash. Se foi dash, busca dashboards.
-        if ct1 and ct1.app_label.lower() == 'dashboards':
-            other_label = 'dash'
-        
-        try:
-            ct2 = ContentType.objects.using(banco).get(
-                app_label__iexact=other_label,
-                model__iexact=model_norm
-            )
-            if ct2 and ct2.id not in ct_ids:
-                ct_ids.append(ct2.id)
-                logger.info(f"[perfil_services] ContentType SECUNDÁRIO ENCONTRADO: id={ct2.id} app={ct2.app_label}")
-        except ContentType.DoesNotExist:
-            pass
+        for alias_label in _app_labels_equivalentes('dash'):
+            try:
+                ct2 = ContentType.objects.using(banco).get(
+                    app_label__iexact=alias_label,
+                    model__iexact=model_norm,
+                )
+                if ct2 and ct2.id not in ct_ids:
+                    ct_ids.append(ct2.id)
+                    logger.info(f"[perfil_services] ContentType SECUNDÁRIO ENCONTRADO: id={ct2.id} app={ct2.app_label}")
+            except ContentType.DoesNotExist:
+                pass
     
     if not ct_ids:
         # NÃO fazer cache de False aqui! Pode ser problema temporário
@@ -407,6 +434,9 @@ def acoes_permitidas(perfil, app_label, model):
     if not perfil:
         return set()
     
+    if (getattr(perfil, 'perf_nome', '') or '').strip().lower() == 'superadmin':
+        return {'criar', 'editar', 'excluir', 'visualizar', 'listar', 'imprimir', 'exportar'}
+
     model_norm = _normalizar_model_name(model)
     
     ct_ids = []
@@ -415,17 +445,17 @@ def acoes_permitidas(perfil, app_label, model):
         ct_ids.append(ct1.id)
         
     if app_norm == 'dash':
-        other_label = 'dashboards'
-        if ct1 and ct1.app_label.lower() == 'dashboards':
-            other_label = 'dash'
-        try:
-            ct2 = ContentType.objects.using(banco).get(app_label__iexact=other_label, model__iexact=model_norm)
-            if ct2 and ct2.id not in ct_ids:
-                ct_ids.append(ct2.id)
-        except:
-            pass
+        for alias_label in _app_labels_equivalentes('dash'):
+            try:
+                ct2 = ContentType.objects.using(banco).get(app_label__iexact=alias_label, model__iexact=model_norm)
+                if ct2 and ct2.id not in ct_ids:
+                    ct_ids.append(ct2.id)
+            except ContentType.DoesNotExist:
+                pass
 
     if not ct_ids:
+        if (getattr(perfil, 'perf_nome', '') or '').strip().lower() == 'superadmin':
+            return {'criar', 'editar', 'excluir', 'visualizar', 'listar', 'imprimir', 'exportar'}
         logger.error(f"[perfil_services] acoes_permitidas: ContentType não encontrado app={app_label} model={model}")
         return set()
     

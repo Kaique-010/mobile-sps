@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}Permissões do Perfil{% endblock %}
 {% block content %}
-<div class="container-fluid">
+<div class="container">
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h4 class="mb-0">Permissões do Perfil: {{ perfil.perf_nome }}</h4>
     <a class="btn btn-sm btn-outline-secondary" href="{% url 'perfil_sincronizar_api' slug=slug %}">
@@ -23,6 +23,9 @@
                 <div class="card-body">
                     <div class="mb-2">
                         <input type="text" id="filter-model" class="form-control" placeholder="Filtrar por modelo">
+                    </div>
+                    <div class="mb-2">
+                        <input type="text" id="filter-modulo" class="form-control" placeholder="Filtrar por módulo">
                     </div>
                     <div class="mb-2">
                         <input type="text" id="filter-acao" class="form-control" placeholder="Filtrar por ação">
@@ -67,7 +70,7 @@
         <div class="col-lg-8">
             <div class="accordion" id="recursosAccordion">
                 {% for app_label, recursos_app in recursos_por_app %}
-                <div class="accordion-item mb-3 border-0 shadow-sm">
+                <div class="accordion-item mb-3 border-0 shadow-sm" data-app="{{ app_label|lower }}" data-total-modelos="{{ recursos_app|length }}">
                     <h2 class="accordion-header" id="heading-{{ forloop.counter }}">
                         <button class="accordion-button {% if not forloop.first %}collapsed{% endif %}" type="button"
                             data-bs-toggle="collapse" data-bs-target="#collapse-{{ forloop.counter }}"
@@ -117,20 +120,25 @@
 </div>
 <script>
 const fm = document.getElementById('filter-model');
+const fmod = document.getElementById('filter-modulo');
 const fa = document.getElementById('filter-acao');
 const blocks = Array.from(document.querySelectorAll('.recurso-block'));
+const appItems = Array.from(document.querySelectorAll('.accordion-item'));
 const countEl = document.getElementById('filter-count');
 function applyFilters() {
   const m = (fm.value || '').toLowerCase().trim();
+  const mod = (fmod.value || '').toLowerCase().trim();
   const a = (fa.value || '').toLowerCase().trim();
   let shownBlocks = 0;
+  let shownApps = 0;
   blocks.forEach(b => {
     const matchModel = !m || b.dataset.model.includes(m);
+    const matchModulo = !mod || (b.dataset.app || '').includes(mod);
     let actionShown = 0;
     const items = Array.from(b.querySelectorAll('.acao-item'));
     items.forEach(i => {
       const matchAction = !a || i.dataset.acao.includes(a);
-      const visible = matchModel && matchAction;
+      const visible = matchModel && matchModulo && matchAction;
       i.style.display = visible ? '' : 'none';
       if (visible) actionShown++;
     });
@@ -138,9 +146,21 @@ function applyFilters() {
     b.style.display = showBlock ? '' : 'none';
     if (showBlock) shownBlocks++;
   });
-  countEl.textContent = shownBlocks + ' modelos visíveis';
+  appItems.forEach(appItem => {
+    const total = parseInt(appItem.dataset.totalModelos || '0', 10);
+            const visible = Array.from(appItem.querySelectorAll('.recurso-block')).filter(el => el.style.display !== 'none').length;
+    const badge = appItem.querySelector('.accordion-header .badge');
+    const hasFilters = !!(m || mod || a);
+    if (badge) badge.textContent = hasFilters ? `${visible}/${total} modelos` : `${total} modelos`;
+            const shouldShow = visible > 0;
+    appItem.style.display = shouldShow ? '' : 'none';
+    if (shouldShow) shownApps++;
+  });
+  const hasAnyFilters = !!(m || mod || a);
+  countEl.textContent = hasAnyFilters ? `${shownApps} módulos e ${shownBlocks} modelos visíveis` : `${shownApps} módulos e ${shownBlocks} modelos`;
 }
 fm.addEventListener('input', applyFilters);
+fmod.addEventListener('input', applyFilters);
 fa.addEventListener('input', applyFilters);
 applyFilters();
 document.querySelectorAll('.btn-select-model').forEach(btn => {

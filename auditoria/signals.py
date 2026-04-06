@@ -18,6 +18,17 @@ _thread_locals = threading.local()
 
 User = get_user_model()
 
+def resolver_usuario_no_banco(usuario, banco):
+    if not usuario:
+        return None
+    pk = getattr(usuario, 'pk', None)
+    if pk is None:
+        return None
+    try:
+        return User.objects.using(banco).filter(pk=pk).first()
+    except Exception:
+        return None
+
 def get_current_user():
     """Obtém o usuário atual do contexto da thread"""
     return getattr(_thread_locals, 'user', None)
@@ -121,8 +132,9 @@ def log_criacao_atualizacao(sender, instance, created, **kwargs):
             empresa = path_parts[1] if len(path_parts) > 1 else None
         
         # Criar log
+        usuario_no_banco = resolver_usuario_no_banco(user, db_alias)
         LogAcao.objects.using(db_alias).create(
-            usuario=user,
+            usuario=usuario_no_banco,
             data_hora=timezone.now(),
             tipo_acao=tipo_acao,
             url=request.path if request else f'/db/{sender.__name__.lower()}/{instance.pk}/',
@@ -175,8 +187,9 @@ def log_exclusao(sender, instance, **kwargs):
             empresa = path_parts[1] if len(path_parts) > 1 else None
         
         # Criar log
+        usuario_no_banco = resolver_usuario_no_banco(user, db_alias)
         LogAcao.objects.using(db_alias).create(
-            usuario=user,
+            usuario=usuario_no_banco,
             data_hora=timezone.now(),
             tipo_acao='DELETE',
             url=request.path if request else f'/db/{sender.__name__.lower()}/{instance.pk}/',
