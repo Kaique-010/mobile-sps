@@ -457,12 +457,12 @@ def selecionar_empresa(request):
                     ):
                         snapshot = dict(request.session.items())
                         try:
-                            request.session.cycle_key()
+                            request.session.create()
                             for k, v in snapshot.items():
                                 request.session[k] = v
-                            request.session.save(must_create=True)
+                            request.session.save()
                             saved = True
-                            logger.warning("[selecionar_empresa] sessão recriada após conflito de update")
+                            logger.warning("[selecionar_empresa] sessão recriada após conflito de update/create")
                             break
                         except Exception:
                             logger.exception("[selecionar_empresa] retry de sessão com must_create falhou")
