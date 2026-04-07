@@ -1,6 +1,5 @@
 import logging
 from django.db import transaction
-from django.core.cache import cache
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -20,6 +19,7 @@ from parametros_admin.decorators import parametros_pedidos_completo
 from parametros_admin.utils_pedidos import obter_parametros_pedidos, atualizar_parametros_pedidos
 from ..services.pedido_service import PedidoVendaService
 from .handlers.dominio_handler import tratar_erro
+from core.cache_service import build_cache_key, cache_get_or_set, safe_delete_pattern
 
 logger = logging.getLogger('Pedidos')
 
@@ -31,6 +31,10 @@ class PedidoVendaViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
     filter_backends = [SearchFilter, DjangoFilterBackend]
     search_fields = ['pedi_forn', 'pedi_nume']
     filterset_fields = ['pedi_empr', 'pedi_fili', 'pedi_nume', 'pedi_forn', 'pedi_data', 'pedi_stat']
+
+    def _invalidate_related_cache(self):
+        safe_delete_pattern("mobile_sps:pedidos:*", logger)
+        safe_delete_pattern("mobile_sps:dashboard:*", logger)
 
     def get_object(self):
         try:
@@ -109,17 +113,18 @@ class PedidoVendaViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
 
         if cliente_nome:
             logger.info(f"Buscando por nome do cliente: {cliente_nome} (sem filtro de ano)")
-            cache_key = f"entidades_cliente_{cliente_nome}_{empresa_id}"
-            entidades_ids = cache.get(cache_key)
-
-            if entidades_ids is None:
-                entidades_ids = list(
+            cache_key = build_cache_key("pedidos", banco, empresa_id or "all", "cliente_nome", cliente_nome.lower())
+            entidades_ids, _ = cache_get_or_set(
+                key=cache_key,
+                timeout=300,
+                factory=lambda: list(
                     Entidades.objects.using(banco)
                     .filter(enti_nome__icontains=cliente_nome)
                     .filter(enti_empr=empresa_id if empresa_id else None)
                     .values_list('enti_clie', flat=True)[:100]
-                )
-                cache.set(cache_key, entidades_ids, 300)
+                ),
+                logger_instance=logger,
+            )
 
             if entidades_ids:
                 queryset = queryset.filter(pedi_forn__in=entidades_ids)
@@ -188,6 +193,7 @@ class PedidoVendaViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
             logger.info(f"✅ Pedido {pedido.pedi_nume} criado com sucesso")
 
             headers = self.get_success_headers(serializer.data)
+            self._invalidate_related_cache()
             return Response(
                 {'pedido': serializer.data},
                 status=status.HTTP_201_CREATED,
@@ -206,7 +212,9 @@ class PedidoVendaViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
 
     def update(self, request, *args, **kwargs):
         try:
-            return super().update(request, *args, **kwargs)
+            response = super().update(request, *args, **kwargs)
+            self._invalidate_related_cache()
+            return response
         except Exception as e:
             return tratar_erro(e)
 
@@ -237,6 +245,7 @@ class PedidoVendaViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
 
                 pedido.delete()
                 logger.info(f"🗑️ Exclusão Pedido ID {pedido.pedi_nume} concluída")
+            self._invalidate_related_cache()
 
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Exception as e:
