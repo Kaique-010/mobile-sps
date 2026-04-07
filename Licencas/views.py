@@ -229,6 +229,15 @@ class LoginView(APIView):
             "OK" if session_ok else "FALHA",
             {k: request.session.get(k) for k in ['usua_codi', 'docu', 'slug', 'empresa_id', 'filial_id']},
         )
+        if not session_ok:
+            logger.error("[LOGIN][%s] abortado: sessão não persistiu após retries", request_id)
+            return Response(
+                {
+                    'error': 'Falha ao persistir sessão. Tente novamente.',
+                    'request_id': request_id,
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         access['username'] = usuario.usua_nome
         access['usuario_id'] = usuario.usua_codi
         access['setor'] = usuario.usua_seto
@@ -254,6 +263,7 @@ class LoginView(APIView):
             pass
 
         return Response({
+            'request_id': request_id,
             'access': str(access),
             'refresh': str(refresh),
             'usuario': {
