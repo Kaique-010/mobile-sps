@@ -31,6 +31,7 @@ from django.db.models import Q
 from core.cache_service import build_cache_key, cache_get_or_set
 
 logger = logging.getLogger(__name__)
+SETOR_OBRIGATORIO_SLUGS = {"savexml144", "saveweb144"}
 
 
 def get_banco_por_docu(docu):
@@ -194,11 +195,23 @@ class LoginView(APIView):
         except Exception:
             filial_id_int = 1
 
+        setor_claim = getattr(usuario, "usua_seto", None)
+        if setor_claim in ("", 0):
+            setor_claim = None
+        if slug_from_docu in SETOR_OBRIGATORIO_SLUGS and setor_claim is None:
+            logger.warning("[LOGIN][%s] bloqueado: usuário sem setor em slug obrigatório (%s)", request_id, slug_from_docu)
+            return Response(
+                {'error': 'Usuário sem setor vinculado para esta licença.', 'request_id': request_id},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if setor_claim is None:
+            setor_claim = 0
+
         jwt_start = time.time()
         refresh = RefreshToken.for_user(usuario)
         refresh['username'] = usuario.usua_nome
         refresh['usuario_id'] = usuario.usua_codi
-        refresh['setor'] = usuario.usua_seto
+        refresh['setor'] = setor_claim
         
         if licenca:
             refresh['lice_id'] = licenca.get('lice_id')
@@ -240,7 +253,7 @@ class LoginView(APIView):
             )
         access['username'] = usuario.usua_nome
         access['usuario_id'] = usuario.usua_codi
-        access['setor'] = usuario.usua_seto
+        access['setor'] = setor_claim
         
         if licenca:
             access['lice_id'] = licenca.get('lice_id')
@@ -266,10 +279,10 @@ class LoginView(APIView):
             'request_id': request_id,
             'access': str(access),
             'refresh': str(refresh),
-            'usuario': {
-                'username': usuario.usua_nome,
-                'usuario_id': usuario.usua_codi,
-                    'setor': usuario.usua_seto,
+                'usuario': {
+                    'username': usuario.usua_nome,
+                    'usuario_id': usuario.usua_codi,
+                    'setor': setor_claim,
                     'empresa_id': empresa_id_int,
                     'filial_id': filial_id_int,
                 },
