@@ -507,24 +507,24 @@ else:
     # Redis para produção
     CACHES = {
         'default': {
-            'BACKEND': 'django_redis.cache.RedisCache',
-            'LOCATION': os.getenv('REDIS_URL', 'redis://redis:6379/1'),
-            'OPTIONS': {
-                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-                'CONNECTION_POOL_KWARGS': {
-                    'max_connections': 50,
-                    'retry_on_timeout': True,
-                    'socket_connect_timeout': 15,
-                    'socket_timeout': 15,
-                    'health_check_interval': 30,
-                },
-                'IGNORE_EXCEPTIONS': True,  # Não quebrar se Redis cair
-                'SOCKET_CONNECT_TIMEOUT': 5,
-                'SOCKET_TIMEOUT': 5,
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379/1',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'CONNECTION_POOL_KWARGS': {
+                'max_connections': 50,
+                'retry_on_timeout': True,
+                'socket_connect_timeout': 15,
+                'socket_timeout': 15,
+                'health_check_interval': 30,
             },
-            'KEY_PREFIX': 'mobile_sps',
-            'TIMEOUT': 86400,  # 24 horas - mesmo valor do LocMemCache
-        }
+            'IGNORE_EXCEPTIONS': False,
+            'SOCKET_CONNECT_TIMEOUT': 5,
+            'SOCKET_TIMEOUT': 5,
+        },
+        'KEY_PREFIX': 'mobile_sps',
+        'TIMEOUT': 86400,
+    }
     }
 
 # ============================================================================
