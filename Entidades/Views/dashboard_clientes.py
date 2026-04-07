@@ -255,9 +255,9 @@ class ClienteDashboardViewSet(viewsets.ViewSet):
             factory=_build_dashboard,
             logger_instance=self.logger,
             lock_timeout=30,
+            use_lock=True,
         )
         return Response(dashboard_data)
-
 
 
 
