@@ -111,6 +111,11 @@ class PerfilPermissionMiddleware:
             return self.get_response(request)
 
         if not usuario and request.path.startswith('/api/'):
+            session_id = request.headers.get('X-Session-ID') or request.GET.get('session_id')
+            if session_id:
+                return self.get_response(request)
+
+        if not usuario and request.path.startswith('/api/'):
             auth = request.headers.get('Authorization', '')
             if auth.startswith('Bearer '):
                 try:

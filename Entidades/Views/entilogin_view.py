@@ -119,12 +119,12 @@ class EntidadesLoginViewSet(viewsets.ViewSet):
                         'documento': entidade.enti_cpf or entidade.enti_cnpj,
                         'banco': banco_slug,
                         'session_id': f"{entidade.enti_clie}_{banco_slug}_{usuario_tipo_logado}",  # ID com usuário para sessão
-                        # Retornar permissões combinadas ou individuais? 
-                        # Aqui vamos retornar as permissões para o front decidir
+                        'usuario_logado': usuario_tipo_logado,
                         'permissoes': {
                             'ver_preco': ver_preco, 
                             'ver_foto': ver_foto,
-                            'usuario_logado': 'usuario1' if login1_ok else 'usuario2',
+                        },
+                        'permissoes_por_usuario': {
                             'usuario1': {
                                 'ver_preco': entidade.enti_mobi_prec,
                                 'ver_foto': entidade.enti_mobi_foto
@@ -133,7 +133,7 @@ class EntidadesLoginViewSet(viewsets.ViewSet):
                                 'ver_preco': entidade.enti_usua_prec,
                                 'ver_foto': entidade.enti_usua_foto
                             }
-                        }
+                        },
                     }
                     session_key = f"session:{resp['session_id']}:permissoes"
                     cache.set(session_key, {'ver_preco': ver_preco, 'ver_foto': ver_foto})
