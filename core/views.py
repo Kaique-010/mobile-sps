@@ -439,39 +439,8 @@ def selecionar_empresa(request):
 
         # garantir que sessão foi modificada e persistida imediatamente
         request.session.modified = True
-        try:
-            from django.contrib.sessions.backends.base import UpdateError
-            from django.db import DatabaseError
-            saved = False
-            for _ in range(3):
-                try:
-                    request.session.save()
-                    saved = True
-                    break
-                except (UpdateError, DatabaseError, RuntimeError) as e:
-                    msg = str(e).lower()
-                    if (
-                        isinstance(e, UpdateError)
-                        or "forced update did not affect any rows" in msg
-                        or "session was deleted" in msg
-                    ):
-                        snapshot = dict(request.session.items())
-                        try:
-                            request.session.create()
-                            for k, v in snapshot.items():
-                                request.session[k] = v
-                            request.session.save()
-                            saved = True
-                            logger.warning("[selecionar_empresa] sessão recriada após conflito de update/create")
-                            break
-                        except Exception:
-                            logger.exception("[selecionar_empresa] retry de sessão com must_create falhou")
-                        continue
-                    raise
-            if not saved:
-                logger.exception("[selecionar_empresa] falha ao salvar session")
-        except Exception as e:
-            logger.exception("[selecionar_empresa] falha ao salvar session: %s", e)
+        # Evita save manual aqui para não disputar com SessionMiddleware em requests concorrentes.
+        # O middleware padrão do Django persiste ao final da resposta.
 
         logger.info("[selecionar_empresa] Sessão atualizada OK: emp=%s (%s) fil=%s (%s) session_snapshot=%s",
                     empresa_id_int, empresa_nome, filial_id_int, filial_nome,
