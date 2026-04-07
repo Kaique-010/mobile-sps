@@ -1,6 +1,5 @@
 import logging
 from django.db import transaction
-from django.core.cache import cache
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -19,6 +18,7 @@ from core.utils import get_licenca_db_config, calcular_subtotal_item_bruto, calc
 from core.mixins.vendedor_mixin import VendedorEntidadeMixin
 from rest_framework.permissions import IsAuthenticated
 from parametros_admin.utils_pedidos import obter_parametros_pedidos, atualizar_parametros_pedidos
+from core.cache_service import build_cache_key, cache_get_or_set, safe_delete_pattern
 
 logger = logging.getLogger('Orcamentos')
 
@@ -30,6 +30,10 @@ class OrcamentoViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
     filter_backends = [SearchFilter, DjangoFilterBackend]
     search_fields = ['pedi_forn', 'pedi_nume']
     filterset_fields = ['pedi_empr', 'pedi_fili', 'pedi_nume', 'pedi_forn', 'pedi_data']
+
+    def _invalidate_related_cache(self):
+        safe_delete_pattern("mobile_sps:orcamentos:*", logger)
+        safe_delete_pattern("mobile_sps:dashboard:*", logger)
 
     def get_object(self):
         banco = get_licenca_db_config(self.request)
@@ -108,16 +112,18 @@ class OrcamentoViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
                 return queryset.none()
         if cliente_nome:
             logger.info(f"Buscando por nome do cliente: {cliente_nome} (sem filtro de ano)")
-            cache_key = f"entidades_cliente_{cliente_nome}_{empresa_id}"
-            entidades_ids = cache.get(cache_key)
-            if entidades_ids is None:
-                entidades_ids = list(
+            cache_key = build_cache_key("orcamentos", banco, empresa_id or "all", "cliente_nome", cliente_nome.lower())
+            entidades_ids, _ = cache_get_or_set(
+                key=cache_key,
+                timeout=300,
+                factory=lambda: list(
                     Entidades.objects.using(banco)
                     .filter(enti_nome__icontains=cliente_nome)
                     .filter(enti_empr=empresa_id if empresa_id else None)
                     .values_list('enti_clie', flat=True)[:100]
-                )
-                cache.set(cache_key, entidades_ids, 300)
+                ),
+                logger_instance=logger,
+            )
             if entidades_ids:
                 queryset = queryset.filter(pedi_forn__in=entidades_ids)
             else:
@@ -165,6 +171,7 @@ class OrcamentoViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
             serializer = self.get_serializer(data=request.data, context=self.get_serializer_context())
             serializer.is_valid(raise_exception=True)
             self.perform_create(serializer)
+            self._invalidate_related_cache()
             headers = self.get_success_headers(serializer.data)
             return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
         except ValidationError as e:
@@ -186,7 +193,9 @@ class OrcamentoViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
         logger.debug(f"[OrcamentoViewSet.update] Args: {args}")
         logger.debug(f"[OrcamentoViewSet.update] Kwargs: {kwargs}")
         try:
-            return super().update(request, *args, **kwargs)
+            response = super().update(request, *args, **kwargs)
+            self._invalidate_related_cache()
+            return response
         except ValidationError as e:
             logger.warning(f"[OrcamentoViewSet.update] Erro de validação: {e.detail}")
             return Response({'errors': e.detail}, status=status.HTTP_400_BAD_REQUEST)
@@ -216,6 +225,7 @@ class OrcamentoViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
                     logger.info(f"Excluídos {itens_count} itens do orçamento {orcamento.pedi_nume}")
                 orcamento.delete()
                 logger.info(f"🗑️ Exclusão Orçamento ID {orcamento.pedi_nume} concluída")
+                self._invalidate_related_cache()
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Exception as e:
             logger.error(f"[OrcamentoViewSet.destroy] Erro inesperado: {e}")
