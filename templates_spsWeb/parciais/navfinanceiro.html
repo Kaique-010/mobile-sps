@@ -15,100 +15,143 @@
                 </a>
                 <div class="collapse" id="collapseFinanceiro">
                     <ul class="list-unstyled ps-4">
-                        <li>
-                            <div class="d-flex align-items-center">
-                                <a class="nav-link" href="/web/login/"
-                                    data-slug-route="/web/{slug}/contas-a-pagar/">Contas a Pagar</a>
-                                <a href="https://youtu.be/kIlkckjQQrE" target="_blank" class="text-decoration-none ms-2"
-                                    title="Ver tutorial no YouTube" onclick="event.stopPropagation();">
-                                    <i class="bi bi-youtube" style="font-size: 1.2rem; color: #ff2f2f;"></i>
-                                </a>
+                        <li class="nav-item">
+                            <a class="nav-link collapsed" data-bs-toggle="collapse" href="#" role="button"
+                                data-bs-target="#collapseContasAPagar" aria-expanded="false"
+                                aria-controls="collapseContasAPagar">
+                                <i class="bi bi-wallet2"></i> Contas a Pagar
+                            </a>
+                            <div class="collapse" id="collapseContasAPagar">
+                                <ul class="list-unstyled ps-4">
+                                    <li>
+                                        <div class="d-flex align-items-center">
+                                            <a class="nav-link" href="/web/login/"
+                                                data-slug-route="/web/{slug}/contas-a-pagar/">Contas a Pagar</a>
+                                            <a href="https://youtu.be/kIlkckjQQrE" target="_blank"
+                                                class="text-decoration-none ms-2" title="Ver tutorial no YouTube"
+                                                onclick="event.stopPropagation();">
+                                                <i class="bi bi-youtube" style="font-size: 1.2rem; color: #ff2f2f;"></i>
+                                            </a>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <a class="nav-link" href="/web/login/"
+                                            data-slug-route="/web/{slug}/contas-a-pagar/parcelas/">Parcelas a Pagar</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+
+                        <li class="nav-item">
+                            <a class="nav-link collapsed" data-bs-toggle="collapse" href="#" role="button"
+                                data-bs-target="#collapseContasAReceber" aria-expanded="false"
+                                aria-controls="collapseContasAReceber">
+                                <i class="bi bi-cash-coin"></i> Contas a Receber
+                            </a>
+                            <div class="collapse" id="collapseContasAReceber">
+                                <ul class="list-unstyled ps-4">
+                                    <li>
+                                        <div class="d-flex align-items-center">
+                                            <a class="nav-link" href="/web/login/"
+                                                data-slug-route="/web/{slug}/contas-a-receber/">Contas a Receber</a>
+                                            <a href="https://youtu.be/8wEa9xLbYks" target="_blank"
+                                                class="text-decoration-none ms-2" title="Ver tutorial no YouTube"
+                                                onclick="event.stopPropagation();">
+                                                <i class="bi bi-youtube" style="font-size: 1.2rem; color: #ff2f2f;"></i>
+                                            </a>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <a class="nav-link" href="/web/login/"
+                                            data-slug-route="/web/{slug}/contas-a-receber/parcelas/">Parcelas a
+                                            Receber</a>
+                                    </li>
+                                    <li>
+                                        <a class="nav-link" href="/web/login/"
+                                            data-slug-route="/web/{slug}/boletos/online/">Registros Online</a>
+                                    </li>
+                                    <li>
+                                        <a class="nav-link" href="/web/login/"
+                                            data-slug-route="/web/{slug}/boletos/bancos/configuracao/">Bancos Caixa</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+
+                        <li class="nav-item">
+                            <a class="nav-link collapsed" data-bs-toggle="collapse" href="#" role="button"
+                                data-bs-target="#collapseRelatoriosFinanceiros" aria-expanded="false"
+                                aria-controls="collapseRelatoriosFinanceiros">
+                                <i class="bi bi-graph-up"></i> Relatórios Financeiros
+                            </a>
+                            <div class="collapse" id="collapseRelatoriosFinanceiros">
+                                <ul class="list-unstyled ps-4">
+                                    <li>
+                                        <a class="nav-link" href="/web/login/"
+                                            data-slug-route="/web/{slug}/orcamento/dashboard/">Planejamento
+                                            Financeiro</a>
+                                    </li>
+                                    <li>
+                                        <a class="nav-link" href="/web/login/"
+                                            data-slug-route="/web/{slug}/lancamentos-bancarios/dashboard/">Resumo de
+                                            Lançamentos Bancários</a>
+                                    </li>
+                                    <li>
+                                        <a class="nav-link" href="/web/login/"
+                                            data-slug-route="/web/{slug}/fluxo-de-caixa/">Fluxo de Caixa(Caixa)</a>
+                                    </li>
+                                    <li>
+                                        <a class="nav-link" href="/web/login/"
+                                            data-slug-route="/web/{slug}/fluxo-de-caixa/fluxo-competencia/">Fluxo de
+                                            Caixa(Competência)</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+
+                        <li class="nav-item">
+                            <a class="nav-link collapsed" data-bs-toggle="collapse" href="#" role="button"
+                                data-bs-target="#collapseCaixa" aria-expanded="false" aria-controls="collapseCaixa">
+                                <i class="bi bi-cash-stack"></i> Caixa
+                            </a>
+                            <div class="collapse" id="collapseCaixa">
+                                <ul class="list-unstyled ps-4">
+                                    <li class="nav-item" data-modulo="CaixaDiario">
+                                        <div class="d-flex align-items-center">
+                                            <a class="nav-link" href="/web/login/"
+                                                data-slug-route="/web/{slug}/caixa-diario/geral">
+                                                <i class="bi bi-cash-coin"></i> Caixa Diário
+                                            </a>
+                                            <a href="https://youtu.be/c2bv-Jf0g6I" target="_blank"
+                                                class="text-decoration-none ms-2" title="Ver tutorial no YouTube"
+                                                onclick="event.stopPropagation();">
+                                                <i class="bi bi-youtube" style="font-size: 1.2rem; color: #ff2f2f;"></i>
+                                            </a>
+                                        </div>
+                                    </li>
+                                    <li class="nav-item" data-modulo="CaixaDiario">
+                                        <a class="nav-link" href="/web/login/"
+                                            data-slug-route="/web/{slug}/caixa-diario/venda/">
+                                            <i class="bi bi-cash-stack"></i>
+                                            <span>Caixa - movimentações</span>
+                                        </a>
+                                    </li>
+                                </ul>
                             </div>
                         </li>
 
                         <li>
                             <a class="nav-link" href="/web/login/"
-                                data-slug-route="/web/{slug}/contas-a-pagar/parcelas/">Parcelas
-                                a
-                                Pagar</a>
+                                data-slug-route="/web/{slug}/adiantamentos/"><i class="bi bi-currency-dollar"></i> Adiantamentos</a>
                         </li>
                         <li>
                             <a class="nav-link" href="/web/login/"
-                                data-slug-route="/web/{slug}/adiantamentos/">Adiantamentos</a>
+                                data-slug-route="/web/{slug}/renegociacao/renegociacoes/"><i class="bi bi-credit-card-2-front"></i> Renegociações</a>
                         </li>
-                        <li>
-                            <div class="d-flex align-items-center">
-                                <a class="nav-link" href="/web/login/"
-                                    data-slug-route="/web/{slug}/contas-a-receber/">Contas a Receber</a>
-                                <a href="https://youtu.be/8wEa9xLbYks" target="_blank" class="text-decoration-none ms-2"
-                                    title="Ver tutorial no YouTube" onclick="event.stopPropagation();">
-                                    <i class="bi bi-youtube" style="font-size: 1.2rem; color: #ff2f2f;"></i>
-                                </a>
-                            </div>
-                        </li>
+                      
                         <li>
                             <a class="nav-link" href="/web/login/"
-                                data-slug-route="/web/{slug}/orcamento/dashboard/">Planejamento Financeiro</a>
-                        </li>
-                        <li>
-                            <a class="nav-link" href="/web/login/"
-                                data-slug-route="/web/{slug}/lancamentos-bancarios/dashboard/">Resumo de Lançamentos
-                                Bancários</a>
-                        </li>
-                        <li>
-                            <a class="nav-link" href="/web/login/"
-                                data-slug-route="/web/{slug}/contas-a-receber/parcelas/">Parcelas a
-                                Receber</a>
-                        </li>
-                        <li>
-                            <a class="nav-link" href="/web/login/"
-                                data-slug-route="/web/{slug}/renegociacao/renegociacoes/">Renegociações</a>
-                        </li>
-                        <li>
-                            <a class="nav-link" href="/web/login/"
-                                data-slug-route="/web/{slug}/renegociacao/renegociacoes/nova/">Nova Renegociação</a>
-                        </li>
-                        <li>
-                            <a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/fluxo-de-caixa/">Fluxo
-                                de Caixa(Caixa)</a>
-                            <a class="nav-link" href="/web/login/"
-                                data-slug-route="/web/{slug}/fluxo-de-caixa/fluxo-competencia/">Fluxo de
-                                Caixa(Competência)</a>
-                        </li>
-                        <li>
-                            <a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/boletos/bancos/">Emissão
-                                de
-                                Boletos</a>
-                        </li>
-                        <li>
-                            <a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/boletos/online/">Registros Online</a>
-                        </li>
-                        <li>
-                            <a class="nav-link" href="/web/login/"
-                                data-slug-route="/web/{slug}/boletos/bancos/configuracao/">Bancos
-                                Caixa</a>
-                        </li>
-                        <li>
-                            <a class="nav-link" href="/web/login/"
-                                data-slug-route="/web/{slug}/boletos/retorno/">Retorno de
-                                Remessas</a>
-                        </li>
-                        <li class="nav-item" data-modulo="CaixaDiario">
-                            <div class="d-flex align-items-center">
-                                <a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/caixa-diario/geral">
-                                    <i class="bi bi-cash-coin"></i> Caixa Diário
-                                </a>
-                                <a href="https://youtu.be/c2bv-Jf0g6I" target="_blank" class="text-decoration-none ms-2"
-                                    title="Ver tutorial no YouTube" onclick="event.stopPropagation();">
-                                    <i class="bi bi-youtube" style="font-size: 1.2rem; color: #ff2f2f;"></i>
-                                </a>
-                            </div>
-                        </li>
-                        <li class="nav-item" data-modulo="CaixaDiario">
-                            <a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/caixa-diario/venda/">
-                                <i class="bi bi-cash-stack"></i>
-                                <span>Caixa - movimentações</span>
-                            </a>
+                                data-slug-route="/web/{slug}/fluxo-de-caixa/baixas-em-massa/"><i class="bi bi-credit-card"></i> Baixa em Massa</a>
                         </li>
                     </ul>
                 </div>
