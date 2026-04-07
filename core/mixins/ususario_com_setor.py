@@ -6,6 +6,8 @@ from core.middleware import get_licenca_slug
 
 from core.licenca_context import get_licencas_map
 
+SETOR_OBRIGATORIO_SLUGS = {"savexml144", "saveweb144"}
+
 class UsuarioComSetorMixin:
     def initial(self, request, *args, **kwargs):
         super().initial(request, *args, **kwargs)
@@ -15,7 +17,7 @@ class UsuarioComSetorMixin:
         licenca_info = next((l for l in licencas if l.get('slug') == slug), None)
         
         db_name = licenca_info.get('db_name', '') if licenca_info else ''
-        is_banco_144 = '144' in db_name
+        is_banco_144 = slug in SETOR_OBRIGATORIO_SLUGS
         usuario = request.user
         tem_setor = False
         setor_id = None
@@ -52,4 +54,6 @@ class UsuarioComSetorMixin:
             'tem_setor': tem_setor,
             'setor_id': setor_id,
             'is_banco_144': is_banco_144,
+            'setor_obrigatorio': is_banco_144,
+            'db_name': db_name,
         }
