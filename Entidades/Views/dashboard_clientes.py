@@ -10,7 +10,7 @@ from OrdemdeServico.models import Ordemservico
 from django.db.models import Sum, Q, Case, When, Value, DateField
 from rest_framework.permissions import IsAuthenticated
 from core.middleware import get_licenca_slug
-from django.core.cache import cache
+from core.cache_service import build_cache_key, cache_get_or_set
 import logging
 
 
@@ -20,7 +20,7 @@ class ClienteDashboardViewSet(viewsets.ViewSet):
     logger = logging.getLogger(__name__)
 
     def _cache_key(self, banco, cliente_id, ver_preco):
-        return f"dash:cliente:b={banco}|c={cliente_id}|vp={'1' if ver_preco else '0'}"
+        return build_cache_key("dashboard", banco, cliente_id, "ver_preco", "1" if ver_preco else "0")
 
     def _should_refresh(self, request):
         val = (request.query_params.get('refresh') or '').strip().lower()
@@ -205,95 +205,58 @@ class ClienteDashboardViewSet(viewsets.ViewSet):
              ver_preco = permissoes.get('ver_preco', False)
 
         key = self._cache_key(banco, cliente_id, ver_preco)
-        if not self._should_refresh(request):
-            cached = cache.get(key)
-            if cached is not None:
-                try:
-                    self.logger.info(f"[CACHE HIT][DASH] key={key}")
-                except Exception:
-                    pass
-                return Response(cached)
-        
-        if False:
-            total_ordens_servico, total_valor_ordens_servico = self._get_safe_ordemservico_totals(banco, cliente_id)
-            total_os, total_valor_os = self._get_safe_os_totals(banco, cliente_id)
-            
-            total_valor_total = total_valor_ordens_servico + total_valor_os
-            total_valor_total = round(total_valor_total, 2)
-
-            dashboard_data = {
-                'total_pedidos': 0,
-                'total_orcamentos': 0, 
+        def _build_dashboard():
+            total_pedidos = PedidoVenda.objects.using(banco).filter(pedi_forn=cliente_id).count()
+            total_orcamentos = Orcamentos.objects.using(banco).filter(pedi_forn=cliente_id).count()
+            qs_ordemservico = self._get_safe_ordemservico_qs(banco, cliente_id)
+            qs_os = self._get_safe_os_qs(banco, cliente_id)
+            total_ordens_servico = qs_ordemservico.count()
+            total_os = qs_os.count()
+            total_itens_pedidos = Itenspedidovenda.objects.using(banco).filter(iped_forn=cliente_id).count()
+            total_itens_orcamentos = ItensOrcamento.objects.using(banco).filter(iped_forn=cliente_id).count()
+            total_valor_pedidos = Itenspedidovenda.objects.using(banco).filter(iped_forn=cliente_id).aggregate(Sum('iped_tota'))['iped_tota__sum'] or 0
+            total_valor_orcamentos = ItensOrcamento.objects.using(banco).filter(iped_forn=cliente_id).aggregate(Sum('iped_tota'))['iped_tota__sum'] or 0
+            try:
+                total_valor_ordens_servico = qs_ordemservico.aggregate(Sum('orde_tota'))['orde_tota__sum'] or 0
+            except Exception:
+                total_valor_ordens_servico = 0
+            try:
+                total_valor_os = qs_os.aggregate(Sum('os_tota'))['os_tota__sum'] or 0
+            except Exception:
+                total_valor_os = 0
+            total_valor_total = round(total_valor_pedidos + total_valor_orcamentos + total_valor_ordens_servico + total_valor_os, 2)
+            if not ver_preco:
+                total_valor_pedidos = 0
+                total_valor_orcamentos = 0
+                total_valor_ordens_servico = 0
+                total_valor_os = 0
+                total_valor_total = 0
+            return {
+                'total_pedidos': total_pedidos,
+                'total_orcamentos': total_orcamentos,
                 'total_ordens_servico': total_ordens_servico,
                 'total_os': total_os,
-                'total_itens_pedidos': 0,
-                'total_itens_orcamentos': 0,
-                'total_valor_pedidos': 0,
-                'total_valor_orcamentos': 0,
+                'total_itens_pedidos': total_itens_pedidos,
+                'total_itens_orcamentos': total_itens_orcamentos,
+                'total_valor_pedidos': total_valor_pedidos,
+                'total_valor_orcamentos': total_valor_orcamentos,
                 'total_valor_ordens_servico': total_valor_ordens_servico,
                 'total_valor_os': total_valor_os,
-                'total_valor_total': total_valor_total, 
+                'total_valor_total': total_valor_total,
             }
-            cache.set(key, dashboard_data)
-            try:
-                self.logger.info(f"[CACHE SET][DASH] key={key}")
-            except Exception:
-                pass
+
+        if self._should_refresh(request):
+            dashboard_data = _build_dashboard()
             return Response(dashboard_data)
-        
-        # Fluxo padrão para outros clientes
-        total_pedidos = PedidoVenda.objects.using(banco).filter(pedi_forn=cliente_id).count()
-        total_orcamentos = Orcamentos.objects.using(banco).filter(pedi_forn=cliente_id).count()
-        
-        qs_ordemservico = self._get_safe_ordemservico_qs(banco, cliente_id)
-        qs_os = self._get_safe_os_qs(banco, cliente_id)
-        
-        total_ordens_servico = qs_ordemservico.count()
-        total_os = qs_os.count()
-        total_itens_pedidos = Itenspedidovenda.objects.using(banco).filter(iped_forn=cliente_id).count()
-        total_itens_orcamentos = ItensOrcamento.objects.using(banco).filter(iped_forn=cliente_id).count()
-        total_valor_pedidos = Itenspedidovenda.objects.using(banco).filter(iped_forn=cliente_id).aggregate(Sum('iped_tota'))['iped_tota__sum'] or 0
-        total_valor_orcamentos = ItensOrcamento.objects.using(banco).filter(iped_forn=cliente_id).aggregate(Sum('iped_tota'))['iped_tota__sum'] or 0
-        try:
-            total_valor_ordens_servico = qs_ordemservico.aggregate(Sum('orde_tota'))['orde_tota__sum'] or 0
-        except Exception:
-            total_valor_ordens_servico = 0
-            
-        try:
-            total_valor_os = qs_os.aggregate(Sum('os_tota'))['os_tota__sum'] or 0
-        except Exception:
-            total_valor_os = 0
-        total_valor_total = total_valor_pedidos + total_valor_orcamentos + total_valor_ordens_servico + total_valor_os
-        total_valor_total = round(total_valor_total, 2)
 
-        if not ver_preco:
-            total_valor_pedidos = 0
-            total_valor_orcamentos = 0
-            total_valor_ordens_servico = 0
-            total_valor_os = 0
-            total_valor_total = 0
-
-        dashboard_data = {
-            'total_pedidos': total_pedidos,
-            'total_orcamentos': total_orcamentos, 
-            'total_ordens_servico': total_ordens_servico,
-            'total_os': total_os,
-            'total_itens_pedidos': total_itens_pedidos,
-            'total_itens_orcamentos': total_itens_orcamentos,
-            'total_valor_pedidos': total_valor_pedidos,
-            'total_valor_orcamentos': total_valor_orcamentos,
-            'total_valor_ordens_servico': total_valor_ordens_servico,
-            'total_valor_os': total_valor_os,
-            'total_valor_total': total_valor_total, 
-        }
-        
-        cache.set(key, dashboard_data)
-        try:
-            self.logger.info(f"[CACHE SET][DASH] key={key}")
-        except Exception:
-            pass
+        dashboard_data, _ = cache_get_or_set(
+            key=key,
+            timeout=120,
+            factory=_build_dashboard,
+            logger_instance=self.logger,
+            lock_timeout=30,
+        )
         return Response(dashboard_data)
-
 
 
 
