@@ -440,18 +440,32 @@ def selecionar_empresa(request):
         # garantir que sessão foi modificada e persistida imediatamente
         request.session.modified = True
         try:
+            from django.contrib.sessions.backends.base import UpdateError
+            from django.db import DatabaseError
             saved = False
-            for _ in range(2):
+            for _ in range(3):
                 try:
                     request.session.save()
                     saved = True
                     break
-                except RuntimeError as e:
-                    if "session was deleted" in str(e) or "session was deleted before the request completed" in str(e):
+                except (UpdateError, DatabaseError, RuntimeError) as e:
+                    msg = str(e).lower()
+                    if (
+                        isinstance(e, UpdateError)
+                        or "forced update did not affect any rows" in msg
+                        or "session was deleted" in msg
+                    ):
+                        snapshot = dict(request.session.items())
                         try:
                             request.session.cycle_key()
+                            for k, v in snapshot.items():
+                                request.session[k] = v
+                            request.session.save(must_create=True)
+                            saved = True
+                            logger.warning("[selecionar_empresa] sessão recriada após conflito de update")
+                            break
                         except Exception:
-                            pass
+                            logger.exception("[selecionar_empresa] retry de sessão com must_create falhou")
                         continue
                     raise
             if not saved:
