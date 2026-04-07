@@ -7,11 +7,15 @@ from django.utils import timezone
 from django.http import Http404, HttpResponse
 from django.urls import reverse_lazy
 from django.views import View
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView, TemplateView
 from Agricola.service.cadastros_service import CadastrosDomainService
 from .services.entidades_trasportadores import EntidadeTransportadoraServico
+from .services.entidades_motoristas import EntidadeMotoristaServico
 from urllib.parse import quote_plus
-
+from django.db.models import Case, When, Value, CharField, IntegerField
+from django.db.models.functions import Cast
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment
 from .models import Entidades
 from .forms import EntidadesForm
 from core.utils import get_licenca_db_config
@@ -90,6 +94,7 @@ class EntidadeListView(DBAndSlugMixin, ListView):
         total_entidades = qs.count()
         total_de_clientes = qs.filter(enti_tipo_enti='CL').count()
         total_de_fornecedores = qs.filter(enti_tipo_enti='FO').count()
+        total_de_motoristas = qs.filter(enti_tipo_enti='FU').count()
         total_de_ambos = qs.filter(enti_tipo_enti__in=['AM']).count()
 
         context['nome'] = nome
@@ -99,6 +104,7 @@ class EntidadeListView(DBAndSlugMixin, ListView):
         context['total_entidades'] = total_entidades
         context['total_de_clientes'] = total_de_clientes
         context['total_de_fornecedores'] = total_de_fornecedores
+        context['total_de_motoristas'] = total_de_motoristas
         context['total_de_ambos'] = total_de_ambos
         
         # Opções para os filtros
@@ -230,6 +236,14 @@ class EntidadeCreateView(DBAndSlugMixin, CreateView):
                 filial_id=filial,
                 banco=db_name
             )
+        
+        if form.cleaned_data.get('is_motorista'):
+             return EntidadeMotoristaServico.cadastrar_motorista(
+                data=data,
+                empresa_id=empresa,
+                filial_id=filial,
+                banco=db_name
+            )
 
         return CadastrosDomainService.cadastrar_entidade(
             empresa=empresa,
@@ -289,30 +303,70 @@ class ExportarEntidadesView(DBAndSlugMixin, View):
         db_alias = getattr(request, 'db_alias', None)
         nome = request.GET.get('enti_nome', '')
         id_cliente = request.GET.get('enti_clie', '')
+        queryset = (
+            Entidades.objects.using(db_alias)
+            .all()
+            .annotate(
+                enti_clie_int=Cast('enti_clie', IntegerField()),
+                tipo=Case(
+                    When(enti_tipo_enti='CL', then=Value('Cliente')),
+                    When(enti_tipo_enti='FO', then=Value('Fornecedor')),
+                    When(enti_tipo_enti='AM', then=Value('Ambos')),
+                    When(enti_tipo_enti='FU', then=Value('Funcionário')),
+                    default=Value('Desconhecido'),
+                    output_field=CharField(),
+                ),
+                tipo_formatado=Case(
+                    When(enti_tien='T', then=Value('Transportadora')),
+                    When(enti_tien='M', then=Value('Motorista')),
+                    default=Value('Entidade'),
+                    output_field=CharField(),
+                ),
+                situacao_formatada=Case(
+                    When(enti_situ='1', then=Value('Ativo')),
+                    When(enti_situ='0', then=Value('Inativo')),
+                    default=Value('Desconhecido'),
+                    output_field=CharField(),
+                ),
+            )
+            .order_by('enti_clie_int')
+        )
 
-        queryset = Entidades.objects.using(db_alias).all().order_by('enti_empr', 'enti_nome')
         if nome:
             queryset = queryset.filter(enti_nome__icontains=nome)
+
         if id_cliente:
             try:
-                queryset = queryset.filter(enti_clie=int(id_cliente))
+                queryset = queryset.filter(enti_clie_int=int(id_cliente))
             except (ValueError, TypeError):
                 pass
 
-        response = HttpResponse(content_type='text/csv; charset=utf-8')
-        response['Content-Disposition'] = 'attachment; filename=entidades.csv'
+        wb = Workbook()
+        ws = wb.active
+        ws.title = 'Entidades'
 
-        import csv
-        writer = csv.writer(response)
-        writer.writerow([
-            'ID', 'Nome', 'Classificação', 'CPF', 'CNPJ', 'Cidade', 'Estado', 'Telefone', 'Celular', 'Email'
-        ])
+        headers = [
+            'ID', 'Nome', 'Classificação', 'CPF', 'CNPJ',
+            'Cidade', 'Estado', 'Telefone', 'Celular',
+            'Email', 'Situação', 'Tipo'
+        ]
+        ws.append(headers)
+
+        # Cabeçalho formatado
+        header_fill = PatternFill(fill_type='solid', fgColor='1F4E78')
+        header_font = Font(color='FFFFFF', bold=True)
+        header_alignment = Alignment(horizontal='center')
+
+        for cell in ws[1]:
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = header_alignment
 
         for e in queryset:
-            writer.writerow([
+            ws.append([
                 e.enti_clie or '',
                 e.enti_nome or '',
-                e.enti_tipo_enti or '',
+                e.tipo or '',
                 e.enti_cpf or '',
                 e.enti_cnpj or '',
                 e.enti_cida or '',
@@ -320,13 +374,28 @@ class ExportarEntidadesView(DBAndSlugMixin, View):
                 e.enti_fone or '',
                 e.enti_celu or '',
                 e.enti_emai or '',
+                e.situacao_formatada or '',
+                e.tipo_formatado or '',
             ])
 
+        # Ajuste simples de largura
+        larguras = {
+            'A': 12, 'B': 35, 'C': 18, 'D': 18, 'E': 20,
+            'F': 20, 'G': 10, 'H': 18, 'I': 18, 'J': 30,
+            'K': 15, 'L': 18,
+        }
+        for col, largura in larguras.items():
+            ws.column_dimensions[col].width = largura
+
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename="entidades.xlsx"'
+
+        wb.save(response)
         return response
 
 
-
-from django.views.generic import TemplateView
 
 class RelatorioEntidadesView(TemplateView):
     template_name = "Entidades/relatorio_entidades.html"

@@ -8,7 +8,10 @@ from django.http import HttpResponse, Http404
 from django.contrib import messages
 import logging
 from django.db import transaction
-
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment
+from django.db.models import DecimalField, IntegerField, OuterRef, Subquery
+from django.db.models.functions import Cast, Coalesce
 logger = logging.getLogger(__name__)
 
 from core.utils import get_licenca_db_config
@@ -1416,29 +1419,136 @@ class ProdutoDeleteView(DBAndSlugMixin, DeleteView):
 
 class ExportarProdutosView(DBAndSlugMixin, View):
     def get(self, request, *args, **kwargs):
-        qs = Produtos.objects.using(self.db_alias).all()
         prod_nome = (request.GET.get('prod_nome') or '').strip()
         prod_codi = (request.GET.get('prod_codi') or '').strip()
+
+        qs = (
+            Produtos.objects.using(self.db_alias)
+            .all()
+            .select_related(
+                'prod_unme',
+                'prod_grup',
+                'prod_sugr',
+                'prod_fami',
+                'prod_marc',
+            )
+        )
+
+        if self.empresa_id:
+            qs = qs.filter(prod_empr=str(self.empresa_id))
+
         if prod_nome:
             qs = qs.filter(prod_nome__icontains=prod_nome)
+
         if prod_codi:
             qs = qs.filter(prod_codi__icontains=prod_codi)
 
-        # CSV simples
-        response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="produtos.csv"'
-        response.write('empresa,codigo,nome,unidade,grupo,subgrupo,familia,marca\n')
-        for p in qs.order_by('prod_empr', 'prod_codi'):
-            response.write(
-                f"{p.prod_empr},"
-                f"{p.prod_codi},"
-                f"\"{p.prod_nome}\","
-                f"{p.prod_unme_id or ''},"
-                f"{p.prod_grup_id or ''},"
-                f"{p.prod_sugr_id or ''},"
-                f"{p.prod_fami_id or ''},"
-                f"{p.prod_marc_id or ''}\n"
-            )
+        # Ordenação correta do código como número
+        qs = qs.annotate(
+            prod_codi_int=Cast('prod_codi', IntegerField())
+        )
+
+        # Preços
+        preco_qs = Tabelaprecos.objects.using(self.db_alias).filter(
+            tabe_prod=OuterRef('prod_codi')
+        )
+
+        if self.empresa_id:
+            try:
+                preco_qs = preco_qs.filter(tabe_empr=int(self.empresa_id))
+            except Exception:
+                pass
+
+        if self.filial_id:
+            try:
+                preco_qs = preco_qs.filter(tabe_fili=int(self.filial_id))
+            except Exception:
+                pass
+
+        qs = qs.annotate(
+            preco_vista=Coalesce(
+                Subquery(preco_qs.values('tabe_avis')[:1], output_field=DecimalField()),
+                0
+            ),
+            preco_prazo=Coalesce(
+                Subquery(preco_qs.values('tabe_praz')[:1], output_field=DecimalField()),
+                0
+            ),
+            preco_custo=Coalesce(
+                Subquery(preco_qs.values('tabe_cuge')[:1], output_field=DecimalField()),
+                0
+            ),
+        ).order_by('prod_empr', 'prod_codi_int')
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = 'Produtos'
+
+        headers = [
+            'Empresa',
+            'Código',
+            'Nome',
+            'Unidade',
+            'Grupo',
+            'Subgrupo',
+            'Família',
+            'Marca',
+            'NCM',
+            'Preço à Vista',
+            'Preço a Prazo',
+            'Preço de Custo',
+        ]
+        ws.append(headers)
+
+        header_fill = PatternFill(fill_type='solid', fgColor='1F4E78')
+        header_font = Font(color='FFFFFF', bold=True)
+        header_alignment = Alignment(horizontal='center')
+
+        for cell in ws[1]:
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = header_alignment
+
+        for p in qs:
+            ws.append([
+                p.prod_empr or '',
+                p.prod_codi or '',
+                p.prod_nome or '',
+                getattr(p.prod_unme, 'unid_desc', '') if p.prod_unme else '',
+                getattr(p.prod_grup, 'descricao', '') if p.prod_grup else '',
+                getattr(p.prod_sugr, 'descricao', '') if p.prod_sugr else '',
+                getattr(p.prod_fami, 'descricao', '') if p.prod_fami else '',
+                getattr(p.prod_marc, 'nome', '') if p.prod_marc else '',
+                p.prod_ncm or '',
+                float(p.preco_vista or 0),
+                float(p.preco_prazo or 0),
+                float(p.preco_custo or 0),
+            ])
+
+        larguras = {
+            'A': 10,
+            'B': 12,
+            'C': 40,
+            'D': 18,
+            'E': 22,
+            'F': 22,
+            'G': 22,
+            'H': 22,
+            'I': 16,
+            'J': 16,
+            'K': 16,
+            'L': 16,
+        }
+
+        for col, largura in larguras.items():
+            ws.column_dimensions[col].width = largura
+
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename="produtos.xlsx"'
+
+        wb.save(response)
         return response
 
 

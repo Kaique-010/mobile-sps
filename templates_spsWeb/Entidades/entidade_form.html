@@ -40,7 +40,7 @@
         <div class="row">
           <div class="col-md-6"></div>
           
-          <div class="col-md-3">
+          <div class="col-md-2">
             <div class="form-group">
               <label class="d-block mb-2">Transportadora</label>
               <div class="form-check form-switch">
@@ -59,7 +59,26 @@
             </div>
           </div>
 
-          <div class="col-md-3">
+          <div class="col-md-2">
+            <div class="form-group">
+              <label class="d-block mb-2">Motorista</label>
+              <div class="form-check form-switch">
+                {{ form.is_motorista }}
+                <label class="form-check-label" for="{{ form.is_motorista.id_for_label }}">
+                   Sim
+                </label>
+              </div>
+              {% if form.is_motorista.errors %}
+              <div class="text-danger">
+                {% for error in form.is_motorista.errors %}
+                <p>{{ error }}</p>
+                {% endfor %}
+              </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="col-md-2">
             <div class="form-group">
               <label class="d-block mb-2">Situação</label>
               <div class="form-check form-switch">
