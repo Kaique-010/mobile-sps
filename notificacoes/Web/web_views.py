@@ -226,9 +226,10 @@ class TitulosAPagarListView(DBAndSlugMixin, ListView):
         )
         def _to_row(o):
             forn = getattr(o, 'titu_forn', '') or getattr(o, 'bapa_forn', '')
-            valo = getattr(o, 'titu_valo', '') or getattr(o, 'bapa_valo', '')
+            valo = getattr(o, 'titu_valo', '') or getattr(o, 'bapa_valo', '') or getattr(o, 'bapa_valo_pago', '')
             parc = getattr(o, 'titu_parc', '') or getattr(o, 'bapa_parc', '')
-            venc = getattr(o, 'titu_venc', '') or getattr(o, 'bapa_dpag', '')
+            venc = getattr(o, 'titu_venc', '') or getattr(o, 'bapa_venc', '')
+            dpag = getattr(o, 'bapa_dpag', '')
             aber = 'T' if status == 'quitado' else getattr(o, 'titu_aber', '')
             return {
                 'titu_titu': getattr(o, 'titu_titu', '') or getattr(o, 'bapa_titu', ''),
@@ -237,6 +238,7 @@ class TitulosAPagarListView(DBAndSlugMixin, ListView):
                 'titu_valo': valo,
                 'titu_parc': parc,
                 'titu_venc': venc,
+                'bapa_dpag': dpag,
                 'titu_aber': aber,
             }
         return [
@@ -300,7 +302,8 @@ class TitulosAReceberListView(DBAndSlugMixin, ListView):
             clie = getattr(o, 'titu_clie', '') or getattr(o, 'bare_clie', '')
             valo = getattr(o, 'titu_valo', '') or getattr(o, 'bare_valo', '') or getattr(o, 'bare_valo_pago', '')
             parc = getattr(o, 'titu_parc', '') or getattr(o, 'bare_parc', '')
-            venc = getattr(o, 'titu_venc', '') or getattr(o, 'bare_dpag', '')
+            venc = getattr(o, 'titu_venc', '') or getattr(o, 'bare_venc', '')
+            dpag = getattr(o, 'bare_dpag', '')
             aber = 'T' if status == 'quitado' else getattr(o, 'titu_aber', '')
             return {
                 'titu_titu': getattr(o, 'titu_titu', '') or getattr(o, 'bare_titu', ''),
@@ -309,6 +312,7 @@ class TitulosAReceberListView(DBAndSlugMixin, ListView):
                 'titu_valo': valo,
                 'titu_parc': parc,
                 'titu_venc': venc,
+                'bapa_dpag': dpag,
                 'titu_aber': aber,
             }
         return [
