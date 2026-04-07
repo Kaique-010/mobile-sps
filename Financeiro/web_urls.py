@@ -1,8 +1,8 @@
 from django.urls import path
-from Financeiro.Web.web_views import FluxoCaixaView, FluxoCompetenciaView, DetalhesCaixaView, DetalhesCompetenciaView
+from Financeiro.Web.web_views import FluxoCaixaView, FluxoCompetenciaView, DetalhesCaixaView, DetalhesCompetenciaView, BaixasEmMassaPageView
 from Financeiro.Web.views import OrcamentoDashboardTemplateView, orcamento_realizado_detalhe
 from Financeiro.Web.orcamento_views import OrcamentoCreateView, OrcamentoItemCreateView, orcamento_item_buscar
-from Financeiro.Rest.autocomplete import autocomplete_cc
+from Financeiro.Rest.autocomplete import autocomplete_cc, autocomplete_bancos_caixas
 
 
 
@@ -15,6 +15,7 @@ app_name = "financeiro_web"
 urlpatterns = [
     path("", FluxoCaixaView.as_view(), name="fluxo_de_caixa"),
     path("fluxo-competencia/", FluxoCompetenciaView.as_view(), name="fluxo_competencia"),
+    path("baixas-em-massa/", BaixasEmMassaPageView.as_view(), name="baixas_em_massa"),
     path("detalhes/caixa/<int:year>/<int:month>/", DetalhesCaixaView.as_view(), name="detalhes_caixa"),
     path("detalhes/competencia/<int:year>/<int:month>/", DetalhesCompetenciaView.as_view(), name="detalhes_competencia"),
     path("orcamento/dashboard/", OrcamentoDashboardTemplateView.as_view(), name="orcamento_dashboard"),
@@ -23,4 +24,5 @@ urlpatterns = [
     path("orcamento/<int:orcamento_id>/item/create/", OrcamentoItemCreateView.as_view(), name="orcamento_item_create"),
     path("orcamento/realizado-detalhe/", orcamento_realizado_detalhe, name="orcamento_realizado_detalhe"),
     path("autocomplete/centrodecustos/", autocomplete_cc, name="autocomplete_centrosdecustos"),
+    path("autocomplete/bancos-caixas/", autocomplete_bancos_caixas, name="autocomplete_bancos_caixas"),
 ]
