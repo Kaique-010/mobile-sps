@@ -189,11 +189,32 @@
   }
 
   @keyframes pulse {
-    0%, 100% {
+
+    0%,
+    100% {
       opacity: 1;
     }
+
     50% {
       opacity: 0.7;
+    }
+  }
+
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 0.75rem;
+  }
+
+  @media (max-width: 1200px) {
+    .stats-row {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .stats-row {
+      grid-template-columns: repeat(2, 1fr);
     }
   }
 </style>
@@ -207,8 +228,8 @@
   </p>
 
   <!-- Cards de Estatísticas -->
-  <div class="row g-3 mb-4">
-    <div class="col-3 col-lg-3">
+  <div class="mb-4 stats-row">
+    <div>
       <a class="stat-card stat-card-danger" href="/web/{{ slug }}/notificacoes/pagar/?period=hoje">
         <div class="card-body position-relative">
           <i class="bi bi-exclamation-circle stat-icon text-danger"></i>
@@ -221,7 +242,7 @@
       </a>
     </div>
 
-    <div class="col-3 col-lg-3">
+    <div>
       <a class="stat-card stat-card-warning" href="/web/{{ slug }}/notificacoes/pagar/?period=semana">
         <div class="card-body position-relative">
           <i class="bi bi-calendar-week stat-icon text-warning"></i>
@@ -234,7 +255,7 @@
       </a>
     </div>
 
-    <div class="col-3 col-lg-3">
+    <div>
       <a class="stat-card stat-card-success" href="/web/{{ slug }}/notificacoes/receber/?period=hoje">
         <div class="card-body position-relative">
           <i class="bi bi-cash-coin stat-icon text-success"></i>
@@ -247,7 +268,7 @@
       </a>
     </div>
 
-    <div class="col-3 col-lg-3">
+    <div>
       <a class="stat-card stat-card-info" href="/web/{{ slug }}/notificacoes/receber/?period=semana">
         <div class="card-body position-relative">
           <i class="bi bi-calendar-check stat-icon text-info"></i>
@@ -259,11 +280,63 @@
         </div>
       </a>
     </div>
+
+    <div>
+      <a class="stat-card stat-card-success" href="/web/{{ slug }}/notificacoes/pagar/?period=hoje&status=quitado">
+        <div class="card-body position-relative">
+          <i class="bi bi-check2-circle stat-icon text-success"></i>
+          <span class="stat-label">Contas Pagas</span>
+          <div class="d-flex align-items-center justify-content-between">
+            <span class="stat-value text-success">{{ pagas_hoje_count }}</span>
+            <span class="badge bg-success badge-pulse">HOJE</span>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div>
+      <a class="stat-card stat-card-info" href="/web/{{ slug }}/notificacoes/pagar/?period=semana&status=quitado">
+        <div class="card-body position-relative">
+          <i class="bi bi-check2-square stat-icon text-info"></i>
+          <span class="stat-label">Contas Pagas</span>
+          <div class="d-flex align-items-center justify-content-between">
+            <span class="stat-value text-info">{{ pagas_semana_count }}</span>
+            <span class="badge bg-info text-dark">SEMANA</span>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div>
+      <a class="stat-card stat-card-success" href="/web/{{ slug }}/notificacoes/receber/?period=hoje&status=quitado">
+        <div class="card-body position-relative">
+          <i class="bi bi-cash stat-icon text-success"></i>
+          <span class="stat-label">Contas Recebidas</span>
+          <div class="d-flex align-items-center justify-content-between">
+            <span class="stat-value text-success">{{ recebidas_hoje_count }}</span>
+            <span class="badge bg-success badge-pulse">HOJE</span>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div>
+      <a class="stat-card stat-card-info" href="/web/{{ slug }}/notificacoes/receber/?period=semana&status=quitado">
+        <div class="card-body position-relative">
+          <i class="bi bi-cash-stack stat-icon text-info"></i>
+          <span class="stat-label">Contas Recebidas</span>
+          <div class="d-flex align-items-center justify-content-between">
+            <span class="stat-value text-info">{{ recebidas_semana_count }}</span>
+            <span class="badge bg-info text-dark">SEMANA</span>
+          </div>
+        </div>
+      </a>
+    </div>
   </div>
 
   <!-- Seção de Conteúdo -->
   <h5 class="section-title">Movimentações Recentes</h5>
-  
+
   <div class="row g-3">
     <div class="col-12 col-lg-8">
       <div class="card content-card h-100">
@@ -288,8 +361,14 @@
                 <td>
                   {% if t.tipo == 'Pagar' %}
                   <span class="badge bg-danger"><i class="bi bi-arrow-up-right"></i> Pagar</span>
-                  {% else %}
+                  {% elif t.tipo == 'Receber' %}
                   <span class="badge bg-success"><i class="bi bi-arrow-down-left"></i> Receber</span>
+                  {% elif t.tipo == 'Paga' %}
+                  <span class="badge bg-secondary"><i class="bi bi-check2-circle"></i> Paga</span>
+                  {% elif t.tipo == 'Recebida' %}
+                  <span class="badge bg-success"><i class="bi bi-check2-square"></i> Recebida</span>
+                  {% else %}
+                  <span class="badge bg-primary">Título</span>
                   {% endif %}
                 </td>
                 <td class="fw-semibold">{{ t.titu_titu }}</td>
@@ -328,32 +407,32 @@
           <i class="bi bi-lightning-charge me-2"></i>Ações Rápidas
         </div>
         <div class="quick-actions list-group list-group-flush">
-          <a class="list-group-item d-flex justify-content-between align-items-center" 
-             href="/web/{{ slug }}/notificacoes/orcamentos/">
+          <a class="list-group-item d-flex justify-content-between align-items-center"
+            href="/web/{{ slug }}/notificacoes/orcamentos/">
             <span>
               <i class="bi bi-file-earmark-text me-2 text-primary"></i>
               Orçamentos Criados
             </span>
             <span class="badge bg-primary rounded-pill">{{ orcamentos_hoje_count }}</span>
           </a>
-          <a class="list-group-item d-flex justify-content-between align-items-center" 
-             href="/web/{{ slug }}/notificacoes/pedidos/">
+          <a class="list-group-item d-flex justify-content-between align-items-center"
+            href="/web/{{ slug }}/notificacoes/pedidos/">
             <span>
               <i class="bi bi-cart-check me-2 text-success"></i>
               Pedidos Criados
             </span>
             <span class="badge bg-success rounded-pill">{{ pedidos_hoje_count }}</span>
           </a>
-          <a class="list-group-item d-flex justify-content-between align-items-center" 
-             href="/web/{{ slug }}/notificacoes/pagar/?period=hoje">
+          <a class="list-group-item d-flex justify-content-between align-items-center"
+            href="/web/{{ slug }}/notificacoes/pagar/?period=hoje">
             <span>
               <i class="bi bi-wallet2 me-2 text-danger"></i>
               Pagar Hoje
             </span>
             <span class="badge bg-danger rounded-pill">{{ pagar_hoje_count }}</span>
           </a>
-          <a class="list-group-item d-flex justify-content-between align-items-center" 
-             href="/web/{{ slug }}/notificacoes/receber/?period=hoje">
+          <a class="list-group-item d-flex justify-content-between align-items-center"
+            href="/web/{{ slug }}/notificacoes/receber/?period=hoje">
             <span>
               <i class="bi bi-cash-stack me-2 text-success"></i>
               Receber Hoje

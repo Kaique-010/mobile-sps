@@ -27,6 +27,16 @@ class EntidadesForm(forms.ModelForm):
         required=False,
         label='É Transportadora?'
     )
+    
+    is_motorista = forms.BooleanField(
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input', 
+            'role': 'switch', 
+            'style': 'width: 3em; height: 1.5em;'
+        }),
+        required=False,
+        label='É Motorista?'
+    )
 
     class Meta:
         model = Entidades
@@ -68,7 +78,9 @@ class EntidadesForm(forms.ModelForm):
         # Ajusta o valor inicial do campo booleano com base no valor '0'/'1' do model
         if self.instance and self.instance.pk:
             self.fields['enti_situ'].initial = (str(self.instance.enti_situ) == '1')
-            self.fields['is_transportadora'].initial = (self.instance.enti_tien == 'T')
+            enti_tien = str(getattr(self.instance, 'enti_tien', '') or '')
+            self.fields['is_motorista'].initial = (enti_tien == 'M')
+            self.fields['is_transportadora'].initial = (enti_tien == 'T')
 
         # Tornar certos campos não obrigatórios
         for field in ['enti_cpf', 'enti_cnpj', 'enti_fone', 'enti_emai',
@@ -113,12 +125,22 @@ class EntidadesForm(forms.ModelForm):
         if 'enti_situ' in self.cleaned_data:
             instance.enti_situ = '1' if str(self.cleaned_data.get('enti_situ')) == '1' else '0'
 
-        if self.cleaned_data.get('is_transportadora'):
+        is_transportadora = bool(self.cleaned_data.get('is_transportadora'))
+        is_motorista = bool(self.cleaned_data.get('is_motorista'))
+
+        if is_transportadora:
             instance.enti_tien = 'T'
             instance.enti_tipo_enti = 'FO'  # Força tipo Fornecedor se for transportadora
         elif instance.enti_tien == 'T':
             # Se era transportadora e desmarcou, volta para Entidade padrão
             instance.enti_tien = 'E'
+
+        if not is_transportadora:
+            if is_motorista:
+                instance.enti_tien = 'M'
+                instance.enti_tipo_enti = 'FU'
+            elif instance.enti_tien == 'M':
+                instance.enti_tien = 'E'
             
         # Atribui empresa/filial a partir dos headers (com fallback à sessão)
         try:

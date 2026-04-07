@@ -1,7 +1,10 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load finance_tags %}
-{% block content %}
+{% block title %}Fluxo de Caixa (Competência){% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
 <style>
     :root {
         --success-color: #10b981;
@@ -124,17 +127,20 @@
     }
 
     .table {
+        --bs-table-bg: transparent;
+        --bs-table-striped-bg: rgba(255, 255, 255, 0.035);
+        --bs-table-hover-bg: rgba(255, 255, 255, 0.05);
         margin-bottom: 0;
     }
 
     .table thead th {
-        background: #f9fafb;
-        border-bottom: 2px solid #e5e7eb;
+        background: rgba(15, 23, 42, 0.92) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
         font-weight: 600;
         text-transform: uppercase;
         font-size: 0.75rem;
         letter-spacing: 0.05em;
-        color: #6b7280;
+        color: rgba(255, 255, 255, 0.75) !important;
         padding: 1rem;
     }
 
@@ -143,7 +149,7 @@
     }
 
     .table tbody tr:hover {
-        background-color: #f9fafb;
+        background-color: rgba(255, 255, 255, 0.04);
     }
 
     .table tbody td {
@@ -228,11 +234,10 @@
     }
 
     .modal-table-wrapper {
-        max-height: 320px;
+        max-height: 65vh;
         overflow-y: auto;
         border: 1px solid #e5e7eb;
         border-radius: 8px;
-        background: #fafafa;
     }
 
     .modal-table-wrapper::-webkit-scrollbar {
@@ -288,11 +293,14 @@
             font-size: 1.5rem;
         }
     }
+
+    #modalDetalhesCompetencia .modal-dialog {
+        max-width: min(1400px, 98vw);
+    }
 </style>
+{% endblock %}
 
-<link rel="stylesheet" href="{% static 'css/list.css' %}">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-
+{% block content %}
 <div class="container my-4">
     <div class="container align-items-center">
         <h2 class="page-title text-center">
@@ -463,13 +471,15 @@
                         </h6>
                         <div class="modal-table-wrapper">
                             <table class="table table-sm table-hover mb-0">
-                                <thead class="table-light sticky-top">
+                                <thead class="table-responsive sticky-top">
                                     <tr>
                                         <th>Título</th>
                                         <th>Parc.</th>
+                                        <th>Entidade</th>
                                         <th>Emissão</th>
                                         <th>Vencimento</th>
                                         <th class="text-end">Valor</th>
+                                        <th class="text-end">Aberto</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tbl-receitas-competencia"></tbody>
@@ -484,13 +494,15 @@
                         </h6>
                         <div class="modal-table-wrapper">
                             <table class="table table-sm table-hover mb-0">
-                                <thead class="table-light sticky-top">
+                                <thead class="table-responsive sticky-top">
                                     <tr>
                                         <th>Título</th>
                                         <th>Parc.</th>
+                                        <th>Entidade</th>
                                         <th>Emissão</th>
                                         <th>Vencimento</th>
                                         <th class="text-end">Valor</th>
+                                        <th class="text-end">Aberto</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tbl-despesas-competencia"></tbody>
@@ -503,6 +515,9 @@
     </div>
 </div>
 
+{% endblock %}
+
+{% block extra_js %}
 <script>
     function formatDateBR(dateStr) {
         if (!dateStr) return "-";
@@ -513,6 +528,7 @@
 
     (function () {
         const modalEl = document.getElementById('modalDetalhesCompetencia');
+        const slug = '{{ slug|escapejs }}';
         document.addEventListener('click', async function (e) {
             const link = e.target.closest('[data-role="show-details-competencia"]');
             if (!link) return;
@@ -520,7 +536,7 @@
 
             const year = link.getAttribute('data-year');
             const month = link.getAttribute('data-month');
-            const url = `/web/${encodeURIComponent('{{ slug }}')}/fluxo-de-caixa/detalhes/competencia/${year}/${month}/`;
+            const url = `/web/${encodeURIComponent(slug)}/fluxo-de-caixa/detalhes/competencia/${year}/${month}/`;
 
             try {
                 const res = await fetch(url, { credentials: 'same-origin' });
@@ -536,29 +552,31 @@
                     <tr>
                         <td>${i.titulo}</td>
                         <td>${i.parcela}</td>
+                        <td>${i.entidade || ''}</td>
                         <td>${formatDateBR(i.emissao || '')}</td>
                         <td>${formatDateBR(i.vencimento || '')}</td>
                         <td class="text-end fw-semibold">${Number(i.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                        <td class="text-end">${Number(i.saldo_aberto || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                     </tr>
-                `).join('') || '<tr><td colspan="5" class="text-center text-muted py-3">Nenhuma receita encontrada</td></tr>';
+                `).join('') || '<tr><td colspan="7" class="text-center text-muted py-3">Nenhuma receita encontrada</td></tr>';
 
                 desTbody.innerHTML = (data.despesas || []).map(i => `
                     <tr>
                         <td>${i.titulo}</td>
                         <td>${i.parcela}</td>
+                        <td>${i.entidade || ''}</td>
                         <td>${formatDateBR(i.emissao || '')}</td>
                         <td>${formatDateBR(i.vencimento || '')}</td>
                         <td class="text-end fw-semibold">${Number(i.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                        <td class="text-end">${Number(i.saldo_aberto || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                     </tr>
-                `).join('') || '<tr><td colspan="5" class="text-center text-muted py-3">Nenhuma despesa encontrada</td></tr>';
+                `).join('') || '<tr><td colspan="7" class="text-center text-muted py-3">Nenhuma despesa encontrada</td></tr>';
 
-                let inst = null;
                 if (window.bootstrap && bootstrap.Modal) {
-                    inst = typeof bootstrap.Modal.getOrCreateInstance === 'function'
-                        ? bootstrap.Modal.getOrCreateInstance(modalEl)
-                        : new bootstrap.Modal(modalEl);
+                    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+                } else if (window.showToast) {
+                    window.showToast('Bootstrap não carregado para abrir o modal', { variant: 'danger', delay: 2500 });
                 }
-                if (inst) inst.show();
             } catch (err) {
                 console.error('Falha ao carregar detalhes de competência:', err, url);
                 if (window.showToast) {
@@ -569,88 +587,87 @@
     })();
 </script>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     (function () {
-        const labels = [{% for m in movimentos_mensais %}'{{ m.mes|date:"m/Y" }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
-        const receitas = [{% for m in movimentos_mensais %}{{ m.receita|default_if_none:"0" }}{% if not forloop.last %}, {% endif %}{% endfor %}].map(Number);
-        const despesas = [{% for m in movimentos_mensais %}{{ m.despesa|default_if_none:"0" }}{% if not forloop.last %}, {% endif %}{% endfor %}].map(Number);
-        const resultados = [{% for m in movimentos_mensais %}{{ m.resultado|default_if_none:"0" }}{% if not forloop.last %}, {% endif %}{% endfor %}].map(Number);
-        
-        const ctx = document.getElementById('chart-competencia');
-        if (ctx && window.Chart) {
-            const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels,
-                    datasets: [
-                        {
-                            type: 'bar',
-                            label: 'Receita',
-                            data: receitas,
-                            backgroundColor: 'rgba(16, 185, 129, 0.6)',
-                            borderColor: '#059669',
-                            borderWidth: 1.5
-                        },
-                        {
-                            type: 'bar',
-                            label: 'Despesa',
-                            data: despesas,
-                            backgroundColor: 'rgba(239, 68, 68, 0.6)',
-                            borderColor: '#dc2626',
-                            borderWidth: 1.5
-                        },
-                        {
-                            type: 'line',
-                            label: 'Resultado',
-                            data: resultados,
-                            borderColor: '#3b82f6',
-                            backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                            tension: 0.4,
-                            pointBackgroundColor: '#3b82f6',
-                            pointBorderColor: '#1e40af',
-                            pointBorderWidth: 2,
-                            pointRadius: 4
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom' },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                            callbacks: {
-                                label: function (context) {
-                                    const label = context.dataset.label || '';
-                                    const value = fmt.format(context.parsed.y || 0);
-                                    return `${label}: ${value}`;
-                                }
-                            }
-                        }
+        const labels = [{% for m in movimentos_mensais %}'{{ m.mes|date:"m/Y" }}'{% if not forloop.last %}, {% endif %} {% endfor %}];
+    const receitas = [{% for m in movimentos_mensais %}{ { m.receita | default_if_none: "0" } } {% if not forloop.last %}, {% endif %} {% endfor %}].map(Number);
+    const despesas = [{% for m in movimentos_mensais %}{ { m.despesa | default_if_none: "0" } } {% if not forloop.last %}, {% endif %} {% endfor %}].map(Number);
+    const resultados = [{% for m in movimentos_mensais %}{ { m.resultado | default_if_none: "0" } } {% if not forloop.last %}, {% endif %} {% endfor %}].map(Number);
+
+    const ctx = document.getElementById('chart-competencia');
+    if (ctx && window.Chart) {
+        const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        type: 'bar',
+                        label: 'Receita',
+                        data: receitas,
+                        backgroundColor: 'rgba(16, 185, 129, 0.6)',
+                        borderColor: '#059669',
+                        borderWidth: 1.5
                     },
-                    scales: {
-                        x: {
-                            title: { text: 'Período', display: true }
-                        },
-                        y: {
-                            title: { text: 'Valor (R$)', display: true },
-                            ticks: {
-                                callback: (v) => fmt.format(v)
+                    {
+                        type: 'bar',
+                        label: 'Despesa',
+                        data: despesas,
+                        backgroundColor: 'rgba(239, 68, 68, 0.6)',
+                        borderColor: '#dc2626',
+                        borderWidth: 1.5
+                    },
+                    {
+                        type: 'line',
+                        label: 'Resultado',
+                        data: resultados,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                        tension: 0.4,
+                        pointBackgroundColor: '#3b82f6',
+                        pointBorderColor: '#1e40af',
+                        pointBorderWidth: 2,
+                        pointRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function (context) {
+                                const label = context.dataset.label || '';
+                                const value = fmt.format(context.parsed.y || 0);
+                                return `${label}: ${value}`;
                             }
                         }
                     }
+                },
+                scales: {
+                    x: {
+                        title: { text: 'Período', display: true }
+                    },
+                    y: {
+                        title: { text: 'Valor (R$)', display: true },
+                        ticks: {
+                            callback: (v) => fmt.format(v)
+                        }
+                    }
                 }
-            });
-        } else if (!ctx) {
-            console.warn('chart-competencia element not found');
-        } else {
-            console.error('Chart.js não carregado. Verifique o CDN ou bloqueios do navegador.');
-        }
-    })();
+            }
+        });
+    } else if (!ctx) {
+        console.warn('chart-competencia element not found');
+    } else {
+        console.error('Chart.js não carregado. Verifique o CDN ou bloqueios do navegador.');
+    }
+    }) ();
 </script>
 
 {% endblock %}

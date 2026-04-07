@@ -4,7 +4,8 @@ from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
 from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import TemplateView, CreateView, UpdateView, DeleteView
-
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment
 from .models import Centrodecustos
 from .forms import CentrodecustosForm
 from core.utils import get_licenca_db_config
@@ -88,32 +89,6 @@ class CentrodeCustosDeleteView(DBAndSlugMixin, DeleteView):
 
     def get_success_url(self):
         return reverse_lazy("centrosdecustos:lista", kwargs={"slug": self.slug})
-
-
-class ExportarCentrodeCustosView(DBAndSlugMixin, View):
-    def get(self, request, *args, **kwargs):
-        db_alias = getattr(request, 'db_alias')
-        empresa = int(self.empresa_id or 0)
-
-        qs = Centrodecustos.objects.using(db_alias).filter(cecu_empr=empresa).order_by("cecu_expa")
-
-        response = HttpResponse(content_type='text/csv; charset=utf-8')
-        response['Content-Disposition'] = 'attachment; filename=centrosdecustos.csv'
-
-        import csv
-        writer = csv.writer(response)
-        writer.writerow(['Empresa', 'Código', 'Nome', 'Nível', 'Tipo'])
-
-        for c in qs:
-            writer.writerow([
-                c.cecu_empr,
-                c.cecu_expa,
-                c.cecu_nome,
-                c.cecu_nive,
-                c.cecu_anal
-            ])
-
-        return response
 
 
 class CentrodeCustosCreateView(DBAndSlugMixin, CreateView):
@@ -220,3 +195,56 @@ class AutocompletePaiCentrodeCustosView(DBAndSlugMixin, View):
         } for c in qs]
 
         return JsonResponse({"results": data})
+
+
+
+class ExportarCentrodeCustosView(DBAndSlugMixin, View):
+    def get(self, request, *args, **kwargs):
+        db_alias = getattr(request, 'db_alias')
+        empresa = int(self.empresa_id or 0)
+        qs = Centrodecustos.objects.using(db_alias).filter(cecu_empr=empresa).order_by("cecu_expa")
+
+        response = HttpResponse(content_type='text/csv; charset=utf-8')
+        response['Content-Disposition'] = 'attachment; filename=centrosdecustos.xlsx'
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = 'Centros de Custos'
+
+        headers = [
+             'Expandido', 'Nome', 'Nível', 'Análitico/Sintético']
+        ws.append(headers)
+        
+        # Cabeçalho formatado
+        header_fill = PatternFill(fill_type='solid', fgColor='1F4E78')
+        header_font = Font(color='FFFFFF', bold=True)
+        header_alignment = Alignment(horizontal='center')
+        for cell in ws[1]:
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = header_alignment
+
+        for c in qs:
+            ws.append([
+                c.cecu_expa,
+                c.cecu_nome,
+                c.cecu_nive,
+                'Sintética' if c.cecu_anal=='S' else 'Analítica'
+            ])
+        
+        # Ajuste simples de largura
+        larguras = {
+            'A': 12, 'B': 35, 'C': 18, 'D': 18, 'E': 20,
+            'F': 20, 'G': 10, 'H': 18, 'I': 18, 'J': 30,
+            'K': 15, 'L': 18,
+        }
+        for col, largura in larguras.items():
+            ws.column_dimensions[col].width = largura
+
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename="centrosdecustos.xlsx"'
+
+        wb.save(response)
+        return response

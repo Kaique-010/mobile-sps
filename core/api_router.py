@@ -28,6 +28,7 @@ urlpatterns = [
     path("<slug>/implantacao/", include("implantacao.urls")),
     path("<slug>/contas_a_pagar/", include("contas_a_pagar.urls")),
     path("<slug>/contas_a_receber/", include("contas_a_receber.urls")),
+    path("<slug>/financeiro/", include("Financeiro.Rest.urls")),
     path("<slug>/contratos/", include("contratos.urls")),
     path("<slug>/ordemdeservico/", include("OrdemdeServico.urls")),
     path("<slug>/caixadiario/", include("CaixaDiario.urls")),
