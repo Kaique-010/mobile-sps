@@ -1,12 +1,16 @@
 from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework import status
-from django.core.cache import cache
+import logging
 from core.decorator import ModuloRequeridoMixin
 from core.middleware import get_licenca_slug
 from core.registry import get_licenca_db_config
+from core.cache_service import build_cache_key, cache_get_or_set
 from ..models import UnidadeMedida
 from ..serializers.unidade_medida_serializer import UnidadeMedidaSerializer
+
+logger = logging.getLogger(__name__)
+
 
 class UnidadeMedidaListView(ModuloRequeridoMixin, ListAPIView):
     modulo_necessario = 'Produtos'
@@ -21,14 +25,13 @@ class UnidadeMedidaListView(ModuloRequeridoMixin, ListAPIView):
         banco = get_licenca_db_config(self.request)
         
         if banco:
-            # Cache para unidades de medida
-            cache_key = f"unidades_medida_{banco}"
-            queryset = cache.get(cache_key)
-            
-            if not queryset:
-                queryset = list(UnidadeMedida.objects.using(banco).all().order_by('unid_desc'))
-                cache.set(cache_key, queryset, 1800)  # Cache por 30 minutos
-                
+            cache_key = build_cache_key("produtos", banco, "unidades_medida")
+            queryset, _ = cache_get_or_set(
+                key=cache_key,
+                timeout=600,
+                factory=lambda: list(UnidadeMedida.objects.using(banco).all().order_by('unid_desc')),
+                logger_instance=logger,
+            )
             serializer = UnidadeMedidaSerializer(queryset, many=True)
             return Response(serializer.data)
         
