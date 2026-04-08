@@ -150,9 +150,7 @@ class OrdemServicoViewSet(BaseClienteViewSet):
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         
-        status_param = (request.query_params.get('status') or '').strip()
-        status_override = None if status_param else "1,22"
-        cache_key = self._cache_key('lista', status_override=status_override)
+        cache_key = self._cache_key('lista')
         if not self._should_refresh():
             cached = cache.get(cache_key)
             if cached is not None:
@@ -200,7 +198,16 @@ class OrdemServicoViewSet(BaseClienteViewSet):
         potencia = (qp.get('potencia') or qp.get('orde_pote') or '').strip()
 
         if incluir_status and status_param:
-            queryset = queryset.filter(orde_stat_orde=status_param)
+            status_tokens = [token.strip() for token in status_param.split(',') if token.strip()]
+            status_values = []
+            for token in status_tokens:
+                try:
+                    status_values.append(int(token))
+                except (TypeError, ValueError):
+                    continue
+
+            if status_values:
+                queryset = queryset.filter(orde_stat_orde__in=status_values)
 
         if data_inicial:
             queryset = queryset.filter(orde_data_aber__gte=data_inicial)
@@ -630,7 +637,20 @@ class OrdemServicoViewSet(BaseClienteViewSet):
     @action(detail=False, methods=['get'], url_path='todas_ordens')
     def listar_todas_ordens(self, request, *args, **kwargs):
         try:
-            status_list = [0, 1, 3]
+            status_param = (request.query_params.get('status') or '').strip()
+            if status_param:
+                status_tokens = [token.strip() for token in status_param.split(',') if token.strip()]
+                status_list = []
+                for token in status_tokens:
+                    try:
+                        status_list.append(int(token))
+                    except (TypeError, ValueError):
+                        continue
+                if not status_list:
+                    status_list = [0, 1, 3]
+            else:
+                status_list = [0, 1, 3]
+
             status_override = ",".join(str(s) for s in status_list)
             cache_key = self._cache_key('todas', status_override=status_override)
             if not self._should_refresh():
