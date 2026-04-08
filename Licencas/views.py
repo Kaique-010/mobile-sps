@@ -6,6 +6,7 @@ from rest_framework.decorators import api_view, action
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import authenticate
+from django.contrib.auth import SESSION_KEY, BACKEND_SESSION_KEY, HASH_SESSION_KEY
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -19,6 +20,7 @@ from parametros_admin.models import PermissaoModulo, Modulo
 from core.decorator import modulo_necessario, ModuloRequeridoMixin
 from django.contrib.auth.hashers import check_password
 from core.middleware import get_licenca_slug
+from core.middleware import set_licenca_slug
 from core.registry import get_licenca_db_config, get_modulos_por_docu
 from parametros_admin.utils import  get_modulos_globais, get_codigos_modulos_liberados
 from Licencas.permissions import UsuariosPermission
@@ -58,19 +60,19 @@ class LoginView(APIView):
                 except Exception:
                     logger.exception("[LOGIN][%s] cycle_key falhou durante retry de sessão", request_id)
         return False
-    
-    def post(self, request, slug=None):  
+
+    def post(self, request, slug=None):
         start_time = time.time()
         request_id = uuid.uuid4().hex[:10]
         logger.info("[LOGIN][%s] início slug_param=%s", request_id, slug)
-        
+
         data = request.data
         username = data.get("username")
         password = data.get("password")
         docu = data.get("docu")
-        empresa_id = data.get("empresa_id", 1)  
-        filial_id = data.get("filial_id", 1)    
-        
+        empresa_id = data.get("empresa_id", 1)
+        filial_id = data.get("filial_id", 1)
+
         if not docu:
             return Response({'error': 'CPF/CNPJ não informado. Deve ser obrigatoriamente informado.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -89,21 +91,19 @@ class LoginView(APIView):
         if not slug_from_docu:
             return Response({'error': 'CPF/CNPJ inválido ou licença não encontrada.'}, status=404)
 
-        # Log: Buscar configuração do banco
         db_start = time.time()
         try:
             banco = get_licenca_db_config(slug_from_docu)
         except Exception as e:
-            logger.error(f"[LOGIN][{request_id}] Erro ao obter config do banco: {e}")
+            logger.error("[LOGIN][%s] Erro ao obter config do banco: %s", request_id, e)
             return Response({'error': f'Erro na configuração da licença: {str(e)}'}, status=500)
-            
+
         db_time = (time.time() - db_start) * 1000
-        logger.debug(f"[LOGIN][{request_id}] get_licenca_db_config: {db_time:.2f}ms")
-        
+        logger.debug("[LOGIN][%s] get_licenca_db_config: %.2fms", request_id, db_time)
+
         if not banco:
             return Response({'error': 'CPF/CNPJ inválido ou licença não encontrada.'}, status=404)
 
-        # Log: Buscar licença
         licenca_start = time.time()
         try:
             licenca_key = build_cache_key("licencas_login", banco, "licenca_docu", docu_digits)
@@ -122,27 +122,26 @@ class LoginView(APIView):
             licenca = licenca_payload
         except Exception:
             licenca = None
-            
-        # LicencaWeb fica no banco default (gerenciador)
-        licenca_web = LicencaWeb.objects.using('default').select_related('plano').filter(Q(cnpj=docu_digits) | Q(cnpj=str(docu))).first()
-        
+
+        licenca_web = LicencaWeb.objects.using('default').select_related('plano').filter(
+            Q(cnpj=docu_digits) | Q(cnpj=str(docu))
+        ).first()
+
         if licenca_web:
             try:
                 plano = licenca_web.plano
             except Exception:
                 plano = None
-                logger.warning(f"[LOGIN] plano órfão ou deletado para licença {licenca_web.slug} — bloqueio ignorado")
+                logger.warning("[LOGIN] plano órfão ou deletado para licença %s", licenca_web.slug)
 
             if plano and plano.plan_trial:
                 if plano.plan_ativ and plano.plan_data_expi:
                     if timezone.now() > plano.plan_data_expi:
                         plano.plan_ativ = False
                         plano.save(update_fields=['plan_ativ'])
-                        logger.warning(f"[LOGIN] Trial expirado on-the-fly — licença {licenca_web.slug}")
+                        logger.warning("[LOGIN] Trial expirado on-the-fly — licença %s", licenca_web.slug)
 
                 if not plano.plan_ativ:
-                    logger.warning(f"[LOGIN] Trial desativado — licença {licenca_web.slug}, deseja prosseguir com o contrato?")
-                    
                     return Response(
                         {
                             'error': 'Seu período de trial expirou. Entre em contato com o suporte.',
@@ -151,40 +150,32 @@ class LoginView(APIView):
                         },
                         status=status.HTTP_403_FORBIDDEN,
                     )
-                    
-            
+
         licenca_time = (time.time() - licenca_start) * 1000
-        logger.debug(f"[LOGIN][{request_id}] Buscar licença: {licenca_time:.2f}ms")
-        
+        logger.debug("[LOGIN][%s] Buscar licença: %.2fms", request_id, licenca_time)
+
         if not licenca and not licenca_web:
             return Response({'error': 'CPF/CNPJ inválido ou licença bloqueada.'}, status=403)
 
-        # Log: Buscar usuário
         user_start = time.time()
         try:
             usuario = Usuarios.objects.using(banco).get(usua_nome__iexact=username)
         except Usuarios.DoesNotExist:
             return Response({'error': 'Usuário não encontrado.'}, status=404)
         except Exception as e:
-            logger.error(f"[LOGIN][{request_id}] Erro ao buscar usuário no banco {banco}: {e}")
+            logger.error("[LOGIN][%s] Erro ao buscar usuário no banco %s: %s", request_id, banco, e)
             return Response({'error': f'Erro ao conectar no banco da empresa: {str(e)}'}, status=500)
-        
-        user_time = (time.time() - user_start) * 1000
-        logger.debug(f"[LOGIN][{request_id}] Buscar usuário: {user_time:.2f}ms")
 
-        # Log: Validar senha
+        user_time = (time.time() - user_start) * 1000
+        logger.debug("[LOGIN][%s] Buscar usuário: %.2fms", request_id, user_time)
+
         password_start = time.time()
         if not usuario.check_password(password):
             return Response({'error': 'Senha incorreta.'}, status=401)
         password_time = (time.time() - password_start) * 1000
-        logger.debug(f"[LOGIN][{request_id}] Validar senha: {password_time:.2f}ms")
+        logger.debug("[LOGIN][%s] Validar senha: %.2fms", request_id, password_time)
 
-        # REMOVIDO: Query desnecessária de módulos globais
-        # modulos_globais = list(get_modulos_globais(banco))
-        
-        # Para o login, retornamos apenas uma lista vazia
-        # Os módulos reais serão carregados após seleção da empresa/filial
-        modulos_login = []  # Não retornar módulos no login
+        modulos_login = []
 
         try:
             empresa_id_int = int(str(empresa_id).strip())
@@ -207,34 +198,43 @@ class LoginView(APIView):
         if setor_claim is None:
             setor_claim = 0
 
-        jwt_start = time.time()
-        refresh = RefreshToken.for_user(usuario)
-        refresh['username'] = usuario.usua_nome
-        refresh['usuario_id'] = usuario.usua_codi
-        refresh['setor'] = setor_claim
-        
-        if licenca:
-            refresh['lice_id'] = licenca.get('lice_id')
-            refresh['lice_nome'] = licenca.get('lice_nome')
-        elif licenca_web:
-            refresh['lice_id'] = licenca_web.id
-            refresh['lice_nome'] = licenca_web.slug
-            
-        refresh['empresa_id'] = empresa_id_int
-        refresh['filial_id'] = filial_id_int
-        refresh['lice_slug'] = slug_from_docu
-        access = refresh.access_token
-        access['lice_slug'] = slug_from_docu
+        # ----------------------------------------------------------------
+        # SESSÃO — grava todos os dados ANTES de rotacionar a chave
+        # Ordem correta: 1) dados, 2) chaves de auth nativas, 3) cycle_key
+        # ----------------------------------------------------------------
+        request.session["usua_codi"] = usuario.usua_codi
+        request.session["docu"] = docu_digits
+        request.session["slug"] = slug_from_docu
+        request.session["empresa_id"] = empresa_id_int
+        request.session["filial_id"] = filial_id_int
+
+        # Grava as chaves que o AuthenticationMiddleware nativo do Django
+        # usa para reconhecer o usuário autenticado em requests futuros.
+        # Sem isso, o Django sempre carrega AnonymousUser e o
+        # RestoreUserMiddleware precisa reconstruir o usuário toda vez.
+        try:
+            request.session[SESSION_KEY] = str(usuario.usua_codi)
+            request.session[BACKEND_SESSION_KEY] = 'Licencas.backends.UserBackend'
+            request.session[HASH_SESSION_KEY] = usuario.get_session_auth_hash()
+        except Exception as e:
+            logger.warning("[LOGIN][%s] falha ao gravar chaves de auth nativas na sessão: %s", request_id, e)
+
+        request.session.modified = True
+
+        # Rotaciona a chave de sessão DEPOIS de gravar tudo
+        # (protege contra session fixation sem perder os dados)
         try:
             request.session.cycle_key()
         except Exception:
-             logger.exception("[LOGIN][%s] cycle_key falhou", request_id)
-        request.session["usua_codi"] = usuario.usua_codi
-        request.session["docu"] = docu_digits
-        request.session["slug"] = slug_from_docu if slug_from_docu else request.session.get('slug')
-        request.session["empresa_id"] = empresa_id_int
-        request.session["filial_id"] = filial_id_int
-        request.session.modified = True
+            logger.exception("[LOGIN][%s] cycle_key falhou", request_id)
+
+        # ----------------------------------------------------------------
+        # Garante que o thread local também tem o slug correto para
+        # qualquer middleware que rode após este response (ex: auditoria)
+        # ----------------------------------------------------------------
+        from core.middleware import set_licenca_slug
+        set_licenca_slug(slug_from_docu)
+
         session_ok = self._save_session_with_retry(request, request_id)
         logger.info(
             "[LOGIN][%s] sessão=%s snapshot=%s",
@@ -251,10 +251,33 @@ class LoginView(APIView):
                 },
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
+
+        # ----------------------------------------------------------------
+        # JWT
+        # ----------------------------------------------------------------
+        jwt_start = time.time()
+        refresh = RefreshToken.for_user(usuario)
+        refresh['username'] = usuario.usua_nome
+        refresh['usuario_id'] = usuario.usua_codi
+        refresh['setor'] = setor_claim
+
+        if licenca:
+            refresh['lice_id'] = licenca.get('lice_id')
+            refresh['lice_nome'] = licenca.get('lice_nome')
+        elif licenca_web:
+            refresh['lice_id'] = licenca_web.id
+            refresh['lice_nome'] = licenca_web.slug
+
+        refresh['empresa_id'] = empresa_id_int
+        refresh['filial_id'] = filial_id_int
+        refresh['lice_slug'] = slug_from_docu
+
+        access = refresh.access_token
+        access['lice_slug'] = slug_from_docu
         access['username'] = usuario.usua_nome
         access['usuario_id'] = usuario.usua_codi
         access['setor'] = setor_claim
-        
+
         if licenca:
             access['lice_id'] = licenca.get('lice_id')
             access['lice_nome'] = licenca.get('lice_nome')
@@ -264,35 +287,34 @@ class LoginView(APIView):
 
         access['empresa_id'] = empresa_id_int
         access['filial_id'] = filial_id_int
-        logger.debug(f"[LOGIN][{request_id}] Token claims: setor refresh={refresh.get('setor')} access={access.get('setor')}")
+
         jwt_time = (time.time() - jwt_start) * 1000
-        logger.debug(f"[LOGIN][{request_id}] Gerar JWT: {jwt_time:.2f}ms")
+        logger.debug("[LOGIN][%s] Gerar JWT: %.2fms", request_id, jwt_time)
 
         total_time = (time.time() - start_time) * 1000
-        logger.info(f"[LOGIN][{request_id}] TOTAL: {total_time:.2f}ms para usuário {username}")
-        try:
-            logger.debug("[TRACE][LOGIN][%s] slug=%s banco=%s empresa=%s filial=%s user_id=%s", request_id, slug_from_docu, banco, empresa_id, filial_id, usuario.usua_codi)
-        except Exception:
-            pass
+        logger.info("[LOGIN][%s] TOTAL: %.2fms para usuário %s", request_id, total_time, username)
+        logger.debug(
+            "[TRACE][LOGIN][%s] slug=%s banco=%s empresa=%s filial=%s user_id=%s",
+            request_id, slug_from_docu, banco, empresa_id, filial_id, usuario.usua_codi
+        )
 
         return Response({
             'request_id': request_id,
             'access': str(access),
             'refresh': str(refresh),
-                'usuario': {
-                    'username': usuario.usua_nome,
-                    'usuario_id': usuario.usua_codi,
-                    'setor': setor_claim,
-                    'empresa_id': empresa_id_int,
-                    'filial_id': filial_id_int,
-                },
+            'usuario': {
+                'username': usuario.usua_nome,
+                'usuario_id': usuario.usua_codi,
+                'setor': setor_claim,
+                'empresa_id': empresa_id_int,
+                'filial_id': filial_id_int,
+            },
             'licenca': {
                 'lice_id': licenca.get('lice_id') if licenca else (licenca_web.id if licenca_web else None),
                 'lice_nome': licenca.get('lice_nome') if licenca else (licenca_web.slug if licenca_web else None),
             },
             'modulos': modulos_login,
         })
-        
 
 class TokenRefreshCustomView(APIView):
     permission_classes = [AllowAny]

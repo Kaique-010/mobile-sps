@@ -126,8 +126,8 @@ def home(request, slug=None, empresa=None, filial=None):
         if sess_slug:
             return redirect('home_slug', slug=sess_slug)
     try:
-        banco = get_licenca_db_config(request) or 'default'
-        logger.debug(f"[home] banco: {banco}")
+        slug_atual = slug or get_licenca_slug() or request.session.get('slug')
+        banco = get_db_from_slug(slug_atual) if slug_atual else 'default'
     except Exception:
         banco = 'default'
     # Fallbacks: tentar slug atual do middleware, depois sessão

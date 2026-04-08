@@ -1,0 +1,26 @@
+### Request to create a Bensptr
+POST http://localhost:8000/api/{{slug}}/bensptr/
+Content-Type: application/json
+X-Empresa: 1
+X-Filial: 1
+
+{
+  "bens_empr": 1,
+  "bens_fili": 1,
+  "bens_codi": "12345678",
+  "bens_desc": "New asset",
+  "bens_data_aqui": "2023-01-01",
+  "bens_valo_aqui": 10000.00
+}
+
+### Request to get Bensptr filtered by period and description
+GET http://localhost:8000/api/{{slug}}/bensptr/
+X-Empresa: 1
+X-Filial: 1
+
+??inicio=2023-01-01&fim=2023-12-31&bens_desc=asset
+
+### Request to get Bensptr resumo
+GET http://localhost:8000/api/{{slug}}/bensptr/resumo/
+X-Empresa: 1
+X-Filial: 1
