@@ -150,9 +150,7 @@ class OrdemServicoViewSet(BaseClienteViewSet):
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         
-        status_param = (request.query_params.get('status') or '').strip()
-        status_override = None if status_param else "1,22"
-        cache_key = self._cache_key('lista', status_override=status_override)
+        cache_key = self._cache_key('lista')
         if not self._should_refresh():
             cached = cache.get(cache_key)
             if cached is not None:
@@ -200,7 +198,16 @@ class OrdemServicoViewSet(BaseClienteViewSet):
         potencia = (qp.get('potencia') or qp.get('orde_pote') or '').strip()
 
         if incluir_status and status_param:
-            queryset = queryset.filter(orde_stat_orde=status_param)
+            status_tokens = [token.strip() for token in status_param.split(',') if token.strip()]
+            status_values = []
+            for token in status_tokens:
+                try:
+                    status_values.append(int(token))
+                except (TypeError, ValueError):
+                    continue
+
+            if status_values:
+                queryset = queryset.filter(orde_stat_orde__in=status_values)
 
         if data_inicial:
             queryset = queryset.filter(orde_data_aber__gte=data_inicial)
