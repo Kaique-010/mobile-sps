@@ -637,7 +637,20 @@ class OrdemServicoViewSet(BaseClienteViewSet):
     @action(detail=False, methods=['get'], url_path='todas_ordens')
     def listar_todas_ordens(self, request, *args, **kwargs):
         try:
-            status_list = [0, 1, 3]
+            status_param = (request.query_params.get('status') or '').strip()
+            if status_param:
+                status_tokens = [token.strip() for token in status_param.split(',') if token.strip()]
+                status_list = []
+                for token in status_tokens:
+                    try:
+                        status_list.append(int(token))
+                    except (TypeError, ValueError):
+                        continue
+                if not status_list:
+                    status_list = [0, 1, 3]
+            else:
+                status_list = [0, 1, 3]
+
             status_override = ",".join(str(s) for s in status_list)
             cache_key = self._cache_key('todas', status_override=status_override)
             if not self._should_refresh():
