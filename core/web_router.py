@@ -21,6 +21,7 @@ urlpatterns = [
     path("<slug:slug>/produtos/", include("Produtos.Web.web_urls")),
     path("<slug:slug>/formulacao/", include("formulacao.Web.web_urls")),
     path("<slug:slug>/pedidos/", include("Pedidos.Web.web_urls")),
+    path("<slug:slug>/trocas-devolucoes/", include("TrocasDevolucoes.Web.web_urls")),
     path("<slug:slug>/orcamentos/", include("Orcamentos.Web.web_urls")),
     path("<slug:slug>/os/", include("O_S.Web.web_urls")),
     path("<slug:slug>/osexterna/", include("osexterna.Web.web_urls")),

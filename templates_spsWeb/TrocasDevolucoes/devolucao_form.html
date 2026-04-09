@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="card">
+    <div class="card-header">
+      <h4 class="mb-0">{{ titulo }}</h4>
+    </div>
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+        <div class="row g-3">
+          {% for field in form %}
+          <div class="col-md-4">
+            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+            <div class="text-danger small">{{ field.errors|striptags }}</div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        <div class="mt-4 d-flex justify-content-end gap-2">
+          <a class="btn btn-outline-secondary" href="{% url 'TrocasDevolucoesWeb:devolucoes_listar' slug=slug %}">Cancelar</a>
+          <button type="submit" class="btn btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
