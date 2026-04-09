@@ -98,6 +98,7 @@ INSTALLED_APPS = [
     'Entidades',
     'GestaoObras',
     'Pedidos',
+    'TrocasDevolucoes',
     'Orcamentos',
     'dashboards',
     'Entradas_Estoque',
