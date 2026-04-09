@@ -5,8 +5,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, action
 from rest_framework.response import Response
 from rest_framework import status
-from django.contrib.auth import authenticate
-from django.contrib.auth import SESSION_KEY, BACKEND_SESSION_KEY, HASH_SESSION_KEY
+from django.contrib.auth import authenticate, login as django_login
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -46,20 +45,6 @@ def get_banco_por_docu(docu):
 class LoginView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
-
-    def _save_session_with_retry(self, request, request_id):
-        for attempt in (1, 2):
-            try:
-                request.session.save()
-                logger.info("[LOGIN][%s] sessão salva com sucesso (tentativa=%s)", request_id, attempt)
-                return True
-            except Exception as exc:
-                logger.exception("[LOGIN][%s] falha ao salvar sessão (tentativa=%s): %s", request_id, attempt, exc)
-                try:
-                    request.session.cycle_key()
-                except Exception:
-                    logger.exception("[LOGIN][%s] cycle_key falhou durante retry de sessão", request_id)
-        return False
 
     def post(self, request, slug=None):
         start_time = time.time()
@@ -199,58 +184,37 @@ class LoginView(APIView):
             setor_claim = 0
 
         # ----------------------------------------------------------------
-        # SESSÃO — grava todos os dados ANTES de rotacionar a chave
-        # Ordem correta: 1) dados, 2) chaves de auth nativas, 3) cycle_key
+        # SESSÃO (anti-race): usa login() nativo do Django para gravar
+        # SESSION_KEY/BACKEND/HASH de forma consistente e com rotação segura.
+        # Depois grava os metadados adicionais usados pelo projeto.
         # ----------------------------------------------------------------
+        try:
+            django_login(request, usuario, backend='Licencas.backends.UserBackend')
+        except Exception as e:
+            logger.exception("[LOGIN][%s] falha no django_login: %s", request_id, e)
+            return Response(
+                {
+                    'error': 'Falha ao iniciar sessão. Tente novamente.',
+                    'request_id': request_id,
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
         request.session["usua_codi"] = usuario.usua_codi
         request.session["docu"] = docu_digits
         request.session["slug"] = slug_from_docu
         request.session["empresa_id"] = empresa_id_int
         request.session["filial_id"] = filial_id_int
-
-        # Grava as chaves que o AuthenticationMiddleware nativo do Django
-        # usa para reconhecer o usuário autenticado em requests futuros.
-        # Sem isso, o Django sempre carrega AnonymousUser e o
-        # RestoreUserMiddleware precisa reconstruir o usuário toda vez.
-        try:
-            request.session[SESSION_KEY] = str(usuario.usua_codi)
-            request.session[BACKEND_SESSION_KEY] = 'Licencas.backends.UserBackend'
-            request.session[HASH_SESSION_KEY] = usuario.get_session_auth_hash()
-        except Exception as e:
-            logger.warning("[LOGIN][%s] falha ao gravar chaves de auth nativas na sessão: %s", request_id, e)
-
         request.session.modified = True
 
-        # Rotaciona a chave de sessão DEPOIS de gravar tudo
-        # (protege contra session fixation sem perder os dados)
-        try:
-            request.session.cycle_key()
-        except Exception:
-            logger.exception("[LOGIN][%s] cycle_key falhou", request_id)
-
-        # ----------------------------------------------------------------
-        # Garante que o thread local também tem o slug correto para
-        # qualquer middleware que rode após este response (ex: auditoria)
-        # ----------------------------------------------------------------
-        from core.middleware import set_licenca_slug
+        # Garante contexto da licença no thread local durante esta request.
         set_licenca_slug(slug_from_docu)
 
-        session_ok = self._save_session_with_retry(request, request_id)
         logger.info(
-            "[LOGIN][%s] sessão=%s snapshot=%s",
+            "[LOGIN][%s] sessão preparada snapshot=%s",
             request_id,
-            "OK" if session_ok else "FALHA",
             {k: request.session.get(k) for k in ['usua_codi', 'docu', 'slug', 'empresa_id', 'filial_id']},
         )
-        if not session_ok:
-            logger.error("[LOGIN][%s] abortado: sessão não persistiu após retries", request_id)
-            return Response(
-                {
-                    'error': 'Falha ao persistir sessão. Tente novamente.',
-                    'request_id': request_id,
-                },
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
-            )
 
         # ----------------------------------------------------------------
         # JWT
