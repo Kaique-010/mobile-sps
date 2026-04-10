@@ -30,6 +30,9 @@ class LicencaMiddleware:
 
     def __call__(self, request):
         start = time.time()
+        # Evita reaproveitar estado thread-local de requests anteriores no mesmo worker.
+        set_licenca_slug(None)
+        set_modulos_disponiveis([])
 
         path = request.path or ""
         parts = path.strip("/").split("/")
