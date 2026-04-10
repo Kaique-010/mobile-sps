@@ -1,0 +1,54 @@
+{% extends 'comissoes/base.html' %}
+{% block comissoes_content %}
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Pagamento #{{ pagamento.pagc_id }}</h5>
+        <a href="{% url 'comissoes_web:pagamentos_list' slug=slug %}" class="btn btn-outline-secondary btn-sm">Voltar</a>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3"><div class="text-muted">Data</div><div><b>{{ pagamento.pagc_data }}</b></div></div>
+            <div class="col-md-3"><div class="text-muted">Beneficiário</div><div><b>{{ pagamento.beneficiario_display|default:pagamento.pagc_bene }}</b></div></div>
+            <div class="col-md-3"><div class="text-muted">Valor</div><div><b>{{ pagamento.pagc_valo }}</b></div></div>
+        </div>
+        {% if pagamento.pagc_obse %}
+            <div class="mt-3">
+                <div class="text-muted">Observação</div>
+                <div><b>{{ pagamento.pagc_obse }}</b></div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h6 class="mb-0">Itens</h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-striped mb-0">
+                <thead>
+                    <tr>
+                        <th>ID Item</th>
+                        <th>Lançamento</th>
+                        <th>Documento</th>
+                        <th class="text-end">Valor Pago</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for i in itens %}
+                    <tr>
+                        <td>{{ i.pgci_id }}</td>
+                        <td>{{ i.pgci_lanc_id }}</td>
+                        <td>{{ i.pgci_lanc.lcom_docu }}</td>
+                        <td class="text-end">{{ i.pgci_valo }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="4" class="text-center text-muted p-3">Sem itens.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

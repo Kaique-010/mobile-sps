@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+{% block content %}
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Comissões{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .sidebar {
+            height: 70vh;
+            background-color: #2c2f31;
+            color: white;
+            padding-top: 20px;
+            border-radius: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .sidebar a {
+            color: #adb5bd;
+            text-decoration: none;
+            padding: 10px 20px;
+            display: block;
+        }
+
+        .sidebar a:hover,
+        .sidebar a.active {
+            color: white;
+        }
+
+        .main-content {
+            padding: 15px;
+        }
+
+        @media (max-width: 767.98px) {
+            .main-content {
+                padding: 12px;
+            }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-2 sidebar d-none d-md-block">
+                <h4 class="text-left mb-4"><i class="fas fa-hand-holding-usd"></i> Comissões</h4>
+                <a href="{% url 'comissoes_web:regras_list' slug=slug %}"
+                    class="{% if request.resolver_match.url_name == 'regras_list' %}active{% endif %}">
+                    <i class="fas fa-percent"></i> Regras
+                </a>
+                <a href="{% url 'comissoes_web:regras_create' slug=slug %}"
+                    class="{% if request.resolver_match.url_name == 'regras_create' %}active{% endif %}">
+                    <i class="fas fa-plus"></i> Nova Regra
+                </a>
+                <a href="{% url 'comissoes_web:lancamentos_list' slug=slug %}"
+                    class="{% if request.resolver_match.url_name == 'lancamentos_list' %}active{% endif %}">
+                    <i class="fas fa-list"></i> Lançamentos
+                </a>
+                <a href="{% url 'comissoes_web:pagamentos_list' slug=slug %}"
+                    class="{% if request.resolver_match.url_name == 'pagamentos_list' %}active{% endif %}">
+                    <i class="fas fa-wallet"></i> Pagamentos
+                </a>
+                <a href="{% url 'comissoes_web:pagamentos_create' slug=slug %}"
+                    class="{% if request.resolver_match.url_name == 'pagamentos_create' %}active{% endif %}">
+                    <i class="fas fa-plus"></i> Novo Pagamento
+                </a>
+            </div>
+            <div class="col-12 col-md-10 main-content">
+                <div class="d-md-none mb-3">
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{% url 'comissoes_web:regras_list' slug=slug %}"
+                            class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-percent"></i> Regras
+                        </a>
+                        <a href="{% url 'comissoes_web:regras_create' slug=slug %}"
+                            class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-plus"></i> Nova Regra
+                        </a>
+                        <a href="{% url 'comissoes_web:lancamentos_list' slug=slug %}"
+                            class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-list"></i> Lançamentos
+                        </a>
+                        <a href="{% url 'comissoes_web:pagamentos_list' slug=slug %}"
+                            class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-wallet"></i> Pagamentos
+                        </a>
+                        <a href="{% url 'comissoes_web:pagamentos_create' slug=slug %}"
+                            class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-plus"></i> Novo Pagamento
+                        </a>
+                    </div>
+                </div>
+                {% if messages %}
+                <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100;">
+                    {% for message in messages %}
+                    <div class="toast align-items-center text-bg-{% if 'error' in message.tags %}danger{% elif 'warning' in message.tags %}warning{% elif 'success' in message.tags %}success{% else %}secondary{% endif %} border-0 mb-2"
+                        role="alert" aria-live="assertive" aria-atomic="true">
+                        <div class="d-flex">
+                            <div class="toast-body">{{ message }}</div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+                                aria-label="Close"></button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% block comissoes_content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <datalist id="beneficiarios_options"></datalist>
+    <script>
+        const COMISSOES_AUTOCOMPLETE_ENTIDADES_URL = "{% url 'comissoes_web:autocomplete_entidades' slug=slug %}";
+        function comissoesDebounce(fn, wait) {
+            let t = null;
+            return (...args) => {
+                clearTimeout(t);
+                t = setTimeout(() => fn(...args), wait);
+            };
+        }
+        async function comissoesCarregarEntidades(term) {
+            const url = `${COMISSOES_AUTOCOMPLETE_ENTIDADES_URL}?q=${encodeURIComponent(term || "")}`;
+            const resp = await fetch(url);
+            if (!resp.ok) return [];
+            const data = await resp.json();
+            return data && data.results ? data.results : [];
+        }
+        function comissoesInitAutocompleteBeneficiario() {
+            const input = document.getElementById("beneficiario_busca");
+            const list = document.getElementById("beneficiarios_options");
+            if (!input || !list) return;
+            const run = comissoesDebounce(async () => {
+                const term = String(input.value || "").trim();
+                if (term.length < 2 && !term.match(/^\d+$/)) return;
+                const results = await comissoesCarregarEntidades(term);
+                list.innerHTML = "";
+                results.slice(0, 20).forEach((r) => {
+                    const opt = document.createElement("option");
+                    opt.value = r.text;
+                    list.appendChild(opt);
+                });
+            }, 250);
+            input.addEventListener("input", run);
+        }
+        document.addEventListener("DOMContentLoaded", comissoesInitAutocompleteBeneficiario);
+        document.addEventListener("DOMContentLoaded", function () {
+            document.querySelectorAll(".toast").forEach(function (el) {
+                try {
+                    const t = new bootstrap.Toast(el, { delay: 3000 });
+                    t.show();
+                } catch (e) { }
+            });
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+
+</html>
+{% endblock %}

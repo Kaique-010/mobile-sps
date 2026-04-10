@@ -1,0 +1,52 @@
+{% extends 'comissoes/base.html' %}
+{% block comissoes_content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Regras de Comissão</h5>
+        <a href="{% url 'comissoes_web:regras_create' slug=slug %}" class="btn btn-primary btn-sm">
+            <i class="fas fa-plus"></i> Nova Regra
+        </a>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-striped mb-0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Beneficiário</th>
+                        <th>Percentual</th>
+                        <th>Ativo</th>
+                        <th>Vigência</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in regras %}
+                    <tr>
+                        <td>{{ r.regc_id }}</td>
+                        <td>{{ r.beneficiario_display|default:r.regc_bene }}</td>
+                        <td>{{ r.regc_perc }}%</td>
+                        <td>{% if r.regc_ativ %}<span class="badge bg-success">Sim</span>{% else %}<span
+                                class="badge bg-secondary">Não</span>{% endif %}</td>
+                        <td>
+                            {% if r.regc_data_ini %}{{ r.regc_data_ini }}{% else %}-{% endif %} —
+                            {% if r.regc_data_fim %}{{ r.regc_data_fim }}{% else %}-{% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a class="btn btn-outline-secondary btn-sm"
+                                href="{% url 'comissoes_web:regras_edit' slug=slug regra_id=r.regc_id %}">
+                                <i class="fas fa-edit"></i> Editar
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted p-3">Nenhuma regra cadastrada.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

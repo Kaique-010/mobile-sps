@@ -116,6 +116,7 @@ INSTALLED_APPS = [
     "notificacoes",
     "Sdk_recebimentos",
     "SpsComissoes",
+    "comissoes",
     "EnvioCobranca",
     "DRE",
     #"Gerencial",

@@ -11,6 +11,7 @@ from core.utils import (
 )
 from CFOP.services.bases import FiscalContexto
 from parametros_admin.utils_pedidos import verificar_baixa_estoque_pedido
+from comissoes.services import ComissaoAutomaticaService
 class PedidoVendaService:
     logger = logging.getLogger(__name__)
 
@@ -472,6 +473,20 @@ class PedidoVendaService:
                 pedido.pedi_tota = subtotal_sum - pedido_desc_val
 
             pedido.pedi_liqu = pedido.pedi_tota
+            pedido.save(using=banco)
+
+            try:
+                ComissaoAutomaticaService(
+                    db_alias=banco,
+                    empresa_id=int(pedido.pedi_empr),
+                    filial_id=int(pedido.pedi_fili),
+                ).gerar_por_pedido(pedido=pedido)
+            except Exception as e:
+                PedidoVendaService.logger.exception(
+                    "[PedidoService.create] falha ao gerar comissão automática pedido=%s err=%s",
+                    getattr(pedido, "pedi_nume", None),
+                    e,
+                )
             resultado = verificar_baixa_estoque_pedido(pedi_empr, pedi_fili, banco=banco)
             PedidoVendaService.logger.debug(
                 "[PedidoService] verificar_baixa_estoque_pedido empr=%s fili=%s resultado=%s",
@@ -724,6 +739,19 @@ class PedidoVendaService:
                             )
 
             pedido.save(using=banco)
+
+            try:
+                ComissaoAutomaticaService(
+                    db_alias=banco,
+                    empresa_id=int(pedido.pedi_empr),
+                    filial_id=int(pedido.pedi_fili),
+                ).gerar_por_pedido(pedido=pedido)
+            except Exception as e:
+                PedidoVendaService.logger.exception(
+                    "[PedidoService.update] falha ao gerar comissão automática pedido=%s err=%s",
+                    getattr(pedido, "pedi_nume", None),
+                    e,
+                )
 
             PedidoVendaService.logger.debug(
                 "[PedidoService.update] Fim: pedi_nume=%s subtotal=%s desc=%s total=%s",

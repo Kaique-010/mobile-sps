@@ -63,6 +63,7 @@ urlpatterns = [
     path("<slug>/adiantamentos/", include("adiantamentos.Rest.urls")),
     path("<slug>/renegociacao/", include("Renegociacao.urls")),
     path("<slug>/transportes/", include("transportes.api.urls")),
+    path("<slug>/comissoes-webapi/", include("comissoes.Rest.urls")),
 
     # Documentação da API
     path("schema/", SpectacularAPIView.as_view(), name="schema"),
