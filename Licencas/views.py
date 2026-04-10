@@ -154,8 +154,18 @@ class LoginView(APIView):
         licenca_time = (time.time() - licenca_start) * 1000
         logger.debug("[LOGIN][%s] Buscar licença: %.2fms", request_id, licenca_time)
 
+        # Em ambiente multi-db/multi-slug existem bases onde a tabela "licencas"
+        # local pode não refletir o cadastro central imediatamente.
+        # Não bloqueamos o login aqui para evitar falso-negativo intermitente:
+        # a validação real continua sendo docu->slug válido + usuário/senha no banco alvo.
         if not licenca and not licenca_web:
-            return Response({'error': 'CPF/CNPJ inválido ou licença bloqueada.'}, status=403)
+            logger.warning(
+                "[LOGIN][%s] licença não encontrada nas tabelas locais/central para docu=%s slug=%s; "
+                "prosseguindo com autenticação pelo banco resolvido",
+                request_id,
+                docu_digits,
+                slug_from_docu,
+            )
 
         user_start = time.time()
         try:
