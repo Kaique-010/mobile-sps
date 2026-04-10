@@ -30,6 +30,7 @@ from django.utils import timezone
 import re
 from django.db.models import Q
 from core.cache_service import build_cache_key, cache_get_or_set
+from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
 SETOR_OBRIGATORIO_SLUGS = {"savexml144", "saveweb144"}
@@ -64,6 +65,20 @@ class LoginView(APIView):
         docu_digits = re.sub(r"\D", "", str(docu))
         if len(docu_digits) not in (11, 14):
             return Response({'error': 'CPF/CNPJ inválido.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        username_norm = (username or "").strip().lower()
+        login_lock_key = build_cache_key("licencas_login", "lock", docu_digits, username_norm or "anon")
+        lock_acquired = cache.add(login_lock_key, request_id, timeout=8)
+        if not lock_acquired:
+            logger.warning(
+                "[LOGIN][%s] bloqueado por corrida: login já em processamento key=%s",
+                request_id,
+                login_lock_key,
+            )
+            return Response(
+                {'error': 'Login já está em processamento. Aguarde 2 segundos e tente novamente.'},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
 
         slug_key = build_cache_key("licencas_login", "slug_por_docu", docu_digits)
         slug_from_docu, slug_hit = cache_get_or_set(

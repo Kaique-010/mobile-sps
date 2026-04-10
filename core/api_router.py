@@ -20,6 +20,7 @@ urlpatterns = [
     path("<slug>/entidades/", include("Entidades.urls")),
     path("<slug>/gestao-obras/", include("GestaoObras.urls")),
     path("<slug>/pedidos/", include("Pedidos.urls")),
+    path("<slug>/trocas-devolucoes/", include("TrocasDevolucoes.urls")),
     path("<slug>/orcamentos/", include("Orcamentos.urls")),
     path("<slug>/dashboards/", include("dashboards.urls")),
     path("<slug>/entradas_estoque/", include("Entradas_Estoque.urls")),
