@@ -32,7 +32,8 @@ from .Views.web_views import (
     UnidadeMedidaCreateView,
     UnidadeMedidaUpdateView,
     UnidadeMedidaDeleteView,
-    SimularImpostosView
+    SimularImpostosView,
+    ZerarEstoqueView
 )
 from .Views.autocompletes import autocomplete_unidades, autocomplete_grupos, autocomplete_marcas, autocomplete_subgrupos, autocomplete_familias, autocomplete_ncms
 from .Views.etiquetas import EtiquetasView
@@ -96,4 +97,5 @@ urlpatterns = [
     
     # Etiquetas
     path('etiquetas/', EtiquetasView.as_view(), name='etiquetas_web'),
+    path('utilitarios/zerar-estoque/', ZerarEstoqueView.as_view(), name='zerar_estoque_web'),
 ]

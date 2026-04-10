@@ -3,6 +3,11 @@
 {% block title %}{{ titulo }}{% endblock %}
 
 {% block content %}
+<style>
+  .form-section-header { cursor: pointer; user-select: none; }
+  .form-section-header .chevron { transition: transform .4s; }
+  .form-section-header.collapsed .chevron { transform: rotate(-90deg); }
+</style>
 <div class="container page-container py-4">
   <div class="card">
     <div class="card-header">
@@ -15,106 +20,191 @@
       {% if itens_json %}{{ itens_json|json_script:"itens-json-data" }}{% endif %}
       <form method="post" id="form-devolucao">
         {% csrf_token %}
-        <div class="form-section">
-          <div class="form-section-header"><i class="bi bi-list-check"></i> Dados gerais</div>
-          <div class="row g-3 align-items-end">
-            <div class="col-md-3">
-              <label class="form-label" for="{{ form.tdvl_pdor.id_for_label }}">{{ form.tdvl_pdor.label }}</label>
-              {{ form.tdvl_pdor }}
-            </div>
-            <div class="col-md-3">
-              <label class="form-label d-block">&nbsp;</label>
-              <button class="btn btn-outline-primary w-100" type="button" id="btn-carregar-pedido"><i class="bi bi-arrow-repeat me-1"></i>Carregar Pedido</button>
-            </div>
-            <div class="col-md-3">
-              <label class="form-label" for="{{ form.tdvl_tipo.id_for_label }}">{{ form.tdvl_tipo.label }}</label>
-              {{ form.tdvl_tipo }}
-            </div>
-            <div class="col-md-3">
-              <label class="form-label" for="{{ form.tdvl_stat.id_for_label }}">{{ form.tdvl_stat.label }}</label>
-              {{ form.tdvl_stat }}
+
+        <!-- DADOS GERAIS -->
+        <div class="form-section p-3">
+          <div class="form-section-header mt-3 mb-3"
+               data-bs-toggle="collapse"
+               data-bs-target="#collapse-gerais"
+               aria-expanded="true"
+               aria-controls="collapse-gerais"
+              style="font-size: 1.2rem; text-align: center;">
+            <i class="bi bi-list-check"></i> Dados gerais
+            <i class="bi bi-chevron-down float-end chevron"></i>
+          </div>
+          <div class="collapse show" id="collapse-gerais">
+            <div class="row g-3 align-items-end">
+              <div class="col-md-3">
+                <label class="form-label" for="{{ form.tdvl_pdor.id_for_label }}">{{ form.tdvl_pdor.label }}</label>
+                {{ form.tdvl_pdor }}
+              </div>
+              <div class="col-md-3">
+                <label class="form-label d-block">&nbsp;</label>
+                <button class="btn btn-outline-primary w-100" type="button" id="btn-carregar-pedido"><i class="bi bi-arrow-repeat me-1"></i>Carregar Pedido</button>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label" for="{{ form.tdvl_tipo.id_for_label }}">{{ form.tdvl_tipo.label }}</label>
+                {{ form.tdvl_tipo }}
+              </div>
+              <div class="col-md-3">
+                <label class="form-label" for="{{ form.tdvl_stat.id_for_label }}">{{ form.tdvl_stat.label }}</label>
+                {{ form.tdvl_stat }}
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="form-section">
-          <div class="form-section-header"><i class="bi bi-person-vcard"></i> Identificação</div>
-          <div class="row g-3 p-3">
-            <div class="col-md-3">
-              <label class="form-label" for="{{ form.tdvl_data.id_for_label }}">{{ form.tdvl_data.label }}</label>
-              {{ form.tdvl_data }}
-            </div>
-            <div class="col-md-5">
-              <label class="form-label" for="{{ form.tdvl_clie.id_for_label }}">{{ form.tdvl_clie.label }}</label>
-              {{ form.tdvl_clie }}
-              <div class="form-text text-muted" id="tdvl_clie_nome_hint"></div>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label" for="{{ form.tdvl_vend.id_for_label }}">{{ form.tdvl_vend.label }}</label>
-              {{ form.tdvl_vend }}
-              <div class="form-text text-muted" id="tdvl_vend_nome_hint"></div>
+        <!-- IDENTIFICAÇÃO -->
+        <div class="form-section p-3">
+          <div class="form-section-header"
+               data-bs-toggle="collapse"
+               data-bs-target="#collapse-identific"
+               aria-expanded="true"
+               aria-controls="collapse-identific"
+               style="font-size: 1.2rem; text-align: center;">
+            <i class="bi bi-person-vcard"></i> Identificação
+            <i class="bi bi-chevron-down float-end chevron"></i>
+          </div>
+          <div class="collapse show" id="collapse-identific">
+            <div class="row g-3 p-3">
+              <div class="col-md-3">
+                <label class="form-label" for="{{ form.tdvl_data.id_for_label }}">{{ form.tdvl_data.label }}</label>
+                {{ form.tdvl_data }}
+              </div>
+              <div class="col-md-5">
+                <label class="form-label" for="{{ form.tdvl_clie.id_for_label }}">{{ form.tdvl_clie.label }}</label>
+                {{ form.tdvl_clie }}
+                <div class="form-text text-muted" id="tdvl_clie_nome_hint"></div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="{{ form.tdvl_vend.id_for_label }}">{{ form.tdvl_vend.label }}</label>
+                {{ form.tdvl_vend }}
+                <div class="form-text text-muted" id="tdvl_vend_nome_hint"></div>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="form-section">
-          <div class="form-section-header"><i class="bi bi-chat-square-text"></i> Observações</div>
-          <div class="row g-3 p-3">
-            <div class="col-12">
-              <label class="form-label" for="{{ form.tdvl_obse.id_for_label }}">{{ form.tdvl_obse.label }}</label>
-              {{ form.tdvl_obse }}
+        <!-- OBSERVAÇÕES -->
+        <div class="form-section p-3">
+          <div class="form-section-header"
+               data-bs-toggle="collapse"
+               data-bs-target="#collapse-obse"
+               aria-expanded="true"
+               aria-controls="collapse-obse"
+               style="font-size: 1.2rem; text-align: center;">
+            <i class="bi bi-chat-square-text"></i> Observações
+            <i class="bi bi-chevron-down float-end chevron"></i>
+          </div>
+          <div class="collapse show" id="collapse-obse">
+            <div class="row g-3 p-3">
+              <div class="col-12">
+                <label class="form-label" for="{{ form.tdvl_obse.id_for_label }}">{{ form.tdvl_obse.label }}</label>
+                {{ form.tdvl_obse }}
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="form-section">
-          <div class="form-section-header"><i class="bi bi-cash-coin"></i> Financeiro do Pedido</div>
-          <div id="financeiro-alert" class="alert alert-info d-none"></div>
+        <!-- FINANCEIRO -->
+        <div class="form-section p-3">
+          <div class="form-section-header"
+               data-bs-toggle="collapse"
+               data-bs-target="#collapse-financeiro"
+               aria-expanded="true"
+               aria-controls="collapse-financeiro">
+            <i class="bi bi-cash-coin"></i> Financeiro do Pedido
+            <i class="bi bi-chevron-down float-end chevron"></i>
+          </div>
+          <div class="collapse show" id="collapse-financeiro">
+            <div id="financeiro-alert" class="alert alert-info d-none"></div>
+            <div class="table-responsive mt-2">
+              <table class="table table-sm align-middle">
+                <thead>
+                  <tr>
+                    <th>Parcela</th>
+                    <th class="text-end">Valor</th>
+                    <th>Vencimento</th>
+                    <th>Forma</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="tdvl-fin-body"></tbody>
+                <tfoot>
+                  <tr class="table-dark">
+                    <td colspan="4" class="text-end fw-semibold">Total</td>
+                    <td class="text-end" id="tdvl-fin-total"></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
         </div>
 
-        <div class="form-section">
-          <div class="form-section-header"><i class="bi bi-box-seam"></i> Itens</div>
-          <div class="table-responsive">
-          <table class="table table-sm align-middle" id="tabela-itens">
-            <thead>
-              <tr>
-                <th style="width: 50px;">Sel.</th>
-                <th>Item</th>
-                <th>Código</th>
-                <th>Produto Origem</th>
-                <th class="text-end">Qtd Orig.</th>
-                <th class="text-end">Valor Orig.</th>
-                <th class="col-repo">Produto Reposição</th>
-                <th class="col-repo">Descrição</th>
-                <th class="text-end col-repo">Qtd Rep.</th>
-                <th class="text-end col-repo">Unit. Rep.</th>
-                <th class="text-end col-repo">Valor Rep.</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
+        <!-- ITENS -->
+        <div class="form-section p-3">
+          <div class="form-section-header"
+               data-bs-toggle="collapse"
+               data-bs-target="#collapse-itens"
+               aria-expanded="true"
+               aria-controls="collapse-itens">
+            <i class="bi bi-box-seam"></i> Itens
+            <i class="bi bi-chevron-down float-end chevron"></i>
+          </div>
+          <div class="collapse show" id="collapse-itens">
+            <div class="table-responsive">
+              <table class="table table-sm align-middle" id="tabela-itens">
+                <thead>
+                  <tr>
+                    <th style="width: 50px;">Sel.</th>
+                    <th>Item</th>
+                    <th>Código</th>
+                    <th>Produto Origem</th>
+                    <th class="text-end">Qtd Orig.</th>
+                    <th class="text-end">Valor Orig.</th>
+                    <th class="col-repo">Produto Reposição</th>
+                    <th class="col-repo">Descrição</th>
+                    <th class="text-end col-repo">Qtd Rep.</th>
+                    <th class="text-end col-repo">Unit. Rep.</th>
+                    <th class="text-end col-repo">Valor Rep.</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
         <input type="hidden" name="itens_json" id="itens_json">
 
-        <div class="form-section">
-          <div class="form-section-header"><i class="bi bi-calculator"></i> Totais</div>
-          <div class="row g-3 mt-1">
-          <div class="col-md-2">
-            <label class="form-label" for="{{ form.tdvl_tode.id_for_label }}">{{ form.tdvl_tode.label }}</label>
-            {{ form.tdvl_tode }}
+        <!-- TOTAIS -->
+        <div class="form-section p-3">
+          <div class="form-section-header"
+               data-bs-toggle="collapse"
+               data-bs-target="#collapse-totais"
+               aria-expanded="true"
+               aria-controls="collapse-totais">
+            <i class="bi bi-calculator"></i> Totais
+            <i class="bi bi-chevron-down float-end chevron"></i>
           </div>
-          <div class="col-md-2">
-            <label class="form-label" for="{{ form.tdvl_tore.id_for_label }}">{{ form.tdvl_tore.label }}</label>
-            {{ form.tdvl_tore }}
-          </div>
-          <div class="col-md-2">
-            <label class="form-label" for="{{ form.tdvl_safi.id_for_label }}">{{ form.tdvl_safi.label }}</label>
-            {{ form.tdvl_safi }}
-          </div>
+          <div class="collapse show" id="collapse-totais">
+            <div class="row g-3 mt-1">
+              <div class="col-md-2">
+                <label class="form-label" for="{{ form.tdvl_tode.id_for_label }}">{{ form.tdvl_tode.label }}</label>
+                {{ form.tdvl_tode }}
+              </div>
+              <div class="col-md-2">
+                <label class="form-label" for="{{ form.tdvl_tore.id_for_label }}">{{ form.tdvl_tore.label }}</label>
+                {{ form.tdvl_tore }}
+              </div>
+              <div class="col-md-2">
+                <label class="form-label" for="{{ form.tdvl_safi.id_for_label }}">{{ form.tdvl_safi.label }}</label>
+                {{ form.tdvl_safi }}
+              </div>
+            </div>
           </div>
         </div>
+
         <div class="mt-4 d-flex justify-content-end gap-2 form-actions">
           <a class="btn btn-outline-secondary" href="{% url 'TrocasDevolucoesWeb:devolucoes_listar' slug=slug %}">Cancelar</a>
           <button type="submit" class="btn btn-primary">Salvar</button>
@@ -124,6 +214,19 @@
   </div>
 </div>
 <script>
+  // Sincroniza o aria-expanded e a classe collapsed no header ao colapsar/expandir
+  document.querySelectorAll('.collapse').forEach(collapseEl => {
+    collapseEl.addEventListener('show.bs.collapse', () => {
+      const header = document.querySelector(`[data-bs-target="#${collapseEl.id}"]`);
+      if (header) { header.classList.remove('collapsed'); header.setAttribute('aria-expanded', 'true'); }
+    });
+    collapseEl.addEventListener('hide.bs.collapse', () => {
+      const header = document.querySelector(`[data-bs-target="#${collapseEl.id}"]`);
+      if (header) { header.classList.add('collapsed'); header.setAttribute('aria-expanded', 'false'); }
+    });
+  });
+
+
   const itensExistentesData = document.getElementById('itens-json-data');
   const itensExistentes = itensExistentesData ? JSON.parse(itensExistentesData.textContent) : null;
   const slug = "{{ slug }}";
@@ -133,7 +236,12 @@
   const tabelaBody = document.querySelector('#tabela-itens tbody');
   const tipoSelect = document.getElementById('id_tdvl_tipo');
   const alertFin = document.getElementById('financeiro-alert');
-
+  const statusSelect = document.getElementById('id_tdvl_stat');
+  const fetchSameOrigin = (url, options = {}) => {
+    const headers = Object.assign({ 'X-Requested-With': 'XMLHttpRequest' }, options.headers || {});
+    return fetch(url, Object.assign({}, options, { headers, credentials: 'same-origin' }));
+  };
+    
   function toggleReposicaoCols() {
     const isTroca = (tipoSelect && tipoSelect.value === 'TROC');
     document.querySelectorAll('.col-repo').forEach(el => el.style.display = isTroca ? '' : 'none');
@@ -236,7 +344,10 @@
     const urlTitulos = `/api/${slug}/pedidos/consultar-titulos-pedido/${ped}/`;
     alertFin.classList.add('d-none');
     try {
-      const [rPedido, rTit] = await Promise.all([fetch(urlPedido), fetch(urlTitulos)]);
+      const [rPedido, rTit] = await Promise.all([
+        fetchSameOrigin(urlPedido),
+        fetchSameOrigin(urlTitulos),
+      ]);
       if (rPedido.ok) {
         const dados = await rPedido.json();
         const cliEl = document.getElementById('id_tdvl_clie');
@@ -285,7 +396,7 @@
         recomputarTotais();
         try {
           if (dados.pedi_vend) {
-            const vResp = await fetch(`/api/${slug}/entidades/entidades/${dados.pedi_vend}/`);
+            const vResp = await fetchSameOrigin(`/api/${slug}/entidades/entidades/${dados.pedi_vend}/`);
             if (vResp.ok) {
               const vData = await vResp.json();
               if (venEl) {
@@ -317,6 +428,59 @@
     }
   }
 
+  async function carregarFinanceiroPedido() {
+    try {
+      const ped = document.getElementById('id_tdvl_pdor')?.value;
+      if (!ped) return;
+      const urlTitulos = `/api/${slug}/pedidos/consultar-titulos-pedido/${ped}/`;
+      const rTit = await fetchSameOrigin(urlTitulos);
+      if (!rTit.ok) return;
+      const dt = await rTit.json();
+      const body = document.getElementById('tdvl-fin-body');
+      const totalEl = document.getElementById('tdvl-fin-total');
+      if (body) body.innerHTML = '';
+      if (totalEl) totalEl.textContent = '';
+      if (dt && dt.titulos && dt.titulos.length > 0) {
+        const existeBaixa = dt.titulos.some(t => (t.aberto && String(t.aberto).toUpperCase() !== 'A'));
+        alertFin.classList.remove('d-none');
+        alertFin.classList.toggle('alert-warning', existeBaixa);
+        alertFin.classList.toggle('alert-info', !existeBaixa);
+        alertFin.textContent = existeBaixa
+          ? 'Atenção: Existem títulos financeiros associados e com baixas/parciais registradas.'
+          : 'Existe financeiro associado ao pedido. Nenhuma baixa encontrada.';
+        if (body) {
+          const statusLabel = (t) => {
+            const aberto = String(t?.aberto ?? '').toUpperCase()
+            if (aberto === 'A') return 'ABERTO'
+            if (aberto) return 'FECHADO'
+            const st = t?.status ?? ''
+            if (st === '' || st === null || st === undefined) return ''
+            return String(st)
+          }
+          dt.titulos.forEach(t => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${t.parcela}</td>
+              <td class="text-end">R$ ${(Number(t.valor || 0)).toFixed(2)}</td>
+              <td>${t.vencimento || ''}</td>
+              <td>${t.forma_pagamento || ''}</td>
+              <td>${statusLabel(t)}</td>
+            `;
+            body.appendChild(tr);
+          });
+          if (totalEl) totalEl.textContent = `R$ ${(Number(dt.total || 0)).toFixed(2)}`;
+        }
+      } else {
+        alertFin.classList.add('d-none');
+        if (body) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td colspan="5" class="text-muted text-center">Sem títulos para este pedido</td>`;
+          body.appendChild(tr);
+        }
+      }
+    } catch (e) {}
+  }
+
   document.getElementById('btn-carregar-pedido')?.addEventListener('click', carregarPedido);
   tipoSelect?.addEventListener('change', () => {
     toggleReposicaoCols();
@@ -331,14 +495,14 @@
       const cliCod = cliEl?.value?.trim();
       const vendCod = vendEl?.value?.trim();
       if (cliCod && cliHint && !cliHint.textContent) {
-        const r = await fetch(`/api/${slug}/entidades/entidades/${encodeURIComponent(cliCod)}/`);
+        const r = await fetchSameOrigin(`/api/${slug}/entidades/entidades/${encodeURIComponent(cliCod)}/`);
         if (r.ok) {
           const j = await r.json();
           cliHint.textContent = j?.enti_nome || '';
         }
       }
       if (vendCod && vendHint && !vendHint.textContent) {
-        const r2 = await fetch(`/api/${slug}/entidades/entidades/${encodeURIComponent(vendCod)}/`);
+        const r2 = await fetchSameOrigin(`/api/${slug}/entidades/entidades/${encodeURIComponent(vendCod)}/`);
         if (r2.ok) {
           const j2 = await r2.json();
           vendHint.textContent = j2?.enti_nome || '';
@@ -351,6 +515,21 @@
   });
   toggleReposicaoCols();
   preencherNomesSeNecessario();
+  carregarFinanceiroPedido();
+  if (statusSelect) {
+    let prev = statusSelect.value;
+    statusSelect.addEventListener('change', () => {
+      const next = statusSelect.value;
+      if (next === '2' && prev !== '2') {
+        const ok = window.confirm('Confirmar a conclusão? Ao concluir, o sistema irá gerar as movimentações de estoque/financeiro.');
+        if (!ok) {
+          statusSelect.value = prev;
+          return;
+        }
+      }
+      prev = statusSelect.value;
+    });
+  }
   if (Array.isArray(itensExistentes) && itensExistentes.length) {
     tabelaBody.innerHTML = '';
     itensExistentes.forEach((it) => {
@@ -436,5 +615,6 @@
     });
     observer.observe(tabelaBody, { childList: true, subtree: true });
   })();
+
 </script>
 {% endblock %}

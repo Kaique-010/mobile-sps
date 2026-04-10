@@ -19,7 +19,12 @@
     const token = localStorage.getItem('access')
     const headers = Object.assign({}, options.headers || {})
     if (token) headers['Authorization'] = `Bearer ${token}`
-    return fetch(url, Object.assign({}, options, { headers }))
+    if (!headers['X-Requested-With'])
+      headers['X-Requested-With'] = 'XMLHttpRequest'
+    return fetch(
+      url,
+      Object.assign({}, options, { headers, credentials: 'same-origin' }),
+    )
   }
   const fmtBRL = (v) => {
     const n = Number(v || 0)
@@ -72,7 +77,7 @@
       const d = new Date()
       const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
         2,
-        '0'
+        '0',
       )}-${String(d.getDate()).padStart(2, '0')}`
       dataBaseEl.value = iso
     }
@@ -120,16 +125,32 @@
         return
       }
       const url = `/api/${slug}/pedidos/consultar-titulos-pedido/${encodeURIComponent(
-        nume
+        nume,
       )}/`
       const resp = await authFetch(url, { method: 'GET' })
+      if (resp.status === 401) {
+        const msg =
+          'Sessão expirada. Recarregue a página e faça login novamente.'
+        if (window.showToast)
+          window.showToast(msg, { variant: 'warning', delay: 5000 })
+        else alert(msg)
+        return
+      }
       const data = await resp.json()
       const titulos = data.titulos || []
       body.innerHTML = ''
+      const statusLabel = (t) => {
+        const aberto = String(t?.aberto ?? '').toUpperCase()
+        if (aberto === 'A') return 'ABERTO'
+        if (aberto) return 'FECHADO'
+        const st = t?.status ?? ''
+        if (st === '' || st === null || st === undefined) return ''
+        return String(st)
+      }
       titulos.forEach((t) => {
         const tr = document.createElement('tr')
         const editBtn =
-          String(t.aberto || '').toUpperCase() === 'A'
+          String(t?.aberto ?? '').toUpperCase() === 'A'
             ? `<button type="button" class="btn btn-sm btn-outline-secondary fin-edit" data-parcela="${t.parcela}"><i class="bi bi-pencil"></i></button>`
             : ''
         tr.innerHTML = `
@@ -137,14 +158,14 @@
           <td class="text-end">R$ ${Number(t.valor || 0).toFixed(2)}</td>
           <td>${t.vencimento || ''}</td>
           <td data-forma="${t.forma_pagamento || ''}">${
-          t.forma_pagamento || ''
-        }</td>
-          <td>${String(t.status || '').toUpperCase()}</td>
+            t.forma_pagamento || ''
+          }</td>
+          <td>${statusLabel(t)}</td>
         `
-        tr.dataset.aberto = t.aberto || ''
-        tr.dataset.valor = t.valor || ''
-        tr.dataset.vencimento = t.vencimento || ''
-        tr.dataset.forma = t.forma_pagamento || ''
+        tr.dataset.aberto = t?.aberto ?? ''
+        tr.dataset.valor = t?.valor ?? ''
+        tr.dataset.vencimento = t?.vencimento ?? ''
+        tr.dataset.forma = t?.forma_pagamento ?? ''
         body.appendChild(tr)
       })
       const total = Number(data.total || 0)
@@ -152,7 +173,7 @@
       const totPedido = Number(
         document.getElementById('id_pedi_tota')?.value ||
           root.dataset.pediTota ||
-          0
+          0,
       )
       const restante = Math.max(totPedido - total, 0)
       if (resRest) resRest.textContent = fmtBRL(restante)
@@ -255,7 +276,7 @@
       const formaAtual =
         tr.dataset.forma || tdForma.dataset.forma || tdForma.textContent || ''
       tdValor.innerHTML = `<input type="number" step="0.01" class="form-control form-control-sm text-end" value="${String(
-        valorAtual
+        valorAtual,
       )}">`
       tdVenc.innerHTML = `<input type="date" class="form-control form-control-sm" value="${(
         vencAtual || ''
@@ -265,7 +286,7 @@
           (o) =>
             `<option value="${o.v}" ${o.v === formaAtual ? 'selected' : ''}>${
               o.v
-            }</option>`
+            }</option>`,
         )
         .join('')}</select>`
       btnAtualizar?.classList.remove('d-none')
@@ -318,6 +339,10 @@
       btnAtualizar?.classList.add('d-none')
       await consultar()
     })
+
+    try {
+      if (nume) consultar()
+    } catch (e) {}
   }
 
   document.addEventListener('DOMContentLoaded', mount)

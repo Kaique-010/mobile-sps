@@ -124,10 +124,47 @@ class GerarTitulosPedidoView(APIView):
 
         try:
             with transaction.atomic(using=banco):
-                # Habilitamos triggers (não desabilitamos)
-                # Inserimos APENAS na tabela de Parcelas
-                # A trigger trc_atualiza_financeiro_pedidos_venda encarrega-se de criar os títulos
                 Parcelaspedidovenda.objects.using(banco).bulk_create(parcelas_objs)
+                titulos_qs = Titulosreceber.objects.using(banco).filter(
+                    titu_empr=pedi_empr,
+                    titu_fili=pedi_fili,
+                    titu_seri="PEV",
+                    titu_titu=str(pedi_nume),
+                    titu_clie=int(pedi_forn),
+                )
+                if not titulos_qs.exists():
+                    rows = []
+                    for p in parcelas_objs:
+                        rows.append(
+                            (
+                                int(pedi_empr),
+                                int(pedi_fili),
+                                int(pedi_forn),
+                                str(pedi_nume),
+                                "PEV",
+                                str(getattr(p, "parc_parc", "") or ""),
+                                getattr(p, "parc_emis", None),
+                                getattr(p, "parc_venc", None),
+                                Decimal(str(getattr(p, "parc_valo", 0) or 0)),
+                                "A",
+                                str(getattr(p, "parc_form", "") or ""),
+                                0,
+                                int(getattr(p, "parc_situ", 0) or 0),
+                                int(getattr(p, "parc_vend", 0) or 0),
+                            )
+                        )
+                    if rows:
+                        with connections[banco].cursor() as cursor:
+                            cursor.executemany(
+                                """
+                                INSERT INTO titulosreceber
+                                    (titu_empr, titu_fili, titu_clie, titu_titu, titu_seri, titu_parc, titu_emis, titu_venc, titu_valo, titu_aber, titu_form_reci, titu_port, titu_situ, titu_vend)
+                                VALUES
+                                    (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                ON CONFLICT (titu_empr, titu_fili, titu_clie, titu_titu, titu_seri, titu_parc) DO NOTHING
+                                """,
+                                rows,
+                            )
                 
         except Exception as e:
             # Integridade/duplicidade: retorna mensagem amigável
@@ -141,7 +178,7 @@ class GerarTitulosPedidoView(APIView):
             )
 
         return Response({
-            "detail": f"{len(parcelas_objs)} parcelas geradas com sucesso (títulos gerados via trigger).",
+            "detail": f"{len(parcelas_objs)} parcelas geradas com sucesso.",
             "total_pedido": float(pedi_tota),
             "entrada": float(entrada),
             "total_parcelado": float(total_restante),
@@ -266,7 +303,36 @@ class ConsultarTitulosPedidoView(APIView):
         ).order_by('titu_parc')
 
         if not titulos.exists():
-            return Response({"detail": "Nenhum título encontrado para esse pedido."}, status=200)
+            parcelas = Parcelaspedidovenda.objects.using(banco).filter(
+                parc_empr=pedido.pedi_empr,
+                parc_fili=pedido.pedi_fili,
+                parc_pedi=int(pedi_nume),
+            ).order_by('parc_parc')
+            if not parcelas.exists():
+                return Response({"detail": "Nenhum título encontrado para esse pedido.", "titulos": [], "total": 0, "quantidade_parcelas": 0}, status=200)
+            dados_parcelas = []
+            total_val = Decimal('0')
+            for p in parcelas:
+                valor = Decimal(str(getattr(p, 'parc_valo', 0) or 0))
+                total_val += valor
+                situ = getattr(p, 'parc_situ', 0)
+                aberto = 'A' if (situ is None or int(situ) == 0) else 'F'
+                dados_parcelas.append({
+                    "parcela": getattr(p, 'parc_parc', None),
+                    "valor": float(valor),
+                    "vencimento": getattr(p, 'parc_venc', None),
+                    "forma_pagamento": getattr(p, 'parc_form', None),
+                    "status": situ,
+                    "aberto": aberto,
+                    "empresa": getattr(p, 'parc_empr', None),
+                    "filial": getattr(p, 'parc_fili', None)
+                })
+            return Response({
+                "titulos": dados_parcelas,
+                "total": float(total_val),
+                "quantidade_parcelas": len(dados_parcelas),
+                "detail": "Parcelas encontradas para esse pedido."
+            }, status=200)
 
         total = titulos.aggregate(
             total=Sum('titu_valo'),

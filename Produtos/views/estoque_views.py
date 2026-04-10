@@ -157,3 +157,56 @@ class EstoqueResumoView(APIView):
         )
 
         return Response(resumo)
+
+
+class ZerarEstoqueView(APIView):
+    permission_classes = [IsAuthenticated]
+    modulo_necessario = 'Produtos'
+
+    def _get_contexto(self, request):
+        banco = get_licenca_db_config(request)
+        empresa = (
+            request.data.get('empresa')
+            if isinstance(getattr(request, 'data', None), (dict,)) else None
+        ) or request.query_params.get('empresa') or request.headers.get('X-Empresa') or request.session.get('empresa_id') or 1
+        filial = (
+            request.data.get('filial')
+            if isinstance(getattr(request, 'data', None), (dict,)) else None
+        ) or request.query_params.get('filial') or request.headers.get('X-Filial') or request.session.get('filial_id') or 1
+        return banco, empresa, filial
+
+    def get(self, request, *args, **kwargs):
+        banco, empresa, filial = self._get_contexto(request)
+        from Produtos.servicos.zerar_estoque import obter_saldos_atuais
+
+        info = obter_saldos_atuais(
+            banco=banco,
+            empresa=empresa,
+            filial=filial,
+            apenas_com_saldo=True,
+            limit=50,
+        )
+        return Response(
+            {
+                'banco': banco,
+                'empresa': str(empresa),
+                'filial': str(filial),
+                'total_com_saldo': info.get('total', 0),
+                'amostra': info.get('amostra', []),
+            }
+        )
+
+    def post(self, request, *args, **kwargs):
+        banco, empresa, filial = self._get_contexto(request)
+        from Produtos.servicos.zerar_estoque import zerar_estoque
+
+        batch_size = request.data.get('batch_size') if isinstance(getattr(request, 'data', None), (dict,)) else None
+        limit_resultados = request.data.get('limit_resultados') if isinstance(getattr(request, 'data', None), (dict,)) else None
+        resultado = zerar_estoque(
+            banco=banco,
+            empresa=empresa,
+            filial=filial,
+            batch_size=int(batch_size or 500),
+            limit_resultados=None if limit_resultados is None else int(limit_resultados),
+        )
+        return Response({'banco': banco, **resultado})

@@ -20,6 +20,7 @@ class DevolucoesListView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        slug = (self.kwargs.get('slug') or getattr(getattr(self.request, 'resolver_match', None), 'kwargs', {}).get('slug'))    
         context['slug'] = self.kwargs.get('slug')
         banco = get_licenca_db_config(self.request)
         devolucoes = list(context.get('devolucoes') or [])

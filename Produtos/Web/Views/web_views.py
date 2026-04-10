@@ -1810,3 +1810,63 @@ def autocomplete_produtos(request, slug=None):
     qs = qs.order_by('prod_nome')[:20]
     data = [{'id': str(obj.prod_codi), 'text': f"{obj.prod_codi} - {obj.prod_nome}"} for obj in qs]
     return JsonResponse({'results': data})
+
+
+class ZerarEstoqueView(DBAndSlugMixin, TemplateView):
+    template_name = 'Produtos/zerar_estoque.html'
+
+    def _get_contexto(self):
+        empresa = self.request.GET.get('empresa') or self.empresa_id or self.request.session.get('empresa_id') or 1
+        filial = self.request.GET.get('filial') or self.filial_id or self.request.session.get('filial_id') or 1
+        return str(empresa), str(filial)
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        empresa, filial = self._get_contexto()
+        ctx['slug'] = self.slug
+        ctx['empresa'] = empresa
+        ctx['filial'] = filial
+
+        try:
+            from Produtos.servicos.zerar_estoque import obter_saldos_atuais
+
+            info = obter_saldos_atuais(
+                banco=self.db_alias,
+                empresa=empresa,
+                filial=filial,
+                apenas_com_saldo=True,
+                limit=50,
+            )
+            ctx['total_com_saldo'] = info.get('total', 0)
+            ctx['amostra'] = info.get('amostra', [])
+        except Exception:
+            ctx['total_com_saldo'] = 0
+            ctx['amostra'] = []
+
+        return ctx
+
+    def post(self, request, *args, **kwargs):
+        empresa = request.POST.get('empresa') or self.empresa_id or request.session.get('empresa_id') or 1
+        filial = request.POST.get('filial') or self.filial_id or request.session.get('filial_id') or 1
+        limit_resultados = request.POST.get('limit_resultados') or 2000
+        batch_size = request.POST.get('batch_size') or 500
+
+        try:
+            from Produtos.servicos.zerar_estoque import zerar_estoque
+
+            resultado = zerar_estoque(
+                banco=self.db_alias,
+                empresa=empresa,
+                filial=filial,
+                batch_size=int(batch_size or 500),
+                limit_resultados=None if str(limit_resultados).strip().lower() in ('none', '') else int(limit_resultados),
+            )
+            messages.success(request, f"Estoque zerado para empresa {resultado.get('empresa')} filial {resultado.get('filial')}. Itens afetados: {resultado.get('zerados')}.")
+        except Exception as e:
+            logger.exception(f"Falha ao zerar estoque: {e}")
+            messages.error(request, f"Falha ao zerar estoque: {e}")
+            resultado = None
+
+        ctx = self.get_context_data(**kwargs)
+        ctx['resultado'] = resultado
+        return self.render_to_response(ctx)
