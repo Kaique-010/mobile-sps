@@ -30,8 +30,8 @@ class TrocaDevolucao(models.Model):
     tdvl_obse = models.TextField(blank=True, null=True)
 
     class Meta:
-        db_table = 'trocasdevolucoes'
-        managed = False
+        db_table = 'trocas_devolucoes'
+        managed = True
         unique_together = ('tdvl_empr', 'tdvl_fili', 'tdvl_nume')
 
 
@@ -51,6 +51,6 @@ class ItensTrocaDevolucao(models.Model):
     itdv_moti = models.CharField(max_length=120, blank=True, null=True)
 
     class Meta:
-        db_table = 'itenstrocasdevolucoes'
-        managed = False
+        db_table = 'itens_trocas_devolucoes'
+        managed = True
         unique_together = ('itdv_empr', 'itdv_fili', 'itdv_tdvl', 'itdv_item')

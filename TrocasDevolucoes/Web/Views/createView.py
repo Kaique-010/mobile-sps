@@ -1,4 +1,6 @@
+import json
 from django.shortcuts import redirect
+from django.contrib import messages
 from django.views.generic import CreateView
 
 from core.utils import get_licenca_db_config
@@ -13,11 +15,35 @@ class DevolucaoCreateView(CreateView):
     def form_valid(self, form):
         banco = get_licenca_db_config(self.request)
         dados = form.cleaned_data
-        self.object = TrocaDevolucaoService.criar_com_itens(banco, dados=dados, itens=[])
-        return redirect('TrocasDevolucoesWeb:devolucoes_listar', slug=self.kwargs.get('slug'))
+        empresa = self.request.session.get('empresa') or self.request.session.get('empr') or 1
+        filial = self.request.session.get('filial') or self.request.session.get('fili') or 1
+        dados['tdvl_empr'] = int(empresa)
+        dados['tdvl_fili'] = int(filial)
+        itens_json = self.request.POST.get('itens_json') or '[]'
+        try:
+            itens = json.loads(itens_json)
+        except Exception:
+            itens = []
+        try:
+            self.object = TrocaDevolucaoService.criar_com_itens(banco, dados=dados, itens=itens)
+        except Exception as e:
+            form.add_error(None, f"Erro ao salvar: {e}")
+            return self.form_invalid(form)
+        messages.success(self.request, f"Devolução/Troca #{getattr(self.object, 'tdvl_nume', '')} criada com sucesso.")
+        slug = (self.kwargs.get('slug') or getattr(getattr(self.request, 'resolver_match', None), 'kwargs', {}).get('slug'))
+        return redirect('TrocasDevolucoesWeb:devolucoes_listar', slug=slug)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['slug'] = self.kwargs.get('slug')
         context['titulo'] = 'Nova Devolução'
+        context['empresa'] = self.request.session.get('empresa') or self.request.session.get('empr') or 1
+        context['filial'] = self.request.session.get('filial') or self.request.session.get('fili') or 1
+        if self.request.method == 'POST':
+            try:
+                posted = self.request.POST.get('itens_json')
+                if posted:
+                    context['itens_json'] = json.loads(posted)
+            except Exception:
+                pass
         return context

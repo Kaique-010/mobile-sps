@@ -3,26 +3,119 @@
 {% block title %}{{ titulo }}{% endblock %}
 
 {% block content %}
-<div class="container py-4">
+<div class="container page-container py-4">
   <div class="card">
     <div class="card-header">
-      <h4 class="mb-0">{{ titulo }}</h4>
+      <div class="page-header-custom w-100">
+        <h4 class="mb-0 page-title">{{ titulo }}</h4>
+        <div class="small text-muted">Empresa: {{ empresa }} • Filial: {{ filial }}</div>
+      </div>
     </div>
     <div class="card-body">
-      <form method="post">
+      {% if itens_json %}{{ itens_json|json_script:"itens-json-data" }}{% endif %}
+      <form method="post" id="form-devolucao">
         {% csrf_token %}
-        <div class="row g-3">
-          {% for field in form %}
-          <div class="col-md-4">
-            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {% if field.errors %}
-            <div class="text-danger small">{{ field.errors|striptags }}</div>
-            {% endif %}
+        <div class="form-section">
+          <div class="form-section-header"><i class="bi bi-list-check"></i> Dados gerais</div>
+          <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+              <label class="form-label" for="{{ form.tdvl_pdor.id_for_label }}">{{ form.tdvl_pdor.label }}</label>
+              {{ form.tdvl_pdor }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label d-block">&nbsp;</label>
+              <button class="btn btn-outline-primary w-100" type="button" id="btn-carregar-pedido"><i class="bi bi-arrow-repeat me-1"></i>Carregar Pedido</button>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label" for="{{ form.tdvl_tipo.id_for_label }}">{{ form.tdvl_tipo.label }}</label>
+              {{ form.tdvl_tipo }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label" for="{{ form.tdvl_stat.id_for_label }}">{{ form.tdvl_stat.label }}</label>
+              {{ form.tdvl_stat }}
+            </div>
           </div>
-          {% endfor %}
         </div>
-        <div class="mt-4 d-flex justify-content-end gap-2">
+
+        <div class="form-section">
+          <div class="form-section-header"><i class="bi bi-person-vcard"></i> Identificação</div>
+          <div class="row g-3 p-3">
+            <div class="col-md-3">
+              <label class="form-label" for="{{ form.tdvl_data.id_for_label }}">{{ form.tdvl_data.label }}</label>
+              {{ form.tdvl_data }}
+            </div>
+            <div class="col-md-5">
+              <label class="form-label" for="{{ form.tdvl_clie.id_for_label }}">{{ form.tdvl_clie.label }}</label>
+              {{ form.tdvl_clie }}
+              <div class="form-text text-muted" id="tdvl_clie_nome_hint"></div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="{{ form.tdvl_vend.id_for_label }}">{{ form.tdvl_vend.label }}</label>
+              {{ form.tdvl_vend }}
+              <div class="form-text text-muted" id="tdvl_vend_nome_hint"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-header"><i class="bi bi-chat-square-text"></i> Observações</div>
+          <div class="row g-3 p-3">
+            <div class="col-12">
+              <label class="form-label" for="{{ form.tdvl_obse.id_for_label }}">{{ form.tdvl_obse.label }}</label>
+              {{ form.tdvl_obse }}
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-header"><i class="bi bi-cash-coin"></i> Financeiro do Pedido</div>
+          <div id="financeiro-alert" class="alert alert-info d-none"></div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-header"><i class="bi bi-box-seam"></i> Itens</div>
+          <div class="table-responsive">
+          <table class="table table-sm align-middle" id="tabela-itens">
+            <thead>
+              <tr>
+                <th style="width: 50px;">Sel.</th>
+                <th>Item</th>
+                <th>Código</th>
+                <th>Produto Origem</th>
+                <th class="text-end">Qtd Orig.</th>
+                <th class="text-end">Valor Orig.</th>
+                <th class="col-repo">Produto Reposição</th>
+                <th class="col-repo">Descrição</th>
+                <th class="text-end col-repo">Qtd Rep.</th>
+                <th class="text-end col-repo">Unit. Rep.</th>
+                <th class="text-end col-repo">Valor Rep.</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        </div>
+
+        <input type="hidden" name="itens_json" id="itens_json">
+
+        <div class="form-section">
+          <div class="form-section-header"><i class="bi bi-calculator"></i> Totais</div>
+          <div class="row g-3 mt-1">
+          <div class="col-md-2">
+            <label class="form-label" for="{{ form.tdvl_tode.id_for_label }}">{{ form.tdvl_tode.label }}</label>
+            {{ form.tdvl_tode }}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label" for="{{ form.tdvl_tore.id_for_label }}">{{ form.tdvl_tore.label }}</label>
+            {{ form.tdvl_tore }}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label" for="{{ form.tdvl_safi.id_for_label }}">{{ form.tdvl_safi.label }}</label>
+            {{ form.tdvl_safi }}
+          </div>
+          </div>
+        </div>
+        <div class="mt-4 d-flex justify-content-end gap-2 form-actions">
           <a class="btn btn-outline-secondary" href="{% url 'TrocasDevolucoesWeb:devolucoes_listar' slug=slug %}">Cancelar</a>
           <button type="submit" class="btn btn-primary">Salvar</button>
         </div>
@@ -30,4 +123,318 @@
     </div>
   </div>
 </div>
+<script>
+  const itensExistentesData = document.getElementById('itens-json-data');
+  const itensExistentes = itensExistentesData ? JSON.parse(itensExistentesData.textContent) : null;
+  const slug = "{{ slug }}";
+  window.EMPRESA = {{ empresa|default:1 }};
+  window.FILIAL = {{ filial|default:1 }};
+  const $ = (sel) => document.querySelector(sel);
+  const tabelaBody = document.querySelector('#tabela-itens tbody');
+  const tipoSelect = document.getElementById('id_tdvl_tipo');
+  const alertFin = document.getElementById('financeiro-alert');
+
+  function toggleReposicaoCols() {
+    const isTroca = (tipoSelect && tipoSelect.value === 'TROC');
+    document.querySelectorAll('.col-repo').forEach(el => el.style.display = isTroca ? '' : 'none');
+  }
+
+  function formatDecimal(v) {
+    try { return (parseFloat(v) || 0).toFixed(2); } catch(e) { return '0.00'; }
+  }
+
+  function recomputarTotais() {
+    let tode = 0, tore = 0;
+    const rows = tabelaBody.querySelectorAll('tr');
+    rows.forEach(tr => {
+      const chk = tr.querySelector('input[type="checkbox"]');
+      if (!chk.checked) return;
+      const vOrig = parseFloat(tr.querySelector('.v-orig').value || '0') || 0;
+      const vRep  = parseFloat(tr.querySelector('.v-rep')?.value || '0') || 0;
+      tode += vOrig;
+      tore += vRep;
+    });
+    const todeEl = document.getElementById('id_tdvl_tode');
+    const toreEl = document.getElementById('id_tdvl_tore');
+    const safiEl = document.getElementById('id_tdvl_safi');
+    if (todeEl) todeEl.value = formatDecimal(tode);
+    if (toreEl) toreEl.value = formatDecimal(tore);
+    if (safiEl) safiEl.value = formatDecimal(tode - tore);
+    sincronizarItensJSON();
+  }
+
+  function sincronizarItensJSON() {
+    const itens = [];
+    const rows = tabelaBody.querySelectorAll('tr');
+    rows.forEach(tr => {
+      const chk = tr.querySelector('input[type="checkbox"]');
+      if (!chk.checked) return;
+      const itor = parseInt(tr.dataset.item || '0');
+      const prodOrig = (tr.querySelector('.p-orig-codigo')?.textContent || tr.querySelector('.p-orig')?.textContent || '').trim();
+      const qOrig = tr.querySelector('.q-orig').value;
+      const vOrig = tr.querySelector('.v-orig').value;
+      const prodRepEl = tr.querySelector('.p-rep');
+      const qRepEl = tr.querySelector('.q-rep');
+      const vRepEl = tr.querySelector('.v-rep');
+      const item = {
+        itdv_pdor: document.getElementById('id_tdvl_pdor').value,
+        itdv_itor: itor,
+        itdv_pror: prodOrig,
+        itdv_qtor: qOrig,
+        itdv_vlor: vOrig
+      };
+      if (prodRepEl) {
+        const prodRep = prodRepEl.value.trim();
+        const qRep = qRepEl.value;
+        const vRep = vRepEl.value;
+        if (prodRep) {
+          item.itdv_prre = prodRep;
+          item.itdv_qtre = qRep;
+          item.itdv_vlre = vRep;
+        }
+      }
+      itens.push(item);
+    });
+    document.getElementById('itens_json').value = JSON.stringify(itens);
+  }
+
+  function linhaItemHTML(idx, produtoCodigo, quantidade, valor, produtoNome, unitOrig) {
+    const isTroca = (tipoSelect && tipoSelect.value === 'TROC');
+    return `
+      <tr data-item="${idx}" data-unit-orig="${unitOrig || 0}">
+        <td><input type="checkbox" class="form-check-input sel-item" checked></td>
+        <td>${idx}</td>
+        <td class="p-orig-codigo">${produtoCodigo}</td>
+        <td class="p-orig">${produtoNome || ''}</td>
+        <td><input type="number" step="0.00001" class="form-control form-control-sm q-orig" value="${quantidade}"></td>
+        <td><input type="number" step="0.01" class="form-control form-control-sm v-orig" value="${valor}"></td>
+        <td class="col-repo" style="${isTroca ? '' : 'display:none'}">
+          <input type="text" class="form-control form-control-sm p-rep" placeholder="Produto reposição">
+        </td>
+        <td class="col-repo" style="${isTroca ? '' : 'display:none'}">
+          <div class="text-muted small p-rep-desc"></div>
+        </td>
+        <td class="col-repo text-end" style="${isTroca ? '' : 'display:none'}">
+          <input type="number" step="0.00001" class="form-control form-control-sm q-rep" value="0">
+        </td>
+        <td class="col-repo text-end" style="${isTroca ? '' : 'display:none'}">
+          <input type="number" step="0.01" class="form-control form-control-sm u-rep" placeholder="0,00">
+        </td>
+        <td class="col-repo text-end" style="${isTroca ? '' : 'display:none'}">
+          <input type="number" step="0.01" class="form-control form-control-sm v-rep" value="0.00">
+        </td>
+      </tr>
+    `;
+  }
+
+  async function carregarPedido() {
+    const empr = window.EMPRESA;
+    const fili = window.FILIAL;
+    const ped  = document.getElementById('id_tdvl_pdor').value;
+    if (!empr || !fili || !ped) return;
+    const urlPedido = `/api/${slug}/pedidos/pedidos/${empr}/${fili}/${ped}/`;
+    const urlTitulos = `/api/${slug}/pedidos/consultar-titulos-pedido/${ped}/`;
+    alertFin.classList.add('d-none');
+    try {
+      const [rPedido, rTit] = await Promise.all([fetch(urlPedido), fetch(urlTitulos)]);
+      if (rPedido.ok) {
+        const dados = await rPedido.json();
+        const cliEl = document.getElementById('id_tdvl_clie');
+        const venEl = document.getElementById('id_tdvl_vend');
+        const datEl = document.getElementById('id_tdvl_data');
+        if (cliEl) {
+          const nome = dados.cliente_nome || '';
+          cliEl.value = (dados.pedi_forn || '');
+          const hint = document.getElementById('tdvl_clie_nome_hint');
+          if (hint) hint.textContent = nome ? nome : '';
+        }
+        if (venEl) venEl.value = (dados.pedi_vend || '');
+        if (datEl) datEl.value = (dados.pedi_data || '').slice(0,10);
+        tabelaBody.innerHTML = '';
+        const itens = dados.itens || [];
+        itens.forEach((it, idx) => {
+          const q = parseFloat(it.iped_quan || 0) || 0;
+          const unit = (parseFloat(it.iped_unit || 0) || 0) || (q ? (parseFloat(it.iped_tota || 0) || 0) / q : 0);
+          const valor = (unit * q).toFixed(2);
+          const html = linhaItemHTML(idx + 1, it.iped_prod, it.iped_quan, valor, it.produto_nome || '', unit);
+          tabelaBody.insertAdjacentHTML('beforeend', html);
+        });
+        tabelaBody.querySelectorAll('input').forEach(inp => {
+          inp.addEventListener('input', recomputarTotais);
+          inp.addEventListener('change', recomputarTotais);
+        });
+        tabelaBody.querySelectorAll('.q-orig').forEach(inp => {
+          inp.addEventListener('input', (ev) => {
+            const tr = ev.target.closest('tr');
+            const unit = parseFloat(tr.getAttribute('data-unit-orig') || '0') || 0;
+            const qtd = parseFloat(ev.target.value || '0') || 0;
+            const vOrig = tr.querySelector('.v-orig');
+            if (vOrig) vOrig.value = (unit * qtd).toFixed(2);
+          });
+        });
+        tabelaBody.querySelectorAll('.q-rep, .u-rep').forEach(inp => {
+          inp.addEventListener('input', (ev) => {
+            const tr = ev.target.closest('tr');
+            const q = parseFloat(tr.querySelector('.q-rep')?.value || '0') || 0;
+            const u = parseFloat(tr.querySelector('.u-rep')?.value || '0') || 0;
+            const v = tr.querySelector('.v-rep');
+            if (v) v.value = (u * q).toFixed(2);
+            recomputarTotais();
+          });
+        });
+        recomputarTotais();
+        try {
+          if (dados.pedi_vend) {
+            const vResp = await fetch(`/api/${slug}/entidades/entidades/${dados.pedi_vend}/`);
+            if (vResp.ok) {
+              const vData = await vResp.json();
+              if (venEl) {
+                const nomeV = vData.enti_nome || '';
+                venEl.value = (dados.pedi_vend || '');
+                const hintV = document.getElementById('tdvl_vend_nome_hint');
+                if (hintV) hintV.textContent = nomeV ? nomeV : '';
+              }
+            }
+          }
+        } catch (e) {}
+      }
+      if (rTit.ok) {
+        const dt = await rTit.json();
+        if (dt && dt.titulos && dt.titulos.length > 0) {
+          const existeBaixa = dt.titulos.some(t => (t.aberto && String(t.aberto).toUpperCase() !== 'A'));
+          alertFin.classList.remove('d-none');
+          alertFin.classList.toggle('alert-warning', existeBaixa);
+          alertFin.classList.toggle('alert-info', !existeBaixa);
+          alertFin.textContent = existeBaixa
+            ? 'Atenção: Existem títulos financeiros associados e com baixas/parciais registradas.'
+            : 'Existe financeiro associado ao pedido. Nenhuma baixa encontrada.';
+        } else {
+          alertFin.classList.add('d-none');
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  document.getElementById('btn-carregar-pedido')?.addEventListener('click', carregarPedido);
+  tipoSelect?.addEventListener('change', () => {
+    toggleReposicaoCols();
+    recomputarTotais();
+  });
+  async function preencherNomesSeNecessario() {
+    try {
+      const cliEl = document.getElementById('id_tdvl_clie');
+      const vendEl = document.getElementById('id_tdvl_vend');
+      const cliHint = document.getElementById('tdvl_clie_nome_hint');
+      const vendHint = document.getElementById('tdvl_vend_nome_hint');
+      const cliCod = cliEl?.value?.trim();
+      const vendCod = vendEl?.value?.trim();
+      if (cliCod && cliHint && !cliHint.textContent) {
+        const r = await fetch(`/api/${slug}/entidades/entidades/${encodeURIComponent(cliCod)}/`);
+        if (r.ok) {
+          const j = await r.json();
+          cliHint.textContent = j?.enti_nome || '';
+        }
+      }
+      if (vendCod && vendHint && !vendHint.textContent) {
+        const r2 = await fetch(`/api/${slug}/entidades/entidades/${encodeURIComponent(vendCod)}/`);
+        if (r2.ok) {
+          const j2 = await r2.json();
+          vendHint.textContent = j2?.enti_nome || '';
+        }
+      }
+    } catch (e) {}
+  }
+  document.getElementById('form-devolucao')?.addEventListener('submit', (ev) => {
+    sincronizarItensJSON();
+  });
+  toggleReposicaoCols();
+  preencherNomesSeNecessario();
+  if (Array.isArray(itensExistentes) && itensExistentes.length) {
+    tabelaBody.innerHTML = '';
+    itensExistentes.forEach((it) => {
+      const html = linhaItemHTML(it.itdv_item, it.itdv_pror, it.itdv_qtor, it.itdv_vlor || 0, '');
+      tabelaBody.insertAdjacentHTML('beforeend', html);
+      const last = tabelaBody.lastElementChild;
+      if (it.itdv_prre) {
+        last.querySelector('.p-rep').value = it.itdv_prre || '';
+        last.querySelector('.q-rep').value = it.itdv_qtre || 0;
+        last.querySelector('.v-rep').value = it.itdv_vlre || 0;
+        const q = parseFloat(it.itdv_qtre || 0) || 0;
+        const v = parseFloat(it.itdv_vlre || 0) || 0;
+        const uEl = last.querySelector('.u-rep');
+        if (uEl) uEl.value = q ? (v / q).toFixed(2) : '';
+      }
+    });
+    tabelaBody.querySelectorAll('input').forEach(inp => {
+      inp.addEventListener('input', recomputarTotais);
+      inp.addEventListener('change', recomputarTotais);
+    });
+    recomputarTotais();
+  }
+  (function initReposicaoAutocomplete(){
+    function attach(tr) {
+      const input = tr.querySelector('.p-rep');
+      const descEl = tr.querySelector('.p-rep-desc');
+      const unitEl = tr.querySelector('.u-rep');
+      const vRep = tr.querySelector('.v-rep');
+      const qRep = tr.querySelector('.q-rep');
+      if (!input) return;
+      let dd;
+      input.addEventListener('input', async (e) => {
+        const term = (e.target.value || '').trim();
+        if (dd) dd.remove();
+        if (term.length < 2) return;
+        dd = document.createElement('div');
+        dd.className = 'list-group position-absolute w-100';
+        dd.style.zIndex = '1000';
+        input.parentElement.appendChild(dd);
+        try {
+          const url = `/api/${slug}/produtos/produtos/busca?empresa=${encodeURIComponent(window.EMPRESA)}&q=${encodeURIComponent(term)}`;
+          const resp = await fetch(url);
+          const arr = await resp.json();
+          const items = Array.isArray(arr) ? arr : [];
+          dd.innerHTML = '';
+          items.slice(0, 10).forEach(p => {
+            const preco = parseFloat(p.preco_principal || 0);
+            const label = `${p.prod_codi} - ${p.prod_nome}${preco ? ' - R$ ' + preco.toFixed(2) : ''}`;
+            const a = document.createElement('a');
+            a.href = '#';
+            a.className = 'list-group-item list-group-item-action';
+            a.textContent = label;
+            a.addEventListener('click', ev => {
+              ev.preventDefault();
+              input.value = p.prod_codi;
+              if (descEl) descEl.textContent = p.prod_nome || '';
+              const qOrig = tr.querySelector('.q-orig');
+              const qtdPadrao = parseFloat(qRep?.value || 0) || parseFloat(qOrig?.value || 0) || 0;
+              if (qRep && !parseFloat(qRep.value)) qRep.value = (qtdPadrao || 0);
+              if (unitEl) unitEl.value = preco ? preco.toFixed(2) : '';
+              if (vRep) vRep.value = ((parseFloat(unitEl?.value || 0) || 0) * (parseFloat(qRep?.value || 0) || 0)).toFixed(2);
+              if (!preco && unitEl) unitEl.focus();
+              if (dd) dd.remove();
+              recomputarTotais();
+            });
+            dd.appendChild(a);
+          });
+          if (!dd.children.length) {
+            const div = document.createElement('div');
+            div.className = 'list-group-item text-muted';
+            div.textContent = 'Nenhum resultado';
+            dd.appendChild(div);
+          }
+        } catch (e) { if (dd) dd.remove(); }
+      });
+      document.addEventListener('click', (evt) => {
+        if (dd && !input.parentElement.contains(evt.target)) dd.remove();
+      });
+    }
+    tabelaBody.querySelectorAll('tr').forEach(attach);
+    const observer = new MutationObserver(() => {
+      tabelaBody.querySelectorAll('tr').forEach(attach);
+    });
+    observer.observe(tabelaBody, { childList: true, subtree: true });
+  })();
+</script>
 {% endblock %}
