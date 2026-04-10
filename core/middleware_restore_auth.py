@@ -12,7 +12,9 @@ class RestoreUserMiddleware:
 
     def __call__(self, request):
         if request.path.startswith("/web/") or request.path.startswith("/api/"):
-            slug = get_licenca_slug() or request.session.get('slug')
+            # Prioriza slug da sessão para evitar "vazamento" de thread-local
+            # entre requests concorrentes no worker.
+            slug = request.session.get('slug') or get_licenca_slug()
             banco = get_db_from_slug(slug) if slug else 'default'
 
             if request.user.is_authenticated:

@@ -437,10 +437,9 @@ def selecionar_empresa(request):
         if filial_nome:
             request.session['filial_nome'] = filial_nome
 
-        # garantir que sessão foi modificada e persistida imediatamente
+        # garantir que sessão foi modificada.
+        # Persistência fica com SessionMiddleware no fim da resposta para evitar conflitos.
         request.session.modified = True
-        # Evita save manual aqui para não disputar com SessionMiddleware em requests concorrentes.
-        # O middleware padrão do Django persiste ao final da resposta.
 
         logger.info("[selecionar_empresa] Sessão atualizada OK: emp=%s (%s) fil=%s (%s) session_snapshot=%s",
                     empresa_id_int, empresa_nome, filial_id_int, filial_nome,
