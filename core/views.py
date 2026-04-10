@@ -437,33 +437,9 @@ def selecionar_empresa(request):
         if filial_nome:
             request.session['filial_nome'] = filial_nome
 
-        # garantir que sessão foi modificada e persistida imediatamente
+        # garantir que sessão foi modificada.
+        # Persistência fica com SessionMiddleware no fim da resposta para evitar conflitos.
         request.session.modified = True
-        # Em produção houve erro intermitente "session was deleted before the request completed"
-        # neste POST (concorrência entre requests do mesmo browser).
-        # Persistimos aqui com retry curto e, se salvar, desarmamos o save final do middleware.
-        try:
-            saved = False
-            for _ in range(2):
-                try:
-                    request.session.save()
-                    saved = True
-                    request.session.modified = False
-                    break
-                except RuntimeError as e:
-                    if "session was deleted" in str(e) or "session was deleted before the request completed" in str(e):
-                        try:
-                            request.session.cycle_key()
-                        except Exception:
-                            pass
-                        continue
-                    raise
-            if not saved:
-                logger.warning("[selecionar_empresa] sessão não persistiu no retry curto; seguirá para middleware salvar no response")
-                request.session.modified = True
-        except Exception:
-            logger.exception("[selecionar_empresa] falha ao persistir sessão com retry curto")
-            request.session.modified = True
 
         logger.info("[selecionar_empresa] Sessão atualizada OK: emp=%s (%s) fil=%s (%s) session_snapshot=%s",
                     empresa_id_int, empresa_nome, filial_id_int, filial_nome,
