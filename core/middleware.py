@@ -2,6 +2,7 @@ import time
 import logging
 from threading import local
 from django.core.cache import cache
+from django.core.exceptions import SuspiciousOperation
 from django.conf import settings
 from django.http import JsonResponse
 from core.licenca_context import set_current_request, get_licencas_map

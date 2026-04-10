@@ -124,7 +124,7 @@
       'X-Filial': filial,
       ...(options.headers || {})
     });
-    let resp = await fetch(url, { ...options, headers: makeHeaders(access) });
+    let resp = await fetch(url, { ...options, credentials: 'same-origin', headers: makeHeaders(access) });
     if (resp.status !== 401) return resp;
     try {
       const data = await resp.json();
@@ -138,6 +138,7 @@
     try {
       const refreshResp = await fetch(`/api/${slug}/auth/token/refresh/`, {
         method: 'POST',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refresh })
       });
@@ -146,7 +147,7 @@
       const newAccess = d && d.access;
       if (!newAccess) return resp;
       localStorage.setItem('access', newAccess);
-      return await fetch(url, { ...options, headers: makeHeaders(newAccess) });
+      return await fetch(url, { ...options, credentials: 'same-origin', headers: makeHeaders(newAccess) });
     } catch (e) {
       return resp;
     }

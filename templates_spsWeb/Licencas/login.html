@@ -425,6 +425,7 @@
     try {
       const resp = await fetch(`/api/${slug}/licencas/login/`, {
         method: 'POST',
+        credentials: 'same-origin',
         headers: {
           'Content-Type': 'application/json'
         },
