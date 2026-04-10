@@ -158,7 +158,8 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'core.performance_middleware.PerformanceMiddleware',
     'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
+    'core.middleware.SessionDeletedRecoveryMiddleware',
+    'core.middleware.SafeSessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',

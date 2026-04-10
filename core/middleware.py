@@ -4,9 +4,12 @@ from threading import local
 from django.core.cache import cache
 from django.core.exceptions import SuspiciousOperation
 from django.conf import settings
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseRedirect
 from core.licenca_context import set_current_request, get_licencas_map
 from core.utils import get_licenca_db_config
+from django.contrib.sessions.middleware import SessionMiddleware as DjangoSessionMiddleware
+from django.utils.cache import patch_vary_headers
+from django.utils.http import http_date
 
 logger = logging.getLogger("licenca.middleware")
 
@@ -23,6 +26,69 @@ def set_modulos_disponiveis(modulos):
 
 def get_modulos_disponiveis():
     return getattr(_local, 'modulos_disponiveis', [])
+
+class SessionDeletedRecoveryMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        try:
+            return self.get_response(request)
+        except (RuntimeError, SuspiciousOperation) as e:
+            msg = str(e)
+            if "session was deleted" not in msg and "session was deleted before the request completed" not in msg:
+                raise
+            try:
+                accept = request.META.get('HTTP_ACCEPT', '')
+            except Exception:
+                accept = ''
+            if (request.path or '').startswith('/api/') or 'application/json' in accept:
+                return JsonResponse(
+                    {
+                        "error": "Session expired",
+                        "code": "SESSION_INVALID",
+                        "next": "/web/selecionar-empresa/",
+                    },
+                    status=401,
+                )
+            return HttpResponseRedirect('/web/selecionar-empresa/')
+
+class SafeSessionMiddleware(DjangoSessionMiddleware):
+    def process_response(self, request, response):
+        try:
+            return super().process_response(request, response)
+        except SuspiciousOperation as e:
+            msg = str(e)
+            if "The request's session was deleted before the request completed" not in msg:
+                raise
+            try:
+                session = getattr(request, "session", None)
+                if session is None:
+                    return response
+                session.create()
+                session.save()
+                patch_vary_headers(response, ('Cookie',))
+                if session.get_expire_at_browser_close():
+                    max_age = None
+                    expires = None
+                else:
+                    max_age = session.get_expiry_age()
+                    expires_time = time.time() + max_age
+                    expires = http_date(expires_time)
+                response.set_cookie(
+                    settings.SESSION_COOKIE_NAME,
+                    session.session_key,
+                    max_age=max_age,
+                    expires=expires,
+                    domain=settings.SESSION_COOKIE_DOMAIN,
+                    path=settings.SESSION_COOKIE_PATH,
+                    secure=settings.SESSION_COOKIE_SECURE or None,
+                    httponly=settings.SESSION_COOKIE_HTTPONLY or None,
+                    samesite=settings.SESSION_COOKIE_SAMESITE,
+                )
+                return response
+            except Exception:
+                return response
 
 
 class LicencaMiddleware:
@@ -232,13 +298,6 @@ class LicencaMiddleware:
         # Headers têm prioridade, depois sessão, depois default
         emp = h_emp if h_emp is not None else (s_emp or 1)
         fil = h_fil if h_fil is not None else (s_fil or 1)
-
-        # Só atualiza sessão se veio nos headers E é diferente
-        if h_emp is not None and h_emp != s_emp:
-            self._session_set(request, "empresa_id", h_emp)
-
-        if h_fil is not None and h_fil != s_fil:
-            self._session_set(request, "filial_id", h_fil)
 
         # Sempre define no request (independente da sessão)
         request.empresa = emp

@@ -358,14 +358,32 @@ class EmpresaUsuarioView(APIView):
         if not licenca_info:
             return Response({"error": "Licença não encontrada."}, status=404)
 
-        # Garantir que estamos consultando no mesmo banco da licença selecionada
-        banco = get_licenca_db_config(request)
-        empresas = Empresas.objects.using(banco).all().order_by('empr_codi')
-        if empresas.exists():
-            serializer = EmpresaSerializer(empresas, many=True)
-            return Response(serializer.data)
-        else:
-            return Response({"error": "Nenhuma empresa encontrada."}, status=404)
+        try:
+            banco = get_licenca_db_config(request)
+        except Exception:
+            return Response(
+                {
+                    "error": "Sessão inválida ou licença indisponível.",
+                    "code": "SESSION_INVALID",
+                    "next": "/web/selecionar-empresa/",
+                },
+                status=401,
+            )
+        try:
+            empresas = Empresas.objects.using(banco).all().order_by('empr_codi')
+            if empresas.exists():
+                serializer = EmpresaSerializer(empresas, many=True)
+                return Response(serializer.data)
+            else:
+                return Response({"error": "Nenhuma empresa encontrada."}, status=404)
+        except Exception:
+            return Response(
+                {
+                    "error": "Falha ao consultar empresas.",
+                    "code": "DB_ERROR",
+                },
+                status=500,
+            )
 
 
 
@@ -379,7 +397,17 @@ class FiliaisPorEmpresaView(APIView):
         if not slug:
             return Response({"error": "Licença não encontrada."}, status=status.HTTP_404_NOT_FOUND)
 
-        banco = get_licenca_db_config(request)
+        try:
+            banco = get_licenca_db_config(request)
+        except Exception:
+            return Response(
+                {
+                    "error": "Sessão inválida ou licença indisponível.",
+                    "code": "SESSION_INVALID",
+                    "next": "/web/selecionar-empresa/",
+                },
+                status=401,
+            )
 
         empresa_id = request.query_params.get('empresa_id')
         if not empresa_id:
@@ -391,9 +419,18 @@ class FiliaisPorEmpresaView(APIView):
         except (TypeError, ValueError):
             return Response({'error': 'empresa_id inválido.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        filiais_qs = Filiais.objects.using(banco).filter(empr_empr=empresa_id_int).order_by('empr_codi')
-        serializer = FilialSerializer(filiais_qs, many=True)
-        return Response(serializer.data)
+        try:
+            filiais_qs = Filiais.objects.using(banco).filter(empr_empr=empresa_id_int).order_by('empr_codi')
+            serializer = FilialSerializer(filiais_qs, many=True)
+            return Response(serializer.data)
+        except Exception:
+            return Response(
+                {
+                    "error": "Falha ao consultar filiais.",
+                    "code": "DB_ERROR",
+                },
+                status=500,
+            )
 
 class UploadCertificadoA1View(APIView):
     permission_classes = [IsAuthenticated]
@@ -434,15 +471,30 @@ class ModulosLiberadosView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        banco = get_licenca_db_config(request)
+        try:
+            banco = get_licenca_db_config(request)
+        except Exception:
+            return Response(
+                {
+                    'error': 'Sessão inválida ou licença indisponível.',
+                    'code': 'SESSION_INVALID',
+                    'next': '/web/selecionar-empresa/',
+                },
+                status=401,
+            )
         empresa_id = request.query_params.get('empresa_id')
         filial_id = request.query_params.get('filial_id')
 
         if not empresa_id or not filial_id:
             return Response({'error': 'Empresa e filial obrigatórias'}, status=400)
 
-        modulos_ids = get_codigos_modulos_liberados(banco, empresa_id, filial_id)
-        pprint(modulos_ids)
+        try:
+            modulos_ids = get_codigos_modulos_liberados(banco, empresa_id, filial_id)
+        except Exception:
+            return Response(
+                {'error': 'Falha ao consultar módulos.'},
+                status=500,
+            )
 
         return Response({'modulos_liberados': modulos_ids})
 

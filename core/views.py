@@ -423,6 +423,20 @@ def selecionar_empresa(request):
             'slug': request.session.get('slug')
         }
 
+        try:
+            sk = getattr(request.session, 'session_key', None)
+            if not sk:
+                request.session.create()
+            else:
+                try:
+                    exists = request.session.exists(sk)
+                except Exception:
+                    exists = True
+                if exists is False:
+                    request.session.create()
+        except Exception:
+            pass
+
         request.session['empresa_id'] = empresa_id_int
         request.session['filial_id'] = filial_id_int
         if slug_post:
