@@ -65,6 +65,16 @@ class ComissaoAutomaticaService:
             base=getattr(pedido, "pedi_tota", None) or Decimal("0.00"),
             beneficiario_id=bene,
         )
+    
+    def gerar_por_titulo_a_pagar(self, *, titulo) -> list[LancamentoComissao]:
+        bene = _to_int(getattr(titulo, "titu_forn", None))
+        return self.gerar_por_documento(
+            tipo_origem="titulo",
+            documento=str(getattr(titulo, "titu_titu", "") or "").strip(),
+            data_doc=getattr(titulo, "titu_emis", None) or date.today(),
+            base=getattr(titulo, "titu_valo", None) or Decimal("0.00"),
+            beneficiario_id=bene,
+        )
 
 
 def _to_int(valor) -> int | None:

@@ -6,6 +6,7 @@ from Entidades.models import Entidades
 from Lancamentos_Bancarios.utils import get_next_lcto_number
 from adiantamentos.services import AdiantamentosService
 from CentrodeCustos.models import Centrodecustos
+from comissoes.services import ComissaoAutomaticaService
 from decimal import Decimal
 from calendar import monthrange
 from datetime import date
@@ -186,10 +187,42 @@ def criar_titulo_pagar(*, banco: str, dados: dict) -> Titulospagar:
             titu_emis=dados['titu_emis'],
             titu_venc=dados['titu_venc'],
         ).exists()
+        
         if existe:
             raise ValidationError({'detail': ['Título já existe.']})
+       
+        try:
+            try:
+                empresa_id = int(dados["titu_empr"])
+                filial_id = int(dados["titu_fili"])
+            except (TypeError, ValueError, KeyError) as e:
+                raise ValidationError({"detail": ["Empresa/filial inválida."]}) from e
+
+            beneficiario_raw = dados.get("titu_forn")
+            beneficiario_id = None
+            if beneficiario_raw is not None and str(beneficiario_raw).strip() != "":
+                try:
+                    beneficiario_id = int(str(beneficiario_raw).split("-", 1)[0].strip())
+                except (TypeError, ValueError):
+                    beneficiario_id = None
+
+            ComissaoAutomaticaService(
+                db_alias=banco,
+                empresa_id=empresa_id,
+                filial_id=filial_id,
+            ).gerar_por_documento(
+                tipo_origem="titulo",
+                documento=f'{dados["titu_forn"]}-{dados["titu_titu"]}-{dados["titu_seri"]}-{dados["titu_parc"]}',
+                data_doc=dados["titu_venc"],
+                base=dados.get("titu_valo") or Decimal("0.00"),
+                beneficiario_id=beneficiario_id,
+            )
+        except ValidationError as e:
+            raise ValidationError({'detail': e.detail}) from e  
         dados.setdefault('titu_aber', 'A')
+        
         return Titulospagar.objects.using(banco).create(**dados)
+       
 
 
 def atualizar_titulo_pagar(titulo: Titulospagar, *, banco: str, dados: dict) -> Titulospagar:
