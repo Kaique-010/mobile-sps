@@ -85,7 +85,8 @@
           {% else %}
             <ul class="list-group">
               {% for produto in saldos_produtos %}
-              <li class="list-group-item d-flex justify-content-between align-items-center">
+              <li class="list-group-item d-flex justify-content-between align-items-center js-saldo-item" role="button" style="cursor:pointer;"
+                  data-prod-codi="{{ produto.prod_codi }}" data-prod-nome="{{ produto.prod_nome }}">
                 <div class="me-2">{{ produto.prod_nome }}</div>
                 <div class="d-flex gap-2 flex-wrap justify-content-end">
                   <span class="badge bg-secondary">Total {{ produto.saldo_total|floatformat:2 }}</span>
@@ -98,6 +99,60 @@
               {% endfor %}
             </ul>
           {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modalMovimentosSaldo" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalMovimentosSaldoTitle">Movimentações</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="d-flex gap-2 flex-wrap mb-3">
+          <span class="badge bg-secondary" id="modalMovPeriodo"></span>
+          <span class="badge bg-primary" id="modalMovTotEntradas"></span>
+          <span class="badge bg-danger" id="modalMovTotSaidas"></span>
+        </div>
+        <div class="row g-3">
+          <div class="col-12 col-lg-6">
+            <div class="fw-semibold mb-2">Entradas</div>
+            <div class="table-responsive">
+              <table class="table table-sm table-hover align-middle">
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Doc</th>
+                    <th>Entidade</th>
+                    <th class="text-end">Qtd</th>
+                    <th class="text-end">Lote</th>
+                  </tr>
+                </thead>
+                <tbody id="modalMovEntradasBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="col-12 col-lg-6">
+            <div class="fw-semibold mb-2">Saídas</div>
+            <div class="table-responsive">
+              <table class="table table-sm table-hover align-middle">
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Doc</th>
+                    <th>Entidade</th>
+                    <th class="text-end">Qtd</th>
+                    <th class="text-end">Lote</th>
+                  </tr>
+                </thead>
+                <tbody id="modalMovSaidasBody"></tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -207,5 +262,114 @@
       const df=document.getElementById('saldoDataFinal'); if(df) df.value='';
     });
   })();
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const url = "{% url 'saldos_movimentos_web' slug=slug %}";
+    const modalEl = document.getElementById('modalMovimentosSaldo');
+    if (!modalEl) return;
+    const titleEl = document.getElementById('modalMovimentosSaldoTitle');
+    const periodoEl = document.getElementById('modalMovPeriodo');
+    const totEntEl = document.getElementById('modalMovTotEntradas');
+    const totSaiEl = document.getElementById('modalMovTotSaidas');
+    const bodyEnt = document.getElementById('modalMovEntradasBody');
+    const bodySai = document.getElementById('modalMovSaidasBody');
+    const modal = window.bootstrap ? new bootstrap.Modal(modalEl) : null;
+
+    function fmtDate(v){
+      const s = String(v || '');
+      if (s.length >= 10) return s.slice(0, 10);
+      return s;
+    }
+    function fmtNum(v){
+      const n = Number(v || 0);
+      if (Number.isFinite(n)) return n.toFixed(2);
+      return String(v || '');
+    }
+    function setLoading(){
+      if (bodyEnt) bodyEnt.innerHTML = '<tr><td colspan="5" class="text-muted">Carregando...</td></tr>';
+      if (bodySai) bodySai.innerHTML = '<tr><td colspan="5" class="text-muted">Carregando...</td></tr>';
+      if (totEntEl) totEntEl.textContent = '';
+      if (totSaiEl) totSaiEl.textContent = '';
+    }
+    function setEmpty(){
+      if (bodyEnt) bodyEnt.innerHTML = '<tr><td colspan="5" class="text-muted">Sem entradas no período</td></tr>';
+      if (bodySai) bodySai.innerHTML = '<tr><td colspan="5" class="text-muted">Sem saídas no período</td></tr>';
+    }
+
+    async function abrir(prodCodi, prodNome){
+      const di = document.getElementById('saldoDataInicial')?.value || '';
+      const df = document.getElementById('saldoDataFinal')?.value || '';
+      const emp = document.getElementById('saldoEmpresa')?.value || '';
+      const fil = document.getElementById('saldoFilial')?.value || '';
+      if (titleEl) titleEl.textContent = `Movimentações - ${prodNome || prodCodi}`;
+      if (periodoEl) periodoEl.textContent = `${di || '-'} a ${df || '-'}`;
+      setLoading();
+      if (modal) modal.show();
+
+      const qs = new URLSearchParams();
+      qs.set('produto', String(prodCodi || ''));
+      if (di) qs.set('data_inicio', di);
+      if (df) qs.set('data_fim', df);
+      if (emp) qs.set('empresa', emp);
+      if (fil) qs.set('filial', fil);
+      qs.set('limit', '300');
+
+      try{
+        const r = await fetch(`${url}?${qs.toString()}`, { credentials: 'same-origin' });
+        const j = await r.json();
+        const entradas = Array.isArray(j.entradas) ? j.entradas : [];
+        const saidas = Array.isArray(j.saidas) ? j.saidas : [];
+        const tot = j.totais || {};
+        if (totEntEl) totEntEl.textContent = `Entradas ${fmtNum(tot.entradas_qtd)}`;
+        if (totSaiEl) totSaiEl.textContent = `Saídas ${fmtNum(tot.saidas_qtd)}`;
+
+        if (bodyEnt) {
+          if (!entradas.length) bodyEnt.innerHTML = '<tr><td colspan="5" class="text-muted">Sem entradas no período</td></tr>';
+          else bodyEnt.innerHTML = entradas.map(e => {
+            const doc = e.entr_sequ;
+            const link = e.link || '';
+            const ent = e.entidade_nome || e.entr_enti || '';
+            const lote = e.entr_lote_vend ?? '';
+            return `<tr>
+              <td>${fmtDate(e.entr_data)}</td>
+              <td>${link ? `<a href="${link}">#${doc}</a>` : `#${doc}`}</td>
+              <td>${ent}</td>
+              <td class="text-end">${fmtNum(e.entr_quan)}</td>
+              <td class="text-end">${lote !== null && lote !== undefined ? lote : ''}</td>
+            </tr>`;
+          }).join('');
+        }
+        if (bodySai) {
+          if (!saidas.length) bodySai.innerHTML = '<tr><td colspan="5" class="text-muted">Sem saídas no período</td></tr>';
+          else bodySai.innerHTML = saidas.map(s => {
+            const doc = s.said_sequ;
+            const link = s.link || '';
+            const ent = s.entidade_nome || s.said_enti || '';
+            const lote = s.said_lote_vend ?? '';
+            return `<tr>
+              <td>${fmtDate(s.said_data)}</td>
+              <td>${link ? `<a href="${link}">#${doc}</a>` : `#${doc}`}</td>
+              <td>${ent}</td>
+              <td class="text-end">${fmtNum(s.said_quan)}</td>
+              <td class="text-end">${lote !== null && lote !== undefined ? lote : ''}</td>
+            </tr>`;
+          }).join('');
+        }
+        if (!entradas.length && !saidas.length) setEmpty();
+      }catch(e){
+        if (bodyEnt) bodyEnt.innerHTML = '<tr><td colspan="5" class="text-danger">Falha ao carregar entradas</td></tr>';
+        if (bodySai) bodySai.innerHTML = '<tr><td colspan="5" class="text-danger">Falha ao carregar saídas</td></tr>';
+      }
+    }
+
+    document.querySelectorAll('.js-saldo-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const prodCodi = el.getAttribute('data-prod-codi') || '';
+        const prodNome = el.getAttribute('data-prod-nome') || prodCodi;
+        if (!prodCodi) return;
+        abrir(prodCodi, prodNome);
+      });
+    });
+  });
 </script>
 {% endblock %}

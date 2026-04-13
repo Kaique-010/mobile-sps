@@ -1,7 +1,8 @@
 from django.db import transaction
+from django.db.models import Subquery
 from decimal import Decimal, InvalidOperation
 
-from Produtos.models import SaldoProduto, Produtos
+from Produtos.models import Lote, SaldoProduto, Produtos
 
 
 def _to_decimal(value, default: str = '0'):
@@ -63,6 +64,7 @@ def zerar_estoque(*, banco: str, empresa, filial, batch_size: int = 500, limit_r
 
     resultados = []
     zerados = 0
+    lotes_zerados = 0
 
     with transaction.atomic(using=banco):
         while True:
@@ -110,6 +112,30 @@ def zerar_estoque(*, banco: str, empresa, filial, batch_size: int = 500, limit_r
             ).update(saldo_estoque=Decimal('0'))
             zerados += int(atualizados or 0)
 
+        try:
+            empresa_i = int(empresa_s)
+        except Exception:
+            empresa_i = empresa
+
+        try:
+            produtos_sq = SaldoProduto.objects.using(banco).filter(
+                empresa=empresa_s,
+                filial=filial_s,
+            ).values('produto_codigo_id')
+            lotes_zerados = (
+                Lote.objects.using(banco)
+                .filter(
+                    lote_empr=empresa_i,
+                    lote_prod__in=Subquery(produtos_sq),
+                )
+                .exclude(lote_sald__isnull=True)
+                .exclude(lote_sald=0)
+                .update(lote_sald=Decimal('0'))
+            )
+            lotes_zerados = int(lotes_zerados or 0)
+        except Exception:
+            lotes_zerados = 0
+
     nomes = {}
     try:
         codigos = [r.get('produto') for r in resultados if r.get('produto')]
@@ -127,5 +153,6 @@ def zerar_estoque(*, banco: str, empresa, filial, batch_size: int = 500, limit_r
         'empresa': empresa_s,
         'filial': filial_s,
         'zerados': zerados,
+        'lotes_zerados': lotes_zerados,
         'itens': resultados,
     }

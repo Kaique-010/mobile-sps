@@ -1738,6 +1738,7 @@ class SaldosDashboardView(DBAndSlugMixin, TemplateView):
                 saldo_lotes = lotes_map.get(codigo, Decimal('0'))
                 saldo_sem_lote = saldo_total - saldo_lotes
                 saldos_list.append({
+                    'prod_codi': codigo,
                     'prod_nome': nomes_map.get(codigo, codigo),
                     'saldo_total': saldo_total,
                     'saldo_lotes': saldo_lotes,
@@ -1796,6 +1797,51 @@ class SaldosDashboardView(DBAndSlugMixin, TemplateView):
             'kpi_produtos_mov': kpi_produtos_mov,
         })
         return ctx
+
+
+class SaldosMovimentosView(DBAndSlugMixin, View):
+    def get(self, request, *args, **kwargs):
+        banco = self.db_alias
+        empresa = request.GET.get('empresa') or self.empresa_id or request.session.get('empresa_id') or request.headers.get('X-Empresa') or 1
+        filial = request.GET.get('filial') or self.filial_id or request.session.get('filial_id') or request.headers.get('X-Filial') or 1
+        produto = (request.GET.get('produto') or '').strip()
+        data_inicio = (request.GET.get('data_inicio') or request.GET.get('data_inicial') or '').strip()
+        data_fim = (request.GET.get('data_fim') or request.GET.get('data_final') or '').strip()
+        limit = request.GET.get('limit')
+        try:
+            limit_i = int(limit) if limit is not None and str(limit).strip() != '' else 200
+        except Exception:
+            limit_i = 200
+
+        from Produtos.consultas.estoque_consultas import obter_movimentacoes_produto
+
+        payload = obter_movimentacoes_produto(
+            banco=banco,
+            empresa=empresa,
+            filial=filial,
+            produto=produto,
+            data_inicio=data_inicio,
+            data_fim=data_fim,
+            limit=limit_i,
+        )
+
+        slug = self.slug or get_licenca_slug()
+        for r in payload.get('entradas') or []:
+            r['link'] = f"/web/{slug}/entradas/{r.get('entr_sequ')}/"
+        for r in payload.get('saidas') or []:
+            r['link'] = f"/web/{slug}/saidas/{r.get('said_sequ')}/"
+
+        return JsonResponse(
+            {
+                'banco': banco,
+                'slug': slug,
+                'empresa': str(empresa),
+                'filial': str(filial),
+                'produto': produto,
+                **payload,
+            },
+            json_dumps_params={'default': str},
+        )
 
 def autocomplete_produtos(request, slug=None):
     banco = get_licenca_db_config(request) or 'default'

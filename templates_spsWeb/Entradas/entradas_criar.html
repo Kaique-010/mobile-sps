@@ -177,6 +177,19 @@
   const lotesProdutoUrl = "{% url 'EntradasWeb:lotes_produto' slug=slug %}";
   const listUrl = "{% url 'EntradasWeb:entradas_listar' slug=slug %}";
 
+  const entradaForm = document.getElementById('entrada-form');
+  if (entradaForm) {
+    entradaForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+    entradaForm.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.target && e.target.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+      }
+    });
+  }
+
   function toastError(msg) {
     if (window.Toast && typeof window.Toast.error === 'function') window.Toast.error(msg);
     else alert(msg);
@@ -487,6 +500,8 @@
     renderTabela();
   }
   document.getElementById('processar').addEventListener('click', async () => {
+    if (window.__entradas_processando) return;
+    window.__entradas_processando = true;
     const entidade = document.getElementById('id_entr_enti').value;
     const data = document.getElementById('id_entr_data').value;
     const autoLoteEl = document.getElementById('{{ form.auto_lote.id_for_label }}') || document.getElementById('id_auto_lote');
@@ -494,44 +509,48 @@
     const atualizarPrecoEl = document.getElementById('{{ form.atualizar_preco.id_for_label }}') || document.getElementById('id_atualizar_preco');
     const atualizar_preco = !!(atualizarPrecoEl && (atualizarPrecoEl.checked || atualizarPrecoEl.value === 'on'));
 
-    if (!entidade || !data) {
-      toastError('Selecione entidade e data.');
-      return;
-    }
-    if (!itens.length) {
-      toastError('Adicione pelo menos um item.');
-      return;
-    }
+    try {
+      if (!entidade || !data) {
+        toastError('Selecione entidade e data.');
+        return;
+      }
+      if (!itens.length) {
+        toastError('Adicione pelo menos um item.');
+        return;
+      }
 
-    const btn = document.getElementById('processar');
-    if (btn) btn.disabled = true;
-    const resp = await fetch(loteUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-      },
-      body: JSON.stringify({
-        entidade,
-        data,
-        itens,
-        auto_lote,
-        atualizar_preco
-      })
-    });
+      const btn = document.getElementById('processar');
+      if (btn) btn.disabled = true;
+      const resp = await fetch(loteUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+          entidade,
+          data,
+          itens,
+          auto_lote,
+          atualizar_preco
+        })
+      });
 
-    if (resp.ok) {
-      toastSuccess('Salvo com sucesso');
-      window.location.href = listUrl;
-    } else {
-      let msg = 'Erro ao salvar';
-      try {
-        const json = await resp.json();
-        if (json && (json.erro || json.error)) msg = json.erro || json.error;
-      } catch (e) { }
-      toastError(msg);
+      if (resp.ok) {
+        toastSuccess('Salvo com sucesso');
+        window.location.href = listUrl;
+      } else {
+        let msg = 'Erro ao salvar';
+        try {
+          const json = await resp.json();
+          if (json && (json.erro || json.error)) msg = json.erro || json.error;
+        } catch (e) { }
+        toastError(msg);
+      }
+      if (btn) btn.disabled = false;
+    } finally {
+      window.__entradas_processando = false;
     }
-    if (btn) btn.disabled = false;
   });
 
 </script>

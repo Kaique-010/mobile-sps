@@ -228,6 +228,8 @@ class EntradaLoteView(View):
                 lote_fabrs = []
                 lote_valis = []
                 next_lote_by_prod = {}
+                tem_lote = False
+                sem_lote = False
 
                 def parse_date(v):
                     if not v:
@@ -289,6 +291,10 @@ class EntradaLoteView(View):
                         lote_label = lote_texto
                     elif auto_lote and not lote_num:
                         lote_num = get_next_lote(str(produto))
+                    if lote_num:
+                        tem_lote = True
+                    else:
+                        sem_lote = True
                     lote_data_fabr = parse_date(item.get('lote_data_fabr'))
                     if lote_data_fabr is None:
                         lote_data_fabr = parse_date(data_mov)
@@ -312,6 +318,9 @@ class EntradaLoteView(View):
                     preco_prazos.append(parse_money(item.get('preco_prazo')))
                     lote_fabrs.append(lote_data_fabr)
                     lote_valis.append(lote_data_vali)
+
+                if tem_lote and sem_lote:
+                    raise ValueError('Não é permitido misturar itens com lote e sem lote na mesma entrada')
 
                 from Produtos.models import Lote
                 from decimal import Decimal

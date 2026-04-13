@@ -27,6 +27,7 @@ from .Views.web_views import (
     MarcaUpdateView,
     MarcaDeleteView,
     SaldosDashboardView,
+    SaldosMovimentosView,
     autocomplete_produtos,
     UnidadeMedidaListView,
     UnidadeMedidaCreateView,
@@ -86,6 +87,7 @@ urlpatterns = [
     
     # Saldos
     path('saldos/', SaldosDashboardView.as_view(), name='saldos_web'),
+    path('saldos/movimentos/', SaldosMovimentosView.as_view(), name='saldos_movimentos_web'),
     path('autocomplete/produtos/', autocomplete_produtos, name='autocomplete_produtos'),
     
     # Autocompletes
