@@ -98,14 +98,18 @@
                 {% if messages %}
                 <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100;">
                     {% for message in messages %}
+                    {% with m=message|stringformat:"s" %}
+                    {% if m %}
                     <div class="toast align-items-center text-bg-{% if 'error' in message.tags %}danger{% elif 'warning' in message.tags %}warning{% elif 'success' in message.tags %}success{% else %}secondary{% endif %} border-0 mb-2"
                         role="alert" aria-live="assertive" aria-atomic="true">
                         <div class="d-flex">
-                            <div class="toast-body">{{ message }}</div>
+                            <div class="toast-body">{{ m }}</div>
                             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
                                 aria-label="Close"></button>
                         </div>
                     </div>
+                    {% endif %}
+                    {% endwith %}
                     {% endfor %}
                 </div>
                 {% endif %}
@@ -117,12 +121,70 @@
     <datalist id="beneficiarios_options"></datalist>
     <script>
         const COMISSOES_AUTOCOMPLETE_ENTIDADES_URL = "{% url 'comissoes_web:autocomplete_entidades' slug=slug %}";
+        const COMISSOES_AUTOCOMPLETE_CENTROSDECUSTOS_URL = "{% url 'comissoes_web:autocomplete_centrosdecustos' slug=slug %}";
         function comissoesDebounce(fn, wait) {
             let t = null;
             return (...args) => {
                 clearTimeout(t);
                 t = setTimeout(() => fn(...args), wait);
             };
+        }
+        function comissoesSetupDropdownAutocomplete({ inputId, hiddenId, dropdownId, url }) {
+            const input = document.getElementById(inputId);
+            const hidden = document.getElementById(hiddenId);
+            const dropdown = document.getElementById(dropdownId);
+            if (!input || !hidden || !dropdown) return;
+
+            let debounce = null;
+            let controller = null;
+
+            function clearDropdown() {
+                dropdown.innerHTML = "";
+            }
+
+            input.addEventListener("input", function () {
+                const term = (this.value || "").trim();
+                if (!term) {
+                    hidden.value = "";
+                    clearDropdown();
+                    return;
+                }
+
+                clearTimeout(debounce);
+                if (controller) controller.abort();
+
+                debounce = setTimeout(async () => {
+                    try {
+                        controller = new AbortController();
+                        const resp = await fetch(`${url}?term=${encodeURIComponent(term)}`, { signal: controller.signal });
+                        const data = await resp.json();
+                        const results = data.results || [];
+                        clearDropdown();
+                        if (!results.length) return;
+                        results.forEach((item) => {
+                            const a = document.createElement("a");
+                            a.href = "#";
+                            a.className = "list-group-item list-group-item-action";
+                            a.textContent = item.text;
+                            a.addEventListener("click", (ev) => {
+                                ev.preventDefault();
+                                hidden.value = item.id;
+                                input.value = item.text;
+                                clearDropdown();
+                            });
+                            dropdown.appendChild(a);
+                        });
+                    } catch (e) {
+                        if (e.name !== "AbortError") clearDropdown();
+                    }
+                }, 250);
+            });
+
+            document.addEventListener("click", function (e) {
+                if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+                    clearDropdown();
+                }
+            });
         }
         async function comissoesCarregarEntidades(term) {
             const url = `${COMISSOES_AUTOCOMPLETE_ENTIDADES_URL}?q=${encodeURIComponent(term || "")}`;
@@ -148,15 +210,34 @@
             }, 250);
             input.addEventListener("input", run);
         }
-        document.addEventListener("DOMContentLoaded", comissoesInitAutocompleteBeneficiario);
-        document.addEventListener("DOMContentLoaded", function () {
-            document.querySelectorAll(".toast").forEach(function (el) {
-                try {
-                    const t = new bootstrap.Toast(el, { delay: 3000 });
-                    t.show();
-                } catch (e) { }
+        function comissoesInitCollapsibles() {
+            document.querySelectorAll("[data-comissoes-toggle]").forEach((btn) => {
+                const selector = btn.getAttribute("data-comissoes-toggle");
+                if (!selector) return;
+                const target = document.querySelector(selector);
+                if (!target) return;
+                btn.setAttribute("aria-expanded", target.hidden ? "false" : "true");
+                btn.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    const willHide = !target.hidden;
+                    target.hidden = willHide;
+                    btn.setAttribute("aria-expanded", willHide ? "false" : "true");
+                });
             });
+        }
+        document.addEventListener("DOMContentLoaded", comissoesInitAutocompleteBeneficiario);
+        document.addEventListener("DOMContentLoaded", comissoesInitCollapsibles);
+        document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll(".toast").forEach(function (el) {
+            // Só exibe se tiver conteúdo no toast-body
+            const body = el.querySelector(".toast-body");
+            if (!body || !body.textContent.trim()) return;
+            try {
+                const t = new bootstrap.Toast(el, { delay: 3000 });
+                t.show();
+            } catch (e) { }
         });
+    }); 
     </script>
     {% block extra_js %}{% endblock %}
 </body>

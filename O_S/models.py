@@ -108,6 +108,28 @@ class Os(models.Model):
         desconto_global = self.os_desc or Decimal('0.00')
         self.os_tota = (total_pecas + total_servicos) - desconto_global
         return self.os_tota
+
+    @property
+    def comissoes(self):
+        cache = getattr(self, "_comissoes_cache", None)
+        if cache is not None:
+            return cache
+        from comissoes.models import LancamentoComissao
+        using = self._state.db or "default"
+        return list(
+            LancamentoComissao.objects.using(using)
+            .filter(
+                lcom_empr=self.os_empr,
+                lcom_fili=self.os_fili,
+                lcom_tipo_origem="os",
+                lcom_docu=str(self.os_os),
+            )
+            .order_by("lcom_id")
+        )
+
+    @comissoes.setter
+    def comissoes(self, value):
+        self._comissoes_cache = list(value or [])
     
 
 class PecasOs(models.Model):

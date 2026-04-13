@@ -1,5 +1,5 @@
 from django.urls import path
-from .Views.autocompletes import autocomplete_entidades
+from .Views.autocompletes import autocomplete_entidades, autocomplete_centrosdecustos
 from .Views import painel, regras, lancamentos, pagamentos
 
 app_name = "comissoes_web"
@@ -7,6 +7,7 @@ app_name = "comissoes_web"
 urlpatterns = [
     path("", painel.painel_view, name="painel"),
     path("autocompletes/entidades/", autocomplete_entidades, name="autocomplete_entidades"),
+    path("autocompletes/centrosdecustos/", autocomplete_centrosdecustos, name="autocomplete_centrosdecustos"),
     path("regras/", regras.lista, name="regras_list"),
     path("regras/criar/", regras.criar, name="regras_create"),
     path("regras/<int:regra_id>/editar/", regras.editar, name="regras_edit"),

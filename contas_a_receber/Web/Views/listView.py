@@ -125,13 +125,26 @@ class TitulosReceberListView(DBAndSlugMixin, ListView):
 
         centros_map = {}
         if cecu_ids:
-            centros = Centrodecustos.objects.using(self.db_alias).filter(cecu_redu__in=list(cecu_ids))
-            centros_map = {c.cecu_redu: c.cecu_nome for c in centros}
+            try:
+                valid_cecu_ids = [int(x) for x in cecu_ids if x]
+                centros = Centrodecustos.objects.using(self.db_alias).filter(cecu_redu__in=valid_cecu_ids)
+                centros_map = {int(c.cecu_redu): c.cecu_nome for c in centros}
+            except Exception:
+                pass
 
         for t in page_qs:
-            setattr(t, 'cliente_nome', entidades_map.get(t.titu_clie, ''))
+            try:
+                clie = int(t.titu_clie) if t.titu_clie else None
+            except Exception:
+                clie = None
+            setattr(t, 'cliente_nome', entidades_map.get(clie, ''))
             setattr(t, 'titu_titu', t.titu_titu)
-            setattr(t, 'nome_centro_custo', centros_map.get(getattr(t, 'titu_cecu', None), ''))
+            
+            try:
+                cecu = int(getattr(t, 'titu_cecu', None)) if getattr(t, 'titu_cecu', None) else None
+            except Exception:
+                cecu = None
+            setattr(t, 'nome_centro_custo', centros_map.get(cecu, ''))
         
         preserved = {
             'titu_empr': self.empresa_id,

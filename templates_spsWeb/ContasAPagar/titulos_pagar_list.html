@@ -168,7 +168,15 @@
             </p>
             <p class="card-text"><strong>Série:</strong> {{ t.titu_seri }}</p>
             <p class="card-text"><strong>Parcela:</strong> {{ t.titu_parc }}</p>
-            <p class="card-text"><strong>Centro de Custo:</strong> {{ t.titu_cecu }}- {{ t.nome_centro_custo }}</p>
+            <p class="card-text"><strong>Centro de Custo:</strong> 
+              {% if t.titu_cecu and t.titu_cecu != '0' and t.nome_centro_custo %}
+                {{ t.titu_cecu }} - {{ t.nome_centro_custo }}
+              {% elif t.titu_cecu and t.titu_cecu != '0' %}
+                {{ t.titu_cecu }}
+              {% else %}
+                -
+              {% endif %}
+            </p>
             <div class="mt-3 d-flex flex-wrap gap-2">
               {% if t.titu_aber == 'A' %}
               <button type="button" class="btn btn-outline-success btn-sm btn-baixar" title="Pagar título" data-tipo="pagar"

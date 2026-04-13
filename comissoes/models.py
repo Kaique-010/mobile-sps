@@ -11,6 +11,7 @@ class RegraComissao(models.Model):
     regc_ativ = models.BooleanField(default=True, verbose_name="Ativo")
     regc_data_ini = models.DateField(blank=True, null=True, verbose_name="Data Inicial")
     regc_data_fim = models.DateField(blank=True, null=True, verbose_name="Data Final")
+    regc_cecu = models.IntegerField(default=0, verbose_name="Cento de Custo", blank=True, null=True)
 
     class Meta:
         db_table = "regras_comissoes_web"
@@ -46,13 +47,14 @@ class LancamentoComissao(models.Model):
     lcom_regra = models.ForeignKey(RegraComissao, on_delete=models.PROTECT, verbose_name="Regra Comissão")
     lcom_bene = models.IntegerField(verbose_name="Vendedor/Beneficiário")  # snapshot do beneficiário
     lcom_data = models.DateField(verbose_name="Data")
-    lcom_tipo_origem = models.CharField(max_length=20, blank=True, null=True, choices=TIPO_ORIGEM_CHOICES)  # pedido, nota, titulo
+    lcom_tipo_origem = models.CharField(max_length=20, blank=True, null=True, choices=TIPO_ORIGEM_CHOICES, verbose_name="Tipo Origem")  # pedido, nota, titulo
     lcom_docu = models.CharField(max_length=20, verbose_name="Documento")
     lcom_base = models.DecimalField(max_digits=14, decimal_places=2, verbose_name="Base Comissão")
     lcom_perc = models.DecimalField(max_digits=5, decimal_places=2, verbose_name="Percentual Comissão")
     lcom_valo = models.DecimalField(max_digits=14, decimal_places=2, verbose_name="Valor Comissão")
     lcom_stat = models.IntegerField(choices=STATUS_CHOICES, default=STATUS_ABERTO)
     lcom_obse = models.TextField(blank=True, null=True, verbose_name="Observação")
+    lcom_cecu = models.IntegerField(default=0, verbose_name="Cento de Custo", blank=True, null=True)
 
     class Meta:
         verbose_name = "Lançamento Comissão"
@@ -71,7 +73,9 @@ class PagamentoComissao(models.Model):
     pagc_bene = models.IntegerField(verbose_name="Vendedor/Beneficiário")
     pagc_valo = models.DecimalField(max_digits=14, decimal_places=2, verbose_name="Valor Pagamento")
     pagc_obse = models.TextField(blank=True, null=True, verbose_name="Observação")
+    pagc_cecu = models.IntegerField(default=0, verbose_name="Cento de Custo", blank=True, null=True)
 
+    
     class Meta:
         db_table = "pagamentos_comissoes_web"
         ordering = ["pagc_id"]
@@ -84,6 +88,8 @@ class PagamentoComissaoItem(models.Model):
     pgci_paga = models.ForeignKey(PagamentoComissao, on_delete=models.CASCADE, related_name="itens")
     pgci_lanc = models.ForeignKey(LancamentoComissao, on_delete=models.PROTECT, verbose_name="Lançamento Comissão")
     pgci_valo = models.DecimalField(max_digits=14, decimal_places=2, verbose_name="Valor Pagamento")
+    pgci_obse = models.TextField(blank=True, null=True, verbose_name="Observação")
+    pgci_cecu = models.IntegerField(default=0, verbose_name="Cento de Custo", blank=True, null=True)
 
     class Meta:
         db_table = "pagamentos_comissoes_itens_web"

@@ -1,5 +1,10 @@
 {% extends 'comissoes/base.html' %}
+{% load static %}
+{% block title %}
+  {% if modo_edicao %}Editar Regra de Comissão{% else %}Nova Regra de Comissão{% endif %}
+{% endblock %}
 {% block comissoes_content %}
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
 <div class="card">
   <div class="card-header">
     <h5 class="mb-0">{% if modo_edicao %}Editar Regra de Comissão{% else %}Nova Regra de Comissão{% endif %}</h5>
@@ -8,20 +13,22 @@
     <form method="post">
       {% csrf_token %}
       {% if form.non_field_errors %}
-        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+      <div class="alert alert-danger">{{ form.non_field_errors }}</div>
       {% endif %}
       <div class="row g-3">
         <div class="col-md-4">
           <label class="form-label">{{ form.beneficiario_busca.label }}</label>
           {{ form.beneficiario_busca }}
           {{ form.regc_bene }}
-          {% if form.beneficiario_busca.errors %}<div class="text-danger small">{{ form.beneficiario_busca.errors }}</div>{% endif %}
+          {% if form.beneficiario_busca.errors %}<div class="text-danger small">{{ form.beneficiario_busca.errors }}
+          </div>{% endif %}
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
           <label class="form-label">{{ form.regc_perc.label }}</label>
           {{ form.regc_perc }}
           {% if form.regc_perc.errors %}<div class="text-danger small">{{ form.regc_perc.errors }}</div>{% endif %}
         </div>
+         <div class="col-md-3"></div>
         <div class="col-md-2">
           <label class="form-label d-block">{{ form.regc_ativ.label }}</label>
           {{ form.regc_ativ }}
@@ -36,14 +43,37 @@
           {{ form.regc_data_fim }}
           {% if form.regc_data_fim.errors %}<div class="text-danger small">{{ form.regc_data_fim.errors }}</div>{% endif %}
         </div>
+         <div class="col-md-3">
+          <label class="form-label">{{ form.centro_custo_display.label }}</label>
+          {{ form.regc_cecu }}
+          <div class="position-relative">
+            {{ form.centro_custo_display }}
+            <div id="centro-custo-dropdown" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
+          </div>
+          {% if form.regc_cecu.errors %}<div class="text-danger small">{{ form.regc_cecu.errors }}</div>{% endif %}
+        </div>
       </div>
+       
       <div class="mt-3">
-        <button type="submit" class="btn btn-primary">
+        <button type="submit" class="btn btn-outline-primary">
           <i class="fas fa-save"></i> Salvar
         </button>
-        <a href="{% url 'comissoes_web:regras_list' slug=slug %}" class="btn btn-secondary">Cancelar</a>
+        <a href="{% url 'comissoes_web:regras_list' slug=slug %}" class="btn btn-outline-secondary">Cancelar</a>
       </div>
     </form>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    comissoesSetupDropdownAutocomplete({
+      inputId: "{{ form.centro_custo_display.id_for_label }}",
+      hiddenId: "{{ form.regc_cecu.id_for_label }}",
+      dropdownId: "centro-custo-dropdown",
+      url: COMISSOES_AUTOCOMPLETE_CENTROSDECUSTOS_URL,
+    });
+  });
+</script>
 {% endblock %}

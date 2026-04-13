@@ -190,13 +190,26 @@ class TitulosPagarListView(DBAndSlugMixin, ListView):
 
         centros_map = {}
         if cecu_ids:
-            centros = Centrodecustos.objects.using(self.db_alias).filter(cecu_redu__in=list(cecu_ids))
-            centros_map = {c.cecu_redu: c.cecu_nome for c in centros}
+            try:
+                valid_cecu_ids = [int(x) for x in cecu_ids if x]
+                centros = Centrodecustos.objects.using(self.db_alias).filter(cecu_redu__in=valid_cecu_ids)
+                centros_map = {int(c.cecu_redu): c.cecu_nome for c in centros}
+            except Exception:
+                pass
 
         # Anota nome do fornecedor em cada título para fácil renderização no template
         for t in page_qs:
-            setattr(t, 'fornecedor_nome', entidades_map.get(t.titu_forn, ''))
-            setattr(t, 'nome_centro_custo', centros_map.get(t.titu_cecu, ''))
+            try:
+                forn = int(t.titu_forn) if t.titu_forn else None
+            except Exception:
+                forn = None
+            setattr(t, 'fornecedor_nome', entidades_map.get(forn, ''))
+            
+            try:
+                cecu = int(t.titu_cecu) if t.titu_cecu else None
+            except Exception:
+                cecu = None
+            setattr(t, 'nome_centro_custo', centros_map.get(cecu, ''))
 
         # Preserva filtros na paginação
         preserved = {

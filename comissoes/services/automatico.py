@@ -10,6 +10,21 @@ from comissoes.services.geracao import GeracaoComissaoService
 from comissoes.services.utils import decimal_2
 
 
+
+def _to_int(valor) -> int | None:
+    if valor is None:
+        return None
+    s = str(valor).strip()
+    if not s:
+        return None
+    head = s.split("-", 1)[0].strip()
+    if head.isdigit():
+        return int(head)
+    if s.isdigit():
+        return int(s)
+    return None
+
+
 class ComissaoAutomaticaService:
     def __init__(self, *, db_alias: str, empresa_id: int, filial_id: int):
         self.db = db_alias
@@ -24,7 +39,8 @@ class ComissaoAutomaticaService:
         documento: str,
         data_doc: date,
         base: Decimal,
-        beneficiario_id: int | None,
+        beneficiario_id: int | None = None,
+        centro_custo_id: int | None = None,
     ) -> list[LancamentoComissao]:
         bene = int(beneficiario_id or 0)
         if bene <= 0:
@@ -41,6 +57,7 @@ class ComissaoAutomaticaService:
                 data_doc=data_doc,
                 base=base,
                 beneficiario_id=bene,
+                centro_custo_id=centro_custo_id,
             )
             (
                 LancamentoComissao.objects.using(self.db)
@@ -64,6 +81,7 @@ class ComissaoAutomaticaService:
             data_doc=getattr(pedido, "pedi_data", None) or date.today(),
             base=getattr(pedido, "pedi_tota", None) or Decimal("0.00"),
             beneficiario_id=bene,
+            centro_custo_id=_to_int(getattr(pedido, "pedi_centro_custo", None)),
         )
     
     def gerar_por_titulo_a_pagar(self, *, titulo) -> list[LancamentoComissao]:
@@ -74,18 +92,17 @@ class ComissaoAutomaticaService:
             data_doc=getattr(titulo, "titu_emis", None) or date.today(),
             base=getattr(titulo, "titu_valo", None) or Decimal("0.00"),
             beneficiario_id=bene,
+            centro_custo_id=_to_int(getattr(titulo, "titu_centro_custo", None)),
+       
         )
 
-
-def _to_int(valor) -> int | None:
-    if valor is None:
-        return None
-    s = str(valor).strip()
-    if not s:
-        return None
-    head = s.split("-", 1)[0].strip()
-    if head.isdigit():
-        return int(head)
-    if s.isdigit():
-        return int(s)
-    return None
+    def gerar_por_os(self, *, os) -> list[LancamentoComissao]:
+        bene = _to_int(getattr(os, "os_resp", None))
+        return self.gerar_por_documento(
+            tipo_origem="os",
+            documento=str(getattr(os, "os_os", "") or "").strip(),
+            data_doc=getattr(os, "os_data_aber", None) or date.today(),
+            base=getattr(os, "os_tota", None) or Decimal("0.00"),
+            beneficiario_id=bene,
+            centro_custo_id=_to_int(getattr(os, "os_centro_custo", None)),
+        )

@@ -1,43 +1,63 @@
 {% extends 'comissoes/base.html' %}
+
 {% block comissoes_content %}
 <div class="card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Pagamentos</h5>
-        <a href="{% url 'comissoes_web:pagamentos_create' slug=slug %}" class="btn btn-primary btn-sm">
-            <i class="fas fa-plus"></i> Novo Pagamento
-        </a>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary btn-sm" type="button" data-comissoes-toggle="#pagamentos-filtros"
+                aria-expanded="false" aria-controls="pagamentos-filtros">
+                <i class="fas fa-filter"></i> Filtros
+            </button>
+            <a href="{% url 'comissoes_web:pagamentos_create' slug=slug %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus"></i> Novo Pagamento
+            </a>
+        </div>
     </div>
     <div class="card-body">
-        <form method="get" class="row g-3">
-            <div class="col-md-4">
-                <label class="form-label">{{ form.beneficiario_busca.label }}</label>
-                {{ form.beneficiario_busca }}
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">{{ form.data_ini.label }}</label>
-                {{ form.data_ini }}
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">{{ form.data_fim.label }}</label>
-                {{ form.data_fim }}
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">{{ form.valor_min.label }}</label>
-                {{ form.valor_min }}
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">{{ form.valor_max.label }}</label>
-                {{ form.valor_max }}
-            </div>
-            <div class="col-md-2 d-flex align-items-end gap-2">
-                <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter"></i> Filtrar</button>
-            </div>
-            <div class="col-md-2 d-flex align-items-end gap-2">
-                <a href="{% url 'comissoes_web:pagamentos_list' slug=slug %}"
-                    class="btn btn-outline-secondary w-100">Limpar</a>
-            </div>
-        </form>
-        <div class="mt-3 text-muted">Total Pago: <b>{{ total }}</b></div>
+        <div id="pagamentos-filtros" hidden>
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.beneficiario_busca.label }}</label>
+                    {{ form.beneficiario_busca }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ form.data_ini.label }}</label>
+                    {{ form.data_ini }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ form.data_fim.label }}</label>
+                    {{ form.data_fim }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ form.valor_min.label }}</label>
+                    {{ form.valor_min }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ form.valor_max.label }}</label>
+                    {{ form.valor_max }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.centro_custo_display.label }}</label>
+                    {{ form.cento_custo }}
+                    <div class="position-relative">
+                        {{ form.centro_custo_display }}
+                        <div id="centro-custo-dropdown" class="list-group position-absolute w-100"
+                            style="z-index: 1000;">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-outline-primary w-100"><i class="fas fa-filter"></i>
+                        Filtrar</button>
+                </div>
+                <div class="col-md-2 d-flex align-items-end gap-2">
+                    <a href="{% url 'comissoes_web:pagamentos_list' slug=slug %}"
+                        class="btn btn-outline-secondary w-100"><i class="fas fa-eraser"></i> Limpar</a>
+                </div>
+            </form>
+            <div class="mt-3 text-muted">Total Pago: <b>{{ total }}</b></div>
+        </div>
     </div>
 </div>
 
@@ -50,6 +70,7 @@
                         <th>ID</th>
                         <th>Data</th>
                         <th>Beneficiário</th>
+                        <th>Centro de Custo</th>
                         <th class="text-end">Valor</th>
                         <th></th>
                     </tr>
@@ -60,6 +81,7 @@
                         <td>{{ p.pagc_id }}</td>
                         <td>{{ p.pagc_data }}</td>
                         <td>{{ p.beneficiario_display|default:p.pagc_bene }}</td>
+                        <td>{{ p.centro_custo_display|default:p.pagc_cecu }}</td>
                         <td class="text-end">{{ p.pagc_valo }}</td>
                         <td class="text-end">
                             <a class="btn btn-outline-secondary btn-sm"
@@ -70,7 +92,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="text-center text-muted p-3">Nenhum pagamento encontrado.</td>
+                        <td colspan="6" class="text-center text-muted p-3">Nenhum pagamento encontrado.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -78,4 +100,17 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        comissoesSetupDropdownAutocomplete({
+            inputId: "{{ form.centro_custo_display.id_for_label }}",
+            hiddenId: "{{ form.cento_custo.id_for_label }}",
+            dropdownId: "centro-custo-dropdown",
+            url: COMISSOES_AUTOCOMPLETE_CENTROSDECUSTOS_URL,
+        });
+    });
+</script>
 {% endblock %}

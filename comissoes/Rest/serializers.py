@@ -10,6 +10,8 @@ class RegraComissaoSerializer(serializers.ModelSerializer):
     ativo = serializers.BooleanField(source="regc_ativ", label=RegraComissao._meta.get_field("regc_ativ").verbose_name)
     data_inicial = serializers.DateField(source="regc_data_ini", allow_null=True, required=False, label=RegraComissao._meta.get_field("regc_data_ini").verbose_name)
     data_final = serializers.DateField(source="regc_data_fim", allow_null=True, required=False, label=RegraComissao._meta.get_field("regc_data_fim").verbose_name)
+    cento_custo = serializers.IntegerField(source="regc_cecu", label=RegraComissao._meta.get_field("regc_cecu").verbose_name)
+    
 
     class Meta:
         model = RegraComissao
@@ -22,6 +24,7 @@ class RegraComissaoSerializer(serializers.ModelSerializer):
             "ativo",
             "data_inicial",
             "data_final",
+            "cento_custo",
         ]
 
 
@@ -37,6 +40,7 @@ class LancamentoComissaoSerializer(serializers.ModelSerializer):
     valor = serializers.DecimalField(source="lcom_valo", max_digits=14, decimal_places=2, label=LancamentoComissao._meta.get_field("lcom_valo").verbose_name)
     status = serializers.IntegerField(source="lcom_stat", label=LancamentoComissao._meta.get_field("lcom_stat").verbose_name if hasattr(LancamentoComissao._meta.get_field("lcom_stat"), "verbose_name") else "Status")
     observacao = serializers.CharField(source="lcom_obse", allow_blank=True, allow_null=True, required=False, label=LancamentoComissao._meta.get_field("lcom_obse").verbose_name)
+    cento_custo = serializers.IntegerField(source="lcom_cecu", label=LancamentoComissao._meta.get_field("lcom_cecu").verbose_name)
 
     class Meta:
         model = LancamentoComissao
@@ -54,15 +58,17 @@ class LancamentoComissaoSerializer(serializers.ModelSerializer):
             "valor",
             "status",
             "observacao",
+            "cento_custo",
         ]
 
 
 class PagamentoComissaoItemSerializer(serializers.ModelSerializer):
     valor = serializers.DecimalField(source="pgci_valo", max_digits=14, decimal_places=2, label=PagamentoComissaoItem._meta.get_field("pgci_valo").verbose_name)
+    cento_custo = serializers.IntegerField(source="pgci_cecu", label=PagamentoComissaoItem._meta.get_field("pgci_cecu").verbose_name)
 
     class Meta:
         model = PagamentoComissaoItem
-        fields = ["pgci_id", "pgci_paga", "pgci_lanc", "valor"]
+        fields = ["pgci_id", "pgci_paga", "pgci_lanc", "valor", "cento_custo"]
 
 
 class PagamentoComissaoSerializer(serializers.ModelSerializer):
@@ -73,7 +79,8 @@ class PagamentoComissaoSerializer(serializers.ModelSerializer):
     valor = serializers.DecimalField(source="pagc_valo", max_digits=14, decimal_places=2, label=PagamentoComissao._meta.get_field("pagc_valo").verbose_name)
     observacao = serializers.CharField(source="pagc_obse", allow_blank=True, allow_null=True, required=False, label=PagamentoComissao._meta.get_field("pagc_obse").verbose_name)
     itens = PagamentoComissaoItemSerializer(source="itens", many=True, read_only=True)
-
+    cento_custo = serializers.IntegerField(source="pagc_cecu", label=PagamentoComissao._meta.get_field("pagc_cecu").verbose_name)
+    
     class Meta:
         model = PagamentoComissao
         fields = [
@@ -84,5 +91,6 @@ class PagamentoComissaoSerializer(serializers.ModelSerializer):
             "beneficiario",
             "valor",
             "observacao",
+            "cento_custo",  
             "itens",
         ]

@@ -5,6 +5,7 @@ from decimal import Decimal, InvalidOperation
 from django.utils import timezone
 from ..models import Os, PecasOs, ServicosOs, OsHora
 from ..utils import get_next_service_id
+from comissoes.services.automatico import ComissaoAutomaticaService
 
 class OsService:
     logger = logging.getLogger(__name__)
@@ -229,6 +230,11 @@ class OsService:
                 f"os_tota no banco={ordem.os_tota} | os_desc={ordem.os_desc}"
             )
             
+            # Gerar comissões
+            comissao_service = ComissaoAutomaticaService(db_alias=banco, empresa_id=ordem.os_empr, filial_id=ordem.os_fili)
+            lancamentos = comissao_service.gerar_por_os(os=ordem)
+            ordem.comissoes = lancamentos
+            
             ordem.id_mappings = id_mappings
             return ordem
 
@@ -362,6 +368,11 @@ class OsService:
                     f"WHERE os_empr = %s AND os_fili = %s AND os_os = %s",
                     [os_tota_final, os_desc_global, ordem.os_empr, ordem.os_fili, ordem.os_os]
                 )
+            
+            # Gerar comissões
+            comissao_service = ComissaoAutomaticaService(db_alias=banco, empresa_id=ordem.os_empr, filial_id=ordem.os_fili)
+            lancamentos = comissao_service.gerar_por_os(os=ordem)
+            ordem.comisssoes.add(*lancamentos)
             
             ordem.refresh_from_db(using=banco)
             return ordem

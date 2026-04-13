@@ -35,6 +35,7 @@ class GeracaoComissaoService:
         documento: str,
         data_doc: date,
         base: Decimal,
+        centro_custo_id: int | None = None,
     ) -> list[LancamentoComissao]:
         tipo_origem = str(tipo_origem or "").strip()
         documento = str(documento or "").strip()
@@ -58,6 +59,7 @@ class GeracaoComissaoService:
                     documento=documento,
                     data_doc=data_doc,
                     base=base,
+                    centro_custo_id=centro_custo_id,
                 )
                 if lanc:
                     resultado.append(lanc)
@@ -71,6 +73,7 @@ class GeracaoComissaoService:
         data_doc: date,
         base: Decimal,
         beneficiario_id: int,
+        centro_custo_id: int | None = None,
     ) -> list[LancamentoComissao]:
         tipo_origem = str(tipo_origem or "").strip()
         documento = str(documento or "").strip()
@@ -94,6 +97,7 @@ class GeracaoComissaoService:
                     documento=documento,
                     data_doc=data_doc,
                     base=base,
+                    centro_custo_id=centro_custo_id,
                 )
                 if lanc:
                     resultado.append(lanc)
@@ -107,9 +111,12 @@ class GeracaoComissaoService:
         documento: str,
         data_doc: date,
         base: Decimal,
+        centro_custo_id: int | None = None,
     ) -> LancamentoComissao | None:
         perc = decimal_2(regra.regc_perc)
         valo = decimal_2((base * perc) / Decimal("100.00"))
+        cecu_regra = getattr(regra, "regc_cecu", None)
+        cecu_id = int(cecu_regra) if cecu_regra not in (None, "", 0) else int(centro_custo_id or 0)
 
         qs = LancamentoComissao.objects.using(self.db).filter(
             lcom_empr=self.empresa_id,
@@ -127,6 +134,7 @@ class GeracaoComissaoService:
             existente.lcom_base = base
             existente.lcom_perc = perc
             existente.lcom_valo = valo
+            existente.lcom_cecu = cecu_id
             existente.save(using=self.db)
             return existente
 
@@ -142,4 +150,5 @@ class GeracaoComissaoService:
             lcom_perc=perc,
             lcom_valo=valo,
             lcom_stat=LancamentoComissao.STATUS_ABERTO,
+            lcom_cecu=cecu_id,
         )

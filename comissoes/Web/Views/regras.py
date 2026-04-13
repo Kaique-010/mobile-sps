@@ -5,7 +5,7 @@ from django.views.decorators.http import require_http_methods
 from core.utils import get_licenca_db_config
 from comissoes.models import RegraComissao
 from comissoes.services import CadastroComissaoService
-from comissoes.Web.forms import RegraComissaoForm
+from comissoes.Web.forms import RegraComissaoForm, RegraFiltroForm
 from Entidades.models import Entidades
 
 
@@ -20,7 +20,13 @@ def _service(request):
 
 def lista(request, slug=None):
     service = _service(request)
+    form = RegraFiltroForm(request.GET or None, request=request)
     regras = service.listar_regras()
+    if form.is_valid():
+        regras = service.listar_regras(
+            beneficiario_id=form.beneficiario_id(),
+            ativas=form.ativas_bool(),
+        )
     banco = get_licenca_db_config(request) or "default"
     empresa_id = request.session.get("empresa_id")
     bene_ids = [int(x) for x in regras.values_list("regc_bene", flat=True) if x is not None]
@@ -32,6 +38,24 @@ def lista(request, slug=None):
             .filter(enti_empr=int(empresa_id), enti_clie__in=bene_ids)
             .only("enti_clie", "enti_nome")
         }
+    cecu_ids = list(
+        {int(x) for x in regras.values_list("regc_cecu", flat=True) if x not in (None, "", 0) and str(x).isdigit()}
+    )
+    cecu_map = {}
+    if cecu_ids:
+        try:
+            from CentrodeCustos.models import Centrodecustos
+        except Exception:
+            Centrodecustos = None
+        if Centrodecustos:
+            cecu_map = {
+                int(cc.cecu_redu): f"{cc.cecu_redu} - {cc.cecu_nome}"
+                for cc in (
+                    Centrodecustos.objects.using(banco)
+                    .filter(cecu_redu__in=cecu_ids)
+                    .only("cecu_redu", "cecu_nome")
+                )
+            }
     for r in regras:
         nome = bene_map.get(int(r.regc_bene)) if getattr(r, "regc_bene", None) is not None else None
         if nome:
@@ -40,7 +64,23 @@ def lista(request, slug=None):
         else:
             r.beneficiario_nome = ""
             r.beneficiario_display = str(r.regc_bene)
-    return render(request, "comissoes/regras_list.html", {"regras": regras, "slug": slug})
+        r.regc_centro_custo_display = ""
+        if getattr(r, "regc_cecu", None) not in (None, "", 0):
+            try:
+                cecu_int = int(r.regc_cecu)
+            except Exception:
+                cecu_int = 0
+            if cecu_int:
+                display = cecu_map.get(cecu_int)
+                if display is None:
+                    try:
+                        from comissoes.Web.forms import _resolver_centro_custo_display
+                    except Exception:
+                        _resolver_centro_custo_display = None
+                    if _resolver_centro_custo_display:
+                        display = _resolver_centro_custo_display(request=request, cecu_id=cecu_int)
+                r.regc_centro_custo_display = display or ""
+    return render(request, "comissoes/regras_list.html", {"regras": regras, "slug": slug, "form": form})
 
 
 @require_http_methods(["GET", "POST"])
@@ -57,6 +97,7 @@ def criar(request, slug=None):
                     ativo=data.get("regc_ativ", True),
                     data_ini=data.get("regc_data_ini"),
                     data_fim=data.get("regc_data_fim"),
+                    centro_custo_id=data.get("regc_cecu"),
                 )
                 messages.success(request, "Salvo com sucesso.")
                 return redirect("comissoes_web:regras_list", slug=slug)
@@ -98,6 +139,7 @@ def editar(request, slug=None, regra_id=None):
                     ativo=data.get("regc_ativ", True),
                     data_ini=data.get("regc_data_ini"),
                     data_fim=data.get("regc_data_fim"),
+                    centro_custo_id=data.get("regc_cecu"),
                 )
                 messages.success(request, "Editado com sucesso.")
                 return redirect("comissoes_web:regras_list", slug=slug)

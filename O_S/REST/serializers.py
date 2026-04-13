@@ -272,6 +272,7 @@ class OsSerializer(BancoModelSerializer):
     total_pecas = serializers.SerializerMethodField()
     total_servicos = serializers.SerializerMethodField()
     total_geral = serializers.SerializerMethodField()
+    comissoes = serializers.SerializerMethodField()
     os_tota = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
     
     # CORRIGIR NOMES DOS CAMPOS DE ASSINATURA
@@ -400,6 +401,14 @@ class OsSerializer(BancoModelSerializer):
     def get_total_geral(self, obj):
         """Calcula total geral (pecas + servicos)"""
         return self.get_total_pecas(obj) + self.get_total_servicos(obj)
+
+    def get_comissoes(self, obj):
+        try:
+            lancs = obj.comissoes
+        except Exception:
+            lancs = []
+        from comissoes.Rest.serializers import LancamentoComissaoSerializer
+        return LancamentoComissaoSerializer(lancs, many=True).data
     
 
     def create(self, validated_data):

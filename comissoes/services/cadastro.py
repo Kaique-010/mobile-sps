@@ -34,8 +34,10 @@ class CadastroComissaoService:
         ativo: bool = True,
         data_ini: date | None = None,
         data_fim: date | None = None,
+        centro_custo_id: int | None = None,
     ) -> RegraComissao:
         percentual = decimal_2(percentual)
+        cecu_id = int(centro_custo_id) if centro_custo_id not in (None, "", 0) else 0
 
         with transaction.atomic(using=self.db):
             regra, _ = RegraComissao.objects.using(self.db).update_or_create(
@@ -47,6 +49,7 @@ class CadastroComissaoService:
                 defaults={
                     "regc_perc": percentual,
                     "regc_ativ": bool(ativo),
+                    "regc_cecu": cecu_id,
                 },
             )
             return regra
@@ -71,8 +74,10 @@ class CadastroComissaoService:
         ativo: bool = True,
         data_ini: date | None = None,
         data_fim: date | None = None,
+        centro_custo_id: int | None = None,
     ) -> RegraComissao:
         percentual = decimal_2(percentual)
+        cecu_id = int(centro_custo_id) if centro_custo_id not in (None, "", 0) else 0
 
         with transaction.atomic(using=self.db):
             regra = self.obter_regra(regra_id=int(regra_id))
@@ -84,6 +89,7 @@ class CadastroComissaoService:
             regra.regc_ativ = bool(ativo)
             regra.regc_data_ini = data_ini
             regra.regc_data_fim = data_fim
+            regra.regc_cecu = cecu_id
             regra.save(using=self.db)
             return regra
 

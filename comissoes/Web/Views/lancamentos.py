@@ -20,7 +20,7 @@ def _contexto_base(request):
 
 def lista(request, slug=None):
     banco, empresa_id, filial_id = _contexto_base(request)
-    form = LancamentoFiltroForm(request.GET or None)
+    form = LancamentoFiltroForm(request.GET or None, request=request)
 
     qs = LancamentoComissao.objects.using(banco).all()
     if empresa_id:
@@ -32,6 +32,10 @@ def lista(request, slug=None):
         bene_id = form.beneficiario_id()
         if bene_id:
             qs = qs.filter(lcom_bene=bene_id)
+
+        cecu_id = form.centro_custo_id()
+        if cecu_id is not None:
+            qs = qs.filter(lcom_cecu=int(cecu_id))
 
         tipo_origem = str(form.cleaned_data.get("tipo_origem") or "").strip()
         if tipo_origem:
@@ -61,6 +65,8 @@ def lista(request, slug=None):
 
     qs = qs.order_by("-lcom_data", "-lcom_id")[:500]
 
+    from comissoes.models import PagamentoComissaoItem
+    
     totais = qs.aggregate(total_base=Sum("lcom_base"), total_valor=Sum("lcom_valo"))
     total_base = totais.get("total_base") or Decimal("0.00")
     total_valor = totais.get("total_valor") or Decimal("0.00")
@@ -74,6 +80,38 @@ def lista(request, slug=None):
             .filter(enti_empr=int(empresa_id), enti_clie__in=bene_ids)
             .only("enti_clie", "enti_nome")
         }
+    cecu_ids = list(
+        {int(x) for x in qs.values_list("lcom_cecu", flat=True) if x not in (None, "", 0) and str(x).isdigit()}
+    )
+    cecu_map = {}
+    if cecu_ids:
+        try:
+            from CentrodeCustos.models import Centrodecustos
+        except Exception:
+            Centrodecustos = None
+        if Centrodecustos:
+            cecu_map = {
+                int(cc.cecu_redu): f"{cc.cecu_redu} - {cc.cecu_nome}"
+                for cc in (
+                    Centrodecustos.objects.using(banco)
+                    .filter(cecu_redu__in=cecu_ids)
+                    .only("cecu_redu", "cecu_nome")
+                )
+            }
+            
+    lanc_ids = [l.lcom_id for l in qs]
+    totais_pago = {}
+    if lanc_ids:
+        totais_pago = {
+            int(x["pgci_lanc_id"]): x["total"] or Decimal("0.00")
+            for x in (
+                PagamentoComissaoItem.objects.using(banco)
+                .filter(pgci_lanc_id__in=lanc_ids)
+                .values("pgci_lanc_id")
+                .annotate(total=Sum("pgci_valo"))
+            )
+        }
+
     for l in qs:
         nome = bene_map.get(int(l.lcom_bene)) if getattr(l, "lcom_bene", None) is not None else None
         if nome:
@@ -82,6 +120,10 @@ def lista(request, slug=None):
         else:
             l.beneficiario_nome = ""
             l.beneficiario_display = str(l.lcom_bene)
+        l.centro_custo_display = cecu_map.get(int(l.lcom_cecu)) if getattr(l, "lcom_cecu", None) not in (None, "", 0) else ""
+        
+        # Adiciona atributo ja_pago
+        l.ja_pago = totais_pago.get(int(l.lcom_id)) or Decimal("0.00")
 
     return render(
         request,

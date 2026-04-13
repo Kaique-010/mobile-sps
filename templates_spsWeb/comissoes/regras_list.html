@@ -1,13 +1,45 @@
 {% extends 'comissoes/base.html' %}
+
 {% block comissoes_content %}
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Regras de Comissão</h5>
-        <a href="{% url 'comissoes_web:regras_create' slug=slug %}" class="btn btn-primary btn-sm">
-            <i class="fas fa-plus"></i> Nova Regra
-        </a>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary btn-sm" type="button" data-comissoes-toggle="#regras-filtros"
+                aria-expanded="false" aria-controls="regras-filtros">
+                <i class="fas fa-filter"></i> Filtros
+            </button>
+            <a href="{% url 'comissoes_web:regras_create' slug=slug %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus"></i> Nova Regra
+            </a>
+        </div>
     </div>
     <div class="card-body p-0">
+        <div class="px-3 pt-3 pb-2">
+            <div id="regras-filtros" hidden>
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">{{ form.beneficiario_busca.label }}</label>
+                        {{ form.beneficiario_busca }}
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">{{ form.ativas.label }}</label>
+                        {{ form.ativas }}
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end gap-2">
+                        <button type="submit" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-filter"></i> Filtrar
+                        </button>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end gap-2">
+                        <a href="{% url 'comissoes_web:regras_list' slug=slug %}"
+                            class="btn btn-outline-secondary w-100">
+                            <i class="fas fa-eraser"></i> Limpar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
         <div class="table-responsive">
             <table class="table table-striped mb-0">
                 <thead>
@@ -17,6 +49,7 @@
                         <th>Percentual</th>
                         <th>Ativo</th>
                         <th>Vigência</th>
+                        <th>Cento de Custo</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -32,6 +65,7 @@
                             {% if r.regc_data_ini %}{{ r.regc_data_ini }}{% else %}-{% endif %} —
                             {% if r.regc_data_fim %}{{ r.regc_data_fim }}{% else %}-{% endif %}
                         </td>
+                        <td>{{ r.regc_centro_custo_display|default:r.regc_cecu }}</td>
                         <td class="text-end">
                             <a class="btn btn-outline-secondary btn-sm"
                                 href="{% url 'comissoes_web:regras_edit' slug=slug regra_id=r.regc_id %}">
