@@ -16,6 +16,7 @@ from transportes.services.st_service import STService
 from transportes.services.difal_service import DIFALService
 from transportes.services.emissao_service import EmissaoService
 from transportes.services.mdfe_emissao_service import MdfeEmissaoService
+from transportes.services.mdfe_encerramento_service import MdfeEncerramentoService
 from transportes.services.numeracao_service import NumeracaoMdfeService
 from Entidades.models import Entidades
 from Licencas.models import Filiais
@@ -143,22 +144,22 @@ class MdfeViewSet(viewsets.ModelViewSet):
             logger.error(f"Erro ao gerar XML do MDF-e: {e}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    @action(detail=True, methods=["post"], url_path="emitir")
+    def emitir(self, request, pk=None):
+        """
+        Emissão REST do MDF-e (gera XML assinado e chave de acesso).
+        """
+        return self.gerar_xml(request, pk=pk)
+
     @action(detail=True, methods=["post"], url_path="encerrar")
     def encerrar(self, request, pk=None):
         slug = get_licenca_db_config(request)
         mdfe = self.get_object()
         try:
-            from datetime import date
-
             uf = (request.data.get("uf") or mdfe.mdf_esta_dest or "").strip()
             cmun = request.data.get("cmun") or request.data.get("municipio_id") or mdfe.mdf_cida_carr
-
-            mdfe.mdf_fina = True
-            mdfe.mdf_data_ence = date.today()
-            mdfe.mdf_esta_ence = uf or mdfe.mdf_esta_ence
-            mdfe.mdf_cida_ence = cmun or mdfe.mdf_cida_ence
-            mdfe.save(using=slug)
-            return Response({"ok": True}, status=status.HTTP_200_OK)
+            resultado = MdfeEncerramentoService(mdfe, slug=slug).encerrar(uf=uf, cmun=cmun)
+            return Response(resultado, status=status.HTTP_200_OK)
         except Exception as e:
             logger.error(f"Erro ao encerrar MDF-e: {e}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -168,17 +169,10 @@ class MdfeViewSet(viewsets.ModelViewSet):
         slug = get_licenca_db_config(request)
         mdfe = self.get_object()
         try:
-            from datetime import date
-
             uf = (mdfe.mdf_esta_dest or "").strip()
             cmun = mdfe.mdf_cida_carr
-
-            mdfe.mdf_fina = True
-            mdfe.mdf_data_ence = date.today()
-            mdfe.mdf_esta_ence = uf or mdfe.mdf_esta_ence
-            mdfe.mdf_cida_ence = cmun or mdfe.mdf_cida_ence
-            mdfe.save(using=slug)
-            return Response({"ok": True}, status=status.HTTP_200_OK)
+            resultado = MdfeEncerramentoService(mdfe, slug=slug).encerrar(uf=uf, cmun=cmun)
+            return Response(resultado, status=status.HTTP_200_OK)
         except Exception as e:
             logger.error(f"Erro ao encerrar MDF-e (automático): {e}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
