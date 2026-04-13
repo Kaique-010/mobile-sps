@@ -6,7 +6,7 @@ from .preview_pipeline import PreviewImportadorPipeline
 from .pipeline import ImportadorProdutosPipeline
 import base64
 from io import BytesIO
-from core.utils import get_licenca_db_config
+from core.utils import get_db_from_slug
 
 
 class UploadImportadorView(View):
@@ -73,7 +73,7 @@ class ConfirmarImportacaoView(View):
     def post(self, request, slug):
         empresa = request.session.get("empresa_id", 1)
         filial = request.session.get("filial_id", 1)
-        db = get_licenca_db_config(request)
+        db = get_db_from_slug(slug)
 
         # Recuperar arquivo da sessão
         conteudo_b64 = request.session.get("importador_file_b64")
