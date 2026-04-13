@@ -20,6 +20,19 @@ class Normalizadores:
         return n
 
     def aplicar(self):
+        # Consolidar colunas duplicadas mapeadas como <campo>__2, <campo>__3...
+        for base_col in ["prod_nome", "prod_ncm", "prod_gtin", "prod_marc", "prod_grup", "prod_sugr", "prod_fami", "prod_unme", "prod_loca", "prod_orig_merc", "preco", "preco_compra", "preco_vista", "preco_prazo"]:
+            duplicadas = [c for c in self.df.columns if c == base_col or c.startswith(f"{base_col}__")]
+            if len(duplicadas) <= 1:
+                continue
+            self.df[base_col] = self.df[duplicadas].apply(
+                lambda row: next((str(v).strip() for v in row if str(v or "").strip()), ""),
+                axis=1,
+            )
+            for col in duplicadas:
+                if col != base_col:
+                    self.df.drop(columns=[col], inplace=True)
+
         if "prod_nome" in self.df:
             self.df["prod_nome"] = self.df["prod_nome"].apply(self.normalizar_texto)
         else:
