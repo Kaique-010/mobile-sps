@@ -43,7 +43,7 @@ class ImportadorProdutosPipeline:
             s = ''.join(c for c in s if not unicodedata.combining(c))
             s = re.sub(r"\s+", " ", s)
             return s
-        for row in df.to_dict("records"):
+        for idx, row in enumerate(df.to_dict("records"), start=2):
             try:
                 # 4) Resolver FKs
                 resolved = ResolvedorFK(row, self.db).resolver()
@@ -73,6 +73,6 @@ class ImportadorProdutosPipeline:
                 relatorio["precos"] += 1
 
             except Exception as e:
-                relatorio["erros"].append(str(e))
+                relatorio["erros"].append(f"Linha {idx}: {str(e)}")
 
         return relatorio

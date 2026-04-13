@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<form method="POST" action="{% url 'confirmar_importacao_entidades' slug=slug %}">
+    {% csrf_token %}
+    <div class="container my-4">
+        <h2 class="page-title"><i class="bi bi-people"></i> Preview Importador de Entidades</h2>
+        <table class="table table-bordered">
+            <thead><tr><th>Coluna do Arquivo</th><th>Mapeamento</th></tr></thead>
+            <tbody>
+                {% for origem, destino in pairs %}
+                <tr><td>{{ origem }}</td><td>{{ destino }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <table class="table table-striped small">
+            <thead>
+                <tr>{% for col in colunas_origem %}<th>{{ col }}</th>{% endfor %}</tr>
+            </thead>
+            <tbody>
+                {% for row in preview_rows %}
+                <tr>
+                    {% for cell in row %}
+                    <td>{{ cell }}</td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <button class="btn btn-success w-100">Confirmar Importação</button>
+    </div>
+</form>
+{% endblock %}
