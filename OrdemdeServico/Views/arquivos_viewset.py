@@ -45,8 +45,8 @@ class OsArquViewSet(BaseMultiDBModelViewSet):
 
         qs = (
             Osarquivos.objects.using(banco)
-            .filter(os_empr=empresa, os_fili=filial, os_nume=os_nume)
-            .order_by("-os_data")
+            .filter(arqu_empr=empresa, arqu_fili=filial, arqu_os=os_nume)
+            .order_by("-arqu_codi_arqu")
         )
 
         data = []

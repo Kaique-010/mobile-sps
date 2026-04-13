@@ -43,6 +43,21 @@ class OrdemViewSet(BaseMultiDBModelViewSet):
     pagination_class = OrdemServicoPagination
     lookup_field = "orde_nume"
 
+    def _get_empresa_filial(self, request):
+        empresa = (
+            request.headers.get("X-Empresa")
+            or request.query_params.get("empresa")
+            or request.query_params.get("empr")
+            or request.data.get("empresa")
+        )
+        filial = (
+            request.headers.get("X-Filial")
+            or request.query_params.get("filial")
+            or request.query_params.get("fili")
+            or request.data.get("filial")
+        )
+        return empresa, filial
+
     def get_queryset(self):
         banco = self.get_banco()
         user_setor = getattr(self.request.user, 'setor', None)
@@ -496,12 +511,16 @@ class OrdemViewSet(BaseMultiDBModelViewSet):
     def arquivos(self, request, *args, **kwargs):
         try:
             banco = self.get_banco()
-            ordem = self.get_object()
+            os_nume = kwargs.get(self.lookup_field) or kwargs.get("pk")
+            empresa, filial = self._get_empresa_filial(request)
+            if not (empresa and filial):
+                ordem = self.get_object()
+                empresa, filial, os_nume = ordem.orde_empr, ordem.orde_fili, ordem.orde_nume
 
             queryset = Osarquivos.objects.using(banco).filter(
-                arqu_empr=ordem.orde_empr,
-                arqu_fili=ordem.orde_fili,
-                arqu_os=ordem.orde_nume,
+                arqu_empr=empresa,
+                arqu_fili=filial,
+                arqu_os=os_nume,
             ).order_by("-arqu_codi_arqu")
 
             page = self.paginate_queryset(queryset)
@@ -526,12 +545,16 @@ class OrdemViewSet(BaseMultiDBModelViewSet):
     def arquivo(self, request, arquivo_id=None, *args, **kwargs):
         try:
             banco = self.get_banco()
-            ordem = self.get_object()
+            os_nume = kwargs.get(self.lookup_field) or kwargs.get("pk")
+            empresa, filial = self._get_empresa_filial(request)
+            if not (empresa and filial):
+                ordem = self.get_object()
+                empresa, filial, os_nume = ordem.orde_empr, ordem.orde_fili, ordem.orde_nume
 
             obj = Osarquivos.objects.using(banco).filter(
-                arqu_empr=ordem.orde_empr,
-                arqu_fili=ordem.orde_fili,
-                arqu_os=ordem.orde_nume,
+                arqu_empr=empresa,
+                arqu_fili=filial,
+                arqu_os=os_nume,
                 arqu_codi_arqu=arquivo_id,
             ).first()
 
@@ -551,7 +574,7 @@ class OrdemViewSet(BaseMultiDBModelViewSet):
     def upload_arquivos(self, request, *args, **kwargs):
         try:
             banco = self.get_banco()
-            ordem = self.get_object()
+            os_nume = kwargs.get(self.lookup_field) or kwargs.get("pk")
             arquivos = request.data.get("arquivos")
 
             user = (
@@ -561,9 +584,10 @@ class OrdemViewSet(BaseMultiDBModelViewSet):
                 or request.data.get("usuario_id")
                 or 0
             )
-            empresa = ordem.orde_empr
-            filial = ordem.orde_fili
-            os_nume = ordem.orde_nume
+            empresa, filial = self._get_empresa_filial(request)
+            if not (empresa and filial):
+                ordem = self.get_object()
+                empresa, filial, os_nume = ordem.orde_empr, ordem.orde_fili, ordem.orde_nume
 
             if isinstance(arquivos, str):
                 obj = OsArquivoService.salvar_um(os_nume, arquivos, user, empresa, filial, banco=banco)
