@@ -5,6 +5,7 @@ from .models import Entidades
 import logging
 
 logger = logging.getLogger(__name__)
+from .services.validacao_documentos import DocumentoFiscalValidacaoServico
 
 
 class EntidadesForm(forms.ModelForm):
@@ -109,6 +110,18 @@ class EntidadesForm(forms.ModelForm):
         # Validação para não permitir CPF junto com CNPJ ou Inscrição Estadual
         if cpf and (cnpj or ie):
             raise forms.ValidationError("Se o CPF for fornecido, CNPJ e Inscrição Estadual não devem ser preenchidos.")
+
+        if cpf:
+            try:
+                cleaned_data["enti_cpf"] = DocumentoFiscalValidacaoServico.validar_cpf(cpf, campo="enti_cpf")
+            except Exception as e:
+                self.add_error("enti_cpf", getattr(e, "message_dict", {}).get("enti_cpf") or str(e))
+
+        if cnpj:
+            try:
+                cleaned_data["enti_cnpj"] = DocumentoFiscalValidacaoServico.validar_cnpj(cnpj, campo="enti_cnpj")
+            except Exception as e:
+                self.add_error("enti_cnpj", getattr(e, "message_dict", {}).get("enti_cnpj") or str(e))
         
         return cleaned_data
 

@@ -22,6 +22,18 @@ class TranspMotoListView(ListView):
         empresa_id = self.request.session.get('empresa_id')
         qs = Entidades.objects.using(banco).filter(enti_empr=empresa_id, enti_tien__in=['T', 'M'])
 
+        alerta = (self.request.GET.get('alerta') or '').strip().lower()
+        if alerta in {'vencido', 'vencendo'}:
+            entidades_ids = MotoristaDocumentoStatusService.entidades_com_alerta(
+                banco=banco,
+                empresa_id=empresa_id,
+                status=alerta,
+            )
+            if entidades_ids:
+                qs = qs.filter(enti_tien='M', enti_clie__in=entidades_ids)
+            else:
+                return qs.none()
+
         term = (self.request.GET.get('q') or '').strip()
         if term:
             qs = qs.annotate(enti_clie_str=Cast('enti_clie', output_field=CharField())).filter(
@@ -57,5 +69,35 @@ class TranspMotoListView(ListView):
             banco=banco,
             empresa_id=empresa_id,
         )
+        alerta = (self.request.GET.get('alerta') or '').strip().lower()
+        context['alerta_tipo'] = alerta if alerta in {'vencido', 'vencendo'} else ''
+        if context['alerta_tipo']:
+            itens = MotoristaDocumentoStatusService.listar_itens_alerta(
+                banco=banco,
+                empresa_id=empresa_id,
+                status=context['alerta_tipo'],
+            )
+            ids = {i.entidade_id for i in itens}
+            entidades = Entidades.objects.using(banco).filter(enti_empr=empresa_id, enti_clie__in=ids).only(
+                'enti_clie',
+                'enti_nome',
+                'enti_fant',
+                'enti_tien',
+            )
+            entidades_por_id = {e.enti_clie: e for e in entidades}
+            context['alertas_itens'] = [
+                {
+                    'entidade_id': item.entidade_id,
+                    'entidade_nome': getattr(entidades_por_id.get(item.entidade_id), 'enti_nome', '') or '',
+                    'entidade_fant': getattr(entidades_por_id.get(item.entidade_id), 'enti_fant', '') or '',
+                    'origem': item.origem,
+                    'descricao': item.descricao,
+                    'data_validade': item.data_validade,
+                    'dias_restantes': item.dias_restantes,
+                    'status': item.status,
+                }
+                for item in itens
+            ]
         context['slug'] = self.kwargs.get('slug')
+        return context
         return context

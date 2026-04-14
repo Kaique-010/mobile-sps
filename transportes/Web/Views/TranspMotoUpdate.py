@@ -12,6 +12,7 @@ from transportes.forms import (
     TranspMotoForm,
 )
 from transportes.services.transp_moto_sync_service import TranspMotoSyncService
+from transportes.services.motorista_documento_status_service import MotoristaDocumentoStatusService
 from transportes.models import MotoristaDadosComplementares, MotoristasCadastros, MotoristaDocumento
 
 
@@ -79,12 +80,21 @@ class TranspMotoUpdateView(UpdateView):
         banco = self._get_banco()
         empresa_id = request.session.get('empresa_id')
         filial_id = request.session.get('filial_id') or 1
+        self._active_tab = (request.POST.get('active_tab') or '').strip() or None
 
         form = self.get_form()
         motorista_form, dados_form, documentos_formset = self._build_forms(post_data=request.POST)
 
         if not form.is_valid():
-            return self.render_to_response(self.get_context_data(form=form, motorista_form=motorista_form, dados_form=dados_form, documentos_formset=documentos_formset))
+            return self.render_to_response(
+                self.get_context_data(
+                    form=form,
+                    motorista_form=motorista_form,
+                    dados_form=dados_form,
+                    documentos_formset=documentos_formset,
+                    active_tab=self._active_tab,
+                )
+            )
 
         self.object = form.save(commit=False)
         self.object.save(using=banco)
@@ -97,7 +107,8 @@ class TranspMotoUpdateView(UpdateView):
                 entidade_id=self.object.enti_clie,
             )
 
-            motorista_form.instance = motorista
+            if motorista is not None:
+                motorista_form.instance = motorista
             if motorista_form.is_valid():
                 cad = motorista_form.save(commit=False)
                 cad.empresa = empresa_id
@@ -105,13 +116,23 @@ class TranspMotoUpdateView(UpdateView):
                 cad.entidade = self.object.enti_clie
                 cad.save(using=banco)
             else:
-                return self.render_to_response(self.get_context_data(form=form, motorista_form=motorista_form, dados_form=dados_form, documentos_formset=documentos_formset))
+                return self.render_to_response(
+                    self.get_context_data(
+                        form=form,
+                        motorista_form=motorista_form,
+                        dados_form=dados_form,
+                        documentos_formset=documentos_formset,
+                        active_tab=self._active_tab,
+                    )
+                )
 
-            dados_form.instance = MotoristaDadosComplementares.objects.using(banco).filter(
+            dados_existente = MotoristaDadosComplementares.objects.using(banco).filter(
                 empresa=empresa_id,
                 filial=filial_id,
                 entidade=self.object.enti_clie,
             ).first()
+            if dados_existente is not None:
+                dados_form.instance = dados_existente
             if dados_form.is_valid():
                 dados = dados_form.save(commit=False)
                 dados.empresa = empresa_id
@@ -119,31 +140,81 @@ class TranspMotoUpdateView(UpdateView):
                 dados.entidade = self.object.enti_clie
                 dados.save(using=banco)
             else:
-                return self.render_to_response(self.get_context_data(form=form, motorista_form=motorista_form, dados_form=dados_form, documentos_formset=documentos_formset))
+                return self.render_to_response(
+                    self.get_context_data(
+                        form=form,
+                        motorista_form=motorista_form,
+                        dados_form=dados_form,
+                        documentos_formset=documentos_formset,
+                        active_tab=self._active_tab,
+                    )
+                )
 
             if documentos_formset.is_valid():
-                for obj in documentos_formset.deleted_objects:
-                    obj.delete(using=banco)
+                for form_excluido in documentos_formset.deleted_forms:
+                    if getattr(form_excluido, 'instance', None) is not None and form_excluido.instance.pk:
+                        form_excluido.instance.delete(using=banco)
                 documentos = documentos_formset.save(commit=False)
                 for doc in documentos:
                     doc.empresa = empresa_id
                     doc.filial = filial_id
                     doc.entidade = self.object.enti_clie
+                    doc.status = MotoristaDocumentoStatusService.calcular_status(doc)
                     doc.save(using=banco)
             else:
-                return self.render_to_response(self.get_context_data(form=form, motorista_form=motorista_form, dados_form=dados_form, documentos_formset=documentos_formset))
+                return self.render_to_response(
+                    self.get_context_data(
+                        form=form,
+                        motorista_form=motorista_form,
+                        dados_form=dados_form,
+                        documentos_formset=documentos_formset,
+                        active_tab=self._active_tab,
+                    )
+                )
 
         messages.success(request, 'Cadastro atualizado com sucesso.')
         return redirect(self.get_success_url())
 
     def get_success_url(self):
-        return reverse('transportes:transportadoras_motoristas_lista', kwargs={'slug': self.kwargs['slug']})
+        url = reverse(
+            'transportes:transportadoras_motoristas_editar',
+            kwargs={'slug': self.kwargs['slug'], 'enti_clie': self.object.enti_clie},
+        )
+        if getattr(self, '_active_tab', None):
+            url = f"{url}?tab={self._active_tab}"
+        return url
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.setdefault('titulo', 'Editar Transportadora/Motorista')
         context['slug'] = self.kwargs.get('slug')
         context['is_motorista'] = self.object.enti_tien == 'M'
+        context['active_tab'] = kwargs.get('active_tab') or self.request.GET.get('tab') or 'aba-entidade'
+
+        if context['is_motorista']:
+            banco = self._get_banco()
+            empresa_id = self.request.session.get('empresa_id')
+            filial_id = self.request.session.get('filial_id') or 1
+            itens_vencidos = MotoristaDocumentoStatusService.listar_itens_alerta(
+                banco=banco,
+                empresa_id=empresa_id,
+                entidade_id=self.object.enti_clie,
+                filial_id=filial_id,
+                status='vencido',
+            )
+            itens_vencendo = MotoristaDocumentoStatusService.listar_itens_alerta(
+                banco=banco,
+                empresa_id=empresa_id,
+                entidade_id=self.object.enti_clie,
+                filial_id=filial_id,
+                status='vencendo',
+            )
+            context['alertas_motorista'] = {
+                'vencidos': itens_vencidos,
+                'vencendo': itens_vencendo,
+                'total_vencidos': len(itens_vencidos),
+                'total_vencendo': len(itens_vencendo),
+            }
 
         if 'motorista_form' not in context or 'dados_form' not in context or 'documentos_formset' not in context:
             motorista_form, dados_form, documentos_formset = self._build_forms()

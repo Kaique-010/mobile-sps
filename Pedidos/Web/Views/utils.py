@@ -40,6 +40,30 @@ def autocomplete_vendedores(request, slug=None):
     data = [{'id': str(obj.enti_clie), 'text': f"{obj.enti_clie} - {obj.enti_nome}"} for obj in qs]
     return JsonResponse({'results': data})
 
+
+def busca_entidades(request, slug=None):
+    banco = get_licenca_db_config(request) or 'default'
+    empresa_id = request.session.get('empresa_id', 1)
+    term = (request.GET.get('term') or request.GET.get('q') or '').strip()
+    tipo = (request.GET.get('tipo') or '').strip().lower()
+    limit_raw = (request.GET.get('limit') or '').strip()
+    try:
+        limit = int(limit_raw) if limit_raw else 200
+    except Exception:
+        limit = 200
+
+    from Pedidos.services.buscas import BuscasEntidadesService
+
+    if tipo in {'vendedor', 'vendedores', 've'}:
+        qs = BuscasEntidadesService.buscar_vendedores(banco=banco, empresa_id=empresa_id, busca=term, limit=limit)
+    elif tipo in {'cliente', 'clientes', 'cl'}:
+        qs = BuscasEntidadesService.buscar_clientes(banco=banco, empresa_id=empresa_id, busca=term, limit=limit)
+    else:
+        qs = BuscasEntidadesService.buscar_entidades(banco=banco, empresa_id=empresa_id, busca=term, limit=limit)
+
+    data = [{'id': str(obj.enti_clie), 'text': f"{obj.enti_clie} - {obj.enti_nome}"} for obj in qs]
+    return JsonResponse({'results': data})
+
 def autocomplete_produtos(request, slug=None):
     banco = get_licenca_db_config(request) or 'default'
     empresa_id = request.session.get('empresa_id', 1)

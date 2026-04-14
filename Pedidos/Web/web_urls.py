@@ -5,7 +5,7 @@ from .Views.detailView import PedidoDetailView
 from .Views.printView import PedidoPrintView
 from .Views.updateView import PedidoUpdateView
 from .Views.dashboardView import PedidosDashboardView
-from .Views.utils import autocomplete_clientes, autocomplete_vendedores, autocomplete_produtos, preco_produto, lotes_produto
+from .Views.utils import autocomplete_clientes, autocomplete_vendedores, autocomplete_produtos, preco_produto, lotes_produto, busca_entidades
 from .Views.emissao_nota import PedidoEmitirNFeView
 from .Views.dashboard_ebitida import DashboardEbitdaView
 from .Views.pedido_rentabilidade import PedidoRentabilidadeView
@@ -25,6 +25,7 @@ urlpatterns = [
     path("autocomplete/clientes/", autocomplete_clientes, name="autocomplete_clientes"),
     path("autocomplete/vendedores/", autocomplete_vendedores, name="autocomplete_vendedores"),
     path("autocomplete/produtos/", autocomplete_produtos, name="autocomplete_produtos"),
+    path("busca/entidades/", busca_entidades, name="busca_entidades"),
     path("preco/", preco_produto, name="preco_produto"),
     path("lotes/produto/", lotes_produto, name="lotes_produto"),
     path("<int:pk>/emitir-nfe/", PedidoEmitirNFeView.as_view(), name="pedido_emitir_nfe"),

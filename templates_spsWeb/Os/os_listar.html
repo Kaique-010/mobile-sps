@@ -7,6 +7,28 @@
 {% block content %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
 <link rel="stylesheet" href="{% static 'css/list.css' %}">
+<style>
+  .cards-resumo-grid .resumo-card {
+    border: 1px solid rgba(255, 255, 255, .08);
+    background: linear-gradient(135deg, var(--card-color) 0%, rgba(0, 0, 0, .45) 100%);
+    box-shadow: 0 10px 22px rgba(0, 0, 0, .22);
+    min-height: 76px;
+  }
+
+  .cards-resumo-grid .resumo-card .resumo-label {
+    color: rgba(255, 255, 255, .92);
+  }
+
+  .cards-resumo-grid .resumo-card .resumo-badge {
+    background: rgba(0, 0, 0, .22);
+    border: 1px solid rgba(255, 255, 255, .18);
+    color: rgba(255, 255, 255, .95);
+  }
+
+  .cards-resumo-grid .resumo-card .resumo-sub {
+    color: rgba(255, 255, 255, .78);
+  }
+</style>
 
 <div class="container page-container">
   <div class="page-header-custom">
@@ -19,13 +41,13 @@
     <div class="row g-2 g-md-3 mb-3 cards-resumo-grid">
       {% for c in cards_por_status %}
       <div class="col-4 col-sm-6 col-md-3">
-        <div class="card" style="border:1px solid {{ c.color }}; box-shadow:0 2px 8px rgba(0,0,0,.08);">
+        <div class="card resumo-card" style="--card-color: {{ c.color }};">
           <div class="card-body py-2">
             <div class="d-flex justify-content-between align-items-center">
-              <span class="fw-semibold" style="color: {{ c.color }};">{{ c.label }}</span>
-              <span class="badge" style="background-color: {{ c.color }};">{{ c.qtd }}</span>
+              <span class="fw-semibold resumo-label">{{ c.label }}</span>
+              <span class="badge resumo-badge">{{ c.qtd }}</span>
             </div>
-            <div class="small text-muted mt-1">Total: {{ c.valor|brl }}</div>
+            <div class="small mt-1 resumo-sub">Total: {{ c.valor|brl }}</div>
           </div>
         </div>
       </div>

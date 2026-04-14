@@ -4,6 +4,7 @@ from django.db import transaction
 from ..models import Entidades
 from transportes.models import MotoristasCadastros
 from ..utils import buscar_endereco_por_cep, proxima_entidade, gerar_cpf_fake
+from .validacao_documentos import DocumentoFiscalValidacaoServico
 
 
 class EntidadeMotoristaServico:
@@ -35,7 +36,11 @@ class EntidadeMotoristaServico:
             enti_fant=data.get("enti_fant") or data["enti_nome"],
             enti_clie=proximo_motorista,
             enti_cep=cep,
-            enti_cpf=data.get("enti_cpf") or gerar_cpf_fake(),
+            enti_cpf=(
+                DocumentoFiscalValidacaoServico.validar_cpf(data.get("enti_cpf"), campo="enti_cpf")
+                if data.get("enti_cpf")
+                else gerar_cpf_fake()
+            ),
             enti_tipo_enti="M",
             enti_empr=empresa_id,
             enti_fili=filial_id,

@@ -3,6 +3,7 @@ from Licencas.models import Usuarios
 from OrdemdeServico.models import OrdemServicoFaseSetor
 import logging
 logger = logging.getLogger(__name__)
+from Entidades.services.validacao_documentos import DocumentoFiscalValidacaoServico
 
 
 class FilialCertificadoForm(forms.Form):
@@ -54,6 +55,16 @@ class EmpresaForm(forms.ModelForm):
             if self.is_bound and self.errors.get(name):
                 css = field.widget.attrs.get('class', '')
                 field.widget.attrs['class'] = (css + ' is-invalid').strip()
+
+    def clean_empr_docu(self):
+        valor = self.cleaned_data.get("empr_docu")
+        if not valor:
+            return valor
+        try:
+            return DocumentoFiscalValidacaoServico.validar_cpf_ou_cnpj(valor, campo="empr_docu")
+        except Exception as e:
+            msg = getattr(e, "message_dict", {}).get("empr_docu") or "CPF/CNPJ inválido."
+            raise forms.ValidationError(msg)
 
 class FilialForm(forms.ModelForm):
     certificado = forms.FileField(required=False, widget=forms.ClearableFileInput(attrs={'class': 'form-control-file'}))
@@ -238,6 +249,16 @@ class FilialForm(forms.ModelForm):
             if self.is_bound and self.errors.get(name):
                 css = field.widget.attrs.get('class', '')
                 field.widget.attrs['class'] = (css + ' is-invalid').strip()
+
+    def clean_empr_docu(self):
+        valor = self.cleaned_data.get("empr_docu")
+        if not valor:
+            return valor
+        try:
+            return DocumentoFiscalValidacaoServico.validar_cpf_ou_cnpj(valor, campo="empr_docu")
+        except Exception as e:
+            msg = getattr(e, "message_dict", {}).get("empr_docu") or "CPF/CNPJ inválido."
+            raise forms.ValidationError(msg)
 
 
 class UsuarioForm(forms.ModelForm):

@@ -16,7 +16,7 @@ from core.decorator import ModuloRequeridoMixin
 from core.registry import get_licenca_db_config
 from core.utils import get_ncm_master_db
 
-from ..models import Produtos, Tabelaprecos, UnidadeMedida, Lote, SaldoProduto
+from ..models import Ncm, Produtos, Tabelaprecos, UnidadeMedida, Lote, SaldoProduto
 from ..serializers.produto_serializer import ProdutoSerializer, ProdutoServicoSerializer
 from ..serializers.tabela_preco_serializer import TabelaPrecoSerializer
 from ..consultas.produto_consultas import listar_produtos, buscar_produto_por_codigo
@@ -406,7 +406,8 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         Cadastro rápido de produto com campos essenciais, gerando código sequencial por empresa.
         Campos aceitos:
           - prod_nome (obrigatório)
-          - unme (código da unidade ou id)
+          - unme (obrigatório) código da unidade (unid_codi)
+          - ncm (obrigatório) código do NCM
           - preco_vista / preco_prazo (opcionais) para criar/atualizar Tabela de Preços
         """
         banco = get_licenca_db_config(request)
@@ -429,22 +430,46 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             return Response({"detail": "prod_nome é obrigatório."}, status=status.HTTP_400_BAD_REQUEST)
 
         unme_code_or_id = (request.data.get('unme') or request.data.get('prod_unme') or '').strip()
+        if not unme_code_or_id:
+            return Response({"detail": "unme é obrigatório."}, status=status.HTTP_400_BAD_REQUEST)
+
+        ncm_code = (request.data.get('ncm') or request.data.get('prod_ncm') or '').strip()
+        if not ncm_code:
+            return Response({"detail": "ncm é obrigatório."}, status=status.HTTP_400_BAD_REQUEST)
+
         unidade = None
-        if unme_code_or_id:
-            unidade = UnidadeMedida.objects.using(banco).filter(unid_codi=str(unme_code_or_id).upper()).first()
-            if not unidade and str(unme_code_or_id).isdigit():
-                unidade = UnidadeMedida.objects.using(banco).filter(pk=int(unme_code_or_id)).first()
-            if not unidade:
-                master_alias = get_ncm_master_db(banco)
-                master_unme = UnidadeMedida.objects.using(master_alias).filter(unid_codi=str(unme_code_or_id).upper()).first()
-                desc = getattr(master_unme, 'unid_desc', str(unme_code_or_id).upper()) if master_unme else str(unme_code_or_id).upper()
-                unidade = UnidadeMedida(unid_codi=str(unme_code_or_id).upper(), unid_desc=desc)
-                unidade.save(using=banco)
+        master_alias = get_ncm_master_db(banco)
+        unme_code = str(unme_code_or_id).upper()
+        master_unme = UnidadeMedida.objects.using(master_alias).filter(unid_codi=unme_code).first()
+        if not master_unme:
+            return Response({"detail": "Unidade de medida inválida."}, status=status.HTTP_400_BAD_REQUEST)
+        unidade = UnidadeMedida.objects.using(banco).filter(unid_codi=unme_code).first()
+        if not unidade:
+            unidade = UnidadeMedida(unid_codi=unme_code, unid_desc=getattr(master_unme, 'unid_desc', unme_code))
+            unidade.save(using=banco)
+
+        digits = ''.join(ch for ch in str(ncm_code) if ch.isdigit())
+        candidates = []
+        for c in (str(ncm_code).strip(), digits):
+            if c and c not in candidates:
+                candidates.append(c)
+        if digits and len(digits) == 8:
+            dotted = f"{digits[:4]}.{digits[4:6]}.{digits[6:]}"
+            if dotted not in candidates:
+                candidates.insert(1, dotted)
+        ncm_obj = None
+        for code in candidates:
+            ncm_obj = Ncm.objects.using(master_alias).filter(ncm_codi=code).first()
+            if ncm_obj:
+                break
+        if not ncm_obj:
+            return Response({"detail": "NCM inválido."}, status=status.HTTP_400_BAD_REQUEST)
 
         payload = {
             'prod_empr': str(empresa_id),
             'prod_fili': str(filial_id) if filial_id else None,
             'prod_nome': nome,
+            'prod_ncm': ncm_obj.ncm_codi,
         }
         if unidade:
             payload['prod_unme'] = unidade.pk
@@ -459,9 +484,11 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         produto = serializer.save()
 
         if preco_vista is not None or preco_prazo is not None:
+            tabe_fili = str(filial_id) if filial_id else '1'
             preco_ctx = {
                 'using': banco,
                 'tabe_empr': produto.prod_empr,  
+                'tabe_fili': tabe_fili,
                 'tabe_prod': produto.prod_codi,
             }
             preco_data = {}
@@ -472,7 +499,10 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             if preco_data:
                 t_serializer = TabelaPrecoSerializer(data=preco_data, context=preco_ctx)
                 if t_serializer.is_valid():
-                    t_serializer.save()
+                    try:
+                        t_serializer.save()
+                    except Exception as e:
+                        logger.warning(f"Falha ao gravar preços do cadastro rápido: {e}")
                 else:
                     logger.warning(f"Falha ao gravar preços do cadastro rápido: {t_serializer.errors}")
 

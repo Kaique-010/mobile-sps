@@ -2,6 +2,7 @@
 from django.core.exceptions import ValidationError  
 from ..models import Entidades
 from ..utils import buscar_endereco_por_cep, proxima_entidade, gerar_cpf_fake
+from .validacao_documentos import DocumentoFiscalValidacaoServico
 
 class EntidadeTransportadoraServico:
 
@@ -31,7 +32,11 @@ class EntidadeTransportadoraServico:
             enti_fant=data["enti_nome"],
             enti_clie=proximo_clie,
             enti_cep=cep,
-            enti_cpf=gerar_cpf_fake() if not data.get("enti_cpf") else data["enti_cpf"],
+            enti_cpf=(
+                DocumentoFiscalValidacaoServico.validar_cpf(data.get("enti_cpf"), campo="enti_cpf")
+                if data.get("enti_cpf")
+                else gerar_cpf_fake()
+            ),
             enti_tipo_enti="FO",
             enti_tien= 'T',
             enti_empr=empresa_id,

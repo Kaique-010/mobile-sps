@@ -2,6 +2,7 @@
 from django.core.exceptions import ValidationError  
 from ..models import Entidades
 from ..utils import buscar_endereco_por_cep, proxima_entidade
+from .validacao_documentos import DocumentoFiscalValidacaoServico
 
 
 class EntidadeCadastroRapido:
@@ -12,6 +13,11 @@ class EntidadeCadastroRapido:
         cpf = data.get("enti_cpf", "").strip()
 
         if not cpf:
+            raise ValidationError("CPF inválido ou não fornecido")
+
+        try:
+            cpf = DocumentoFiscalValidacaoServico.validar_cpf(cpf, campo="enti_cpf")
+        except Exception:
             raise ValidationError("CPF inválido ou não fornecido")
 
         # Tenta usar os campos já preenchidos pelo frontend (hidden fields)

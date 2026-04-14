@@ -13,19 +13,26 @@
         border-radius: 12px;
         height: 100%;
         color: #fff;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.10);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.10);
         transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
 
     .stat-card:hover {
         transform: translateY(-3px);
-        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     }
 
-    .stat-total        { background: linear-gradient(135deg, #8389a3, #431a8a); }
-    .stat-ativos       { background: linear-gradient(135deg, #acd4c7, #145843); }
+    .stat-total {
+        background: linear-gradient(135deg, #8389a3, #431a8a);
+    }
 
-    .stat-transp       { background: linear-gradient(135deg, #dbc9ab, #ffa43c); }
+    .stat-ativos {
+        background: linear-gradient(135deg, #acd4c7, #145843);
+    }
+
+    .stat-transp {
+        background: linear-gradient(135deg, #dbc9ab, #ffa43c);
+    }
 
     .stat-icon {
         font-size: 2rem;
@@ -51,185 +58,293 @@
         font-weight: 700;
         line-height: 1.1;
     }
+
     #btn-novo-veiculo {
         margin-top: 10px;
         margin-left: auto;
     }
+
     #btn-filtrar-veiculos {
         margin-top: 10px;
         margin-left: auto;
         border-color: #0e5c83;
     }
+
+    .stats-scroller {
+        display: flex;
+        gap: 12px;
+        overflow-x: auto;
+        padding-bottom: 8px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .stats-scroller::-webkit-scrollbar {
+        height: 8px;
+    }
+
+    .stats-scroller::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.15);
+        border-radius: 999px;
+    }
+
+    .stats-item {
+        flex: 0 0 auto;
+        width: 260px;
+        display: block;
+    }
+
+    @media (min-width: 768px) {
+        .stats-scroller {
+            overflow-x: visible;
+            padding-bottom: 0;
+            flex-wrap: wrap;
+        }
+
+        .stats-item {
+            width: auto;
+            flex: 1 1 220px;
+        }
+    }
 </style>
 <link rel="stylesheet" href="{% static 'css/list.css' %}">
 
-<div class="container page-container">
-    <div class="page-header-custom">
-        <div class="container align-items-center">
-            <h2 class="page-title">
-                <i class="bi bi-truck"></i> Transportadoras e Motoristas
-            </h2>
-        </div>
+<div class="card-header py-1 mb-3 mt-1">
+    <div
+        class="d-flex flex-column flex-md-row justify-content-between align-items-center align-items-md-center gap-2 me-2 mb-4">
+        <h4 class="mb-0 fw-bold text-secondary" style="font-size: 1.6rem;">
+            <i class="bi bi-truck fs-1" style="align-items: center;"></i> Transportadoras e Motoristas
+        </h4>
+    </div>
 
-        <div class="container mt-3">
-            <div class="row g-3 align-items-stretch">
-                <div class="col-12 col-md-2">
-                    <div class="stat-card stat-total">
-                        <div class="stat-icon"><i class="bi bi-truck"></i></div>
-                        <div class="stat-info">
-                            <span class="stat-label">Total Transportadoras e Motoristas</span>
-                            <span class="stat-value">{{ total_transportadoras_motoristas|default:"0" }}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-md-2">
-                    <div class="stat-card stat-transp">
-                        <div class="stat-icon"><i class="bi bi-truck-flatbed"></i></div>
-                        <div class="stat-info">
-                            <span class="stat-label">Total Transportadoras</span>
-                            <span class="stat-value">{{ total_transportadoras|default:"0" }}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-md-2">
-                    <div class="stat-card stat-ativos">
-                        <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
-                        <div class="stat-info">
-                            <span class="stat-label">Total Motoristas</span>
-                            <span class="stat-value">{{ total_motoristas|default:"0" }}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-md-2">
-                    <div class="stat-card stat-total">
-                        <div class="stat-icon"><i class="bi bi-exclamation-triangle"></i></div>
-                        <div class="stat-info">
-                            <span class="stat-label">Docs Vencendo</span>
-                            <span class="stat-value">{{ painel_alertas_documentos.vencendo|default:"0" }}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-md-2">
-                    <div class="stat-card stat-transp">
-                        <div class="stat-icon"><i class="bi bi-x-octagon"></i></div>
-                        <div class="stat-info">
-                            <span class="stat-label">Docs Vencidos</span>
-                            <span class="stat-value">{{ painel_alertas_documentos.vencidos|default:"0" }}</span>
-                        </div>
+    <div class="mt-3">
+        <div class="stats-scroller align-items-stretch">
+            <div class="stats-item">
+                <div class="stat-card stat-total">
+                    <div class="stat-icon"><i class="bi bi-truck"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-label">Total Transportadoras e Motoristas</span>
+                        <span class="stat-value">{{ total_transportadoras_motoristas|default:"0" }}</span>
                     </div>
                 </div>
             </div>
-        </div>
-        <a href="#" class="btn btn-success disabled" id="btn-novo-transadora" tabindex="-1" aria-disabled="true">
-            <i class="bi bi-plus"></i> Novo (em breve)
-        </a>
-    </div>
-    
-    <div class="card card-corporate mb-3">
-        <div class="card-body">
-            {% if messages %}
-                {% for message in messages %}
-                <div class="alert alert-{{ message.tags }}">
-                    {{ message }}
-                </div>
-                {% endfor %}
-            {% endif %}
-
-            <form method="get" class="mb-0">
-                <div class="row g-2">
-                    <div class="col-md-4">
-                        <label for="transp_moto_tran" class="form-label">Tipo</label>
-                        <select id="transp_moto_tran" name="transp_moto_tran" class="form-select">
-                            <option value="" {% if not request.GET.transp_moto_tran %}selected{% endif %}>Todos</option>
-                            <option value="T" {% if request.GET.transp_moto_tran == "T" %}selected{% endif %}>Transportadora</option>
-                            <option value="M" {% if request.GET.transp_moto_tran == "M" %}selected{% endif %}>Motorista</option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label for="transp_moto_clie" class="form-label">Código (enti_clie)</label>
-                        <input type="text" id="transp_moto_clie" name="transp_moto_clie" class="form-control"
-                            value="{{ request.GET.transp_moto_clie }}" placeholder="Filtrar por código">
-                    </div>
-
-                    <div class="col-md-4">
-                        <label for="q" class="form-label">Pesquisa</label>
-                        <input type="text" id="q" name="q" class="form-control"
-                            value="{{ request.GET.q }}" placeholder="Código / Nome">
-                    </div>
-                    <div class="col-12 d-flex align-items-end gap-2">
-                        <button type="submit" class="btn btn-outline-primary w-100" id="btn-filtrar-veiculos">
-                            <i class="bi bi-search"></i> Filtrar
-                        </button>
+            <div class="stats-item">
+                <div class="stat-card stat-transp">
+                    <div class="stat-icon"><i class="bi bi-truck-flatbed"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-label">Total Transportadoras</span>
+                        <span class="stat-value">{{ total_transportadoras|default:"0" }}</span>
                     </div>
                 </div>
-            </form>
+            </div>
+            <div class="stats-item">
+                <div class="stat-card stat-ativos">
+                    <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-label">Total Motoristas</span>
+                        <span class="stat-value">{{ total_motoristas|default:"0" }}</span>
+                    </div>
+                </div>
+            </div>
+            <a class="stats-item text-decoration-none" href="?alerta=vencendo">
+                <div class="stat-card stat-total">
+                    <div class="stat-icon"><i class="bi bi-exclamation-triangle"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-label">Docs Vencendo</span>
+                        <span class="stat-value">{{ painel_alertas_documentos.vencendo|default:"0" }}</span>
+                    </div>
+                </div>
+            </a>
+            <a class="stats-item text-decoration-none" href="?alerta=vencido">
+                <div class="stat-card stat-transp">
+                    <div class="stat-icon"><i class="bi bi-x-octagon"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-label">Docs Vencidos</span>
+                        <span class="stat-value">{{ painel_alertas_documentos.vencidos|default:"0" }}</span>
+                    </div>
+                </div>
+            </a>
         </div>
     </div>
 
-    <div class="card card-corporate">
-        <div class="card-body">
-            {% if transp_moto %}
-            <div class="row g-3">
-                {% for ent in transp_moto %}
-                <div class="col-12 col-md-6 col-lg-4">
-                    <div class="card shadow-sm h-100 entidade-card">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <h5 class="card-title mb-1">
-                                    {{ ent.enti_clie }} - {{ ent.enti_nome }}
-                                </h5>
-                                <span class="badge text-bg-secondary">
-                                    {% if ent.enti_tien == "T" %}Transportadora{% elif ent.enti_tien == "M" %}Motorista{% else %}{{ ent.enti_tien }}{% endif %}
-                                </span>
-                            </div>
-                            {% if ent.enti_fant %}
-                            <p class="text-body-secondary mb-0">{{ ent.enti_fant }}</p>
+</div>
+
+{% if alerta_tipo %}
+<div class="card card-corporate mb-3">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="mb-0">
+                {% if alerta_tipo == "vencido" %}Itens vencidos{% else %}Itens vencendo{% endif %}
+            </h6>
+            <a class="btn btn-outline-secondary btn-sm" href="?">Limpar</a>
+        </div>
+
+        {% if alertas_itens %}
+        <div class="table-responsive">
+            <table class="table table-sm table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Motorista</th>
+                        <th>Item</th>
+                        <th>Validade</th>
+                        <th>Dias</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in alertas_itens %}
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">{{ item.entidade_id }} - {{ item.entidade_nome }}</div>
+                            {% if item.entidade_fant %}
+                            <div class="text-body-secondary small">{{ item.entidade_fant }}</div>
                             {% endif %}
-                            <div class="mt-3">
-                                <a href="{% url 'transportes:transportadoras_motoristas_editar' slug=slug enti_clie=ent.enti_clie %}" class="btn btn-outline-primary btn-sm">
-                                    <i class="bi bi-pencil"></i> Editar
-                                </a>
-                            </div>
+                        </td>
+                        <td>
+                            <span class="badge text-bg-secondary">{{ item.origem }}</span>
+                            <span class="ms-2">{{ item.descricao }}</span>
+                        </td>
+                        <td>
+                            {% if item.data_validade %}
+                            {{ item.data_validade|date:"d/m/Y" }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.dias_restantes or item.dias_restantes == 0 %}
+                            {{ item.dias_restantes }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a class="btn btn-outline-primary btn-sm"
+                                href="{% url 'transportes:transportadoras_motoristas_editar' slug=slug enti_clie=item.entidade_id %}?tab=aba-documentos">
+                                Abrir
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-body-secondary">Nenhum item encontrado.</div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<div class="card card-corporate mb-3">
+    <div class="card-body">
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <form method="get" class="mb-0">
+            <div class="row g-2">
+                <div class="col-md-4">
+                    <label for="transp_moto_tran" class="form-label">Tipo</label>
+                    <select id="transp_moto_tran" name="transp_moto_tran" class="form-select">
+                        <option value="" {% if not request.GET.transp_moto_tran %}selected{% endif %}>Todos</option>
+                        <option value="T" {% if request.GET.transp_moto_tran == "T" %}selected{% endif %}>Transportadora
+                        </option>
+                        <option value="M" {% if request.GET.transp_moto_tran == "M" %}selected{% endif %}>Motorista
+                        </option>
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label for="transp_moto_clie" class="form-label">Código (enti_clie)</label>
+                    <input type="text" id="transp_moto_clie" name="transp_moto_clie" class="form-control"
+                        value="{{ request.GET.transp_moto_clie }}" placeholder="Filtrar por código">
+                </div>
+
+                <div class="col-md-4">
+                    <label for="q" class="form-label">Pesquisa</label>
+                    <input type="text" id="q" name="q" class="form-control" value="{{ request.GET.q }}"
+                        placeholder="Código / Nome">
+                </div>
+                <div class="col-12 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-outline-primary w-100" id="btn-filtrar-veiculos">
+                        <i class="bi bi-search"></i> Filtrar
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card card-corporate">
+    <div class="card-body">
+        {% if transp_moto %}
+        <div class="row g-3">
+            {% for ent in transp_moto %}
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="card shadow-sm h-100 entidade-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <h5 class="card-title mb-1">
+                                {{ ent.enti_clie }} - {{ ent.enti_nome }}
+                            </h5>
+                            <span class="badge text-bg-secondary">
+                                {% if ent.enti_tien == "T" %}Transportadora{% elif ent.enti_tien == "M" %}Motorista{% else %}{{ ent.enti_tien }}{% endif %}
+                            </span>
+                        </div>
+                        {% if ent.enti_fant %}
+                        <p class="text-body-secondary mb-0">{{ ent.enti_fant }}</p>
+                        {% endif %}
+                        <div class="mt-3">
+                            <a href="{% url 'transportes:transportadoras_motoristas_editar' slug=slug enti_clie=ent.enti_clie %}"
+                                class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-pencil"></i> Editar
+                            </a>
                         </div>
                     </div>
                 </div>
-                {% endfor %}
             </div>
-
-            {% if is_paginated %}
-            <div class="d-flex justify-content-center mt-4">
-                <ul class="pagination">
-                    {% if page_obj.has_previous %}
-                    <li class="page-item">
-                        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.transp_moto_tran %}&transp_moto_tran={{ request.GET.transp_moto_tran }}{% endif %}{% if request.GET.transp_moto_clie %}&transp_moto_clie={{ request.GET.transp_moto_clie }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" class="page-link">
-                            <i class="bi bi-chevron-left"></i>
-                        </a>
-                    </li>
-                    {% endif %}
-                    
-                    <li class="page-item active">
-                        <span class="page-link">{{ page_obj.number }}</span>
-                    </li>
-                    
-                    {% if page_obj.has_next %}
-                    <li class="page-item">
-                        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.transp_moto_tran %}&transp_moto_tran={{ request.GET.transp_moto_tran }}{% endif %}{% if request.GET.transp_moto_clie %}&transp_moto_clie={{ request.GET.transp_moto_clie }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" class="page-link">
-                            <i class="bi bi-chevron-right"></i>
-                        </a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </div>
-            {% endif %}
-
-            {% else %}
-            <div class="text-center py-5">
-                <i class="bi bi-truck fs-1 text-muted mb-3"></i>
-                <p class="text-muted mb-0">Nenhuma transportadora/motorista encontrado com os filtros selecionados.</p>
-            </div>
-            {% endif %}
+            {% endfor %}
         </div>
+
+        {% if is_paginated %}
+        <div class="d-flex justify-content-center mt-4">
+            <ul class="pagination">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.transp_moto_tran %}&transp_moto_tran={{ request.GET.transp_moto_tran }}{% endif %}{% if request.GET.transp_moto_clie %}&transp_moto_clie={{ request.GET.transp_moto_clie }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
+                        class="page-link">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+
+                <li class="page-item active">
+                    <span class="page-link">{{ page_obj.number }}</span>
+                </li>
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a href="?page={{ page_obj.next_page_number }}{% if request.GET.transp_moto_tran %}&transp_moto_tran={{ request.GET.transp_moto_tran }}{% endif %}{% if request.GET.transp_moto_clie %}&transp_moto_clie={{ request.GET.transp_moto_clie }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
+                        class="page-link">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-truck fs-1 text-muted mb-3"></i>
+            <p class="text-muted mb-0">Nenhuma transportadora/motorista encontrado com os filtros selecionados.</p>
+        </div>
+        {% endif %}
     </div>
+</div>
 </div>
 {% endblock %}

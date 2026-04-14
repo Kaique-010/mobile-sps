@@ -5,6 +5,7 @@ from django.db.models import Max
 from django.db import connections
 from .models import Entidades
 from Licencas.models  import Empresas
+from .services.validacao_documentos import DocumentoFiscalValidacaoServico
 
 _ENTIDADES_COLUMNS_CACHE = {}
 
@@ -64,6 +65,27 @@ class EntidadesSerializer(serializers.ModelSerializer):
         if 'enti_clie' in data:
             if Entidades.objects.using(banco).filter(enti_clie=data['enti_clie']).exists():
                 erros['enti_clie'] = ['Este código já existe.']
+
+        cpf = data.get("enti_cpf")
+        cnpj = data.get("enti_cnpj")
+        ie = data.get("enti_insc_esta")
+
+        if cpf and (cnpj or ie):
+            erros["enti_cpf"] = ["Se o CPF for fornecido, CNPJ e Inscrição Estadual não devem ser preenchidos."]
+
+        if cpf:
+            try:
+                data["enti_cpf"] = DocumentoFiscalValidacaoServico.validar_cpf(cpf, campo="enti_cpf")
+            except Exception as e:
+                msg = getattr(e, "message_dict", {}).get("enti_cpf") or "CPF inválido."
+                erros["enti_cpf"] = [msg]
+
+        if cnpj:
+            try:
+                data["enti_cnpj"] = DocumentoFiscalValidacaoServico.validar_cnpj(cnpj, campo="enti_cnpj")
+            except Exception as e:
+                msg = getattr(e, "message_dict", {}).get("enti_cnpj") or "CNPJ inválido."
+                erros["enti_cnpj"] = [msg]
 
         if erros:
             raise serializers.ValidationError(erros)
@@ -155,3 +177,11 @@ class EntidadesCadastroRapidoCreateSerializer(serializers.Serializer):
     enti_cpf = serializers.CharField(max_length=11, required=False, allow_blank=True)
     enti_cep = serializers.CharField(max_length=8, required=False, allow_blank=True)
     enti_nome = serializers.CharField(max_length=255)
+
+    def validate_enti_cpf(self, value):
+        if not value:
+            return value
+        try:
+            return DocumentoFiscalValidacaoServico.validar_cpf(value, campo="enti_cpf")
+        except Exception:
+            raise serializers.ValidationError("CPF inválido.")

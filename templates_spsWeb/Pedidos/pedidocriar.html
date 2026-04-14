@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{% if form.instance.pk %}Editar Pedido de Venda{% else %}Cadastrar Pedido de Venda{% endif %}{%endblock %}
+{% block title %}{% if form.instance.pk %}Editar Pedido de Venda{% else %}Cadastrar Pedido de Venda{% endif %}{%endblock%}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
 <link rel="stylesheet" href="{% static 'css/form.css' %}">
 {% block content %}
@@ -41,21 +41,35 @@
             {% if form.pedi_data.errors %}<div class="invalid-feedback d-block">{{ form.pedi_data.errors|striptags }}
             </div>{% endif %}
           </div>
-          <div class="col-md-5 position-relative">
+          <div class="col-md-5">
             <label class="form-label fw-semibold" for="{{ form.pedi_forn.id_for_label }}"><i
                 class="bi bi-person-circle me-1"></i>Cliente</label>
-            <input type="text" class="form-control form-control-lg" id="autocomplete-cliente"
-              placeholder="Buscar cliente por nome ou código" {% if is_edit and cliente_display %}value="{{ cliente_display }}" {% endif %}>
+            <div class="input-group input-group-lg">
+              <input type="text" class="form-control" id="autocomplete-cliente"
+                placeholder="Buscar cliente por nome ou código" {% if is_edit and cliente_display %}value="{{ cliente_display }}" {% endif %}>
+              <button type="button" class="btn btn-outline-secondary js-lookup-entidade" data-lookup-tipo="cliente"
+                data-lookup-hidden="id_pedi_forn" data-lookup-input="autocomplete-cliente"
+                data-lookup-label="cliente-selecionado">
+                <i class="bi bi-search"></i>
+              </button>
+            </div>
             {{ form.pedi_forn }}
             <small id="cliente-selecionado" class="text-success mt-1 d-block"></small>
             {% if form.pedi_forn.errors %}<div class="invalid-feedback d-block">{{ form.pedi_forn.errors|striptags }}
             </div>{% endif %}
           </div>
-          <div class="col-md-4 position-relative">
+          <div class="col-md-4">
             <label class="form-label fw-semibold" for="{{ form.pedi_vend.id_for_label }}"><i
                 class="bi bi-person-badge me-1"></i>Vendedor</label>
-            <input type="text" class="form-control form-control-lg" id="autocomplete-vendedor"
-              placeholder="Buscar vendedor por nome ou código" {% if is_edit and vendedor_display %}value="{{ vendedor_display }}" {% endif %}>
+            <div class="input-group input-group-lg">
+              <input type="text" class="form-control" id="autocomplete-vendedor"
+                placeholder="Buscar vendedor por nome ou código" {% if is_edit and vendedor_display %}value="{{ vendedor_display }}" {% endif %}>
+              <button type="button" class="btn btn-outline-secondary js-lookup-entidade" data-lookup-tipo="vendedor"
+                data-lookup-hidden="id_pedi_vend" data-lookup-input="autocomplete-vendedor"
+                data-lookup-label="vendedor-selecionado">
+                <i class="bi bi-search"></i>
+              </button>
+            </div>
             {{ form.pedi_vend }}
             <small id="vendedor-selecionado" class="text-success mt-1 d-block"></small>
             {% if form.pedi_vend.errors %}<div class="invalid-feedback d-block">{{ form.pedi_vend.errors|striptags }}
@@ -135,10 +149,14 @@
                       {{ form_item.iped_prod }}
                       {{ form_item.iped_lote_vend }}
                       <div class="d-none">{{ form_item.DELETE }}</div>
-                      <input type="text" class="form-control autocomplete-prod" data-index="{{ forloop.counter0 }}"
-                        placeholder="Buscar produto por nome ou código" {% if is_edit and
-                        form_item.initial.display_prod_text %}value="{{ form_item.initial.display_prod_text }}" {% endif
-                        %}>
+                      <div class="input-group">
+                        <input type="text" class="form-control autocomplete-prod" data-index="{{ forloop.counter0 }}"
+                          placeholder="Buscar produto por nome ou código" {% if is_edit and form_item.initial.display_prod_text %}value="{{ form_item.initial.display_prod_text }}" {% endif %}>
+                        <button type="button" class="btn btn-outline-secondary js-cadastro-rapido-produto"
+                          data-index="{{ forloop.counter0 }}">
+                          <i class="bi bi-plus-lg"></i>
+                        </button>
+                      </div>
                       <div class="d-flex align-items-center justify-content-between mt-1">
                         <small class="text-muted">Lote: <span class="js-lote-display">-</span></small>
                         <button type="button" class="btn btn-outline-secondary btn-sm js-escolher-lote"
@@ -177,7 +195,8 @@
                           <span class="input-group-text"><i class="bi bi-currency-dollar"></i></span>
                           {{ form.pedi_topr }}
                         </div>
-                        {% if form.pedi_topr.errors %}<div class="invalid-feedback d-block">{{ form.pedi_topr.errors|striptags }}</div>{% endif %}
+                        {% if form.pedi_topr.errors %}<div class="invalid-feedback d-block">{{
+                          form.pedi_topr.errors|striptags }}</div>{% endif %}
                       </div>
                       <div class="col-md-4">
                         <label class="form-label fw-semibold">Desconto</label>
@@ -193,7 +212,8 @@
                           <span class="input-group-text bg-success text-white"><i class="bi bi-cash"></i></span>
                           {{ form.pedi_tota }}
                         </div>
-                        {% if form.pedi_tota.errors %}<div class="invalid-feedback d-block">{{ form.pedi_tota.errors|striptags }}</div>{% endif %}
+                        {% if form.pedi_tota.errors %}<div class="invalid-feedback d-block">{{
+                          form.pedi_tota.errors|striptags }}</div>{% endif %}
                       </div>
                     </div>
                   </div>
@@ -263,6 +283,87 @@
   </div>
 </div>
 
+<div class="modal fade" id="entidadeLookupModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="entidadeLookupTitle">Buscar</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-2 align-items-center mb-3">
+          <div class="col-12 col-md-8">
+            <input type="text" class="form-control" id="entidadeLookupTerm" placeholder="Digite nome ou código">
+          </div>
+          <div class="col-12 col-md-4 text-md-end">
+            <button type="button" class="btn btn-outline-secondary w-100" id="entidadeLookupLimpar">Limpar</button>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm table-hover align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Código</th>
+                <th>Nome</th>
+                <th style="width: 120px;"></th>
+              </tr>
+            </thead>
+            <tbody id="entidadeLookupBody"></tbody>
+          </table>
+        </div>
+        <div class="text-body-secondary small" id="entidadeLookupStatus"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="produtoRapidoModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Cadastro rápido de produto</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label">Nome/Descrição</label>
+            <input type="text" class="form-control" id="produtoRapidoNome" placeholder="Nome do produto">
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label">Unidade de medida</label>
+            <input type="hidden" id="produtoRapidoUnme">
+            <input type="text" class="form-control" id="produtoRapidoUnmeText" placeholder="Buscar unidade (ex: UN)">
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label">NCM</label>
+            <input type="hidden" id="produtoRapidoNcm">
+            <input type="text" class="form-control" id="produtoRapidoNcmText" placeholder="Buscar NCM">
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label">Preço à vista (opcional)</label>
+            <input type="number" class="form-control" id="produtoRapidoPrecoVista" step="0.01" min="0"
+              placeholder="0,00">
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label">Preço a prazo (opcional)</label>
+            <input type="number" class="form-control" id="produtoRapidoPrecoPrazo" step="0.01" min="0"
+              placeholder="0,00">
+          </div>
+        </div>
+        <div class="text-body-secondary small mt-3" id="produtoRapidoStatus"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-outline-success" id="produtoRapidoSalvar">Salvar produto</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   // Aguarda jQuery estar disponível
   document.addEventListener('DOMContentLoaded', function () {
@@ -318,7 +419,12 @@
           <input type="hidden" name="form-${currentIndex}-iped_prod" id="id_form-${currentIndex}-iped_prod">
           <input type="hidden" name="form-${currentIndex}-iped_lote_vend" id="id_form-${currentIndex}-iped_lote_vend">
           <input type="checkbox" name="form-${currentIndex}-DELETE" id="id_form-${currentIndex}-DELETE" class="visually-hidden">
-          <input type="text" class="form-control autocomplete-prod" data-index="${currentIndex}" placeholder="Buscar produto por nome ou código">
+          <div class="input-group">
+            <input type="text" class="form-control autocomplete-prod" data-index="${currentIndex}" placeholder="Buscar produto por nome ou código">
+            <button type="button" class="btn btn-outline-secondary js-cadastro-rapido-produto" data-index="${currentIndex}">
+              <i class="bi bi-plus-lg"></i>
+            </button>
+          </div>
           <div class="d-flex align-items-center justify-content-between mt-1">
             <small class="text-muted">Lote: <span class="js-lote-display">-</span></small>
             <button type="button" class="btn btn-outline-secondary btn-sm js-escolher-lote" data-index="${currentIndex}">Lotes</button>
@@ -435,7 +541,10 @@
           controller = new AbortController();
           const resp = await fetch(`${url}?term=${encodeURIComponent(term)}`, { signal: controller.signal });
           const json = await resp.json();
-          const results = json.results || [];
+          const results = (json.results || []).map((raw) => ({
+            id: (typeof raw.id !== 'undefined' && raw.id !== null) ? raw.id : raw.value,
+            text: (typeof raw.text !== 'undefined' && raw.text !== null) ? raw.text : raw.label,
+          })).filter((r) => typeof r.id !== 'undefined' && r.id !== null && r.text);
           dropdown.innerHTML = '';
           positionDropdown(inputEl, dropdown);
           dropdown.style.display = 'block';
@@ -486,6 +595,10 @@
     const produtosUrl = "{% url 'PedidosWeb:autocomplete_produtos' slug=slug %}";
     const precoUrl = "{% url 'PedidosWeb:preco_produto' slug=slug %}";
     const lotesUrl = "{% url 'PedidosWeb:lotes_produto' slug=slug %}";
+    const buscaEntidadesUrl = "{% url 'PedidosWeb:busca_entidades' slug=slug %}";
+    const unidadesUrl = "{% url 'autocomplete_unidades' slug=slug %}";
+    const ncmsUrl = "{% url 'autocomplete_ncms' slug=slug %}";
+    const cadastroRapidoProdutoUrl = "/api/{{ slug }}/produtos/produtos/cadastro_rapido/";
 
     function formatDateBR(iso) {
       if (!iso) return '-';
@@ -762,6 +875,292 @@
     prefillEntidade('#id_pedi_forn', '#autocomplete-cliente', clientesUrl, '#cliente-selecionado');
     prefillEntidade('#id_pedi_vend', '#autocomplete-vendedor', vendedoresUrl, '#vendedor-selecionado');
     prefillProdutos();
+
+    function getCSRFToken() {
+      const input = document.querySelector('input[name="csrfmiddlewaretoken"]');
+      if (input && input.value) return String(input.value);
+      const value = `; ${document.cookie || ''}`;
+      const names = ['mobile_sps_csrftoken', 'csrftoken'];
+      for (const name of names) {
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return String(parts.pop().split(';').shift() || '');
+      }
+      return '';
+    }
+
+    const produtoRapidoModalEl = document.getElementById('produtoRapidoModal');
+    const produtoRapidoModal = (produtoRapidoModalEl && window.bootstrap && window.bootstrap.Modal) ? new window.bootstrap.Modal(produtoRapidoModalEl) : null;
+    const produtoRapidoNomeEl = document.getElementById('produtoRapidoNome');
+    const produtoRapidoUnmeEl = document.getElementById('produtoRapidoUnme');
+    const produtoRapidoUnmeTextEl = document.getElementById('produtoRapidoUnmeText');
+    const produtoRapidoNcmEl = document.getElementById('produtoRapidoNcm');
+    const produtoRapidoNcmTextEl = document.getElementById('produtoRapidoNcmText');
+    const produtoRapidoPrecoVistaEl = document.getElementById('produtoRapidoPrecoVista');
+    const produtoRapidoPrecoPrazoEl = document.getElementById('produtoRapidoPrecoPrazo');
+    const produtoRapidoSalvarEl = document.getElementById('produtoRapidoSalvar');
+    const produtoRapidoStatusEl = document.getElementById('produtoRapidoStatus');
+
+    let produtoRapidoIndex = null;
+
+    function setProdutoRapidoStatus(text) {
+      if (produtoRapidoStatusEl) produtoRapidoStatusEl.textContent = text || '';
+    }
+
+    setupInputAutocomplete({
+      inputEl: produtoRapidoUnmeTextEl,
+      hiddenEl: produtoRapidoUnmeEl,
+      url: unidadesUrl,
+      onSelect: () => setProdutoRapidoStatus(''),
+    });
+
+    setupInputAutocomplete({
+      inputEl: produtoRapidoNcmTextEl,
+      hiddenEl: produtoRapidoNcmEl,
+      url: ncmsUrl,
+      onSelect: () => setProdutoRapidoStatus(''),
+    });
+
+    function abrirModalCadastroRapidoProduto(idx) {
+      produtoRapidoIndex = String(idx);
+      setProdutoRapidoStatus('');
+      if (produtoRapidoNomeEl) {
+        const row = document.getElementById(`id_form-${produtoRapidoIndex}-iped_prod`)?.closest('tr');
+        const current = row ? (row.querySelector('.autocomplete-prod')?.value || '') : '';
+        produtoRapidoNomeEl.value = current && current.length < 120 ? current : '';
+      }
+      if (produtoRapidoUnmeEl) produtoRapidoUnmeEl.value = '';
+      if (produtoRapidoUnmeTextEl) produtoRapidoUnmeTextEl.value = '';
+      if (produtoRapidoNcmEl) produtoRapidoNcmEl.value = '';
+      if (produtoRapidoNcmTextEl) produtoRapidoNcmTextEl.value = '';
+      if (produtoRapidoPrecoVistaEl) produtoRapidoPrecoVistaEl.value = '';
+      if (produtoRapidoPrecoPrazoEl) produtoRapidoPrecoPrazoEl.value = '';
+      if (produtoRapidoModal) produtoRapidoModal.show();
+      if (produtoRapidoNomeEl) produtoRapidoNomeEl.focus();
+    }
+
+    $table.on('click', '.js-cadastro-rapido-produto', function () {
+      const idx = $(this).data('index');
+      abrirModalCadastroRapidoProduto(idx);
+    });
+
+    if (produtoRapidoSalvarEl) {
+      produtoRapidoSalvarEl.addEventListener('click', async () => {
+        try {
+          const nome = (produtoRapidoNomeEl?.value || '').trim();
+          const unme = (produtoRapidoUnmeEl?.value || '').trim();
+          const ncm = (produtoRapidoNcmEl?.value || '').trim();
+          const precoVista = (produtoRapidoPrecoVistaEl?.value || '').trim();
+          const precoPrazo = (produtoRapidoPrecoPrazoEl?.value || '').trim();
+
+          if (!nome) {
+            setProdutoRapidoStatus('Informe o nome/descrição.');
+            return;
+          }
+          if (!unme) {
+            setProdutoRapidoStatus('Selecione a unidade de medida.');
+            return;
+          }
+          if (!ncm) {
+            setProdutoRapidoStatus('Selecione o NCM.');
+            return;
+          }
+
+          setProdutoRapidoStatus('Salvando...');
+          const payload = { prod_nome: nome, unme, ncm };
+          if (precoVista) payload.preco_vista = precoVista;
+          if (precoPrazo) payload.preco_prazo = precoPrazo;
+
+          const headers = {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken(),
+            'X-Requested-With': 'XMLHttpRequest',
+          };
+          const access = localStorage.getItem('access') || sessionStorage.getItem('access');
+          if (access) headers['Authorization'] = `Bearer ${access}`;
+          const empresaId =
+            localStorage.getItem('empresa_id') ||
+            localStorage.getItem('empresaId') ||
+            sessionStorage.getItem('empresa_id') ||
+            sessionStorage.getItem('empresaId') ||
+            '1';
+          const filialId =
+            localStorage.getItem('filial_id') ||
+            localStorage.getItem('filialId') ||
+            sessionStorage.getItem('filial_id') ||
+            sessionStorage.getItem('filialId') ||
+            '1';
+          if (empresaId) headers['X-Empresa'] = String(empresaId);
+          if (filialId) headers['X-Filial'] = String(filialId);
+
+          const resp = await fetch(cadastroRapidoProdutoUrl, {
+            method: 'POST',
+            headers,
+            credentials: 'same-origin',
+            body: JSON.stringify(payload),
+          });
+          const rawText = await resp.text();
+          let json = {};
+          try { json = rawText ? JSON.parse(rawText) : {}; } catch (e) { json = {}; }
+          if (!resp.ok) {
+            const msg = (json && (json.detail || json.prod_nome || json.non_field_errors))
+              ? (json.detail ? String(json.detail) : JSON.stringify(json))
+              : (rawText || `Falha ao cadastrar produto (HTTP ${resp.status})`);
+            setProdutoRapidoStatus(msg);
+            return;
+          }
+
+          const prodCodi = json.prod_codi || json.prod_codi_nume;
+          const prodNome = json.prod_nome || nome;
+          if (!prodCodi) {
+            setProdutoRapidoStatus('Produto criado, mas sem código retornado.');
+            return;
+          }
+
+          const idx = produtoRapidoIndex;
+          const prodHidden = document.getElementById(`id_form-${idx}-iped_prod`);
+          const unitEl = document.getElementById(`id_form-${idx}-iped_unit`);
+          const loteEl = document.getElementById(`id_form-${idx}-iped_lote_vend`);
+          const row = prodHidden ? prodHidden.closest('tr') : null;
+          const inputEl = row ? row.querySelector('.autocomplete-prod') : null;
+
+          if (prodHidden) prodHidden.value = String(prodCodi);
+          if (inputEl) inputEl.value = `${prodCodi} - ${prodNome}`;
+          if (loteEl) loteEl.value = '';
+          if (row) row.dataset.loteModo = '';
+          atualizarLoteDisplay(idx);
+
+          try {
+            const tipo = $('#id_pedi_fina').val();
+            const precoResp = await fetch(`${precoUrl}?prod_codi=${encodeURIComponent(prodCodi)}&pedi_fina=${encodeURIComponent(tipo)}`, { credentials: 'same-origin' });
+            const precoJson = await precoResp.json();
+            if (unitEl && precoJson && typeof precoJson.unit_price !== 'undefined') {
+              unitEl.value = Number(precoJson.unit_price || 0).toFixed(2);
+            }
+          } catch (e) { }
+
+          updateTotals();
+
+          if (produtoRapidoModal) produtoRapidoModal.hide();
+          try {
+            await abrirModalLotes(idx, prodCodi, `${prodCodi} - ${prodNome}`);
+          } catch (e) { }
+        } catch (e) {
+          setProdutoRapidoStatus('Falha ao cadastrar produto.');
+        }
+      });
+    }
+
+    const lookupModalEl = document.getElementById('entidadeLookupModal');
+    const lookupModal = (lookupModalEl && window.bootstrap && window.bootstrap.Modal) ? new window.bootstrap.Modal(lookupModalEl) : null;
+    const lookupTitleEl = document.getElementById('entidadeLookupTitle');
+    const lookupTermEl = document.getElementById('entidadeLookupTerm');
+    const lookupBodyEl = document.getElementById('entidadeLookupBody');
+    const lookupStatusEl = document.getElementById('entidadeLookupStatus');
+    const lookupLimparEl = document.getElementById('entidadeLookupLimpar');
+
+    let lookupCfg = null;
+    let lookupDebounce = null;
+    let lookupController = null;
+
+    function setLookupStatus(text) {
+      if (lookupStatusEl) lookupStatusEl.textContent = text || '';
+    }
+
+    function renderLookupRows(results) {
+      if (!lookupBodyEl) return;
+      lookupBodyEl.innerHTML = '';
+      (results || []).forEach(item => {
+        const parts = String(item.text || '').split(' - ');
+        const codigo = parts[0] || item.id;
+        const nome = parts.slice(1).join(' - ') || item.text || '';
+        const tr = document.createElement('tr');
+        const tdCodigo = document.createElement('td');
+        tdCodigo.className = 'fw-semibold';
+        tdCodigo.textContent = codigo;
+        const tdNome = document.createElement('td');
+        tdNome.textContent = nome;
+        const tdAcao = document.createElement('td');
+        tdAcao.className = 'text-end';
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-outline-primary btn-sm';
+        btn.textContent = 'Selecionar';
+        tdAcao.appendChild(btn);
+        tr.appendChild(tdCodigo);
+        tr.appendChild(tdNome);
+        tr.appendChild(tdAcao);
+        if (btn) {
+          btn.addEventListener('click', () => {
+            const hiddenEl = document.getElementById(lookupCfg.hiddenId);
+            const inputEl = document.getElementById(lookupCfg.inputId);
+            const labelEl = document.getElementById(lookupCfg.labelId);
+            if (hiddenEl) hiddenEl.value = item.id;
+            if (inputEl) inputEl.value = item.text;
+            if (labelEl) labelEl.textContent = `Selecionado: ${item.text}`;
+            setLookupStatus('');
+            if (lookupModal) lookupModal.hide();
+          });
+        }
+        lookupBodyEl.appendChild(tr);
+      });
+      if (!results || results.length === 0) {
+        lookupBodyEl.innerHTML = `<tr><td colspan="3" class="text-center text-muted">Nenhum resultado</td></tr>`;
+      }
+    }
+
+    async function fetchLookup(term) {
+      try {
+        if (!lookupCfg) return;
+        if (lookupController) lookupController.abort();
+        lookupController = new AbortController();
+        setLookupStatus('Carregando...');
+        const url = `${buscaEntidadesUrl}?tipo=${encodeURIComponent(lookupCfg.tipo)}&term=${encodeURIComponent(term || '')}&limit=200`;
+        const resp = await fetch(url, { signal: lookupController.signal, credentials: 'same-origin' });
+        const json = await resp.json();
+        const results = json.results || [];
+        renderLookupRows(results);
+        setLookupStatus(`Resultados: ${results.length}`);
+      } catch (e) {
+        if (e && e.name === 'AbortError') return;
+        setLookupStatus('Falha ao carregar resultados');
+      }
+    }
+
+    function openLookupFromButton(btn) {
+      const tipo = btn.getAttribute('data-lookup-tipo') || 'entidade';
+      const hiddenId = btn.getAttribute('data-lookup-hidden');
+      const inputId = btn.getAttribute('data-lookup-input');
+      const labelId = btn.getAttribute('data-lookup-label');
+      lookupCfg = { tipo, hiddenId, inputId, labelId };
+      if (lookupTitleEl) {
+        lookupTitleEl.textContent = (tipo === 'vendedor') ? 'Buscar vendedor' : (tipo === 'cliente' ? 'Buscar cliente' : 'Buscar entidade');
+      }
+      if (lookupTermEl) lookupTermEl.value = '';
+      renderLookupRows([]);
+      setLookupStatus('');
+      if (lookupModal) lookupModal.show();
+      fetchLookup('');
+      if (lookupTermEl) lookupTermEl.focus();
+    }
+
+    document.querySelectorAll('.js-lookup-entidade').forEach(btn => {
+      btn.addEventListener('click', () => openLookupFromButton(btn));
+    });
+
+    if (lookupTermEl) {
+      lookupTermEl.addEventListener('input', () => {
+        clearTimeout(lookupDebounce);
+        const term = lookupTermEl.value.trim();
+        lookupDebounce = setTimeout(() => fetchLookup(term), 250);
+      });
+    }
+
+    if (lookupLimparEl) {
+      lookupLimparEl.addEventListener('click', () => {
+        if (lookupTermEl) lookupTermEl.value = '';
+        fetchLookup('');
+      });
+    }
 
     // Rebinding é feito diretamente após inserir a nova linha (ver handler do botão)
 
