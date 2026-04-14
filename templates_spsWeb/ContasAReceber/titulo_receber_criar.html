@@ -6,8 +6,122 @@
 <link rel="stylesheet" href="{% static 'css/form.css' %}">
 
 <style>
+  /* ── Confirm Toast Customizado ─────────────────────────────── */
+  #confirm-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(3px);
+    z-index: 1090;
+    align-items: center;
+    justify-content: center;
+  }
+  #confirm-overlay.show {
+    display: flex;
+    animation: overlayIn 180ms ease forwards;
+  }
+  @keyframes overlayIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
 
+  #confirm-box {
+    background: #1a1d23;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 28px 32px 24px;
+    max-width: 420px;
+    width: calc(100% - 32px);
+    box-shadow: 0 24px 64px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,165,0,0.12);
+    animation: boxIn 220ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+  @keyframes boxIn {
+    from { transform: scale(0.88) translateY(16px); opacity: 0; }
+    to   { transform: scale(1) translateY(0);       opacity: 1; }
+  }
+
+  #confirm-box .confirm-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255, 165, 0, 0.12);
+    margin-bottom: 16px;
+    font-size: 1.4rem;
+    color: #ffaa00;
+  }
+
+  #confirm-box h6 {
+    color: #f0f0f0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+    letter-spacing: 0.01em;
+  }
+
+  #confirm-avisos {
+    font-size: 0.82rem;
+    color: #aab0bb;
+    line-height: 1.7;
+    margin-bottom: 20px;
+    padding: 10px 12px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 7px;
+    border-left: 3px solid #ffaa00;
+  }
+
+  #confirm-box .btn-confirm-cancel {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.10);
+    color: #ccc;
+    border-radius: 7px;
+    font-size: 0.83rem;
+    padding: 7px 18px;
+    transition: background 150ms, color 150ms;
+  }
+  #confirm-box .btn-confirm-cancel:hover {
+    background: rgba(255,255,255,0.11);
+    color: #fff;
+  }
+
+  #confirm-box .btn-confirm-ok {
+    background: linear-gradient(135deg, #e67e00, #ffaa00);
+    border: none;
+    color: #111;
+    border-radius: 7px;
+    font-size: 0.83rem;
+    font-weight: 700;
+    padding: 7px 22px;
+    transition: opacity 150ms, transform 100ms;
+  }
+  #confirm-box .btn-confirm-ok:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+  #confirm-box .btn-confirm-ok:active {
+    transform: translateY(0);
+  }
 </style>
+
+<!-- ── Confirm Overlay ──────────────────────────────────────── -->
+<div id="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+  <div id="confirm-box">
+    <div class="confirm-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
+    <h6 id="confirm-title">Atenção — verifique as datas</h6>
+    <div id="confirm-avisos"></div>
+    <div class="d-flex gap-2 justify-content-end">
+      <button type="button" class="btn btn-confirm-cancel" id="confirm-btn-cancel">
+        <i class="bi bi-arrow-left me-1"></i> Corrigir
+      </button>
+      <button type="button" class="btn btn-confirm-ok" id="confirm-btn-ok">
+        Salvar mesmo assim <i class="bi bi-check2 ms-1"></i>
+      </button>
+    </div>
+  </div>
+</div>
 
 <div class="container py-4">
   {% include 'ContasAReceber/partials/messages.html' %}
@@ -182,69 +296,48 @@
   </div>
 </div>
 
-<div aria-live="polite" aria-atomic="true" class="position-fixed top-0 end-0 p-3" style="z-index: 1080">
-  <div id="toast-validacao-datas" class="toast text-bg-warning border-0" role="alert" aria-live="assertive" aria-atomic="true">
-    <div class="d-flex">
-      <div class="toast-body" id="toast-validacao-datas-body"></div>
-      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-    </div>
-  </div>
-</div>
-
 <script>
   const slugTpl = '{{ slug|default:"" }}';
   const slug = slugTpl || (function () {
     try {
       const p = location.pathname.split('/');
-      return p.length > 2 ? p[2] : ''
-    } catch (e) {
-      return ''
-    }
+      return p.length > 2 ? p[2] : '';
+    } catch (e) { return ''; }
   })();
 
-  const input = document.getElementById('autocomplete-cliente');
+  /* ── Autocomplete: Cliente ──────────────────────────────── */
+  const input  = document.getElementById('autocomplete-cliente');
   const hidden = document.getElementById('{{ form.titu_clie.id_for_label }}');
 
   if (input && hidden) {
-    let controller = null;
-    let dd = null;
+    let controller = null, dd = null;
 
     function dropdown() {
       if (dd) return dd;
       dd = document.createElement('div');
       dd.className = 'list-group position-absolute w-100';
-      dd.style.marginTop = '4px';
+      dd.style.cssText = 'margin-top:4px;z-index:1070;';
       input.parentElement.appendChild(dd);
       return dd;
     }
 
     input.addEventListener('input', async function () {
       const term = this.value.trim();
-      if (term.length < 2) {
-        if (dd) dd.innerHTML = '';
-        return;
-      }
-
+      if (term.length < 2) { if (dd) dd.innerHTML = ''; return; }
       try {
         if (controller) controller.abort();
         controller = new AbortController();
-
-        const r = await fetch(`/web/${slug}/contas-a-receber/autocomplete/clientes/?q=${encodeURIComponent(term)}`, {
-          signal: controller.signal
-        });
+        const r = await fetch(`/web/${slug}/contas-a-receber/autocomplete/clientes/?q=${encodeURIComponent(term)}`, { signal: controller.signal });
         const j = await r.json();
         const results = j.results || [];
         const d = dropdown();
         d.innerHTML = '';
-
-        if (results.length === 0) {
-          const empty = document.createElement('div');
-          empty.className = 'list-group-item text-muted';
-          empty.textContent = 'Nenhum cliente encontrado';
-          d.appendChild(empty);
-          return;
+        if (!results.length) {
+          const el = document.createElement('div');
+          el.className = 'list-group-item text-muted';
+          el.textContent = 'Nenhum cliente encontrado';
+          d.appendChild(el); return;
         }
-
         results.forEach(it => {
           const a = document.createElement('a');
           a.href = '#';
@@ -253,68 +346,50 @@
           a.addEventListener('click', ev => {
             ev.preventDefault();
             hidden.value = it.id || '';
-            input.value = it.text || it.id || '';
-            d.innerHTML = '';
+            input.value  = it.text || it.id || '';
+            d.innerHTML  = '';
           });
           d.appendChild(a);
         });
-      } catch (e) {
-        if (e.name !== 'AbortError') {
-          console.error('Erro ao buscar clientes:', e);
-        }
-      }
+      } catch (e) { if (e.name !== 'AbortError') console.error('Erro ao buscar clientes:', e); }
     });
 
-    document.addEventListener('click', e => {
-      if (dd && !input.parentElement.contains(e.target)) {
-        dd.innerHTML = '';
-      }
-    });
+    document.addEventListener('click', e => { if (dd && !input.parentElement.contains(e.target)) dd.innerHTML = ''; });
   }
 
-  const inputCC = document.getElementById('autocomplete-cecu');
+  /* ── Autocomplete: Centro de Custo ─────────────────────── */
+  const inputCC  = document.getElementById('autocomplete-cecu');
   const hiddenCC = document.getElementById('{{ form.titu_cecu.id_for_label }}');
 
   if (inputCC && hiddenCC) {
-    let controllerCC = null;
-    let ddCC = null;
+    let controllerCC = null, ddCC = null;
 
     function dropdownCC() {
       if (ddCC) return ddCC;
       ddCC = document.createElement('div');
       ddCC.className = 'list-group position-absolute w-100';
-      ddCC.style.marginTop = '4px';
+      ddCC.style.cssText = 'margin-top:4px;z-index:1070;';
       inputCC.parentElement.appendChild(ddCC);
       return ddCC;
     }
 
     inputCC.addEventListener('input', async function () {
       const term = this.value.trim();
-      if (term.length < 2) {
-        if (ddCC) ddCC.innerHTML = '';
-        return;
-      }
-
+      if (term.length < 2) { if (ddCC) ddCC.innerHTML = ''; return; }
       try {
         if (controllerCC) controllerCC.abort();
         controllerCC = new AbortController();
-
-        const r = await fetch(`/web/${slug}/contas-a-receber/autocomplete/centrodecustos/?q=${encodeURIComponent(term)}`, {
-          signal: controllerCC.signal
-        });
+        const r = await fetch(`/web/${slug}/contas-a-receber/autocomplete/centrodecustos/?q=${encodeURIComponent(term)}`, { signal: controllerCC.signal });
         const j = await r.json();
         const results = j.results || [];
         const d = dropdownCC();
         d.innerHTML = '';
-
-        if (results.length === 0) {
-          const empty = document.createElement('div');
-          empty.className = 'list-group-item text-muted';
-          empty.textContent = 'Nenhum centro de custo encontrado';
-          d.appendChild(empty);
-          return;
+        if (!results.length) {
+          const el = document.createElement('div');
+          el.className = 'list-group-item text-muted';
+          el.textContent = 'Nenhum centro de custo encontrado';
+          d.appendChild(el); return;
         }
-
         results.forEach(it => {
           const a = document.createElement('a');
           a.href = '#';
@@ -323,33 +398,28 @@
           a.addEventListener('click', ev => {
             ev.preventDefault();
             hiddenCC.value = it.value || '';
-            inputCC.value = it.label || it.value || '';
-            d.innerHTML = '';
+            inputCC.value  = it.label || it.value || '';
+            d.innerHTML    = '';
           });
           d.appendChild(a);
         });
-      } catch (e) {
-        if (e.name !== 'AbortError') {
-          console.error('Erro ao buscar centros de custo:', e);
-        }
-      }
+      } catch (e) { if (e.name !== 'AbortError') console.error('Erro ao buscar centros de custo:', e); }
     });
 
-    document.addEventListener('click', e => {
-      if (ddCC && !inputCC.parentElement.contains(e.target)) {
-        ddCC.innerHTML = '';
-      }
-    });
+    document.addEventListener('click', e => { if (ddCC && !inputCC.parentElement.contains(e.target)) ddCC.innerHTML = ''; });
   }
 
+  /* ── Validação de Datas com Confirm Overlay ─────────────── */
   (function () {
-    const form = document.getElementById('titulo-receber-form');
-    const inputEmissao = document.getElementById('{{ form.titu_emis.id_for_label }}');
-    const inputVencimento = document.getElementById('{{ form.titu_venc.id_for_label }}');
-    const toastElement = document.getElementById('toast-validacao-datas');
-    const toastBody = document.getElementById('toast-validacao-datas-body');
+    const form           = document.getElementById('titulo-receber-form');
+    const inputEmissao   = document.getElementById('{{ form.titu_emis.id_for_label }}');
+    const inputVencimento= document.getElementById('{{ form.titu_venc.id_for_label }}');
+    const overlay        = document.getElementById('confirm-overlay');
+    const avisosEl       = document.getElementById('confirm-avisos');
+    const btnOk          = document.getElementById('confirm-btn-ok');
+    const btnCancel      = document.getElementById('confirm-btn-cancel');
 
-    if (!form || !inputEmissao || !inputVencimento || !toastElement || !toastBody || typeof bootstrap === 'undefined') return;
+    if (!form || !inputEmissao || !inputVencimento || !overlay) return;
 
     function parseLocalDate(value) {
       if (!value) return null;
@@ -365,38 +435,62 @@
       return date;
     }
 
+    function fecharOverlay() {
+      overlay.classList.remove('show');
+    }
+
     let confirmouEnvio = false;
 
     form.addEventListener('submit', function (event) {
       if (confirmouEnvio) return;
 
-      const emissao = normalizar(parseLocalDate(inputEmissao.value));
+      const emissao    = normalizar(parseLocalDate(inputEmissao.value));
       const vencimento = normalizar(parseLocalDate(inputVencimento.value));
-      const hoje = normalizar(new Date());
-      const avisos = [];
+      const hoje       = normalizar(new Date());
+      const avisos     = [];
 
-      if (emissao && emissao < hoje) avisos.push('Data de emissão anterior à data atual.');
-      if (vencimento && vencimento < hoje) avisos.push('Data de vencimento anterior à data atual.');
-      if (emissao && vencimento && vencimento < emissao) avisos.push('Data de emissão maior que vencimento');
+      if (emissao    && emissao    < hoje)    avisos.push('Data de emissão anterior à data atual.');
+      if (vencimento && vencimento < hoje)    avisos.push('Data de vencimento anterior à data atual.');
+      if (emissao && vencimento && vencimento < emissao) avisos.push('Data de vencimento menor que a data de emissão.');
 
       if (!avisos.length) return;
 
       event.preventDefault();
-      toastBody.innerHTML = avisos.map(a => `• ${a}`).join('<br>');
-      bootstrap.Toast.getOrCreateInstance(toastElement, { delay: 8000 }).show();
 
-      const desejaContinuar = window.confirm(`${avisos.join('\n')}\n\nDeseja continuar?`);
-      if (desejaContinuar) {
-        confirmouEnvio = true;
-        form.requestSubmit ? form.requestSubmit() : form.submit();
-        return;
-      }
+      avisosEl.innerHTML = avisos.map(a => `• ${a}`).join('<br>');
+      overlay.classList.add('show');
 
+      // Foca no botão "Corrigir" por acessibilidade
+      btnCancel.focus();
+    });
+
+    btnOk.addEventListener('click', function () {
+      fecharOverlay();
+      confirmouEnvio = true;
+      form.requestSubmit ? form.requestSubmit() : form.submit();
+    });
+
+    btnCancel.addEventListener('click', function () {
+      fecharOverlay();
+      // Foca no campo mais crítico se vencimento < emissão
+      const emissao    = normalizar(parseLocalDate(inputEmissao.value));
+      const vencimento = normalizar(parseLocalDate(inputVencimento.value));
       if (emissao && vencimento && vencimento < emissao) {
         inputVencimento.focus();
       }
     });
-  })();
 
+    // Fecha com Escape
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && overlay.classList.contains('show')) {
+        fecharOverlay();
+      }
+    });
+
+    // Fecha clicando fora do box
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay) fecharOverlay();
+    });
+  })();
 </script>
 {% endblock %}
