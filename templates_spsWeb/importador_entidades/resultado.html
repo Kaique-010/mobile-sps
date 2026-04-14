@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container my-4">
+  <h3 class="text-center">Resultado da Importação de Entidades</h3>
+  <p class="text-center">Criadas: {{ resultado.criadas }}</p>
+  <p class="text-center">Atualizadas: {{ resultado.atualizadas }}</p>
+
+  {% if resultado.erros %}
+  <h4>Erros</h4>
+  <ul>{% for erro in resultado.erros %}<li>{{ erro }}</li>{% endfor %}</ul>
+  {% endif %}
+
+  <a href="/web/{{ slug }}/importador/entidades/" class="btn btn-outline-primary w-100">Nova Importação</a>
+</div>
+{% endblock %}
