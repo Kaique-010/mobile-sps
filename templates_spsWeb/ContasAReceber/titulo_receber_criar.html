@@ -182,6 +182,15 @@
   </div>
 </div>
 
+<div aria-live="polite" aria-atomic="true" class="position-fixed top-0 end-0 p-3" style="z-index: 1080">
+  <div id="toast-validacao-datas" class="toast text-bg-warning border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body" id="toast-validacao-datas-body"></div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>
+</div>
+
 <script>
   const slugTpl = '{{ slug|default:"" }}';
   const slug = slugTpl || (function () {
@@ -332,5 +341,62 @@
       }
     });
   }
+
+  (function () {
+    const form = document.getElementById('titulo-receber-form');
+    const inputEmissao = document.getElementById('{{ form.titu_emis.id_for_label }}');
+    const inputVencimento = document.getElementById('{{ form.titu_venc.id_for_label }}');
+    const toastElement = document.getElementById('toast-validacao-datas');
+    const toastBody = document.getElementById('toast-validacao-datas-body');
+
+    if (!form || !inputEmissao || !inputVencimento || !toastElement || !toastBody || typeof bootstrap === 'undefined') return;
+
+    function parseLocalDate(value) {
+      if (!value) return null;
+      const parts = value.split('-');
+      if (parts.length !== 3) return null;
+      const [y, m, d] = parts.map(Number);
+      return new Date(y, m - 1, d);
+    }
+
+    function normalizar(date) {
+      if (!date) return null;
+      date.setHours(0, 0, 0, 0);
+      return date;
+    }
+
+    let confirmouEnvio = false;
+
+    form.addEventListener('submit', function (event) {
+      if (confirmouEnvio) return;
+
+      const emissao = normalizar(parseLocalDate(inputEmissao.value));
+      const vencimento = normalizar(parseLocalDate(inputVencimento.value));
+      const hoje = normalizar(new Date());
+      const avisos = [];
+
+      if (emissao && emissao < hoje) avisos.push('Data de emissão anterior à data atual.');
+      if (vencimento && vencimento < hoje) avisos.push('Data de vencimento anterior à data atual.');
+      if (emissao && vencimento && vencimento < emissao) avisos.push('Data de emissão maior que vencimento');
+
+      if (!avisos.length) return;
+
+      event.preventDefault();
+      toastBody.innerHTML = avisos.map(a => `• ${a}`).join('<br>');
+      bootstrap.Toast.getOrCreateInstance(toastElement, { delay: 8000 }).show();
+
+      const desejaContinuar = window.confirm(`${avisos.join('\n')}\n\nDeseja continuar?`);
+      if (desejaContinuar) {
+        confirmouEnvio = true;
+        form.requestSubmit ? form.requestSubmit() : form.submit();
+        return;
+      }
+
+      if (emissao && vencimento && vencimento < emissao) {
+        inputVencimento.focus();
+      }
+    });
+  })();
+
 </script>
 {% endblock %}
