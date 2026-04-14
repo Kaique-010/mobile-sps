@@ -1,9 +1,11 @@
 from django.views.generic import UpdateView
 from django.shortcuts import redirect
+from django.contrib import messages
 from core.utils import get_licenca_db_config
 from ..mixin import DBAndSlugMixin
 from ..forms import TitulosReceberForm
 from ...models import Titulosreceber
+from ...validators import validar_datas_titulo
 
 
 class TitulosReceberUpdateView(DBAndSlugMixin, UpdateView):
@@ -64,6 +66,13 @@ class TitulosReceberUpdateView(DBAndSlugMixin, UpdateView):
                 dados['titu_fili'] = int(fil)
             except Exception:
                 dados['titu_fili'] = fil
+
+        avisos = validar_datas_titulo(
+            titu_emis=dados.get('titu_emis'),
+            titu_venc=dados.get('titu_venc'),
+        )
+        for aviso in avisos:
+            messages.warning(self.request, aviso)
 
         from ...services import atualizar_titulo_receber
         atualizar_titulo_receber(obj, banco=banco, dados=dados)

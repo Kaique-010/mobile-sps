@@ -1,9 +1,11 @@
 from django.views.generic import UpdateView
 from django.shortcuts import redirect
+from django.contrib import messages
 from core.utils import get_licenca_db_config
 from ..mixin import DBAndSlugMixin
 from ..forms import TitulosPagarForm
 from ...models import Titulospagar
+from ...validators import validar_datas_titulo
 
 
 class TitulosPagarUpdateView(DBAndSlugMixin, UpdateView):
@@ -26,6 +28,13 @@ class TitulosPagarUpdateView(DBAndSlugMixin, UpdateView):
         banco = get_licenca_db_config(self.request) or 'default'
         obj = self.get_object()
         dados = form.cleaned_data
+        avisos = validar_datas_titulo(
+            titu_emis=dados.get('titu_emis'),
+            titu_venc=dados.get('titu_venc'),
+        )
+        for aviso in avisos:
+            messages.warning(self.request, aviso)
+
         from ...services import atualizar_titulo_pagar
         atualizar_titulo_pagar(obj, banco=banco, dados=dados)
         return redirect('contas_a_pagar_web:titulos_pagar_list', slug=self.slug)
