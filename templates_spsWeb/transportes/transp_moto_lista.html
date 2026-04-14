@@ -1,9 +1,9 @@
-{% extends 'base.html' %}
+{% extends 'transportes/base_cte.html' %}
 {% load static %}
 {% block title %}Lista de Transportadoras e Motoristas
 {% endblock %}
 
-{% block content %}
+{% block cte_content %}
 <style>
     .stat-card {
         display: flex;
@@ -100,6 +100,24 @@
                         </div>
                     </div>
                 </div>
+                <div class="col-12 col-md-2">
+                    <div class="stat-card stat-total">
+                        <div class="stat-icon"><i class="bi bi-exclamation-triangle"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Docs Vencendo</span>
+                            <span class="stat-value">{{ painel_alertas_documentos.vencendo|default:"0" }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-2">
+                    <div class="stat-card stat-transp">
+                        <div class="stat-icon"><i class="bi bi-x-octagon"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Docs Vencidos</span>
+                            <span class="stat-value">{{ painel_alertas_documentos.vencidos|default:"0" }}</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         <a href="#" class="btn btn-success disabled" id="btn-novo-transadora" tabindex="-1" aria-disabled="true">
@@ -168,6 +186,11 @@
                             {% if ent.enti_fant %}
                             <p class="text-body-secondary mb-0">{{ ent.enti_fant }}</p>
                             {% endif %}
+                            <div class="mt-3">
+                                <a href="{% url 'transportes:transportadoras_motoristas_editar' slug=slug enti_clie=ent.enti_clie %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-pencil"></i> Editar
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>

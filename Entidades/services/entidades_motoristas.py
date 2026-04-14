@@ -46,7 +46,7 @@ class EntidadeMotoristaServico:
             filial=filial_id,
             entidade=entidade.enti_clie,
             defaults={
-                "ativo": True,
+                "status": "ATV",
             }
         )
 
