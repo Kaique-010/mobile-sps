@@ -7,9 +7,8 @@ from transportes.Web.Views.VeiculosUpdate import VeiculosUpdateView
 from transportes.Web.Views.VeiculosDelete import VeiculosDeleteView
 from transportes.Rest.Views.autocompletes import autocomplete_transportadoras, autocomplete_marcas, autocomplete_centrodecustos, autocomplete_entidades, autocomplete_veiculos, get_entidade_detalhes
 from transportes.Web.Views.TranspMotoList import TranspMotoListView
-#from transportes.Web.Views.TranspMotoCreate import TranspMotoCreateView
-#from transportes.Web.Views.TranspMotoUpdate import TranspMotoUpdateView
-#from transportes.Web.Views.TranspMotoDelete import TranspMotoDeleteView
+from transportes.Web.Views.TranspMotoUpdate import TranspMotoUpdateView
+from transportes.Rest.Views.transp_moto import TranspMotoListApiView, TranspMotoUpdateApiView
 
 
 
@@ -24,9 +23,9 @@ urlpatterns = [
     
     # Transportadoras Motos
     path('transportadoras_motoristas/', TranspMotoListView.as_view(), name='transportadoras_motoristas_lista'),
-    #path('transportadoras_motoristas/novo/', TranspMotoCreateView.as_view(), name='transportadoras_motoristas_novo'),
-    #path('transportadoras_motoristas/<int:tran>/<int:sequ>/editar/', TranspMotoUpdateView.as_view(), name='transportadoras_motoristas_editar'),
-    #path('transportadoras_motoristas/<int:tran>/<int:sequ>/excluir/', TranspMotoDeleteView.as_view(), name='transportadoras_motoristas_deletar'),
+    path('transportadoras_motoristas/<int:enti_clie>/editar/', TranspMotoUpdateView.as_view(), name='transportadoras_motoristas_editar'),
+    path('api/transportadoras_motoristas/', TranspMotoListApiView.as_view(), name='transportadoras_motoristas_api_lista'),
+    path('api/transportadoras_motoristas/<int:enti_clie>/', TranspMotoUpdateApiView.as_view(), name='transportadoras_motoristas_api_editar'),
 
 
 

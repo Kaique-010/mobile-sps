@@ -1,0 +1,94 @@
+{% extends 'transportes/base_cte.html' %}
+
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block cte_content %}
+<div class="container-fluid">
+  <form method="post">
+    {% csrf_token %}
+    <div class="card shadow-sm">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">{{ titulo }}</h5>
+        <a href="{% url 'transportes:transportadoras_motoristas_lista' slug=slug %}" class="btn btn-outline-secondary btn-sm">Voltar</a>
+      </div>
+
+      <div class="card-body">
+        <ul class="nav nav-tabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#aba-entidade" type="button" role="tab">Cadastro</button>
+          </li>
+          {% if is_motorista %}
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#aba-motorista" type="button" role="tab">Motorista</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#aba-documentos" type="button" role="tab">Documentos/Anexos</button>
+          </li>
+          {% endif %}
+        </ul>
+
+        <div class="tab-content pt-3">
+          <div class="tab-pane fade show active" id="aba-entidade" role="tabpanel">
+            <div class="row g-3">
+              {% for field in form %}
+                <div class="col-md-4">
+                  <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                  {{ field }}
+                  {% if field.errors %}<div class="text-danger small">{{ field.errors|join:', ' }}</div>{% endif %}
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          {% if is_motorista %}
+          <div class="tab-pane fade" id="aba-motorista" role="tabpanel">
+            <h6 class="mb-3">Status</h6>
+            <div class="row g-3 mb-4">
+              {% for field in motorista_form %}
+                <div class="col-md-4">
+                  <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                  {{ field }}
+                  {% if field.errors %}<div class="text-danger small">{{ field.errors|join:', ' }}</div>{% endif %}
+                </div>
+              {% endfor %}
+            </div>
+
+            <h6 class="mb-3">Dados complementares</h6>
+            <div class="row g-3">
+              {% for field in dados_form %}
+                <div class="col-md-4">
+                  <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                  {{ field }}
+                  {% if field.errors %}<div class="text-danger small">{{ field.errors|join:', ' }}</div>{% endif %}
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="tab-pane fade" id="aba-documentos" role="tabpanel">
+            {{ documentos_formset.management_form }}
+            {% for doc_form in documentos_formset %}
+              <div class="border rounded p-3 mb-3">
+                <div class="row g-3">
+                  {% for field in doc_form.visible_fields %}
+                    <div class="col-md-4">
+                      <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                      {{ field }}
+                      {% if field.errors %}<div class="text-danger small">{{ field.errors|join:', ' }}</div>{% endif %}
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card-footer text-end">
+        <button class="btn btn-primary" type="submit">Salvar alterações</button>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}
