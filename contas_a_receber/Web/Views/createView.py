@@ -1,9 +1,11 @@
 from django.views.generic import CreateView
 from django.shortcuts import redirect
+from django.contrib import messages
 from core.utils import get_licenca_db_config
 from ..mixin import DBAndSlugMixin
 from ..forms import TitulosReceberForm
 from ...models import Titulosreceber
+from ...validators import validar_datas_titulo
 
 
 class TitulosReceberCreateView(DBAndSlugMixin, CreateView):
@@ -59,6 +61,13 @@ class TitulosReceberCreateView(DBAndSlugMixin, CreateView):
                 dados['titu_fili'] = int(filial)
             except Exception:
                 dados['titu_fili'] = filial
+        avisos = validar_datas_titulo(
+            titu_emis=dados.get('titu_emis'),
+            titu_venc=dados.get('titu_venc'),
+        )
+        for aviso in avisos:
+            messages.warning(self.request, aviso)
+
         from ...services import criar_titulo_receber, gera_parcelas_a_receber
         self.object = criar_titulo_receber(
             banco=banco,
@@ -104,6 +113,13 @@ class TitulosReceberParcelasCreateView(DBAndSlugMixin, CreateView):
                 dados['titu_fili'] = int(filial)
             except Exception:
                 dados['titu_fili'] = filial
+        avisos = validar_datas_titulo(
+            titu_emis=dados.get('titu_emis'),
+            titu_venc=dados.get('titu_venc'),
+        )
+        for aviso in avisos:
+            messages.warning(self.request, aviso)
+
         from ...services import criar_titulo_receber, gera_parcelas_a_receber
         self.object = criar_titulo_receber(
             banco=banco,
