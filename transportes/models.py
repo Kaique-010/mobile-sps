@@ -68,11 +68,22 @@ class Veiculos(models.Model):
         
 
 class MotoristasCadastros(models.Model):
+    STATUS_CHOICES = (
+        ('ATV', 'Ativo'),
+        ('INA', 'Inativo'),
+        ('BLO', 'Bloqueado'),
+    )
+
     id = models.AutoField(primary_key=True)
     empresa = models.IntegerField(db_column='moto_empr')
     filial = models.IntegerField(db_column='moto_fili')
     entidade = models.IntegerField(db_column='moto_enti')
-    ativo = models.BooleanField(db_column='moto_ativo', default=True)
+    status = models.CharField(
+        max_length=3,
+        db_column='moto_stat',
+        choices=STATUS_CHOICES,
+        default='ATV'
+    )
     criado_em = models.DateTimeField(db_column='moto_cria_em', auto_now_add=True)
     atualizado_em = models.DateTimeField(db_column='moto_atual_em', auto_now=True)
 
@@ -82,7 +93,11 @@ class MotoristasCadastros(models.Model):
         unique_together = ('empresa', 'filial', 'entidade')
 
     def __str__(self):
-        return f"Motorista {self.entidade}"
+        return f"Motorista {self.entidade} ({self.get_status_display()})"
+
+    @property
+    def ativo(self):
+        return self.status == 'ATV'
 
 class MotoristaDocumento(models.Model):
     STATUS_CHOICES = (
