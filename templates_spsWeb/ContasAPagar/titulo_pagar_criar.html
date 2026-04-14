@@ -364,7 +364,11 @@
       return date;
     }
 
-    form.addEventListener('submit', function () {
+    let confirmouEnvio = false;
+
+    form.addEventListener('submit', function (event) {
+      if (confirmouEnvio) return;
+
       const emissao = normalizar(parseLocalDate(inputEmissao.value));
       const vencimento = normalizar(parseLocalDate(inputVencimento.value));
       const hoje = normalizar(new Date());
@@ -372,11 +376,23 @@
 
       if (emissao && emissao < hoje) avisos.push('Data de emissão anterior à data atual.');
       if (vencimento && vencimento < hoje) avisos.push('Data de vencimento anterior à data atual.');
-      if (emissao && vencimento && vencimento < emissao) avisos.push('Data de vencimento anterior à data de emissão.');
+      if (emissao && vencimento && vencimento < emissao) avisos.push('Data de emissão maior que vencimento');
 
-      if (avisos.length) {
-        toastBody.innerHTML = avisos.map(a => `• ${a}`).join('<br>');
-        bootstrap.Toast.getOrCreateInstance(toastElement, { delay: 6000 }).show();
+      if (!avisos.length) return;
+
+      event.preventDefault();
+      toastBody.innerHTML = avisos.map(a => `• ${a}`).join('<br>');
+      bootstrap.Toast.getOrCreateInstance(toastElement, { delay: 8000 }).show();
+
+      const desejaContinuar = window.confirm(`${avisos.join('\n')}\n\nDeseja continuar?`);
+      if (desejaContinuar) {
+        confirmouEnvio = true;
+        form.requestSubmit ? form.requestSubmit() : form.submit();
+        return;
+      }
+
+      if (emissao && vencimento && vencimento < emissao) {
+        inputVencimento.focus();
       }
     });
   })();
