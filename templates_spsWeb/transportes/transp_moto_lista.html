@@ -1,0 +1,212 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Lista de Transportadoras e Motoristas
+{% endblock %}
+
+{% block content %}
+<style>
+    .stat-card {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 16px 20px;
+        border-radius: 12px;
+        height: 100%;
+        color: #fff;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.10);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+
+    .stat-total        { background: linear-gradient(135deg, #8389a3, #431a8a); }
+    .stat-ativos       { background: linear-gradient(135deg, #acd4c7, #145843); }
+
+    .stat-transp       { background: linear-gradient(135deg, #dbc9ab, #ffa43c); }
+
+    .stat-icon {
+        font-size: 2rem;
+        opacity: 0.85;
+        flex-shrink: 0;
+    }
+
+    .stat-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .stat-label {
+        font-size: 0.78rem;
+        font-weight: 500;
+        opacity: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .stat-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        line-height: 1.1;
+    }
+    #btn-novo-veiculo {
+        margin-top: 10px;
+        margin-left: auto;
+    }
+    #btn-filtrar-veiculos {
+        margin-top: 10px;
+        margin-left: auto;
+        border-color: #0e5c83;
+    }
+</style>
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
+
+<div class="container page-container">
+    <div class="page-header-custom">
+        <div class="container align-items-center">
+            <h2 class="page-title">
+                <i class="bi bi-truck"></i> Transportadoras e Motoristas
+            </h2>
+        </div>
+
+        <div class="container mt-3">
+            <div class="row g-3 align-items-stretch">
+                <div class="col-12 col-md-2">
+                    <div class="stat-card stat-total">
+                        <div class="stat-icon"><i class="bi bi-truck"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Total Transportadoras e Motoristas</span>
+                            <span class="stat-value">{{ total_transportadoras_motoristas|default:"0" }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-2">
+                    <div class="stat-card stat-transp">
+                        <div class="stat-icon"><i class="bi bi-truck-flatbed"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Total Transportadoras</span>
+                            <span class="stat-value">{{ total_transportadoras|default:"0" }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-2">
+                    <div class="stat-card stat-ativos">
+                        <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Total Motoristas</span>
+                            <span class="stat-value">{{ total_motoristas|default:"0" }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <a href="#" class="btn btn-success disabled" id="btn-novo-transadora" tabindex="-1" aria-disabled="true">
+            <i class="bi bi-plus"></i> Novo (em breve)
+        </a>
+    </div>
+    
+    <div class="card card-corporate mb-3">
+        <div class="card-body">
+            {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="get" class="mb-0">
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <label for="transp_moto_tran" class="form-label">Tipo</label>
+                        <select id="transp_moto_tran" name="transp_moto_tran" class="form-select">
+                            <option value="" {% if not request.GET.transp_moto_tran %}selected{% endif %}>Todos</option>
+                            <option value="T" {% if request.GET.transp_moto_tran == "T" %}selected{% endif %}>Transportadora</option>
+                            <option value="M" {% if request.GET.transp_moto_tran == "M" %}selected{% endif %}>Motorista</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="transp_moto_clie" class="form-label">Código (enti_clie)</label>
+                        <input type="text" id="transp_moto_clie" name="transp_moto_clie" class="form-control"
+                            value="{{ request.GET.transp_moto_clie }}" placeholder="Filtrar por código">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="q" class="form-label">Pesquisa</label>
+                        <input type="text" id="q" name="q" class="form-control"
+                            value="{{ request.GET.q }}" placeholder="Código / Nome">
+                    </div>
+                    <div class="col-12 d-flex align-items-end gap-2">
+                        <button type="submit" class="btn btn-outline-primary w-100" id="btn-filtrar-veiculos">
+                            <i class="bi bi-search"></i> Filtrar
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card card-corporate">
+        <div class="card-body">
+            {% if transp_moto %}
+            <div class="row g-3">
+                {% for ent in transp_moto %}
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="card shadow-sm h-100 entidade-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <h5 class="card-title mb-1">
+                                    {{ ent.enti_clie }} - {{ ent.enti_nome }}
+                                </h5>
+                                <span class="badge text-bg-secondary">
+                                    {% if ent.enti_tien == "T" %}Transportadora{% elif ent.enti_tien == "M" %}Motorista{% else %}{{ ent.enti_tien }}{% endif %}
+                                </span>
+                            </div>
+                            {% if ent.enti_fant %}
+                            <p class="text-body-secondary mb-0">{{ ent.enti_fant }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if is_paginated %}
+            <div class="d-flex justify-content-center mt-4">
+                <ul class="pagination">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.transp_moto_tran %}&transp_moto_tran={{ request.GET.transp_moto_tran }}{% endif %}{% if request.GET.transp_moto_clie %}&transp_moto_clie={{ request.GET.transp_moto_clie }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" class="page-link">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_obj.number }}</span>
+                    </li>
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.transp_moto_tran %}&transp_moto_tran={{ request.GET.transp_moto_tran }}{% endif %}{% if request.GET.transp_moto_clie %}&transp_moto_clie={{ request.GET.transp_moto_clie }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" class="page-link">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-truck fs-1 text-muted mb-3"></i>
+                <p class="text-muted mb-0">Nenhuma transportadora/motorista encontrado com os filtros selecionados.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

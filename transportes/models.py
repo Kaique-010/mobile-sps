@@ -67,7 +67,96 @@ class Veiculos(models.Model):
         unique_together = (('veic_empr', 'veic_tran', 'veic_sequ'),)
         
 
+class MotoristasCadastros(models.Model):
+    id = models.AutoField(primary_key=True)
+    empresa = models.IntegerField(db_column='moto_empr')
+    filial = models.IntegerField(db_column='moto_fili')
+    entidade = models.IntegerField(db_column='moto_enti')
+    ativo = models.BooleanField(db_column='moto_ativo', default=True)
+    criado_em = models.DateTimeField(db_column='moto_cria_em', auto_now_add=True)
+    atualizado_em = models.DateTimeField(db_column='moto_atual_em', auto_now=True)
 
+    class Meta:
+        db_table = 'motoristas'
+        ordering = ('-criado_em',)
+        unique_together = ('empresa', 'filial', 'entidade')
+
+    def __str__(self):
+        return f"Motorista {self.entidade}"
+
+class MotoristaDocumento(models.Model):
+    STATUS_CHOICES = (
+        ('pendente', 'Pendente'),
+        ('valido', 'Válido'),
+        ('vencendo', 'Vencendo'),
+        ('vencido', 'Vencido'),
+    )
+
+    id = models.AutoField(primary_key=True, db_column='moto_docu_id')
+    tipo_doc = models.CharField(max_length=30, db_column='moto_tipo_doc')
+    empresa = models.IntegerField(db_column='moto_empr')
+    filial = models.IntegerField(db_column='moto_fili')
+    entidade = models.IntegerField(db_column='moto_enti')
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pendente',
+        db_column='moto_stat'
+    )
+    numero = models.CharField(max_length=50, blank=True, null=True, db_column='moto_nume')
+    data_emissao = models.DateField(blank=True, null=True, db_column='moto_data_emis')
+    data_validade = models.DateField(blank=True, null=True, db_column='moto_data_val')
+    criado_em = models.DateTimeField(db_column='moto_cria_em', auto_now_add=True)
+    atualizado_em = models.DateTimeField(db_column='moto_atual_em', auto_now=True)
+    alerta_em_dias = models.IntegerField(db_column='moto_alerta_dias', default=30)
+    observacoes = models.TextField(blank=True, null=True, db_column='moto_obse')
+    anexos = models.TextField(blank=True, null=True, db_column='moto_anexos')
+
+    class Meta:
+        db_table = 'motoristas_documentos'
+        ordering = ('-criado_em',)
+
+    def __str__(self):
+        return f"{self.tipo_doc} - {self.entidade}"
+
+
+class TipoDocumentoMotorista(models.Model):
+    id = models.AutoField(primary_key=True)
+    descricao = models.CharField(max_length=100, db_column='tdoc_desc')
+    slug = models.CharField(max_length=30, unique=True, db_column='tdoc_slug')
+    exige_validade = models.BooleanField(default=True, db_column='tdoc_exige_val')
+    alerta_padrao_dias = models.IntegerField(default=30, db_column='tdoc_alerta')
+    ativo = models.BooleanField(default=True, db_column='tdoc_ativo')
+
+    class Meta:
+        db_table = 'tipos_documentos_motoristas'
+        ordering = ('descricao',)
+
+    def __str__(self):
+        return self.descricao
+
+
+class MotoristaDadosComplementares(models.Model):
+    id = models.AutoField(primary_key=True, db_column='mdad_id')
+    empresa = models.IntegerField(db_column='mdad_empr')
+    filial = models.IntegerField(db_column='mdad_fili')
+    entidade = models.IntegerField(db_column='mdad_enti')
+    cnh_numero = models.CharField(max_length=20, blank=True, null=True, db_column='mdad_cnh')
+    cnh_categoria = models.CharField(max_length=5, blank=True, null=True, db_column='mdad_cnh_cat')
+    cnh_validade = models.DateField(blank=True, null=True, db_column='mdad_cnh_val')
+    rg_numero = models.CharField(max_length=20, blank=True, null=True, db_column='mdad_rg')
+    ear = models.BooleanField(default=False, db_column='mdad_ear')
+    ear_validade = models.DateField(blank=True, null=True, db_column='mdad_ear_val')
+    criado_em = models.DateTimeField(db_column='mdad_cria_em', auto_now_add=True)
+    atualizado_em = models.DateTimeField(db_column='mdad_atual_em', auto_now=True)
+
+    class Meta:
+        db_table = 'motoristas_dados_complementares'
+        ordering = ('-criado_em',)
+        unique_together = ('empresa', 'filial', 'entidade')
+
+    def __str__(self):
+        return f"Dados motorista {self.entidade}"
 
 class Cte(models.Model):
     

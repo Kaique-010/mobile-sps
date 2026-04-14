@@ -1,11 +1,15 @@
-# servicos.py
-from django.core.exceptions import ValidationError  
+from django.core.exceptions import ValidationError
+from django.db import transaction
+
 from ..models import Entidades
+from transportes.models import MotoristasCadastros
 from ..utils import buscar_endereco_por_cep, proxima_entidade, gerar_cpf_fake
+
 
 class EntidadeMotoristaServico:
 
     @staticmethod
+    @transaction.atomic
     def cadastrar_motorista(
         *,
         data: dict,
@@ -24,16 +28,29 @@ class EntidadeMotoristaServico:
         if not endereco:
             raise ValidationError("CEP inválido ou não encontrado")
 
-        proximo_clie = proxima_entidade(empresa_id, filial_id, banco)
+        proximo_motorista = proxima_entidade(empresa_id, filial_id, banco)
 
-        return Entidades.objects.using(banco).create(
+        entidade = Entidades.objects.using(banco).create(
             enti_nome=data["enti_nome"],
-            enti_fant=data["enti_nome"],
-            enti_clie=proximo_clie,
+            enti_fant=data.get("enti_fant") or data["enti_nome"],
+            enti_clie=proximo_motorista,
             enti_cep=cep,
-            enti_cpf=gerar_cpf_fake() if not data.get("enti_cpf") else data["enti_cpf"],
-            enti_tipo_enti="FU",
-            enti_tien= 'M',
+            enti_cpf=data.get("enti_cpf") or gerar_cpf_fake(),
+            enti_tipo_enti="M",
             enti_empr=empresa_id,
+            enti_fili=filial_id,
         )
-        
+
+        motorista, _ = MotoristasCadastros.objects.using(banco).update_or_create(
+            empresa=empresa_id,
+            filial=filial_id,
+            entidade=entidade.enti_clie,
+            defaults={
+                "ativo": True,
+            }
+        )
+
+        return {
+            "entidade": entidade,
+            "motorista": motorista,
+        }

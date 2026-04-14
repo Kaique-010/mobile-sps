@@ -76,9 +76,13 @@
                     class="{% if request.resolver_match.url_name == 'mdfe_create' %}active{% endif %}">
                     <i class="fas fa-plus"></i> Novo MDF-e
                 </a>
-                 <a href="/web/login/transportes/veiculos/"
-                    class="{% if request.resolver_match.url_name == 'veiculos_list' %}active{% endif %}">
+                <a href="{% url 'transportes:veiculos_lista' slug=slug %}"
+                    class="{% if request.resolver_match.url_name == 'veiculos_lista' %}active{% endif %}">
                     <i class="fas fa-list"></i> Listagem de Veículos
+                </a>
+                <a href="{% url 'transportes:transportadoras_motoristas_lista' slug=slug %}"
+                    class="{% if request.resolver_match.url_name == 'transportadoras_motoristas_lista' %}active{% endif %}">
+                    <i class="fas fa-list"></i> Listagem de Transportadoras e Motoristas
                 </a>
             </div>
 

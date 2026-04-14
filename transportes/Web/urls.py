@@ -6,6 +6,10 @@ from transportes.Web.Views.VeiculosCreate import VeiculosCreateView
 from transportes.Web.Views.VeiculosUpdate import VeiculosUpdateView
 from transportes.Web.Views.VeiculosDelete import VeiculosDeleteView
 from transportes.Rest.Views.autocompletes import autocomplete_transportadoras, autocomplete_marcas, autocomplete_centrodecustos, autocomplete_entidades, autocomplete_veiculos, get_entidade_detalhes
+from transportes.Web.Views.TranspMotoList import TranspMotoListView
+#from transportes.Web.Views.TranspMotoCreate import TranspMotoCreateView
+#from transportes.Web.Views.TranspMotoUpdate import TranspMotoUpdateView
+#from transportes.Web.Views.TranspMotoDelete import TranspMotoDeleteView
 
 
 
@@ -17,6 +21,14 @@ urlpatterns = [
     path('veiculos/novo/', VeiculosCreateView.as_view(), name='veiculos_novo'),
     path('veiculos/<int:tran>/<int:sequ>/editar/', VeiculosUpdateView.as_view(), name='veiculos_editar'),
     path('veiculos/<int:tran>/<int:sequ>/excluir/', VeiculosDeleteView.as_view(), name='veiculos_deletar'),
+    
+    # Transportadoras Motos
+    path('transportadoras_motoristas/', TranspMotoListView.as_view(), name='transportadoras_motoristas_lista'),
+    #path('transportadoras_motoristas/novo/', TranspMotoCreateView.as_view(), name='transportadoras_motoristas_novo'),
+    #path('transportadoras_motoristas/<int:tran>/<int:sequ>/editar/', TranspMotoUpdateView.as_view(), name='transportadoras_motoristas_editar'),
+    #path('transportadoras_motoristas/<int:tran>/<int:sequ>/excluir/', TranspMotoDeleteView.as_view(), name='transportadoras_motoristas_deletar'),
+
+
 
     # Listagem
     path('ctes/', web.CteListView.as_view(), name='cte_list'),
