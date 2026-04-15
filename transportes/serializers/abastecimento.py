@@ -74,13 +74,19 @@ class AbastecimentoSerializer(serializers.Serializer):
         banco = self.context["banco"]
         usuario_id = self.context.get("usuario_id")
         payload = validated_data.pop("_service_payload", self._payload_from_validated(validated_data))
-        return AbastecimentoService.create_abastecimento(payload, user_id=usuario_id, using=banco)
+        try:
+            return AbastecimentoService.create_abastecimento(payload, user_id=usuario_id, using=banco)
+        except ValueError as exc:
+            raise serializers.ValidationError({"detail": str(exc)})
 
     def update(self, instance, validated_data):
         banco = self.context["banco"]
         usuario_id = self.context.get("usuario_id")
         payload = validated_data.pop("_service_payload", self._payload_from_validated(validated_data))
-        return AbastecimentoService.update_abastecimento(instance, payload, user_id=usuario_id, using=banco)
+        try:
+            return AbastecimentoService.update_abastecimento(instance, payload, user_id=usuario_id, using=banco)
+        except ValueError as exc:
+            raise serializers.ValidationError({"detail": str(exc)})
 
     def to_representation(self, instance):
         return {

@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from core.utils import get_db_from_slug, get_licenca_db_config
 from transportes.models import Abastecusto
 from transportes.serializers.abastecimento import AbastecimentoSerializer
+from transportes.services.servico_de_abastecimento import AbastecimentoService
 
 
 class AbastecimentoViewSet(viewsets.ViewSet):
@@ -63,10 +64,11 @@ class AbastecimentoViewSet(viewsets.ViewSet):
 
     def destroy(self, request, pk=None, slug=None):
         ctx = self._contexto(request, slug)
-        Abastecusto.objects.using(ctx["banco"]).filter(
-            abas_empr=ctx["empresa_id"],
-            abas_fili=ctx["filial_id"],
-            abas_ctrl=pk,
-        ).delete()
+        obj = self._get_obj(request, pk, slug)
+        AbastecimentoService.delete_abastecimento(
+            abastecimento=obj,
+            user_id=ctx.get("usuario_id"),
+            using=ctx["banco"],
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 

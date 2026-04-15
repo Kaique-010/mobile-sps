@@ -1,6 +1,9 @@
+from decimal import Decimal
+
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Max, Q
-from transportes.models import Abastecusto
+from transportes.models import Abastecusto, Bombas
 from Entidades.models import Entidades
 from ..models import Veiculos
 from Produtos.models import Produtos
@@ -17,6 +20,62 @@ class AbastecimentoService:
             bomb_bomb=str(bomb_bomb),
             bomb_comb=str(bomb_comb),
         )
+
+    @staticmethod
+    def registrar_consumo_combustivel(
+        *,
+        using: str,
+        empresa_id: int,
+        filial_id: int,
+        bomb_bomb: str,
+        bomb_comb: str,
+        quantidade,
+        data,
+        usuario_id: int | None,
+    ):
+        try:
+            return BombasSaldosService.registrar_movimentacao(
+                using=using,
+                empresa_id=int(empresa_id),
+                filial_id=int(filial_id),
+                bomb_bomb=str(bomb_bomb),
+                bomb_comb=str(bomb_comb),
+                tipo_movi=2,
+                quantidade=Decimal(quantidade),
+                data=data,
+                usuario_id=usuario_id,
+            )
+        except ValidationError as exc:
+            msgs = getattr(exc, "messages", None)
+            raise ValueError("; ".join(msgs) if msgs else str(exc))
+
+    @staticmethod
+    def registrar_estorno_combustivel(
+        *,
+        using: str,
+        empresa_id: int,
+        filial_id: int,
+        bomb_bomb: str,
+        bomb_comb: str,
+        quantidade,
+        data,
+        usuario_id: int | None,
+    ):
+        try:
+            return BombasSaldosService.registrar_movimentacao(
+                using=using,
+                empresa_id=int(empresa_id),
+                filial_id=int(filial_id),
+                bomb_bomb=str(bomb_bomb),
+                bomb_comb=str(bomb_comb),
+                tipo_movi=1,
+                quantidade=Decimal(quantidade),
+                data=data,
+                usuario_id=usuario_id,
+            )
+        except ValidationError as exc:
+            msgs = getattr(exc, "messages", None)
+            raise ValueError("; ".join(msgs) if msgs else str(exc))
 
     @staticmethod
     def gerar_sequencial(empresa_id, filial_id, using='default'):
@@ -105,13 +164,23 @@ class AbastecimentoService:
             ).exists():
                 raise ValueError("Fornecedor não encontrado")
 
+        if not data.get("abas_bomb"):
+            raise ValueError("Bomba é obrigatória")
+
+        if not Bombas.objects.using(using).filter(
+            bomb_empr=empresa_id,
+            bomb_codi=str(data.get("abas_bomb")),
+        ).exists():
+            raise ValueError("Bomba não encontrada")
+
         # ⛽ Combustível (Produto)
-        if data.get("abas_comb"):
-            if not Produtos.objects.using(using).filter(
-                prod_empr=empresa_id,
-                prod_codi=data.get("abas_comb")
-            ).exists():
-                raise ValueError("Combustível não encontrado")
+        if not data.get("abas_comb"):
+            raise ValueError("Combustível é obrigatório")
+        if not Produtos.objects.using(using).filter(
+            prod_empr=str(empresa_id),
+            prod_codi=str(data.get("abas_comb"))
+        ).exists():
+            raise ValueError("Combustível não encontrado")
 
         # 📊 Regras básicas
         if not data.get("abas_quan"):
@@ -144,6 +213,17 @@ class AbastecimentoService:
                     abastecimento.abas_quan * abastecimento.abas_unit
                 )
 
+            AbastecimentoService.registrar_consumo_combustivel(
+                using=using,
+                empresa_id=abastecimento.abas_empr,
+                filial_id=abastecimento.abas_fili,
+                bomb_bomb=abastecimento.abas_bomb,
+                bomb_comb=abastecimento.abas_comb,
+                quantidade=abastecimento.abas_quan,
+                data=abastecimento.abas_data,
+                usuario_id=user_id,
+            )
+
             abastecimento.save(using=using, force_insert=True)
             return abastecimento
 
@@ -151,6 +231,66 @@ class AbastecimentoService:
     def update_abastecimento(abastecimento, data, user_id, using='default'):
         with transaction.atomic(using=using):
             AbastecimentoService.validar_dados(data, using)
+
+            empresa_id = int(data.get("abas_empr") or abastecimento.abas_empr)
+            filial_id = int(data.get("abas_fili") or abastecimento.abas_fili)
+
+            old_bomb = str(getattr(abastecimento, "abas_bomb", "") or "")
+            old_comb = str(getattr(abastecimento, "abas_comb", "") or "")
+            old_quan = Decimal(getattr(abastecimento, "abas_quan", None) or 0)
+
+            new_bomb = str(data.get("abas_bomb") or old_bomb)
+            new_comb = str(data.get("abas_comb") or old_comb)
+            new_quan = Decimal(data.get("abas_quan") or old_quan or 0)
+            mov_data = data.get("abas_data") or getattr(abastecimento, "abas_data", None)
+
+            if old_bomb and old_comb and old_quan > 0:
+                if old_bomb == new_bomb and old_comb == new_comb:
+                    delta = new_quan - old_quan
+                    if delta > 0:
+                        AbastecimentoService.registrar_consumo_combustivel(
+                            using=using,
+                            empresa_id=empresa_id,
+                            filial_id=filial_id,
+                            bomb_bomb=new_bomb,
+                            bomb_comb=new_comb,
+                            quantidade=delta,
+                            data=mov_data,
+                            usuario_id=user_id,
+                        )
+                    elif delta < 0:
+                        AbastecimentoService.registrar_estorno_combustivel(
+                            using=using,
+                            empresa_id=empresa_id,
+                            filial_id=filial_id,
+                            bomb_bomb=new_bomb,
+                            bomb_comb=new_comb,
+                            quantidade=abs(delta),
+                            data=mov_data,
+                            usuario_id=user_id,
+                        )
+                else:
+                    AbastecimentoService.registrar_estorno_combustivel(
+                        using=using,
+                        empresa_id=empresa_id,
+                        filial_id=filial_id,
+                        bomb_bomb=old_bomb,
+                        bomb_comb=old_comb,
+                        quantidade=old_quan,
+                        data=mov_data,
+                        usuario_id=user_id,
+                    )
+
+                    AbastecimentoService.registrar_consumo_combustivel(
+                        using=using,
+                        empresa_id=empresa_id,
+                        filial_id=filial_id,
+                        bomb_bomb=new_bomb,
+                        bomb_comb=new_comb,
+                        quantidade=new_quan,
+                        data=mov_data,
+                        usuario_id=user_id,
+                    )
 
             campos_permitidos = {
                 "abas_frot", "abas_data", "abas_func", "abas_enti",
@@ -178,3 +318,31 @@ class AbastecimentoService:
                 abas_fili=data.get("abas_fili"),
                 abas_ctrl=abastecimento.abas_ctrl,
             ).first()
+
+    @staticmethod
+    def delete_abastecimento(*, abastecimento, user_id, using="default"):
+        with transaction.atomic(using=using):
+            empresa_id = int(getattr(abastecimento, "abas_empr", 0) or 0)
+            filial_id = int(getattr(abastecimento, "abas_fili", 0) or 0)
+            bomb_bomb = str(getattr(abastecimento, "abas_bomb", "") or "")
+            bomb_comb = str(getattr(abastecimento, "abas_comb", "") or "")
+            quantidade = Decimal(getattr(abastecimento, "abas_quan", None) or 0)
+            mov_data = getattr(abastecimento, "abas_data", None)
+
+            if bomb_bomb and bomb_comb and quantidade > 0 and empresa_id and filial_id:
+                AbastecimentoService.registrar_estorno_combustivel(
+                    using=using,
+                    empresa_id=empresa_id,
+                    filial_id=filial_id,
+                    bomb_bomb=bomb_bomb,
+                    bomb_comb=bomb_comb,
+                    quantidade=quantidade,
+                    data=mov_data,
+                    usuario_id=user_id,
+                )
+
+            Abastecusto.objects.using(using).filter(
+                abas_empr=empresa_id,
+                abas_fili=filial_id,
+                abas_ctrl=getattr(abastecimento, "abas_ctrl", None),
+            ).delete()

@@ -5,6 +5,7 @@ from django.views.generic import DeleteView
 
 from core.utils import get_db_from_slug, get_licenca_db_config
 from transportes.models import Abastecusto
+from transportes.services.servico_de_abastecimento import AbastecimentoService
 
 
 class AbastecimentosDeleteView(DeleteView):
@@ -33,11 +34,15 @@ class AbastecimentosDeleteView(DeleteView):
     def delete(self, request, *args, **kwargs):
         self.object = self.get_object()
         banco = self._get_banco()
-        Abastecusto.objects.using(banco).filter(
-            abas_empr=self.object.abas_empr,
-            abas_fili=self.object.abas_fili,
-            abas_ctrl=self.object.abas_ctrl,
-        ).delete()
+        usuario_id = request.session.get("usua_codi")
+        try:
+            AbastecimentoService.delete_abastecimento(
+                abastecimento=self.object,
+                user_id=usuario_id,
+                using=banco,
+            )
+        except ValueError as exc:
+            messages.error(request, str(exc))
+            return redirect(self.get_success_url())
         messages.success(request, "Abastecimento excluído com sucesso!")
         return redirect(self.get_success_url())
-
