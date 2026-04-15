@@ -4,9 +4,19 @@ from transportes.models import Abastecusto
 from Entidades.models import Entidades
 from ..models import Veiculos
 from Produtos.models import Produtos
+from transportes.services.bombas_saldos import BombasSaldosService
 
 
 class AbastecimentoService:
+    @staticmethod
+    def get_saldo_bomba_combustivel(*, using: str, empresa_id: int, filial_id: int, bomb_bomb: str, bomb_comb: str):
+        return BombasSaldosService.calcular_saldo_atual(
+            using=using,
+            empresa_id=int(empresa_id),
+            filial_id=int(filial_id),
+            bomb_bomb=str(bomb_bomb),
+            bomb_comb=str(bomb_comb),
+        )
 
     @staticmethod
     def gerar_sequencial(empresa_id, filial_id, using='default'):

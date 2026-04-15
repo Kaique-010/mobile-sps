@@ -6,6 +6,7 @@ from transportes.models import Bombas, Veiculos
 from Produtos.models import Marca
 from Produtos.models import Produtos
 from CentrodeCustos.models import Centrodecustos
+from transportes.services.bombas_saldos import BombasSaldosService
 
 
 
@@ -180,44 +181,76 @@ def autocomplete_veiculos(request, slug=None):
 def autocomplete_bombas(request, slug=None):
     banco = get_licenca_db_config(request) or 'default'
     empresa_id = request.session.get('empresa_id')
+    filial_id = request.session.get('filial_id') or 1
     if not empresa_id:
         return JsonResponse({'results': []})
 
     term = (request.GET.get('term') or request.GET.get('q') or '').strip()
+    bomb_comb = (request.GET.get('bomb_comb') or request.GET.get('abas_comb') or '').strip()
     qs = Bombas.objects.using(banco).filter(bomb_empr=empresa_id)
 
     if term:
         qs = qs.filter(Q(bomb_codi__icontains=term) | Q(bomb_desc__icontains=term))
 
     qs = qs.order_by('bomb_desc', 'bomb_codi')[:20]
-    data = [
-        {
-            'id': str(obj.bomb_codi),
-            'text': f"{obj.bomb_codi} - {obj.bomb_desc or ''}",
-        }
-        for obj in qs
-    ]
+    data = []
+    for obj in qs:
+        saldo = None
+        if bomb_comb:
+            saldo = BombasSaldosService.calcular_saldo_atual(
+                using=banco,
+                empresa_id=int(empresa_id),
+                filial_id=int(filial_id),
+                bomb_bomb=str(obj.bomb_codi),
+                bomb_comb=str(bomb_comb),
+            )
+        texto = f"{obj.bomb_codi} - {obj.bomb_desc or ''}"
+        if saldo is not None:
+            texto = f"{texto} (Saldo: {saldo:.4f})"
+        data.append(
+            {
+                'id': str(obj.bomb_codi),
+                'text': texto,
+                'saldo': f"{saldo:.4f}" if saldo is not None else None,
+            }
+        )
     return JsonResponse({'results': data})
 
 
 def autocomplete_combustiveis(request, slug=None):
     banco = get_licenca_db_config(request) or 'default'
     empresa_id = request.session.get('empresa_id')
+    filial_id = request.session.get('filial_id') or 1
     if not empresa_id:
         return JsonResponse({'results': []})
 
     term = (request.GET.get('term') or request.GET.get('q') or '').strip()
+    bomb_bomb = (request.GET.get('bomb_bomb') or request.GET.get('abas_bomb') or '').strip()
     qs = Produtos.objects.using(banco).filter(prod_empr=str(empresa_id))
 
     if term:
         qs = qs.filter(Q(prod_codi__icontains=term) | Q(prod_nome__icontains=term))
 
     qs = qs.order_by('prod_nome')[:20]
-    data = [
-        {
-            'id': str(obj.prod_codi),
-            'text': f"{obj.prod_codi} - {obj.prod_nome}",
-        }
-        for obj in qs
-    ]
+    data = []
+    for obj in qs:
+        saldo = None
+        if bomb_bomb:
+            saldo = BombasSaldosService.calcular_saldo_atual(
+                using=banco,
+                empresa_id=int(empresa_id),
+                filial_id=int(filial_id),
+                bomb_bomb=str(bomb_bomb),
+                bomb_comb=str(obj.prod_codi),
+            )
+        texto = f"{obj.prod_codi} - {obj.prod_nome}"
+        if saldo is not None:
+            texto = f"{texto} (Saldo: {saldo:.4f})"
+        data.append(
+            {
+                'id': str(obj.prod_codi),
+                'text': texto,
+                'saldo': f"{saldo:.4f}" if saldo is not None else None,
+            }
+        )
     return JsonResponse({'results': data})

@@ -7,7 +7,8 @@
 <div class="container mt-4">
     <div class="card">
         <div class="card-header text-center">
-            <h4 class="mb-0" style="color: #fadcaf;">⩍{% if form.instance.abas_ctrl %}Editar{% else %}Novo{% endif %} Abastecimento</h4>
+            <h4 class="mb-0" style="color: #fadcaf;">⩍{% if form.instance.abas_ctrl %}Editar{% else %}Novo{% endif %}
+                Abastecimento</h4>
         </div>
         <div class="card-body">
             <form method="post">
@@ -115,6 +116,10 @@
                                     <div id="dropdown_combustivel" class="list-group position-absolute w-100"
                                         style="z-index: 1000;"></div>
                                 </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Saldo Atual (Bomba x Combustível)</label>
+                                    <input type="text" id="saldo_bomba_comb" class="form-control" value="-" readonly>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -199,7 +204,7 @@
 </div>
 
 <script>
-    function setupAutocomplete(inputId, hiddenId, dropdownId, url, extraParams) {
+    function setupAutocomplete(inputId, hiddenId, dropdownId, url, extraParams, onSelect) {
         const input = document.getElementById(inputId);
         const hidden = document.getElementById(hiddenId);
         const dropdown = document.getElementById(dropdownId);
@@ -241,6 +246,9 @@
                                     hidden.value = item.id;
                                     hidden.dispatchEvent(new Event('change', { bubbles: true }));
                                     dropdown.innerHTML = '';
+                                    if (typeof onSelect === 'function') {
+                                        onSelect(item);
+                                    }
                                 };
                                 dropdown.appendChild(a);
                             });
@@ -269,6 +277,9 @@
         const frotaHiddenEl = document.getElementById('id_abas_frot');
         const veicHiddenEl = document.getElementById('id_abas_veic_sequ');
         const resumoEl = document.getElementById('resumoAbastecimentos');
+        const saldoEl = document.getElementById('saldo_bomba_comb');
+        const bombaHiddenEl = document.getElementById('id_abas_bomb');
+        const combHiddenEl = document.getElementById('id_abas_comb');
 
         function parseNumber(v) {
             const s = String(v || '').trim().replace(',', '.');
@@ -305,6 +316,21 @@
                 return;
             }
             totaEl.value = (q * u).toFixed(2);
+        }
+
+        function setSaldo(valor) {
+            if (!saldoEl) return;
+            const v = String(valor ?? '').trim();
+            saldoEl.value = v ? v : '-';
+        }
+
+        function resetSaldoSeIncompleto() {
+            if (!bombaHiddenEl || !combHiddenEl) return;
+            const bomb = String(bombaHiddenEl.value || '').trim();
+            const comb = String(combHiddenEl.value || '').trim();
+            if (!bomb || !comb) {
+                setSaldo('-');
+            }
         }
 
         function renderResumo(rows) {
@@ -403,6 +429,12 @@
         if (veicHiddenEl) {
             veicHiddenEl.addEventListener('change', carregarResumo);
         }
+        if (bombaHiddenEl) {
+            bombaHiddenEl.addEventListener('change', resetSaldoSeIncompleto);
+        }
+        if (combHiddenEl) {
+            combHiddenEl.addEventListener('change', resetSaldoSeIncompleto);
+        }
 
         setupAutocomplete(
             'input_frota',
@@ -439,16 +471,37 @@
             'input_bomba',
             'id_abas_bomb',
             'dropdown_bomba',
-            "{% url 'transportes:autocomplete_bombas' slug=view.kwargs.slug %}"
+            "{% url 'transportes:autocomplete_bombas' slug=view.kwargs.slug %}",
+            function () {
+                return { bomb_comb: document.getElementById('id_abas_comb').value };
+            },
+            function (item) {
+                if (item && item.saldo) {
+                    setSaldo(item.saldo);
+                } else {
+                    resetSaldoSeIncompleto();
+                }
+            }
         );
 
         setupAutocomplete(
             'input_combustivel',
             'id_abas_comb',
             'dropdown_combustivel',
-            "{% url 'transportes:autocomplete_combustiveis' slug=view.kwargs.slug %}"
+            "{% url 'transportes:autocomplete_combustiveis' slug=view.kwargs.slug %}",
+            function () {
+                return { bomb_bomb: document.getElementById('id_abas_bomb').value };
+            },
+            function (item) {
+                if (item && item.saldo) {
+                    setSaldo(item.saldo);
+                } else {
+                    resetSaldoSeIncompleto();
+                }
+            }
         );
 
+        resetSaldoSeIncompleto();
         carregarResumo();
     });
 </script>
