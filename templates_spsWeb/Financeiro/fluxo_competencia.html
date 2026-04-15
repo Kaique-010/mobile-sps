@@ -589,10 +589,33 @@
 
 <script>
     (function () {
-        const labels = [{% for m in movimentos_mensais %}'{{ m.mes|date:"m/Y" }}'{% if not forloop.last %}, {% endif %} {% endfor %}];
-    const receitas = [{% for m in movimentos_mensais %}{ { m.receita | default_if_none: "0" } } {% if not forloop.last %}, {% endif %} {% endfor %}].map(Number);
-    const despesas = [{% for m in movimentos_mensais %}{ { m.despesa | default_if_none: "0" } } {% if not forloop.last %}, {% endif %} {% endfor %}].map(Number);
-    const resultados = [{% for m in movimentos_mensais %}{ { m.resultado | default_if_none: "0" } } {% if not forloop.last %}, {% endif %} {% endfor %}].map(Number);
+        function toNumberBR(v) {
+            if (v === null || v === undefined) return 0;
+            if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+            const s = String(v).trim();
+            if (!s) return 0;
+            const normalized = s.replace(/\./g, '').replace(',', '.');
+            const n = Number(normalized);
+            return Number.isFinite(n) ? n : 0;
+        }
+
+        const labels = [{% for m in movimentos_mensais %}'{{ m.mes|date:"m/Y"|escapejs }}'{% if not forloop.last %}, {% endif %} {% endfor %}];
+        const receitas = [
+            {% for m in movimentos_mensais %}
+                {{ m.receita|default_if_none:"0" }}{% if not forloop.last %}, {% endif %}
+            {% endfor %}
+        ];
+
+    const despesas = [
+            {% for m in movimentos_mensais %}
+                {{ m.despesa|default_if_none:"0" }}{% if not forloop.last %}, {% endif %}
+             {% endfor %}
+        ];
+    const resultados = [
+            {% for m in movimentos_mensais %}
+                {{ m.resultado|default_if_none:"0" }}{% if not forloop.last %}, {% endif %}
+             {% endfor %}
+        ];
 
     const ctx = document.getElementById('chart-competencia');
     if (ctx && window.Chart) {

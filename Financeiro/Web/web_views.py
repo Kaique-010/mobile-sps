@@ -10,6 +10,7 @@ from django.db.models import (
 from django.db.models.functions import TruncMonth, Coalesce, Greatest
 from django.utils.http import urlencode
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from core.utils import get_licenca_db_config
 from contas_a_receber.models import Baretitulos, Titulosreceber
 from contas_a_pagar.models import Bapatitulos, Titulospagar
@@ -176,8 +177,8 @@ class FluxoCompetenciaView(DBAndSlugMixin, TemplateView):
         context = super().get_context_data(**kwargs)
 
         # --- 1. Parâmetros ---
-        data_ini = self.request.GET.get('data_ini')
-        data_fim = self.request.GET.get('data_fim')
+        data_ini_raw = self.request.GET.get('data_ini')
+        data_fim_raw = self.request.GET.get('data_fim')
         saldo_inicial = self.request.GET.get('saldo_inicial')
         entidade = self.request.GET.get('entidade')
         pagamento = self.request.GET.get('pagamento')
@@ -186,9 +187,16 @@ class FluxoCompetenciaView(DBAndSlugMixin, TemplateView):
         default_ini = today.replace(day=1)
         default_fim = today
 
+        data_ini = parse_date(data_ini_raw) if data_ini_raw else None
+        data_fim = parse_date(data_fim_raw) if data_fim_raw else None
+        data_ini = data_ini or default_ini
+        data_fim = data_fim or default_fim
+        if data_fim < data_ini:
+            data_ini, data_fim = data_fim, data_ini
+
         preserved = {
-            'data_ini': data_ini or default_ini.isoformat(),
-            'data_fim': data_fim or default_fim.isoformat(),
+            'data_ini': data_ini.isoformat(),
+            'data_fim': data_fim.isoformat(),
             'saldo_inicial': saldo_inicial or '0.00',
             'entidade': entidade or '',
             'pagamento': pagamento or '',
@@ -214,8 +222,8 @@ class FluxoCompetenciaView(DBAndSlugMixin, TemplateView):
             pag_qs = pag_qs.filter(titu_fili=self.filial_id)
 
         # --- 3. Filtro por vencimento ---
-        rec_qs = rec_qs.filter(titu_venc__range=(preserved['data_ini'], preserved['data_fim']))
-        pag_qs = pag_qs.filter(titu_venc__range=(preserved['data_ini'], preserved['data_fim']))
+        rec_qs = rec_qs.filter(titu_venc__range=(data_ini, data_fim))
+        pag_qs = pag_qs.filter(titu_venc__range=(data_ini, data_fim))
 
         # Entidade (join manual via tabela entidades)
         if preserved['entidade']:
@@ -270,9 +278,10 @@ class FluxoCompetenciaView(DBAndSlugMixin, TemplateView):
             valor=Sum('titu_valo')
         )
 
-        # Totais com base nas mesmas agregações exibidas na tabela
-        total_receita = float(sum(float(r['valor'] or 0) for r in rec_mensal))
-        total_despesa = float(sum(float(p['valor'] or 0) for p in pag_mensal))
+        # Totais respeitando os mesmos filtros do período
+        zero_dec = Value(0, output_field=DecimalField(max_digits=15, decimal_places=2))
+        total_receita = float(rec_qs.aggregate(total=Coalesce(Sum('titu_valo'), zero_dec))['total'] or 0)
+        total_despesa = float(pag_qs.aggregate(total=Coalesce(Sum('titu_valo'), zero_dec))['total'] or 0)
         resultado_liquido = float(total_receita) - float(total_despesa)
 
         try:
