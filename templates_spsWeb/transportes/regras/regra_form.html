@@ -1,156 +1,162 @@
 {% extends 'transportes/base_cte.html' %}
+{% load static %}
 
 {% block title %}{% if form.instance.pk %}Editar Regra{% else %}Nova Regra{% endif %}{% endblock %}
 
-{% block cte_content %}
-<div class="card shadow-sm mb-4">
-    <div class="card-header bg-primary text-white">
-        <h5 class="mb-0">{% if form.instance.pk %}Editar Regra{% else %}Nova Regra de ICMS{% endif %}</h5>
-    </div>
-    <div class="card-body">
-        <form method="post">
-            {% csrf_token %}
-
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <label for="{{ form.uf_origem.id_for_label }}" class="form-label">UF Origem</label>
-                    {{ form.uf_origem }}
-                    {{ form.uf_origem.errors }}
-                </div>
-                <div class="col-md-3">
-                    <label for="{{ form.uf_destino.id_for_label }}" class="form-label">UF Destino</label>
-                    {{ form.uf_destino }}
-                    {{ form.uf_destino.errors }}
-                </div>
-                <div class="col-md-3">
-                    <label for="{{ form.cfop.id_for_label }}" class="form-label">CFOP (Opcional)</label>
-                    {{ form.cfop }}
-                    <small class="text-muted">Deixe em branco para aplicar a todos</small>
-                    {{ form.cfop.errors }}
-                </div>
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
+<div class="container py-4">
+    <div class="card shadow-lg border-0">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">{% if form.instance.pk %}Editar Regra{% else %}Nova Regra de ICMS{% endif %}</h5>
             </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
 
-            <hr>
-
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <div class="form-check mt-4">
-                        {{ form.contribuinte }}
-                        <label class="form-check-label" for="{{ form.contribuinte.id_for_label }}">
-                            Contribuinte ICMS?
-                        </label>
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label for="{{ form.uf_origem.id_for_label }}" class="form-label">UF Origem</label>
+                            {{ form.uf_origem }}
+                            {{ form.uf_origem.errors }}
+                        </div>
+                        <div class="col-md-3">
+                            <label for="{{ form.uf_destino.id_for_label }}" class="form-label">UF Destino</label>
+                            {{ form.uf_destino }}
+                            {{ form.uf_destino.errors }}
+                        </div>
+                        <div class="col-md-3">
+                            <label for="{{ form.cfop.id_for_label }}" class="form-label">CFOP (Opcional)</label>
+                            {{ form.cfop }}
+                            <small class="text-muted">Deixe em branco para aplicar a todos</small>
+                            {{ form.cfop.errors }}
+                        </div>
                     </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-check mt-4">
-                        {{ form.simples_nacional }}
-                        <label class="form-check-label" for="{{ form.simples_nacional.id_for_label }}">
-                            Simples Nacional?
-                        </label>
+
+                    <hr>
+
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <div class="form-check mt-4">
+                                {{ form.contribuinte }}
+                                <label class="form-check-label" for="{{ form.contribuinte.id_for_label }}">
+                                    Contribuinte ICMS?
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check mt-4">
+                                {{ form.simples_nacional }}
+                                <label class="form-check-label" for="{{ form.simples_nacional.id_for_label }}">
+                                    Simples Nacional?
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check mt-4">
+                                {{ form.diferimento }}
+                                <label class="form-check-label" for="{{ form.diferimento.id_for_label }}">
+                                    Diferimento?
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check mt-4">
+                                {{ form.isento }}
+                                <label class="form-check-label" for="{{ form.isento.id_for_label }}">
+                                    Isento?
+                                </label>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-check mt-4">
-                        {{ form.diferimento }}
-                        <label class="form-check-label" for="{{ form.diferimento.id_for_label }}">
-                            Diferimento?
-                        </label>
+
+                    <hr>
+
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label for="{{ form.aliquota.id_for_label }}" class="form-label">Alíquota ICMS (%)</label>
+                            {{ form.aliquota }}
+                            {{ form.aliquota.errors }}
+                        </div>
+                        <div class="col-md-3">
+                            <label for="{{ form.aliquota_destino.id_for_label }}" class="form-label">Aliq. Destino
+                                (DIFAL)</label>
+                            {{ form.aliquota_destino }}
+                            {{ form.aliquota_destino.errors }}
+                        </div>
+                        <div class="col-md-3">
+                            <label for="{{ form.reducao_base.id_for_label }}" class="form-label">Redução Base
+                                (%)</label>
+                            {{ form.reducao_base }}
+                            {{ form.reducao_base.errors }}
+                        </div>
                     </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-check mt-4">
-                        {{ form.isento }}
-                        <label class="form-check-label" for="{{ form.isento.id_for_label }}">
-                            Isento?
-                        </label>
+
+                    <hr>
+                    <h6>Substituição Tributária</h6>
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label for="{{ form.mva_st.id_for_label }}" class="form-label">MVA ST (%)</label>
+                            {{ form.mva_st }}
+                            {{ form.mva_st.errors }}
+                        </div>
+                        <div class="col-md-3">
+                            <label for="{{ form.aliquota_st.id_for_label }}" class="form-label">Alíquota ST (%)</label>
+                            {{ form.aliquota_st }}
+                            {{ form.aliquota_st.errors }}
+                        </div>
+                        <div class="col-md-3">
+                            <label for="{{ form.reducao_base_st.id_for_label }}" class="form-label">Red. Base ST
+                                (%)</label>
+                            {{ form.reducao_base_st }}
+                            {{ form.reducao_base_st.errors }}
+                        </div>
                     </div>
-                </div>
+
+                    <hr>
+
+                    <div class="row g-3">
+                        <div class="col-md-3" id="cst-field-wrapper">
+                            <label for="{{ form.cst.id_for_label }}" class="form-label">CST</label>
+                            {{ form.cst }}
+                            {{ form.cst.errors }}
+                        </div>
+                        <div class="col-md-3" id="csosn-field-wrapper">
+                            <label for="{{ form.csosn.id_for_label }}" class="form-label">CSOSN (Simples)</label>
+                            {{ form.csosn }}
+                            {{ form.csosn.errors }}
+                        </div>
+                    </div>
+
+                    <div class="mt-4 d-flex justify-content-end gap-2">
+                        <a href="{% url 'transportes:regra_list' slug=slug %}" class="btn btn-outline-danger">Cancelar</a>
+                        <button type="submit" class="btn btn-outline-primary">Salvar</button>
+                    </div>
+                </form>
             </div>
+        </div>
 
-            <hr>
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                const simplesEl = document.getElementById("{{ form.simples_nacional.id_for_label }}");
+                const cstWrapper = document.getElementById("cst-field-wrapper");
+                const csosnWrapper = document.getElementById("csosn-field-wrapper");
+                const cstEl = document.getElementById("{{ form.cst.id_for_label }}");
+                const csosnEl = document.getElementById("{{ form.csosn.id_for_label }}");
 
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <label for="{{ form.aliquota.id_for_label }}" class="form-label">Alíquota ICMS (%)</label>
-                    {{ form.aliquota }}
-                    {{ form.aliquota.errors }}
-                </div>
-                <div class="col-md-3">
-                    <label for="{{ form.aliquota_destino.id_for_label }}" class="form-label">Aliq. Destino
-                        (DIFAL)</label>
-                    {{ form.aliquota_destino }}
-                    {{ form.aliquota_destino.errors }}
-                </div>
-                <div class="col-md-3">
-                    <label for="{{ form.reducao_base.id_for_label }}" class="form-label">Redução Base (%)</label>
-                    {{ form.reducao_base }}
-                    {{ form.reducao_base.errors }}
-                </div>
-            </div>
+                function refreshCstCsosn() {
+                    const isSimples = !!(simplesEl && simplesEl.checked);
 
-            <hr>
-            <h6>Substituição Tributária</h6>
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <label for="{{ form.mva_st.id_for_label }}" class="form-label">MVA ST (%)</label>
-                    {{ form.mva_st }}
-                    {{ form.mva_st.errors }}
-                </div>
-                <div class="col-md-3">
-                    <label for="{{ form.aliquota_st.id_for_label }}" class="form-label">Alíquota ST (%)</label>
-                    {{ form.aliquota_st }}
-                    {{ form.aliquota_st.errors }}
-                </div>
-                <div class="col-md-3">
-                    <label for="{{ form.reducao_base_st.id_for_label }}" class="form-label">Red. Base ST (%)</label>
-                    {{ form.reducao_base_st }}
-                    {{ form.reducao_base_st.errors }}
-                </div>
-            </div>
+                    if (cstWrapper) cstWrapper.style.display = isSimples ? "none" : "";
+                    if (csosnWrapper) csosnWrapper.style.display = isSimples ? "" : "none";
 
-            <hr>
+                    if (cstEl) cstEl.required = !isSimples;
+                    if (csosnEl) csosnEl.required = isSimples;
+                }
 
-            <div class="row g-3">
-                <div class="col-md-3" id="cst-field-wrapper">
-                    <label for="{{ form.cst.id_for_label }}" class="form-label">CST</label>
-                    {{ form.cst }}
-                    {{ form.cst.errors }}
-                </div>
-                <div class="col-md-3" id="csosn-field-wrapper">
-                    <label for="{{ form.csosn.id_for_label }}" class="form-label">CSOSN (Simples)</label>
-                    {{ form.csosn }}
-                    {{ form.csosn.errors }}
-                </div>
-            </div>
-
-            <div class="mt-4 d-flex justify-content-end gap-2">
-                <a href="{% url 'transportes:regra_list' slug=slug %}" class="btn btn-secondary">Cancelar</a>
-                <button type="submit" class="btn btn-primary">Salvar</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const simplesEl = document.getElementById("{{ form.simples_nacional.id_for_label }}");
-    const cstWrapper = document.getElementById("cst-field-wrapper");
-    const csosnWrapper = document.getElementById("csosn-field-wrapper");
-    const cstEl = document.getElementById("{{ form.cst.id_for_label }}");
-    const csosnEl = document.getElementById("{{ form.csosn.id_for_label }}");
-
-    function refreshCstCsosn() {
-      const isSimples = !!(simplesEl && simplesEl.checked);
-
-      if (cstWrapper) cstWrapper.style.display = isSimples ? "none" : "";
-      if (csosnWrapper) csosnWrapper.style.display = isSimples ? "" : "none";
-
-      if (cstEl) cstEl.required = !isSimples;
-      if (csosnEl) csosnEl.required = isSimples;
-    }
-
-    if (simplesEl) simplesEl.addEventListener("change", refreshCstCsosn);
-    refreshCstCsosn();
-  });
-</script>
-{% endblock %}
+                if (simplesEl) simplesEl.addEventListener("change", refreshCstCsosn);
+                refreshCstCsosn();
+            });
+        </script>
+        {% endblock %}

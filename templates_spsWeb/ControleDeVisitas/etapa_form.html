@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block content %}
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
 <div class="container">
   <h4 class="mb-3 text-center">{% if modo == 'editar' %}Editar Etapa{% else %}Nova Etapa{% endif %}</h4>
   <form method="post" class="card p-3">

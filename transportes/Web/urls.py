@@ -5,10 +5,26 @@ from transportes.Web.Views.VeiculosList import VeiculosListView
 from transportes.Web.Views.VeiculosCreate import VeiculosCreateView
 from transportes.Web.Views.VeiculosUpdate import VeiculosUpdateView
 from transportes.Web.Views.VeiculosDelete import VeiculosDeleteView
-from transportes.Rest.Views.autocompletes import autocomplete_transportadoras, autocomplete_marcas, autocomplete_centrodecustos, autocomplete_entidades, autocomplete_veiculos, get_entidade_detalhes
+from transportes.Web.Views.BombasList import BombasListView
+from transportes.Web.Views.BombasCreate import BombasCreateView
+from transportes.Web.Views.BombasUpdate import BombasUpdateView
+from transportes.Web.Views.BombasDelete import BombasDeleteView
+from transportes.Web.Views.AbastecimentosList import AbastecimentosListView
+from transportes.Web.Views.AbastecimentosCreate import AbastecimentosCreateView
+from transportes.Web.Views.AbastecimentosUpdate import AbastecimentosUpdateView
+from transportes.Web.Views.AbastecimentosDelete import AbastecimentosDeleteView
+from transportes.Web.Views.BombasSaldosList import BombasSaldosListView
+from transportes.Web.Views.BombasSaldosCreate import BombasSaldosCreateView
+from transportes.Web.Views.BombasSaldosUpdate import BombasSaldosUpdateView
+from transportes.Web.Views.BombasSaldosDelete import BombasSaldosDeleteView
+from transportes.Rest.Views.autocompletes import autocomplete_transportadoras, autocomplete_marcas, autocomplete_centrodecustos, autocomplete_entidades, autocomplete_veiculos, autocomplete_bombas, autocomplete_combustiveis, get_entidade_detalhes
 from transportes.Web.Views.TranspMotoList import TranspMotoListView
 from transportes.Web.Views.TranspMotoUpdate import TranspMotoUpdateView
 from transportes.Rest.Views.transp_moto import TranspMotoListApiView, TranspMotoUpdateApiView
+from transportes.Rest.Views.bombas import BombasListApiView, BombasDetailApiView
+from transportes.Rest.Views.abastecimentos import AbastecimentoViewSet
+from transportes.Rest.Views.abastecimentos_resumo import abastecimentos_resumo
+from transportes.Rest.Views.bombas_saldos import BombasSaldosViewSet
 
 
 
@@ -26,7 +42,47 @@ urlpatterns = [
     path('transportadoras_motoristas/<int:enti_clie>/editar/', TranspMotoUpdateView.as_view(), name='transportadoras_motoristas_editar'),
     path('api/transportadoras_motoristas/', TranspMotoListApiView.as_view(), name='transportadoras_motoristas_api_lista'),
     path('api/transportadoras_motoristas/<int:enti_clie>/', TranspMotoUpdateApiView.as_view(), name='transportadoras_motoristas_api_editar'),
+    
+    # Bombas
+    path('bombas/', BombasListView.as_view(), name='bombas_lista'),
+    path('bombas/novo/', BombasCreateView.as_view(), name='bombas_novo'),
+    path('bombas/<str:bomb_codi>/editar/', BombasUpdateView.as_view(), name='bombas_editar'),
+    path('bombas/<str:bomb_codi>/excluir/', BombasDeleteView.as_view(), name='bombas_deletar'),
+    path('api/bombas/', BombasListApiView.as_view(), name='bombas_api_lista'),
+    path('api/bombas/<str:bomb_codi>/', BombasDetailApiView.as_view(), name='bombas_api_detalhe'),
 
+    # Abastecimentos
+    path('abastecimentos/', AbastecimentosListView.as_view(), name='abastecimentos_lista'),
+    path('abastecimentos/novo/', AbastecimentosCreateView.as_view(), name='abastecimentos_novo'),
+    path('abastecimentos/<int:abas_ctrl>/editar/', AbastecimentosUpdateView.as_view(), name='abastecimentos_editar'),
+    path('abastecimentos/<int:abas_ctrl>/excluir/', AbastecimentosDeleteView.as_view(), name='abastecimentos_deletar'),
+    path(
+        'api/abastecimentos/',
+        AbastecimentoViewSet.as_view({'get': 'list', 'post': 'create'}),
+        name='abastecimentos_api_lista',
+    ),
+    path(
+        'api/abastecimentos/<int:pk>/',
+        AbastecimentoViewSet.as_view({'get': 'retrieve', 'patch': 'partial_update', 'delete': 'destroy'}),
+        name='abastecimentos_api_detalhe',
+    ),
+    path('api/abastecimentos/resumo/', abastecimentos_resumo, name='abastecimentos_api_resumo'),
+
+    # Movimentação por Bomba
+    path('bombas_saldos/', BombasSaldosListView.as_view(), name='bombas_saldos_lista'),
+    path('bombas_saldos/novo/', BombasSaldosCreateView.as_view(), name='bombas_saldos_novo'),
+    path('bombas_saldos/<int:bomb_id>/editar/', BombasSaldosUpdateView.as_view(), name='bombas_saldos_editar'),
+    path('bombas_saldos/<int:bomb_id>/excluir/', BombasSaldosDeleteView.as_view(), name='bombas_saldos_deletar'),
+    path(
+        'api/bombas_saldos/',
+        BombasSaldosViewSet.as_view({'get': 'list', 'post': 'create'}),
+        name='bombas_saldos_api_lista',
+    ),
+    path(
+        'api/bombas_saldos/<int:pk>/',
+        BombasSaldosViewSet.as_view({'get': 'retrieve', 'patch': 'partial_update', 'delete': 'destroy'}),
+        name='bombas_saldos_api_detalhe',
+    ),
 
 
     # Listagem
@@ -77,5 +133,7 @@ urlpatterns = [
     path('autocomplete/centrodecustos/', autocomplete_centrodecustos, name='autocomplete_centrodecustos'),
     path('autocomplete/entidades/', autocomplete_entidades, name='autocomplete_entidades'),
     path('autocomplete/veiculos/', autocomplete_veiculos, name='autocomplete_veiculos'),
+    path('autocomplete/bombas/', autocomplete_bombas, name='autocomplete_bombas'),
+    path('autocomplete/combustiveis/', autocomplete_combustiveis, name='autocomplete_combustiveis'),
     path('api/entidade/detalhes/', get_entidade_detalhes, name='api_entidade_detalhes'),
 ]

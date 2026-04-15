@@ -1,0 +1,235 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Abastecimentos{% endblock %}
+
+{% block content %}
+<style>
+    .stat-card {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 16px 20px;
+        border-radius: 12px;
+        height: 100%;
+        color: #fff;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.10);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .stat-total {
+        background: linear-gradient(135deg, #b7c1e9, #2a0864);
+    }
+
+    .stat-frotas {
+        background: linear-gradient(135deg, #dbe0df, #145843);
+    }
+
+    .stat-top {
+        background: linear-gradient(135deg, #ffba43, #915d22);
+    }
+
+    .stat-icon {
+        font-size: 2rem;
+        opacity: 0.85;
+        flex-shrink: 0;
+    }
+
+    .stat-info {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    .stat-label {
+        font-size: 0.78rem;
+        font-weight: 500;
+        opacity: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .stat-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        line-height: 1.1;
+    }
+
+    .stat-sub {
+        font-size: 0.85rem;
+        opacity: 0.9;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+</style>
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
+
+<div class="container page-container">
+    <div class="page-header-custom">
+        <div class="container align-items-center">
+            <h2 class="page-title">
+                <i class="bi bi-droplet-half"></i> Abastecimentos
+            </h2>
+        </div>
+        <div class="container d-flex justify-content-end">
+            <a class="btn btn-success" href="{% url 'transportes:abastecimentos_novo' slug=view.kwargs.slug %}">
+                <i class="bi bi-plus"></i> Novo Abastecimento
+            </a>
+        </div>
+    </div>
+
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+    {% endif %}
+
+    <div class="container mt-3">
+        <div class="row g-3 align-items-stretch">
+            <div class="col-12 col-md-3">
+                <div class="stat-card stat-total">
+                    <div class="stat-icon"><i class="bi bi-droplet-half"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-label">Total Abastecimentos</span>
+                        <span class="stat-value">{{ total_abastecimentos|default:"0" }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-3">
+                <div class="stat-card stat-frotas">
+                    <div class="stat-icon"><i class="bi bi-truck"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-label">Frotas</span>
+                        <span class="stat-value">{{ total_frotas|default:"0" }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="stat-card stat-top">
+                    <div class="stat-icon"><i class="bi bi-bar-chart"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-label">Top Frota</span>
+                        <span class="stat-value">
+                            {% if top_frota %}{{ top_frota.total }}{% else %}0{% endif %}
+                        </span>
+                        <span class="stat-sub">
+                            {% if top_frota %}{{ top_frota.abas_frot }}{% else %}-{% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% if totais_por_frota %}
+        <div class="row g-2 mt-2">
+            {% for item in totais_por_frota %}
+            <div class="col-6 col-md-2">
+                <div class="card card-corporate h-100">
+                    <div class="card-body py-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="small text-muted">Frota</div>
+                            <div class="fw-bold">{{ item.abas_frot }}</div>
+                        </div>
+                        <div class="mt-2">
+                            <span class="badge bg-secondary w-100">Abastec.: {{ item.total }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card card-corporate mb-3">
+        <div class="card-body">
+            <form class="row g-2" method="get">
+                <div class="col-md-5">
+                    <label class="form-label" for="q"><i class="bi bi-filter-left"></i> Busca</label>
+                    <input type="text" id="q" name="q" class="form-control" value="{{ request.GET.q }}"
+                        placeholder="Controle, frota, bomba, combustível, placa">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="abas_data">Data</label>
+                    <input type="date" id="abas_data" name="abas_data" class="form-control"
+                        value="{{ request.GET.abas_data }}">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-outline-primary w-100">
+                        <i class="bi bi-search"></i> Filtrar
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    <div class="card card-corporate">
+        <div class="card-body">
+            {% if abastecimentos %}
+            <div class="row g-3">
+                {% for item in abastecimentos %}
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="card shadow-sm h-100 entidade-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <h5 class="card-title mb-1">
+                                    {{ item.abas_ctrl }} - {{ item.abas_data|date:"d/m/Y" }}
+                                </h5>
+                            </div>
+                            <div class="small">
+                                <div><i class="bi bi-truck"></i> Frota: {{ item.abas_frot|default:"-" }}</div>
+                                <div><i class="bi bi-fuel-pump"></i> Bomba: {{ item.abas_bomb|default:"-" }}</div>
+                                <div><i class="bi bi-droplet"></i> Comb.: {{ item.abas_comb|default:"-" }}</div>
+                                <div><i class="bi bi-123"></i> Qtd: {{ item.abas_quan|default:"0" }}</div>
+                                <div><i class="bi bi-currency-dollar"></i> Unit: {{ item.abas_unit|default:"0" }}</div>
+                                <div><i class="bi bi-cash-stack"></i> Total: {{ item.abas_tota|default:"0" }}</div>
+                                <div><i class="bi bi-8-square-fill"></i> Placa: {{ item.abas_plac|default:"-" }}</div>
+                            </div>
+                        </div>
+                        <div class="card-footer d-flex gap-2">
+                            <a href="{% url 'transportes:abastecimentos_editar' slug=view.kwargs.slug abas_ctrl=item.abas_ctrl %}"
+                                class="btn btn-outline-primary btn-sm flex-grow-1">
+                                <i class="bi bi-pencil"></i> Editar
+                            </a>
+                            <a href="{% url 'transportes:abastecimentos_deletar' slug=view.kwargs.slug abas_ctrl=item.abas_ctrl %}"
+                                class="btn btn-outline-danger btn-sm flex-grow-1">
+                                <i class="bi bi-trash"></i> Excluir
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if is_paginated %}
+            <div class="d-flex justify-content-center mt-3">
+                <ul class="pagination">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item"><a class="page-link"
+                            href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.abas_data %}&abas_data={{ request.GET.abas_data }}{% endif %}"><i
+                                class="bi bi-chevron-left"></i></a></li>
+                    {% endif %}
+                    <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
+                    {% if page_obj.has_next %}
+                    <li class="page-item"><a class="page-link"
+                            href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.abas_data %}&abas_data={{ request.GET.abas_data }}{% endif %}"><i
+                                class="bi bi-chevron-right"></i></a></li>
+                    {% endif %}
+                </ul>
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-droplet-half fs-1 text-muted mb-3"></i>
+                <p class="text-muted mb-0">Nenhum abastecimento encontrado.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

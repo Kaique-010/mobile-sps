@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Movimentação por Bomba{% endblock %}
+
+{% block content %}
+<style>
+    .stat-card {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 16px 20px;
+        border-radius: 12px;
+        height: 100%;
+        color: #fff;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.10);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+
+    .stat-total { background: linear-gradient(135deg, #7182cf, #431a8a); }
+    .stat-saldo { background: linear-gradient(135deg, #71ac98, #145843); }
+
+    .stat-icon {
+        font-size: 2rem;
+        opacity: 0.85;
+        flex-shrink: 0;
+    }
+
+    .stat-info {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    .stat-label {
+        font-size: 0.78rem;
+        font-weight: 500;
+        opacity: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .stat-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        line-height: 1.1;
+    }
+</style>
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
+
+<div class="container page-container">
+    <div class="page-header-custom">
+        <div class="container align-items-center">
+            <h2 class="page-title">
+                <i class="bi bi-fuel-pump"></i> Movimentação de Combustível por Bomba
+            </h2>
+        </div>
+        <div class="container d-flex justify-content-end">
+            <a class="btn btn-success" href="{% url 'transportes:bombas_saldos_novo' slug=view.kwargs.slug %}">
+                <i class="bi bi-plus"></i> Nova Movimentação
+            </a>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="container mt-3">
+        <div class="row g-3 align-items-stretch">
+            <div class="col-12 col-md-3">
+                <div class="stat-card stat-total">
+                    <div class="stat-icon"><i class="bi bi-list-ul"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-label">Movimentos</span>
+                        <span class="stat-value">{{ total_movimentos|default:"0" }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-3">
+                <div class="stat-card stat-saldo">
+                    <div class="stat-icon"><i class="bi bi-box-seam"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-label">Saldo Atual</span>
+                        <span class="stat-value">{% if saldo_atual is not None %}{{ saldo_atual }}{% else %}-{% endif %}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card card-corporate mb-3 mt-3">
+        <div class="card-body">
+            <form method="get" class="row g-2">
+                <div class="col-md-4">
+                    <label class="form-label" for="q">Busca</label>
+                    <input type="text" id="q" name="q" class="form-control" value="{{ request.GET.q }}" placeholder="Bomba, combustível ou tipo">
+                </div>
+                <div class="col-md-4 position-relative">
+                    <label class="form-label">Bomba</label>
+                    <input type="text" id="input_bomba" class="form-control" autocomplete="off" placeholder="Digite a bomba"
+                        value="{{ request.GET.bomb_bomb|default:'' }}">
+                    <input type="hidden" id="bomb_bomb" name="bomb_bomb" value="{{ request.GET.bomb_bomb|default:'' }}">
+                    <div id="dropdown_bomba" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
+                </div>
+                <div class="col-md-4 position-relative">
+                    <label class="form-label">Combustível</label>
+                    <input type="text" id="input_comb" class="form-control" autocomplete="off" placeholder="Digite o combustível"
+                        value="{{ request.GET.bomb_comb|default:'' }}">
+                    <input type="hidden" id="bomb_comb" name="bomb_comb" value="{{ request.GET.bomb_comb|default:'' }}">
+                    <div id="dropdown_comb" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-outline-primary w-100">
+                        <i class="bi bi-search"></i> Filtrar
+                    </button>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <a class="btn btn-outline-secondary w-100" href="{% url 'transportes:bombas_saldos_lista' slug=view.kwargs.slug %}">
+                        Limpar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card card-corporate">
+        <div class="card-body">
+            {% if movimentos %}
+            <div class="row g-3">
+                {% for mov in movimentos %}
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="card shadow-sm h-100 entidade-card">
+                        <div class="card-body">
+                            <h5 class="card-title mb-1">{{ mov.bomb_bomb }} - {{ mov.bomb_comb }}</h5>
+                            <div class="small">
+                                <div>Data: {{ mov.bomb_data|date:"d/m/Y" }}</div>
+                                <div>Tipo: {{ mov.get_bomb_tipo_movi_display }}</div>
+                                <div>Qtd: {{ mov.bomb_sald }}</div>
+                            </div>
+                        </div>
+                        <div class="card-footer d-flex gap-2">
+                            <a href="{% url 'transportes:bombas_saldos_editar' slug=view.kwargs.slug bomb_id=mov.bomb_id %}"
+                                class="btn btn-outline-primary btn-sm flex-grow-1">
+                                <i class="bi bi-pencil"></i> Editar
+                            </a>
+                            <a href="{% url 'transportes:bombas_saldos_deletar' slug=view.kwargs.slug bomb_id=mov.bomb_id %}"
+                                class="btn btn-outline-danger btn-sm flex-grow-1">
+                                <i class="bi bi-trash"></i> Excluir
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if is_paginated %}
+            <div class="d-flex justify-content-center mt-3">
+                <ul class="pagination">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.bomb_bomb %}&bomb_bomb={{ request.GET.bomb_bomb }}{% endif %}{% if request.GET.bomb_comb %}&bomb_comb={{ request.GET.bomb_comb }}{% endif %}"><i class="bi bi-chevron-left"></i></a></li>
+                    {% endif %}
+                    <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
+                    {% if page_obj.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.bomb_bomb %}&bomb_bomb={{ request.GET.bomb_bomb }}{% endif %}{% if request.GET.bomb_comb %}&bomb_comb={{ request.GET.bomb_comb }}{% endif %}"><i class="bi bi-chevron-right"></i></a></li>
+                    {% endif %}
+                </ul>
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-fuel-pump fs-1 text-muted mb-3"></i>
+                <p class="text-muted mb-0">Nenhuma movimentação encontrada.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    function setupAutocomplete(inputId, hiddenId, dropdownId, url) {
+        const input = document.getElementById(inputId);
+        const hidden = document.getElementById(hiddenId);
+        const dropdown = document.getElementById(dropdownId);
+        let debounceTimer;
+
+        input.addEventListener('input', function () {
+            clearTimeout(debounceTimer);
+            const query = this.value;
+            if (query.length < 1) {
+                dropdown.innerHTML = '';
+                return;
+            }
+            debounceTimer = setTimeout(() => {
+                fetch(`${url}?term=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        dropdown.innerHTML = '';
+                        if (data.results && data.results.length > 0) {
+                            data.results.forEach(item => {
+                                const a = document.createElement('a');
+                                a.className = 'list-group-item list-group-item-action';
+                                a.href = '#';
+                                a.textContent = item.text;
+                                a.onclick = function (e) {
+                                    e.preventDefault();
+                                    input.value = item.text;
+                                    hidden.value = item.id;
+                                    dropdown.innerHTML = '';
+                                };
+                                dropdown.appendChild(a);
+                            });
+                        } else {
+                            dropdown.innerHTML = '<div class="list-group-item">Nenhum resultado encontrado</div>';
+                        }
+                    });
+            }, 250);
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.innerHTML = '';
+            }
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        setupAutocomplete(
+            'input_bomba',
+            'bomb_bomb',
+            'dropdown_bomba',
+            "{% url 'transportes:autocomplete_bombas' slug=view.kwargs.slug %}"
+        );
+        setupAutocomplete(
+            'input_comb',
+            'bomb_comb',
+            'dropdown_comb',
+            "{% url 'transportes:autocomplete_combustiveis' slug=view.kwargs.slug %}"
+        );
+    });
+</script>
+{% endblock %}
+

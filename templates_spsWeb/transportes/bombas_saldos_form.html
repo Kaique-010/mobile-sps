@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
+
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header text-center">
+            <h4 class="mb-0" style="color: #fadcaf;">{% if form.instance.bomb_id %}Editar{% else %}Nova{% endif %} Movimentação</h4>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+
+                {% if form.errors %}
+                <div class="alert alert-danger">
+                    {{ form.errors }}
+                </div>
+                {% endif %}
+
+                {% if form.instance.bomb_id %}
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">ID</label>
+                        <input type="text" class="form-control" value="{{ form.instance.bomb_id }}" readonly>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">{{ form.bomb_data.label }}</label>
+                        {{ form.bomb_data }}
+                    </div>
+
+                    <div class="col-md-6 mb-3 position-relative">
+                        <label class="form-label">{{ form.bomba_display.label }}</label>
+                        <input type="text" id="input_bomba" class="form-control" autocomplete="off"
+                            value="{{ bomba_display|default:'' }}" placeholder="Digite a bomba">
+                        {{ form.bomb_bomb }}
+                        <div id="dropdown_bomba" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
+                    </div>
+
+                    <div class="col-md-6 mb-3 position-relative">
+                        <label class="form-label">{{ form.combustivel_display.label }}</label>
+                        <input type="text" id="input_comb" class="form-control" autocomplete="off"
+                            value="{{ combustivel_display|default:'' }}" placeholder="Digite o combustível">
+                        {{ form.bomb_comb }}
+                        <div id="dropdown_comb" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
+                    </div>
+
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">{{ form.bomb_tipo_movi.label }}</label>
+                        {{ form.bomb_tipo_movi }}
+                    </div>
+
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">{{ form.bomb_sald.label }}</label>
+                        {{ form.bomb_sald }}
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="fas fa-save"></i> Salvar
+                    </button>
+                    <a href="{% url 'transportes:bombas_saldos_lista' slug=view.kwargs.slug %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Voltar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function setupAutocomplete(inputId, hiddenId, dropdownId, url) {
+        const input = document.getElementById(inputId);
+        const hidden = document.getElementById(hiddenId);
+        const dropdown = document.getElementById(dropdownId);
+        let debounceTimer;
+
+        input.addEventListener('input', function () {
+            clearTimeout(debounceTimer);
+            const query = this.value;
+            if (query.length < 1) {
+                dropdown.innerHTML = '';
+                return;
+            }
+            debounceTimer = setTimeout(() => {
+                fetch(`${url}?term=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        dropdown.innerHTML = '';
+                        if (data.results && data.results.length > 0) {
+                            data.results.forEach(item => {
+                                const a = document.createElement('a');
+                                a.className = 'list-group-item list-group-item-action';
+                                a.href = '#';
+                                a.textContent = item.text;
+                                a.onclick = function (e) {
+                                    e.preventDefault();
+                                    input.value = item.text;
+                                    hidden.value = item.id;
+                                    dropdown.innerHTML = '';
+                                };
+                                dropdown.appendChild(a);
+                            });
+                        } else {
+                            dropdown.innerHTML = '<div class="list-group-item">Nenhum resultado encontrado</div>';
+                        }
+                    });
+            }, 250);
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.innerHTML = '';
+            }
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        setupAutocomplete(
+            'input_bomba',
+            'id_bomb_bomb',
+            'dropdown_bomba',
+            "{% url 'transportes:autocomplete_bombas' slug=view.kwargs.slug %}"
+        );
+        setupAutocomplete(
+            'input_comb',
+            'id_bomb_comb',
+            'dropdown_comb',
+            "{% url 'transportes:autocomplete_combustiveis' slug=view.kwargs.slug %}"
+        );
+    });
+</script>
+{% endblock %}
+

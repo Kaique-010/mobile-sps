@@ -5,7 +5,7 @@
 <div class="container">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <div class="container">
-      <h3 style="text-align: center;">Controle de Visitas</h3>
+      <h3 style="text-align: center; margin-bottom: 20px;"><i class="fas fa-user-check me-1"></i> Controle de Visitas</h3>
     </div>
   </div>
   <form class="row g-2 mb-3" method="get">
@@ -15,11 +15,11 @@
         class="form-control" /></div>
     <div class="col-md-4"><input type="text" name="etapa" value="{{ request.GET.etapa }}" placeholder="Etapa"
         class="form-control" /></div>
-    <div class="col-md-4"><input type="date" name="data_inicio" value="{{ request.GET.data_inicio }}" placeholder="Data Início"
-        class="form-control" /></div>
+    <div class="col-md-4"><input type="date" name="data_inicio" value="{{ request.GET.data_inicio }}"
+        placeholder="Data Início" class="form-control" /></div>
     <div class="col-md-4"><input type="date" name="data_fim" value="{{ request.GET.data_fim }}" placeholder="Data Fim"
         class="form-control" /></div>
-    <div class="col-md-4"><button class="btn btn-primary w-100">Filtrar</button></div>
+    <div class="col-md-4"><button class="btn btn-primary w-100"><i class="fas fa-filter me-1"></i Filtrar</button></div>
   </form>
   <div class="table-responsive">
     <table class="table table-sm align-middle">
@@ -62,7 +62,8 @@
           href="?page={{ page_obj.previous_page_number }}&cliente={{ request.GET.cliente|urlencode }}&vendedor={{ request.GET.vendedor|urlencode }}">Anterior</a>
       </li>
       {% endif %}
-      <li class="page-item active"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+      <li class="page-item active"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages
+          }}</span></li>
       {% if page_obj.has_next %}
       <li class="page-item"><a class="page-link"
           href="?page={{ page_obj.next_page_number }}&cliente={{ request.GET.cliente|urlencode }}&vendedor={{ request.GET.vendedor|urlencode }}">Próxima</a>

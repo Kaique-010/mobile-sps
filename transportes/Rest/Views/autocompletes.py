@@ -2,8 +2,9 @@ from django.http import JsonResponse
 from django.db.models import Q
 from core.utils import get_licenca_db_config
 from Entidades.models import Entidades
-from transportes.models import Veiculos
+from transportes.models import Bombas, Veiculos
 from Produtos.models import Marca
+from Produtos.models import Produtos
 from CentrodeCustos.models import Centrodecustos
 
 
@@ -170,6 +171,52 @@ def autocomplete_veiculos(request, slug=None):
         {
             'id': str(obj.veic_sequ),
             'text': f"{obj.veic_plac} - {obj.veic_marc or ''} {obj.veic_espe or ''}",
+        }
+        for obj in qs
+    ]
+    return JsonResponse({'results': data})
+
+
+def autocomplete_bombas(request, slug=None):
+    banco = get_licenca_db_config(request) or 'default'
+    empresa_id = request.session.get('empresa_id')
+    if not empresa_id:
+        return JsonResponse({'results': []})
+
+    term = (request.GET.get('term') or request.GET.get('q') or '').strip()
+    qs = Bombas.objects.using(banco).filter(bomb_empr=empresa_id)
+
+    if term:
+        qs = qs.filter(Q(bomb_codi__icontains=term) | Q(bomb_desc__icontains=term))
+
+    qs = qs.order_by('bomb_desc', 'bomb_codi')[:20]
+    data = [
+        {
+            'id': str(obj.bomb_codi),
+            'text': f"{obj.bomb_codi} - {obj.bomb_desc or ''}",
+        }
+        for obj in qs
+    ]
+    return JsonResponse({'results': data})
+
+
+def autocomplete_combustiveis(request, slug=None):
+    banco = get_licenca_db_config(request) or 'default'
+    empresa_id = request.session.get('empresa_id')
+    if not empresa_id:
+        return JsonResponse({'results': []})
+
+    term = (request.GET.get('term') or request.GET.get('q') or '').strip()
+    qs = Produtos.objects.using(banco).filter(prod_empr=str(empresa_id))
+
+    if term:
+        qs = qs.filter(Q(prod_codi__icontains=term) | Q(prod_nome__icontains=term))
+
+    qs = qs.order_by('prod_nome')[:20]
+    data = [
+        {
+            'id': str(obj.prod_codi),
+            'text': f"{obj.prod_codi} - {obj.prod_nome}",
         }
         for obj in qs
     ]

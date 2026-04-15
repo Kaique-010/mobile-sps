@@ -1,0 +1,455 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
+
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header text-center">
+            <h4 class="mb-0" style="color: #fadcaf;">⩍{% if form.instance.abas_ctrl %}Editar{% else %}Novo{% endif %} Abastecimento</h4>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+
+                {% if form.errors %}
+                <div class="alert alert-danger">
+                    {{ form.errors }}
+                </div>
+                {% endif %}
+
+                {% if form.instance.abas_ctrl %}
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Controle</label>
+                        <input type="text" class="form-control" value="{{ form.instance.abas_ctrl }}" readonly>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="row">
+                    <div class="col-md-9 mb-3"></div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">{{ form.abas_data.label }}</label>
+                        {{ form.abas_data }}
+                    </div>
+
+                    <div class="col-12">
+                        <h6 style="margin-top: 40px; margin-bottom: 20px; text-align: center; color: #fadcaf; cursor: pointer;"
+                            data-bs-toggle="collapse" data-bs-target="#secDadosGerais" aria-expanded="true"
+                            aria-controls="secDadosGerais">
+                            Dados Gerais:
+                        </h6>
+                    </div>
+                    <div class="col-12">
+                        <div id="secDadosGerais" class="collapse show">
+                            <div class="row">
+                                <div class="col-md-3 mb-3 position-relative">
+                                    <label class="form-label">{{ form.frota_display.label }}</label>
+                                    <input type="text" id="input_frota" class="form-control" autocomplete="off"
+                                        value="{{ frota_display|default:'' }}" placeholder="Digite a transportadora">
+                                    {{ form.abas_frot }}
+                                    <div id="dropdown_frota" class="list-group position-absolute w-100"
+                                        style="z-index: 1000;">
+                                    </div>
+                                </div>
+                                <div class="col-md-2 mb-3"></div>
+                                <div class="col-md-3 mb-3 position-relative">
+                                    <label class="form-label">{{ form.veiculo_display.label }}</label>
+                                    <input type="text" id="input_veiculo" class="form-control" autocomplete="off"
+                                        value="{{ veiculo_display|default:'' }}" placeholder="Digite a placa ou marca">
+                                    {{ form.abas_veic_sequ }}
+                                    <div id="dropdown_veiculo" class="list-group position-absolute w-100"
+                                        style="z-index: 1000;">
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-3"></div>
+                                <div class="col-md-5 mb-3 position-relative">
+                                    <label class="form-label">{{ form.funcionario_display.label }}</label>
+                                    <input type="text" id="input_funcionario" class="form-control" autocomplete="off"
+                                        value="{{ funcionario_display|default:'' }}" placeholder="Digite o funcionário">
+                                    {{ form.abas_func }}
+                                    <div id="dropdown_funcionario" class="list-group position-absolute w-100"
+                                        style="z-index: 1000;"></div>
+                                </div>
+
+                                <div class="col-md-6 mb-3 position-relative">
+                                    <label class="form-label">{{ form.fornecedor_display.label }}</label>
+                                    <input type="text" id="input_fornecedor" class="form-control" autocomplete="off"
+                                        value="{{ fornecedor_display|default:'' }}" placeholder="Digite o fornecedor">
+                                    {{ form.abas_enti }}
+                                    <div id="dropdown_fornecedor" class="list-group position-absolute w-100"
+                                        style="z-index: 1000;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <h6 style="margin-top: 40px; margin-bottom: 20px; text-align: center; color: #fadcaf; cursor: pointer;"
+                            data-bs-toggle="collapse" data-bs-target="#secInfoAbastecimento" aria-expanded="true"
+                            aria-controls="secInfoAbastecimento">
+                            Informações do Abastecimento
+                        </h6>
+                    </div>
+                    <div class="col-12">
+                        <div id="secInfoAbastecimento" class="collapse show">
+                            <div class="row">
+                                <div class="col-md-6 mb-3 position-relative">
+                                    <label class="form-label">{{ form.bomba_display.label }}</label>
+                                    <input type="text" id="input_bomba" class="form-control" autocomplete="off"
+                                        value="{{ bomba_display|default:'' }}" placeholder="Digite a bomba">
+                                    {{ form.abas_bomb }}
+                                    <div id="dropdown_bomba" class="list-group position-absolute w-100"
+                                        style="z-index: 1000;">
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6 mb-3 position-relative">
+                                    <label class="form-label">{{ form.combustivel_display.label }}</label>
+                                    <input type="text" id="input_combustivel" class="form-control" autocomplete="off"
+                                        value="{{ combustivel_display|default:'' }}" placeholder="Digite o combustível">
+                                    {{ form.abas_comb }}
+                                    <div id="dropdown_combustivel" class="list-group position-absolute w-100"
+                                        style="z-index: 1000;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <h6 style="margin-top: 40px; margin-bottom: 20px; text-align: center; color: #fadcaf; cursor: pointer;"
+                            data-bs-toggle="collapse" data-bs-target="#secQuantidadesValores" aria-expanded="true"
+                            aria-controls="secQuantidadesValores">
+                            Quantidades e Valores:
+                        </h6>
+                    </div>
+                    <div class="col-12">
+                        <div id="secQuantidadesValores" class="collapse show">
+                            <div class="row">
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">{{ form.abas_quan.label }}</label>
+                                    {{ form.abas_quan }}
+                                </div>
+                                <div class="col-md-1 mb-3"></div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">{{ form.abas_unit.label }}</label>
+                                    {{ form.abas_unit }}
+                                </div>
+                                <div class="col-md-2 mb-3"></div>
+
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">{{ form.abas_tota.label }}</label>
+                                    {{ form.abas_tota }}
+                                </div>
+
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">{{ form.abas_hokm.label }}</label>
+                                    {{ form.abas_hokm }}
+                                </div>
+                                <div class="col-md-1 mb-3"></div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">{{ form.abas_hokm_ante.label }}</label>
+                                    {{ form.abas_hokm_ante }}
+                                </div>
+                                <div class="col-md-2 mb-3"></div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">Diferença</label>
+                                    <input type="text" id="diferenca" class="form-control" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <h6 style="margin-top: 40px; margin-bottom: 20px; text-align: center; color: #fadcaf; cursor: pointer;"
+                            data-bs-toggle="collapse" data-bs-target="#secResumoAbastecimentos" aria-expanded="true"
+                            aria-controls="secResumoAbastecimentos">
+                            Resumo (últimos abastecimentos)
+                        </h6>
+                    </div>
+                    <div class="col-12">
+                        <div id="secResumoAbastecimentos" class="collapse show">
+                            <div id="resumoAbastecimentos" class="table-responsive">
+                                <div class="text-muted">Selecione a frota e o veículo para carregar o resumo.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">{{ form.abas_obse.label }}</label>
+                        {{ form.abas_obse }}
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="fas fa-save"></i> Salvar
+                    </button>
+                    <a href="{% url 'transportes:abastecimentos_lista' slug=view.kwargs.slug %}"
+                        class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Voltar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function setupAutocomplete(inputId, hiddenId, dropdownId, url, extraParams) {
+        const input = document.getElementById(inputId);
+        const hidden = document.getElementById(hiddenId);
+        const dropdown = document.getElementById(dropdownId);
+
+        let debounceTimer;
+
+        input.addEventListener('input', function () {
+            clearTimeout(debounceTimer);
+            const query = this.value;
+            if (query.length < 1) {
+                dropdown.innerHTML = '';
+                return;
+            }
+
+            debounceTimer = setTimeout(() => {
+                let queryString = `term=${encodeURIComponent(query)}`;
+                if (extraParams) {
+                    const extras = extraParams();
+                    Object.keys(extras).forEach((key) => {
+                        if (extras[key] !== null && extras[key] !== undefined && extras[key] !== '') {
+                            queryString += `&${encodeURIComponent(key)}=${encodeURIComponent(extras[key])}`;
+                        }
+                    });
+                }
+
+                fetch(`${url}?${queryString}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        dropdown.innerHTML = '';
+                        if (data.results && data.results.length > 0) {
+                            data.results.forEach(item => {
+                                const a = document.createElement('a');
+                                a.className = 'list-group-item list-group-item-action';
+                                a.href = '#';
+                                a.textContent = item.text;
+                                a.onclick = function (e) {
+                                    e.preventDefault();
+                                    input.value = item.text;
+                                    hidden.value = item.id;
+                                    hidden.dispatchEvent(new Event('change', { bubbles: true }));
+                                    dropdown.innerHTML = '';
+                                };
+                                dropdown.appendChild(a);
+                            });
+                        } else {
+                            dropdown.innerHTML = '<div class="list-group-item">Nenhum resultado encontrado</div>';
+                        }
+                    });
+            }, 300);
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.innerHTML = '';
+            }
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const isCreate = String('{{ form.instance.abas_ctrl|default:"" }}').trim() === '';
+        const quanEl = document.getElementById('{{ form.abas_quan.id_for_label }}');
+        const unitEl = document.getElementById('{{ form.abas_unit.id_for_label }}');
+        const totaEl = document.getElementById('{{ form.abas_tota.id_for_label }}');
+        const hokmEl = document.getElementById('{{ form.abas_hokm.id_for_label }}');
+        const hokmAnteEl = document.getElementById('{{ form.abas_hokm_ante.id_for_label }}');
+        const diferencaEl = document.getElementById('diferenca');
+        const frotaHiddenEl = document.getElementById('id_abas_frot');
+        const veicHiddenEl = document.getElementById('id_abas_veic_sequ');
+        const resumoEl = document.getElementById('resumoAbastecimentos');
+
+        function parseNumber(v) {
+            const s = String(v || '').trim().replace(',', '.');
+            if (!s) return null;
+            const n = Number(s);
+            return Number.isFinite(n) ? n : null;
+        }
+
+        function formatDateISOToBR(value) {
+            if (!value) return '';
+            const s = String(value);
+            const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (!m) return s;
+            return `${m[3]}/${m[2]}/${m[1]}`;
+        }
+
+        function updateDiferenca() {
+            if (!hokmEl || !hokmAnteEl || !diferencaEl) return;
+            const hokm = parseNumber(hokmEl.value);
+            const hokmAnte = parseNumber(hokmAnteEl.value);
+            if (hokm === null || hokmAnte === null) {
+                diferencaEl.value = '';
+                return;
+            }
+            diferencaEl.value = (hokm - hokmAnte).toFixed(2);
+        }
+
+        function updateTotal() {
+            if (!quanEl || !unitEl || !totaEl) return;
+            const q = parseNumber(quanEl.value);
+            const u = parseNumber(unitEl.value);
+            if (q === null || u === null) {
+                totaEl.value = '';
+                return;
+            }
+            totaEl.value = (q * u).toFixed(2);
+        }
+
+        function renderResumo(rows) {
+            if (!resumoEl) return;
+            if (!rows || rows.length === 0) {
+                resumoEl.innerHTML = '<div class="text-muted">Nenhum abastecimento encontrado para o filtro.</div>';
+                return;
+            }
+
+            let html = '';
+            html += '<table class="table table-sm table-striped align-middle">';
+            html += '<thead><tr>';
+            html += '<th>Controle</th>';
+            html += '<th>Data</th>';
+            html += '<th>Bomba</th>';
+            html += '<th>Combustível</th>';
+            html += '<th class="text-end">Qtd</th>';
+            html += '<th class="text-end">Unit.</th>';
+            html += '<th class="text-end">Total</th>';
+            html += '<th class="text-end">H. Atual</th>';
+            html += '<th class="text-end">H. Ant.</th>';
+            html += '<th class="text-end">Dif.</th>';
+            html += '</tr></thead><tbody>';
+
+            rows.forEach((r) => {
+                const hokm = parseNumber(r.horimetro);
+                const hokmAnte = parseNumber(r.horimetro_anterior);
+                const dif = (hokm !== null && hokmAnte !== null) ? (hokm - hokmAnte).toFixed(2) : '';
+
+                html += '<tr>';
+                html += `<td>${r.controle ?? ''}</td>`;
+                html += `<td>${formatDateISOToBR(r.data)}</td>`;
+                html += `<td>${r.bomba_codigo ?? ''}</td>`;
+                html += `<td>${r.combustivel_codigo ?? ''}</td>`;
+                html += `<td class="text-end">${r.quantidade ?? ''}</td>`;
+                html += `<td class="text-end">${r.valor_unitario ?? ''}</td>`;
+                html += `<td class="text-end">${r.total ?? ''}</td>`;
+                html += `<td class="text-end">${r.horimetro ?? ''}</td>`;
+                html += `<td class="text-end">${r.horimetro_anterior ?? ''}</td>`;
+                html += `<td class="text-end">${dif}</td>`;
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            resumoEl.innerHTML = html;
+        }
+
+        async function carregarResumo() {
+            if (!resumoEl) return;
+            const frotaId = frotaHiddenEl ? String(frotaHiddenEl.value || '').trim() : '';
+            const veicSequ = veicHiddenEl ? String(veicHiddenEl.value || '').trim() : '';
+
+            if (!frotaId || !veicSequ) {
+                resumoEl.innerHTML = '<div class="text-muted">Selecione a frota e o veículo para carregar o resumo.</div>';
+                return;
+            }
+
+            resumoEl.innerHTML = '<div class="text-muted">Carregando resumo...</div>';
+            const url = "{% url 'transportes:abastecimentos_api_resumo' slug=view.kwargs.slug %}";
+            try {
+                const resp = await fetch(`${url}?abas_frot=${encodeURIComponent(frotaId)}&abas_veic_sequ=${encodeURIComponent(veicSequ)}&limit=10`);
+                const data = await resp.json();
+                renderResumo(data.results || []);
+                if (isCreate && hokmAnteEl && data.ultimo_horimetro !== null && data.ultimo_horimetro !== undefined && data.ultimo_horimetro !== '') {
+                    hokmAnteEl.value = data.ultimo_horimetro;
+                    updateDiferenca();
+                }
+            } catch (e) {
+                resumoEl.innerHTML = '<div class="text-danger">Erro ao carregar resumo.</div>';
+            }
+        }
+
+        if (quanEl) {
+            quanEl.addEventListener('input', updateTotal);
+            quanEl.addEventListener('change', updateTotal);
+        }
+        if (unitEl) {
+            unitEl.addEventListener('input', updateTotal);
+            unitEl.addEventListener('change', updateTotal);
+        }
+
+        if (hokmEl) {
+            hokmEl.addEventListener('input', updateDiferenca);
+            hokmEl.addEventListener('change', updateDiferenca);
+        }
+        if (hokmAnteEl) {
+            hokmAnteEl.addEventListener('input', updateDiferenca);
+            hokmAnteEl.addEventListener('change', updateDiferenca);
+        }
+        updateTotal();
+        updateDiferenca();
+
+        if (frotaHiddenEl) {
+            frotaHiddenEl.addEventListener('change', carregarResumo);
+        }
+        if (veicHiddenEl) {
+            veicHiddenEl.addEventListener('change', carregarResumo);
+        }
+
+        setupAutocomplete(
+            'input_frota',
+            'id_abas_frot',
+            'dropdown_frota',
+            "{% url 'transportes:autocomplete_transportadoras' slug=view.kwargs.slug %}"
+        );
+
+        setupAutocomplete(
+            'input_veiculo',
+            'id_abas_veic_sequ',
+            'dropdown_veiculo',
+            "{% url 'transportes:autocomplete_veiculos' slug=view.kwargs.slug %}",
+            function () {
+                return { transportadora_id: document.getElementById('id_abas_frot').value };
+            }
+        );
+
+        setupAutocomplete(
+            'input_funcionario',
+            'id_abas_func',
+            'dropdown_funcionario',
+            "{% url 'transportes:autocomplete_entidades' slug=view.kwargs.slug %}"
+        );
+
+        setupAutocomplete(
+            'input_fornecedor',
+            'id_abas_enti',
+            'dropdown_fornecedor',
+            "{% url 'transportes:autocomplete_entidades' slug=view.kwargs.slug %}"
+        );
+
+        setupAutocomplete(
+            'input_bomba',
+            'id_abas_bomb',
+            'dropdown_bomba',
+            "{% url 'transportes:autocomplete_bombas' slug=view.kwargs.slug %}"
+        );
+
+        setupAutocomplete(
+            'input_combustivel',
+            'id_abas_comb',
+            'dropdown_combustivel',
+            "{% url 'transportes:autocomplete_combustiveis' slug=view.kwargs.slug %}"
+        );
+
+        carregarResumo();
+    });
+</script>
+{% endblock %}

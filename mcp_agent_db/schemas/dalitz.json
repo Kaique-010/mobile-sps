@@ -7401,7 +7401,7 @@
         "primary_key": false
       },
       {
-        "nome": "bomb_obse",
+        "nome": "bomb_obsee",
         "tipo": "character varying",
         "nullable": true,
         "default": null,

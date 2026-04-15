@@ -9,34 +9,113 @@
     color: #e8eef5;
   }
 
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  @media (max-width: 1200px) {
+    .metrics-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 768px) {
+    .metrics-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  .metric-card {
+    --accent: rgba(255, 255, 255, .18);
+  }
+
+  .metric-card .card {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .02));
+    border: 1px solid rgba(255, 255, 255, .10);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .25);
+  }
+
+  .metric-card .card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(800px 180px at 0% 0%, var(--accent), rgba(0, 0, 0, 0) 55%);
+    pointer-events: none;
+  }
+
+  .metric-card .card-body {
+    padding: 10px 12px;
+  }
+
+  .metric-ico {
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, .18);
+    border: 1px solid rgba(255, 255, 255, .18);
+    font-size: 0.9rem;
+    font-weight: 800;
+    letter-spacing: .02em;
+    flex: 0 0 auto;
+  }
+
+  .metric-label {
+    font-size: 0.82rem;
+    opacity: .92;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+  }
+
+  .metric-value {
+    font-size: 1.25rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .cv-dark .btn-filter-toggle {
+    border: 1px solid rgba(255, 255, 255, .18);
+  }
+
+  .cv-dark .btn-filter-toggle:hover {
+    border-color: rgba(255, 255, 255, .32);
+  }
+
+  .dash-title {
+    letter-spacing: .02em;
+  }
+
   .cv-dark .badge {
     background: rgba(255, 255, 255, .12);
     color: #e8eef5;
   }
 
-  .metric-teal .card {
-    background: #21c7b7;
-    color: #08121f;
+  .metric-aqua {
+    --accent: rgba(34, 183, 216, .32);
   }
 
-  .metric-orange .card {
-    background: #f0ad4e;
-    color: #08121f;
+  .metric-teal {
+    --accent: rgba(33, 199, 183, .30);
   }
 
-  .metric-purple .card {
-    background: #8e7df5;
-    color: #08121f;
+  .metric-orange {
+    --accent: rgba(240, 173, 78, .30);
   }
 
-  .metric-aqua .card {
-    background: #22b7d8;
-    color: #08121f;
+  .metric-purple {
+    --accent: rgba(142, 125, 245, .30);
   }
 
-  .metric-red .card {
-    background: #ff6b6b;
-    color: #08121f;
+  .metric-red {
+    --accent: rgba(255, 107, 107, .30);
   }
 
   .chart-wrap {
@@ -49,62 +128,99 @@
 <div class="container cv-dark py-2">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <div class="container">
-      <h4 class="text-center">Dashboard de Visitas</h4>
+      <h4 class="text-center dash-title mb-4 mt-4">Dashboard de Visitas</h4>
     </div>
     <a href="/web/{{ slug }}/controle-de-visitas/" class="btn btn-outline-secondary">Voltar</a>
   </div>
-  <form class="row g-2 mb-3" method="get">
-    <div class="col-md-2"><input type="text" name="cliente" value="{{ filtros.cliente }}" placeholder="Cliente" class="form-control" /></div>
-    <div class="col-md-2"><input type="text" name="vendedor" value="{{ filtros.vendedor }}" placeholder="Vendedor" class="form-control" /></div>
-    <div class="col-md-2"><input type="text" name="etapa" value="{{ filtros.etapa }}" placeholder="Etapa" class="form-control" /></div>
-    <div class="col-md-2"><input type="date" name="data_inicio" value="{{ filtros.data_inicio }}" placeholder="Data Início" class="form-control" /></div>
-    <div class="col-md-2"><input type="date" name="data_fim" value="{{ filtros.data_fim }}" placeholder="Data Fim" class="form-control" /></div>
-    <div class="col-md-2"><button class="btn btn-outline-primary w-100">Filtrar</button></div>
-  </form>
-  <div class="row g-3">
-    <div class="col-md-3 metric-aqua">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center"><span>Total de Visitas</span>
-            <h5 class="mb-0">{{ metricas.total_visitas }}</h5>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3 metric-teal">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center"><span>Hoje</span>
-            <h5 class="mb-0">{{ metricas.hoje }}</h5>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3 metric-orange">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center"><span>Esta Semana</span>
-            <h5 class="mb-0">{{ metricas.semana }}</h5>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3 metric-purple">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center"><span>Este Mês</span>
-            <h5 class="mb-0">{{ metricas.mes }}</h5>
-          </div>
-        </div>
+
+  <div class="d-flex justify-content-end mb-2">
+    <button class="btn btn-sm btn-filter-toggle btn-outline-secondary" type="button" data-bs-toggle="collapse"
+      data-bs-target="#filtrosDashboard" aria-expanded="true" aria-controls="filtrosDashboard">
+      <span class="me-1" aria-hidden="true">⛭</span> Filtros
+    </button>
+  </div>
+  <div class="collapse show" id="filtrosDashboard">
+    <div class="card mb-3">
+      <div class="card-body">
+        <form class="row g-2" method="get">
+          <div class="col-md-2"><input type="text" name="cliente" value="{{ filtros.cliente }}" placeholder="Cliente"
+              class="form-control" /></div>
+          <div class="col-md-2"><input type="text" name="vendedor" value="{{ filtros.vendedor }}" placeholder="Vendedor"
+              class="form-control" /></div>
+          <div class="col-md-2"><input type="text" name="etapa" value="{{ filtros.etapa }}" placeholder="Etapa"
+              class="form-control" /></div>
+          <div class="col-md-2"><input type="date" name="data_inicio" value="{{ filtros.data_inicio }}"
+              placeholder="Data Início" class="form-control" /></div>
+          <div class="col-md-2"><input type="date" name="data_fim" value="{{ filtros.data_fim }}" placeholder="Data Fim"
+              class="form-control" /></div>
+          <div class="col-md-2"><button class="btn btn-outline-primary w-100"><span class="me-1"
+                aria-hidden="true">🔎</span>Filtrar</button></div>
+        </form>
       </div>
     </div>
   </div>
-  <div class="row g-3 mt-1">
-    <div class="col-md-12 metric-red">
+  <div class="metrics-grid">
+    <div class="metric-aqua metric-card">
       <div class="card">
         <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center"><span>KM Percorrido</span>
-            <h5 class="mb-0">{{ metricas.km_total }} km</h5>
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2 min-w-0">
+              <span class="metric-ico" aria-hidden="true">Σ</span>
+              <span class="metric-label">Total</span>
+            </div>
+            <div class="metric-value">{{ metricas.total_visitas }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="metric-teal metric-card">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2 min-w-0">
+              <span class="metric-ico" aria-hidden="true">D</span>
+              <span class="metric-label">Hoje</span>
+            </div>
+            <div class="metric-value">{{ metricas.hoje }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="metric-orange metric-card">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2 min-w-0">
+              <span class="metric-ico" aria-hidden="true">W</span>
+              <span class="metric-label">Semana</span>
+            </div>
+            <div class="metric-value">{{ metricas.semana }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="metric-purple metric-card">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2 min-w-0">
+              <span class="metric-ico" aria-hidden="true">M</span>
+              <span class="metric-label">Mês</span>
+            </div>
+            <div class="metric-value">{{ metricas.mes }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="metric-red metric-card">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2 min-w-0">
+              <span class="metric-ico" aria-hidden="true">KM</span>
+              <span class="metric-label">Percorrido</span>
+            </div>
+            <div class="metric-value">{{ metricas.km_total }} km</div>
           </div>
         </div>
       </div>
@@ -114,7 +230,9 @@
     <div class="col-md-12">
       <div class="card">
         <div class="card-body">
-          <div class="d-flex justify-content_between align-items-center mb-2"><span>Visitas por Etapa</span></div>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="fw-semibold">Visitas por Etapa</span>
+          </div>
           <div class="chart-wrap">
             <canvas id="graficoEtapas"></canvas>
           </div>

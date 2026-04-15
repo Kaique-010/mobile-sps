@@ -2,6 +2,8 @@
 {% load static %}
 
 {% block content %}
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
+
 <div class="container mt-4">
     <div class="card">
         <div class="card-header">
@@ -340,10 +342,10 @@
                 </div>
 
                 <div class="mt-4">
-                    <button type="submit" class="btn btn-primary">
+                    <button type="submit" class="btn btn-outline-primary">
                         <i class="fas fa-save"></i> Salvar
                     </button>
-                    <a href="{% url 'transportes:veiculos_lista' slug=view.kwargs.slug %}" class="btn btn-secondary">
+                    <a href="{% url 'transportes:veiculos_lista' slug=view.kwargs.slug %}" class="btn btn-outline-danger">
                         <i class="fas fa-arrow-left"></i> Voltar
                     </a>
                 </div>

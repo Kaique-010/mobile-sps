@@ -551,3 +551,85 @@ class Mdfeseguro(models.Model):
     class Meta:
         managed = False
         db_table = 'mdfeseguro'
+
+
+
+
+class Bombas(models.Model):
+    bomb_empr = models.IntegerField(primary_key=True, db_column='bomb_empr', verbose_name='Empresa Bomba')
+    bomb_codi = models.CharField(max_length=10, blank=True, null=True, db_column='bomb_codi', verbose_name='Código Bomba')
+    bomb_desc = models.CharField(max_length=60, blank=True, null=True, db_column='bomb_desc', verbose_name='Descrição Bomba')
+    bomb_cecu = models.IntegerField(blank=True, null=True, db_column='bomb_cecu', verbose_name='Centro de custo da Bomba')
+    bomb_forn = models.BigIntegerField(blank=True, null=True, db_column='bomb_forn', verbose_name='Fornecedor da Bomba')
+    bomb_obse = models.TextField(blank=True, null=True, db_column='bomb_obse', verbose_name='Observação Bomba')
+    
+    class Meta:
+        managed = False
+        db_table = 'bomba'
+        verbose_name = 'Bomba'
+        verbose_name_plural = 'Bombas'
+        ordering = ['bomb_empr', 'bomb_codi']
+        unique_together = (('bomb_empr', 'bomb_codi'),)
+    
+    def __str__(self):
+        return f"{self.bomb_empr} - {self.bomb_codi} - {self.bomb_desc}"
+
+
+
+
+
+class BombasSaldos(models.Model):
+    TIPO_MOVIMENTACAO = (
+    (1, 'Entrada'),
+    (2, 'Saída'),
+)
+    bomb_id = models.BigAutoField(primary_key=True, db_column='bomb_id')
+    bomb_empr = models.IntegerField(db_column='bomb_empr', verbose_name='Empresa Bomba')
+    bomb_fili = models.IntegerField(verbose_name='Filial Bomba')
+    bomb_bomb = models.CharField(max_length=10, blank=True, null=True, db_column='bomb_bomb', verbose_name='Código Bomba')
+    bomb_comb = models.CharField(max_length=10, blank=True, null=True, db_column='bomb_comb', verbose_name='Combustível')
+    bomb_sald = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True, db_column='bomb_sald', verbose_name='Quantidade Movimentada')
+    bomb_tipo_movi = models.IntegerField(blank=True, null=True, db_column='bomb_tipo_movi', verbose_name='Tipo Movimentação', choices=TIPO_MOVIMENTACAO)
+    bomb_data = models.DateField(blank=True, null=True, db_column='bomb_data', verbose_name='Data Movimentação')
+    bomb_usua = models.IntegerField(blank=True, null=True, db_column='bomb_usua', verbose_name='Usuário Movimentação')
+    
+    class Meta:
+        managed = False
+        db_table = 'bombasaldos'
+        verbose_name = 'Bomba Saldo'
+        verbose_name_plural = 'Bombas Saldos'
+        ordering = ['bomb_empr', 'bomb_fili', 'bomb_bomb', 'bomb_comb', '-bomb_data', '-bomb_id']
+    
+    def __str__(self):
+        return f"{self.bomb_empr} - {self.bomb_bomb} - {self.bomb_comb} - {self.bomb_sald}"
+
+
+class Abastecusto(models.Model):
+    abas_empr = models.IntegerField(primary_key=True, verbose_name='Empresa Abastecimento')
+    abas_fili = models.IntegerField(verbose_name='Filial Abastecimento')
+    abas_ctrl = models.IntegerField(verbose_name='Controle Abastecimento')
+    abas_frot = models.CharField(max_length=10, blank=True, null=True, verbose_name='Frota/Transportadora')
+    abas_veic_sequ = models.IntegerField(blank=True, null=True, verbose_name='Veículo Sequencial')
+    abas_plac = models.CharField(max_length=7, blank=True, null=True, verbose_name='Placa')
+    abas_data = models.DateField(blank=True, null=True, verbose_name='Data Abastecimento')
+    abas_func = models.IntegerField(blank=True, null=True, verbose_name='Funcionário Abastecimento')
+    abas_enti = models.IntegerField(blank=True, null=True, verbose_name='Entidade Abastecimento')
+    abas_bomb = models.CharField(max_length=10, blank=True, null=True, verbose_name='Bomba Abastecimento')
+    abas_comb = models.CharField(max_length=20, blank=True, null=True, verbose_name='Combustível Abastecimento')
+    abas_quan = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True, verbose_name='Quantidade Abastecimento')
+    abas_unit = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True, verbose_name='Preço Unitário Abastecimento')
+    abas_tota = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True, verbose_name='Total Abastecimento')
+    abas_hokm = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True, verbose_name='Horimetro Abastecimento')
+    abas_hokm_ante = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True, verbose_name='Horimetro Anterior Abastecimento')
+    abas_obse = models.TextField(blank=True, null=True, verbose_name='Observação Abastecimento')
+    abas_quan_ante = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True, verbose_name='Quantidade Anterior Abastecimento')
+    abas_medi = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True, verbose_name='Medidor Abastecimento')
+    abas_docu = models.DecimalField(max_digits=15, decimal_places=0, blank=True, null=True, verbose_name='Documento Abastecimento')
+    abas_usua_nome = models.IntegerField(blank=True, null=True, verbose_name='Usuário Abastecimento')
+    abas_usua_alte = models.IntegerField(blank=True, null=True, verbose_name='Usuário Alteração')
+
+
+    class Meta:
+        managed = False
+        db_table = 'abastecusto'
+        unique_together = (('abas_empr', 'abas_fili', 'abas_ctrl'),)

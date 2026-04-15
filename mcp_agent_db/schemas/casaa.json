@@ -7401,7 +7401,7 @@
         "primary_key": false
       },
       {
-        "nome": "bomb_obse",
+        "nome": "bomb_obsee",
         "tipo": "character varying",
         "nullable": true,
         "default": null,
@@ -101651,73 +101651,28 @@
   "_metadados": {
     "campos_chave": {
       "clientes": {
-        "tabelas": [
-          "entidades"
-        ],
-        "campos_identificacao": [
-          "enti_clie",
-          "enti_nome",
-          "enti_fant"
-        ],
-        "campos_contato": [
-          "enti_fone",
-          "enti_celu",
-          "enti_emai"
-        ],
-        "campos_endereco": [
-          "enti_ende",
-          "enti_cida",
-          "enti_esta",
-          "enti_cep"
-        ],
-        "campos_documento": [
-          "enti_cnpj",
-          "enti_cpf"
-        ]
+        "tabelas": ["entidades"],
+        "campos_identificacao": ["enti_clie", "enti_nome", "enti_fant"],
+        "campos_contato": ["enti_fone", "enti_celu", "enti_emai"],
+        "campos_endereco": ["enti_ende", "enti_cida", "enti_esta", "enti_cep"],
+        "campos_documento": ["enti_cnpj", "enti_cpf"]
       },
       "vendedores": {
-        "tabelas": [
-          "entidades"
-        ],
-        "campos_identificacao": [
-          "pedi_vend",
-          "enti_nome",
-          "enti_titpo_enti"
-        ]
+        "tabelas": ["entidades"],
+        "campos_identificacao": ["pedi_vend", "enti_nome", "enti_titpo_enti"]
       },
       "produtos": {
-        "tabelas": [
-          "produtos"
-        ],
-        "campos_identificacao": [
-          "prod_codi",
-          "prod_nome"
-        ],
-        "campos_preco": [
-          "prod_prec",
-          "prod_cust"
-        ],
-        "campos_estoque": [
-          "sapr_sald"
-        ]
+        "tabelas": ["produtos"],
+        "campos_identificacao": ["prod_codi", "prod_nome"],
+        "campos_preco": ["prod_prec", "prod_cust"],
+        "campos_estoque": ["sapr_sald"]
       },
       "pedidos": {
-        "tabelas": [
-          "pedidosvenda"
-        ],
-        "campos_identificacao": [
-          "pedi_nume",
-          "pedi_data"
-        ],
-        "campos_cliente": [
-          "pedi_forn"
-        ],
-        "campos_vendedor": [
-          "pedi_vend"
-        ],
-        "campos_valor": [
-          "pedi_tota"
-        ]
+        "tabelas": ["pedidosvenda"],
+        "campos_identificacao": ["pedi_nume", "pedi_data"],
+        "campos_cliente": ["pedi_forn"],
+        "campos_vendedor": ["pedi_vend"],
+        "campos_valor": ["pedi_tota"]
       }
     },
     "descricao": "Metadados para facilitar consultas do agente",
