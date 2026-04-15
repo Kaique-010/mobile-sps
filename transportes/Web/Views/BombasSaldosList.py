@@ -48,11 +48,22 @@ class BombasSaldosListView(ListView):
         filial_id = int(self.request.session.get("filial_id") or 1)
 
         context["titulo"] = "Movimentação de Combustível por Bomba"
-        context["total_movimentos"] = self.get_queryset().count()
+        qs = self.get_queryset()
+        context["total_movimentos"] = qs.count()
 
         bomb_bomb = (self.request.GET.get("bomb_bomb") or "").strip()
         bomb_comb = (self.request.GET.get("bomb_comb") or "").strip()
         context["saldo_atual"] = None
+        if bomb_bomb and not bomb_comb:
+            combs = (
+                qs.exclude(bomb_comb__isnull=True)
+                .exclude(bomb_comb="")
+                .values_list("bomb_comb", flat=True)
+                .distinct()
+            )
+            if combs.count() == 1:
+                bomb_comb = combs.first() or ""
+
         if bomb_bomb and bomb_comb and empresa_id:
             context["saldo_atual"] = BombasSaldosService.calcular_saldo_atual(
                 using=banco,

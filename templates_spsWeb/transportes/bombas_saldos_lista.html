@@ -97,7 +97,7 @@
 
     <div class="card card-corporate mb-3 mt-3">
         <div class="card-body">
-            <form method="get" class="row g-2">
+            <form method="get" class="row g-2" id="formFiltrosSaldos">
                 <div class="col-md-4">
                     <label class="form-label" for="q">Busca</label>
                     <input type="text" id="q" name="q" class="form-control" value="{{ request.GET.q }}" placeholder="Bomba, combustível ou tipo">
@@ -189,6 +189,24 @@
         const hidden = document.getElementById(hiddenId);
         const dropdown = document.getElementById(dropdownId);
         let debounceTimer;
+        const form = document.getElementById('formFiltrosSaldos');
+
+        function tryAutoSubmit() {
+            const bomb = document.getElementById('bomb_bomb');
+            const comb = document.getElementById('bomb_comb');
+            if (!form || !bomb || !comb) return;
+            if (String(bomb.value || '').trim() && String(comb.value || '').trim()) {
+                form.submit();
+            }
+        }
+
+        function parseCodigo(value) {
+            const raw = String(value || '').trim();
+            if (!raw) return '';
+            const parts = raw.split(' - ');
+            const left = (parts[0] || '').trim();
+            return left;
+        }
 
         input.addEventListener('input', function () {
             clearTimeout(debounceTimer);
@@ -213,6 +231,7 @@
                                     input.value = item.text;
                                     hidden.value = item.id;
                                     dropdown.innerHTML = '';
+                                    tryAutoSubmit();
                                 };
                                 dropdown.appendChild(a);
                             });
@@ -221,6 +240,13 @@
                         }
                     });
             }, 250);
+        });
+
+        input.addEventListener('blur', function () {
+            const codigo = parseCodigo(input.value);
+            if (codigo) {
+                hidden.value = codigo;
+            }
         });
 
         document.addEventListener('click', function (e) {
