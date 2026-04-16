@@ -13,16 +13,21 @@ from transportes.Web.Views.AbastecimentosList import AbastecimentosListView
 from transportes.Web.Views.AbastecimentosCreate import AbastecimentosCreateView
 from transportes.Web.Views.AbastecimentosUpdate import AbastecimentosUpdateView
 from transportes.Web.Views.AbastecimentosDelete import AbastecimentosDeleteView
+from transportes.Web.Views.LancamentoCustosList import LancamentoCustosListView
+from transportes.Web.Views.LancamentoCustosCreate import LancamentoCustosCreateView
+from transportes.Web.Views.LancamentoCustosUpdate import LancamentoCustosUpdateView
+from transportes.Web.Views.LancamentoCustosDelete import LancamentoCustosDeleteView
 from transportes.Web.Views.BombasSaldosList import BombasSaldosListView
 from transportes.Web.Views.BombasSaldosCreate import BombasSaldosCreateView
 from transportes.Web.Views.BombasSaldosUpdate import BombasSaldosUpdateView
 from transportes.Web.Views.BombasSaldosDelete import BombasSaldosDeleteView
-from transportes.Rest.Views.autocompletes import autocomplete_transportadoras, autocomplete_marcas, autocomplete_centrodecustos, autocomplete_entidades, autocomplete_veiculos, autocomplete_bombas, autocomplete_combustiveis, get_entidade_detalhes
+from transportes.Rest.Views.autocompletes import autocomplete_transportadoras, autocomplete_marcas, autocomplete_centrodecustos, autocomplete_entidades, autocomplete_veiculos, autocomplete_bombas, autocomplete_combustiveis, autocomplete_produtos, get_entidade_detalhes
 from transportes.Web.Views.TranspMotoList import TranspMotoListView
 from transportes.Web.Views.TranspMotoUpdate import TranspMotoUpdateView
 from transportes.Rest.Views.transp_moto import TranspMotoListApiView, TranspMotoUpdateApiView
 from transportes.Rest.Views.bombas import BombasListApiView, BombasDetailApiView
 from transportes.Rest.Views.abastecimentos import AbastecimentoViewSet
+from transportes.Rest.Views.lancamento_custos import LancamentoCustosViewSet
 from transportes.Rest.Views.abastecimentos_resumo import abastecimentos_resumo
 from transportes.Rest.Views.bombas_saldos import BombasSaldosViewSet
 
@@ -67,6 +72,22 @@ urlpatterns = [
         name='abastecimentos_api_detalhe',
     ),
     path('api/abastecimentos/resumo/', abastecimentos_resumo, name='abastecimentos_api_resumo'),
+
+    # Lançamentos de Custos
+    path('lancamento_custos/', LancamentoCustosListView.as_view(), name='lancamento_custos_lista'),
+    path('lancamento_custos/novo/', LancamentoCustosCreateView.as_view(), name='lancamento_custos_novo'),
+    path('lancamento_custos/<int:lacu_ctrl>/editar/', LancamentoCustosUpdateView.as_view(), name='lancamento_custos_editar'),
+    path('lancamento_custos/<int:lacu_ctrl>/excluir/', LancamentoCustosDeleteView.as_view(), name='lancamento_custos_deletar'),
+    path(
+        'api/lancamento_custos/',
+        LancamentoCustosViewSet.as_view({'get': 'list', 'post': 'create'}),
+        name='lancamento_custos_api_lista',
+    ),
+    path(
+        'api/lancamento_custos/<int:pk>/',
+        LancamentoCustosViewSet.as_view({'get': 'retrieve', 'patch': 'partial_update', 'delete': 'destroy'}),
+        name='lancamento_custos_api_detalhe',
+    ),
 
     # Movimentação por Bomba
     path('bombas_saldos/', BombasSaldosListView.as_view(), name='bombas_saldos_lista'),
@@ -135,5 +156,6 @@ urlpatterns = [
     path('autocomplete/veiculos/', autocomplete_veiculos, name='autocomplete_veiculos'),
     path('autocomplete/bombas/', autocomplete_bombas, name='autocomplete_bombas'),
     path('autocomplete/combustiveis/', autocomplete_combustiveis, name='autocomplete_combustiveis'),
+    path('autocomplete/produtos/', autocomplete_produtos, name='autocomplete_produtos'),
     path('api/entidade/detalhes/', get_entidade_detalhes, name='api_entidade_detalhes'),
 ]

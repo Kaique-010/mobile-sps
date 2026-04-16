@@ -633,3 +633,41 @@ class Abastecusto(models.Model):
         managed = False
         db_table = 'abastecusto'
         unique_together = (('abas_empr', 'abas_fili', 'abas_ctrl'),)
+        
+        
+        
+
+class Custos(models.Model):
+    lacu_empr = models.IntegerField(verbose_name='Empresa')
+    lacu_fili = models.IntegerField(verbose_name='Filial')
+    lacu_ctrl = models.DecimalField(max_digits=9, decimal_places=0, verbose_name='Controle')
+    lacu_data = models.DateField(blank=True, null=True, verbose_name='Data Custos')
+    lacu_item = models.CharField(max_length=20, blank=True, null=True, verbose_name='Item/Insumo')
+    lacu_nome_item = models.CharField(max_length=60, blank=True, null=True, verbose_name='Descrição Item')
+    lacu_quan = models.DecimalField(max_digits=15, decimal_places=5, blank=True, null=True, verbose_name='Quantidade')
+    lacu_unit = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True, verbose_name='Preço Unitário')
+    lacu_tota = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True, verbose_name='Total')
+    lacu_daga = models.DateField(blank=True, null=True, verbose_name='Data Garantia')
+    lacu_kmga = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True, verbose_name='Km Garantia')
+    lacu_cecu = models.IntegerField(blank=True, null=True, verbose_name='Custos de Execução')
+    lacu_kmat = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True, verbose_name='Km Matriz')
+    lacu_veic = models.IntegerField(verbose_name='Veículo')
+    lacu_frot = models.CharField(max_length=20, verbose_name='Frota/Transportadora')
+    lacu_tran = models.IntegerField(verbose_name='Nome da Transportadora')
+    lacu_moto = models.IntegerField(verbose_name='Motorista')
+    lacu_docu = models.CharField(max_length=25, verbose_name='Documento')
+    lacu_forn = models.IntegerField(verbose_name='Fornecedor')
+    lacu_nome_forn = models.CharField(max_length=60, blank=True, null=True, verbose_name='Nome Fornecedor')
+    lacu_veic = models.IntegerField(blank=True, null=True, verbose_name='Veículo')
+    lacu_moto = models.IntegerField(blank=True, null=True, verbose_name='Motorista')
+    lacu_docu = models.CharField(max_length=25, blank=True, null=True, verbose_name='Documento')
+    lacu_obse = models.TextField(blank=True, null=True, verbose_name='Observação')
+    lacu_nota = models.DecimalField(max_digits=9, decimal_places=0, blank=True, null=True, verbose_name='Nota Fiscal')
+    lacu_cupo = models.DecimalField(max_digits=9, decimal_places=0, blank=True, null=True, verbose_name='Cupom')
+    lacu_comp = models.BooleanField(blank=True, null=True, verbose_name='Completado')
+ 
+    lacu_id = models.AutoField(primary_key=True, verbose_name='ID')
+    class Meta:
+        managed = False
+        db_table = 'custos'
+        ordering = ['lacu_id']

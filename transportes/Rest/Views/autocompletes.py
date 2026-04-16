@@ -254,3 +254,28 @@ def autocomplete_combustiveis(request, slug=None):
             }
         )
     return JsonResponse({'results': data})
+
+
+def autocomplete_produtos(request, slug=None):
+    banco = get_licenca_db_config(request) or 'default'
+    empresa_id = request.session.get('empresa_id')
+    if not empresa_id:
+        return JsonResponse({'results': []})
+
+    term = (request.GET.get('term') or request.GET.get('q') or '').strip()
+    qs = Produtos.objects.using(banco).filter(prod_empr=str(empresa_id))
+
+    if term:
+        qs = qs.filter(Q(prod_codi__icontains=term) | Q(prod_nome__icontains=term))
+
+    qs = qs.order_by('prod_nome')[:20]
+    data = [
+        {
+            'id': str(obj.prod_codi),
+            'text': f"{obj.prod_codi} - {obj.prod_nome}",
+            'codigo': str(obj.prod_codi),
+            'nome': obj.prod_nome or '',
+        }
+        for obj in qs
+    ]
+    return JsonResponse({'results': data})

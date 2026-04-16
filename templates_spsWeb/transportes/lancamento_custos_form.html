@@ -1,0 +1,348 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
+
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header text-center">
+            <h4 class="mb-0" style="color: #fadcaf;">{% if form.instance.lacu_ctrl %}Editar{% else %}Novo{% endif %}
+                Lançamento de Custo</h4>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+
+                {% if form.errors %}
+                <div class="alert alert-danger">
+                    {{ form.errors }}
+                </div>
+                {% endif %}
+
+                {% if form.instance.lacu_ctrl %}
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Controle</label>
+                        <input type="text" class="form-control" value="{{ form.instance.lacu_ctrl }}" readonly>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="row">
+                    <div class="col-md-9 mb-3"></div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">{{ form.lacu_data.label }}</label>
+                        {{ form.lacu_data }}
+                    </div>
+
+                    <div class="col-12">
+                        <h6 style="margin-top: 40px; margin-bottom: 20px; text-align: center; color: #fadcaf; cursor: pointer;"
+                            data-bs-toggle="collapse" data-bs-target="#secDadosGerais" aria-expanded="true"
+                            aria-controls="secDadosGerais">
+                            Dados Gerais:
+                        </h6>
+                    </div>
+                    <div class="col-12">
+                        <div id="secDadosGerais" class="collapse show">
+                            <div class="row">
+                                <div class="col-md-3 mb-3 position-relative">
+                                    <label class="form-label">{{ form.frota_display.label }}</label>
+                                    <input type="text" id="input_frota" class="form-control" autocomplete="off"
+                                        value="{{ frota_display|default:'' }}" placeholder="Digite a transportadora">
+                                    {{ form.lacu_frot }}
+                                    <div id="dropdown_frota" class="list-group position-absolute w-100"
+                                        style="z-index: 1000;"></div>
+                                </div>
+                                <div class="col-md-2 mb-3"></div>
+                                <div class="col-md-3 mb-3 position-relative">
+                                    <label class="form-label">{{ form.veiculo_display.label }}</label>
+                                    <input type="text" id="input_veiculo" class="form-control" autocomplete="off"
+                                        value="{{ veiculo_display|default:'' }}" placeholder="Digite a placa ou marca">
+                                    {{ form.lacu_veic }}
+                                    <div id="dropdown_veiculo" class="list-group position-absolute w-100"
+                                        style="z-index: 1000;"></div>
+                                </div>
+                                <div class="col-md-3 mb-3"></div>
+                                <div class="col-md-5 mb-3 position-relative">
+                                    <label class="form-label">{{ form.funcionario_display.label }}</label>
+                                    <input type="text" id="input_funcionario" class="form-control" autocomplete="off"
+                                        value="{{ funcionario_display|default:'' }}" placeholder="Digite o funcionário">
+                                    {{ form.lacu_moto }}
+                                    <div id="dropdown_funcionario" class="list-group position-absolute w-100"
+                                        style="z-index: 1000;"></div>
+                                </div>
+                                <div class="col-md-6 mb-3 position-relative">
+                                    <label class="form-label">{{ form.fornecedor_display.label }}</label>
+                                    <input type="text" id="input_fornecedor" class="form-control" autocomplete="off"
+                                        value="{{ fornecedor_display|default:'' }}" placeholder="Digite o fornecedor">
+                                    {{ form.lacu_forn }}
+                                    <div id="dropdown_fornecedor" class="list-group position-absolute w-100"
+                                        style="z-index: 1000;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <h6 style="margin-top: 40px; margin-bottom: 20px; text-align: center; color: #fadcaf; cursor: pointer;"
+                            data-bs-toggle="collapse" data-bs-target="#secInfoLancamento" aria-expanded="true"
+                            aria-controls="secInfoLancamento">
+                            Informações do Lançamento
+                        </h6>
+                    </div>
+                    <div class="col-12">
+                        <div id="secInfoLancamento" class="collapse show">
+                            <div class="row">
+                                <div class="col-md-6 mb-3 position-relative">
+                                    <label class="form-label">{{ form.produto_display.label }}</label>
+                                    <input type="text" id="input_produto" class="form-control" autocomplete="off"
+                                        value="{{ produto_display|default:'' }}" placeholder="Digite o produto">
+                                    {{ form.lacu_item }}
+                                    <div id="dropdown_produto" class="list-group position-absolute w-100"
+                                        style="z-index: 1000;"></div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">{{ form.lacu_nome_item.label }}</label>
+                                    {{ form.lacu_nome_item }}
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">{{ form.lacu_docu.label }}</label>
+                                    {{ form.lacu_docu }}
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">{{ form.lacu_nota.label }}</label>
+                                    {{ form.lacu_nota }}
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">{{ form.lacu_cupo.label }}</label>
+                                    {{ form.lacu_cupo }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <h6 style="margin-top: 40px; margin-bottom: 20px; text-align: center; color: #fadcaf; cursor: pointer;"
+                            data-bs-toggle="collapse" data-bs-target="#secQuantidadesValores" aria-expanded="true"
+                            aria-controls="secQuantidadesValores">
+                            Quantidades e Valores:
+                        </h6>
+                    </div>
+                    <div class="col-12">
+                        <div id="secQuantidadesValores" class="collapse show">
+                            <div class="row">
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">{{ form.lacu_quan.label }}</label>
+                                    {{ form.lacu_quan }}
+                                </div>
+                                <div class="col-md-1 mb-3"></div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">{{ form.lacu_unit.label }}</label>
+                                    {{ form.lacu_unit }}
+                                </div>
+                                <div class="col-md-2 mb-3"></div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">{{ form.lacu_tota.label }}</label>
+                                    {{ form.lacu_tota }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">{{ form.lacu_obse.label }}</label>
+                        {{ form.lacu_obse }}
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="fas fa-save"></i> Salvar
+                    </button>
+                    <a href="{% url 'transportes:lancamento_custos_lista' slug=view.kwargs.slug %}"
+                        class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Voltar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+    function setupAutocomplete(inputId, hiddenId, dropdownId, url, extraParams, onSelect) {
+        const input = document.getElementById(inputId);
+        const hidden = document.getElementById(hiddenId);
+        const dropdown = document.getElementById(dropdownId);
+        if (!input || !hidden || !dropdown) return;
+
+        let debounceTimer;
+
+        input.addEventListener('input', function () {
+            clearTimeout(debounceTimer);
+            const query = this.value;
+            if (query.length < 1) {
+                dropdown.innerHTML = '';
+                return;
+            }
+
+            debounceTimer = setTimeout(() => {
+                let queryString = `term=${encodeURIComponent(query)}`;
+                if (extraParams) {
+                    const extras = extraParams();
+                    Object.keys(extras).forEach((key) => {
+                        if (extras[key] !== null && extras[key] !== undefined && extras[key] !== '') {
+                            queryString += `&${encodeURIComponent(key)}=${encodeURIComponent(extras[key])}`;
+                        }
+                    });
+                }
+
+                fetch(`${url}?${queryString}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        dropdown.innerHTML = '';
+                        if (data.results && data.results.length > 0) {
+                            data.results.forEach(item => {
+                                const a = document.createElement('a');
+                                a.className = 'list-group-item list-group-item-action';
+                                a.href = '#';
+                                a.textContent = item.text;
+                                a.onclick = function (e) {
+                                    e.preventDefault();
+                                    input.value = item.text;
+                                    hidden.value = item.id;
+                                    hidden.dispatchEvent(new Event('change', { bubbles: true }));
+                                    dropdown.innerHTML = '';
+                                    if (typeof onSelect === 'function') {
+                                        onSelect(item);
+                                    }
+                                };
+                                dropdown.appendChild(a);
+                            });
+                        } else {
+                            dropdown.innerHTML = '<div class="list-group-item">Nenhum resultado encontrado</div>';
+                        }
+                    });
+            }, 300);
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.innerHTML = '';
+            }
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const quanEl = document.getElementById('{{ form.lacu_quan.id_for_label }}');
+        const unitEl = document.getElementById('{{ form.lacu_unit.id_for_label }}');
+        const totaEl = document.getElementById('{{ form.lacu_tota.id_for_label }}');
+        const nomeItemEl = document.getElementById('{{ form.lacu_nome_item.id_for_label }}');
+        const frotaHiddenEl = document.getElementById('id_lacu_frot');
+        const veicHiddenEl = document.getElementById('id_lacu_veic');
+        const itemHiddenEl = document.getElementById('id_lacu_item');
+
+        function parseNumber(v) {
+            const s = String(v || '').trim().replace(',', '.');
+            if (!s) return null;
+            const n = Number(s);
+            return Number.isFinite(n) ? n : null;
+        }
+
+        function updateTotal() {
+            if (!quanEl || !unitEl || !totaEl) return;
+            const q = parseNumber(quanEl.value);
+            const u = parseNumber(unitEl.value);
+            if (q === null || u === null) {
+                totaEl.value = '';
+                return;
+            }
+            totaEl.value = (q * u).toFixed(2);
+        }
+
+        async function preencherDescricaoProdutoPorCodigo() {
+            if (!itemHiddenEl || !nomeItemEl) return;
+            const codigo = String(itemHiddenEl.value || '').trim();
+            if (!codigo) {
+                nomeItemEl.value = '';
+                return;
+            }
+            try {
+                const url = "{% url 'transportes:autocomplete_produtos' slug=view.kwargs.slug %}";
+                const resp = await fetch(`${url}?term=${encodeURIComponent(codigo)}`);
+                const data = await resp.json();
+                const results = data.results || [];
+                const exato = results.find((r) => String(r.id) === codigo);
+                const item = exato || results[0];
+                nomeItemEl.value = item && item.nome ? item.nome : '';
+            } catch (_e) {
+                // fallback silencioso
+            }
+        }
+
+        if (quanEl) {
+            quanEl.addEventListener('input', updateTotal);
+            quanEl.addEventListener('change', updateTotal);
+        }
+        if (unitEl) {
+            unitEl.addEventListener('input', updateTotal);
+            unitEl.addEventListener('change', updateTotal);
+        }
+        updateTotal();
+
+        setupAutocomplete(
+            'input_frota',
+            'id_lacu_frot',
+            'dropdown_frota',
+            "{% url 'transportes:autocomplete_transportadoras' slug=view.kwargs.slug %}",
+            null,
+            function () {
+                const inputVeiculo = document.getElementById('input_veiculo');
+                if (veicHiddenEl) veicHiddenEl.value = '';
+                if (inputVeiculo) inputVeiculo.value = '';
+            }
+        );
+
+        setupAutocomplete(
+            'input_veiculo',
+            'id_lacu_veic',
+            'dropdown_veiculo',
+            "{% url 'transportes:autocomplete_veiculos' slug=view.kwargs.slug %}",
+            function () {
+                return { transportadora_id: document.getElementById('id_lacu_frot').value };
+            }
+        );
+
+        setupAutocomplete(
+            'input_funcionario',
+            'id_lacu_moto',
+            'dropdown_funcionario',
+            "{% url 'transportes:autocomplete_entidades' slug=view.kwargs.slug %}"
+        );
+
+        setupAutocomplete(
+            'input_fornecedor',
+            'id_lacu_forn',
+            'dropdown_fornecedor',
+            "{% url 'transportes:autocomplete_entidades' slug=view.kwargs.slug %}"
+        );
+
+        setupAutocomplete(
+            'input_produto',
+            'id_lacu_item',
+            'dropdown_produto',
+            "{% url 'transportes:autocomplete_produtos' slug=view.kwargs.slug %}",
+            null,
+            function (item) {
+                if (nomeItemEl) {
+                    nomeItemEl.value = item && item.nome ? item.nome : '';
+                }
+            }
+        );
+
+        if (itemHiddenEl) {
+            itemHiddenEl.addEventListener('change', preencherDescricaoProdutoPorCodigo);
+        }
+    });
+</script>
+{% endblock %}
