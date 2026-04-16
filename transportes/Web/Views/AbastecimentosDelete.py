@@ -19,6 +19,11 @@ class AbastecimentosDeleteView(DeleteView):
     def get_success_url(self):
         return reverse("transportes:abastecimentos_lista", kwargs={"slug": self.kwargs["slug"]})
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["slug"] = self.kwargs.get("slug")
+        return context
+
     def get_object(self, queryset=None):
         banco = self._get_banco()
         empresa_id = self.request.session.get("empresa_id")

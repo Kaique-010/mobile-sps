@@ -38,6 +38,7 @@ class BombasListView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)        
+        context['slug'] = self.kwargs.get('slug')
         context['titulo'] = 'Bombas'
         # Contagem total para exibir no card
         context['total_bombas'] = self.get_queryset().count()   

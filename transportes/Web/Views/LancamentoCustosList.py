@@ -42,6 +42,7 @@ class LancamentoCustosListView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context["slug"] = self.kwargs.get("slug")
         context["titulo"] = "Lançamentos de Custos"
         qs = self.get_queryset()
         context["total_lancamentos"] = qs.count()

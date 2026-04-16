@@ -1,6 +1,6 @@
 from django.http import JsonResponse
 from django.db.models import Q
-from core.utils import get_licenca_db_config
+from core.utils import get_db_from_slug, get_licenca_db_config
 from Entidades.models import Entidades
 from transportes.models import Bombas, Veiculos
 from Produtos.models import Marca
@@ -10,8 +10,12 @@ from transportes.services.bombas_saldos import BombasSaldosService
 
 
 
+def _get_banco(request, slug=None):
+    return get_db_from_slug(slug) if slug else (get_licenca_db_config(request) or 'default')
+
+
 def autocomplete_transportadoras(request, slug=None):
-    banco = get_licenca_db_config(request) or 'default'
+    banco = _get_banco(request, slug)
     empresa_id = request.session.get('empresa_id')
     
     if not empresa_id:
@@ -39,7 +43,7 @@ def autocomplete_transportadoras(request, slug=None):
 
 
 def autocomplete_marcas(request, slug=None):
-    banco = get_licenca_db_config(request) or 'default'
+    banco = _get_banco(request, slug)
     term = (request.GET.get('term') or request.GET.get('q') or '').strip()
 
     qs = Marca.objects.using(banco).all()
@@ -62,7 +66,7 @@ def autocomplete_marcas(request, slug=None):
 
 
 def autocomplete_centrodecustos(request, slug=None):
-    banco = get_licenca_db_config(request) or 'default'
+    banco = _get_banco(request, slug)
     empresa_id = request.session.get('empresa_id')
     
     if not empresa_id:
@@ -94,7 +98,7 @@ def autocomplete_entidades(request, slug=None):
     Busca geral de entidades (clientes, fornecedores, motoristas, etc.)
     Filtrada apenas pela empresa logada.
     """
-    banco = get_licenca_db_config(request) or 'default'
+    banco = _get_banco(request, slug)
     empresa_id = request.session.get('empresa_id')
     term = (request.GET.get('term') or request.GET.get('q') or '').strip()
 
@@ -122,7 +126,7 @@ def get_entidade_detalhes(request, slug=None):
     Retorna detalhes de uma entidade específica.
     Usado para preenchimento automático de campos (ex: cidade na rota do CTe).
     """
-    banco = get_licenca_db_config(request) or 'default'
+    banco = _get_banco(request, slug)
     entidade_id = request.GET.get('id')
     
     if not entidade_id:
@@ -145,7 +149,7 @@ def get_entidade_detalhes(request, slug=None):
 
 
 def autocomplete_veiculos(request, slug=None):
-    banco = get_licenca_db_config(request) or 'default'
+    banco = _get_banco(request, slug)
     empresa_id = request.session.get('empresa_id')
     
     if not empresa_id:
@@ -179,7 +183,7 @@ def autocomplete_veiculos(request, slug=None):
 
 
 def autocomplete_bombas(request, slug=None):
-    banco = get_licenca_db_config(request) or 'default'
+    banco = _get_banco(request, slug)
     empresa_id = request.session.get('empresa_id')
     filial_id = request.session.get('filial_id') or 1
     if not empresa_id:
@@ -218,7 +222,7 @@ def autocomplete_bombas(request, slug=None):
 
 
 def autocomplete_combustiveis(request, slug=None):
-    banco = get_licenca_db_config(request) or 'default'
+    banco = _get_banco(request, slug)
     empresa_id = request.session.get('empresa_id')
     filial_id = request.session.get('filial_id') or 1
     if not empresa_id:
@@ -257,7 +261,7 @@ def autocomplete_combustiveis(request, slug=None):
 
 
 def autocomplete_produtos(request, slug=None):
-    banco = get_licenca_db_config(request) or 'default'
+    banco = _get_banco(request, slug)
     empresa_id = request.session.get('empresa_id')
     if not empresa_id:
         return JsonResponse({'results': []})

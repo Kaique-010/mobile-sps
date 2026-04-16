@@ -36,6 +36,7 @@ class DashboardManutencoesView(TemplateView):
 
         context.update(
             {
+                "slug": self.kwargs.get("slug"),
                 "titulo": "Dashboard de Manutenções",
                 "filtros": filtros,
                 "frotas": service.listar_frotas(

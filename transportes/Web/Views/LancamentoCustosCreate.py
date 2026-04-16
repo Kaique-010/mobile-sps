@@ -50,6 +50,7 @@ class LancamentoCustosCreateView(CreateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context["slug"] = self.kwargs.get("slug")
         context["titulo"] = "Novo Lançamento de Custo"
         context["acao"] = "Criar"
         return context

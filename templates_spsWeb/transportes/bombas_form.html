@@ -29,37 +29,66 @@
                 {% endif %}
 
                 <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">{{ form.bomb_desc.label }}</label>
-                        {{ form.bomb_desc }}
+                    <div class="col-12">
+                        <h6 style="margin-top: 40px; margin-bottom: 20px; text-align: center; color: #fadcaf; cursor: pointer;"
+                            data-bs-toggle="collapse" data-bs-target="#secDadosBomba" aria-expanded="true"
+                            aria-controls="secDadosBomba">
+                            Dados da Bomba
+                        </h6>
                     </div>
+                    <div class="col-12">
+                        <div id="secDadosBomba" class="collapse show">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">{{ form.bomb_desc.label }}</label>
+                                    {{ form.bomb_desc }}
+                                </div>
 
-                    <div class="col-md-6 mb-3 position-relative">
-                        <label class="form-label">{{ form.bomb_cecu.label }}</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-search"></i></span>
-                            <input type="text" id="input_cc" class="form-control"
-                                placeholder="Digite o centro de custos" autocomplete="off"
-                                value="{{ cecu_nome|default:'' }}">
-                            {{ form.bomb_cecu }}
+                                <div class="col-md-6 mb-3 position-relative">
+                                    <label class="form-label">{{ form.bomb_cecu.label }}</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                        <input type="text" id="input_cc" class="form-control"
+                                            placeholder="Digite o centro de custos" autocomplete="off"
+                                            value="{{ cecu_nome|default:'' }}">
+                                        {{ form.bomb_cecu }}
+                                    </div>
+                                    <div id="dropdown_cc" class="list-group position-absolute w-100"
+                                        style="z-index: 1000;"></div>
+                                </div>
+
+                                <div class="col-md-6 mb-3 position-relative">
+                                    <label class="form-label">{{ form.bomb_forn.label }}</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                        <input type="text" id="input_forn" class="form-control"
+                                            placeholder="Digite o fornecedor" autocomplete="off"
+                                            value="{{ fornecedor_nome|default:'' }}">
+                                        {{ form.bomb_forn }}
+                                    </div>
+                                    <div id="dropdown_forn" class="list-group position-absolute w-100"
+                                        style="z-index: 1000;"></div>
+                                </div>
+                            </div>
                         </div>
-                        <div id="dropdown_cc" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
                     </div>
 
-                    <div class="col-md-6 mb-3 position-relative">
-                        <label class="form-label">{{ form.bomb_forn.label }}</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-search"></i></span>
-                            <input type="text" id="input_forn" class="form-control" placeholder="Digite o fornecedor"
-                                autocomplete="off" value="{{ fornecedor_nome|default:'' }}">
-                            {{ form.bomb_forn }}
+                    <div class="col-12">
+                        <h6 style="margin-top: 40px; margin-bottom: 20px; text-align: center; color: #fadcaf; cursor: pointer;"
+                            data-bs-toggle="collapse" data-bs-target="#secObsBomba" aria-expanded="true"
+                            aria-controls="secObsBomba">
+                            Observações
+                        </h6>
+                    </div>
+                    <div class="col-12">
+                        <div id="secObsBomba" class="collapse show">
+                            <div class="row">
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label">{{ form.bomb_obse.label }}</label>
+                                    {{ form.bomb_obse }}
+                                </div>
+                            </div>
                         </div>
-                        <div id="dropdown_forn" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
-                    </div>
-
-                    <div class="col-md-12 mb-3">
-                        <label class="form-label">{{ form.bomb_obse.label }}</label>
-                        {{ form.bomb_obse }}
                     </div>
                 </div>
 

@@ -29,8 +29,10 @@ import uuid
 from django.utils import timezone
 import re
 from django.db.models import Q
+from django.db import DatabaseError
 from core.cache_service import build_cache_key, cache_get_or_set
 from django.core.cache import cache
+from planos.models import Plano
 
 logger = logging.getLogger(__name__)
 SETOR_OBRIGATORIO_SLUGS = {"savexml144", "saveweb144"}
@@ -137,8 +139,16 @@ class LoginView(APIView):
             if plano and plano.plan_trial:
                 if plano.plan_ativ and plano.plan_data_expi:
                     if timezone.now() > plano.plan_data_expi:
-                        plano.plan_ativ = False
-                        plano.save(update_fields=['plan_ativ'])
+                        try:
+                            updated = Plano.objects.using('default').filter(pk=plano.pk).update(plan_ativ=False)
+                            if updated:
+                                plano.plan_ativ = False
+                            else:
+                                logger.warning("[LOGIN] Trial expirado mas plano não foi atualizado (0 rows) — licença %s", licenca_web.slug)
+                                plano.plan_ativ = False
+                        except DatabaseError as exc:
+                            logger.error("[LOGIN] Falha ao inativar plano expirado — licença %s erro=%s", licenca_web.slug, exc)
+                            plano.plan_ativ = False
                         logger.warning("[LOGIN] Trial expirado on-the-fly — licença %s", licenca_web.slug)
 
                 if not plano.plan_ativ:

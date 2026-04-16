@@ -319,6 +319,17 @@
       "database": "saveweb005",
       "username": "postgres",
       "password": "@spartacus201@"
+    },
+    {
+      "ssh": "Disabled",
+      "previewLimit": 50,
+      "server": "64.181.163.190",
+      "port": 5432,
+      "driver": "PostgreSQL",
+      "name": "saveweb002",
+      "database": "saveweb002",
+      "username": "postgres",
+      "password": "@spartacus201@"
     }
   ],
   "liveServer.settings.port": 5501

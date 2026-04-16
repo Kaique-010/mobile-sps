@@ -66,6 +66,7 @@ class VeiculosUpdateView(UpdateView):
         context = super().get_context_data(**kwargs)
         banco = get_licenca_db_config(self.request)
         empresa_id = self.request.session.get('empresa_id')
+        context['slug'] = self.kwargs.get('slug')
 
         # Transportadora
         if self.object.veic_tran:

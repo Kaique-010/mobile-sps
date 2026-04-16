@@ -53,6 +53,7 @@ class BombasSaldosCreateView(CreateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context["slug"] = self.kwargs.get("slug")
         banco = self._get_banco()
         empresa_id = self.request.session.get("empresa_id")
 
@@ -74,4 +75,3 @@ class BombasSaldosCreateView(CreateView):
         context["titulo"] = "Nova Movimentação de Combustível"
         context["acao"] = "Criar"
         return context
-
