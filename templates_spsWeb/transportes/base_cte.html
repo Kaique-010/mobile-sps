@@ -85,12 +85,6 @@
                     <i class="fas fa-list"></i> Listagem de Transportadoras e Motoristas
                 </a>
 
-                <hr class="text-secondary">
-                <h6 class="text-uppercase px-3 text-muted" style="font-size: .75rem;">Manutenções</h6>
-                <a href="{% url 'transportes:manutencoes_dashboard' slug=slug %}"
-                    class="{% if request.resolver_match.url_name == 'manutencoes_dashboard' %}active{% endif %}">
-                    <i class="fas fa-chart-line"></i> Dashboard de Manutenções
-                </a>
             </div>
 
             <!-- Main Content -->
@@ -110,9 +104,6 @@
                             <i class="fas fa-plus"></i> Novo MDF-e
                         </a>
 
-                        <a href="{% url 'transportes:manutencoes_dashboard' slug=slug %}" class="btn btn-outline-secondary btn-sm">
-                            <i class="fas fa-chart-line"></i> Manutenções
-                        </a>
                     </div>
                 </div>
                 <!-- Messages -->
