@@ -84,6 +84,7 @@
                     class="{% if request.resolver_match.url_name == 'transportadoras_motoristas_lista' %}active{% endif %}">
                     <i class="fas fa-list"></i> Listagem de Transportadoras e Motoristas
                 </a>
+
             </div>
 
             <!-- Main Content -->
@@ -102,6 +103,7 @@
                         <a href="{% url 'transportes:mdfe_create' slug=slug %}" class="btn btn-outline-primary btn-sm">
                             <i class="fas fa-plus"></i> Novo MDF-e
                         </a>
+
                     </div>
                 </div>
                 <!-- Messages -->
