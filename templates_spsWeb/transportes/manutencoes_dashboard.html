@@ -1,0 +1,88 @@
+{% extends 'transportes/base_cte.html' %}
+
+{% block title %}Dashboard de Manutenções{% endblock %}
+
+{% block cte_content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="mb-0"><i class="fas fa-screwdriver-wrench"></i> Dashboard de Manutenções</h3>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label" for="frota">Frota/Transportadora</label>
+                    <select class="form-select" id="frota" name="frota">
+                        <option value="">Todas</option>
+                        {% for frota in frotas %}
+                        <option value="{{ frota }}" {% if filtros.frota == frota %}selected{% endif %}>{{ frota }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="veiculo">Veículo</label>
+                    <select class="form-select" id="veiculo" name="veiculo">
+                        <option value="">Todos</option>
+                        {% for veiculo in veiculos %}
+                        <option value="{{ veiculo.sequencial }}" {% if filtros.veiculo == veiculo.sequencial|stringformat:'s' %}selected{% endif %}>
+                            {{ veiculo.descricao }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter"></i> Filtrar</button>
+                </div>
+                <div class="col-md-2">
+                    <a href="{% url 'transportes:manutencoes_dashboard' slug=slug %}" class="btn btn-outline-secondary w-100">Limpar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-4"><div class="card"><div class="card-body"><small>Total Movimentações</small><h4>{{ total_movimentacoes }}</h4></div></div></div>
+        <div class="col-md-4"><div class="card"><div class="card-body"><small>Total Custos/Manutenções</small><h4>R$ {{ total_custos|floatformat:2 }}</h4></div></div></div>
+        <div class="col-md-4"><div class="card"><div class="card-body"><small>Total Abastecimentos</small><h4>R$ {{ total_abastecimentos|floatformat:2 }}</h4></div></div></div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Histórico de lançamentos de custos e abastecimentos</div>
+        <div class="card-body table-responsive">
+            <table class="table table-sm table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Tipo</th>
+                        <th>Frota</th>
+                        <th>Veículo</th>
+                        <th>Descrição</th>
+                        <th>Documento</th>
+                        <th>Controle</th>
+                        <th class="text-end">Valor (R$)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for mov in movimentacoes %}
+                    <tr>
+                        <td>{{ mov.data|date:"d/m/Y" }}</td>
+                        <td>{{ mov.tipo }}</td>
+                        <td>{{ mov.frota|default:"-" }}</td>
+                        <td>{{ mov.veiculo|default:"-" }}</td>
+                        <td>{{ mov.descricao|default:"-" }}</td>
+                        <td>{{ mov.documento|default:"-" }}</td>
+                        <td>{{ mov.controle|default:"-" }}</td>
+                        <td class="text-end">{{ mov.valor|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted">Nenhuma movimentação encontrada para os filtros selecionados.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
