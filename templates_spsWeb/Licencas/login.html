@@ -453,6 +453,10 @@
         const usuaCodi = (u && (u.usua_codi || u.usuario_id || u.id)) || '';
         if (usuaCodi) localStorage.setItem('usua_codi', String(usuaCodi));
       } catch (_e) { }
+      try {
+        const v = encodeURIComponent(String(username || '').trim().toLowerCase());
+        if (v) document.cookie = `mobile_sps_user_hint=${v}; path=/; samesite=lax`;
+      } catch (_e) { }
 
       // Avança para seleção de empresa/filial
       window.location.href = '/web/selecionar-empresa/';

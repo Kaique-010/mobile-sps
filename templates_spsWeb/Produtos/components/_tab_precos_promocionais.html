@@ -1,0 +1,130 @@
+<div class="tab-pane fade" id="precos-promocionais">
+  <h5 class="form-section-title text-center mb-5">Tabela de Preços Promocionais</h5>
+  {% if promo_formset.non_form_errors %}
+  <div class="alert alert-danger" role="alert">{{ promo_formset.non_form_errors|striptags }}</div>
+  {% endif %}
+  {{ promo_formset.management_form }}
+
+  <div id="precos-promo-formset">
+    {% for form in promo_formset %}
+    <div class="preco-promo-item border p-3 mb-2">
+      {% if form.non_field_errors %}
+      <div class="alert alert-danger" role="alert">{{ form.non_field_errors|striptags }}</div>
+      {% endif %}
+
+      <div class="row">
+        <div class="col-md-4">
+          <label for="{{ form.tabe_prco.id_for_label }}">Preço Base (R$)</label>
+          {{ form.tabe_prco }}
+          {% if form.tabe_prco.errors %}
+          <div class="alert alert-danger mt-1">{{ form.tabe_prco.errors|striptags }}</div>
+          {% endif %}
+        </div>
+        <div class="col-md-4">
+          <label for="{{ form.tabe_desp.id_for_label }}">Despesas (R$)</label>
+          {{ form.tabe_desp }}
+          {% if form.tabe_desp.errors %}
+          <div class="alert alert-danger mt-1">{{ form.tabe_desp.errors|striptags }}</div>
+          {% endif %}
+        </div>
+        <div class="col-md-4">
+          <label for="{{ form.tabe_cuge.id_for_label }}">Custo Gerencial (R$)</label>
+          {{ form.tabe_cuge }}
+          {% if form.tabe_cuge.errors %}
+          <div class="alert alert-danger mt-1">{{ form.tabe_cuge.errors|striptags }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-4">
+          <label for="{{ form.tabe_perc_reaj.id_for_label }}">% Reajuste</label>
+          {{ form.tabe_perc_reaj }}
+          {% if form.tabe_perc_reaj.errors %}
+          <div class="alert alert-danger mt-1">{{ form.tabe_perc_reaj.errors|striptags }}</div>
+          {% endif %}
+        </div>
+        <div class="col-md-8" style="display:none;">
+          {{ form.tabe_fili }}
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-6">
+          <label for="{{ form.tabe_marg.id_for_label }}">% à Vista</label>
+          {{ form.tabe_marg }}
+          {% if form.tabe_marg.errors %}
+          <div class="alert alert-danger mt-1">{{ form.tabe_marg.errors|striptags }}</div>
+          {% endif %}
+        </div>
+        <div class="col-md-6">
+          <label for="{{ form.tabe_avis.id_for_label }}">Preço à Vista (R$)</label>
+          {{ form.tabe_avis }}
+          {% if form.tabe_avis.errors %}
+          <div class="alert alert-danger mt-1">{{ form.tabe_avis.errors|striptags }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-6">
+          <label for="{{ form.tabe_praz.id_for_label }}">% a Prazo</label>
+          {{ form.tabe_praz }}
+          {% if form.tabe_praz.errors %}
+          <div class="alert alert-danger mt-1">{{ form.tabe_praz.errors|striptags }}</div>
+          {% endif %}
+        </div>
+        <div class="col-md-6">
+          <label for="{{ form.tabe_apra.id_for_label }}">Preço a Prazo (R$)</label>
+          {{ form.tabe_apra }}
+          {% if form.tabe_apra.errors %}
+          <div class="alert alert-danger mt-1">{{ form.tabe_apra.errors|striptags }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-12">
+          <label for="{{ form.tabe_hist.id_for_label }}">Histórico</label>
+          {{ form.tabe_hist }}
+          {% if form.tabe_hist.errors %}
+          <div class="alert alert-danger mt-1">{{ form.tabe_hist.errors|striptags }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if promo_historico %}
+  <div class="mt-4">
+    <h6>Últimas Alterações</h6>
+    <div class="table-responsive">
+      <table class="table table-sm table-striped">
+        <thead>
+          <tr>
+            <th>Data/Hora</th>
+            <th>Filial</th>
+            <th>Preço Base</th>
+            <th>À Vista</th>
+            <th>A Prazo</th>
+            <th>Histórico</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for h in promo_historico %}
+          <tr>
+            <td>{{ h.tabe_data_hora|date:"d/m/Y H:i" }}</td>
+            <td>{{ h.tabe_fili }}</td>
+            <td>{{ h.tabe_prco_novo|default_if_none:"-" }}</td>
+            <td>{{ h.tabe_avis_novo|default_if_none:"-" }}</td>
+            <td>{{ h.tabe_apra_novo|default_if_none:"-" }}</td>
+            <td>{{ h.tabe_hist|default_if_none:"-" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</div>

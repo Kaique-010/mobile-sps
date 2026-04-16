@@ -29,48 +29,35 @@
                 {% endif %}
 
                 <div class="row">
-                    <div class="col-12">
-                        <h6 style="margin-top: 40px; margin-bottom: 20px; text-align: center; color: #fadcaf; cursor: pointer;"
-                            data-bs-toggle="collapse" data-bs-target="#secMovBomba" aria-expanded="true"
-                            aria-controls="secMovBomba">
-                            Dados da Movimentação
-                        </h6>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">{{ form.bomb_data.label }}</label>
+                        {{ form.bomb_data }}
                     </div>
-                    <div class="col-12">
-                        <div id="secMovBomba" class="collapse show">
-                            <div class="row">
-                                <div class="col-md-3 mb-3">
-                                    <label class="form-label">{{ form.bomb_data.label }}</label>
-                                    {{ form.bomb_data }}
-                                </div>
 
-                                <div class="col-md-6 mb-3 position-relative">
-                                    <label class="form-label">{{ form.bomba_display.label }}</label>
-                                    <input type="text" id="input_bomba" class="form-control" autocomplete="off"
-                                        value="{{ bomba_display|default:'' }}" placeholder="Digite a bomba">
-                                    {{ form.bomb_bomb }}
-                                    <div id="dropdown_bomba" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
-                                </div>
+                    <div class="col-md-6 mb-3 position-relative">
+                        <label class="form-label">{{ form.bomba_display.label }}</label>
+                        <input type="text" id="input_bomba" class="form-control" autocomplete="off"
+                            value="{{ bomba_display|default:'' }}" placeholder="Digite a bomba">
+                        {{ form.bomb_bomb }}
+                        <div id="dropdown_bomba" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
+                    </div>
 
-                                <div class="col-md-6 mb-3 position-relative">
-                                    <label class="form-label">{{ form.combustivel_display.label }}</label>
-                                    <input type="text" id="input_comb" class="form-control" autocomplete="off"
-                                        value="{{ combustivel_display|default:'' }}" placeholder="Digite o combustível">
-                                    {{ form.bomb_comb }}
-                                    <div id="dropdown_comb" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
-                                </div>
+                    <div class="col-md-6 mb-3 position-relative">
+                        <label class="form-label">{{ form.combustivel_display.label }}</label>
+                        <input type="text" id="input_comb" class="form-control" autocomplete="off"
+                            value="{{ combustivel_display|default:'' }}" placeholder="Digite o combustível">
+                        {{ form.bomb_comb }}
+                        <div id="dropdown_comb" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
+                    </div>
 
-                                <div class="col-md-3 mb-3">
-                                    <label class="form-label">{{ form.bomb_tipo_movi.label }}</label>
-                                    {{ form.bomb_tipo_movi }}
-                                </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">{{ form.bomb_tipo_movi.label }}</label>
+                        {{ form.bomb_tipo_movi }}
+                    </div>
 
-                                <div class="col-md-3 mb-3">
-                                    <label class="form-label">{{ form.bomb_sald.label }}</label>
-                                    {{ form.bomb_sald }}
-                                </div>
-                            </div>
-                        </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">{{ form.bomb_sald.label }}</label>
+                        {{ form.bomb_sald }}
                     </div>
                 </div>
 

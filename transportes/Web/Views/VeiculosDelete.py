@@ -12,11 +12,6 @@ class VeiculosDeleteView(DeleteView):
     def get_success_url(self):
         return reverse('transportes:veiculos_lista', kwargs={'slug': self.kwargs['slug']})
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['slug'] = self.kwargs.get('slug')
-        return context
-
     def get_object(self, queryset=None):
         banco = get_licenca_db_config(self.request)
         empresa_id = self.request.session.get('empresa_id')

@@ -38,7 +38,6 @@ class VeiculosListView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         banco = get_licenca_db_config(self.request)
-        context['slug'] = self.kwargs.get('slug')
         
         context['titulo'] = 'Veículos'
         # Contagem total para exibir no card

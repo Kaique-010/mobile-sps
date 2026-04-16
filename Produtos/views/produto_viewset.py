@@ -17,12 +17,21 @@ from core.registry import get_licenca_db_config
 from core.utils import get_ncm_master_db
 
 from ..models import Ncm, Produtos, Tabelaprecos, UnidadeMedida, Lote, SaldoProduto
+from ..preco_models import TabelaprecosPromocional, TabelaprecosPromocionalhist
 from ..serializers.produto_serializer import ProdutoSerializer, ProdutoServicoSerializer
-from ..serializers.tabela_preco_serializer import TabelaPrecoSerializer
+from ..serializers.tabela_preco_serializer import (
+    TabelaPrecoPromocionalHistSerializer,
+    TabelaPrecoPromocionalSerializer,
+    TabelaPrecoSerializer,
+)
 from ..consultas.produto_consultas import listar_produtos, buscar_produto_por_codigo
 from ..servicos.produto_servico import buscar_produto_por_hash
 from ..servicos.etiqueta_servico import gerar_dados_etiquetas
 from ..servicos.preco_servico import atualizar_preco_com_historico, criar_preco_com_historico
+from ..servicos.preco_promocional import (
+    atualizar_preco_com_historico as atualizar_preco_promocional_com_historico,
+    criar_preco_com_historico as criar_preco_promocional_com_historico,
+)
 
 class ProdutoListView(ModuloRequeridoMixin, APIView):
     """
@@ -384,6 +393,65 @@ class ProdutoViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
             
             novo_preco = criar_preco_com_historico(banco, dados_limpos)
             serializer = TabelaPrecoSerializer(novo_preco, context={'banco': banco})
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['get'])
+    def precos_promocionais(self, request, pk=None):
+        produto = self.get_object()
+        banco = get_licenca_db_config(request)
+
+        precos = TabelaprecosPromocional.objects.using(banco).filter(
+            tabe_prod=produto.prod_codi,
+            tabe_empr=produto.prod_empr,
+        )
+        serializer = TabelaPrecoPromocionalSerializer(precos, many=True, context={'banco': banco})
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def precos_promocionais_historico(self, request, pk=None):
+        produto = self.get_object()
+        banco = get_licenca_db_config(request)
+
+        hist = (
+            TabelaprecosPromocionalhist.objects.using(banco)
+            .filter(tabe_prod=produto.prod_codi, tabe_empr=produto.prod_empr)
+            .order_by('-tabe_data_hora')[:200]
+        )
+        serializer = TabelaPrecoPromocionalHistSerializer(hist, many=True, context={'banco': banco})
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def atualizar_precos_promocionais(self, request, pk=None):
+        produto = self.get_object()
+        banco = get_licenca_db_config(request)
+
+        dados_preco = request.data.copy()
+        tabe_fili = dados_preco.get('tabe_fili', 1)
+
+        try:
+            preco_existente = TabelaprecosPromocional.objects.using(banco).get(
+                tabe_prod=produto.prod_codi,
+                tabe_empr=produto.prod_empr,
+                tabe_fili=tabe_fili,
+            )
+
+            campos_validos = [f.name for f in TabelaprecosPromocional._meta.fields]
+            dados_limpos = {k: v for k, v in dados_preco.items() if k in campos_validos}
+
+            atualizar_preco_promocional_com_historico(banco, preco_existente, dados_limpos)
+            serializer = TabelaPrecoPromocionalSerializer(preco_existente, context={'banco': banco})
+            return Response(serializer.data)
+
+        except TabelaprecosPromocional.DoesNotExist:
+            dados_preco['tabe_prod'] = produto.prod_codi
+            dados_preco['tabe_empr'] = produto.prod_empr
+            dados_preco['tabe_fili'] = tabe_fili
+
+            campos_validos = [f.name for f in TabelaprecosPromocional._meta.fields]
+            dados_limpos = {k: v for k, v in dados_preco.items() if k in campos_validos}
+
+            novo_preco = criar_preco_promocional_com_historico(banco, dados_limpos)
+            serializer = TabelaPrecoPromocionalSerializer(novo_preco, context={'banco': banco})
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @action(detail=False, methods=['post'])

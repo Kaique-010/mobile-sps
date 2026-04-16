@@ -26,7 +26,7 @@
 
   <div class="card-body p-4">
 
-    {% if form.non_field_errors or form.errors or fiscal_form.non_field_errors or fiscal_form.errors or formset.non_form_errors or formset.errors %}
+    {% if form.non_field_errors or form.errors or fiscal_form.non_field_errors or fiscal_form.errors or formset.non_form_errors or formset.errors or promo_formset.non_form_errors or promo_formset.errors %}
     <div class="alert alert-danger" role="alert">
       <div class="fw-semibold mb-1">Existem campos obrigatórios ou inválidos. Corrija os itens abaixo e tente novamente.
       </div>
@@ -38,6 +38,9 @@
       {% endif %}
       {% if formset.non_form_errors %}
       <div class="mb-2">{{ formset.non_form_errors|striptags }}</div>
+      {% endif %}
+      {% if promo_formset.non_form_errors %}
+      <div class="mb-2">{{ promo_formset.non_form_errors|striptags }}</div>
       {% endif %}
       <ul class="mb-0">
         {% for field in form %}
@@ -64,6 +67,19 @@
         {% endfor %}
         {% endfor %}
         {% endfor %}
+
+        {% for fs_form in promo_formset %}
+        {% if fs_form.non_field_errors %}
+        {% for error in fs_form.non_field_errors %}
+        <li>Preços promocionais (linha {{ forloop.parentloop.counter }}): {{ error }}</li>
+        {% endfor %}
+        {% endif %}
+        {% for field in fs_form %}
+        {% for error in field.errors %}
+        <li>Preços promocionais (linha {{ forloop.parentloop.parentloop.counter }}): {{ field.label }}: {{ error }}</li>
+        {% endfor %}
+        {% endfor %}
+        {% endfor %}
       </ul>
     </div>
     {% endif %}
@@ -82,6 +98,9 @@
           <a class="nav-link" id="precos-tab" data-bs-toggle="tab" href="#precos">Tabela de Preços</a>
         </li>
         <li class="nav-item">
+          <a class="nav-link" id="precos-promocionais-tab" data-bs-toggle="tab" href="#precos-promocionais">Preços Promocionais</a>
+        </li>
+        <li class="nav-item">
           <a class="nav-link" id="lotes-tab" data-bs-toggle="tab" href="#lotes">Lotes</a>
         </li>
       </ul>
@@ -90,6 +109,7 @@
         {% include "Produtos/components/_tab_dados_produto.html" %}
         {% include "Produtos/components/_tab_fiscal.html" %}
         {% include "Produtos/components/_tab_precos.html" %}
+        {% include "Produtos/components/_tab_precos_promocionais.html" %}
         {% include "Produtos/components/_tab_lotes.html" %}
       </div>
 

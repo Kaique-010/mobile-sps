@@ -23,6 +23,8 @@ from ...models import (
     Lote,
     Produtos,
     Tabelaprecos,
+    TabelaprecosPromocional,
+    TabelaprecosPromocionalhist,
     SaldoProduto,
     Tabelaprecoshist,
     GrupoProduto,
@@ -40,11 +42,17 @@ from ..prod_forms import (
     TabelaprecosFormSet,
     TabelaprecosPlainFormSet,
     TabelaprecosFormSetUpdate,
+    TabelaprecosPromocionalFormSet,
+    TabelaprecosPromocionalPlainFormSet,
     GrupoForm,
     SubgrupoForm,
     FamiliaForm,
     MarcaForm,
     UnidadeMedidaForm,
+)
+from ...servicos.preco_promocional import (
+    atualizar_preco_com_historico as atualizar_preco_promocional_com_historico,
+    criar_preco_com_historico as criar_preco_promocional_com_historico,
 )
 from CFOP.services.services import MotorFiscal
 from CFOP.services.bases import FiscalContexto
@@ -313,6 +321,8 @@ class ProdutoCreateView(DBAndSlugMixin, CreateView):
         # Formset vazio por enquanto; será inicializado após salvar o produto
         from Produtos.models import Tabelaprecos
         ctx['formset'] = TabelaprecosFormSet(queryset=Tabelaprecos.objects.none(), prefix='precos')
+        from Produtos.models import TabelaprecosPromocional
+        ctx['promo_formset'] = TabelaprecosPromocionalFormSet(queryset=TabelaprecosPromocional.objects.none(), prefix='precos_promo')
         cst_choices = self._get_cst_choices()
         if self.request.POST:
             ctx['fiscal_form'] = ProdutoFiscalPadraoForm(self.request.POST, prefix='fiscal', cst_choices=cst_choices)
@@ -405,6 +415,7 @@ class ProdutoCreateView(DBAndSlugMixin, CreateView):
 
         # Salvar preços (se enviados)
         formset = TabelaprecosPlainFormSet(self.request.POST, prefix='precos')
+        promo_formset = TabelaprecosPromocionalPlainFormSet(self.request.POST, prefix='precos_promo')
         cst_choices = self._get_cst_choices()
         fiscal_form = ProdutoFiscalPadraoForm(self.request.POST, prefix='fiscal', cst_choices=cst_choices)
 
@@ -416,6 +427,19 @@ class ProdutoCreateView(DBAndSlugMixin, CreateView):
             ctx = self.get_context_data()
             ctx['form'] = form
             ctx['formset'] = formset
+            ctx['promo_formset'] = promo_formset
+            ctx['fiscal_form'] = fiscal_form
+            return self.render_to_response(ctx)
+
+        if not promo_formset.is_valid():
+            for fs_form in promo_formset.forms:
+                for field, errs in fs_form.errors.items():
+                    for err in errs:
+                        messages.error(self.request, f'Preço Promocional - erro em {field}: {err}')
+            ctx = self.get_context_data()
+            ctx['form'] = form
+            ctx['formset'] = formset
+            ctx['promo_formset'] = promo_formset
             ctx['fiscal_form'] = fiscal_form
             return self.render_to_response(ctx)
             
@@ -426,11 +450,13 @@ class ProdutoCreateView(DBAndSlugMixin, CreateView):
              ctx = self.get_context_data()
              ctx['form'] = form
              ctx['formset'] = formset
+             ctx['promo_formset'] = promo_formset
              ctx['fiscal_form'] = fiscal_form
              return self.render_to_response(ctx)
 
         logger.info(f"Preços POST: TOTAL_FORMS={formset.total_form_count()} INITIAL_FORMS={formset.initial_form_count()}")
         processed = 0
+        processed_promo = 0
         try:
             with transaction.atomic(using=self.db_alias):
                 # Salvar Fiscal Padrão
@@ -452,6 +478,8 @@ class ProdutoCreateView(DBAndSlugMixin, CreateView):
                     if not f.has_changed():
                         continue
                     cd = f.cleaned_data
+                    if cd.get('DELETE'):
+                        continue
                     tabe_prod = instance.prod_codi
                     try:
                         tabe_empr = int(self.empresa_id) if self.empresa_id else int(instance.prod_empr)
@@ -462,135 +490,180 @@ class ProdutoCreateView(DBAndSlugMixin, CreateView):
                     except Exception:
                         tabe_fili = cd.get('tabe_fili') or (self.filial_id or 1)
 
-                existing = Tabelaprecos.objects.using(self.db_alias).filter(
-                    tabe_empr=tabe_empr,
-                    tabe_fili=tabe_fili,
-                    tabe_prod=tabe_prod,
-                ).first()
-
-                if existing:
-                    historico = "Alteração de preços via Web"
-                    if cd.get('tabe_prco') is not None and existing.tabe_prco != cd.get('tabe_prco'):
-                        historico += f"\nPreço Normal: R$ {float(existing.tabe_prco or 0):.2f} -> R$ {float(cd.get('tabe_prco') or 0):.2f}"
-                    if cd.get('tabe_avis') is not None and existing.tabe_avis != cd.get('tabe_avis'):
-                        historico += f"\nPreço à Vista: R$ {float(existing.tabe_avis or 0):.2f} -> R$ {float(cd.get('tabe_avis') or 0):.2f}"
-                    if cd.get('tabe_apra') is not None and existing.tabe_apra != cd.get('tabe_apra'):
-                        historico += f"\nPreço a Prazo: R$ {float(existing.tabe_apra or 0):.2f} -> R$ {float(cd.get('tabe_apra') or 0):.2f}"
-
-                    hist_data = {
-                        'tabe_empr': tabe_empr,
-                        'tabe_fili': tabe_fili,
-                        'tabe_prod': tabe_prod,
-                        'tabe_data_hora': timezone.now(),
-                        'tabe_hist': historico,
-                        'tabe_perc_reaj': cd.get('tabe_perc_reaj'),
-                        'tabe_prco_ante': existing.tabe_prco,
-                        'tabe_avis_ante': existing.tabe_avis,
-                        'tabe_apra_ante': existing.tabe_apra,
-                        'tabe_pipi_ante': getattr(existing, 'tabe_pipi', None),
-                        'tabe_fret_ante': getattr(existing, 'tabe_fret', None),
-                        'tabe_desp_ante': getattr(existing, 'tabe_desp', None),
-                        'tabe_cust_ante': getattr(existing, 'tabe_cust', None),
-                        'tabe_cuge_ante': getattr(existing, 'tabe_cuge', None),
-                        'tabe_icms_ante': getattr(existing, 'tabe_icms', None),
-                        'tabe_impo_ante': getattr(existing, 'tabe_impo', None),
-                        'tabe_marg_ante': getattr(existing, 'tabe_marg', None),
-                        'tabe_praz_ante': getattr(existing, 'tabe_praz', None),
-                        'tabe_valo_st_ante': getattr(existing, 'tabe_valo_st', None),
-                        'tabe_prco_novo': cd.get('tabe_prco'),
-                        'tabe_avis_novo': cd.get('tabe_avis'),
-                        'tabe_apra_novo': cd.get('tabe_apra'),
-                        'tabe_pipi_novo': cd.get('tabe_pipi'),
-                        'tabe_fret_novo': cd.get('tabe_fret'),
-                        'tabe_desp_novo': cd.get('tabe_desp'),
-                        'tabe_cust_novo': cd.get('tabe_cust'),
-                        'tabe_cuge_novo': cd.get('tabe_cuge'),
-                        'tabe_icms_novo': cd.get('tabe_icms'),
-                        'tabe_impo_novo': cd.get('tabe_impo'),
-                        'tabe_marg_novo': cd.get('tabe_marg'),
-                        'tabe_praz_novo': cd.get('tabe_praz'),
-                        'tabe_valo_st_novo': cd.get('tabe_valo_st'),
-                    }
-                    Tabelaprecoshist.objects.using(self.db_alias).create(**hist_data)
-                    rows = Tabelaprecos.objects.using(self.db_alias).filter(
+                    existing = Tabelaprecos.objects.using(self.db_alias).filter(
                         tabe_empr=tabe_empr,
                         tabe_fili=tabe_fili,
                         tabe_prod=tabe_prod,
-                    ).update(
-                        tabe_prco=cd.get('tabe_prco'),
-                        tabe_icms=cd.get('tabe_icms'),
-                        tabe_desc=cd.get('tabe_desc'),
-                        tabe_vipi=cd.get('tabe_vipi'),
-                        tabe_pipi=cd.get('tabe_pipi'),
-                        tabe_fret=cd.get('tabe_fret'),
-                        tabe_desp=cd.get('tabe_desp'),
-                        tabe_cust=cd.get('tabe_cust'),
-                        tabe_marg=cd.get('tabe_marg'),
-                        tabe_impo=cd.get('tabe_impo'),
-                        tabe_avis=cd.get('tabe_avis'),
-                        tabe_praz=cd.get('tabe_praz'),
-                        tabe_apra=cd.get('tabe_apra'),
-                        tabe_vare=cd.get('tabe_vare'),
-                        field_log_data=cd.get('field_log_data'),
-                        field_log_time=cd.get('field_log_time'),
-                        tabe_valo_st=cd.get('tabe_valo_st'),
-                        tabe_perc_reaj=cd.get('tabe_perc_reaj'),
-                        tabe_hist=cd.get('tabe_hist'),
-                        tabe_cuge=cd.get('tabe_cuge'),
-                        tabe_entr=cd.get('tabe_entr'),
-                        tabe_perc_st=cd.get('tabe_perc_st'),
-                    )
-                    logger.info(f"Atualização de preços: {rows} linha(s) para produto={tabe_prod} empr={tabe_empr} fili={tabe_fili}")
-                else:
-                    hist_data = {
-                        'tabe_empr': tabe_empr,
-                        'tabe_fili': tabe_fili,
-                        'tabe_prod': tabe_prod,
-                        'tabe_data_hora': timezone.now(),
-                        'tabe_hist': "Criação de preços via Web",
-                        'tabe_perc_reaj': cd.get('tabe_perc_reaj'),
-                        'tabe_prco_novo': cd.get('tabe_prco'),
-                        'tabe_avis_novo': cd.get('tabe_avis'),
-                        'tabe_apra_novo': cd.get('tabe_apra'),
-                    }
-                    Tabelaprecoshist.objects.using(self.db_alias).create(**hist_data)
-                    obj = Tabelaprecos.objects.using(self.db_alias).create(
+                    ).first()
+
+                    if existing:
+                        historico = "Alteração de preços via Web"
+                        if cd.get('tabe_prco') is not None and existing.tabe_prco != cd.get('tabe_prco'):
+                            historico += f"\nPreço Normal: R$ {float(existing.tabe_prco or 0):.2f} -> R$ {float(cd.get('tabe_prco') or 0):.2f}"
+                        if cd.get('tabe_avis') is not None and existing.tabe_avis != cd.get('tabe_avis'):
+                            historico += f"\nPreço à Vista: R$ {float(existing.tabe_avis or 0):.2f} -> R$ {float(cd.get('tabe_avis') or 0):.2f}"
+                        if cd.get('tabe_apra') is not None and existing.tabe_apra != cd.get('tabe_apra'):
+                            historico += f"\nPreço a Prazo: R$ {float(existing.tabe_apra or 0):.2f} -> R$ {float(cd.get('tabe_apra') or 0):.2f}"
+
+                        hist_data = {
+                            'tabe_empr': tabe_empr,
+                            'tabe_fili': tabe_fili,
+                            'tabe_prod': tabe_prod,
+                            'tabe_data_hora': timezone.now(),
+                            'tabe_hist': historico,
+                            'tabe_perc_reaj': cd.get('tabe_perc_reaj'),
+                            'tabe_prco_ante': existing.tabe_prco,
+                            'tabe_avis_ante': existing.tabe_avis,
+                            'tabe_apra_ante': existing.tabe_apra,
+                            'tabe_pipi_ante': getattr(existing, 'tabe_pipi', None),
+                            'tabe_fret_ante': getattr(existing, 'tabe_fret', None),
+                            'tabe_desp_ante': getattr(existing, 'tabe_desp', None),
+                            'tabe_cust_ante': getattr(existing, 'tabe_cust', None),
+                            'tabe_cuge_ante': getattr(existing, 'tabe_cuge', None),
+                            'tabe_icms_ante': getattr(existing, 'tabe_icms', None),
+                            'tabe_impo_ante': getattr(existing, 'tabe_impo', None),
+                            'tabe_marg_ante': getattr(existing, 'tabe_marg', None),
+                            'tabe_praz_ante': getattr(existing, 'tabe_praz', None),
+                            'tabe_valo_st_ante': getattr(existing, 'tabe_valo_st', None),
+                            'tabe_prco_novo': cd.get('tabe_prco'),
+                            'tabe_avis_novo': cd.get('tabe_avis'),
+                            'tabe_apra_novo': cd.get('tabe_apra'),
+                            'tabe_pipi_novo': cd.get('tabe_pipi'),
+                            'tabe_fret_novo': cd.get('tabe_fret'),
+                            'tabe_desp_novo': cd.get('tabe_desp'),
+                            'tabe_cust_novo': cd.get('tabe_cust'),
+                            'tabe_cuge_novo': cd.get('tabe_cuge'),
+                            'tabe_icms_novo': cd.get('tabe_icms'),
+                            'tabe_impo_novo': cd.get('tabe_impo'),
+                            'tabe_marg_novo': cd.get('tabe_marg'),
+                            'tabe_praz_novo': cd.get('tabe_praz'),
+                            'tabe_valo_st_novo': cd.get('tabe_valo_st'),
+                        }
+                        Tabelaprecoshist.objects.using(self.db_alias).create(**hist_data)
+                        rows = Tabelaprecos.objects.using(self.db_alias).filter(
+                            tabe_empr=tabe_empr,
+                            tabe_fili=tabe_fili,
+                            tabe_prod=tabe_prod,
+                        ).update(
+                            tabe_prco=cd.get('tabe_prco'),
+                            tabe_icms=cd.get('tabe_icms'),
+                            tabe_desc=cd.get('tabe_desc'),
+                            tabe_vipi=cd.get('tabe_vipi'),
+                            tabe_pipi=cd.get('tabe_pipi'),
+                            tabe_fret=cd.get('tabe_fret'),
+                            tabe_desp=cd.get('tabe_desp'),
+                            tabe_cust=cd.get('tabe_cust'),
+                            tabe_marg=cd.get('tabe_marg'),
+                            tabe_impo=cd.get('tabe_impo'),
+                            tabe_avis=cd.get('tabe_avis'),
+                            tabe_praz=cd.get('tabe_praz'),
+                            tabe_apra=cd.get('tabe_apra'),
+                            tabe_vare=cd.get('tabe_vare'),
+                            field_log_data=cd.get('field_log_data'),
+                            field_log_time=cd.get('field_log_time'),
+                            tabe_valo_st=cd.get('tabe_valo_st'),
+                            tabe_perc_reaj=cd.get('tabe_perc_reaj'),
+                            tabe_hist=cd.get('tabe_hist'),
+                            tabe_cuge=cd.get('tabe_cuge'),
+                            tabe_entr=cd.get('tabe_entr'),
+                            tabe_perc_st=cd.get('tabe_perc_st'),
+                        )
+                        logger.info(f"Atualização de preços: {rows} linha(s) para produto={tabe_prod} empr={tabe_empr} fili={tabe_fili}")
+                    else:
+                        hist_data = {
+                            'tabe_empr': tabe_empr,
+                            'tabe_fili': tabe_fili,
+                            'tabe_prod': tabe_prod,
+                            'tabe_data_hora': timezone.now(),
+                            'tabe_hist': "Criação de preços via Web",
+                            'tabe_perc_reaj': cd.get('tabe_perc_reaj'),
+                            'tabe_prco_novo': cd.get('tabe_prco'),
+                            'tabe_avis_novo': cd.get('tabe_avis'),
+                            'tabe_apra_novo': cd.get('tabe_apra'),
+                        }
+                        Tabelaprecoshist.objects.using(self.db_alias).create(**hist_data)
+                        obj = Tabelaprecos.objects.using(self.db_alias).create(
+                            tabe_empr=tabe_empr,
+                            tabe_fili=tabe_fili,
+                            tabe_prod=tabe_prod,
+                            tabe_prco=cd.get('tabe_prco'),
+                            tabe_icms=cd.get('tabe_icms'),
+                            tabe_desc=cd.get('tabe_desc'),
+                            tabe_vipi=cd.get('tabe_vipi'),
+                            tabe_pipi=cd.get('tabe_pipi'),
+                            tabe_fret=cd.get('tabe_fret'),
+                            tabe_desp=cd.get('tabe_desp'),
+                            tabe_cust=cd.get('tabe_cust'),
+                            tabe_marg=cd.get('tabe_marg'),
+                            tabe_impo=cd.get('tabe_impo'),
+                            tabe_avis=cd.get('tabe_avis'),
+                            tabe_praz=cd.get('tabe_praz'),
+                            tabe_apra=cd.get('tabe_apra'),
+                            tabe_vare=cd.get('tabe_vare'),
+                            field_log_data=cd.get('field_log_data'),
+                            field_log_time=cd.get('field_log_time'),
+                            tabe_valo_st=cd.get('tabe_valo_st'),
+                            tabe_perc_reaj=cd.get('tabe_perc_reaj'),
+                            tabe_hist=cd.get('tabe_hist'),
+                            tabe_cuge=cd.get('tabe_cuge'),
+                            tabe_entr=cd.get('tabe_entr'),
+                            tabe_perc_st=cd.get('tabe_perc_st'),
+                        )
+                        logger.info(f"Criação de preços: produto={obj.tabe_prod} empr={obj.tabe_empr} fili={obj.tabe_fili}")
+                    processed += 1
+
+                for f in promo_formset.forms:
+                    if not f.has_changed():
+                        continue
+                    cd = f.cleaned_data
+                    if cd.get('DELETE'):
+                        continue
+                    tabe_prod = instance.prod_codi
+                    try:
+                        tabe_empr = int(self.empresa_id) if self.empresa_id else int(instance.prod_empr)
+                    except Exception:
+                        tabe_empr = self.empresa_id or instance.prod_empr
+                    try:
+                        tabe_fili = int(cd.get('tabe_fili')) if cd.get('tabe_fili') else (int(self.filial_id) if self.filial_id else 1)
+                    except Exception:
+                        tabe_fili = cd.get('tabe_fili') or (self.filial_id or 1)
+
+                    existing_promo = TabelaprecosPromocional.objects.using(self.db_alias).filter(
                         tabe_empr=tabe_empr,
                         tabe_fili=tabe_fili,
                         tabe_prod=tabe_prod,
-                        tabe_prco=cd.get('tabe_prco'),
-                        tabe_icms=cd.get('tabe_icms'),
-                        tabe_desc=cd.get('tabe_desc'),
-                        tabe_vipi=cd.get('tabe_vipi'),
-                        tabe_pipi=cd.get('tabe_pipi'),
-                        tabe_fret=cd.get('tabe_fret'),
-                        tabe_desp=cd.get('tabe_desp'),
-                        tabe_cust=cd.get('tabe_cust'),
-                        tabe_marg=cd.get('tabe_marg'),
-                        tabe_impo=cd.get('tabe_impo'),
-                        tabe_avis=cd.get('tabe_avis'),
-                        tabe_praz=cd.get('tabe_praz'),
-                        tabe_apra=cd.get('tabe_apra'),
-                        tabe_vare=cd.get('tabe_vare'),
-                        field_log_data=cd.get('field_log_data'),
-                        field_log_time=cd.get('field_log_time'),
-                        tabe_valo_st=cd.get('tabe_valo_st'),
-                        tabe_perc_reaj=cd.get('tabe_perc_reaj'),
-                        tabe_hist=cd.get('tabe_hist'),
-                        tabe_cuge=cd.get('tabe_cuge'),
-                        tabe_entr=cd.get('tabe_entr'),
-                        tabe_perc_st=cd.get('tabe_perc_st'),
-                    )
-                    logger.info(f"Criação de preços: produto={obj.tabe_prod} empr={obj.tabe_empr} fili={obj.tabe_fili}")
-                processed += 1
+                    ).first()
+
+                    dados_promo = {
+                        'tabe_empr': tabe_empr,
+                        'tabe_fili': tabe_fili,
+                        'tabe_prod': tabe_prod,
+                        'tabe_prco': cd.get('tabe_prco'),
+                        'tabe_desp': cd.get('tabe_desp'),
+                        'tabe_cust': cd.get('tabe_cust'),
+                        'tabe_marg': cd.get('tabe_marg'),
+                        'tabe_cuge': cd.get('tabe_cuge'),
+                        'tabe_avis': cd.get('tabe_avis'),
+                        'tabe_praz': cd.get('tabe_praz'),
+                        'tabe_apra': cd.get('tabe_apra'),
+                        'tabe_hist': cd.get('tabe_hist'),
+                        'tabe_perc_reaj': cd.get('tabe_perc_reaj'),
+                    }
+
+                    if existing_promo:
+                        atualizar_preco_promocional_com_historico(self.db_alias, existing_promo, dados_promo)
+                    else:
+                        criar_preco_promocional_com_historico(self.db_alias, dados_promo)
+                    processed_promo += 1
         except Exception as e:
             messages.error(self.request, f'Erro ao salvar preços: {e}')
             logger.exception('Falha ao salvar tabela de preços')
             ctx = self.get_context_data()
             ctx['form'] = form
             ctx['formset'] = formset
+            ctx['promo_formset'] = promo_formset
             return self.render_to_response(ctx)
-        if processed == 0:
+        if processed == 0 and processed_promo == 0:
             messages.info(self.request, 'Nenhum item de preço foi enviado/alterado.')
         messages.success(self.request, f'Produto criado com sucesso. Código: {instance.prod_codi}')
         return redirect(self.get_success_url())
@@ -614,6 +687,17 @@ class ProdutoCreateView(DBAndSlugMixin, CreateView):
                         for field, errs in fs_form.errors.items():
                             for err in errs:
                                 messages.error(self.request, f'Preço - erro em {field}: {err}')
+        except Exception:
+            pass
+        from ...models import TabelaprecosPromocional
+        try:
+            promo_formset = TabelaprecosPromocionalFormSet(self.request.POST, queryset=TabelaprecosPromocional.objects.none(), prefix='precos_promo')
+            if not promo_formset.is_valid():
+                for fs_form in promo_formset.forms:
+                    if fs_form.errors:
+                        for field, errs in fs_form.errors.items():
+                            for err in errs:
+                                messages.error(self.request, f'Preço Promocional - erro em {field}: {err}')
         except Exception:
             pass
         return super().form_invalid(form)
@@ -740,6 +824,36 @@ class ProdutoUpdateView(DBAndSlugMixin, UpdateView):
             })
         ctx['formset'] = TabelaprecosPlainFormSet(initial=initial_list, prefix='precos')
 
+        qs_promo = TabelaprecosPromocional.objects.using(self.db_alias).filter(
+            tabe_prod=produto.prod_codi,
+            tabe_empr=emp_int,
+        )
+        promo_initial_list = []
+        for preco in qs_promo:
+            promo_initial_list.append({
+                'tabe_fili': preco.tabe_fili,
+                'tabe_prco': preco.tabe_prco,
+                'tabe_desp': preco.tabe_desp,
+                'tabe_cust': preco.tabe_cust,
+                'tabe_marg': preco.tabe_marg,
+                'tabe_cuge': preco.tabe_cuge,
+                'tabe_avis': preco.tabe_avis,
+                'tabe_praz': preco.tabe_praz,
+                'tabe_apra': preco.tabe_apra,
+                'tabe_hist': preco.tabe_hist,
+                'tabe_perc_reaj': preco.tabe_perc_reaj,
+            })
+        ctx['promo_formset'] = TabelaprecosPromocionalPlainFormSet(initial=promo_initial_list, prefix='precos_promo')
+        try:
+            ctx['promo_historico'] = list(
+                TabelaprecosPromocionalhist.objects.using(self.db_alias).filter(
+                    tabe_prod=produto.prod_codi,
+                    tabe_empr=emp_int,
+                ).order_by('-tabe_data_hora')[:50]
+            )
+        except Exception:
+            ctx['promo_historico'] = []
+
         # Load Fiscal Data
         try:
             fiscal_obj = ProdutoFiscalPadrao.objects.using(self.db_alias).filter(produto=produto).first()
@@ -789,6 +903,7 @@ class ProdutoUpdateView(DBAndSlugMixin, UpdateView):
         except Exception:
             emp_int = self.empresa_id or form.instance.prod_empr
         formset = TabelaprecosPlainFormSet(self.request.POST, prefix='precos')
+        promo_formset = TabelaprecosPromocionalPlainFormSet(self.request.POST, prefix='precos_promo')
 
         # Load Fiscal Data for saving
         try:
@@ -806,6 +921,19 @@ class ProdutoUpdateView(DBAndSlugMixin, UpdateView):
             ctx = self.get_context_data()
             ctx['form'] = form
             ctx['formset'] = formset
+            ctx['promo_formset'] = promo_formset
+            ctx['fiscal_form'] = fiscal_form
+            return self.render_to_response(ctx)
+
+        if not promo_formset.is_valid():
+            for fs_form in promo_formset.forms:
+                for field, errs in fs_form.errors.items():
+                    for err in errs:
+                        messages.error(self.request, f'Preço Promocional - erro em {field}: {err}')
+            ctx = self.get_context_data()
+            ctx['form'] = form
+            ctx['formset'] = formset
+            ctx['promo_formset'] = promo_formset
             ctx['fiscal_form'] = fiscal_form
             return self.render_to_response(ctx)
             
@@ -816,6 +944,7 @@ class ProdutoUpdateView(DBAndSlugMixin, UpdateView):
             ctx = self.get_context_data()
             ctx['form'] = form
             ctx['formset'] = formset
+            ctx['promo_formset'] = promo_formset
             ctx['fiscal_form'] = fiscal_form
             return self.render_to_response(ctx)
 
@@ -840,10 +969,13 @@ class ProdutoUpdateView(DBAndSlugMixin, UpdateView):
                   fiscal_obj_save.save()
 
         processed = 0
+        processed_promo = 0
         for f in formset.forms:
             if not f.has_changed():
                 continue
             cd = f.cleaned_data
+            if cd.get('DELETE'):
+                continue
             tabe_prod = instance.prod_codi
             try:
                 tabe_empr = int(self.empresa_id) if self.empresa_id else int(instance.prod_empr)
@@ -973,7 +1105,52 @@ class ProdutoUpdateView(DBAndSlugMixin, UpdateView):
                     tabe_perc_st=cd.get('tabe_perc_st'),
                 )
             processed += 1
-        if processed == 0:
+
+        for f in promo_formset.forms:
+            if not f.has_changed():
+                continue
+            cd = f.cleaned_data
+            if cd.get('DELETE'):
+                continue
+            tabe_prod = instance.prod_codi
+            try:
+                tabe_empr = int(self.empresa_id) if self.empresa_id else int(instance.prod_empr)
+            except Exception:
+                tabe_empr = self.empresa_id or instance.prod_empr
+            try:
+                tabe_fili = int(cd.get('tabe_fili')) if cd.get('tabe_fili') else (int(self.filial_id) if self.filial_id else 1)
+            except Exception:
+                tabe_fili = cd.get('tabe_fili') or (self.filial_id or 1)
+
+            existing_promo = TabelaprecosPromocional.objects.using(self.db_alias).filter(
+                tabe_empr=tabe_empr,
+                tabe_fili=tabe_fili,
+                tabe_prod=tabe_prod,
+            ).first()
+
+            dados_promo = {
+                'tabe_empr': tabe_empr,
+                'tabe_fili': tabe_fili,
+                'tabe_prod': tabe_prod,
+                'tabe_prco': cd.get('tabe_prco'),
+                'tabe_desp': cd.get('tabe_desp'),
+                'tabe_cust': cd.get('tabe_cust'),
+                'tabe_marg': cd.get('tabe_marg'),
+                'tabe_cuge': cd.get('tabe_cuge'),
+                'tabe_avis': cd.get('tabe_avis'),
+                'tabe_praz': cd.get('tabe_praz'),
+                'tabe_apra': cd.get('tabe_apra'),
+                'tabe_hist': cd.get('tabe_hist'),
+                'tabe_perc_reaj': cd.get('tabe_perc_reaj'),
+            }
+
+            if existing_promo:
+                atualizar_preco_promocional_com_historico(self.db_alias, existing_promo, dados_promo)
+            else:
+                criar_preco_promocional_com_historico(self.db_alias, dados_promo)
+            processed_promo += 1
+
+        if processed == 0 and processed_promo == 0:
             messages.info(self.request, 'Nenhum item de preço foi enviado/alterado.')
         messages.success(self.request, f'Produto atualizado com sucesso. Código: {instance.prod_codi}')
         logger.info(f'Produto atualizado com sucesso. Código: {instance.prod_codi},tabela de preços atualizada com sucesso.')

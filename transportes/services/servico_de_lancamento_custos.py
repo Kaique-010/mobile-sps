@@ -3,41 +3,9 @@ from django.db import transaction
 from django.db.models import Max, Q
 from transportes.models import Custos, Veiculos
 from Entidades.models import Entidades
-from Produtos.models import Produtos
 
 
 class LancamentoCustosService:
-    @staticmethod
-    def _normalizar_produto(data, empresa_id, using='default'):
-        item_codigo = data.get("lacu_item")
-        if not item_codigo:
-            raise ValueError("Item/Insumo é obrigatório")
-
-        produto = Produtos.objects.using(using).filter(
-            prod_empr=str(empresa_id),
-            prod_codi=str(item_codigo),
-        ).first()
-        if not produto:
-            raise ValueError("Item/Insumo não encontrado")
-
-        data["lacu_item"] = str(produto.prod_codi)
-        data["lacu_nome_item"] = (produto.prod_nome or "").strip() or data.get("lacu_nome_item")
-
-    @staticmethod
-    def _normalizar_fornecedor(data, empresa_id, using='default'):
-        fornecedor_id = data.get("lacu_forn")
-        if not fornecedor_id:
-            return
-
-        fornecedor = Entidades.objects.using(using).filter(
-            enti_empr=empresa_id,
-            enti_clie=fornecedor_id,
-        ).first()
-        if not fornecedor:
-            raise ValueError("Fornecedor não encontrado")
-
-        data["lacu_forn"] = fornecedor.enti_clie
-        data["lacu_nome_forn"] = (fornecedor.enti_nome or "").strip() or data.get("lacu_nome_forn")
 
     @staticmethod
     def gerar_sequencial(empresa_id, filial_id, using='default'):
@@ -92,7 +60,11 @@ class LancamentoCustosService:
                 raise ValueError("Funcionário/Motorista não encontrado")
 
         if data.get("lacu_forn"):
-            LancamentoCustosService._normalizar_fornecedor(data, empresa_id, using)
+            if not Entidades.objects.using(using).filter(
+                enti_empr=empresa_id,
+                enti_clie=data.get("lacu_forn")
+            ).exists():
+                raise ValueError("Fornecedor não encontrado")
 
         if not data.get("lacu_quan"):
             raise ValueError("Quantidade é obrigatória")
@@ -103,7 +75,8 @@ class LancamentoCustosService:
         if not data.get("lacu_item"):
             raise ValueError("Item/Insumo é obrigatório")
 
-        LancamentoCustosService._normalizar_produto(data, empresa_id, using)
+        if not data.get("lacu_nome_item"):
+            raise ValueError("Descrição do item é obrigatória")
 
     @staticmethod
     def create_custo(data, user_id, using='default'):

@@ -30,6 +30,13 @@ def get_nome_usuario(request):
         except Exception:
             nome = None
 
+    # Fallback: cookie simples (setado pelo frontend) para casos em que o Set-Cookie do login API não propagou
+    if not nome:
+        try:
+            nome = request.COOKIES.get("mobile_sps_user_hint")
+        except Exception:
+            nome = None
+
     nome_final = (nome or "").strip().lower()
     logger.debug("[PERM] user=%s usua_nome_resolvido='%s'", user, nome_final)
     return nome_final

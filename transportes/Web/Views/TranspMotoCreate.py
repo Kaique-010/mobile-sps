@@ -41,7 +41,6 @@ class VeiculosCreateView(CreateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['slug'] = self.kwargs.get('slug')
         context['titulo'] = 'Novo Veículo'
         context['acao'] = 'Criar'
         return context

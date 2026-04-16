@@ -32,6 +32,7 @@ from django.db.models import Q
 from django.db import DatabaseError
 from django.conf import settings
 from django.core import signing
+from core.utils import get_db_from_slug
 from core.cache_service import build_cache_key, cache_get_or_set
 from django.core.cache import cache
 from planos.models import Plano
@@ -382,7 +383,7 @@ class EmpresaUsuarioView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        slug = get_licenca_slug()
+        slug = (kwargs.get("slug") or "").strip() or get_licenca_slug()
         from core.licenca_context import get_licencas_map
         licenca_info = next((item for item in get_licencas_map() if item['slug'] == slug), None)
 
@@ -390,7 +391,7 @@ class EmpresaUsuarioView(APIView):
             return Response({"error": "Licença não encontrada."}, status=404)
 
         try:
-            banco = get_licenca_db_config(request)
+            banco = get_db_from_slug(slug) if slug else get_licenca_db_config(request)
         except Exception:
             return Response(
                 {
@@ -423,13 +424,13 @@ class FiliaisPorEmpresaView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, slug=None):
-        slug = get_licenca_slug()
+        slug = (slug or "").strip() or get_licenca_slug()
 
         if not slug:
             return Response({"error": "Licença não encontrada."}, status=status.HTTP_404_NOT_FOUND)
 
         try:
-            banco = get_licenca_db_config(request)
+            banco = get_db_from_slug(slug) if slug else get_licenca_db_config(request)
         except Exception:
             return Response(
                 {

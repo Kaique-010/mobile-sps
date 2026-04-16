@@ -56,13 +56,13 @@ class ContratosvendasSerializer(serializers.ModelSerializer):
             enti_empr=obj.cont_empr
         ).first()
 
-        return cliente.ent_nome if cliente else None
+        return cliente.enti_nome if cliente else None
     
     def get_empresa_nome(self, obj):
         banco = self.context.get("banco")
 
         empresa = Empresas.objects.using(banco).filter(
-            emp_codi=obj.cont_empr
+            empr_codi=obj.cont_empr
         ).first()
 
-        return empresa.emp_nome if empresa else None
+        return empresa.empr_nome if empresa else None

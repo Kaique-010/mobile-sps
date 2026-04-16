@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from ..models import Tabelaprecos
+from ..preco_models import TabelaprecosPromocional, TabelaprecosPromocionalhist
 from core.serializers import BancoContextMixin
 from decimal import Decimal, ROUND_HALF_UP
 import logging
@@ -118,3 +119,59 @@ class TabelaPrecoSerializer(BancoContextMixin, serializers.ModelSerializer):
                 instance.tabe_entr = None
         
         return super().to_representation(instance)
+
+
+class TabelaPrecoPromocionalSerializer(BancoContextMixin, serializers.ModelSerializer):
+    class Meta:
+        model = TabelaprecosPromocional
+        fields = [
+            'tabe_empr',
+            'tabe_fili',
+            'tabe_prod',
+            'tabe_prco',
+            'tabe_desp',
+            'tabe_cust',
+            'tabe_marg',
+            'tabe_cuge',
+            'tabe_avis',
+            'tabe_praz',
+            'tabe_apra',
+            'tabe_hist',
+            'tabe_perc_reaj',
+        ]
+        extra_kwargs = {
+            'tabe_empr': {'read_only': True},
+            'tabe_fili': {'read_only': True},
+            'tabe_prod': {'read_only': True},
+        }
+
+    def to_internal_value(self, data):
+        decimal_fields = [
+            'tabe_prco',
+            'tabe_desp',
+            'tabe_cust',
+            'tabe_marg',
+            'tabe_cuge',
+            'tabe_avis',
+            'tabe_praz',
+            'tabe_apra',
+            'tabe_perc_reaj',
+        ]
+        for field in decimal_fields:
+            if field in data and (data[field] == '' or data[field] is None):
+                data[field] = None
+        return super().to_internal_value(data)
+
+    def validate(self, data):
+        campos_preco = ['tabe_prco', 'tabe_avis', 'tabe_apra', 'tabe_cuge']
+        for campo in campos_preco:
+            valor = data.get(campo)
+            if valor is not None and Decimal(valor) < 0:
+                raise serializers.ValidationError({campo: "O preço não pode ser negativo"})
+        return data
+
+
+class TabelaPrecoPromocionalHistSerializer(BancoContextMixin, serializers.ModelSerializer):
+    class Meta:
+        model = TabelaprecosPromocionalhist
+        fields = '__all__'

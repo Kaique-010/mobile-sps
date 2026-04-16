@@ -1,8 +1,9 @@
 from rest_framework import viewsets
+from rest_framework.response import Response
 from ..service import ContratoService
 from ..models import Contratosvendas
 from ..Rest.serializers import ContratosvendasSerializer
-from core.utils import get_db_from_slug
+from core.utils import get_licenca_db_config
 
 
 
@@ -12,7 +13,7 @@ class ContratoViewSet(viewsets.ModelViewSet):
     search_fields = ['cont_cont', 'cont_clie__enti_nome', 'cont_empr__emp_nome']
     
     def get_queryset(self):
-        banco = get_db_from_slug(self.request)
+        banco = get_licenca_db_config(self.request)
         return Contratosvendas.objects.using(banco).all().order_by("cont_cont")
     
     def create(self, request, *args, **kwargs):
@@ -34,7 +35,7 @@ class ContratoViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        banco = get_db_from_slug(self.request)
+        banco = get_licenca_db_config(self.request)
 
         try:
             ContratoService.delete_contrato(instance.cont_cont, banco)

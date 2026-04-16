@@ -1,7 +1,7 @@
 from django import forms
 from django.forms.models import inlineformset_factory
 from django.forms import formset_factory
-from Produtos.models import Produtos, GrupoProduto, SubgrupoProduto, FamiliaProduto, Marca, Tabelaprecos, UnidadeMedida
+from Produtos.models import Produtos, GrupoProduto, SubgrupoProduto, FamiliaProduto, Marca, Tabelaprecos, TabelaprecosPromocional, UnidadeMedida
 
 from CFOP.models import ProdutoFiscalPadrao
 
@@ -372,4 +372,86 @@ TabelaprecosFormSetUpdate = forms.modelformset_factory(
     Tabelaprecos,
     form=TabelaprecosForm,
     extra=0,
+)
+
+
+class TabelaprecosPromocionalForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'tabe_fili' in self.fields:
+            self.fields['tabe_fili'].required = False
+
+    class Meta:
+        model = TabelaprecosPromocional
+        fields = [
+            'tabe_fili',
+            'tabe_prco',
+            'tabe_desp',
+            'tabe_cust',
+            'tabe_marg',
+            'tabe_cuge',
+            'tabe_avis',
+            'tabe_praz',
+            'tabe_apra',
+            'tabe_hist',
+            'tabe_perc_reaj',
+        ]
+        widgets = {
+            'tabe_prco': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Preço base'}),
+            'tabe_desp': forms.TextInput(attrs={'class': 'form-control', 'inputmode': 'decimal', 'placeholder': 'Despesas'}),
+            'tabe_marg': forms.TextInput(attrs={'class': 'form-control', 'inputmode': 'decimal', 'placeholder': '% a vista'}),
+            'tabe_avis': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'readonly': 'readonly'}),
+            'tabe_praz': forms.TextInput(attrs={'class': 'form-control', 'inputmode': 'decimal', 'placeholder': '% a prazo'}),
+            'tabe_apra': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'readonly': 'readonly'}),
+            'tabe_hist': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Histórico'}),
+            'tabe_cuge': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'readonly': 'readonly'}),
+            'tabe_cust': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'readonly': 'readonly'}),
+        }
+
+    def clean(self):
+        cleaned = super().clean()
+        from decimal import Decimal, ROUND_HALF_UP
+
+        def norm(v):
+            if v is None:
+                return Decimal('0')
+            if isinstance(v, Decimal):
+                return v
+            try:
+                if isinstance(v, (int, float)):
+                    return Decimal(str(v))
+                s = str(v).strip().replace('.', '').replace(',', '.') if isinstance(v, str) else str(v)
+                return Decimal(s or '0')
+            except Exception:
+                return Decimal('0')
+
+        prco = norm(cleaned.get('tabe_prco'))
+        despesas = norm(cleaned.get('tabe_desp'))
+        marg = norm(cleaned.get('tabe_marg'))
+        perc_prazo = norm(cleaned.get('tabe_praz'))
+
+        custo_gerencial = prco + despesas
+        custo_gerencial_q = custo_gerencial.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        preco_vista = prco * (Decimal('1') + (marg / Decimal('100')))
+        preco_vista_q = preco_vista.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        preco_prazo = preco_vista * (Decimal('1') + (perc_prazo / Decimal('100')))
+        preco_prazo_q = preco_prazo.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+        cleaned['tabe_cuge'] = custo_gerencial_q
+        cleaned['tabe_cust'] = custo_gerencial_q
+        cleaned['tabe_avis'] = preco_vista_q
+        cleaned['tabe_apra'] = preco_prazo_q
+        return cleaned
+
+
+TabelaprecosPromocionalFormSet = forms.modelformset_factory(
+    TabelaprecosPromocional,
+    form=TabelaprecosPromocionalForm,
+    extra=1,
+)
+
+TabelaprecosPromocionalPlainFormSet = formset_factory(
+    TabelaprecosPromocionalForm,
+    extra=0,
+    can_delete=True,
 )

@@ -444,3 +444,6 @@ class Movimentoestoque(models.Model):
         db_table = 'movimentoestoque'
         unique_together = (('moes_empr', 'moes_fili', 'moes_tipo', 'moes_docu', 'moes_seri', 'moes_mode', 'moes_enti', 'moes_item', 'moes_seto'),)
 
+
+from .preco_models import TabelaprecosPromocional, TabelaprecosPromocionalhist
+

@@ -45,6 +45,48 @@
       container.querySelectorAll(".preco-item").forEach(calcItem);
     }
 
+    const promoContainer = document.querySelector("#precos-promo-formset");
+    if (promoContainer) {
+      const toNumber = (v) => {
+        if (!v) return 0;
+        return parseFloat(v.replace(",", ".")) || 0;
+      };
+
+      const calcPromoItem = (item) => {
+        const prco = item.querySelector("[name$='tabe_prco']");
+        const desp = item.querySelector("[name$='tabe_desp']");
+        const cuge = item.querySelector("[name$='tabe_cuge']");
+        const marg = item.querySelector("[name$='tabe_marg']");
+        const avis = item.querySelector("[name$='tabe_avis']");
+        const apra = item.querySelector("[name$='tabe_apra']");
+        const praz = item.querySelector("[name$='tabe_praz']");
+        const cust = item.querySelector("[name$='tabe_cust']");
+
+        if (!prco || !cuge || !marg || !avis || !apra || !praz) return;
+
+        const precoBase = toNumber(prco.value);
+        const valorDespesas = desp ? toNumber(desp.value) : 0;
+        const percMargem = toNumber(marg.value);
+        const percPrazo = toNumber(praz.value);
+
+        const custoGerencial = precoBase + valorDespesas;
+        if (cuge) cuge.value = custoGerencial.toFixed(2);
+        if (cust) cust.value = custoGerencial.toFixed(2);
+
+        const precoVista = precoBase * (1 + percMargem / 100);
+        const precoPrazo = precoVista * (1 + percPrazo / 100);
+        avis.value = precoVista.toFixed(2);
+        apra.value = precoPrazo.toFixed(2);
+      };
+
+      promoContainer.addEventListener("input", (e) => {
+        const item = e.target.closest(".preco-promo-item");
+        if (item) calcPromoItem(item);
+      });
+
+      promoContainer.querySelectorAll(".preco-promo-item").forEach(calcPromoItem);
+    }
+
     // =================================================================
     // 2. Autocomplete Helpers
     // =================================================================
