@@ -1,12 +1,11 @@
-{% if request.user.is_authenticated %}
-{% if request.user.usua_nome|lower == 'admin' or request.user.usua_nome|lower == 'mobile' or request.user.usua_nome|lower == 'web' or request.user.usua_nome|lower == 'lais' %}
+{% if can_view_admin_menus %}
 <li class="nav-item">
     <a class="nav-link" data-slug-route="/web/{slug}/parametros-admin/" data-modulo="parametros_admin">
         <i class="bi bi-gear fs-3"></i> Parametrizações de Módulos
     </a>
-    <a class="nav-link" data-slug-route="/web/{slug}/parametros-admin/parametros/" data-modulo="parametros_admin_parametros">
+    <a class="nav-link" data-slug-route="/web/{slug}/parametros-admin/parametros/"
+        data-modulo="parametros_admin_parametros">
         <i class="bi bi-gear fs-3"></i> Parametrizações de Parâmetros
     </a>
 </li>
-{% endif %}
 {% endif %}

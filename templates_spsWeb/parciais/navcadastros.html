@@ -22,22 +22,21 @@
 
             <li class="nav-item">
                 <div class="d-flex align-items-center">
-                    <a class="nav-link flex-grow-1" href="/web/login/" data-slug-route="/web/{slug}/entidades/relatorio/">
+                    <a class="nav-link flex-grow-1" href="/web/login/"
+                        data-slug-route="/web/{slug}/entidades/relatorio/">
                         <i class="bi bi-bar-chart-fill"></i> Relatório de Entidades
                     </a>
                 </div>
             </li>
 
-            {% if request.user.is_authenticated %}
-                {% if request.user.usua_nome|lower == 'admin' or request.user.usua_nome|lower == 'mobile' or request.user.usua_nome|lower == 'web'  or request.user.usua_nome|lower == 'lais' %}
-                <li class="nav-item">
-                    <div class="d-flex align-items-center">
-                        <a class="nav-link flex-grow-1" href="/web/login/" data-slug-route="/web/{slug}/perfil/">
-                            <i class="bi bi-people-fill"></i> Perfis
-                        </a>
-                    </div>
-                </li>
-                {% endif %}
+            {% if can_view_admin_menus %}
+            <li class="nav-item">
+                <div class="d-flex align-items-center">
+                    <a class="nav-link flex-grow-1" href="/web/login/" data-slug-route="/web/{slug}/perfil/">
+                        <i class="bi bi-people-fill"></i> Perfis
+                    </a>
+                </div>
+            </li>
             {% endif %}
 
             <li class="nav-item">
@@ -54,12 +53,14 @@
                 </div>
                 <div class="collapse" id="collapseCentros">
                     <ul class="list-unstyled ps-4">
-                        <li><a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/centrosdecustos/">Listagem de Centros de Custo</a></li>
-                       
+                        <li><a class="nav-link" href="/web/login/"
+                                data-slug-route="/web/{slug}/centrosdecustos/">Listagem de Centros de Custo</a></li>
+
                     </ul>
                 </div>
             </li>
 
+            {% if can_view_admin_menus %}
             <li class="nav-item" data-modulo="parametros_admin">
                 <a class="nav-link collapsed" data-bs-toggle="collapse" href="#" role="button"
                     data-bs-target="#collapseParametrizacoes" aria-expanded="false"
@@ -69,17 +70,20 @@
                 <div class="collapse" id="collapseParametrizacoes">
                     <ul class="list-unstyled ps-4">
                         <li>
-                            <a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/licencas/empresas/">Empresas</a>
+                            <a class="nav-link" href="/web/login/"
+                                data-slug-route="/web/{slug}/licencas/empresas/">Empresas</a>
                         </li>
                         <li>
-                            <a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/licencas/filiais/">Filiais</a>
+                            <a class="nav-link" href="/web/login/"
+                                data-slug-route="/web/{slug}/licencas/filiais/">Filiais</a>
                         </li>
                         <li>
                             <a class="nav-link" href="/web/login/" data-slug-route="/web/{slug}/cfop/">CFOP</a>
                         </li>
                         <li>
                             <div class="d-flex align-items-center">
-                                <a class="nav-link flex-grow-1" href="/web/login/" data-slug-route="/web/{slug}/series/">Séries</a>
+                                <a class="nav-link flex-grow-1" href="/web/login/"
+                                    data-slug-route="/web/{slug}/series/">Séries</a>
                                 <a href="https://youtu.be/sf9hj6Ge9Zg" target="_blank" class="text-decoration-none ms-2"
                                     title="Ver tutorial no YouTube" onclick="event.stopPropagation();">
                                     <i class="bi bi-youtube" style="font-size: 1.2rem; color: #ff2f2f;"></i>
@@ -88,7 +92,8 @@
                         </li>
                         <li>
                             <div class="d-flex align-items-center">
-                                <a class="nav-link flex-grow-1" href="/web/login/" data-slug-route="/web/{slug}/importador/">Importador de Produtos</a>
+                                <a class="nav-link flex-grow-1" href="/web/login/"
+                                    data-slug-route="/web/{slug}/importador/">Importador de Produtos</a>
                                 <a href="https://youtu.be/sf9hj6Ge9Zg" target="_blank" class="text-decoration-none ms-2"
                                     title="Ver tutorial no YouTube" onclick="event.stopPropagation();">
                                     <i class="bi bi-youtube" style="font-size: 1.2rem; color: #ff2f2f;"></i>
@@ -97,25 +102,24 @@
                         </li>
                         <li>
                             <div class="d-flex align-items-center">
-                                <a class="nav-link flex-grow-1" href="/web/login/" data-slug-route="/web/{slug}/importador/entidades/">Importador de Entidades</a>
+                                <a class="nav-link flex-grow-1" href="/web/login/"
+                                    data-slug-route="/web/{slug}/importador/entidades/">Importador de Entidades</a>
                             </div>
                         </li>
 
-                        {% if request.user.is_authenticated %}
-                            {% if request.user.usua_nome|lower == 'admin' or request.user.usua_nome|lower == 'mobile'  or request.user.usua_nome|lower == 'lais'  or request.user.usua_nome|lower == 'web' %}
-                            <li class="nav-item">
-                                <div class="d-flex align-items-center">
-                                    <a class="nav-link flex-grow-1" href="/web/login/" data-slug-route="/web/{slug}/licencas/users/">
-                                        <i class="bi bi-person"></i> Perfil / Usuários
-                                    </a>
-                                </div>
-                            </li>
-                            {% endif %}
-                        {% endif %}
+                        <li class="nav-item">
+                            <div class="d-flex align-items-center">
+                                <a class="nav-link flex-grow-1" href="/web/login/"
+                                    data-slug-route="/web/{slug}/licencas/users/">
+                                    <i class="bi bi-person"></i> Perfil / Usuários
+                                </a>
+                            </div>
+                        </li>
 
                     </ul>
                 </div>
             </li>
+            {% endif %}
 
         </ul>
     </div>

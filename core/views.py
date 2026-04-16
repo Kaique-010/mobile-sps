@@ -394,6 +394,8 @@ def selecionar_empresa(request):
         empresa_nome = request.POST.get('empresa_nome')
         filial_nome = request.POST.get('filial_nome')
         slug_post = (request.POST.get('slug') or '').strip()
+        usua_codi_post = request.POST.get('usua_codi')
+        usua_nome_post = (request.POST.get('usua_nome') or '').strip()
 
         logger.info("[selecionar_empresa] POST recebido: empresa_id=%s filial_id=%s empresa_nome=%s filial_nome=%s HEADERS=%s COOKIES=%s",
                     empresa_id, filial_id, empresa_nome, filial_nome,
@@ -419,6 +421,7 @@ def selecionar_empresa(request):
         # preserva chaves críticas (usua_codi, docu, slug) e atualiza empresa/filial
         keep = {
             'usua_codi': request.session.get('usua_codi'),
+            'usua_nome': request.session.get('usua_nome'),
             'docu': request.session.get('docu'),
             'slug': request.session.get('slug')
         }
@@ -441,6 +444,19 @@ def selecionar_empresa(request):
         request.session['filial_id'] = filial_id_int
         if slug_post:
             request.session['slug'] = slug_post
+        if keep.get('usua_codi') is not None:
+            request.session['usua_codi'] = keep.get('usua_codi')
+        elif usua_codi_post:
+            try:
+                request.session['usua_codi'] = int(usua_codi_post)
+            except Exception:
+                pass
+        if keep.get('usua_nome'):
+            request.session['usua_nome'] = keep.get('usua_nome')
+        elif usua_nome_post:
+            request.session['usua_nome'] = usua_nome_post
+        if keep.get('docu'):
+            request.session['docu'] = keep.get('docu')
 
         # nomes (sua lógica)
         ...
@@ -457,7 +473,7 @@ def selecionar_empresa(request):
 
         logger.info("[selecionar_empresa] Sessão atualizada OK: emp=%s (%s) fil=%s (%s) session_snapshot=%s",
                     empresa_id_int, empresa_nome, filial_id_int, filial_nome,
-                    {k: request.session.get(k) for k in ['usua_codi','docu','slug','empresa_id','filial_id']})
+                    {k: request.session.get(k) for k in ['usua_codi','usua_nome','docu','slug','empresa_id','filial_id']})
         try:
             prev_slug = keep.get('slug')
             cur_slug = request.session.get('slug')

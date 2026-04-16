@@ -3,15 +3,20 @@ from typing import Dict, Any
 from django.http import HttpRequest
 
 try:
-    # Importações locais do projeto
     from Licencas.models import Empresas, Filiais
-    from auditoria.utils import get_licenca_db_config
 except Exception:
-    # Evitar crash em import durante coleta estática
     Empresas = None
     Filiais = None
-    get_licenca_db_config = None
 
+try:
+    from Licencas.permissions import usuario_privilegiado
+except Exception:
+    usuario_privilegiado = None
+
+try:
+    from core.utils import get_licenca_db_config
+except Exception:
+    get_licenca_db_config = None
 
 def empresa_filial_names(request: HttpRequest) -> Dict[str, Any]:
     """
@@ -70,3 +75,20 @@ def empresa_filial_names(request: HttpRequest) -> Dict[str, Any]:
         pass
 
     return contexto
+
+
+def auth_menu_flags(request: HttpRequest) -> Dict[str, Any]:
+    can_view_admin_menus = False
+    try:
+        user = getattr(request, "user", None)
+        is_auth = user is not None and getattr(user, "is_authenticated", False)
+
+        # Sem autenticação, nem tenta — evita False negativo por sessão vazia
+        if not is_auth:
+            return {"can_view_admin_menus": False}
+
+        if usuario_privilegiado:
+            can_view_admin_menus = usuario_privilegiado(request)
+    except Exception:
+        can_view_admin_menus = False
+    return {"can_view_admin_menus": can_view_admin_menus}

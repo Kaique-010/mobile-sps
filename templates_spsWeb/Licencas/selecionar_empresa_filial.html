@@ -58,6 +58,8 @@
         <input type="hidden" id="slugInput" name="slug" />
         <input type="hidden" id="empresaNomeInput" name="empresa_nome" />
         <input type="hidden" id="filialNomeInput" name="filial_nome" />
+        <input type="hidden" id="usuaCodiInput" name="usua_codi" />
+        <input type="hidden" id="usuaNomeInput" name="usua_nome" />
         <div class="form-floating mb-3">
           <select class="form-select" id="empresa" name="empresa_id" required>
             <option value="" selected disabled>Carregando...</option>
@@ -70,7 +72,8 @@
           </select>
           <label for="filial">Filial</label>
         </div>
-        <button type="submit" class="btn btn-success w-100 d-flex align-items-center justify-content-center gap-2" aria-busy="false">
+        <button type="submit" class="btn btn-success w-100 d-flex align-items-center justify-content-center gap-2"
+          aria-busy="false">
           <span id="selBtnText">Continuar</span>
           <span class="login-spinner d-none js-sel-spinner" aria-hidden="true"></span>
         </button>
@@ -158,6 +161,8 @@
   const spinnerEl = submitBtn.querySelector('.js-sel-spinner');
   const btnTextEl = document.getElementById('selBtnText');
   let isLoading = false;
+  const usuaCodiInput = document.getElementById('usuaCodiInput');
+  const usuaNomeInput = document.getElementById('usuaNomeInput');
 
   const setLoading = (loading) => {
     isLoading = loading;
@@ -166,6 +171,24 @@
     submitBtn.setAttribute('aria-busy', loading ? 'true' : 'false');
     if (spinnerEl) spinnerEl.classList.toggle('d-none', !loading);
     if (btnTextEl) btnTextEl.textContent = loading ? 'Carregando...' : 'Continuar';
+  };
+
+  const hydrateUserHidden = () => {
+    if (!usuaCodiInput || !usuaNomeInput) return;
+    try {
+      const rawUsuario = localStorage.getItem('usuario');
+      const usuario = rawUsuario ? JSON.parse(rawUsuario) : {};
+      const isObj = usuario && typeof usuario === 'object' && !Array.isArray(usuario);
+      const usuaCodi = (isObj ? (usuario?.usua_codi || usuario?.usuario_id || usuario?.id) : null) || localStorage.getItem('usua_codi') || '';
+      const usuaNome = (isObj ? (usuario?.usua_nome || usuario?.username) : String(usuario || '')) || localStorage.getItem('usua_nome') || '';
+      usuaCodiInput.value = usuaCodi ? String(usuaCodi) : '';
+      usuaNomeInput.value = usuaNome ? String(usuaNome) : '';
+      L.log('Hidden user hydrated:', { usua_codi: usuaCodiInput.value, usua_nome: usuaNomeInput.value });
+    } catch (_err) {
+      usuaCodiInput.value = localStorage.getItem('usua_codi') || '';
+      usuaNomeInput.value = localStorage.getItem('usua_nome') || '';
+      L.warn('Falha ao hidratar hidden user via JSON, usando fallback localStorage');
+    }
   };
 
   const carregarEmpresas = async () => {
@@ -277,6 +300,7 @@
       document.getElementById('slugInput').value = slug || '';
       document.getElementById('empresaNomeInput').value = empresaNome || '';
       document.getElementById('filialNomeInput').value = filialNome || '';
+      hydrateUserHidden();
       L.info('Submit nativo: LocalStorage atualizado', { empresaId, filialId });
     } catch (err) {
       L.warn('Falha ao persistir no localStorage:', err?.message);
@@ -290,6 +314,7 @@
     window.location.href = '/web/login/';
   } else {
     L.info('Inicializando carregamento de empresas...');
+    hydrateUserHidden();
     carregarEmpresas();
   }
 </script>

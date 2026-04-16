@@ -84,6 +84,7 @@
   .password-wrapper {
     position: relative;
   }
+
   .password-toggle {
     position: absolute;
     right: 12px;
@@ -98,6 +99,7 @@
     justify-content: center;
     cursor: pointer;
   }
+
   .password-toggle:focus {
     outline: none;
   }
@@ -445,6 +447,12 @@
       localStorage.setItem('licenca', JSON.stringify(data.licenca));
       localStorage.setItem('slug', slug);
       localStorage.setItem('docu', docuDigits);
+      localStorage.setItem('usua_nome', username);
+      try {
+        const u = data && data.usuario ? data.usuario : null;
+        const usuaCodi = (u && (u.usua_codi || u.usuario_id || u.id)) || '';
+        if (usuaCodi) localStorage.setItem('usua_codi', String(usuaCodi));
+      } catch (_e) { }
 
       // Avança para seleção de empresa/filial
       window.location.href = '/web/selecionar-empresa/';

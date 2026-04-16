@@ -223,6 +223,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.empresa_filial_names',
+                'core.context_processors.auth_menu_flags',
                 'onboarding.context_processors.onboarding_context',
             ],
         },

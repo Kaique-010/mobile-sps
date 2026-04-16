@@ -30,6 +30,8 @@ from django.utils import timezone
 import re
 from django.db.models import Q
 from django.db import DatabaseError
+from django.conf import settings
+from django.core import signing
 from core.cache_service import build_cache_key, cache_get_or_set
 from django.core.cache import cache
 from planos.models import Plano
@@ -242,6 +244,7 @@ class LoginView(APIView):
             )
 
         request.session["usua_codi"] = usuario.usua_codi
+        request.session["usua_nome"] = usuario.usua_nome
         request.session["docu"] = docu_digits
         request.session["slug"] = slug_from_docu
         request.session["empresa_id"] = empresa_id_int
@@ -303,13 +306,15 @@ class LoginView(APIView):
             request_id, slug_from_docu, banco, empresa_id, filial_id, usuario.usua_codi
         )
 
-        return Response({
+        response = Response({
             'request_id': request_id,
             'access': str(access),
             'refresh': str(refresh),
             'usuario': {
                 'username': usuario.usua_nome,
                 'usuario_id': usuario.usua_codi,
+                'usua_nome': usuario.usua_nome,
+                'usua_codi': usuario.usua_codi,
                 'setor': setor_claim,
                 'empresa_id': empresa_id_int,
                 'filial_id': filial_id_int,
@@ -320,6 +325,22 @@ class LoginView(APIView):
             },
             'modulos': modulos_login,
         })
+
+        try:
+            signed = signing.dumps({"u": usuario.usua_nome})
+            response.set_cookie(
+                "mobile_sps_auth_hint",
+                signed,
+                max_age=getattr(settings, "SESSION_COOKIE_AGE", 86400),
+                samesite=getattr(settings, "SESSION_COOKIE_SAMESITE", "Lax"),
+                secure=getattr(settings, "SESSION_COOKIE_SECURE", False),
+                httponly=True,
+                path="/",
+            )
+        except Exception as e:
+            logger.warning("[LOGIN][%s] falha ao setar cookie auth_hint: %s", request_id, e)
+
+        return response
 
 class TokenRefreshCustomView(APIView):
     permission_classes = [AllowAny]
