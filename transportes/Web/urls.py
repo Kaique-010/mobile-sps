@@ -22,7 +22,7 @@ from transportes.Web.Views.BombasSaldosCreate import BombasSaldosCreateView
 from transportes.Web.Views.BombasSaldosUpdate import BombasSaldosUpdateView
 from transportes.Web.Views.BombasSaldosDelete import BombasSaldosDeleteView
 from transportes.Web.Views.DashboardManutencoes import DashboardManutencoesView
-from transportes.Rest.Views.autocompletes import autocomplete_transportadoras, autocomplete_marcas, autocomplete_centrodecustos, autocomplete_entidades, autocomplete_veiculos, autocomplete_bombas, autocomplete_combustiveis, get_entidade_detalhes
+from transportes.Rest.Views.autocompletes import autocomplete_transportadoras, autocomplete_marcas, autocomplete_centrodecustos, autocomplete_entidades, autocomplete_veiculos, autocomplete_bombas, autocomplete_combustiveis, autocomplete_produtos, get_entidade_detalhes
 from transportes.Web.Views.TranspMotoList import TranspMotoListView
 from transportes.Web.Views.TranspMotoUpdate import TranspMotoUpdateView
 from transportes.Rest.Views.transp_moto import TranspMotoListApiView, TranspMotoUpdateApiView
@@ -158,5 +158,6 @@ urlpatterns = [
     path('autocomplete/veiculos/', autocomplete_veiculos, name='autocomplete_veiculos'),
     path('autocomplete/bombas/', autocomplete_bombas, name='autocomplete_bombas'),
     path('autocomplete/combustiveis/', autocomplete_combustiveis, name='autocomplete_combustiveis'),
+    path('autocomplete/produtos/', autocomplete_produtos, name='autocomplete_produtos'),
     path('api/entidade/detalhes/', get_entidade_detalhes, name='api_entidade_detalhes'),
 ]
