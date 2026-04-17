@@ -99,3 +99,22 @@ def atualizar_preco_com_historico(banco, instancia_preco, novos_dados, user=None
     instancia_preco.save(using=banco)
 
     return instancia_preco
+
+
+def buscar_preco_promocional(*, banco, tabe_empr, tabe_fili, tabe_prod):
+    return (
+        TabelaprecosPromocional.objects.using(banco)
+        .filter(tabe_empr=tabe_empr, tabe_fili=tabe_fili, tabe_prod=tabe_prod)
+        .first()
+    )
+
+
+def obter_valor_preco_promocional(*, preco, modalidade=None):
+    if not preco:
+        return None
+    mod = (modalidade or "").lower().strip()
+    if mod in {"avista", "a_vista", "vista", "0"}:
+        return preco.tabe_avis or preco.tabe_apra or preco.tabe_prco
+    if mod in {"prazo", "a_prazo", "1"}:
+        return preco.tabe_apra or preco.tabe_avis or preco.tabe_prco
+    return preco.tabe_avis or preco.tabe_apra or preco.tabe_prco

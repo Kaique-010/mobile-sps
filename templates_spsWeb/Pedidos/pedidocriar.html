@@ -119,9 +119,15 @@
           <div class="tab-pane fade show active" id="pane-itens" role="tabpanel">
             <div class="d-flex justify-content-between align-items-center mb-3">
               <h5 class="mb-0 text-primary"><i class="bi bi-cart me-2"></i>Itens</h5>
-              <button type="button" class="btn btn-success btn-sm" id="add-item">
-                <i class="bi bi-plus-circle me-1"></i>Adicionar Item
-              </button>
+              <div class="d-flex align-items-center gap-3">
+                <div class="form-check form-switch mb-0">
+                  <input class="form-check-input" type="checkbox" role="switch" id="usarPrecoPromocionalPedidos">
+                  <label class="form-check-label" for="usarPrecoPromocionalPedidos">Usar preços promocionais</label>
+                </div>
+                <button type="button" class="btn btn-success btn-sm" id="add-item">
+                  <i class="bi bi-plus-circle me-1"></i>Adicionar Item
+                </button>
+              </div>
             </div>
             <div class="table-responsive">
               <table class="table table-hover table-bordered align-middle">
@@ -359,6 +365,27 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
         <button type="button" class="btn btn-outline-success" id="produtoRapidoSalvar">Salvar produto</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="precoPromoModalPedidos" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Selecionar preço promocional</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2 text-muted small" id="precoPromoProdutoPedidos"></div>
+        <div class="d-flex flex-column gap-2">
+          <button type="button" class="btn btn-outline-primary" id="btnPrecoPromoVistaPedidos"></button>
+          <button type="button" class="btn btn-outline-primary" id="btnPrecoPromoPrazoPedidos"></button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
       </div>
     </div>
   </div>
@@ -770,6 +797,27 @@
       }
     });
 
+    const usarPromoPedidosEl = document.getElementById('usarPrecoPromocionalPedidos');
+    const precoPromoModalPedidosEl = document.getElementById('precoPromoModalPedidos');
+    const precoPromoProdutoPedidosEl = document.getElementById('precoPromoProdutoPedidos');
+    const btnPrecoPromoVistaPedidosEl = document.getElementById('btnPrecoPromoVistaPedidos');
+    const btnPrecoPromoPrazoPedidosEl = document.getElementById('btnPrecoPromoPrazoPedidos');
+    const precoPromoModalPedidos = (function () { try { return precoPromoModalPedidosEl ? new bootstrap.Modal(precoPromoModalPedidosEl) : null } catch (e) { return null } })();
+
+    function brl(v) { try { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v || 0)) } catch (e) { return `R$ ${v}` } }
+
+    function selecionarPrecoPromocionalPedidos({ prodCodi, prodText, vista, prazo }) {
+      return new Promise((resolve) => {
+        if (!precoPromoModalPedidos) return resolve(null);
+        if (precoPromoProdutoPedidosEl) precoPromoProdutoPedidosEl.textContent = prodText || `Produto ${prodCodi}`;
+        if (btnPrecoPromoVistaPedidosEl) btnPrecoPromoVistaPedidosEl.textContent = `À vista: ${brl(vista)}`;
+        if (btnPrecoPromoPrazoPedidosEl) btnPrecoPromoPrazoPedidosEl.textContent = `A prazo: ${brl(prazo)}`;
+        btnPrecoPromoVistaPedidosEl.onclick = function () { precoPromoModalPedidos.hide(); resolve({ tipo: 'avista', valor: Number(vista || 0) }) };
+        btnPrecoPromoPrazoPedidosEl.onclick = function () { precoPromoModalPedidos.hide(); resolve({ tipo: 'prazo', valor: Number(prazo || 0) }) };
+        precoPromoModalPedidos.show();
+      });
+    }
+
     // Produtos (por linha)
     function bindProdutoAutocomplete($context) {
       $context.find('.autocomplete-prod').each(function () {
@@ -794,14 +842,29 @@
             } catch (e) { }
             atualizarLoteDisplay(idx);
 
-            // Buscar preço pelo financeiro atual
             const tipo = $('#id_pedi_fina').val();
+            const usarPromo = !!(usarPromoPedidosEl && usarPromoPedidosEl.checked);
             try {
-              const resp = await fetch(`${precoUrl}?prod_codi=${encodeURIComponent(item.id)}&pedi_fina=${encodeURIComponent(tipo)}`, { credentials: 'same-origin' });
+              const url = usarPromo
+                ? `${precoUrl}?prod_codi=${encodeURIComponent(item.id)}&pedi_fina=${encodeURIComponent(tipo)}&promocional=1&opcoes=1`
+                : `${precoUrl}?prod_codi=${encodeURIComponent(item.id)}&pedi_fina=${encodeURIComponent(tipo)}`;
+              const resp = await fetch(url, { credentials: 'same-origin' });
               const json = await resp.json();
-              if (json && typeof json.unit_price !== 'undefined') {
+              if (usarPromo && json && json.prices && json.prices.promocional) {
+                const vista = Number(json.prices.promocional.avista || 0);
+                const prazo = Number(json.prices.promocional.prazo || 0);
+                if (vista > 0 || prazo > 0) {
+                  const sel = await selecionarPrecoPromocionalPedidos({ prodCodi: item.id, prodText: item.text, vista, prazo });
+                  if (sel && typeof sel.valor !== 'undefined') {
+                    unitEl.value = Number(sel.valor || 0).toFixed(2);
+                    updateTotals();
+                  }
+                } else if (json && typeof json.unit_price !== 'undefined') {
+                  unitEl.value = Number(json.unit_price || 0).toFixed(2);
+                  updateTotals();
+                }
+              } else if (json && typeof json.unit_price !== 'undefined') {
                 unitEl.value = Number(json.unit_price || 0).toFixed(2);
-                console.debug('[Pedidos.autocomplete.produto] preço definido', { prod_codi: item.id, tipo_fina: tipo, unit_price: json.unit_price });
                 updateTotals();
               }
             } catch (e) {

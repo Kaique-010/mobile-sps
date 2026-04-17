@@ -319,6 +319,65 @@ class PedidoVendaViewSet(viewsets.ModelViewSet, VendedorEntidadeMixin):
         except Exception as e:
             return tratar_erro(e)
 
+    @action(detail=False, methods=['get'], url_path='preco-produto')
+    def preco_produto(self, request, *args, **kwargs):
+        try:
+            banco = get_licenca_db_config(request)
+            if not banco:
+                raise NotFound("Banco de dados não encontrado.")
+
+            empresa_id = request.headers.get('X-Empresa') or request.query_params.get('empresa') or request.query_params.get('pedi_empr')
+            filial_id = request.headers.get('X-Filial') or request.query_params.get('filial') or request.query_params.get('pedi_fili')
+            prod_codi = (request.query_params.get('prod_codi') or request.query_params.get('produto') or '').strip()
+            tipo_financeiro = (request.query_params.get('pedi_fina') or request.query_params.get('tipo') or '0')
+            promocional = str(request.query_params.get('promocional', '0')).lower() in {'1', 'true', 'sim', 'yes'}
+            opcoes = str(request.query_params.get('opcoes', '0')).lower() in {'1', 'true', 'sim', 'yes'}
+            modo = (request.query_params.get('modo') or '').strip()
+
+            if not prod_codi:
+                raise ValidationError("prod_codi é obrigatório")
+            if not empresa_id or not filial_id:
+                raise ValidationError("Empresa e filial são obrigatórios")
+
+            if not modo:
+                modo = 'avista' if str(tipo_financeiro) == '0' else 'prazo'
+
+            from Produtos.servicos.preco_servico import buscar_preco_normal, obter_valor_preco_normal
+            from Produtos.servicos.preco_promocional import buscar_preco_promocional, obter_valor_preco_promocional
+
+            normal = buscar_preco_normal(banco=banco, tabe_empr=str(empresa_id), tabe_fili=str(filial_id), tabe_prod=str(prod_codi))
+            promo = None
+            if promocional or opcoes:
+                promo = buscar_preco_promocional(banco=banco, tabe_empr=str(empresa_id), tabe_fili=str(filial_id), tabe_prod=str(prod_codi))
+
+            valor_normal = obter_valor_preco_normal(preco=normal, modalidade=modo)
+            valor_promo = obter_valor_preco_promocional(preco=promo, modalidade=modo) if promo else None
+
+            if promocional and valor_promo is not None:
+                unit_price = float(valor_promo or 0)
+                source = 'promocional'
+                found = True
+            else:
+                unit_price = float(valor_normal or 0)
+                source = 'normal'
+                found = valor_normal is not None
+
+            payload = {'unit_price': unit_price, 'found': bool(found), 'source': source}
+            if opcoes or promocional:
+                payload['prices'] = {
+                    'normal': {
+                        'avista': float(obter_valor_preco_normal(preco=normal, modalidade='avista') or 0) if normal else 0,
+                        'prazo': float(obter_valor_preco_normal(preco=normal, modalidade='prazo') or 0) if normal else 0,
+                    },
+                    'promocional': {
+                        'avista': float(obter_valor_preco_promocional(preco=promo, modalidade='avista') or 0) if promo else 0,
+                        'prazo': float(obter_valor_preco_promocional(preco=promo, modalidade='prazo') or 0) if promo else 0,
+                    },
+                }
+            return Response(payload)
+        except Exception as e:
+            return tratar_erro(e)
+
     @action(detail=False, methods=['get'], url_path='lotes-produtos-desc')
     def lotes_produtos_desc(self, request, *args, **kwargs):
         try:

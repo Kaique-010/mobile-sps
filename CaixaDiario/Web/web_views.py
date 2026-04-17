@@ -455,6 +455,9 @@ def venda_adicionar_item(request, slug=None):
     numero_venda = data.get('numero_venda')
     produto = data.get('produto')
     quantidade = data.get('quantidade')
+    valor_unitario_in = data.get('valor_unitario')
+    preco_origem = (data.get('preco_origem') or '').strip().lower()
+    preco_tipo = (data.get('preco_tipo') or '').strip().lower()
     if not all([numero_venda, produto, quantidade]):
         return JsonResponse({'Detalhe': 'Número da venda, produto e quantidade são obrigatórios'}, status=400)
     try:
@@ -463,19 +466,37 @@ def venda_adicionar_item(request, slug=None):
         return JsonResponse({'Detalhe': 'Quantidade inválida'}, status=400)
     if quantidade_val <= 0:
         return JsonResponse({'Detalhe': 'Quantidade inválida'}, status=400)
+    if not preco_tipo:
+        preco_tipo = 'avista'
     try:
-        from Produtos.models import Tabelaprecos
-        tp = Tabelaprecos.objects.using(banco).filter(
-            tabe_empr=str(empresa_id),
-            tabe_fili=str(filial_id),
-            tabe_prod=str(produto),
-        ).first()
-        if not tp:
-            return JsonResponse({'Detalhe': 'Preço de venda à vista não encontrado para o produto'}, status=400)
-        price = tp.tabe_avis or tp.tabe_apra
-        valor_unitario = float(price)
+        if preco_origem == 'manual':
+            valor_unitario = float(valor_unitario_in or 0)
+            if valor_unitario <= 0:
+                return JsonResponse({'Detalhe': 'Valor unitário manual inválido'}, status=400)
+        elif preco_origem == 'promocional':
+            from Produtos.servicos.preco_promocional import buscar_preco_promocional, obter_valor_preco_promocional
+            tp = buscar_preco_promocional(
+                banco=banco,
+                tabe_empr=str(empresa_id),
+                tabe_fili=str(filial_id),
+                tabe_prod=str(produto),
+            )
+            price = obter_valor_preco_promocional(preco=tp, modalidade=preco_tipo)
+        else:
+            from Produtos.servicos.preco_servico import buscar_preco_normal, obter_valor_preco_normal
+            tp = buscar_preco_normal(
+                banco=banco,
+                tabe_empr=str(empresa_id),
+                tabe_fili=str(filial_id),
+                tabe_prod=str(produto),
+            )
+            price = obter_valor_preco_normal(preco=tp, modalidade=preco_tipo)
+        if preco_origem != 'manual':
+            if price is None:
+                return JsonResponse({'Detalhe': 'Preço não encontrado para o produto'}, status=400)
+            valor_unitario = float(price or 0)
     except Exception:
-        return JsonResponse({'Detalhe': 'Preço de venda à vista não encontrado para o produto'}, status=400)
+        return JsonResponse({'Detalhe': 'Preço não encontrado para o produto'}, status=400)
     with transaction.atomic(using=banco):
         pedido = PedidoVenda.objects.using(banco).filter(pedi_empr=empresa_id, pedi_fili=filial_id, pedi_nume=numero_venda).first()
         if not pedido:
@@ -505,7 +526,7 @@ def venda_adicionar_item(request, slug=None):
         total_pedido = Itenspedidovenda.objects.using(banco).filter(iped_empr=empresa_id, iped_fili=filial_id, iped_pedi=str(numero_venda)).aggregate(Sum('iped_tota'))['iped_tota__sum'] or 0
         pedido.pedi_tota = total_pedido
         pedido.save(using=banco)
-    return JsonResponse({'numero_venda': numero_venda, 'produto': produto, 'quantidade': float(quantidade_val), 'valor_unitario': float(valor_unitario), 'valor_total': float(valor_total), 'total_pedido': float(total_pedido), 'status': 'Item adicionado com sucesso'})
+    return JsonResponse({'numero_venda': numero_venda, 'produto': produto, 'quantidade': float(quantidade_val), 'valor_unitario': float(valor_unitario), 'valor_total': float(valor_total), 'total_pedido': float(total_pedido), 'preco_origem': preco_origem or 'normal', 'preco_tipo': preco_tipo, 'status': 'Item adicionado com sucesso'})
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -519,21 +540,42 @@ def venda_atualizar_item(request, slug=None):
     numero_venda = data.get('numero_venda')
     produto = data.get('produto')
     quantidade = data.get('quantidade')
+    valor_unitario_in = data.get('valor_unitario')
+    preco_origem = (data.get('preco_origem') or '').strip().lower()
+    preco_tipo = (data.get('preco_tipo') or '').strip().lower()
     if not all([numero_venda, produto]):
         return JsonResponse({'Detalhe': 'Número da venda e produto são obrigatórios'}, status=400)
+    if not preco_tipo:
+        preco_tipo = 'avista'
     try:
-        from Produtos.models import Tabelaprecos
-        tp = Tabelaprecos.objects.using(banco).filter(
-            tabe_empr=str(empresa_id),
-            tabe_fili=str(filial_id),
-            tabe_prod=str(produto),
-        ).first()
-        if not tp:
-            return JsonResponse({'Detalhe': 'Preço de venda à vista não encontrado para o produto'}, status=400)
-        price = tp.tabe_avis or tp.tabe_apra
-        valor_unitario = float(price)
+        if preco_origem == 'manual':
+            valor_unitario = float(valor_unitario_in or 0)
+            if valor_unitario <= 0:
+                return JsonResponse({'Detalhe': 'Valor unitário manual inválido'}, status=400)
+        elif preco_origem == 'promocional':
+            from Produtos.servicos.preco_promocional import buscar_preco_promocional, obter_valor_preco_promocional
+            tp = buscar_preco_promocional(
+                banco=banco,
+                tabe_empr=str(empresa_id),
+                tabe_fili=str(filial_id),
+                tabe_prod=str(produto),
+            )
+            price = obter_valor_preco_promocional(preco=tp, modalidade=preco_tipo)
+        else:
+            from Produtos.servicos.preco_servico import buscar_preco_normal, obter_valor_preco_normal
+            tp = buscar_preco_normal(
+                banco=banco,
+                tabe_empr=str(empresa_id),
+                tabe_fili=str(filial_id),
+                tabe_prod=str(produto),
+            )
+            price = obter_valor_preco_normal(preco=tp, modalidade=preco_tipo)
+        if preco_origem != 'manual':
+            if price is None:
+                return JsonResponse({'Detalhe': 'Preço não encontrado para o produto'}, status=400)
+            valor_unitario = float(price or 0)
     except Exception:
-        return JsonResponse({'Detalhe': 'Preço de venda à vista não encontrado para o produto'}, status=400)
+        return JsonResponse({'Detalhe': 'Preço não encontrado para o produto'}, status=400)
     with transaction.atomic(using=banco):
         item = Itenspedidovenda.objects.using(banco).filter(
             iped_empr=empresa_id, iped_fili=filial_id, iped_pedi=str(numero_venda), iped_prod=produto
@@ -561,6 +603,8 @@ def venda_atualizar_item(request, slug=None):
         'valor_unitario': float(item.iped_unit),
         'valor_total': float(item.iped_tota),
         'total_pedido': float(total_pedido),
+        'preco_origem': preco_origem or 'normal',
+        'preco_tipo': preco_tipo,
         'status': 'Item atualizado com sucesso'
     })
 
