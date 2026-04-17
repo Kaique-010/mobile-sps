@@ -452,6 +452,6 @@ TabelaprecosPromocionalFormSet = forms.modelformset_factory(
 
 TabelaprecosPromocionalPlainFormSet = formset_factory(
     TabelaprecosPromocionalForm,
-    extra=0,
+    extra=1,
     can_delete=True,
 )
