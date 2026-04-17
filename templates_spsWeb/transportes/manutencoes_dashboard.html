@@ -68,8 +68,8 @@
                     <tr>
                         <td>{{ mov.data|date:"d/m/Y" }}</td>
                         <td>{{ mov.tipo }}</td>
-                        <td>{{ mov.frota|default:"-" }}</td>
-                        <td>{{ mov.veiculo|default:"-" }}</td>
+                        <td>{{ mov.frota|default:"-" }}{% if mov.frota_nome %} - {{ mov.frota_nome }}{% endif %}</td>
+                        <td>{{ mov.veiculo|default:"-" }}{% if mov.veiculo_placa %} - {{ mov.veiculo_placa }}{% endif %}</td>
                         <td>{{ mov.descricao|default:"-" }}</td>
                         <td>{{ mov.documento|default:"-" }}</td>
                         <td>{{ mov.controle|default:"-" }}</td>

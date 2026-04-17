@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from transportes.models import Abastecusto, Custos, Veiculos
+from Entidades.models import Entidades
 from transportes.services.servico_de_abastecimento import AbastecimentoService
 from transportes.services.servico_de_lancamento_custos import LancamentoCustosService
 
@@ -124,6 +125,47 @@ class DashboardManutencoesService:
                     "controle": item.abas_ctrl,
                 }
             )
+
+        frotas = {str(mov.get("frota")).strip() for mov in movimentacoes if mov.get("frota") not in (None, "")}
+        frota_map = {}
+        if frotas:
+            for row in (
+                Entidades.objects.using(using)
+                .filter(enti_empr=empresa_id, enti_clie__in=list(frotas))
+                .values("enti_clie", "enti_nome")
+            ):
+                frota_map[str(row.get("enti_clie")).strip()] = (row.get("enti_nome") or "").strip()
+
+        veic_tran_set = set()
+        veic_sequ_set = set()
+        for mov in movimentacoes:
+            try:
+                tran = int(str(mov.get("frota")).strip())
+                sequ = int(str(mov.get("veiculo")).strip())
+            except (TypeError, ValueError):
+                continue
+            veic_tran_set.add(tran)
+            veic_sequ_set.add(sequ)
+
+        veic_map = {}
+        if veic_tran_set and veic_sequ_set:
+            for v in (
+                Veiculos.objects.using(using)
+                .filter(veic_empr=empresa_id, veic_tran__in=list(veic_tran_set), veic_sequ__in=list(veic_sequ_set))
+                .only("veic_tran", "veic_sequ", "veic_plac")
+            ):
+                veic_map[(v.veic_tran, v.veic_sequ)] = (v.veic_plac or "").strip()
+
+        for mov in movimentacoes:
+            frota_key = str(mov.get("frota")).strip() if mov.get("frota") not in (None, "") else ""
+            mov["frota_nome"] = frota_map.get(frota_key) or ""
+            try:
+                tran = int(frota_key) if frota_key else None
+                sequ = int(str(mov.get("veiculo")).strip())
+            except (TypeError, ValueError):
+                tran = None
+                sequ = None
+            mov["veiculo_placa"] = veic_map.get((tran, sequ)) if tran is not None and sequ is not None else ""
 
         movimentacoes.sort(key=lambda mov: (mov.get("data") is not None, mov.get("data")), reverse=True)
 

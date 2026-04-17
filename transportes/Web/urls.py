@@ -21,6 +21,7 @@ from transportes.Web.Views.BombasSaldosList import BombasSaldosListView
 from transportes.Web.Views.BombasSaldosCreate import BombasSaldosCreateView
 from transportes.Web.Views.BombasSaldosUpdate import BombasSaldosUpdateView
 from transportes.Web.Views.BombasSaldosDelete import BombasSaldosDeleteView
+from transportes.Web.Views.DashboardManutencoes import DashboardManutencoesView
 from transportes.Rest.Views.autocompletes import autocomplete_transportadoras, autocomplete_marcas, autocomplete_centrodecustos, autocomplete_entidades, autocomplete_veiculos, autocomplete_bombas, autocomplete_combustiveis, get_entidade_detalhes
 from transportes.Web.Views.TranspMotoList import TranspMotoListView
 from transportes.Web.Views.TranspMotoUpdate import TranspMotoUpdateView
@@ -36,6 +37,7 @@ from transportes.Rest.Views.bombas_saldos import BombasSaldosViewSet
 app_name = 'transportes'
 
 urlpatterns = [
+    path('manutencoes/', DashboardManutencoesView.as_view(), name='manutencoes_dashboard'),
     # Veículos
     path('veiculos/', VeiculosListView.as_view(), name='veiculos_lista'),
     path('veiculos/novo/', VeiculosCreateView.as_view(), name='veiculos_novo'),
