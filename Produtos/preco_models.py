@@ -2,7 +2,8 @@ from django.db import models
 
 
 class TabelaprecosPromocional(models.Model):
-    tabe_empr = models.IntegerField(primary_key=True)  
+    tabe_id = models.BigAutoField(primary_key=True, db_column='tabe_id')
+    tabe_empr = models.IntegerField()
     tabe_fili = models.IntegerField(db_column='tabe_fili', verbose_name="Filial")
     tabe_prod = models.CharField( max_length=60, db_column='tabe_prod', verbose_name="Produto")
     tabe_prco = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True, verbose_name="Preço de Compra")

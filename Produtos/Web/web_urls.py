@@ -36,6 +36,10 @@ from .Views.web_views import (
     SimularImpostosView,
     ZerarEstoqueView
 )
+from .Views.preco_massa_view import PrecoMassaTemplateView
+from ..views.preco_massa_views import PrecoMassaAPIView
+from .Views.produtos_massa_view import ProdutosMassaTemplateView
+from ..views.produtos_massa_views import ProdutosMassaAPIView
 from .Views.autocompletes import autocomplete_unidades, autocomplete_grupos, autocomplete_marcas, autocomplete_subgrupos, autocomplete_familias, autocomplete_ncms
 from .Views.etiquetas import EtiquetasView
 
@@ -100,4 +104,8 @@ urlpatterns = [
     # Etiquetas
     path('etiquetas/', EtiquetasView.as_view(), name='etiquetas_web'),
     path('utilitarios/zerar-estoque/', ZerarEstoqueView.as_view(), name='zerar_estoque_web'),
+    path('precos-massa/', PrecoMassaTemplateView.as_view(), name='precos_massa_web'),
+    path('precos-massa/api/', PrecoMassaAPIView.as_view(), name='precos_massa_api_web'),
+    path('produtos-massa/', ProdutosMassaTemplateView.as_view(), name='produtos_massa_web'),
+    path('produtos-massa/api/', ProdutosMassaAPIView.as_view(), name='produtos_massa_api_web'),
 ]

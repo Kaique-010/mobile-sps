@@ -1,8 +1,28 @@
 from ..models import Produtos
+from django.db.models import Q, Max
 from ..utils.hash import gerar_hash_str
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def cadastrar_produtro_padrao(banco, empresa_id,  prod_desc, prod_unme, prod_ncm, prod_gtin, prod_codi_nume, prod_orig_merc):
+    if ultimo_codigo is None:
+        ultimo_codigo = 0
+    else:
+        ultimo_codigo = Produtos.objects.using(banco).filter(prod_empr=empresa_id).aggregate(Max('prod_codi'))['prod_codi__max']
+    
+    novo_codigo =    Produtos.objects.using(banco).create(
+        prod_empr=empresa_id,
+        prod_codi=ultimo_codigo + 1,
+        prod_desc=prod_desc,
+        prod_unme=prod_unme,
+        prod_ncm=prod_ncm,
+        prod_gtin=prod_gtin,
+        prod_codi_nume=prod_codi_nume,
+        prod_orig_merc=prod_orig_merc,
+    )
+    return novo_codigo
 
 def buscar_produto_por_hash(banco, hash_busca, empresa_id_preferencia=None):
     """

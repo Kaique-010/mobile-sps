@@ -1,0 +1,562 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Atualização de Produtos em Massa{% endblock %}
+
+{% block content %}
+<style>
+    .produtos-massa-page .massa-header {
+        background: #2b3035;
+        border-radius: 10px;
+        padding: 12px 14px;
+    }
+
+    .produtos-massa-page .massa-header-spacer {
+        width: 90px;
+    }
+
+    .produtos-massa-page .massa-header-title {
+        flex: 1;
+        text-align: center;
+        color: antiquewhite;
+    }
+
+    .produtos-massa-page #previewModal .modal-title {
+        text-align: center;
+        width: 100%;
+        color: antiquewhite;
+    }
+
+    .produtos-massa-page .table>:not(caption)>*>* {
+        background-color: transparent !important;
+    }
+
+    .produtos-massa-page .table thead th {
+        background: #2b3035 !important;
+        color: antiquewhite !important;
+        text-align: center;
+        vertical-align: middle;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        white-space: nowrap;
+    }
+
+    .produtos-massa-page .table tbody td {
+        vertical-align: middle;
+        border-color: rgba(255, 255, 255, 0.08) !important;
+    }
+
+    .produtos-massa-page .table-striped>tbody>tr:nth-of-type(odd)>* {
+        --bs-table-accent-bg: transparent;
+    }
+
+    .pv-antes {
+        color: #ff6b6b;
+        font-weight: 600;
+    }
+
+    .pv-depois {
+        color: #51cf66;
+        font-weight: 700;
+    }
+
+    .pv-campo {
+        white-space: nowrap;
+    }
+
+    #previewModal .modal-dialog {
+        width: 100vw;
+        max-width: 100vw;
+        height: 100vh;
+        margin: 0;
+    }
+
+    #previewModal .modal-content {
+        height: 100vh;
+        border-radius: 0;
+    }
+
+    #previewModal .modal-body {
+        overflow: auto;
+    }
+
+    .produtos-massa-page .table .form-control,
+    .produtos-massa-page .table .form-select,
+    .produtos-massa-page .table .form-control-sm,
+    .produtos-massa-page .table .form-select-sm {
+        padding: 16px 20px;
+        border-radius: 8px;
+        border-top: 1px solid var(--bs-border-color) !important;
+        border-left: 1px solid var(--bs-border-color) !important;
+        border-right: 0 !important;
+        border-bottom: 0 !important;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+        background: color-mix(in srgb, var(--bs-body-bg) 92%, var(--bs-tertiary-bg));
+    }
+
+    .produtos-massa-page .table .form-control:focus,
+    .produtos-massa-page .table .form-select:focus,
+    .produtos-massa-page .table .form-control-sm:focus,
+    .produtos-massa-page .table .form-select-sm:focus {
+        box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.15);
+        background: var(--bs-body-bg);
+    }
+</style>
+<div class="container py-4 produtos-massa-page">
+    <form id="csrfForm" style="display:none">{% csrf_token %}</form>
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3 massa-header">
+                <div class="massa-header-spacer"></div>
+                <h4 class="mb-0 massa-header-title">Atualização de Produtos em Massa</h4>
+                <a class="btn btn-outline-secondary" href="{% url 'produtos_web' slug=slug %}">Voltar</a>
+            </div>
+
+            <div class="row g-2 mb-3">
+                <div class="col-md-3">
+                    <label class="form-label">Buscar produto</label>
+                    <input id="fBusca" class="form-control" placeholder="Código ou nome">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Marca</label>
+                    <select id="fMarca" class="form-select">
+                        <option value="">Todas</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Família</label>
+                    <select id="fFamilia" class="form-select">
+                        <option value="">Todas</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Grupo</label>
+                    <select id="fGrupo" class="form-select">
+                        <option value="">Todos</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Subgrupo</label>
+                    <select id="fSubgrupo" class="form-select">
+                        <option value="">Todos</option>
+                    </select>
+                </div>
+                <div class="col-md-1 d-grid">
+                    <label class="form-label">&nbsp;</label>
+                    <button id="btnBuscar" type="button" class="btn btn-primary">Buscar</button>
+                </div>
+            </div>
+
+            <hr>
+
+            <div class="row g-2">
+                <div class="col-md-7">
+                    <label class="form-label d-block">Edição</label>
+                    <div class="text-muted">
+                        Edite os campos diretamente na tabela. Use “Aplicar” para salvar no banco.
+                    </div>
+                </div>
+
+                <div class="col-md-5">
+                    <label class="form-label d-block">Ações</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button id="btnPreview" type="button" class="btn btn-outline-secondary">Prévia</button>
+                        <button id="btnAplicar" type="button" class="btn btn-success">Aplicar</button>
+                        <button id="btnExportXlsx" type="button" class="btn btn-outline-primary">Exportar XLSX</button>
+                        <button id="btnExportCsv" type="button" class="btn btn-outline-primary">Exportar CSV</button>
+                    </div>
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" id="somenteSelecionados">
+                        <label class="form-check-label" for="somenteSelecionados">Somente itens selecionados da
+                            página</label>
+                    </div>
+                </div>
+            </div>
+
+            <hr>
+
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="text-muted" id="lblPaginacao">—</div>
+                <div class="btn-group btn-group-sm">
+                    <button id="btnPrev" type="button" class="btn btn-outline-secondary">Anterior</button>
+                    <button id="btnNext" type="button" class="btn btn-outline-secondary">Próxima</button>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th style="width:40px"><input type="checkbox" id="chkAll"></th>
+                            <th>Código</th>
+                            <th>Nome</th>
+                            <th>Unidade</th>
+                            <th>Marca</th>
+                            <th>Família</th>
+                            <th>Grupo</th>
+                            <th>Subgrupo</th>
+                            <th>NCM</th>
+                            <th>GTIN</th>
+                            <th>Local</th>
+                            <th>Origem</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbProdutos"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title">Prévia</h5>
+                    <small class="text-muted" id="previewResumo">—</small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead id="previewHead"></thead>
+                        <tbody id="tbPreview"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_URL = "{{ api_url }}";
+    let page = 1;
+    let numPages = 1;
+    let pageSize = 30;
+    let currentRows = [];
+    let filtrosCache = {};
+
+    function csrf() {
+        const inp = document.querySelector('#csrfForm input[name="csrfmiddlewaretoken"]');
+        if (inp && inp.value) return inp.value;
+        return '';
+    }
+
+    function queryParams() {
+        const p = new URLSearchParams();
+        p.set('page', String(page));
+        p.set('page_size', String(pageSize));
+        const busca = document.getElementById('fBusca').value.trim();
+        const marca = document.getElementById('fMarca').value;
+        const familia = document.getElementById('fFamilia').value;
+        const grupo = document.getElementById('fGrupo').value;
+        const subgrupo = document.getElementById('fSubgrupo').value;
+        if (busca) p.set('busca', busca);
+        if (marca) p.set('marca', marca);
+        if (familia) p.set('familia', familia);
+        if (grupo) p.set('grupo', grupo);
+        if (subgrupo) p.set('subgrupo', subgrupo);
+        return p;
+    }
+
+    function fillSelect(el, items, valueKey, textKey, firstLabel) {
+        if (!el) return;
+        const keep = el.value;
+        el.innerHTML = `<option value="">${firstLabel || '—'}</option>`;
+        (items || []).forEach(it => {
+            const opt = document.createElement('option');
+            opt.value = it[valueKey];
+            opt.textContent = `${it[valueKey]} - ${it[textKey]}`;
+            el.appendChild(opt);
+        });
+        if (keep) el.value = keep;
+    }
+
+    function escapeHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function escapeAttr(s) {
+        return escapeHtml(s);
+    }
+
+    function buildSelectOptions(items, valueKey, textKey, currentValue, emptyLabel) {
+        const cur = String(currentValue ?? '');
+        let html = `<option value="">${escapeHtml(emptyLabel || '—')}</option>`;
+        (items || []).forEach(it => {
+            const v = String(it[valueKey] ?? '');
+            const t = `${it[valueKey]} - ${it[textKey]}`;
+            const sel = v === cur ? ' selected' : '';
+            html += `<option value="${escapeAttr(v)}"${sel}>${escapeHtml(t)}</option>`;
+        });
+        return html;
+    }
+
+    function buildOrigOptions(currentValue) {
+        const cur = String(currentValue ?? '');
+        const opts = [
+            { v: '', t: '—' },
+            { v: '0', t: '0 - Nacional' },
+            { v: '1', t: '1 - Estrangeira (importação direta)' },
+            { v: '2', t: '2 - Estrangeira (mercado interno)' },
+            { v: '3', t: '3 - Nacional c/ importação' },
+            { v: '4', t: '4 - Nacional (PPB)' },
+            { v: '5', t: '5 - Nacional c/ importação (PPB)' },
+            { v: '6', t: '6 - Estrangeira (importação direta - sem similar)' },
+            { v: '7', t: '7 - Estrangeira (mercado interno - sem similar)' },
+            { v: '8', t: '8 - Nacional c/ importação (sem similar)' },
+        ];
+        return opts.map(o => `<option value="${escapeAttr(o.v)}"${o.v === cur ? ' selected' : ''}>${escapeHtml(o.t)}</option>`).join('');
+    }
+
+    function renderRows(rows) {
+        currentRows = rows || [];
+        const tb = document.getElementById('tbProdutos');
+        tb.innerHTML = '';
+        currentRows.forEach(r => {
+            const tr = document.createElement('tr');
+            tr.dataset.prod = String(r.prod_codi ?? '');
+            const unmeOpts = buildSelectOptions(filtrosCache.unidades || [], 'unid_codi', 'unid_desc', r.prod_unme, '—');
+            const marcOpts = buildSelectOptions(filtrosCache.marcas || [], 'codigo', 'nome', r.prod_marc, '—');
+            const famiOpts = buildSelectOptions(filtrosCache.familias || [], 'codigo', 'descricao', r.prod_fami, '—');
+            const grupOpts = buildSelectOptions(filtrosCache.grupos || [], 'codigo', 'descricao', r.prod_grup, '—');
+            const sugrOpts = buildSelectOptions(filtrosCache.subgrupos || [], 'codigo', 'descricao', r.prod_sugr, '—');
+            tr.innerHTML = `
+        <td><input type="checkbox" class="chk-item" value="${r.prod_codi}"></td>
+        <td>${escapeHtml(r.prod_codi || '')}</td>
+        <td>
+          <input class="form-control form-control-sm edit-field" data-field="prod_nome" data-old="${escapeAttr(r.prod_nome || '')}" value="${escapeAttr(r.prod_nome || '')}">
+        </td>
+        <td>
+          <select class="form-select form-select-sm edit-field" data-field="prod_unme" data-old="${escapeAttr(r.prod_unme || '')}">${unmeOpts}</select>
+        </td>
+        <td>
+          <select class="form-select form-select-sm edit-field" data-field="prod_marc" data-old="${escapeAttr(r.prod_marc || '')}">${marcOpts}</select>
+        </td>
+        <td>
+          <select class="form-select form-select-sm edit-field" data-field="prod_fami" data-old="${escapeAttr(r.prod_fami || '')}">${famiOpts}</select>
+        </td>
+        <td>
+          <select class="form-select form-select-sm edit-field" data-field="prod_grup" data-old="${escapeAttr(r.prod_grup || '')}">${grupOpts}</select>
+        </td>
+        <td>
+          <select class="form-select form-select-sm edit-field" data-field="prod_sugr" data-old="${escapeAttr(r.prod_sugr || '')}">${sugrOpts}</select>
+        </td>
+        <td>
+          <input class="form-control form-control-sm edit-field" data-field="prod_ncm" data-old="${escapeAttr(r.prod_ncm || '')}" value="${escapeAttr(r.prod_ncm || '')}">
+        </td>
+        <td>
+          <input class="form-control form-control-sm edit-field" data-field="prod_gtin" data-old="${escapeAttr(r.prod_gtin || '')}" value="${escapeAttr(r.prod_gtin || '')}">
+        </td>
+        <td>
+          <input class="form-control form-control-sm edit-field" data-field="prod_loca" data-old="${escapeAttr(r.prod_loca || '')}" value="${escapeAttr(r.prod_loca || '')}">
+        </td>
+        <td>
+          <select class="form-select form-select-sm edit-field" data-field="prod_orig_merc" data-old="${escapeAttr(r.prod_orig_merc ?? '')}">${buildOrigOptions(r.prod_orig_merc)}</select>
+        </td>
+      `;
+            tb.appendChild(tr);
+        });
+    }
+
+    function mapBy(items, keyField, textField) {
+        const m = {};
+        (items || []).forEach(it => {
+            m[String(it[keyField])] = `${it[keyField]} - ${it[textField]}`;
+        });
+        return m;
+    }
+
+    function formatValue(campo, valor) {
+        const v = String(valor ?? '');
+        if (!v) return '-';
+        if (campo === 'prod_unme') return (filtrosCache.mapUnidades || {})[v] || v;
+        if (campo === 'prod_marc') return (filtrosCache.mapMarcas || {})[v] || v;
+        if (campo === 'prod_fami') return (filtrosCache.mapFamilias || {})[v] || v;
+        if (campo === 'prod_grup') return (filtrosCache.mapGrupos || {})[v] || v;
+        if (campo === 'prod_sugr') return (filtrosCache.mapSubgrupos || {})[v] || v;
+        if (campo === 'prod_orig_merc') {
+            const m = {
+                '0': '0 - Nacional',
+                '1': '1 - Estrangeira (importação direta)',
+                '2': '2 - Estrangeira (mercado interno)',
+                '3': '3 - Nacional c/ importação',
+                '4': '4 - Nacional (PPB)',
+                '5': '5 - Nacional c/ importação (PPB)',
+                '6': '6 - Estrangeira (importação direta - sem similar)',
+                '7': '7 - Estrangeira (mercado interno - sem similar)',
+                '8': '8 - Nacional c/ importação (sem similar)',
+            };
+            return m[v] || v;
+        }
+        return v;
+    }
+
+    function gatherUpdates() {
+        const onlySelected = document.getElementById('somenteSelecionados').checked;
+        const trs = Array.from(document.querySelectorAll('#tbProdutos tr[data-prod]'));
+        const updates = [];
+        trs.forEach(tr => {
+            const prod_codi = tr.dataset.prod;
+            const chk = tr.querySelector('.chk-item');
+            if (onlySelected && (!chk || !chk.checked)) return;
+            const valores = {};
+            tr.querySelectorAll('.edit-field').forEach(el => {
+                const campo = el.dataset.field;
+                const oldVal = String(el.dataset.old ?? '');
+                const curVal = String(el.value ?? '').trim();
+                if (curVal !== oldVal) {
+                    valores[campo] = curVal;
+                }
+            });
+            if (Object.keys(valores).length) {
+                updates.push({ prod_codi, valores });
+            }
+        });
+        return updates;
+    }
+
+    function buildPreview() {
+        const head = document.getElementById('previewHead');
+        const tb = document.getElementById('tbPreview');
+        const resumo = document.getElementById('previewResumo');
+        if (!head || !tb || !resumo) return;
+        const label = {
+            prod_nome: 'Nome',
+            prod_unme: 'Unidade',
+            prod_ncm: 'NCM',
+            prod_gtin: 'GTIN',
+            prod_loca: 'Local',
+            prod_orig_merc: 'Origem',
+            prod_marc: 'Marca',
+            prod_fami: 'Família',
+            prod_grup: 'Grupo',
+            prod_sugr: 'Subgrupo',
+        };
+
+        const updates = gatherUpdates();
+        head.innerHTML = `<tr><th>Produto</th><th>Campo</th><th>Antes</th><th>Depois</th></tr>`;
+        tb.innerHTML = '';
+
+        let linhas = 0;
+        updates.forEach(upd => {
+            const tr = document.querySelector(`#tbProdutos tr[data-prod="${CSS.escape(String(upd.prod_codi))}"]`);
+            if (!tr) return;
+            Object.keys(upd.valores || {}).forEach(campo => {
+                if (linhas >= 200) return;
+                const el = tr.querySelector(`.edit-field[data-field="${CSS.escape(campo)}"]`);
+                if (!el) return;
+                const antes = formatValue(campo, el.dataset.old ?? '');
+                const depois = formatValue(campo, upd.valores[campo]);
+                const rowEl = document.createElement('tr');
+                rowEl.innerHTML = `
+                  <td>${escapeHtml(upd.prod_codi)}</td>
+                  <td>${escapeHtml(label[campo] || campo)}</td>
+                  <td><span class="pv-antes pv-campo">${escapeHtml(antes)}</span></td>
+                  <td><span class="pv-depois pv-campo">${escapeHtml(depois)}</span></td>
+                `;
+                tb.appendChild(rowEl);
+                linhas += 1;
+            });
+        });
+
+        resumo.textContent = `${updates.length} produto(s) com alteração na página.`;
+        if (!updates.length) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td colspan="4" class="text-muted">Nenhuma alteração na página.</td>`;
+            tb.appendChild(tr);
+        }
+    }
+
+    function abrirPreview() {
+        buildPreview();
+        try {
+            const el = document.getElementById('previewModal');
+            if (!el || !window.bootstrap || typeof window.bootstrap.Modal !== 'function') return;
+            const modal = window.bootstrap.Modal.getOrCreateInstance(el);
+            modal.show();
+        } catch (e) { }
+    }
+
+    async function aplicar() {
+        const updates = gatherUpdates();
+        if (!updates.length) return alert('Nenhuma alteração para aplicar.');
+        const resp = await fetch(API_URL, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+            body: JSON.stringify({ updates }),
+        });
+        const data = await resp.json();
+        if (!resp.ok) return alert(data.detail || 'Falha ao aplicar atualização.');
+        alert(`Atualização concluída.\nProdutos filtrados: ${data.resultado.total_produtos}\nAtualizados: ${data.resultado.atualizados}`);
+        carregar();
+    }
+
+    async function exportar(formato) {
+        const updates = gatherUpdates();
+        if (!updates.length) return alert('Nenhuma alteração para exportar.');
+        const payload = { acao: 'export', formato, updates };
+        const resp = await fetch(API_URL, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+            body: JSON.stringify(payload),
+        });
+        if (!resp.ok) {
+            try {
+                const j = await resp.json();
+                return alert(j.detail || 'Falha ao exportar.');
+            } catch (e) {
+                return alert('Falha ao exportar.');
+            }
+        }
+        const blob = await resp.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = formato === 'csv' ? 'atualizacao_produtos.csv' : 'atualizacao_produtos.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+    }
+
+    async function carregar() {
+        const resp = await fetch(`${API_URL}?${queryParams().toString()}`, { credentials: 'same-origin' });
+        const data = await resp.json();
+        filtrosCache = data.filtros || {};
+        filtrosCache.mapUnidades = mapBy(filtrosCache.unidades || [], 'unid_codi', 'unid_desc');
+        filtrosCache.mapMarcas = mapBy(filtrosCache.marcas || [], 'codigo', 'nome');
+        filtrosCache.mapFamilias = mapBy(filtrosCache.familias || [], 'codigo', 'descricao');
+        filtrosCache.mapGrupos = mapBy(filtrosCache.grupos || [], 'codigo', 'descricao');
+        filtrosCache.mapSubgrupos = mapBy(filtrosCache.subgrupos || [], 'codigo', 'descricao');
+
+        fillSelect(document.getElementById('fMarca'), filtrosCache.marcas || [], 'codigo', 'nome', 'Todas');
+        fillSelect(document.getElementById('fFamilia'), filtrosCache.familias || [], 'codigo', 'descricao', 'Todas');
+        fillSelect(document.getElementById('fGrupo'), filtrosCache.grupos || [], 'codigo', 'descricao', 'Todos');
+        fillSelect(document.getElementById('fSubgrupo'), filtrosCache.subgrupos || [], 'codigo', 'descricao', 'Todos');
+
+        renderRows(data.results || []);
+        numPages = data.num_pages || 1;
+        document.getElementById('lblPaginacao').textContent = `Página ${data.page || 1} de ${numPages} | ${data.count || 0} produto(s)`;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('btnBuscar').addEventListener('click', () => { page = 1; carregar(); });
+        document.getElementById('btnPrev').addEventListener('click', () => { if (page > 1) { page -= 1; carregar(); } });
+        document.getElementById('btnNext').addEventListener('click', () => { if (page < numPages) { page += 1; carregar(); } });
+        document.getElementById('btnPreview').addEventListener('click', abrirPreview);
+        document.getElementById('btnAplicar').addEventListener('click', aplicar);
+        document.getElementById('btnExportXlsx').addEventListener('click', () => exportar('xlsx'));
+        document.getElementById('btnExportCsv').addEventListener('click', () => exportar('csv'));
+        document.getElementById('chkAll').addEventListener('change', (e) => {
+            document.querySelectorAll('.chk-item').forEach(c => { c.checked = e.target.checked; });
+        });
+        carregar();
+    });
+</script>
+{% endblock %}

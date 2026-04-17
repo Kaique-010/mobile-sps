@@ -1,3 +1,5 @@
+from decimal import Decimal, InvalidOperation
+
 from django.utils import timezone
 
 from ..preco_models import TabelaprecosPromocional, TabelaprecosPromocionalhist
@@ -6,6 +8,29 @@ from ..preco_models import TabelaprecosPromocional, TabelaprecosPromocionalhist
 def _filtrar_campos_model(model, dados):
     campos_validos = {f.name for f in model._meta.fields}
     return {k: v for k, v in (dados or {}).items() if k in campos_validos}
+
+
+def _to_decimal(value):
+    if value is None or value == "":
+        return None
+    if isinstance(value, Decimal):
+        return value
+    try:
+        return Decimal(str(value).strip().replace(",", "."))
+    except (InvalidOperation, ValueError, TypeError):
+        return None
+
+
+def _fmt_decimal(value, places, *, default="0"):
+    dec = _to_decimal(value)
+    if dec is None:
+        dec = Decimal(default)
+    quant = Decimal("1").scaleb(-places)
+    try:
+        dec = dec.quantize(quant)
+    except (InvalidOperation, ValueError):
+        dec = Decimal(default).quantize(quant)
+    return f"{dec:.{places}f}"
 
 
 def criar_preco_com_historico(banco, dados_preco, user=None):
@@ -52,18 +77,18 @@ def atualizar_preco_com_historico(banco, instancia_preco, novos_dados, user=None
     }
 
     historico = "Alteração de preços promocionais via Web/Api"
-    if 'tabe_prco' in novos_dados and novos_dados['tabe_prco'] != velhos_valores['tabe_prco']:
-        historico += f"\nPreço Normal: R$ {velhos_valores['tabe_prco'] or 0:.2f} -> R$ {novos_dados['tabe_prco']:.2f}"
-    if 'tabe_avis' in novos_dados and novos_dados['tabe_avis'] != velhos_valores['tabe_avis']:
-        historico += f"\nPreço à Vista: R$ {velhos_valores['tabe_avis'] or 0:.2f} -> R$ {novos_dados['tabe_avis']:.2f}"
-    if 'tabe_apra' in novos_dados and novos_dados['tabe_apra'] != velhos_valores['tabe_apra']:
-        historico += f"\nPreço a Prazo: R$ {velhos_valores['tabe_apra'] or 0:.2f} -> R$ {novos_dados['tabe_apra']:.2f}"
-    if 'tabe_desp' in novos_dados and novos_dados['tabe_desp'] != velhos_valores['tabe_desp']:
-        historico += f"\nDespesas: {velhos_valores['tabe_desp'] or 0:.4f} -> {novos_dados['tabe_desp']:.4f}"
-    if 'tabe_marg' in novos_dados and novos_dados['tabe_marg'] != velhos_valores['tabe_marg']:
-        historico += f"\nMargem: {velhos_valores['tabe_marg'] or 0:.4f}% -> {novos_dados['tabe_marg']:.4f}%"
-    if 'tabe_praz' in novos_dados and novos_dados['tabe_praz'] != velhos_valores['tabe_praz']:
-        historico += f"\nPrazo: {velhos_valores['tabe_praz'] or 0:.4f}% -> {novos_dados['tabe_praz']:.4f}%"
+    if 'tabe_prco' in novos_dados and _to_decimal(novos_dados.get('tabe_prco')) != _to_decimal(velhos_valores.get('tabe_prco')):
+        historico += f"\nPreço Normal: R$ {_fmt_decimal(velhos_valores.get('tabe_prco'), 2)} -> R$ {_fmt_decimal(novos_dados.get('tabe_prco'), 2)}"
+    if 'tabe_avis' in novos_dados and _to_decimal(novos_dados.get('tabe_avis')) != _to_decimal(velhos_valores.get('tabe_avis')):
+        historico += f"\nPreço à Vista: R$ {_fmt_decimal(velhos_valores.get('tabe_avis'), 2)} -> R$ {_fmt_decimal(novos_dados.get('tabe_avis'), 2)}"
+    if 'tabe_apra' in novos_dados and _to_decimal(novos_dados.get('tabe_apra')) != _to_decimal(velhos_valores.get('tabe_apra')):
+        historico += f"\nPreço a Prazo: R$ {_fmt_decimal(velhos_valores.get('tabe_apra'), 2)} -> R$ {_fmt_decimal(novos_dados.get('tabe_apra'), 2)}"
+    if 'tabe_desp' in novos_dados and _to_decimal(novos_dados.get('tabe_desp')) != _to_decimal(velhos_valores.get('tabe_desp')):
+        historico += f"\nDespesas: {_fmt_decimal(velhos_valores.get('tabe_desp'), 4)} -> {_fmt_decimal(novos_dados.get('tabe_desp'), 4)}"
+    if 'tabe_marg' in novos_dados and _to_decimal(novos_dados.get('tabe_marg')) != _to_decimal(velhos_valores.get('tabe_marg')):
+        historico += f"\nMargem: {_fmt_decimal(velhos_valores.get('tabe_marg'), 4)}% -> {_fmt_decimal(novos_dados.get('tabe_marg'), 4)}%"
+    if 'tabe_praz' in novos_dados and _to_decimal(novos_dados.get('tabe_praz')) != _to_decimal(velhos_valores.get('tabe_praz')):
+        historico += f"\nPrazo: {_fmt_decimal(velhos_valores.get('tabe_praz'), 4)}% -> {_fmt_decimal(novos_dados.get('tabe_praz'), 4)}%"
 
     hist_data = {
         'tabe_empr': instancia_preco.tabe_empr,

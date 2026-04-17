@@ -214,8 +214,9 @@ class Marca(models.Model):
         return self.nome
 
 class Tabelaprecos(models.Model):
-    tabe_empr = models.IntegerField(primary_key=True)  
-    tabe_fili = models.IntegerField()
+    tabe_id = models.BigAutoField(primary_key=True, db_column='tabe_id')
+    tabe_empr = models.IntegerField(db_column='tabe_empr')  
+    tabe_fili = models.IntegerField(db_column='tabe_fili')
     tabe_prod = models.CharField("Produtos", max_length=60, db_column='tabe_prod')
     tabe_prco = models.DecimalField("Preço", max_digits=15, decimal_places=2, blank=True, null=True)
     tabe_icms = models.DecimalField("ICMS", max_digits=15, decimal_places=2, blank=True, null=True)
@@ -246,6 +247,13 @@ class Tabelaprecos(models.Model):
         managed = False
         verbose_name = 'Tabela de Preço'
         verbose_name_plural = 'Tabelas de Preços'
+    
+        constraints = [
+                models.UniqueConstraint(
+                    fields=['tabe_empr', 'tabe_fili', 'tabe_prod'],
+                    name='tabelaprecos_pkey'
+                )
+            ]
 
     def __str__(self):
         return f"{self.tabe_prod} - R$ {self.tabe_prco or 0:.2f}"

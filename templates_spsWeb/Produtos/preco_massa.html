@@ -1,0 +1,554 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Reajuste de Preços em Massa{% endblock %}
+
+{% block content %}
+<style>
+  .preco-massa-page .massa-header {
+    background: #2b3035;
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+
+  .preco-massa-page .massa-header-spacer {
+    width: 90px;
+  }
+
+  .preco-massa-page .massa-header-title {
+    flex: 1;
+    text-align: center;
+    color: antiquewhite;
+  }
+
+  .preco-massa-page #previewModal .modal-title {
+    text-align: center;
+    width: 100%;
+    color: antiquewhite;
+  }
+
+  .preco-massa-page .table>:not(caption)>*>* {
+    background-color: transparent !important;
+  }
+
+  .preco-massa-page .table thead th {
+    background: #2b3035 !important;
+    color: antiquewhite !important;
+    text-align: center;
+    vertical-align: middle;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    white-space: nowrap;
+  }
+
+  .preco-massa-page .table tbody td {
+    vertical-align: middle;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+  }
+
+  .preco-massa-page .table-striped>tbody>tr:nth-of-type(odd)>* {
+    --bs-table-accent-bg: transparent;
+  }
+
+  .pv-antes {
+    color: #ff6b6b;
+    font-weight: 600;
+  }
+
+  .pv-depois {
+    color: #51cf66;
+    font-weight: 700;
+  }
+
+  .pv-campo {
+    white-space: nowrap;
+  }
+
+  #previewModal .modal-dialog {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100vh;
+    margin: 0;
+  }
+
+  #previewModal .modal-content {
+    height: 100vh;
+    border-radius: 0;
+  }
+
+  #previewModal .modal-body {
+    overflow: auto;
+  }
+</style>
+<div class="container py-4 preco-massa-page">
+  <form id="csrfForm" style="display:none">{% csrf_token %}</form>
+  <div class="card">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3 massa-header">
+        <div class="massa-header-spacer"></div>
+        <h4 class="mb-0 massa-header-title">Reajuste de Preços em Massa</h4>
+        <a class="btn btn-outline-secondary" href="{% url 'produtos_web' slug=slug %}">Voltar</a>
+      </div>
+
+      <div class="row g-2 mb-3">
+        <div class="col-md-3">
+          <label class="form-label">Buscar produto</label>
+          <input id="fBusca" class="form-control" placeholder="Código ou nome">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Marca</label>
+          <select id="fMarca" class="form-select">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Família</label>
+          <select id="fFamilia" class="form-select">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Grupo</label>
+          <select id="fGrupo" class="form-select">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Subgrupo</label>
+          <select id="fSubgrupo" class="form-select">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div class="col-md-1 d-grid">
+          <label class="form-label">&nbsp;</label>
+          <button class="btn btn-outline-primary" id="btnBuscar">Filtrar</button>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-body">
+          <div class="row g-2">
+            <div class="col-md-3">
+              <label class="form-label d-block">Tipo de atualização</label>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="tipoReajuste" id="tipoPercentual" value="percentual"
+                  checked>
+                <label class="form-check-label" for="tipoPercentual">% Reajuste</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="tipoReajuste" id="tipoValor" value="valor">
+                <label class="form-check-label" for="tipoValor">Informar valores</label>
+              </div>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">% Reajuste</label>
+              <input id="percentual" class="form-control" type="number" step="0.01" value="0">
+            </div>
+            <div class="col-md-7">
+              <label class="form-label d-block">Atualizar em</label>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" id="alvoNormal" checked>
+                <label class="form-check-label" for="alvoNormal">Tabela normal</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" id="alvoPromocional" checked>
+                <label class="form-check-label" for="alvoPromocional">Tabela promocional</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" id="somenteSelecionados">
+                <label class="form-check-label" for="somenteSelecionados">Somente itens selecionados da página</label>
+              </div>
+            </div>
+          </div>
+
+          <hr>
+          <div class="row g-2">
+            <div class="col-md-2">
+              <div class="form-check"><input class="form-check-input campo-check" type="checkbox" value="tabe_prco"
+                  id="cPrco" checked><label class="form-check-label" for="cPrco">Compra</label></div>
+              <input class="form-control form-control-sm valor-fixo" data-campo="tabe_prco" type="number" step="0.01"
+                placeholder="Valor compra">
+            </div>
+            <div class="col-md-2">
+              <div class="form-check"><input class="form-check-input campo-check" type="checkbox" value="tabe_cust"
+                  id="cCust" checked><label class="form-check-label" for="cCust">Custo</label></div>
+              <input class="form-control form-control-sm valor-fixo" data-campo="tabe_cust" type="number" step="0.01"
+                placeholder="Valor custo">
+            </div>
+            <div class="col-md-2">
+              <div class="form-check"><input class="form-check-input campo-check" type="checkbox" value="tabe_cuge"
+                  id="cCuge"><label class="form-check-label" for="cCuge">Custo Gerencial</label></div>
+              <input class="form-control form-control-sm valor-fixo" data-campo="tabe_cuge" type="number" step="0.01"
+                placeholder="Valor cust. ger.">
+            </div>
+            <div class="col-md-2">
+              <div class="form-check"><input class="form-check-input campo-check" type="checkbox" value="tabe_avis"
+                  id="cAvis" checked><label class="form-check-label" for="cAvis">À vista</label></div>
+              <input class="form-control form-control-sm valor-fixo" data-campo="tabe_avis" type="number" step="0.01"
+                placeholder="Valor à vista">
+            </div>
+            <div class="col-md-2">
+              <div class="form-check"><input class="form-check-input campo-check" type="checkbox" value="tabe_apra"
+                  id="cApra" checked><label class="form-check-label" for="cApra">A prazo</label></div>
+              <input class="form-control form-control-sm valor-fixo" data-campo="tabe_apra" type="number" step="0.01"
+                placeholder="Valor a prazo">
+            </div>
+            <div class="col-md-2 d-grid">
+              <label class="form-label">&nbsp;</label>
+              <div class="d-grid gap-2">
+                <button class="btn btn-outline-info" id="btnPreview">Pré-visualizar</button>
+                <button class="btn btn-success" id="btnAplicar">Aplicar Reajuste</button>
+                <button class="btn btn-outline-secondary" id="btnExportXlsx">Exportar Excel</button>
+                <button class="btn btn-outline-secondary" id="btnExportCsv">Exportar CSV</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle">
+          <thead>
+            <tr>
+              <th><input type="checkbox" id="chkAll"></th>
+              <th>Produto</th>
+              <th>Marca</th>
+              <th>Família</th>
+              <th>Grupo</th>
+              <th>Subgrupo</th>
+              <th>Normal Vista</th>
+              <th>Normal Prazo</th>
+              <th>Promo Vista</th>
+              <th>Promo Prazo</th>
+            </tr>
+          </thead>
+          <tbody id="tbProdutos"></tbody>
+        </table>
+      </div>
+
+      <div class="d-flex justify-content-between">
+        <small id="lblPaginacao"></small>
+        <div class="btn-group">
+          <button class="btn btn-outline-secondary btn-sm" id="btnPrev">Anterior</button>
+          <button class="btn btn-outline-secondary btn-sm" id="btnNext">Próxima</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-fullscreen modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Pré-visualização do Reajuste</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div class="text-muted small">Mostra os efeitos na página atual (não aplica alterações).</div>
+          <small class="text-muted" id="previewResumo">—</small>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead id="previewHead"></thead>
+            <tbody id="tbPreview"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const API_URL = "{{ api_url }}";
+  let page = 1;
+  let numPages = 1;
+  let pageSize = 30;
+  let currentRows = [];
+
+  function csrf() {
+    const inp = document.querySelector('#csrfForm input[name="csrfmiddlewaretoken"]');
+    if (inp && inp.value) return inp.value;
+    return '';
+  }
+  function brl(v) {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v || 0));
+  }
+  function queryParams() {
+    const p = new URLSearchParams();
+    p.set('page', String(page));
+    p.set('page_size', String(pageSize));
+    const busca = document.getElementById('fBusca').value.trim();
+    const marca = document.getElementById('fMarca').value;
+    const familia = document.getElementById('fFamilia').value;
+    const grupo = document.getElementById('fGrupo').value;
+    const subgrupo = document.getElementById('fSubgrupo').value;
+    if (busca) p.set('busca', busca);
+    if (marca) p.set('marca', marca);
+    if (familia) p.set('familia', familia);
+    if (grupo) p.set('grupo', grupo);
+    if (subgrupo) p.set('subgrupo', subgrupo);
+    return p;
+  }
+
+  function fillSelect(id, items, valueKey, textKey) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const keep = el.value;
+    const first = el.options[0] ? el.options[0].textContent : 'Todos';
+    el.innerHTML = `<option value="">${first}</option>`;
+    (items || []).forEach(it => {
+      const opt = document.createElement('option');
+      opt.value = it[valueKey];
+      opt.textContent = `${it[valueKey]} - ${it[textKey]}`;
+      el.appendChild(opt);
+    });
+    if (keep) el.value = keep;
+  }
+
+  function renderRows(rows) {
+    currentRows = rows || [];
+    const tb = document.getElementById('tbProdutos');
+    tb.innerHTML = '';
+    currentRows.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input type="checkbox" class="chk-item" value="${r.prod_codi}"></td>
+        <td>${r.prod_codi} - ${r.prod_nome}</td>
+        <td>${r.marca || '-'}</td>
+        <td>${r.familia || '-'}</td>
+        <td>${r.grupo || '-'}</td>
+        <td>${r.subgrupo || '-'}</td>
+        <td>${brl(r.normal.tabe_avis)}</td>
+        <td>${brl(r.normal.tabe_apra)}</td>
+        <td>${brl(r.promocional.tabe_avis)}</td>
+        <td>${brl(r.promocional.tabe_apra)}</td>
+      `;
+      tb.appendChild(tr);
+    });
+  }
+
+  function getConfig() {
+    const tipo = document.getElementById('tipoPercentual').checked ? 'percentual' : 'valor';
+    const aplicar_normal = document.getElementById('alvoNormal').checked;
+    const aplicar_promocional = document.getElementById('alvoPromocional').checked;
+    const campos = Array.from(document.querySelectorAll('.campo-check:checked')).map(x => x.value);
+    const percentual = Number(document.getElementById('percentual').value || 0);
+    const valores = {};
+    document.querySelectorAll('.valor-fixo').forEach(inp => {
+      if (inp.value !== '') valores[inp.dataset.campo] = Number(inp.value || 0);
+    });
+    return { tipo, aplicar_normal, aplicar_promocional, campos, percentual, valores };
+  }
+
+  function calcNewValue(tipo, percentual, valorFixo, atual) {
+    const v = Number(atual || 0);
+    if (tipo === 'percentual') return Number((v * (1 + (Number(percentual || 0) / 100))).toFixed(2));
+    if (typeof valorFixo !== 'undefined') return Number((Number(valorFixo || 0)).toFixed(2));
+    return Number(v.toFixed(2));
+  }
+
+  function buildPreview() {
+    const cfg = getConfig();
+    const head = document.getElementById('previewHead');
+    const tb = document.getElementById('tbPreview');
+    const resumo = document.getElementById('previewResumo');
+    if (!head || !tb || !resumo) return;
+    if (!cfg.aplicar_normal && !cfg.aplicar_promocional) {
+      head.innerHTML = '';
+      tb.innerHTML = '';
+      resumo.textContent = 'Selecione Tabela normal e/ou promocional.';
+      return;
+    }
+    if (!cfg.campos.length) {
+      head.innerHTML = '';
+      tb.innerHTML = '';
+      resumo.textContent = 'Selecione ao menos 1 campo.';
+      return;
+    }
+
+    const cols = ['Produto'];
+    const fieldLabel = {
+      tabe_prco: 'Compra',
+      tabe_cust: 'Custo',
+      tabe_cuge: 'Custo Ger.',
+      tabe_avis: 'À vista',
+      tabe_apra: 'A prazo',
+    };
+    cfg.campos.forEach(c => {
+      if (cfg.aplicar_normal) cols.push(`Normal ${fieldLabel[c] || c} (Antes)`, `Normal ${fieldLabel[c] || c} (Depois)`);
+      if (cfg.aplicar_promocional) cols.push(`Promo ${fieldLabel[c] || c} (Antes)`, `Promo ${fieldLabel[c] || c} (Depois)`);
+    });
+
+    head.innerHTML = `<tr>${cols.map(c => `<th>${c}</th>`).join('')}</tr>`;
+    tb.innerHTML = '';
+
+    let alterados = 0;
+    const previewRows = [];
+
+    currentRows.forEach(r => {
+      let mudou = false;
+      const row = { prod: `${r.prod_codi} - ${r.prod_nome}`, normal: {}, promo: {} };
+      cfg.campos.forEach(c => {
+        if (cfg.aplicar_normal) {
+          const antes = Number((r.normal || {})[c] || 0);
+          const depois = calcNewValue(cfg.tipo, cfg.percentual, cfg.valores[c], antes);
+          row.normal[c] = { antes, depois };
+          if (depois !== Number(antes.toFixed(2))) mudou = true;
+        }
+        if (cfg.aplicar_promocional) {
+          const antes = Number((r.promocional || {})[c] || 0);
+          const depois = calcNewValue(cfg.tipo, cfg.percentual, cfg.valores[c], antes);
+          row.promo[c] = { antes, depois };
+          if (depois !== Number(antes.toFixed(2))) mudou = true;
+        }
+      });
+      if (mudou) alterados += 1;
+      previewRows.push({ mudou, row });
+    });
+
+    resumo.textContent = `${alterados} produto(s) com alteração na página.`;
+
+    previewRows.filter(x => x.mudou).slice(0, 50).forEach(x => {
+      const cells = [x.row.prod];
+      cfg.campos.forEach(c => {
+        if (cfg.aplicar_normal) {
+          const a = x.row.normal[c]?.antes ?? 0;
+          const d = x.row.normal[c]?.depois ?? a;
+          cells.push(`<span class="pv-antes pv-campo">${brl(a)}</span>`, `<span class="pv-depois pv-campo">${brl(d)}</span>`);
+        }
+        if (cfg.aplicar_promocional) {
+          const a = x.row.promo[c]?.antes ?? 0;
+          const d = x.row.promo[c]?.depois ?? a;
+          cells.push(`<span class="pv-antes pv-campo">${brl(a)}</span>`, `<span class="pv-depois pv-campo">${brl(d)}</span>`);
+        }
+      });
+      const tr = document.createElement('tr');
+      tr.innerHTML = cells.map(v => `<td>${v}</td>`).join('');
+      tb.appendChild(tr);
+    });
+
+    if (alterados === 0) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td colspan="${cols.length}" class="text-muted">Nenhuma alteração na página com as configurações atuais.</td>`;
+      tb.appendChild(tr);
+    }
+  }
+
+  function abrirPreview() {
+    buildPreview();
+    try {
+      const el = document.getElementById('previewModal');
+      if (!el || !window.bootstrap || typeof window.bootstrap.Modal !== 'function') return;
+      const modal = window.bootstrap.Modal.getOrCreateInstance(el);
+      modal.show();
+    } catch (e) { }
+  }
+
+  async function carregar() {
+    const resp = await fetch(`${API_URL}?${queryParams().toString()}`, { credentials: 'same-origin' });
+    const data = await resp.json();
+    fillSelect('fMarca', data.filtros?.marcas || [], 'codigo', 'nome');
+    fillSelect('fFamilia', data.filtros?.familias || [], 'codigo', 'descricao');
+    fillSelect('fGrupo', data.filtros?.grupos || [], 'codigo', 'descricao');
+    fillSelect('fSubgrupo', data.filtros?.subgrupos || [], 'codigo', 'descricao');
+    renderRows(data.results || []);
+    numPages = data.num_pages || 1;
+    document.getElementById('lblPaginacao').textContent = `Página ${data.page || 1} de ${numPages} | ${data.count || 0} produto(s)`;
+  }
+
+  function buildPayloadBase() {
+    const tipo = document.getElementById('tipoPercentual').checked ? 'percentual' : 'valor';
+    const campos = Array.from(document.querySelectorAll('.campo-check:checked')).map(x => x.value);
+    const payload = {
+      tipo,
+      percentual: document.getElementById('percentual').value || '0',
+      aplicar_normal: document.getElementById('alvoNormal').checked,
+      aplicar_promocional: document.getElementById('alvoPromocional').checked,
+      marca: document.getElementById('fMarca').value || '',
+      familia: document.getElementById('fFamilia').value || '',
+      grupo: document.getElementById('fGrupo').value || '',
+      subgrupo: document.getElementById('fSubgrupo').value || '',
+      busca: document.getElementById('fBusca').value || '',
+      campos,
+      valores: {},
+    };
+    document.querySelectorAll('.valor-fixo').forEach(inp => {
+      if (inp.value !== '') payload.valores[inp.dataset.campo] = inp.value;
+    });
+    if (document.getElementById('somenteSelecionados').checked) {
+      const codigos = Array.from(document.querySelectorAll('.chk-item:checked')).map(x => x.value);
+      payload.codigos = codigos;
+    }
+    return payload;
+  }
+
+  async function aplicar() {
+    const payload = buildPayloadBase();
+    if (!payload.campos.length) return alert('Selecione ao menos 1 campo.');
+    if (document.getElementById('somenteSelecionados').checked && (!payload.codigos || !payload.codigos.length)) {
+      return alert('Selecione ao menos 1 produto na tabela.');
+    }
+    const resp = await fetch(API_URL, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+      body: JSON.stringify(payload),
+    });
+    const data = await resp.json();
+    if (!resp.ok) return alert(data.detail || 'Falha ao aplicar reajuste.');
+    alert(`Atualização concluída.\nProdutos filtrados: ${data.resultado.total_produtos}\nNormal: ${data.resultado.atualizados_normal}\nPromocional: ${data.resultado.atualizados_promocional}`);
+    carregar();
+  }
+
+  async function exportar(formato) {
+    const payload = buildPayloadBase();
+    if (!payload.campos.length) return alert('Selecione ao menos 1 campo.');
+    if (document.getElementById('somenteSelecionados').checked && (!payload.codigos || !payload.codigos.length)) {
+      return alert('Selecione ao menos 1 produto na tabela.');
+    }
+    payload.acao = 'export';
+    payload.formato = formato;
+    payload.limit = 5000;
+    const resp = await fetch(API_URL, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+      body: JSON.stringify(payload),
+    });
+    if (!resp.ok) {
+      try {
+        const j = await resp.json();
+        return alert(j.detail || 'Falha ao exportar.');
+      } catch (e) {
+        return alert('Falha ao exportar.');
+      }
+    }
+    const blob = await resp.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = formato === 'csv' ? 'reajuste_precos.csv' : 'reajuste_precos.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('btnBuscar').addEventListener('click', () => { page = 1; carregar(); });
+    document.getElementById('btnPrev').addEventListener('click', () => { if (page > 1) { page -= 1; carregar(); } });
+    document.getElementById('btnNext').addEventListener('click', () => { if (page < numPages) { page += 1; carregar(); } });
+    document.getElementById('btnPreview').addEventListener('click', abrirPreview);
+    document.getElementById('btnAplicar').addEventListener('click', aplicar);
+    document.getElementById('btnExportXlsx').addEventListener('click', () => exportar('xlsx'));
+    document.getElementById('btnExportCsv').addEventListener('click', () => exportar('csv'));
+    document.getElementById('chkAll').addEventListener('change', (e) => {
+      document.querySelectorAll('.chk-item').forEach(c => { c.checked = e.target.checked; });
+    });
+    carregar();
+  });
+</script>
+{% endblock %}
