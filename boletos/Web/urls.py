@@ -10,6 +10,13 @@ from .views.carteira_cbv import (
 )
 from .views.logo_cbv import LogoView
 from .views.online_cbv import BoletoOnlineView, BoletoOnlinePrintView
+from .views.online_bank_cbv import (
+    SicrediBoletoOnlineView,
+    BradescoBoletoOnlineView,
+    ItauBoletoOnlineView,
+    BancoBrasilBoletoOnlineView,
+    CoraBoletoOnlineView,
+)
 
 urlpatterns = [
     path("titulo/<int:pk>/gerar/", GerarBoletoWebView.as_view(), name="boleto_web_gerar"),
@@ -24,5 +31,10 @@ urlpatterns = [
     path("carteiras/lookup/", CarteiraLookupView.as_view(), name="carteira_lookup"),
     path("carteiras/proximo/", CarteiraNextCodeView.as_view(), name="carteira_proximo"),
     path("online/", BoletoOnlineView.as_view(), name="boletos_online"),
+    path("online/sicredi/", SicrediBoletoOnlineView.as_view(), name="boletos_online_sicredi"),
+    path("online/bradesco/", BradescoBoletoOnlineView.as_view(), name="boletos_online_bradesco"),
+    path("online/itau/", ItauBoletoOnlineView.as_view(), name="boletos_online_itau"),
+    path("online/bb/", BancoBrasilBoletoOnlineView.as_view(), name="boletos_online_bb"),
+    path("online/cora/", CoraBoletoOnlineView.as_view(), name="boletos_online_cora"),
     path("online/imprimir/<str:nosso_numero>/", BoletoOnlinePrintView.as_view(), name="boletos_online_imprimir"),
 ]

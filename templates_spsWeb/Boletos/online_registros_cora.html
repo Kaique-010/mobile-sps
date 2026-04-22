@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+{% block title %}Registros Online de Boletos - Cora{% endblock %}
+{% block content %}
+<div class="container py-3">
+  <h3>Registros Online de Boletos - Cora</h3>
+  <input type="hidden" id="csrfTokenOnline" value="{{ csrf_token }}">
+  <form method="get" class="row g-2 mb-3">
+    <div class="col-md-4">
+      <label>Banco (Entidade)</label>
+      <select class="form-select" name="entidade_banco" id="entidadeBancoSel">
+        <option value="">Selecione</option>
+        {% for e in entidades_banco %}
+          <option value="{{ e.enti_clie }}" {% if filtro.entidade_banco == e.enti_clie|stringformat:'s' %}selected{% endif %}>{{ e.enti_clie }} - {{ e.enti_nome }} ({{ e.enti_banc }})</option>
+        {% endfor %}
+      </select>
+      {% if bank_code %}<small class="text-muted">Código banco da entidade: {{ bank_code }}</small>{% endif %}
+    </div>
+    <div class="col-md-4">
+      <label>Carteira</label>
+      <select class="form-select" name="carteira" id="carteiraSel">
+        <option value="">Selecione</option>
+        {% for c in carteiras %}
+          <option value="{{ c.cart_codi }}" {% if filtro.carteira == c.cart_codi|stringformat:'s' %}selected{% endif %}>{{ c.cart_codi }} - {{ c.cart_nome }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label>Cliente</label>
+      <select class="form-select" name="cliente">
+        <option value="">Todos</option>
+        {% for c in clientes %}
+          <option value="{{ c.enti_clie }}" {% if filtro.cliente == c.enti_clie|stringformat:'s' %}selected{% endif %}>{{ c.enti_nome }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-1">
+      <label>De</label>
+      <input type="text" class="form-control" name="data_ini" placeholder="AAAA-MM-DD" value="{{ filtro.data_ini|default:'' }}">
+    </div>
+    <div class="col-md-1">
+      <label>Até</label>
+      <input type="text" class="form-control" name="data_fim" placeholder="AAAA-MM-DD" value="{{ filtro.data_fim|default:'' }}">
+    </div>
+    <div class="col-md-2 d-flex align-items-end"><button type="submit" class="btn btn-primary w-100">Filtrar</button></div>
+  </form>
+
+  <ul class="nav nav-tabs" role="tablist">
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-pend">Pendentes de registro</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-env">Já enviados</button></li>
+  </ul>
+
+  <div class="tab-content border border-top-0 p-3">
+    <div class="tab-pane fade show active" id="tab-pend">
+      <div class="mb-2">
+        <button type="button" class="btn btn-success btn-sm" onclick="enviarSelecionados('registrar')">Enviar selecionados (API)</button>
+      </div>
+      <table class="table table-sm table-striped">
+        <thead><tr><th></th><th>Título</th><th>Cliente</th><th>Venc.</th><th>Valor</th><th>Banco/Cart.</th></tr></thead>
+        <tbody>
+          {% for t in pendentes %}
+            <tr>
+              <td><input type="checkbox" class="sel-pend" value="{{ t.titu_titu }}|{{ t.titu_seri }}|{{ t.titu_parc }}|{{ t.titu_clie }}"></td>
+              <td>{{ t.titu_titu }}/{{ t.titu_parc }}</td>
+              <td>{{ t.titu_clie }}</td>
+              <td>{{ t.titu_venc|date:'d/m/Y' }}</td>
+              <td>R$ {{ t.titu_valo }}</td>
+              <td>{{ t.titu_cobr_banc }} / {{ t.titu_cobr_cart }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6" class="text-center">Sem pendências.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="tab-pane fade" id="tab-env">
+      <div class="mb-2 d-flex gap-2 flex-wrap">
+        <button type="button" class="btn btn-outline-primary btn-sm" onclick="enviarSelecionados('consultar')">Consultar</button>
+        <button type="button" class="btn btn-outline-warning btn-sm" onclick="enviarSelecionados('alterar')">Alterar vencimento</button>
+        <button type="button" class="btn btn-outline-danger btn-sm" onclick="enviarSelecionados('cancelar')">Cancelar</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="enviarSelecionados('baixar')">Baixar</button>
+      </div>
+      <table class="table table-sm table-striped">
+        <thead><tr><th></th><th>Título</th><th>Nosso Nº</th><th>Linha Digitável</th><th>QR/Pix</th><th>Ações</th></tr></thead>
+        <tbody>
+          {% for t in enviados %}
+            <tr>
+              <td><input type="checkbox" class="sel-pend" value="{{ t.titu_titu }}|{{ t.titu_seri }}|{{ t.titu_parc }}|{{ t.titu_clie }}"></td>
+              <td>{{ t.titu_titu }}/{{ t.titu_parc }}</td>
+              <td>{{ t.titu_noss_nume }}</td>
+              <td>{{ t.titu_linh_digi|default:'-' }}</td>
+              <td>{% if t.titu_url_bole %}<code>{{ t.titu_url_bole|truncatechars:40 }}</code>{% else %}-{% endif %}</td>
+              <td>
+                {% if t.titu_linh_digi %}
+                  <button type="button" class="btn btn-sm btn-primary" onclick="imprimirBoleto('{{ t.titu_noss_nume|default:'' }}','{{ t.titu_titu }}','{{ t.titu_linh_digi|default:'' }}','{{ t.titu_url_bole|default:'' }}')">Imprimir</button>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6" class="text-center">Nenhum enviado ainda.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+function csrfToken() {
+  const hidden = document.getElementById('csrfTokenOnline');
+  if (hidden && hidden.value) return hidden.value;
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  return m ? m[1] : '';
+}
+function selecionados() {
+  return Array.from(document.querySelectorAll('.sel-pend:checked')).map(i => i.value);
+}
+async function enviarSelecionados(action) {
+  const titulos = selecionados();
+  const carteira = document.getElementById('carteiraSel').value;
+  const entidadeBanco = document.getElementById('entidadeBancoSel').value;
+  if (!entidadeBanco) { alert('Selecione o Banco (Entidade).'); return; }
+  if (!carteira) { alert('Selecione a carteira.'); return; }
+  if (!titulos.length) { alert('Selecione ao menos um título.'); return; }
+  const fd = new FormData();
+  fd.append('action', action);
+  fd.append('carteira', carteira);
+  fd.append('entidade_banco', entidadeBanco);
+  const clienteSel = document.querySelector('select[name="cliente"]');
+  if (clienteSel && clienteSel.value) fd.append('cliente', clienteSel.value);
+  titulos.forEach(t => fd.append('titulos[]', t));
+  if (action === 'alterar') {
+    const nova = prompt('Nova data de vencimento (YYYY-MM-DD):');
+    if (!nova) return;
+    fd.append('nova_data_vencimento', nova);
+  }
+  const res = await fetch('', { method: 'POST', body: fd, headers: {'X-CSRFToken': csrfToken()}, credentials: 'same-origin' });
+  const data = await res.json();
+  if (!res.ok) { alert((data && data.erro) ? data.erro : 'Erro ao processar ação.'); return; }
+  const results = (data && data.results) ? data.results : [];
+  const okItems = results.filter(r => r && r.ok);
+  const errItems = results.filter(r => r && r.ok === false);
+  if (errItems.length) {
+    const first = errItems[0];
+    const detalhe = first.erro ? `\n\nPrimeiro erro: ${first.titulo || ''} - ${first.erro}` : '';
+    alert(`Processado com erros.\nSucesso: ${okItems.length}\nFalhas: ${errItems.length}${detalhe}`);
+  } else {
+    alert(`Ação concluída.\nSucesso: ${okItems.length}`);
+  }
+  if (okItems.length) {
+    window.location.reload();
+  }
+}
+function imprimirBoleto(nossoNumero, titulo, linha, urlBoleto) {
+  const nosso = (nossoNumero || '').trim();
+  if (nosso) {
+    const wPdf = window.open(`imprimir/${encodeURIComponent(nosso)}/`, '_blank');
+    if (wPdf) {
+      wPdf.focus();
+      setTimeout(() => {
+        try { wPdf.print(); } catch (e) {}
+      }, 900);
+      return;
+    }
+  }
+  const url = (urlBoleto || '').trim();
+  if (/^https?:\/\//i.test(url)) {
+    const wPdf = window.open(url, '_blank');
+    if (wPdf) {
+      wPdf.focus();
+      setTimeout(() => {
+        try { wPdf.print(); } catch (e) {}
+      }, 900);
+      return;
+    }
+  }
+  const temLinha = (linha || '').trim();
+  if (!temLinha) { alert('Boleto sem linha digitável.'); return; }
+  const w = window.open('', '_blank');
+  w.document.write(`<html><body style="font-family:Arial,sans-serif;padding:16px;"><h3>Boleto ${titulo}</h3><p><b>Linha digitável</b></p><p style="font-size:16px;letter-spacing:0.3px;">${linha}</p></body></html>`);
+  w.document.close();
+  w.focus();
+  w.print();
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const form = document.querySelector('form[method="get"]');
+  const banco = document.getElementById('entidadeBancoSel');
+  const carteira = document.getElementById('carteiraSel');
+  if (form && banco) {
+    banco.addEventListener('change', () => {
+      if (carteira) carteira.value = '';
+      form.submit();
+    });
+  }
+  if (form && carteira) {
+    carteira.addEventListener('change', () => form.submit());
+  }
+});
+</script>
+{% endblock %}

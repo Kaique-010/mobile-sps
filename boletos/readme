@@ -67,3 +67,40 @@ Mapeamento de bancos
 - Caixa: `codigo_banco` = `104`
 - Sicoob: `codigo_banco` = `756`
 - Sicredi: `codigo_banco` = `748`
+
+---
+
+Online (API + WEB) padronizado por banco
+
+Services registrados por banco (`boletos/services/online_banks/`)
+- `bradesco_service.py` -> registrar, consultar, baixa, cancelamento, alteração de vencimento, impressão (via consulta/pdf).
+- `itau_service.py` -> registrar, consultar, baixa, cancelamento, alteração de vencimento, impressão (via consulta/pdf).
+- `bb_service.py` -> registrar, consultar, baixa, cancelamento, alteração de vencimento, impressão (via consulta/pdf).
+- `cora_service.py` -> registrar, consultar, baixa, cancelamento, alteração de vencimento, impressão (via consulta/pdf).
+- `sicredi_api_service.py` -> fluxo dedicado Sicredi com rotas alternativas (incluindo alteração de vencimento com fallbacks extras).
+
+Padrão de carteira (igual Sicredi para todos os bancos online)
+- `cart_webs_clie_id` (client_id)
+- `cart_webs_clie_secr` (client_secret)
+- `cart_webs_ssl_lib` (ambiente/base URL)
+- opcionais: `cart_webs_user_key` (x-api-key), `cart_webs_scop` (scope)
+
+Web URLs (`boletos/Web/urls.py`)
+- `/online/sicredi/`
+- `/online/bradesco/`
+- `/online/itau/`
+- `/online/bb/`
+- `/online/cora/`
+- todas com ações: registrar, consultar, alterar vencimento, baixar, cancelar, imprimir.
+
+REST URLs (`boletos/REST/urls.py`)
+- `/sicredi/carteira/<carteira_codigo>/token/`
+- `/sicredi/carteira/<carteira_codigo>/boletos/`
+- `/bradesco/carteira/<carteira_codigo>/token/`
+- `/bradesco/carteira/<carteira_codigo>/boletos/`
+- `/itau/carteira/<carteira_codigo>/token/`
+- `/itau/carteira/<carteira_codigo>/boletos/`
+- `/cora/carteira/<carteira_codigo>/token/`
+- `/cora/carteira/<carteira_codigo>/boletos/`
+- `/bb/carteira/<carteira_codigo>/token/`
+- `/bb/carteira/<carteira_codigo>/boletos/`
