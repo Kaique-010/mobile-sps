@@ -4,6 +4,7 @@ import base64
 from typing import Optional
 
 import requests
+from .online_banks.wallet_config import validate_online_wallet_config
 
 
 class SicrediAPIError(Exception):
@@ -102,13 +103,14 @@ class SicrediCobrancaService:
         raise SicrediAPIError(f"{prefix}: HTTP {response.status_code} - {body}{hint}")
 
     def get_access_token(self) -> str:
-        client_id = self._clean(getattr(self.carteira, "cart_webs_clie_id", ""))
-        client_secret = self._clean(getattr(self.carteira, "cart_webs_clie_secr", ""))
-        scope = self._clean(getattr(self.carteira, "cart_webs_scop", ""))
-        user_key = self._clean(getattr(self.carteira, "cart_webs_user_key", ""))
-
-        if not client_id or not client_secret:
-            raise SicrediAPIError("Carteira sem client_id/client_secret configurados.")
+        try:
+            cfg = validate_online_wallet_config(self.carteira, "Sicredi")
+        except ValueError as exc:
+            raise SicrediAPIError(str(exc))
+        client_id = cfg["client_id"]
+        client_secret = cfg["client_secret"]
+        scope = cfg["scope"]
+        user_key = cfg["api_key"]
 
         headers = {
             "Content-Type": "application/x-www-form-urlencoded",
@@ -170,6 +172,9 @@ class SicrediCobrancaService:
             "cooperativa": cooperativa,
             "posto": posto,
         }
+        codigo_beneficiario = self._clean(os.getenv("SICREDI_CODIGO_BENEFICIARIO")) or cedente
+        if codigo_beneficiario:
+            headers["codigoBeneficiario"] = codigo_beneficiario
         user_key = self._clean(getattr(self.carteira, "cart_webs_user_key", ""))
         if user_key:
             headers["x-api-key"] = user_key
@@ -291,47 +296,49 @@ class SicrediCobrancaService:
         token = self.get_access_token()
         params = self._routing_params()
         errors = []
+        normalized_payload = dict(payload or {})
+        data_vencimento = normalized_payload.get("dataVencimento")
+        if not data_vencimento:
+            data_vencimento = normalized_payload.get("novoVencimento") or normalized_payload.get("vencimento")
+        if not data_vencimento:
+            raise SicrediAPIError("Falha ao alterar boleto: payload sem data de vencimento (dataVencimento).")
+        payload_candidates = [
+            {"dataVencimento": data_vencimento},
+            {"novoVencimento": data_vencimento},
+            {"vencimento": data_vencimento},
+            {"dadosVencimento": {"dataVencimento": data_vencimento}},
+            {"alteracao": {"dataVencimento": data_vencimento}},
+            normalized_payload,
+        ]
 
         for nn in self._normalize_nosso_numero_candidates(nosso_numero):
             url_v = f"{self._api_base()}/boletos/{nn}/vencimento"
-            r = requests.patch(url_v, params=params, json=payload, headers=self._headers(token), timeout=30)
-            if r.status_code < 400:
-                return r.json() if r.text else {"ok": True}
-            errors.append(f"PATCH /boletos/{nn}/vencimento -> {r.status_code} {(r.text or '').strip()[:200]}")
-
-            r = requests.put(url_v, params=params, json=payload, headers=self._headers(token), timeout=30)
-            if r.status_code < 400:
-                return r.json() if r.text else {"ok": True}
-            errors.append(f"PUT /boletos/{nn}/vencimento -> {r.status_code} {(r.text or '').strip()[:200]}")
-
+            url_v0 = f"{self._api_base()}/boletos/{nn}/data-vencimento"
+            url_v2 = f"{self._api_base()}/boletos/{nn}/alterar-vencimento"
             url1 = f"{self._api_base()}/boletos/{nn}"
-            r = requests.patch(url1, params=params, json=payload, headers=self._headers(token), timeout=30)
-            if r.status_code < 400:
-                return r.json() if r.text else {"ok": True}
-            errors.append(f"PATCH /boletos/{nn} -> {r.status_code} {(r.text or '').strip()[:200]}")
-
             url2 = f"{self._api_base()}/boletos"
             params2 = {**params, "nossoNumero": nn}
-            r = requests.patch(url2, params=params2, json=payload, headers=self._headers(token), timeout=30)
-            if r.status_code < 400:
-                return r.json() if r.text else {"ok": True}
-            errors.append(f"PATCH /boletos?nossoNumero={nn} -> {r.status_code} {(r.text or '').strip()[:200]}")
-
-            r = requests.put(url1, params=params, json=payload, headers=self._headers(token), timeout=30)
-            if r.status_code < 400:
-                return r.json() if r.text else {"ok": True}
-            errors.append(f"PUT /boletos/{nn} -> {r.status_code} {(r.text or '').strip()[:200]}")
-
             url2b = f"{self._api_base()}/boletos/vencimento"
-            r = requests.patch(url2b, params=params2, json=payload, headers=self._headers(token), timeout=30)
-            if r.status_code < 400:
-                return r.json() if r.text else {"ok": True}
-            errors.append(f"PATCH /boletos/vencimento?nossoNumero={nn} -> {r.status_code} {(r.text or '').strip()[:200]}")
-
-            r = requests.put(url2b, params=params2, json=payload, headers=self._headers(token), timeout=30)
-            if r.status_code < 400:
-                return r.json() if r.text else {"ok": True}
-            errors.append(f"PUT /boletos/vencimento?nossoNumero={nn} -> {r.status_code} {(r.text or '').strip()[:200]}")
+            endpoints = [
+                ("PATCH", url_v0, params),
+                ("PATCH", url_v, params),
+                ("PUT", url_v, params),
+                ("PATCH", url_v2, params),
+                ("PUT", url_v2, params),
+                ("PATCH", url1, params),
+                ("PUT", url1, params),
+                ("PATCH", url2, params2),
+                ("PUT", url2, params2),
+                ("PATCH", url2b, params2),
+                ("PUT", url2b, params2),
+            ]
+            for method, url, req_params in endpoints:
+                for body in payload_candidates:
+                    req = requests.patch if method == "PATCH" else requests.put
+                    r = req(url, params=req_params, json=body, headers=self._headers(token), timeout=30)
+                    if r.status_code < 400:
+                        return r.json() if r.text else {"ok": True}
+                    errors.append(f"{method} {url} -> {r.status_code} {(r.text or '').strip()[:120]}")
 
         raise SicrediAPIError("Falha ao alterar boleto: " + " | ".join(errors))
 
@@ -370,26 +377,28 @@ class SicrediCobrancaService:
 
     def obter_pdf_boleto(self, nosso_numero: str, linha_digitavel: Optional[str] = None) -> bytes:
         token = self.get_access_token()
-        headers = dict(self._headers(token))
-        headers["Accept"] = "application/pdf"
+        headers_pdf = dict(self._headers(token))
+        headers_pdf["Accept"] = "application/pdf"
+        headers_json = dict(self._headers(token))
+        headers_json["Accept"] = "application/json"
         params_base = self._routing_params()
 
         ld = self._clean(linha_digitavel)
         ld_digits = "".join(ch for ch in ld if ch.isdigit())
 
         candidates = []
-        for nn in self._normalize_nosso_numero_candidates(nosso_numero):
-            candidates.append((f"{self._api_base()}/boletos/{nn}/pdf", params_base))
-            candidates.append((f"{self._api_base()}/boletos/{nn}/impressao", params_base))
-            candidates.append((f"{self._api_base()}/boletos/pdf", {**params_base, "nossoNumero": nn}))
-            candidates.append((f"{self._api_base()}/boletos/impressao", {**params_base, "nossoNumero": nn}))
-
         if ld_digits:
-            candidates.append((f"{self._api_base()}/boletos/pdf", {**params_base, "linhaDigitavel": ld_digits}))
-            candidates.append((f"{self._api_base()}/boletos/impressao", {**params_base, "linhaDigitavel": ld_digits}))
+            candidates.append((f"{self._api_base()}/boletos/pdf", {**params_base, "linhaDigitavel": ld_digits}, headers_json))
+            candidates.append((f"{self._api_base()}/boletos/impressao", {**params_base, "linhaDigitavel": ld_digits}, headers_json))
+
+        for nn in self._normalize_nosso_numero_candidates(nosso_numero):
+            candidates.append((f"{self._api_base()}/boletos/{nn}/pdf", params_base, headers_pdf))
+            candidates.append((f"{self._api_base()}/boletos/{nn}/impressao", params_base, headers_pdf))
+            candidates.append((f"{self._api_base()}/boletos/pdf", {**params_base, "nossoNumero": nn}, headers_json))
+            candidates.append((f"{self._api_base()}/boletos/impressao", {**params_base, "nossoNumero": nn}, headers_json))
 
         errors = []
-        for url, params in candidates:
+        for url, params, headers in candidates:
             try:
                 r = requests.get(url, params=params, headers=headers, timeout=45)
             except Exception as ex:

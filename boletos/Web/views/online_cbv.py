@@ -8,11 +8,12 @@ from django.shortcuts import render
 from django.views import View
 
 from core.registry import get_licenca_db_config
+from core.utils import get_db_from_slug
 from Entidades.models import Entidades
 from contas_a_receber.models import Titulosreceber
 
 from ...models import Carteira
-from ...services.boleto_online_factory import get_online_boleto_service
+from ...services.boleto_online_factory import get_online_boleto_service, SUPPORTED_BANKS
 
 
 logger = logging.getLogger(__name__)
@@ -54,6 +55,11 @@ def _normalize_bank_code(raw_value):
     return code_str, code_int
 
 
+def _resolve_bank_code(entidade_banco):
+    code, _ = _normalize_bank_code(getattr(entidade_banco, 'enti_banc', None))
+    return code
+
+
 def _mask(value):
     v = str(value or '').strip()
     if not v:
@@ -65,9 +71,19 @@ def _mask(value):
 
 class BoletoOnlineView(View):
     template_name = 'Boletos/online_registros.html'
+    forced_bank_code = None
+
+    def _db(self, request):
+        slug = self.kwargs.get('slug') or request.session.get('slug')
+        if slug:
+            try:
+                return get_db_from_slug(slug)
+            except Exception:
+                pass
+        return get_licenca_db_config(request) or 'default'
 
     def _ctx(self, request):
-        db = get_licenca_db_config(request) or 'default'
+        db = self._db(request)
         empresa = request.session.get('empresa_id')
         filial = request.session.get('filial_id')
 
@@ -99,6 +115,13 @@ class BoletoOnlineView(View):
             data_fim = SAFE_MAX_DATE
 
         entidades_banco_qs = Entidades.objects.using(db).filter(enti_empr=empresa, enti_tien='B').order_by('enti_nome')
+        supported_codes = set(SUPPORTED_BANKS.keys())
+        entidades_banco_qs = [
+            e for e in entidades_banco_qs
+            if (_normalize_bank_code(getattr(e, 'enti_banc', None))[0] in supported_codes)
+        ]
+        if self.forced_bank_code:
+            entidades_banco_qs = [e for e in entidades_banco_qs if _normalize_bank_code(getattr(e, 'enti_banc', None))[0] == str(self.forced_bank_code)]
 
         entidade_banco = None
         bank_code_str = None
@@ -108,8 +131,17 @@ class BoletoOnlineView(View):
         except (TypeError, ValueError):
             entidade_id_int = None
         if entidade_id:
-            entidade_banco = entidades_banco_qs.filter(enti_clie=entidade_id).first()
+            entidade_banco = next((e for e in entidades_banco_qs if str(getattr(e, 'enti_clie', '')) == str(entidade_id)), None)
             bank_code_str, bank_code_int = _normalize_bank_code(getattr(entidade_banco, 'enti_banc', None))
+        elif self.forced_bank_code:
+            entidade_banco = entidades_banco_qs[0] if entidades_banco_qs else None
+            if entidade_banco:
+                entidade_id = str(getattr(entidade_banco, 'enti_clie', '') or '')
+                try:
+                    entidade_id_int = int(entidade_id)
+                except (TypeError, ValueError):
+                    entidade_id_int = None
+                bank_code_str, bank_code_int = _normalize_bank_code(getattr(entidade_banco, 'enti_banc', None))
 
         carteiras_qs = Carteira.objects.using(db).filter(cart_empr=empresa)
         if filial:
@@ -186,7 +218,7 @@ class BoletoOnlineView(View):
         
       
         
-        db = get_licenca_db_config(request) or 'default'
+        db = self._db(request)
         empresa = request.session.get('empresa_id')
         filial = request.session.get('filial_id')
 
@@ -248,6 +280,8 @@ class BoletoOnlineView(View):
         bank_code_str, bank_code_int = _normalize_bank_code(getattr(entidade_banco, 'enti_banc', None))
         if bank_code_int is None or not bank_code_str:
             return JsonResponse({'ok': False, 'erro': 'codigo_banco_invalido_na_entidade'}, status=400)
+        if self.forced_bank_code and str(bank_code_str) != str(self.forced_bank_code):
+            return JsonResponse({'ok': False, 'erro': 'entidade_banco_fora_do_contexto_da_view'}, status=400)
 
         try:
             entidade_id_int = int(entidade_id)
@@ -426,7 +460,7 @@ class BoletoOnlineView(View):
                         retorno = service.cancelar_boleto(titulo.titu_noss_nume, payload={})
                     else:
                         retorno = service.baixar_boleto(titulo.titu_noss_nume, payload={})
-                elif action == 'alterar':
+                elif action in ('alterar', 'alterar_vencimento'):
                     nova = _parse_date(request.POST.get('nova_data_vencimento'))
                     if not nova:
                         error_count += 1
@@ -452,7 +486,14 @@ class BoletoOnlineView(View):
 
 class BoletoOnlinePrintView(View):
     def get(self, request, nosso_numero: str, *args, **kwargs):
-        db = get_licenca_db_config(request) or 'default'
+        slug = self.kwargs.get('slug') or request.session.get('slug')
+        if slug:
+            try:
+                db = get_db_from_slug(slug)
+            except Exception:
+                db = get_licenca_db_config(request) or 'default'
+        else:
+            db = get_licenca_db_config(request) or 'default'
         empresa = request.session.get('empresa_id')
         filial = request.session.get('filial_id')
 
