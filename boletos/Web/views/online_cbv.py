@@ -12,7 +12,7 @@ from core.utils import get_db_from_slug
 from Entidades.models import Entidades
 from contas_a_receber.models import Titulosreceber
 
-from ...models import Carteira
+from ...models import Boletoscancelados, Carteira
 from ...services.boleto_online_factory import get_online_boleto_service, SUPPORTED_BANKS
 
 
@@ -516,6 +516,7 @@ class BoletoOnlinePrintView(View):
             'titu_noss_nume',
             'titu_linh_digi',
             'titu_url_bole',
+            'titu_aber',
             'titu_cobr_banc',
             'titu_cobr_cart',
             'titu_empr',
@@ -524,9 +525,22 @@ class BoletoOnlinePrintView(View):
         if not titulo:
             return HttpResponse('titulo_nao_encontrado', status=404)
 
-        url_boleto = str(getattr(titulo, 'titu_url_bole', '') or '').strip()
-        if url_boleto and url_boleto.lower().startswith(('http://', 'https://')):
-            return HttpResponseRedirect(url_boleto)
+        def _resposta_indisponivel(msg: str):
+            html = (
+                "<html><head><meta charset='utf-8'><title>Boleto indisponível</title></head>"
+                "<body style='font-family:Arial,sans-serif;padding:20px;'>"
+                "<h3>Boleto indisponível para impressão</h3>"
+                f"<p>{msg}</p>"
+                "</body></html>"
+            )
+            return HttpResponse(html, content_type='text/html', status=409)
+
+        if getattr(titulo, 'titu_aber', None) not in (None, '', 'A'):
+            return _resposta_indisponivel('Este título não está mais em aberto no sistema.')
+
+        linha_digitavel = str(getattr(titulo, 'titu_linh_digi', '') or '').strip()
+        if linha_digitavel and Boletoscancelados.objects.using(db).filter(linh_digi=linha_digitavel).exists():
+            return _resposta_indisponivel('Este boleto consta como cancelado/baixado e não pode ser impresso.')
 
         entidade_id = getattr(titulo, 'titu_cobr_banc', None)
         carteira_id = getattr(titulo, 'titu_cobr_cart', None)
@@ -558,11 +572,47 @@ class BoletoOnlinePrintView(View):
             return HttpResponse('carteira_nao_encontrada', status=404)
 
         service, service_error = get_online_boleto_service(bank_code_str, carteira)
+
+        def _status_indica_cancelado(dados: object) -> bool:
+            tokens = []
+            stack = [dados]
+            while stack:
+                cur = stack.pop()
+                if isinstance(cur, dict):
+                    for v in cur.values():
+                        stack.append(v)
+                    continue
+                if isinstance(cur, (list, tuple)):
+                    stack.extend(list(cur))
+                    continue
+                if cur is None:
+                    continue
+                s = str(cur).strip().lower()
+                if s:
+                    tokens.append(s)
+            for s in tokens:
+                if 'cancel' in s or 'cancela' in s:
+                    return True
+                if 'baix' in s:
+                    return True
+            return False
+
         try:
+            try:
+                data_status = service.consultar_boleto(nosso)
+                if _status_indica_cancelado(data_status):
+                    return _resposta_indisponivel('Este boleto consta como cancelado/baixado no banco e não pode ser impresso.')
+            except Exception:
+                data_status = None
+
+            url_boleto = str(getattr(titulo, 'titu_url_bole', '') or '').strip()
+            if url_boleto and url_boleto.lower().startswith(('http://', 'https://')):
+                return HttpResponseRedirect(url_boleto)
+
             if hasattr(service, 'obter_pdf_boleto'):
                 pdf_bytes = service.obter_pdf_boleto(nosso, linha_digitavel=getattr(titulo, 'titu_linh_digi', None))
             else:
-                data = service.consultar_boleto(nosso)
+                data = data_status or service.consultar_boleto(nosso)
                 link = _extract(data, 'linkBoleto', 'urlBoleto', 'boletoUrl', 'links.0.href')
                 if link and str(link).lower().startswith(('http://', 'https://')):
                     return HttpResponseRedirect(str(link))
@@ -578,7 +628,12 @@ class BoletoOnlinePrintView(View):
                     if decoded.startswith(b'%PDF'):
                         pdf_bytes = decoded
                 if not pdf_bytes:
-                    return HttpResponse('pdf_nao_disponivel', status=404)
+                    if str(getattr(service, 'bank_code', '') or '').upper() == 'BB':
+                        return _resposta_indisponivel(
+                            'O Banco do Brasil não retornou PDF/URL de impressão para este boleto. '
+                            'Verifique se a carteira possui convênio e app-key válidos e se existe uma URL do boleto salva no título.'
+                        )
+                    return _resposta_indisponivel('O banco não disponibilizou PDF/URL de impressão para este boleto.')
 
             resp = HttpResponse(pdf_bytes, content_type='application/pdf')
             resp['Content-Disposition'] = f'inline; filename="boleto_{nosso}.pdf"'

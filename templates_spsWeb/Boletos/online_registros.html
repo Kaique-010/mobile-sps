@@ -2,10 +2,10 @@
 {% block title %}Registros Online de Boletos{% endblock %}
 {% block content %}
 <div class="container py-3">
-  <h3>Registros Online de Boletos</h3>
+  <h3 class="text-center"><i class="bi bi-credit-card"></i> Registros Online de Boletos</h3>
   <input type="hidden" id="csrfTokenOnline" value="{{ csrf_token }}">
   <form method="get" class="row g-2 mb-3">
-    <div class="col-md-4">
+    <div class="col-md-3">
       <label>Banco (Entidade)</label>
       <select class="form-select" name="entidade_banco" id="entidadeBancoSel">
         <option value="">Selecione</option>
@@ -15,7 +15,7 @@
       </select>
       {% if bank_code %}<small class="text-muted">Código banco da entidade: {{ bank_code }}</small>{% endif %}
     </div>
-    <div class="col-md-4">
+    <div class="col-md-2">
       <label>Carteira</label>
       <select class="form-select" name="carteira" id="carteiraSel">
         <option value="">Selecione</option>
@@ -41,7 +41,7 @@
       <label>Até</label>
       <input type="text" class="form-control" name="data_fim" placeholder="AAAA-MM-DD" value="{{ filtro.data_fim|default:'' }}">
     </div>
-    <div class="col-md-2 d-flex align-items-end"><button type="submit" class="btn btn-primary w-100">Filtrar</button></div>
+    <div class="col-md-2 mb-4 d-flex align-items-end"><button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-filter"></i> Filtrar</button></div>
   </form>
 
   <ul class="nav nav-tabs" role="tablist">
@@ -92,7 +92,7 @@
               <td>{% if t.titu_url_bole %}<code>{{ t.titu_url_bole|truncatechars:40 }}</code>{% else %}-{% endif %}</td>
               <td>
                 {% if t.titu_linh_digi %}
-                  <button type="button" class="btn btn-sm btn-primary" onclick="imprimirBoleto('{{ t.titu_noss_nume|default:'' }}','{{ t.titu_titu }}','{{ t.titu_linh_digi|default:'' }}','{{ t.titu_url_bole|default:'' }}')">Imprimir</button>
+                  <button type="button" class="btn btn-sm btn-outline-success" onclick="imprimirBoleto('{{ t.titu_noss_nume|default:'' }}','{{ t.titu_titu }}','{{ t.titu_linh_digi|default:'' }}','{{ t.titu_url_bole|default:'' }}')"><i class="bi bi-print"></i> Imprimir</button>
                 {% endif %}
               </td>
             </tr>
