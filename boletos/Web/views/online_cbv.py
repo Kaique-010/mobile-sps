@@ -3,7 +3,7 @@ import logging
 
 from django.db import IntegrityError
 from django.db.models import Q
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.views import View
 
@@ -448,3 +448,99 @@ class BoletoOnlineView(View):
             'errors': error_count,
             'results': results,
         })
+
+
+class BoletoOnlinePrintView(View):
+    def get(self, request, nosso_numero: str, *args, **kwargs):
+        db = get_licenca_db_config(request) or 'default'
+        empresa = request.session.get('empresa_id')
+        filial = request.session.get('filial_id')
+
+        nosso = str(nosso_numero or '').strip()
+        if not nosso:
+            return HttpResponse('nosso_numero_obrigatorio', status=400)
+
+        titulo_qs = Titulosreceber.objects.using(db).filter(
+            titu_empr=empresa,
+            titu_form_reci='53',
+            titu_noss_nume=nosso,
+        )
+        if filial:
+            titulo_qs = titulo_qs.filter(titu_fili=filial)
+        titulo = titulo_qs.only(
+            'titu_titu',
+            'titu_parc',
+            'titu_seri',
+            'titu_clie',
+            'titu_noss_nume',
+            'titu_linh_digi',
+            'titu_url_bole',
+            'titu_cobr_banc',
+            'titu_cobr_cart',
+            'titu_empr',
+            'titu_fili',
+        ).first()
+        if not titulo:
+            return HttpResponse('titulo_nao_encontrado', status=404)
+
+        url_boleto = str(getattr(titulo, 'titu_url_bole', '') or '').strip()
+        if url_boleto and url_boleto.lower().startswith(('http://', 'https://')):
+            return HttpResponseRedirect(url_boleto)
+
+        entidade_id = getattr(titulo, 'titu_cobr_banc', None)
+        carteira_id = getattr(titulo, 'titu_cobr_cart', None)
+        if not carteira_id:
+            return HttpResponse('titulo_sem_carteira', status=400)
+
+        entidade_banco = None
+        bank_code_str = None
+        if entidade_id is not None:
+            entidade_banco = Entidades.objects.using(db).filter(
+                enti_empr=empresa,
+                enti_tien='B',
+                enti_clie=entidade_id,
+            ).only('enti_banc').first()
+        if entidade_banco:
+            bank_code_str, _ = _normalize_bank_code(getattr(entidade_banco, 'enti_banc', None))
+        if not bank_code_str:
+            bank_code_str, _ = _normalize_bank_code(entidade_id)
+
+        carteira_qs = Carteira.objects.using(db).filter(cart_empr=empresa, cart_codi=carteira_id)
+        if filial:
+            carteira_qs = carteira_qs.filter(cart_fili=filial)
+        if entidade_id is not None:
+            carteira_qs2 = carteira_qs.filter(cart_banc=entidade_id)
+            carteira = carteira_qs2.first() or carteira_qs.first()
+        else:
+            carteira = carteira_qs.first()
+        if not carteira:
+            return HttpResponse('carteira_nao_encontrada', status=404)
+
+        service, service_error = get_online_boleto_service(bank_code_str, carteira)
+        try:
+            if hasattr(service, 'obter_pdf_boleto'):
+                pdf_bytes = service.obter_pdf_boleto(nosso, linha_digitavel=getattr(titulo, 'titu_linh_digi', None))
+            else:
+                data = service.consultar_boleto(nosso)
+                link = _extract(data, 'linkBoleto', 'urlBoleto', 'boletoUrl', 'links.0.href')
+                if link and str(link).lower().startswith(('http://', 'https://')):
+                    return HttpResponseRedirect(str(link))
+                pdf_raw = _extract(data, 'pdf', 'conteudoPdf', 'conteudoPDF')
+                pdf_bytes = None
+                if isinstance(pdf_raw, str):
+                    import base64
+
+                    try:
+                        decoded = base64.b64decode(pdf_raw, validate=False)
+                    except Exception:
+                        decoded = b''
+                    if decoded.startswith(b'%PDF'):
+                        pdf_bytes = decoded
+                if not pdf_bytes:
+                    return HttpResponse('pdf_nao_disponivel', status=404)
+
+            resp = HttpResponse(pdf_bytes, content_type='application/pdf')
+            resp['Content-Disposition'] = f'inline; filename="boleto_{nosso}.pdf"'
+            return resp
+        except service_error as exc:
+            return HttpResponse(str(exc), status=502)
