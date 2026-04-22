@@ -153,6 +153,7 @@ INSTALLED_APPS = [
     'bens',
     'transportes',
     'formulacao',
+    'nfse',
 ]
 
 # Middleware
