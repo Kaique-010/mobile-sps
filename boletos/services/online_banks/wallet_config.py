@@ -9,8 +9,6 @@ def validate_online_wallet_config(carteira, bank_name='Banco'):
 
     if not client_id or not client_secret:
         raise ValueError(f'Carteira sem client_id/client_secret configurados para {bank_name}.')
-    if not base:
-        raise ValueError(f'Carteira sem ambiente/base_url (cart_webs_ssl_lib) configurado para {bank_name}.')
 
     return {
         'client_id': client_id,
