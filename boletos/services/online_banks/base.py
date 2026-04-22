@@ -1,5 +1,6 @@
 import os
 import requests
+from .wallet_config import validate_online_wallet_config
 
 
 class OnlineBankAPIError(Exception):
@@ -49,13 +50,14 @@ class BaseOAuthBoletoService:
         raise NotImplementedError
 
     def _token(self):
-        client_id = self._clean(getattr(self.carteira, 'cart_webs_clie_id', ''))
-        client_secret = self._clean(getattr(self.carteira, 'cart_webs_clie_secr', ''))
-        scope = self._clean(getattr(self.carteira, 'cart_webs_scop', ''))
-        api_key = self._clean(getattr(self.carteira, 'cart_webs_user_key', ''))
-
-        if not client_id or not client_secret:
-            raise OnlineBankAPIError(f'Client ID/Secret não configurados para {self.bank_name}.')
+        try:
+            cfg = validate_online_wallet_config(self.carteira, self.bank_name)
+        except ValueError as exc:
+            raise OnlineBankAPIError(str(exc))
+        client_id = cfg['client_id']
+        client_secret = cfg['client_secret']
+        scope = cfg['scope']
+        api_key = cfg['api_key']
 
         headers = {'Content-Type': 'application/x-www-form-urlencoded'}
         if api_key:

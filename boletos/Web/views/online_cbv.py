@@ -54,6 +54,11 @@ def _normalize_bank_code(raw_value):
     return code_str, code_int
 
 
+def _resolve_bank_code(entidade_banco):
+    code, _ = _normalize_bank_code(getattr(entidade_banco, 'enti_banc', None))
+    return code
+
+
 def _mask(value):
     v = str(value or '').strip()
     if not v:
@@ -65,6 +70,7 @@ def _mask(value):
 
 class BoletoOnlineView(View):
     template_name = 'Boletos/online_registros.html'
+    forced_bank_code = None
 
     def _ctx(self, request):
         db = get_licenca_db_config(request) or 'default'
@@ -99,6 +105,8 @@ class BoletoOnlineView(View):
             data_fim = SAFE_MAX_DATE
 
         entidades_banco_qs = Entidades.objects.using(db).filter(enti_empr=empresa, enti_tien='B').order_by('enti_nome')
+        if self.forced_bank_code:
+            entidades_banco_qs = entidades_banco_qs.filter(enti_banc__startswith=str(self.forced_bank_code))
 
         entidade_banco = None
         bank_code_str = None
@@ -110,6 +118,11 @@ class BoletoOnlineView(View):
         if entidade_id:
             entidade_banco = entidades_banco_qs.filter(enti_clie=entidade_id).first()
             bank_code_str, bank_code_int = _normalize_bank_code(getattr(entidade_banco, 'enti_banc', None))
+        elif self.forced_bank_code:
+            entidade_banco = entidades_banco_qs.first()
+            if entidade_banco:
+                entidade_id = str(getattr(entidade_banco, 'enti_clie', '') or '')
+                bank_code_str, bank_code_int = _normalize_bank_code(getattr(entidade_banco, 'enti_banc', None))
 
         carteiras_qs = Carteira.objects.using(db).filter(cart_empr=empresa)
         if filial:
@@ -248,6 +261,8 @@ class BoletoOnlineView(View):
         bank_code_str, bank_code_int = _normalize_bank_code(getattr(entidade_banco, 'enti_banc', None))
         if bank_code_int is None or not bank_code_str:
             return JsonResponse({'ok': False, 'erro': 'codigo_banco_invalido_na_entidade'}, status=400)
+        if self.forced_bank_code and str(bank_code_str) != str(self.forced_bank_code):
+            return JsonResponse({'ok': False, 'erro': 'entidade_banco_fora_do_contexto_da_view'}, status=400)
 
         try:
             entidade_id_int = int(entidade_id)
@@ -426,7 +441,7 @@ class BoletoOnlineView(View):
                         retorno = service.cancelar_boleto(titulo.titu_noss_nume, payload={})
                     else:
                         retorno = service.baixar_boleto(titulo.titu_noss_nume, payload={})
-                elif action == 'alterar':
+                elif action in ('alterar', 'alterar_vencimento'):
                     nova = _parse_date(request.POST.get('nova_data_vencimento'))
                     if not nova:
                         error_count += 1
