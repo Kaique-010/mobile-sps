@@ -172,6 +172,9 @@ class SicrediCobrancaService:
             "cooperativa": cooperativa,
             "posto": posto,
         }
+        codigo_beneficiario = self._clean(os.getenv("SICREDI_CODIGO_BENEFICIARIO")) or cedente
+        if codigo_beneficiario:
+            headers["codigoBeneficiario"] = codigo_beneficiario
         user_key = self._clean(getattr(self.carteira, "cart_webs_user_key", ""))
         if user_key:
             headers["x-api-key"] = user_key
@@ -310,12 +313,14 @@ class SicrediCobrancaService:
 
         for nn in self._normalize_nosso_numero_candidates(nosso_numero):
             url_v = f"{self._api_base()}/boletos/{nn}/vencimento"
+            url_v0 = f"{self._api_base()}/boletos/{nn}/data-vencimento"
             url_v2 = f"{self._api_base()}/boletos/{nn}/alterar-vencimento"
             url1 = f"{self._api_base()}/boletos/{nn}"
             url2 = f"{self._api_base()}/boletos"
             params2 = {**params, "nossoNumero": nn}
             url2b = f"{self._api_base()}/boletos/vencimento"
             endpoints = [
+                ("PATCH", url_v0, params),
                 ("PATCH", url_v, params),
                 ("PUT", url_v, params),
                 ("PATCH", url_v2, params),
@@ -372,26 +377,28 @@ class SicrediCobrancaService:
 
     def obter_pdf_boleto(self, nosso_numero: str, linha_digitavel: Optional[str] = None) -> bytes:
         token = self.get_access_token()
-        headers = dict(self._headers(token))
-        headers["Accept"] = "application/pdf"
+        headers_pdf = dict(self._headers(token))
+        headers_pdf["Accept"] = "application/pdf"
+        headers_json = dict(self._headers(token))
+        headers_json["Accept"] = "application/json"
         params_base = self._routing_params()
 
         ld = self._clean(linha_digitavel)
         ld_digits = "".join(ch for ch in ld if ch.isdigit())
 
         candidates = []
-        for nn in self._normalize_nosso_numero_candidates(nosso_numero):
-            candidates.append((f"{self._api_base()}/boletos/{nn}/pdf", params_base))
-            candidates.append((f"{self._api_base()}/boletos/{nn}/impressao", params_base))
-            candidates.append((f"{self._api_base()}/boletos/pdf", {**params_base, "nossoNumero": nn}))
-            candidates.append((f"{self._api_base()}/boletos/impressao", {**params_base, "nossoNumero": nn}))
-
         if ld_digits:
-            candidates.append((f"{self._api_base()}/boletos/pdf", {**params_base, "linhaDigitavel": ld_digits}))
-            candidates.append((f"{self._api_base()}/boletos/impressao", {**params_base, "linhaDigitavel": ld_digits}))
+            candidates.append((f"{self._api_base()}/boletos/pdf", {**params_base, "linhaDigitavel": ld_digits}, headers_json))
+            candidates.append((f"{self._api_base()}/boletos/impressao", {**params_base, "linhaDigitavel": ld_digits}, headers_json))
+
+        for nn in self._normalize_nosso_numero_candidates(nosso_numero):
+            candidates.append((f"{self._api_base()}/boletos/{nn}/pdf", params_base, headers_pdf))
+            candidates.append((f"{self._api_base()}/boletos/{nn}/impressao", params_base, headers_pdf))
+            candidates.append((f"{self._api_base()}/boletos/pdf", {**params_base, "nossoNumero": nn}, headers_json))
+            candidates.append((f"{self._api_base()}/boletos/impressao", {**params_base, "nossoNumero": nn}, headers_json))
 
         errors = []
-        for url, params in candidates:
+        for url, params, headers in candidates:
             try:
                 r = requests.get(url, params=params, headers=headers, timeout=45)
             except Exception as ex:
