@@ -16,6 +16,7 @@ from .tools.db_tool import (
     historico_de_pedidos,
     historico_de_pedidos_cliente,
     total_pedidos_periodo,
+    criar_pedido_de_venda,
 )
 from .tools.file_tool import ler_documentos
 from .tools.tool_mapa_semantico import plotar_mapa_semantico
@@ -39,6 +40,7 @@ AGENT_TOOLS = [
     plotar_mapa_semantico,
     rag_url_resposta_vetorial,
     procura_web,
+    criar_pedido_de_venda,
 ]
 
 # Validação das tools
@@ -71,6 +73,7 @@ SYSTEM_PROMPT = """Você é um assistente de ERP especializado.
 - consultar_titulos_a_pagar
 - consultar_titulos_a_receber
 - consulta_inteligente_prime
+- criar_pedido_de_venda
 - ler_documentos
 - plotar_mapa_semantico
 - rag_url_resposta_vetorial
@@ -82,6 +85,12 @@ SYSTEM_PROMPT = """Você é um assistente de ERP especializado.
 3. Respostas concisas
 4. Valide parâmetros antes de chamar uma tool
 5. Consultas de histórico → prefira historico_de_pedidos_cliente quando aplicável
+6. Criar pedidos → prefira criar_pedido_de_venda quando aplicável
+7. Peça sempre informações completas para criar pedidos:
+    código do cliente ou nome completo.
+    data do pedido, ou fale que será criado com data atual.
+    itens do pedido, com código do produto, quantidade e preço unitário. 
+
 
 📍 Contexto da sessão:
 - Banco: {banco}

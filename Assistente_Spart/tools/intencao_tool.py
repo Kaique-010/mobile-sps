@@ -13,6 +13,7 @@ from .db_tool import (
     historico_de_pedidos_cliente,
     historico_de_pedidos,
     total_pedidos_periodo,
+    criar_pedido_de_venda,
 )
 from .rag_tool import rag_url_resposta_vetorial
 from .web_tool import procura_web
@@ -21,6 +22,115 @@ from .tool_mapa_semantico import plotar_mapa_semantico
 from .fiscal import fiscal_router
 
 logger = logging.getLogger(__name__)
+
+def normalizar_itens_pedido(itens_data: list) -> list:
+    itens_normalizados = []
+
+    for idx, item in enumerate(itens_data, start=1):
+        if not isinstance(item, dict):
+            raise ValueError(f"Item {idx} inválido: esperado objeto.")
+
+        produto = (
+            item.get("iped_prod")
+            or item.get("produto_codigo")
+            or item.get("produto")
+            or item.get("codigo_produto")
+        )
+
+        quantidade = (
+            item.get("iped_quan")
+            or item.get("quantidade")
+            or item.get("qtd")
+        )
+
+        valor_unitario = (
+            item.get("iped_unit")
+            or item.get("valor_unitario")
+            or item.get("preco_unitario")
+            or item.get("preco")
+            or item.get("valor")
+        )
+
+        desconto = (
+            item.get("iped_desc")
+            or item.get("desconto")
+            or "0"
+        )
+
+        lote = item.get("iped_lote_vend") or item.get("lote")
+
+        if not produto:
+            raise ValueError(f"Item {idx}: produto não informado.")
+        if quantidade in (None, "", 0, "0"):
+            raise ValueError(f"Item {idx}: quantidade não informada ou inválida.")
+        if valor_unitario in (None, "", 0, "0"):
+            raise ValueError(f"Item {idx}: valor unitário não informado ou inválido.")
+
+        item_final = {
+            "iped_prod": str(produto),
+            "iped_quan": str(quantidade),
+            "iped_unit": str(valor_unitario),
+            "iped_desc": str(desconto),
+        }
+
+        if lote not in (None, ""):
+            item_final["iped_lote_vend"] = lote
+
+        itens_normalizados.append(item_final)
+
+    return itens_normalizados
+
+
+def extrair_dados_criacao_pedido(mensagem: str) -> dict:
+    texto = mensagem.lower().strip()
+
+    # cliente
+    m_cliente = re.search(r"\bcliente[:\s]+(\d+)\b", texto, re.IGNORECASE)
+
+    # data
+    if re.search(r"\bhoje\b", texto, re.IGNORECASE):
+        data_pedido = datetime.now().strftime("%Y-%m-%d")
+    else:
+        m_data = re.search(r"\bdata(?:\s+do\s+pedido)?[:\s]+(\d{4}-\d{2}-\d{2}|\d{2}/\d{2}/\d{4})\b", texto, re.IGNORECASE)
+        if m_data:
+            data_pedido = m_data.group(1)
+            if "/" in data_pedido:
+                data_pedido = datetime.strptime(data_pedido, "%d/%m/%Y").strftime("%Y-%m-%d")
+        else:
+            data_pedido = datetime.now().strftime("%Y-%m-%d")
+
+    # item/produto
+    m_item = re.search(r"\b(?:item|produto)[:\s]+(\d+)\b", texto, re.IGNORECASE)
+
+    # quantidade
+    m_quant = re.search(r"\bquantidade[:\s]+(\d+(?:[.,]\d+)?)\b", texto, re.IGNORECASE)
+
+    # preço unitário / valor unitário
+    m_preco = re.search(
+        r"\b(?:pre[cç]o\s+unit[aá]rio|valor\s+unit[aá]rio|unit[aá]rio)[:\s]+(\d+(?:[.,]\d+)?)\b",
+        texto,
+        re.IGNORECASE
+    )
+
+    cliente_id = m_cliente.group(1) if m_cliente else None
+    produto_id = m_item.group(1) if m_item else None
+    quantidade = m_quant.group(1).replace(",", ".") if m_quant else None
+    preco_unitario = m_preco.group(1).replace(",", ".") if m_preco else None
+
+    itens = []
+    if produto_id and quantidade and preco_unitario:
+        itens.append({
+            "iped_prod": str(produto_id),
+            "iped_quan": str(quantidade),
+            "iped_unit": str(preco_unitario),
+            "iped_desc": "0",
+        })
+
+    return {
+        "cliente_id": cliente_id,
+        "data_pedido": data_pedido,
+        "itens": itens,
+    }
 
 @tool
 def executar_intencao(
@@ -177,6 +287,34 @@ def executar_intencao(
                 empresa_id=str(empresa_id),
                 filial_id=str(filial_id),
             )
+        
+        
+        
+        # ========== CRIAR PEDIDO ========== VENDA ==========
+        m_criar = re.search(r"(?i)(criar|crie|novo)\s+pedido(\s+de\s+venda)?", mensagem)
+
+        if m_criar:
+            dados = extrair_dados_criacao_pedido(mensagem)
+
+            cliente_id = dados.get("cliente_id")
+            data_pedido = dados.get("data_pedido")
+            itens = dados.get("itens") or []
+
+            if not cliente_id:
+                return "❌ Erro: informe o código do cliente."
+
+            if not itens:
+                return "❌ Erro: informe item, quantidade e preço unitário."
+
+            return criar_pedido_de_venda.invoke({
+                "banco": real_banco,
+                "empresa_id": str(empresa_id),
+                "filial_id": str(filial_id),
+                "cliente_id": str(cliente_id),
+                "data_pedido": data_pedido,
+                "itens": json.dumps(itens),
+                "tipo_oper": "VENDA",
+    })
 
         # ========== HISTÓRICO DE PEDIDOS ==========
         if re.search(r"(?i)(hist[óo]rico\s+de\s+pedidos|hist[óo]rico\s+geral\s+de\s+pedidos|relat[óo]rio\s+de\s+pedidos|pedidos\s+por\s+cliente)", msg_lower):

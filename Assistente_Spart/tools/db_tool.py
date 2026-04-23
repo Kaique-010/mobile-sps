@@ -3,10 +3,11 @@ from Entidades.models import Entidades
 from Produtos.models import Produtos, SaldoProduto, UnidadeMedida
 from contas_a_pagar.models import Titulospagar
 from contas_a_receber.models import Titulosreceber
+from Pedidos.models import PedidosGeral, PedidoVenda, Itenspedidovenda
+from Pedidos.services.pedido_service import PedidoVendaService
 from core.utils import get_db_from_slug
 from core.middleware import get_licenca_slug
 from django.db.models import Count, Sum, Q
-from Pedidos.models import PedidosGeral, PedidoVenda
 import traceback
 from langchain_openai import ChatOpenAI
 from django.db import connections, connection
@@ -27,6 +28,64 @@ llm = ChatOpenAI(model=CHAT_MODEL, temperature=0)
 
 _Schema_Cache = {}
 _TTL = timedelta(minutes=120)
+
+
+def normalizar_itens_pedido(itens_data: list) -> list:
+    itens_normalizados = []
+
+    for idx, item in enumerate(itens_data, start=1):
+        if not isinstance(item, dict):
+            raise ValueError(f"Item {idx} inválido: esperado objeto.")
+
+        produto = (
+            item.get("iped_prod")
+            or item.get("produto_codigo")
+            or item.get("produto")
+            or item.get("codigo_produto")
+        )
+
+        quantidade = (
+            item.get("iped_quan")
+            or item.get("quantidade")
+            or item.get("qtd")
+        )
+
+        valor_unitario = (
+            item.get("iped_unit")
+            or item.get("valor_unitario")
+            or item.get("preco_unitario")
+            or item.get("preco")
+            or item.get("valor")
+        )
+
+        desconto = (
+            item.get("iped_desc")
+            or item.get("desconto")
+            or "0"
+        )
+
+        lote = item.get("iped_lote_vend") or item.get("lote")
+
+        if not produto:
+            raise ValueError(f"Item {idx}: produto não informado.")
+        if quantidade in (None, "", 0, "0"):
+            raise ValueError(f"Item {idx}: quantidade não informada ou inválida.")
+        if valor_unitario in (None, "", 0, "0"):
+            raise ValueError(f"Item {idx}: valor unitário não informado ou inválido.")
+
+        item_final = {
+            "iped_prod": str(produto),
+            "iped_quan": str(quantidade),
+            "iped_unit": str(valor_unitario),
+            "iped_desc": str(desconto),
+        }
+
+        if lote not in (None, ""):
+            item_final["iped_lote_vend"] = lote
+
+        itens_normalizados.append(item_final)
+
+    return itens_normalizados
 
 
 def _normalizar_data_filtro(data_valor: str, is_fim: bool = False) -> str:
@@ -715,4 +774,69 @@ def total_pedidos_periodo(
             logger.error(f"[TOTAL_PEDIDOS_PERIODO] {error_msg}\n{traceback.format_exc()}")
         except Exception:
             pass
+        return error_msg
+
+
+@tool
+def criar_pedido_de_venda(
+    banco: str = "default",
+    empresa_id: str = "1",
+    filial_id: str = "1",
+    cliente_id: str = "1",
+    data_pedido: str = None,
+    vendedor_id: str = None,
+    itens: str = "[]",
+    tipo_oper: str = "Venda",
+    observacao: str = "Pedido de venda criado pelo Assistente Khronus",
+) -> str:
+    """Cria um pedido de venda no banco de dados com status 0"""
+    try:
+        real_banco = banco or "default"
+        
+        from datetime import datetime
+        if not data_pedido:
+            data_pedido = datetime.now().strftime("%Y-%m-%d")
+        try:
+            desconto_total = "0"
+            itens_data = json.loads(itens) if itens else []
+        except json.JSONDecodeError:
+            itens_data = None
+        except Exception:
+            itens_data = None
+
+        if not isinstance(itens_data, list) or not itens_data:
+            return "❌ Erro: informe ao menos 1 item no pedido."
+        try:
+            itens_data = normalizar_itens_pedido(itens_data)
+        except ValueError as e:
+            return f"❌ Erro nos itens: {e}"
+        pedido_dados = {
+            "pedi_empr": int(empresa_id),
+            "pedi_fili": int(filial_id),
+            "pedi_forn": str(cliente_id),  
+            "pedi_vend": int(vendedor_id) if vendedor_id not in (None, "", "null") else None,
+            "pedi_data": data_pedido,
+            "pedi_desc": desconto_total or "0",
+            "pedi_obse": observacao or "",
+            "pedi_stat": 0,
+        }
+        
+        pedido = PedidoVendaService.create_pedido_venda(
+            banco=real_banco,
+            pedido_data=pedido_dados,
+            itens_data=itens_data,
+            pedi_tipo_oper=tipo_oper,
+            request=None,
+        )
+        return (
+            f"✅ Pedido criado com sucesso.\n"
+            f"Pedido: {pedido.pedi_nume}\n"
+            f"Cliente: {pedido.pedi_forn}\n"
+            f"Total: {pedido.pedi_tota}\n"
+            f"Empresa: {pedido.pedi_empr} | Filial: {pedido.pedi_fili}"
+        )
+
+    except Exception as e:
+        error_msg = f"❌ Erro ao criar pedido de venda: {str(e)}"
+        logger.error("[CRIAR_PEDIDO_DE_VENDA] %s\n%s", error_msg, traceback.format_exc())
         return error_msg
