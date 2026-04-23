@@ -91,7 +91,7 @@ SYSTEM_PROMPT = """Você é um assistente de ERP especializado.
 
 # ===== CONFIGURAÇÃO DO LLM =====
 llm = ChatOpenAI(
-    model="gpt-5-mini",
+    model="gpt-5.4-mini",
     temperature=0.1,
     max_tokens=2000,
     timeout=30,

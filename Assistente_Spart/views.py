@@ -49,7 +49,7 @@ class SpartView(APIView):
         # Detecta se cliente quer streaming (SSE)
         accept = request.META.get('HTTP_ACCEPT', '')
         try:
-            logger.info(f"[SPART_CHAT] accept={accept}")
+            logger.info(f"[KRHONUS_CHAT] accept={accept}")
         except Exception:
             pass
         if 'text/event-stream' in accept:
@@ -79,7 +79,7 @@ class SpartView(APIView):
         filial_id = request.META.get("HTTP_X_FILIAL", 1)
         thread_id = str(request.user.usua_codi)
         log_ctx = f"slug={slug} banco={banco} empresa={empresa_id} filial={filial_id} thread={thread_id}"
-        logger.info(f"[SPART_CHAT] inicio {log_ctx}")
+        logger.info(f"[KRHONUS_CHAT] inicio {log_ctx}")
 
         config = RunnableConfig(
             recursion_limit=50,
@@ -95,13 +95,13 @@ class SpartView(APIView):
         mensagem_usuario = self._processar_entrada(request, client)
         if isinstance(mensagem_usuario, Response):
             return mensagem_usuario
-        logger.info(f"[SPART_CHAT] entrada tamanho={len(mensagem_usuario or '')} {log_ctx}")
+        logger.info(f"[KRHONUS_CHAT] entrada tamanho={len(mensagem_usuario or '')} {log_ctx}")
 
         # ======== PRÉ-ROTEADOR (50-100ms) ========
         inicio_pre_roteador = time.time()
         rota = pre_rotear(mensagem_usuario)
         tempo_pre_roteador = round(time.time() - inicio_pre_roteador, 3)
-        logger.info(f"[SPART_CHAT] pre_rotear tipo={rota['tipo']} confianca={rota['confianca']} tempo_s={tempo_pre_roteador} {log_ctx}")
+        logger.info(f"[KRHONUS_CHAT] pre_rotear tipo={rota['tipo']} confianca={rota['confianca']} tempo_s={tempo_pre_roteador} {log_ctx}")
         metricas.registrar("pre_roteador", tempo_pre_roteador)
 
         # ======== CONTEXTO FAISS (CONDICIONAL + CACHE) ========
@@ -111,10 +111,10 @@ class SpartView(APIView):
             try:
                 contexto_faiss = faiss_cached(mensagem_usuario)
                 tempo_faiss = round(time.time() - inicio_faiss, 2)
-                logger.info(f"[SPART_CHAT] faiss ok tempo_s={tempo_faiss} tamanho={len(contexto_faiss or '')} {log_ctx}")
+                logger.info(f"[KRHONUS_CHAT] faiss ok tempo_s={tempo_faiss} tamanho={len(contexto_faiss or '')} {log_ctx}")
                 metricas.registrar("faiss", tempo_faiss)
             except Exception as e:
-                logger.warning(f"[SPART_CHAT] faiss erro={str(e)} {log_ctx}")
+                logger.warning(f"[KRHONUS_CHAT] faiss erro={str(e)} {log_ctx}")
         else:
             pass
 
@@ -155,7 +155,7 @@ Ela já faz o roteamento inteligente para a tool correta.""")
             )
             
             tempo_agente = round(time.time() - inicio_agente, 2)
-            logger.info(f"[SPART_CHAT] agente ok tempo_s={tempo_agente} {log_ctx}")
+            logger.info(f"[KRHONUS_CHAT] agente ok tempo_s={tempo_agente} {log_ctx}")
             metricas.registrar("agente", tempo_agente)
             
             # Extração robusta de mensagens
@@ -200,7 +200,7 @@ Ela já faz o roteamento inteligente para a tool correta.""")
                 
                 # logger.info(f"🔧 Tools executadas: {tools_usadas or ['nenhuma']}")
                 if tools_usadas:
-                    logger.info(f"[SPART_CHAT] tools {','.join(tools_usadas)} {log_ctx}")
+                    logger.info(f"[KRHONUS_CHAT] tools {','.join(tools_usadas)} {log_ctx}")
                 
                 # Validação final
                 if not resposta_texto or resposta_texto.strip() == "":
@@ -259,7 +259,7 @@ Ela já faz o roteamento inteligente para a tool correta.""")
         thread_tts.join(timeout=3.0)
         
         tempo_total = round(time.time() - inicio_total, 2)
-        logger.info(f"[SPART_CHAT] fim tempo_total_s={tempo_total} {log_ctx}")
+        logger.info(f"[KRHONUS_CHAT] fim tempo_total_s={tempo_total} {log_ctx}")
         metricas.registrar("total", tempo_total)
 
         return Response({
@@ -290,7 +290,7 @@ Ela já faz o roteamento inteligente para a tool correta.""")
             filial_id = request.META.get("HTTP_X_FILIAL", 1)
             thread_id = str(request.user.usua_codi)
             log_ctx = f"slug={slug} banco={banco} empresa={empresa_id} filial={filial_id} thread={thread_id}"
-            logger.info(f"[SPART_CHAT_STREAM] inicio {log_ctx}")
+            logger.info(f"[KRHONUS_CHAT_STREAM] inicio {log_ctx}")
             
             config = RunnableConfig(
                 recursion_limit=50,
@@ -309,7 +309,7 @@ Ela já faz o roteamento inteligente para a tool correta.""")
             if isinstance(mensagem_usuario, Response):
                 yield f"data: {json.dumps({'erro': 'Erro na entrada'})}\n\n"
                 return
-            logger.info(f"[SPART_CHAT_STREAM] entrada tamanho={len(mensagem_usuario or '')} {log_ctx}")
+            logger.info(f"[KRHONUS_CHAT_STREAM] entrada tamanho={len(mensagem_usuario or '')} {log_ctx}")
             
             # Pré-roteador
             rota = pre_rotear(mensagem_usuario)
@@ -367,7 +367,7 @@ Ela já faz o roteamento inteligente para a tool correta.""")
             # Finaliza
             texto_final = "".join(resposta_completa)
             tempo_total = round(time.time() - inicio, 2)
-            logger.info(f"[SPART_CHAT_STREAM] fim tempo_total_s={tempo_total} tools={','.join(tools_usadas) if tools_usadas else 'nenhuma'} {log_ctx}")
+            logger.info(f"[KRHONUS_CHAT_STREAM] fim tempo_total_s={tempo_total} tools={','.join(tools_usadas) if tools_usadas else 'nenhuma'} {log_ctx}")
 
             # Evita f-string multilinha (quebra parsing). Monta payload antes.
             payload_fim = {

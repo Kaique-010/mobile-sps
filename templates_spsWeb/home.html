@@ -361,6 +361,10 @@
                         <input id="mensagemInput" type="text" class="form-control"
                             placeholder="Diga algo para o Kronos..." />
                         <button id="enviarMensagem" class="btn btn-primary">Enviar</button>
+                        <button id="toggleAudio" title="Áudio ligado/desligado"
+                            style="background:none;border:none;color:#00bfff;font-size:18px;margin-right:8px">
+                            🔊
+                        </button>
                     </div>
                 </div>
             </div>
@@ -382,7 +386,6 @@
             const el = document.getElementById(id);
             if (el) el.textContent = valor;
         };
-
         setText('kpi-total-vendido', formatBrl(dados.total_valor || 0));
         setText('kpi-lucro-percent', `${Number(dados.lucro_percent || 0).toFixed(2)}%`);
         setText('kpi-ticket-medio', formatBrl(dados.ticket_medio || 0));
@@ -394,7 +397,6 @@
         setText('kpi-pedidos-por-dia', Number(dados.pedidos_por_dia || 0).toFixed(2));
     }
 
-    // Helper: datas padrão (últimos 30 dias)
     function getDefaultDates() {
         const hoje = new Date();
         const fim = hoje.toISOString().slice(0, 10);
@@ -404,7 +406,6 @@
         return { ini, fim };
     }
 
-    // Helper: fetch autenticado com auto-refresh
     function getAuthHeaders(token) {
         return token ? { 'Authorization': `Bearer ${token}` } : {};
     }
@@ -447,12 +448,32 @@
     let chartItensVendidos = null;
 
     function createBarGradient(ctx) {
-        const g = ctx.createLinearGradient(0, ctx.canvas.height, 0, 0); g.addColorStop(0, '#274c55'); g.addColorStop(1, '#9cceff'); return g
+        const g = ctx.createLinearGradient(0, ctx.canvas.height, 0, 0);
+        g.addColorStop(0, '#274c55');
+        g.addColorStop(1, '#9cceff');
+        return g;
     }
-    const shadowPlugin = { id: 'barShadow', beforeDatasetsDraw(chart) { const c = chart.ctx; c.save(); c.shadowColor = 'rgba(142, 196, 212, 0.733)'; c.shadowBlur = 8; c.shadowOffsetY = 4 }, afterDatasetsDraw(chart) { chart.ctx.restore() } };
-    function isDarkTheme() { const t = (document.documentElement.getAttribute('data-bs-theme') || document.body.getAttribute('data-bs-theme') || '').toLowerCase(); if (t) return t === 'dark'; return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches }
-    function isWhiteTheme() { return !isDarkTheme() }
-    function themeAxis() { const dark = isDarkTheme(); return { gridColor: dark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.12)', tickColor: dark ? '#ffffff' : '#212529', legendColor: dark ? '#ffffff' : '#212529' } }
+
+    const shadowPlugin = {
+        id: 'barShadow',
+        beforeDatasetsDraw(chart) { const c = chart.ctx; c.save(); c.shadowColor = 'rgba(142, 196, 212, 0.733)'; c.shadowBlur = 8; c.shadowOffsetY = 4; },
+        afterDatasetsDraw(chart) { chart.ctx.restore(); }
+    };
+
+    function isDarkTheme() {
+        const t = (document.documentElement.getAttribute('data-bs-theme') || document.body.getAttribute('data-bs-theme') || '').toLowerCase();
+        if (t) return t === 'dark';
+        return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+
+    function themeAxis() {
+        const dark = isDarkTheme();
+        return {
+            gridColor: dark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.12)',
+            tickColor: dark ? '#ffffff' : '#212529',
+            legendColor: dark ? '#ffffff' : '#212529'
+        };
+    }
 
     function upsertPedidosPeriodo(labels, valoresCount) {
         const ctx = chartPedidosPeriodoCtx ? chartPedidosPeriodoCtx.getContext('2d') : null;
@@ -460,14 +481,7 @@
         const safeValores = Array.isArray(valoresCount) && valoresCount.length ? valoresCount : [0];
         const countData = {
             labels: safeLabels,
-            datasets: [{
-                label: 'Pedidos',
-                data: safeValores,
-                backgroundColor: ctx ? createBarGradient(ctx) : '#82a0ff',
-                borderColor: '#fff',
-                borderWidth: 1,
-                borderRadius: 6
-            }]
+            datasets: [{ label: 'Pedidos', data: safeValores, backgroundColor: ctx ? createBarGradient(ctx) : '#82a0ff', borderColor: '#fff', borderWidth: 1, borderRadius: 6 }]
         };
         const axis = themeAxis();
         if (chartPedidosPeriodo) {
@@ -479,17 +493,8 @@
             chartPedidosPeriodo.update();
         } else if (ctx) {
             chartPedidosPeriodo = new Chart(ctx, {
-                type: 'bar',
-                data: countData,
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true, grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } },
-                        x: { grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } }
-                    },
-                    plugins: { legend: { display: false } }
-                },
+                type: 'bar', data: countData,
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } }, x: { grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } } }, plugins: { legend: { display: false } } },
                 plugins: [shadowPlugin]
             });
         }
@@ -503,47 +508,15 @@
         const safeLabels = Array.isArray(labels) && labels.length ? labels : ['Sem dados'];
         const safeContagens = Array.isArray(contagens) && contagens.length ? contagens : [0];
         const safeValores = Array.isArray(valores) && valores.length ? valores : [0];
-        const countData = {
-            labels: safeLabels,
-            datasets: [{
-                label: 'Pedidos',
-                data: safeContagens,
-                backgroundColor: safeLabels.map((_, i) => palette[i % palette.length]),
-                borderColor: '#ffffff',
-                borderWidth: 1
-            }]
-        };
-        const valorData = {
-            labels: safeLabels,
-            datasets: [{
-                label: 'Valor dos Pedidos',
-                data: safeValores,
-                backgroundColor: 'rgba(13,110,253,.35)',
-                borderColor: 'rgba(13,110,253,.9)',
-                borderWidth: 1.5,
-                borderRadius: 6
-            }]
-        };
-        if (chartPedidosVendedor && chartPedidosVendedor.config?.type !== 'pie') {
-            chartPedidosVendedor.destroy();
-            chartPedidosVendedor = null;
-        }
+        const countData = { labels: safeLabels, datasets: [{ label: 'Pedidos', data: safeContagens, backgroundColor: safeLabels.map((_, i) => palette[i % palette.length]), borderColor: '#ffffff', borderWidth: 1 }] };
+        const valorData = { labels: safeLabels, datasets: [{ label: 'Valor dos Pedidos', data: safeValores, backgroundColor: 'rgba(13,110,253,.35)', borderColor: 'rgba(13,110,253,.9)', borderWidth: 1.5, borderRadius: 6 }] };
+        if (chartPedidosVendedor && chartPedidosVendedor.config?.type !== 'pie') { chartPedidosVendedor.destroy(); chartPedidosVendedor = null; }
         if (chartPedidosVendedor) {
             chartPedidosVendedor.data = countData;
-            if (chartPedidosVendedor.options?.plugins?.legend?.labels) {
-                chartPedidosVendedor.options.plugins.legend.labels.color = axis.legendColor;
-            }
+            if (chartPedidosVendedor.options?.plugins?.legend?.labels) chartPedidosVendedor.options.plugins.legend.labels.color = axis.legendColor;
             chartPedidosVendedor.update();
         } else if (ctxCount) {
-            chartPedidosVendedor = new Chart(ctxCount, {
-                type: 'pie',
-                data: countData,
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'bottom', labels: { color: axis.legendColor } } }
-                }
-            });
+            chartPedidosVendedor = new Chart(ctxCount, { type: 'pie', data: countData, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: axis.legendColor } } } } });
         }
         if (chartValorVendedor) {
             chartValorVendedor.data = valorData;
@@ -553,134 +526,71 @@
             chartValorVendedor.options.scales.x.ticks.color = axis.tickColor;
             chartValorVendedor.update();
         } else if (ctxValor) {
-            chartValorVendedor = new Chart(ctxValor, {
-                type: 'bar',
-                data: valorData,
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true, grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } },
-                        x: { grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } }
-                    },
-                    plugins: { legend: { display: false } }
-                }
-            });
+            chartValorVendedor = new Chart(ctxValor, { type: 'bar', data: valorData, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } }, x: { grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } } }, plugins: { legend: { display: false } } } });
         }
     }
+
     function upsertTopItens(labels, quantities) {
         const ctx = chartItensVendidosCtx ? chartItensVendidosCtx.getContext('2d') : null;
         const palette = ['#8bb4ff', '#78a8ff', '#659cff', '#5290ff', '#1a5e7e', '#1b3f50', '#004766', '#003a52', '#002d44', '#00243a', '#001a26', '#001119'];
-        const data = {
-            labels,
-            datasets: [{
-                label: 'Quantidade',
-                data: quantities,
-                backgroundColor: labels.map((_, i) => palette[i % palette.length]),
-                borderColor: '#ffffff',
-                borderWidth: 1
-            }]
-        };
+        const data = { labels, datasets: [{ label: 'Quantidade', data: quantities, backgroundColor: labels.map((_, i) => palette[i % palette.length]), borderColor: '#ffffff', borderWidth: 1 }] };
         const axis = themeAxis();
         if (chartItensVendidos) {
             chartItensVendidos.data = data;
             chartItensVendidos.options.indexAxis = 'y';
             chartItensVendidos.options.plugins.legend.labels.color = axis.legendColor;
-            chartItensVendidos.options.scales = {
-                x: { beginAtZero: true, grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } },
-                y: { grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } }
-            };
+            chartItensVendidos.options.scales = { x: { beginAtZero: true, grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } }, y: { grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } } };
             chartItensVendidos.update();
         } else if (ctx) {
-            chartItensVendidos = new Chart(ctx, {
-                type: 'bar',
-                data,
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { beginAtZero: true, grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } },
-                        y: { grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } }
-                    }
-                }
-            });
+            chartItensVendidos = new Chart(ctx, { type: 'bar', data, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } }, y: { grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } } } } });
         }
     }
+
     async function loadData(paramsOverride = {}) {
         const slug = localStorage.getItem('slug');
         const token = localStorage.getItem('access');
-        if (!slug || !token) {
-            alert('Necessário estar logado.');
-            return;
-        }
-
-        // Datas padrão
+        if (!slug || !token) { alert('Necessário estar logado.'); return; }
         const { ini, fim } = getDefaultDates();
         const dataInicioEl = document.getElementById('data_inicio');
         const dataFimEl = document.getElementById('data_fim');
         if (dataInicioEl && !dataInicioEl.value) dataInicioEl.value = ini;
         if (dataFimEl && !dataFimEl.value) dataFimEl.value = fim;
-
         const selVend = document.getElementById('vendedor');
         const override = paramsOverride || {};
         const nomeVendedor = String(override.nome_vendedor ?? selVend?.value ?? selVend?.dataset?.selectedVendedor ?? '').trim();
         const data_inicial = String(override.data_inicial ?? dataInicioEl?.value ?? ini).trim() || ini;
         const data_final = String(override.data_final ?? dataFimEl?.value ?? fim).trim() || fim;
-
         if (dataInicioEl) dataInicioEl.value = data_inicial;
         if (dataFimEl) dataFimEl.value = data_final;
-
         const empresa = localStorage.getItem('empresa_id') || '';
         const filial = localStorage.getItem('filial_id') || '';
-        const params = new URLSearchParams({
-            data_inicial,
-            data_final,
-            limit: '250'
-        });
+        const params = new URLSearchParams({ data_inicial, data_final, limit: '250' });
         if (empresa) params.set('empresa', empresa);
         if (filial) params.set('filial', filial);
         if (nomeVendedor) params.set('nome_vendedor', nomeVendedor);
         const url = `/api/${slug}/pedidos/pedidos-geral/?${params.toString()}`;
-
         try {
-            console.log('[home.loadData] pedidos-geral url', url);
             const resp = await authFetch(url);
             if (!resp.ok) throw new Error(`Erro ${resp.status}`);
             const data = await resp.json();
             const items = Array.isArray(data) ? data : (data.results || []);
-            console.log('[home.loadData] pedidos-geral total', items.length, items.slice(0, 5));
-
-            const porDiaCount = {};
-            const porVendCount = {};
-            const porVendValor = {};
+            const porDiaCount = {}, porVendCount = {}, porVendValor = {};
             for (const item of items) {
                 const dia = item.data_pedido;
-                if (dia) {
-                    porDiaCount[dia] = (porDiaCount[dia] || 0) + 1;
-                }
+                if (dia) porDiaCount[dia] = (porDiaCount[dia] || 0) + 1;
                 const vend = item.nome_vendedor || 'N/D';
                 const valor = Number(item.valor_total || 0);
                 porVendCount[vend] = (porVendCount[vend] || 0) + 1;
                 porVendValor[vend] = (porVendValor[vend] || 0) + valor;
             }
-
             const labelsDia = Object.keys(porDiaCount).sort((a, b) => a.localeCompare(b));
-            const valoresDia = labelsDia.map(d => porDiaCount[d]);
-            upsertPedidosPeriodo(labelsDia, valoresDia);
-
-            const vendedores = Object.keys(porVendCount);
-            vendedores.sort((a, b) => (porVendValor[b] || 0) - (porVendValor[a] || 0));
-            const contagens = vendedores.map(v => porVendCount[v]);
-            const valores = vendedores.map(v => porVendValor[v]);
-            upsertPedidosVendedor(vendedores, contagens, valores);
-
+            upsertPedidosPeriodo(labelsDia, labelsDia.map(d => porDiaCount[d]));
+            const vendedores = Object.keys(porVendCount).sort((a, b) => (porVendValor[b] || 0) - (porVendValor[a] || 0));
+            upsertPedidosVendedor(vendedores, vendedores.map(v => porVendCount[v]), vendedores.map(v => porVendValor[v]));
             const totalPedidos = items.length;
             const totalValor = items.reduce((acc, item) => acc + Number(item.valor_total || 0), 0);
             const totalItens = items.reduce((acc, item) => acc + Number(item.quantidade_total || 0), 0);
             const clientesDistintos = new Set(items.map(item => item.codigo_cliente || item.nome_cliente).filter(Boolean)).size;
-            const diasPeriodo = labelsDia.length || 0;
             atualizarKpisDashboard({
                 total_valor: totalValor,
                 lucro_percent: Number('{{ kpis.lucro_percent|default:0 }}'),
@@ -690,24 +600,20 @@
                 clientes_distintos: clientesDistintos,
                 itens_por_pedido: totalPedidos ? (totalItens / totalPedidos) : 0,
                 valor_medio_item: totalItens ? (totalValor / totalItens) : 0,
-                pedidos_por_dia: diasPeriodo ? (totalPedidos / diasPeriodo) : 0,
+                pedidos_por_dia: labelsDia.length ? (totalPedidos / labelsDia.length) : 0,
             });
         } catch (err) {
             console.error('Falha ao carregar dados de pedidos:', err);
             upsertPedidosPeriodo([], []);
             upsertPedidosVendedor([], [], []);
         }
-
         try {
             const urlTop = `/api/${slug}/dashboards/vendas/?data_ini=${encodeURIComponent(data_inicial)}&data_fim=${encodeURIComponent(data_final)}`;
-            console.log('[home.loadData] dashboards/vendas url', urlTop);
             const respTop = await authFetch(urlTop);
             if (!respTop.ok) throw new Error(`Erro ${respTop.status}`);
             const dadosTop = await respTop.json();
             const top = Array.isArray(dadosTop?.top_vendas) ? dadosTop.top_vendas : [];
-            const labelsTop = top.map(t => t.iped_prod);
-            const qtyTop = top.map(t => Number(t.total || 0));
-            upsertTopItens(labelsTop, qtyTop);
+            upsertTopItens(top.map(t => t.iped_prod), top.map(t => Number(t.total || 0)));
         } catch (err) {
             console.error('Falha ao carregar itens mais vendidos:', err);
             upsertTopItens([], []);
@@ -719,13 +625,11 @@
             const slug = localStorage.getItem('slug');
             const empresa = localStorage.getItem('empresa_id') || '';
             if (!slug || !empresa) return;
-            const url = `/api/${slug}/entidades/entidades/?enti_empr=${encodeURIComponent(empresa)}&enti_tipo_enti=VE&limit=500`;
-            const resp = await authFetch(url);
+            const resp = await authFetch(`/api/${slug}/entidades/entidades/?enti_empr=${encodeURIComponent(empresa)}&enti_tipo_enti=VE&limit=500`);
             if (!resp.ok) return;
             const data = await resp.json();
             const sel = document.getElementById('vendedor');
             const atual = sel.value;
-            // Limpa mantendo a opção "Todos"
             sel.innerHTML = '<option value="">Todos os Vendedores</option>';
             const lista = Array.isArray(data) ? data : (data.results || []);
             lista.forEach(v => {
@@ -754,7 +658,13 @@
         });
     })();
 
-    // Inicializa ao carregar a página
+    // ===== ESTADO GLOBAL =====
+    let audioAtivo = true;
+    let pensando = false;
+    let pensandoTexto = 'pensando...';
+    let historico = [];
+
+    // ===== DOM CONTENT LOADED =====
     document.addEventListener('DOMContentLoaded', () => {
         try {
             const slugTpl = '{{ slug|default:"" }}';
@@ -762,11 +672,18 @@
                 localStorage.setItem('slug', slugTpl);
             }
         } catch (e) { }
+
         loadData();
         carregarVendedores();
+
+        // Toggle áudio — registrado aqui para garantir que o botão já existe no DOM
+        document.getElementById('toggleAudio')?.addEventListener('click', () => {
+            audioAtivo = !audioAtivo;
+            document.getElementById('toggleAudio').textContent = audioAtivo ? '🔊' : '🔇';
+        });
     });
 
-    // Kronos: abre o modal e carrega o histórico
+    // ===== REFS DO KRONOS =====
     const abrirBtn = document.getElementById('abrirKronos');
     const modalEl = document.getElementById('kronosModal');
     const mensagemInput = document.getElementById('mensagemInput');
@@ -774,48 +691,38 @@
     const limparBtn = document.getElementById('limparChat');
     const chatBox = document.getElementById('chatBox');
     const logoPulse = document.getElementById('logoPulse');
-    let pensando = false;
-    let pensandoTexto = 'pensando...';
-    let historico = [];
 
     function setPensando(active) {
         pensando = active;
         if (!logoPulse) return;
-        if (active) {
-            logoPulse.classList.add('pulse-run');
-        } else {
-            logoPulse.classList.remove('pulse-run');
-        }
+        if (active) logoPulse.classList.add('pulse-run');
+        else logoPulse.classList.remove('pulse-run');
     }
+
     function setPensandoTexto(texto) {
         pensandoTexto = (texto && String(texto).trim()) ? String(texto).trim() : 'pensando...';
         if (pensando) renderHistorico();
     }
+
     function mdFormat(text) {
-        const link = /\[([^\]]+)\]\(([^\)]+)\)/g;
-        const bold = /\*\*([^*]+)\*\*/g;
-        const h3 = /^###\s+(.+)$/gm;
-        const h2 = /^##\s+(.+)$/gm;
-        const h1 = /^#\s+(.+)$/gm;
         let t = String(text || '');
-        t = t.replace(h1, '<h3>$1</h3>');
-        t = t.replace(h2, '<h4>$1</h4>');
-        t = t.replace(h3, '<h5>$1</h5>');
-        t = t.replace(bold, '<strong>$1</strong>');
-        t = t.replace(link, (m, p1, p2) => {
+        t = t.replace(/^#\s+(.+)$/gm, '<h3>$1</h3>');
+        t = t.replace(/^##\s+(.+)$/gm, '<h4>$1</h4>');
+        t = t.replace(/^###\s+(.+)$/gm, '<h5>$1</h5>');
+        t = t.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        t = t.replace(/\[([^\]]+)\]\(([^\)]+)\)/g, (m, p1, p2) => {
             const url = String(p2 || '').replace(/^sandbox:\//, '');
             return `<a href="${url}" target="_blank" rel="noopener">${p1}</a>`;
         });
         const lines = t.split(/\r?\n/);
-        let out = '';
-        let inList = false;
+        let out = '', inList = false;
         for (const line of lines) {
             if (/^\s*[-•]\s+/.test(line)) {
                 if (!inList) { out += '<ul style="margin:6px 0 10px 18px;">'; inList = true; }
                 out += `<li>${line.replace(/^\s*[-•]\s+/, '')}</li>`;
             } else {
                 if (inList) { out += '</ul>'; inList = false; }
-                if (line.trim()) { out += `<div>${line}</div>`; }
+                if (line.trim()) out += `<div>${line}</div>`;
             }
         }
         if (inList) out += '</ul>';
@@ -826,35 +733,16 @@
         chatBox.innerHTML = '';
         historico.forEach((msg) => {
             const row = document.createElement('div');
-            row.style.display = 'flex';
-            row.style.flexDirection = msg.tipo === 'user' ? 'row-reverse' : 'row';
-            row.style.alignItems = 'flex-end';
-            row.style.margin = '6px 0';
+            row.style.cssText = `display:flex;flex-direction:${msg.tipo === 'user' ? 'row-reverse' : 'row'};align-items:flex-end;margin:6px 0`;
             const avatar = document.createElement('div');
+            avatar.style.cssText = 'width:34px;height:34px;border-radius:17px;background:#00bfff33;display:flex;justify-content:center;align-items:center;margin:0 6px;flex-shrink:0';
             if (msg.tipo === 'user') {
-                avatar.style.width = '34px';
-                avatar.style.height = '34px';
-                avatar.style.borderRadius = '17px';
-                avatar.style.background = '#00bfff33';
-                avatar.style.display = 'flex';
-                avatar.style.justifyContent = 'center';
-                avatar.style.alignItems = 'center';
-                avatar.style.margin = '0 6px';
                 avatar.textContent = '👤';
             } else {
-                avatar.style.width = '34px';
-                avatar.style.height = '34px';
-                avatar.style.borderRadius = '17px';
-                avatar.style.margin = '0 6px';
-                avatar.style.background = '#00bfff33';
-                avatar.innerHTML = `<img src="{% static 'logo.png' %}" style="height:24px; margin-left:6px">`;
+                avatar.innerHTML = `<img src="{% static 'logo.png' %}" style="height:24px;margin-left:6px">`;
             }
             const bubble = document.createElement('div');
-            bubble.style.maxWidth = '70%';
-            bubble.style.padding = '8px';
-            bubble.style.borderRadius = '8px';
-            bubble.style.color = '#fff';
-            bubble.style.background = msg.tipo === 'user' ? '#00bfff' : '#333';
+            bubble.style.cssText = `max-width:70%;padding:8px;border-radius:8px;color:#fff;background:${msg.tipo === 'user' ? '#00bfff' : '#333'}`;
             bubble.innerHTML = msg.tipo === 'user' ? msg.texto : mdFormat(msg.texto);
             row.appendChild(avatar);
             row.appendChild(bubble);
@@ -862,23 +750,14 @@
         });
         if (pensando) {
             const dots = document.createElement('div');
-            dots.style.display = 'flex';
-            dots.style.alignItems = 'center';
-            dots.style.margin = '6px 0 6px 8px';
+            dots.style.cssText = 'display:flex;align-items:center;margin:6px 0 6px 8px';
             for (let i = 0; i < 3; i++) {
                 const d = document.createElement('div');
-                d.style.width = '8px';
-                d.style.height = '8px';
-                d.style.borderRadius = '4px';
-                d.style.background = '#00bfff';
-                d.style.opacity = '0.3';
-                d.style.margin = '0 3px';
-                d.style.animation = `dot${i} 0.8s linear infinite`;
+                d.style.cssText = `width:8px;height:8px;border-radius:4px;background:#00bfff;opacity:0.3;margin:0 3px;animation:dot${i} 0.8s linear infinite`;
                 dots.appendChild(d);
             }
             const t = document.createElement('span');
-            t.style.color = '#aaa';
-            t.style.marginLeft = '10px';
+            t.style.cssText = 'color:#aaa;margin-left:10px';
             t.textContent = pensandoTexto || 'pensando...';
             dots.appendChild(t);
             chatBox.appendChild(dots);
@@ -903,17 +782,22 @@
             while ((sep = buffer.indexOf('\n\n')) >= 0) {
                 const raw = buffer.slice(0, sep);
                 buffer = buffer.slice(sep + 2);
-                const lines = raw.split(/\r?\n/);
-                for (const line of lines) {
+                for (const line of raw.split(/\r?\n/)) {
                     if (!line.startsWith('data:')) continue;
                     const payload = line.slice(5).trim();
                     if (!payload) continue;
-                    let evt = null;
-                    try { evt = JSON.parse(payload); } catch (e) { evt = null; }
-                    if (evt) onEvent(evt);
+                    try { onEvent(JSON.parse(payload)); } catch (e) { }
                 }
             }
         }
+    }
+
+    function tocarAudio(base64) {
+        if (!audioAtivo) return;
+        try {
+            const audio = new Audio(`data:audio/mp3;base64,${base64}`);
+            audio.play();
+        } catch (e) { }
     }
 
     async function enviarMsg(texto) {
@@ -925,97 +809,55 @@
         renderHistorico();
         try {
             const slug = localStorage.getItem('slug');
-            const url = `/api/${slug}/assistente/chat/`;
-            const resp = await authFetch(url, { method: 'POST', headers: { 'Accept': 'text/event-stream' }, body: JSON.stringify({ mensagem: texto }) });
+            const resp = await authFetch(`/api/${slug}/assistente/chat/`, {
+                method: 'POST',
+                headers: { 'Accept': 'text/event-stream' },
+                body: JSON.stringify({ mensagem: texto })
+            });
             const ctype = (resp.headers.get('content-type') || '').toLowerCase();
-            if (resp.ok && ctype.includes('text/event-stream') && resp.body && resp.body.getReader) {
+            if (resp.ok && ctype.includes('text/event-stream') && resp.body?.getReader) {
                 const spartIndex = historico.push({ tipo: 'spart', texto: '' }) - 1;
                 renderHistorico();
                 let fimRecebido = false;
                 await consumirSSE(resp, (evt) => {
-                    if (evt.tipo === 'status' && evt.mensagem) {
-                        pushStatus(evt.mensagem);
-                        return;
-                    }
-                    if (evt.tipo === 'rota') {
-                        const conf = (typeof evt.confianca === 'number') ? evt.confianca.toFixed(2) : evt.confianca;
-                        pushStatus(`Rota: ${evt.valor} (confiança ${conf})`);
-                        return;
-                    }
-                    if (evt.tipo === 'contexto_sessao') {
-                        if (evt.banco) pushStatus(`Utilizando banco ${evt.banco} (empresa ${evt.empresa_id}, filial ${evt.filial_id}).`);
-                        return;
-                    }
+                    if (evt.tipo === 'status' && evt.mensagem) { pushStatus(evt.mensagem); return; }
+                    if (evt.tipo === 'rota') { pushStatus(`Rota: ${evt.valor} (confiança ${typeof evt.confianca === 'number' ? evt.confianca.toFixed(2) : evt.confianca})`); return; }
+                    if (evt.tipo === 'contexto_sessao') { if (evt.banco) pushStatus(`Utilizando banco ${evt.banco} (empresa ${evt.empresa_id}, filial ${evt.filial_id}).`); return; }
                     if (evt.tipo === 'tool' && evt.nome) {
-                        pushStatus(`Tool "${evt.nome}" encontrada.`);
                         const n = String(evt.nome || '').toLowerCase();
-                        if (n.includes('cadastrar')) {
-                            pushStatus(`Utilizando inserção no banco (tool "${evt.nome}").`);
-                        } else if (n.includes('consultar') || n.includes('historico') || n.includes('consulta')) {
-                            pushStatus(`Consultando banco (tool "${evt.nome}").`);
-                        } else {
-                            pushStatus(`Executando "${evt.nome}"...`);
-                        }
+                        if (n.includes('cadastrar')) pushStatus(`Inserindo no banco (tool "${evt.nome}").`);
+                        else if (n.includes('consultar') || n.includes('historico') || n.includes('consulta')) pushStatus(`Consultando banco (tool "${evt.nome}").`);
+                        else pushStatus(`Executando "${evt.nome}"...`);
                         return;
                     }
-                    if (evt.tipo === 'tool_fim' && evt.nome) {
-                        pushStatus(`Tool "${evt.nome}" finalizada.`);
-                        return;
-                    }
-                    if (evt.tipo === 'chunk' && typeof evt.texto === 'string') {
-                        historico[spartIndex].texto = (historico[spartIndex].texto || '') + evt.texto;
-                        renderHistorico();
-                        return;
-                    }
+                    if (evt.tipo === 'tool_fim' && evt.nome) { pushStatus(`Tool "${evt.nome}" finalizada.`); return; }
+                    if (evt.tipo === 'chunk' && typeof evt.texto === 'string') { historico[spartIndex].texto += evt.texto; renderHistorico(); return; }
                     if (evt.tipo === 'fim') {
                         fimRecebido = true;
-                        if (typeof evt.resposta === 'string' && evt.resposta.trim()) {
-                            historico[spartIndex].texto = evt.resposta;
-                        }
+                        if (typeof evt.resposta === 'string' && evt.resposta.trim()) historico[spartIndex].texto = evt.resposta;
                         setPensando(false);
                         renderHistorico();
                         return;
                     }
-                    if (evt.tipo === 'audio' && evt.data) {
-                        try {
-                            const audio = new Audio(`data:audio/mp3;base64,${evt.data}`);
-                            audio.play();
-                        } catch (e) { }
-                        return;
-                    }
+                    if (evt.tipo === 'audio' && evt.data) { tocarAudio(evt.data); return; }
                 });
-                if (!fimRecebido) {
-                    setPensando(false);
-                    renderHistorico();
-                }
+                if (!fimRecebido) { setPensando(false); renderHistorico(); }
                 return;
             }
-
             if (!resp.ok) {
                 let corpo = '';
-                try { corpo = await resp.text(); } catch (e) { corpo = ''; }
-                const detalhe = corpo ? corpo.slice(0, 800) : '';
-                historico.push({ tipo: 'spart', texto: `❌ Erro HTTP ${resp.status}${detalhe ? `: ${detalhe}` : ''}` });
+                try { corpo = await resp.text(); } catch (e) { }
+                historico.push({ tipo: 'spart', texto: `❌ Erro HTTP ${resp.status}${corpo ? `: ${corpo.slice(0, 800)}` : ''}` });
                 return;
             }
-
             let data = null;
-            try { data = await resp.json(); } catch (e) { data = null; }
-            if (!data) {
-                historico.push({ tipo: 'spart', texto: '⚠️ Resposta do servidor inválida (não é JSON).' });
-                return;
-            }
-
+            try { data = await resp.json(); } catch (e) { }
+            if (!data) { historico.push({ tipo: 'spart', texto: '⚠️ Resposta do servidor inválida (não é JSON).' }); return; }
             const textoSpart = (typeof data?.resposta === 'string' && data.resposta.trim())
                 ? data.resposta
                 : (data?.erro || (data?.detail ? String(data.detail) : `⚠️ Resposta inesperada: ${JSON.stringify(data).slice(0, 600)}`));
             historico.push({ tipo: 'spart', texto: textoSpart });
-            if (data?.resposta_audio) {
-                try {
-                    const audio = new Audio(`data:audio/mp3;base64,${data.resposta_audio}`);
-                    await audio.play();
-                } catch (e) { }
-            }
+            if (data?.resposta_audio) tocarAudio(data.resposta_audio);
         } catch (err) {
             historico.push({ tipo: 'spart', texto: '❌ Erro ao falar com o agente.' });
         } finally {
@@ -1023,19 +865,11 @@
             renderHistorico();
         }
     }
-    abrirBtn?.addEventListener('click', () => {
-        const modal = new bootstrap.Modal(modalEl);
-        modal.show();
-    });
-    enviarBtn?.addEventListener('click', () => {
-        const texto = mensagemInput.value.trim();
-        mensagemInput.value = '';
-        enviarMsg(texto);
-    });
-    limparBtn?.addEventListener('click', () => {
-        historico = [];
-        renderHistorico();
-    });
+
+    abrirBtn?.addEventListener('click', () => new bootstrap.Modal(modalEl).show());
+    enviarBtn?.addEventListener('click', () => { const texto = mensagemInput.value.trim(); mensagemInput.value = ''; enviarMsg(texto); });
+    mensagemInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); const texto = mensagemInput.value.trim(); mensagemInput.value = ''; enviarMsg(texto); } });
+    limparBtn?.addEventListener('click', () => { historico = []; renderHistorico(); });
 
     const style = document.createElement('style');
     style.innerHTML = `@keyframes dot0{0%{opacity:.3;transform:scale(1)}50%{opacity:1;transform:scale(1.6)}100%{opacity:.3;transform:scale(1)}}@keyframes dot1{0%{opacity:.3;transform:scale(1)}50%{opacity:1;transform:scale(1.6)}100%{opacity:.3;transform:scale(1)}}@keyframes dot2{0%{opacity:.3;transform:scale(1)}50%{opacity:1;transform:scale(1.6)}100%{opacity:.3;transform:scale(1)}}`;
