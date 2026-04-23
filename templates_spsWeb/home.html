@@ -122,7 +122,7 @@
                                         </div>
                                         <div>
                                             <div class="text-muted small">Total vendido</div>
-                                            <div class="fs-6 fw-semibold text-success">{{ kpis.total_valor|brl }}</div>
+                                            <div id="kpi-total-vendido" class="fs-6 fw-semibold text-success">{{ kpis.total_valor|brl }}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -136,7 +136,7 @@
                                         </div>
                                         <div>
                                             <div class="text-muted small">Lucro (%)</div>
-                                            <div class="fs-6 fw-semibold text-info">{{ kpis.lucro_percent|floatformat:2}}%</div>
+                                            <div id="kpi-lucro-percent" class="fs-6 fw-semibold text-info">{{ kpis.lucro_percent|floatformat:2 }}%</div>
                                         </div>
                                     </div>
                                 </div>
@@ -150,7 +150,7 @@
                                         </div>
                                         <div>
                                             <div class="text-muted small">Ticket médio</div>
-                                            <div class="fs-6 fw-semibold text-warning">{{ kpis.ticket_medio|brl }}</div>
+                                            <div id="kpi-ticket-medio" class="fs-6 fw-semibold text-warning">{{ kpis.ticket_medio|brl }}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -164,7 +164,7 @@
                                         </div>
                                         <div>
                                             <div class="text-muted small">Pedidos</div>
-                                            <div class="fs-6 fw-semibold text-primary">{{ kpis.qtd_pedidos }}</div>
+                                            <div id="kpi-pedidos" class="fs-6 fw-semibold text-primary">{{ kpis.qtd_pedidos }}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -178,7 +178,7 @@
                                         </div>
                                         <div>
                                             <div class="text-muted small">Itens vendidos</div>
-                                            <div class="fs-6 fw-semibold" style="color:#6f42c1">{{ kpis.itens_contagem}}
+                                            <div id="kpi-itens-vendidos" class="fs-6 fw-semibold" style="color:#6f42c1">{{ kpis.itens_contagem}}
                                             </div>
                                         </div>
                                     </div>
@@ -197,7 +197,7 @@
                                         </div>
                                         <div>
                                             <div class="text-muted small">Clientes distintos</div>
-                                            <div class="fs-6 fw-semibold text-info">{{ kpis.clientes_distintos }}</div>
+                                            <div id="kpi-clientes-distintos" class="fs-6 fw-semibold text-info">{{ kpis.clientes_distintos }}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -211,7 +211,7 @@
                                         </div>
                                         <div>
                                             <div class="text-muted small">Itens por pedido</div>
-                                            <div class="fs-6 fw-semibold" style="color:#6610f2">{{ kpis.itens_por_pedido|floatformat:2 }}</div>
+                                            <div id="kpi-itens-por-pedido" class="fs-6 fw-semibold" style="color:#6610f2">{{ kpis.itens_por_pedido|floatformat:2 }}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -225,7 +225,7 @@
                                         </div>
                                         <div>
                                             <div class="text-muted small">Valor médio item</div>
-                                            <div class="fs-6 fw-semibold text-danger">{{ kpis.valor_medio_item|brl }}
+                                            <div id="kpi-valor-medio-item" class="fs-6 fw-semibold text-danger">{{ kpis.valor_medio_item|brl }}
                                             </div>
                                         </div>
                                     </div>
@@ -240,7 +240,7 @@
                                         </div>
                                         <div>
                                             <div class="text-muted small">Pedidos/dia</div>
-                                            <div class="fs-6 fw-semibold text-success">{{ kpis.pedidos_por_dia|floatformat:2 }}</div>
+                                            <div id="kpi-pedidos-por-dia" class="fs-6 fw-semibold text-success">{{ kpis.pedidos_por_dia|floatformat:2 }}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -371,6 +371,29 @@
 
 
 <script>
+    function formatBrl(valor) {
+        const numero = Number(valor || 0);
+        return numero.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function atualizarKpisDashboard(kpis) {
+        const dados = kpis || {};
+        const setText = (id, valor) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = valor;
+        };
+
+        setText('kpi-total-vendido', formatBrl(dados.total_valor || 0));
+        setText('kpi-lucro-percent', `${Number(dados.lucro_percent || 0).toFixed(2)}%`);
+        setText('kpi-ticket-medio', formatBrl(dados.ticket_medio || 0));
+        setText('kpi-pedidos', String(Number(dados.qtd_pedidos || 0)));
+        setText('kpi-itens-vendidos', String(Number(dados.itens_contagem || 0)));
+        setText('kpi-clientes-distintos', String(Number(dados.clientes_distintos || 0)));
+        setText('kpi-itens-por-pedido', Number(dados.itens_por_pedido || 0).toFixed(2));
+        setText('kpi-valor-medio-item', formatBrl(dados.valor_medio_item || 0));
+        setText('kpi-pedidos-por-dia', Number(dados.pedidos_por_dia || 0).toFixed(2));
+    }
+
     // Helper: datas padrão (últimos 30 dias)
     function getDefaultDates() {
         const hoje = new Date();
@@ -433,11 +456,13 @@
 
     function upsertPedidosPeriodo(labels, valoresCount) {
         const ctx = chartPedidosPeriodoCtx ? chartPedidosPeriodoCtx.getContext('2d') : null;
+        const safeLabels = Array.isArray(labels) && labels.length ? labels : ['Sem dados'];
+        const safeValores = Array.isArray(valoresCount) && valoresCount.length ? valoresCount : [0];
         const countData = {
-            labels,
+            labels: safeLabels,
             datasets: [{
                 label: 'Pedidos',
-                data: valoresCount,
+                data: safeValores,
                 backgroundColor: ctx ? createBarGradient(ctx) : '#82a0ff',
                 borderColor: '#fff',
                 borderWidth: 1,
@@ -464,8 +489,9 @@
                         x: { grid: { color: axis.gridColor }, ticks: { color: axis.tickColor } }
                     },
                     plugins: { legend: { display: false } }
-                }
-            }, plugins = [shadowPlugin]);
+                },
+                plugins: [shadowPlugin]
+            });
         }
     }
 
@@ -474,21 +500,24 @@
         const ctxValor = chartValorVendedorCtx ? chartValorVendedorCtx.getContext('2d') : null;
         const axis = themeAxis();
         const palette = ['#8bb4ff', '#78a8ff', '#659cff', '#5290ff', '#1a5e7e', '#1b3f50', '#004766', '#003a52', '#002d44', '#00243a', '#001a26', '#001119'];
+        const safeLabels = Array.isArray(labels) && labels.length ? labels : ['Sem dados'];
+        const safeContagens = Array.isArray(contagens) && contagens.length ? contagens : [0];
+        const safeValores = Array.isArray(valores) && valores.length ? valores : [0];
         const countData = {
-            labels,
+            labels: safeLabels,
             datasets: [{
                 label: 'Pedidos',
-                data: contagens,
-                backgroundColor: labels.map((_, i) => palette[i % palette.length]),
+                data: safeContagens,
+                backgroundColor: safeLabels.map((_, i) => palette[i % palette.length]),
                 borderColor: '#ffffff',
                 borderWidth: 1
             }]
         };
         const valorData = {
-            labels,
+            labels: safeLabels,
             datasets: [{
                 label: 'Valor dos Pedidos',
-                data: valores,
+                data: safeValores,
                 backgroundColor: 'rgba(13,110,253,.35)',
                 borderColor: 'rgba(13,110,253,.9)',
                 borderWidth: 1.5,
@@ -595,9 +624,13 @@
         if (dataFimEl && !dataFimEl.value) dataFimEl.value = fim;
 
         const selVend = document.getElementById('vendedor');
-        const nomeVendedor = ((selVend?.value || selVend?.dataset?.selectedVendedor || '')).trim();
-        const data_inicial = dataInicioEl?.value || ini;
-        const data_final = dataFimEl?.value || fim;
+        const override = paramsOverride || {};
+        const nomeVendedor = String(override.nome_vendedor ?? selVend?.value ?? selVend?.dataset?.selectedVendedor ?? '').trim();
+        const data_inicial = String(override.data_inicial ?? dataInicioEl?.value ?? ini).trim() || ini;
+        const data_final = String(override.data_final ?? dataFimEl?.value ?? fim).trim() || fim;
+
+        if (dataInicioEl) dataInicioEl.value = data_inicial;
+        if (dataFimEl) dataFimEl.value = data_final;
 
         const empresa = localStorage.getItem('empresa_id') || '';
         const filial = localStorage.getItem('filial_id') || '';
@@ -612,10 +645,12 @@
         const url = `/api/${slug}/pedidos/pedidos-geral/?${params.toString()}`;
 
         try {
+            console.log('[home.loadData] pedidos-geral url', url);
             const resp = await authFetch(url);
             if (!resp.ok) throw new Error(`Erro ${resp.status}`);
             const data = await resp.json();
             const items = Array.isArray(data) ? data : (data.results || []);
+            console.log('[home.loadData] pedidos-geral total', items.length, items.slice(0, 5));
 
             const porDiaCount = {};
             const porVendCount = {};
@@ -640,6 +675,23 @@
             const contagens = vendedores.map(v => porVendCount[v]);
             const valores = vendedores.map(v => porVendValor[v]);
             upsertPedidosVendedor(vendedores, contagens, valores);
+
+            const totalPedidos = items.length;
+            const totalValor = items.reduce((acc, item) => acc + Number(item.valor_total || 0), 0);
+            const totalItens = items.reduce((acc, item) => acc + Number(item.quantidade_total || 0), 0);
+            const clientesDistintos = new Set(items.map(item => item.codigo_cliente || item.nome_cliente).filter(Boolean)).size;
+            const diasPeriodo = labelsDia.length || 0;
+            atualizarKpisDashboard({
+                total_valor: totalValor,
+                lucro_percent: Number('{{ kpis.lucro_percent|default:0 }}'),
+                ticket_medio: totalPedidos ? (totalValor / totalPedidos) : 0,
+                qtd_pedidos: totalPedidos,
+                itens_contagem: totalItens,
+                clientes_distintos: clientesDistintos,
+                itens_por_pedido: totalPedidos ? (totalItens / totalPedidos) : 0,
+                valor_medio_item: totalItens ? (totalValor / totalItens) : 0,
+                pedidos_por_dia: diasPeriodo ? (totalPedidos / diasPeriodo) : 0,
+            });
         } catch (err) {
             console.error('Falha ao carregar dados de pedidos:', err);
             upsertPedidosPeriodo([], []);
@@ -648,6 +700,7 @@
 
         try {
             const urlTop = `/api/${slug}/dashboards/vendas/?data_ini=${encodeURIComponent(data_inicial)}&data_fim=${encodeURIComponent(data_final)}`;
+            console.log('[home.loadData] dashboards/vendas url', urlTop);
             const respTop = await authFetch(urlTop);
             if (!respTop.ok) throw new Error(`Erro ${respTop.status}`);
             const dadosTop = await respTop.json();
@@ -691,6 +744,14 @@
     (function () {
         const form = document.getElementById('filtroDashboard');
         if (!form) return;
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            loadData({
+                nome_vendedor: document.getElementById('vendedor')?.value || '',
+                data_inicial: document.getElementById('data_inicio')?.value || '',
+                data_final: document.getElementById('data_fim')?.value || ''
+            });
+        });
     })();
 
     // Inicializa ao carregar a página
@@ -714,6 +775,7 @@
     const chatBox = document.getElementById('chatBox');
     const logoPulse = document.getElementById('logoPulse');
     let pensando = false;
+    let pensandoTexto = 'pensando...';
     let historico = [];
 
     function setPensando(active) {
@@ -724,6 +786,10 @@
         } else {
             logoPulse.classList.remove('pulse-run');
         }
+    }
+    function setPensandoTexto(texto) {
+        pensandoTexto = (texto && String(texto).trim()) ? String(texto).trim() : 'pensando...';
+        if (pensando) renderHistorico();
     }
     function mdFormat(text) {
         const link = /\[([^\]]+)\]\(([^\)]+)\)/g;
@@ -813,23 +879,136 @@
             const t = document.createElement('span');
             t.style.color = '#aaa';
             t.style.marginLeft = '10px';
-            t.textContent = 'pensando...';
+            t.textContent = pensandoTexto || 'pensando...';
             dots.appendChild(t);
             chatBox.appendChild(dots);
         }
         chatBox.scrollTop = chatBox.scrollHeight;
     }
+
+    function pushStatus(texto) {
+        if (!texto) return;
+        setPensandoTexto(String(texto));
+    }
+
+    async function consumirSSE(resp, onEvent) {
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            let sep;
+            while ((sep = buffer.indexOf('\n\n')) >= 0) {
+                const raw = buffer.slice(0, sep);
+                buffer = buffer.slice(sep + 2);
+                const lines = raw.split(/\r?\n/);
+                for (const line of lines) {
+                    if (!line.startsWith('data:')) continue;
+                    const payload = line.slice(5).trim();
+                    if (!payload) continue;
+                    let evt = null;
+                    try { evt = JSON.parse(payload); } catch (e) { evt = null; }
+                    if (evt) onEvent(evt);
+                }
+            }
+        }
+    }
+
     async function enviarMsg(texto) {
         if (!texto) return;
+        historico = historico.filter((m) => m && m.tipo !== 'status');
         historico.push({ tipo: 'user', texto });
         setPensando(true);
+        setPensandoTexto('Pensando...');
         renderHistorico();
         try {
             const slug = localStorage.getItem('slug');
             const url = `/api/${slug}/assistente/chat/`;
-            const resp = await authFetch(url, { method: 'POST', body: JSON.stringify({ mensagem: texto }) });
-            const data = await resp.json();
-            const textoSpart = (typeof data?.resposta === 'string' && data.resposta.trim()) ? data.resposta : (data?.erro || '⚠️ Sem retorno visível do agente.');
+            const resp = await authFetch(url, { method: 'POST', headers: { 'Accept': 'text/event-stream' }, body: JSON.stringify({ mensagem: texto }) });
+            const ctype = (resp.headers.get('content-type') || '').toLowerCase();
+            if (resp.ok && ctype.includes('text/event-stream') && resp.body && resp.body.getReader) {
+                const spartIndex = historico.push({ tipo: 'spart', texto: '' }) - 1;
+                renderHistorico();
+                let fimRecebido = false;
+                await consumirSSE(resp, (evt) => {
+                    if (evt.tipo === 'status' && evt.mensagem) {
+                        pushStatus(evt.mensagem);
+                        return;
+                    }
+                    if (evt.tipo === 'rota') {
+                        const conf = (typeof evt.confianca === 'number') ? evt.confianca.toFixed(2) : evt.confianca;
+                        pushStatus(`Rota: ${evt.valor} (confiança ${conf})`);
+                        return;
+                    }
+                    if (evt.tipo === 'contexto_sessao') {
+                        if (evt.banco) pushStatus(`Utilizando banco ${evt.banco} (empresa ${evt.empresa_id}, filial ${evt.filial_id}).`);
+                        return;
+                    }
+                    if (evt.tipo === 'tool' && evt.nome) {
+                        pushStatus(`Tool "${evt.nome}" encontrada.`);
+                        const n = String(evt.nome || '').toLowerCase();
+                        if (n.includes('cadastrar')) {
+                            pushStatus(`Utilizando inserção no banco (tool "${evt.nome}").`);
+                        } else if (n.includes('consultar') || n.includes('historico') || n.includes('consulta')) {
+                            pushStatus(`Consultando banco (tool "${evt.nome}").`);
+                        } else {
+                            pushStatus(`Executando "${evt.nome}"...`);
+                        }
+                        return;
+                    }
+                    if (evt.tipo === 'tool_fim' && evt.nome) {
+                        pushStatus(`Tool "${evt.nome}" finalizada.`);
+                        return;
+                    }
+                    if (evt.tipo === 'chunk' && typeof evt.texto === 'string') {
+                        historico[spartIndex].texto = (historico[spartIndex].texto || '') + evt.texto;
+                        renderHistorico();
+                        return;
+                    }
+                    if (evt.tipo === 'fim') {
+                        fimRecebido = true;
+                        if (typeof evt.resposta === 'string' && evt.resposta.trim()) {
+                            historico[spartIndex].texto = evt.resposta;
+                        }
+                        setPensando(false);
+                        renderHistorico();
+                        return;
+                    }
+                    if (evt.tipo === 'audio' && evt.data) {
+                        try {
+                            const audio = new Audio(`data:audio/mp3;base64,${evt.data}`);
+                            audio.play();
+                        } catch (e) { }
+                        return;
+                    }
+                });
+                if (!fimRecebido) {
+                    setPensando(false);
+                    renderHistorico();
+                }
+                return;
+            }
+
+            if (!resp.ok) {
+                let corpo = '';
+                try { corpo = await resp.text(); } catch (e) { corpo = ''; }
+                const detalhe = corpo ? corpo.slice(0, 800) : '';
+                historico.push({ tipo: 'spart', texto: `❌ Erro HTTP ${resp.status}${detalhe ? `: ${detalhe}` : ''}` });
+                return;
+            }
+
+            let data = null;
+            try { data = await resp.json(); } catch (e) { data = null; }
+            if (!data) {
+                historico.push({ tipo: 'spart', texto: '⚠️ Resposta do servidor inválida (não é JSON).' });
+                return;
+            }
+
+            const textoSpart = (typeof data?.resposta === 'string' && data.resposta.trim())
+                ? data.resposta
+                : (data?.erro || (data?.detail ? String(data.detail) : `⚠️ Resposta inesperada: ${JSON.stringify(data).slice(0, 600)}`));
             historico.push({ tipo: 'spart', texto: textoSpart });
             if (data?.resposta_audio) {
                 try {

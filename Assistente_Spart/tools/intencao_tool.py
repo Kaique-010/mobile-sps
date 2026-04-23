@@ -12,6 +12,7 @@ from .db_tool import (
     consulta_inteligente_prime,
     historico_de_pedidos_cliente,
     historico_de_pedidos,
+    total_pedidos_periodo,
 )
 from .rag_tool import rag_url_resposta_vetorial
 from .web_tool import procura_web
@@ -82,6 +83,15 @@ def executar_intencao(
 
         def extrair_periodo(texto:str):
             import re
+            from calendar import monthrange
+            from datetime import datetime
+
+            meses = {
+                'janeiro': 1, 'fevereiro': 2, 'marco': 3, 'março': 3, 'abril': 4,
+                'maio': 5, 'junho': 6, 'julho': 7, 'agosto': 8, 'setembro': 9,
+                'outubro': 10, 'novembro': 11, 'dezembro': 12,
+            }
+
             r1 = re.search(r"(?i)(?:de|desde)\s*(\d{1,2})(?:\s*de\s*([a-zçãõáéíóú]+))?\s*(?:de\s*(\d{4}))?\s*(?:at[eé]|a)\s*(\d{1,2})(?:\s*de\s*([a-zçãõáéíóú]+))?\s*(?:de\s*(\d{4}))?", texto)
             if r1:
                 di, mi, yi, df, mf, yf = r1.groups()
@@ -94,6 +104,31 @@ def executar_intencao(
                 y1 = int(y1); y1 = 2000+y1 if y1<100 else y1
                 y2 = int(y2); y2 = 2000+y2 if y2<100 else y2
                 return f"{y1:04d}-{int(m1):02d}-{int(d1):02d}", f"{y2:04d}-{int(m2):02d}-{int(d2):02d}"
+            r3 = re.search(r"(?i)(?:entre|de|desde)\s*(\d{4}-\d{2}-\d{2}).*?(?:e|at[eé]|a)\s*(\d{4}-\d{2}-\d{2})", texto)
+            if r3:
+                return r3.group(1), r3.group(2)
+            r4 = re.search(r"(?i)(\d{4}-\d{2}-\d{2}).*?(?:at[eé]|a)\s*(\d{4}-\d{2}-\d{2})", texto)
+            if r4:
+                return r4.group(1), r4.group(2)
+
+            r5 = re.search(r"(?i)(?:no|do|de|em)?\s*m[eê]s\s+de\s+([a-zçãõáéíóú]+)(?:\s+de\s+(\d{4}))?", texto)
+            if r5:
+                mes_nome, ano = r5.groups()
+                mes = meses.get((mes_nome or '').strip().lower())
+                ano_ref = int(ano) if ano else datetime.now().year
+                if mes:
+                    ultimo_dia = monthrange(ano_ref, mes)[1]
+                    return f"{ano_ref:04d}-{mes:02d}-01", f"{ano_ref:04d}-{mes:02d}-{ultimo_dia:02d}"
+
+            r6 = re.search(r"(?i)([a-zçãõáéíóú]+)\s+de\s+(\d{4})", texto)
+            if r6:
+                mes_nome, ano = r6.groups()
+                mes = meses.get((mes_nome or '').strip().lower())
+                if mes:
+                    ano_ref = int(ano)
+                    ultimo_dia = monthrange(ano_ref, mes)[1]
+                    return f"{ano_ref:04d}-{mes:02d}-01", f"{ano_ref:04d}-{mes:02d}-{ultimo_dia:02d}"
+
             return None, None
 
         def extrair_cliente(texto:str):
@@ -165,6 +200,23 @@ def executar_intencao(
                     data_inicial=di,
                     data_final=df,
                 )
+
+        # ========== TOTAL DE PEDIDOS (PERÍODO / STATUS) ==========
+        if re.search(r"(?i)(quantos\s+pedidos|total\s+de\s+pedidos)", msg_lower):
+            di, df = extrair_periodo(mensagem)
+            status = None
+            if re.search(r"(?i)confirmad|conclu[ií]d", msg_lower):
+                status = "confirmado"
+            elif re.search(r"(?i)cancel", msg_lower):
+                status = "cancelado"
+            return total_pedidos_periodo.func(
+                banco=real_banco,
+                empresa_id=str(empresa_id),
+                filial_id=str(filial_id),
+                data_inicial=di,
+                data_final=df,
+                status=status,
+            )
 
         # Substitua as seções de títulos no executar_intencao:
 

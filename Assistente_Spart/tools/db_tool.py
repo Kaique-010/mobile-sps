@@ -1,16 +1,15 @@
 from langchain_core.tools import tool
-import Entidades
+from Entidades.models import Entidades
 from Produtos.models import Produtos, SaldoProduto, UnidadeMedida
 from contas_a_pagar.models import Titulospagar
 from contas_a_receber.models import Titulosreceber
 from core.utils import get_db_from_slug
 from core.middleware import get_licenca_slug
-from django.db.models import Count, Sum
-from Pedidos.models import PedidosGeral
-
+from django.db.models import Count, Sum, Q
+from Pedidos.models import PedidosGeral, PedidoVenda
+import traceback
 from langchain_openai import ChatOpenAI
-from django.db import connection
-from django.db import connections
+from django.db import connections, connection
 from ..configuracoes.config import CHAT_MODEL
 from datetime import datetime, timedelta
 from statistics import mean
@@ -28,6 +27,49 @@ llm = ChatOpenAI(model=CHAT_MODEL, temperature=0)
 
 _Schema_Cache = {}
 _TTL = timedelta(minutes=120)
+
+
+def _normalizar_data_filtro(data_valor: str, is_fim: bool = False) -> str:
+    if not data_valor:
+        return data_valor
+    texto = str(data_valor).strip()
+    if not texto:
+        return texto
+    formatos = ["%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y"]
+    for formato in formatos:
+        try:
+            return datetime.strptime(texto, formato).date().isoformat()
+        except Exception:
+            continue
+    meses = {
+        'janeiro': 1, 'fevereiro': 2, 'marco': 3, 'março': 3, 'abril': 4,
+        'maio': 5, 'junho': 6, 'julho': 7, 'agosto': 8, 'setembro': 9,
+        'outubro': 10, 'novembro': 11, 'dezembro': 12,
+    }
+    m = re.match(r"(?i)^([a-zçãõáéíóú]+)\s+de\s+(\d{4})$", texto)
+    if m:
+        from calendar import monthrange
+        mes = meses.get(m.group(1).strip().lower())
+        ano = int(m.group(2))
+        if mes:
+            dia = monthrange(ano, mes)[1] if is_fim else 1
+            return f"{ano:04d}-{mes:02d}-{dia:02d}"
+    return texto
+
+def _extrair_select(sql_texto: str) -> str:
+    if not sql_texto:
+        return ""
+    t = str(sql_texto).strip()
+    m = re.search(r"```(?:sql)?\s*([\s\S]*?)```", t, flags=re.IGNORECASE)
+    if m:
+        t = m.group(1).strip()
+    t = re.sub(r"^(sql\s*:)", "", t, flags=re.IGNORECASE).strip()
+    t = re.sub(r"^(query\s*:)", "", t, flags=re.IGNORECASE).strip()
+    m = re.search(r"\bselect\b[\s\S]*", t, flags=re.IGNORECASE)
+    if m:
+        t = m.group(0).strip()
+    t = t.strip().rstrip(";").strip()
+    return t
 
 
 def ler_schema_db(slug: str = "default") -> dict:
@@ -175,7 +217,7 @@ Pergunta:
 """
     try:
         resposta = llm.invoke(prompt)
-        return resposta.content.strip()
+        return _extrair_select(getattr(resposta, "content", ""))
     except Exception as e:
         logger.error(f"❌ Erro ao invocar LLM para gerar SQL: {e}")
         return "" # Retorna vazio para ser tratado pelo chamador
@@ -374,7 +416,7 @@ def consultar_titulos_a_pagar(banco: str = "default",
         titulos = Titulospagar.objects.using(real_banco).filter(
             titu_empr=empresa_id,
             titu_fili=filial_id,
-            titu_aber='A'
+            titu_aber__in=['A', 'P']
         )
         
         if not titulos.exists():
@@ -578,5 +620,99 @@ def historico_de_pedidos_cliente(banco: str = "default",
             logger = logging.getLogger(__name__)
             logger.error(f"[HISTORICO_PEDIDOS_CLIENTE] {error_msg}\n{traceback.format_exc()}")
         except:
+            pass
+        return error_msg
+
+@tool
+def total_pedidos_periodo(
+    banco: str = "default",
+    empresa_id: str = "1",
+    filial_id: str = "1",
+    data_inicial: str = None,
+    data_final: str = None,
+    status: str = None,
+) -> str:
+    """Retorna total e valor de pedidos por período, com filtro opcional de status."""
+    try:
+        real_banco = banco or "default"
+        data_inicial = _normalizar_data_filtro(data_inicial, is_fim=False)
+        data_final = _normalizar_data_filtro(data_final, is_fim=True)
+        periodo_txt = ""
+        if data_inicial or data_final:
+            periodo_txt = f" — Período {data_inicial or 'início'} a {data_final or 'hoje'}"
+
+        status_txt = f" | Status: {status}" if status else ""
+
+        qs_g = PedidosGeral.objects.using(real_banco).filter(
+            empresa=empresa_id,
+            filial=filial_id,
+        )
+        if data_inicial:
+            qs_g = qs_g.filter(data_pedido__gte=data_inicial)
+        if data_final:
+            qs_g = qs_g.filter(data_pedido__lte=data_final)
+
+        total_view = qs_g.count()
+        valor_view = qs_g.aggregate(soma=Sum("valor_total")).get("soma") or 0
+        itens_view = qs_g.aggregate(soma=Sum("quantidade_total")).get("soma") or 0
+
+        if not status:
+            return (
+                f"📌 Total de pedidos{periodo_txt} — Empresa {empresa_id}, Filial {filial_id}:\n\n"
+                f"• Quantidade: {total_view}\n"
+                f"• Valor total: R$ {float(valor_view or 0):,.2f}\n"
+                f"• Itens: {float(itens_view or 0):,.2f}"
+            )
+
+        st = str(status).strip().lower()
+        status_map = {
+            "pendente": "Pendente",
+            "aberto": "Pendente",
+            "processando": "Processando",
+            "enviado": "Enviado",
+            "concluido": "Concluído",
+            "concluído": "Concluído",
+            "confirmado": "Concluído",
+            "confirmados": "Concluído",
+            "cancelado": "Cancelado",
+            "cancelados": "Cancelado",
+        }
+        status_resolvido = status_map.get(st)
+        if status_resolvido is None:
+            status_raw = str(status).strip()
+            status_por_codigo = {
+                "0": "Pendente",
+                "1": "Processando",
+                "2": "Enviado",
+                "3": "Concluído",
+                "4": "Cancelado",
+            }
+            status_resolvido = status_por_codigo.get(status_raw, status_raw)
+
+        qs_status = qs_g.filter(status__iexact=status_resolvido)
+        total = qs_status.count()
+        valor_total = qs_status.aggregate(soma=Sum("valor_total")).get("soma") or 0
+        itens_status = qs_status.aggregate(soma=Sum("quantidade_total")).get("soma") or 0
+        status_txt = f" | Status: {status_resolvido}"
+
+        resposta = (
+            f"📌 Total de pedidos{periodo_txt} — Empresa {empresa_id}, Filial {filial_id}{status_txt}:\n\n"
+            f"• Quantidade: {total}\n"
+            f"• Valor total: R$ {float(valor_total or 0):,.2f}\n"
+            f"• Itens: {float(itens_status or 0):,.2f}"
+        )
+
+        if total_view and total != total_view:
+            resposta += (
+                f"\n\nℹ️ Total geral no período em pedidos_geral: {total_view} pedidos"
+                f"\nℹ️ Itens no período em pedidos_geral: {float(itens_view or 0):,.2f}"
+            )
+
+        return resposta
+    except Exception as e:
+        error_msg = f"❌ Erro ao consultar total de pedidos: {str(e)}"
+        try:
+            logger.error(f"[TOTAL_PEDIDOS_PERIODO] {error_msg}\n{traceback.format_exc()}")
+        except Exception:
             pass
         return error_msg

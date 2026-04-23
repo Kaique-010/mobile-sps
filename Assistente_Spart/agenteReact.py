@@ -15,6 +15,7 @@ from .tools.db_tool import (
     consultar_titulos_a_receber,
     historico_de_pedidos,
     historico_de_pedidos_cliente,
+    total_pedidos_periodo,
 )
 from .tools.file_tool import ler_documentos
 from .tools.tool_mapa_semantico import plotar_mapa_semantico
@@ -30,6 +31,7 @@ AGENT_TOOLS = [
     consultar_saldo,
     historico_de_pedidos,
     historico_de_pedidos_cliente,
+    total_pedidos_periodo,
     consultar_titulos_a_pagar,
     consultar_titulos_a_receber,
     consulta_inteligente_prime,
@@ -65,6 +67,7 @@ SYSTEM_PROMPT = """Você é um assistente de ERP especializado.
 - consultar_saldo
 - historico_de_pedidos
 - historico_de_pedidos_cliente
+- total_pedidos_periodo
 - consultar_titulos_a_pagar
 - consultar_titulos_a_receber
 - consulta_inteligente_prime
@@ -88,7 +91,7 @@ SYSTEM_PROMPT = """Você é um assistente de ERP especializado.
 
 # ===== CONFIGURAÇÃO DO LLM =====
 llm = ChatOpenAI(
-    model="gpt-4o-mini",
+    model="gpt-5-mini",
     temperature=0.1,
     max_tokens=2000,
     timeout=30,
@@ -103,8 +106,8 @@ try:
     agenteReact = create_react_agent(
         llm,
         AGENT_TOOLS,
-        state_modifier=SYSTEM_PROMPT,
-        checkpointer=memory
+        prompt=SYSTEM_PROMPT,
+        checkpointer=memory,
     )
     logger.info("✅ Agente React criado com sucesso")
 

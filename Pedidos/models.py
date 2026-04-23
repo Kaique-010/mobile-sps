@@ -158,6 +158,7 @@ class PedidosGeral(models.Model):
     codigo_cliente = models.IntegerField()
     nome_cliente = models.CharField(max_length=100)
     data_pedido = models.DateField()
+    status = models.CharField(max_length=50, blank=True, null=True)
     quantidade_total = models.DecimalField(max_digits=10, decimal_places=2)
     itens_do_pedido = models.TextField()
     valor_total = models.DecimalField(max_digits=12, decimal_places=2)

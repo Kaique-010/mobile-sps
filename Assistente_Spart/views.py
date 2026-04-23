@@ -2,6 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.renderers import BaseRenderer, JSONRenderer
 from django.http import StreamingHttpResponse
 from core.utils import get_licenca_db_config
 from core.middleware import get_licenca_slug
@@ -13,6 +14,15 @@ from core.utils import configurar_logger_colorido
 
 configurar_logger_colorido()
 logger = logging.getLogger(__name__)
+
+class ServerSentEventRenderer(BaseRenderer):
+    media_type = "text/event-stream"
+    format = "event-stream"
+    charset = None
+    render_style = "binary"
+
+    def render(self, data, accepted_media_type=None, renderer_context=None):
+        return data
 
 def _lazy_agente_refs():
     from .agenteReact import agenteReact, AGENT_TOOLS, faiss_cached, pre_rotear, metricas
@@ -29,6 +39,7 @@ class SpartView(APIView):
     - Streaming: Reduz latência percebida
     """
     permission_classes = [IsAuthenticated]
+    renderer_classes = [JSONRenderer, ServerSentEventRenderer]
     # Suporta JSON (mensagens) e multipart/form-data (áudio)
     parser_classes = [JSONParser, FormParser, MultiPartParser]
 
@@ -37,6 +48,10 @@ class SpartView(APIView):
         
         # Detecta se cliente quer streaming (SSE)
         accept = request.META.get('HTTP_ACCEPT', '')
+        try:
+            logger.info(f"[SPART_CHAT] accept={accept}")
+        except Exception:
+            pass
         if 'text/event-stream' in accept:
             return self._streaming_response(request, slug)
         
@@ -62,11 +77,14 @@ class SpartView(APIView):
         banco = get_licenca_db_config(request)
         empresa_id = request.META.get("HTTP_X_EMPRESA", 1)
         filial_id = request.META.get("HTTP_X_FILIAL", 1)
+        thread_id = str(request.user.usua_codi)
+        log_ctx = f"slug={slug} banco={banco} empresa={empresa_id} filial={filial_id} thread={thread_id}"
+        logger.info(f"[SPART_CHAT] inicio {log_ctx}")
 
         config = RunnableConfig(
             recursion_limit=50,
             configurable={
-            "thread_id": str(request.user.usua_codi),
+            "thread_id": thread_id,
             "empresa_id": str(empresa_id),
             "filial_id": str(filial_id),
             "banco": banco,
@@ -77,12 +95,13 @@ class SpartView(APIView):
         mensagem_usuario = self._processar_entrada(request, client)
         if isinstance(mensagem_usuario, Response):
             return mensagem_usuario
+        logger.info(f"[SPART_CHAT] entrada tamanho={len(mensagem_usuario or '')} {log_ctx}")
 
         # ======== PRÉ-ROTEADOR (50-100ms) ========
         inicio_pre_roteador = time.time()
         rota = pre_rotear(mensagem_usuario)
         tempo_pre_roteador = round(time.time() - inicio_pre_roteador, 3)
-        # logger.info(f"🎯 Pré-roteador: {rota['tipo']} (confiança: {rota['confianca']}) em {tempo_pre_roteador}s")
+        logger.info(f"[SPART_CHAT] pre_rotear tipo={rota['tipo']} confianca={rota['confianca']} tempo_s={tempo_pre_roteador} {log_ctx}")
         metricas.registrar("pre_roteador", tempo_pre_roteador)
 
         # ======== CONTEXTO FAISS (CONDICIONAL + CACHE) ========
@@ -90,15 +109,13 @@ class SpartView(APIView):
         if rota["precisa_faiss"]:
             inicio_faiss = time.time()
             try:
-                # logger.info("🔍 Buscando contexto FAISS (com cache)...")
                 contexto_faiss = faiss_cached(mensagem_usuario)
                 tempo_faiss = round(time.time() - inicio_faiss, 2)
-                # logger.info(f"✅ FAISS em {tempo_faiss}s")
+                logger.info(f"[SPART_CHAT] faiss ok tempo_s={tempo_faiss} tamanho={len(contexto_faiss or '')} {log_ctx}")
                 metricas.registrar("faiss", tempo_faiss)
             except Exception as e:
-                logger.warning(f"[FAISS] Erro: {e}")
+                logger.warning(f"[SPART_CHAT] faiss erro={str(e)} {log_ctx}")
         else:
-            # logger.info("⚡ FAISS ignorado (consulta direta detectada)")
             pass
 
         # ======== PROMPT OTIMIZADO ========
@@ -131,8 +148,6 @@ Ela já faz o roteamento inteligente para a tool correta.""")
         inicio_agente = time.time()
 
         try:
-            # logger.info(f"🤖 Executando agente (tipo: {rota['tipo']})...")
-            
             # Configuração robusta
             resultado = agenteReact.invoke(
                 {"messages": [HumanMessage(content=prompt)]},
@@ -140,7 +155,7 @@ Ela já faz o roteamento inteligente para a tool correta.""")
             )
             
             tempo_agente = round(time.time() - inicio_agente, 2)
-            # logger.info(f"✅ Agente concluído em {tempo_agente}s")
+            logger.info(f"[SPART_CHAT] agente ok tempo_s={tempo_agente} {log_ctx}")
             metricas.registrar("agente", tempo_agente)
             
             # Extração robusta de mensagens
@@ -184,6 +199,8 @@ Ela já faz o roteamento inteligente para a tool correta.""")
                             resposta_texto = str(conteudo)
                 
                 # logger.info(f"🔧 Tools executadas: {tools_usadas or ['nenhuma']}")
+                if tools_usadas:
+                    logger.info(f"[SPART_CHAT] tools {','.join(tools_usadas)} {log_ctx}")
                 
                 # Validação final
                 if not resposta_texto or resposta_texto.strip() == "":
@@ -242,7 +259,7 @@ Ela já faz o roteamento inteligente para a tool correta.""")
         thread_tts.join(timeout=3.0)
         
         tempo_total = round(time.time() - inicio_total, 2)
-        # logger.info(f"✅ Tempo total: {tempo_total}s")
+        logger.info(f"[SPART_CHAT] fim tempo_total_s={tempo_total} {log_ctx}")
         metricas.registrar("total", tempo_total)
 
         return Response({
@@ -271,26 +288,33 @@ Ela já faz o roteamento inteligente para a tool correta.""")
             banco = get_licenca_db_config(request)
             empresa_id = request.META.get("HTTP_X_EMPRESA", 1)
             filial_id = request.META.get("HTTP_X_FILIAL", 1)
+            thread_id = str(request.user.usua_codi)
+            log_ctx = f"slug={slug} banco={banco} empresa={empresa_id} filial={filial_id} thread={thread_id}"
+            logger.info(f"[SPART_CHAT_STREAM] inicio {log_ctx}")
             
             config = RunnableConfig(
                 recursion_limit=50,
                 configurable={
-                "thread_id": str(request.user.usua_codi),
+                "thread_id": thread_id,
                 "empresa_id": str(empresa_id),
                 "filial_id": str(filial_id),
                 "banco": banco,
                 "slug": slug,
             })
+            yield f"data: {json.dumps({'tipo': 'status', 'mensagem': 'Pensando...'})}\n\n"
+            yield f"data: {json.dumps({'tipo': 'contexto_sessao', 'banco': banco, 'empresa_id': str(empresa_id), 'filial_id': str(filial_id), 'slug': slug})}\n\n"
             
             # Entrada
             mensagem_usuario = self._processar_entrada(request, client)
             if isinstance(mensagem_usuario, Response):
                 yield f"data: {json.dumps({'erro': 'Erro na entrada'})}\n\n"
                 return
+            logger.info(f"[SPART_CHAT_STREAM] entrada tamanho={len(mensagem_usuario or '')} {log_ctx}")
             
             # Pré-roteador
             rota = pre_rotear(mensagem_usuario)
             yield f"data: {json.dumps({'tipo': 'rota', 'valor': rota['tipo'], 'confianca': rota['confianca']})}\n\n"
+            yield f"data: {json.dumps({'tipo': 'status', 'mensagem': 'Buscando tool para a pergunta...'})}\n\n"
             
             # FAISS condicional
             contexto_faiss = None
@@ -343,6 +367,7 @@ Ela já faz o roteamento inteligente para a tool correta.""")
             # Finaliza
             texto_final = "".join(resposta_completa)
             tempo_total = round(time.time() - inicio, 2)
+            logger.info(f"[SPART_CHAT_STREAM] fim tempo_total_s={tempo_total} tools={','.join(tools_usadas) if tools_usadas else 'nenhuma'} {log_ctx}")
 
             # Evita f-string multilinha (quebra parsing). Monta payload antes.
             payload_fim = {
@@ -380,15 +405,13 @@ Ela já faz o roteamento inteligente para a tool correta.""")
                     pass
                 loop.close()
         
-        return StreamingHttpResponse(
+        response = StreamingHttpResponse(
             sync_generator(),
-            content_type='text/event-stream',
-            headers={
-                'X-Accel-Buffering': 'no',
-                'Cache-Control': 'no-cache',
-                'Connection': 'keep-alive'
-            }
+            content_type="text/event-stream",
         )
+        response["X-Accel-Buffering"] = "no"
+        response["Cache-Control"] = "no-cache"
+        return response
 
     def _processar_entrada(self, request, client):
         """Processa texto ou áudio (com Whisper)"""
@@ -425,8 +448,7 @@ Ela já faz o roteamento inteligente para a tool correta.""")
         """
         TTS com otimizações:
         - Trunca textos longos
-        - Speed 1.15x (15% mais rápido)
-        - Timeout de 5s
+        - Speed 1.60x
         """
         from .agenteReact import metricas  # Importação local para evitar ciclo
         
@@ -444,7 +466,7 @@ Ela já faz o roteamento inteligente para a tool correta.""")
                 model="gpt-4o-mini-tts",
                 voice="alloy",
                 input=texto,
-                speed=1.15  # 15% mais rápido
+                speed=1.60,
             )
             
             audio_base64 = base64.b64encode(response.read()).decode("utf-8")
