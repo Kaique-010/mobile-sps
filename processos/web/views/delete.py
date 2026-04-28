@@ -17,8 +17,8 @@ class ProcessoDeleteView(DeleteView):
         ctx = self.get_context_base()
         return ProcessoService.listar(
             db_alias=ctx["db_alias"],
-            empresa_id=self.empresa_id,
-            filial_id=self.filial_id,
+            empresa_id=ctx["empresa_id"],
+            filial_id=ctx["filial_id"],
         )
         
     def get_context_base(self):

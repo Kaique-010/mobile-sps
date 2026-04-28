@@ -7,9 +7,11 @@ from django.views.generic import View
 
 
 class SalvarChecklistView(View):
-    banco = get_licenca_db_config(self.request) or 'default'  
-    empresa_id = self.request.session.get('empresa_id', 1)
-    filial_id = self.request.session.get('filial_id', 1)
+    def __init__(self, *args, **kwargs):
+        self.banco = get_licenca_db_config(self.request) or 'default'  
+        self.empresa_id = self.request.session.get('empresa_id', 1)
+        self.filial_id = self.request.session.get('filial_id', 1)
+        super().__init__(*args, **kwargs)
     def post(self, request, pk):
         dados = {}
 
@@ -35,9 +37,11 @@ class SalvarChecklistView(View):
 
 
 class ValidarProcessoView(View):
-    banco = get_licenca_db_config(self.request) or 'default'  
-    empresa_id = self.request.session.get('empresa_id', 1)
-    filial_id = self.request.session.get('filial_id', 1)
+    def __init__(self, *args, **kwargs):
+        self.banco = get_licenca_db_config(self.request) or 'default'  
+        self.empresa_id = self.request.session.get('empresa_id', 1)
+        self.filial_id = self.request.session.get('filial_id', 1)
+        super().__init__(*args, **kwargs)
     def post(self, request, pk):
 
         resultado = ValidacaoProcessoService.validar_processo(

@@ -3,7 +3,7 @@ from core.utils import get_licenca_db_config
 from processos.models import Processo
 from processos.services.processo_service import ProcessoService
 
-class ProcessoListView(MultiDBContextMixin, ListView):
+class ProcessoListView(ListView):
     model = Processo
     template_name = "processos/processo_list.html"
     context_object_name = "processos"

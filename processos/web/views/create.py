@@ -13,9 +13,11 @@ class ProcessoCreateView(CreateView):
     model = Processo
     template_name = "processos/processo_create.html"
     context_object_name = "processo"
-    banco = get_licenca_db_config(self.request) or 'default'
-    empresa_id = self.request.session.get('empresa_id', 1)
-    filial_id = self.request.session.get('filial_id', 1)
+    def __init__(self, *args, **kwargs):
+        self.banco = get_licenca_db_config(self.request) or 'default'
+        self.empresa_id = self.request.session.get('empresa_id', 1)
+        self.filial_id = self.request.session.get('filial_id', 1)
+        super().__init__(*args, **kwargs)
     
     def form_valid(self, form):
         form.instance.empresa_id = self.empresa_id
