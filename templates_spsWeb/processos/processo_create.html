@@ -1,2 +1,14 @@
 {% extends 'base.html' %}
-{% block content %}<div class="container py-4"><h4>Novo Processo</h4><form method="post">{% csrf_token %}{{ form.as_p }}<button class="btn btn-primary">Criar Processo</button></form></div>{% endblock %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
+<div class="container py-4">
+    <h4>Novo Processo</h4>
+    <form method="post">{% csrf_token %}{{ form.as_p }}
+        <p><label><input type="checkbox" name="ativo" checked /> Ativo</label></p>
+        <button class="btn btn-outline-primary">Criar Processo</button>
+        <a class="btn btn-outline-danger" href="">Voltar</a>
+    </form>
+
+</div>{% endblock %}

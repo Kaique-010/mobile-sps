@@ -1,18 +1,42 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Templates de Processos{% endblock %}
 {% block content %}
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
 <div class="container py-4">
-  <h4>Templates de Processos</h4>
+  <h4 class="text-center" style="font-size: 24px; font-weight: bold; margin-bottom: 20px;"><span><i
+        class="fas fa-freebsd"></i> Templates de Processos</h4>
   <div class="mb-3 d-flex gap-2">
-    <a class="btn btn-primary" href="{% url 'processos:tipo_criar' slug=slug %}">Novo ProcessoTipo</a>
-    <a class="btn btn-primary" href="{% url 'processos:modelo_criar' slug=slug %}">Novo ChecklistModelo</a>
-    <a class="btn btn-primary" href="{% url 'processos:item_criar' slug=slug %}">Novo ChecklistItem</a>
+    <a class="btn btn-outline-primary" href="{% url 'processos:tipo_criar' slug=slug %}">Novo Tipo de Processo</a>
+    <a class="btn btn-outline-primary" href="{% url 'processos:modelo_criar' slug=slug %}">Novo Checklist de Modelo</a>
+    <a class="btn btn-outline-primary" href="{% url 'processos:item_criar' slug=slug %}">Inserção de Itens no Checklist</a>
     <a class="btn btn-outline-secondary" href="{% url 'processos:lista' slug=slug %}">Ir para Processos</a>
   </div>
   <div class="row g-3">
-    <div class="col-md-4"><div class="card"><div class="card-body"><h6>Tipos</h6>{% for t in tipos %}<div>{{ t.prot_codi }} - {{ t.prot_nome }}</div>{% empty %}<div class="text-muted">Sem tipos</div>{% endfor %}</div></div></div>
-    <div class="col-md-4"><div class="card"><div class="card-body"><h6>Modelos</h6>{% for m in modelos %}<div>{{ m.chmo_nome }} (v{{ m.chmo_vers }})</div>{% empty %}<div class="text-muted">Sem modelos</div>{% endfor %}</div></div></div>
-    <div class="col-md-4"><div class="card"><div class="card-body"><h6>Itens</h6>{% for i in itens %}<div>{{ i.chit_orde }} - {{ i.chit_desc }}</div>{% empty %}<div class="text-muted">Sem itens</div>{% endfor %}</div></div></div>
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-body">
+          <h6>Tipos</h6>{% for t in tipos %}<div>{{ t.prot_codi }} - {{ t.prot_nome }}</div>{% empty %}<div
+            class="text-muted">Sem tipos</div>{% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-body">
+          <h6>Modelos</h6>{% for m in modelos %}<div>{{ m.chmo_nome }} (v{{ m.chmo_vers }})</div>{% empty %}<div
+            class="text-muted">Sem modelos</div>{% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-body">
+          <h6>Itens</h6>{% for i in itens %}<div>{{ i.chit_orde }} - {{ i.chit_desc }}</div>{% empty %}<div
+            class="text-muted">Sem itens</div>{% endfor %}
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}

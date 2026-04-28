@@ -1,10 +1,17 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block content %}
-<div class="container py-4"><h4>Novo ChecklistItem</h4>
-<form method="post">{% csrf_token %}
-<p><label>Modelo:</label><select name="checklist_modelo_id" class="form-select">{% for m in modelos %}<option value="{{ m.id }}">{{ m.chmo_nome }} (v{{ m.chmo_vers }})</option>{% endfor %}</select></p>
-<p><label>Ordem:</label><input type="number" name="ordem" value="0" class="form-control" /></p>
-<p><label>Descrição:</label><input name="descricao" class="form-control" /></p>
-<p><label><input type="checkbox" name="obrigatorio" checked /> Obrigatório</label></p>
-<button class="btn btn-primary">Salvar</button></form></div>
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
+<div class="container py-4">
+    <h4 class="text-center"><i class="fas fa-up-down"></i> Inserção de Itens no Checklist de Processos</h4>
+    <form method="post">{% csrf_token %}
+        <p><label>Modelo:</label><select name="checklist_modelo_id" class="form-select">{% for m in modelos %}<option
+                    value="{{ m.id }}">{{ m.chmo_nome }} (v{{ m.chmo_vers }})</option>{% endfor %}</select></p>
+        <p><label>Ordem:</label><input type="number" name="ordem" value="0" class="form-control" /></p>
+        <p><label>Descrição:</label><input name="descricao" class="form-control" /></p>
+        <p><label><input type="checkbox" name="obrigatorio" checked /> Obrigatório</label></p>
+        <button class="btn btn-outline-primary">Salvar</button>
+        <a class="btn btn-outline-danger" href="">Voltar</a>
+    </form>
+</div>
 {% endblock %}

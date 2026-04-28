@@ -1,10 +1,12 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block content %}
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
 <div class="container py-4">
-  <h4>Processos</h4>
+  <h4 class="text-center" style="font-size: 24px; font-weight: bold; margin-bottom: 20px;"><span><i class="fas fa-folder-closed"></i> Processos</h4>
   <div class="mb-3 d-flex gap-2">
-    <a class="btn btn-outline-primary" href="{% url 'processos:templates' slug=slug %}">Templates</a>
-    <a class="btn btn-primary" href="{% url 'processos:criar' slug=slug %}">Novo Processo</a>
+    <a class="btn btn-outline-primary " href="{% url 'processos:templates' slug=slug %}">Templates</a>
+    <a class="btn btn-outline-primary" href="{% url 'processos:criar' slug=slug %}">Novo Processo</a>
   </div>
   <table class="table table-striped">
     <thead><tr><th>ID</th><th>Tipo</th><th>Descrição</th><th>Status</th><th></th></tr></thead>
