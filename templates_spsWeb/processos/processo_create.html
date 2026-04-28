@@ -1,14 +1,15 @@
 {% extends 'base.html' %}
 {% load static %}
-
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/form.css' %}?v=20260313">{% endblock %}
 {% block content %}
-<link rel="stylesheet" href="{% static 'css/form.css' %}">
-<div class="container py-4">
-    <h4>Novo Processo</h4>
-    <form method="post">{% csrf_token %}{{ form.as_p }}
-        <p><label><input type="checkbox" name="ativo" checked /> Ativo</label></p>
-        <button class="btn btn-outline-primary">Criar Processo</button>
-        <a class="btn btn-outline-danger" href="">Voltar</a>
-    </form>
-
-</div>{% endblock %}
+<div class="container page-container">
+  <div class="page-header-custom"><h3 class="page-title">Novo Processo</h3></div>
+  <form method="post" class="form-section">{% csrf_token %}
+    <div class="row g-3">
+      <div class="col-md-4"><label class="form-label required-label">{{ form.proc_tipo.label }}</label>{{ form.proc_tipo }}</div>
+      <div class="col-md-8"><label class="form-label required-label">{{ form.proc_desc.label }}</label>{{ form.proc_desc }}</div>
+    </div>
+    <div class="form-actions mt-3"><button class="btn btn-primary">Criar Processo</button></div>
+  </form>
+</div>
+{% endblock %}
