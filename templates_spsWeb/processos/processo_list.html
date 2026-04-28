@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-4">
+  <h4>Processos</h4>
+  <div class="mb-3 d-flex gap-2">
+    <a class="btn btn-outline-primary" href="{% url 'processos:templates' slug=slug %}">Templates</a>
+    <a class="btn btn-primary" href="{% url 'processos:criar' slug=slug %}">Novo Processo</a>
+  </div>
+  <table class="table table-striped">
+    <thead><tr><th>ID</th><th>Tipo</th><th>Descrição</th><th>Status</th><th></th></tr></thead>
+    <tbody>{% for p in processos %}<tr><td>{{ p.id }}</td><td>{{ p.proc_tipo.prot_nome }}</td><td>{{ p.proc_desc }}</td><td>{{ p.proc_stat }}</td><td><a href="{% url 'processos:detalhe' slug=slug pk=p.id %}">Abrir</a></td></tr>{% empty %}<tr><td colspan="5">Sem processos</td></tr>{% endfor %}</tbody>
+  </table>
+</div>
+{% endblock %}

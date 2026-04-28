@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-4"><h4>Novo ChecklistModelo</h4>
+<form method="post">{% csrf_token %}
+<p><label>Tipo:</label><select name="processo_tipo_id" class="form-select">{% for t in tipos %}<option value="{{ t.id }}">{{ t.prot_nome }}</option>{% endfor %}</select></p>
+<p><label>Nome:</label><input name="nome" class="form-control" /></p>
+<p><label>Versão:</label><input type="number" name="versao" value="1" class="form-control" /></p>
+<p><label><input type="checkbox" name="ativo" checked /> Ativo</label></p>
+<button class="btn btn-primary">Salvar</button></form></div>
+{% endblock %}
