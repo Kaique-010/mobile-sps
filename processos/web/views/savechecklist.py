@@ -1,20 +1,28 @@
-from core.utils import get_licenca_db_config
-from processos.services.processo_service import ProcessoService
-from processos.services.checklist_service import ChecklistService
-from processos.services.validacao_service import ValidacaoProcessoService
+from django.contrib import messages
+from django.shortcuts import redirect
 from django.views.generic import View
 
+from core.utils import get_db_from_slug
+from processos.services.checklist_service import ChecklistService
+from processos.services.validacao_service import ValidacaoProcessoService
 
 
-class SalvarChecklistView(View):
-    def __init__(self, *args, **kwargs):
-        self.banco = get_licenca_db_config(self.request) or 'default'  
-        self.empresa_id = self.request.session.get('empresa_id', 1)
-        self.filial_id = self.request.session.get('filial_id', 1)
-        super().__init__(*args, **kwargs)
-    def post(self, request, pk):
+class _ChecklistBaseView(View):
+    def _ctx(self):
+        slug = self.kwargs.get("slug")
+        return {
+            "slug": slug,
+            "db_alias": get_db_from_slug(slug) if slug else "default",
+            "empresa": self.request.session.get("empresa_id", 1),
+            "filial": self.request.session.get("filial_id", 1),
+            "usuario_id": self.request.session.get("usuario_id"),
+        }
+
+
+class SalvarChecklistView(_ChecklistBaseView):
+    def post(self, request, pk, slug=None):
+        cfg = self._ctx()
         dados = {}
-
         for key, value in request.POST.items():
             if key.startswith("resposta_"):
                 item_id = key.replace("resposta_", "")
@@ -22,40 +30,38 @@ class SalvarChecklistView(View):
                     "resposta": value,
                     "observacao": request.POST.get(f"observacao_{item_id}", ""),
                 }
-
         ChecklistService.salvar_respostas(
-            db_alias=self.banco,
-            empresa_id=self.empresa_id,
-            filial_id=self.filial_id,
+            db_alias=cfg["db_alias"],
+            empresa=cfg["empresa"],
+            filial=cfg["filial"],
             processo_id=pk,
             dados=dados,
-            usuario_id=request.session.get("usuario_id"),
         )
-
         messages.success(request, "Checklist salvo com sucesso.")
-        return redirect("processos:detalhe", pk=pk)
+        return redirect("processos:detalhe", slug=cfg["slug"], pk=pk)
 
 
-class ValidarProcessoView(View):
-    def __init__(self, *args, **kwargs):
-        self.banco = get_licenca_db_config(self.request) or 'default'  
-        self.empresa_id = self.request.session.get('empresa_id', 1)
-        self.filial_id = self.request.session.get('filial_id', 1)
-        super().__init__(*args, **kwargs)
-    def post(self, request, pk):
+class ValidarProcessoView(_ChecklistBaseView):
+    def post(self, request, pk, slug=None):
+        cfg = self._ctx()
+        assinatura_nome = (request.POST.get("assinatura_nome") or "").strip()
+        assinatura_documento = (request.POST.get("assinatura_documento") or "").strip()
+        assinatura_confirmada = request.POST.get("assinatura_confirmada") == "on"
+
+        if not assinatura_nome or not assinatura_documento or not assinatura_confirmada:
+            messages.error(request, "Preencha a assinatura (nome, documento e confirmação) para validar o processo.")
+            return redirect("processos:detalhe", slug=cfg["slug"], pk=pk)
 
         resultado = ValidacaoProcessoService.validar_processo(
-            db_alias=self.banco,    
-            empresa_id=self.empresa_id,
-            filial_id=self.filial_id,
+            db_alias=cfg["db_alias"],
+            empresa=cfg["empresa"],
+            filial=cfg["filial"],
             processo_id=pk,
-            usuario_id=request.session.get("usuario_id"),
+            usuario_id=cfg["usuario_id"],
         )
-
         if resultado["aprovado"]:
-            messages.success(request, "Processo aprovado.")
+            messages.success(request, f"Processo aprovado com sucesso. Assinado por {assinatura_nome} ({assinatura_documento}).")
         else:
             for erro in resultado["erros"]:
                 messages.error(request, erro)
-
-        return redirect("processos:detalhe", pk=pk)
+        return redirect("processos:detalhe", slug=cfg["slug"], pk=pk)

@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/form.css' %}?v=20260313">{% endblock %}
+{% block content %}
+<div class="container page-container">
+  <div class="page-header-custom"><h3 class="page-title">Novo ChecklistItem</h3></div>
+  <form method="post" class="form-section">{% csrf_token %}
+    <div class="row g-3">
+      <div class="col-md-6"><label class="form-label required-label">Modelo</label><select name="checklist_modelo_id" class="form-select">{% for m in modelos %}<option value="{{ m.id }}">{{ m.chmo_nome }} (v{{ m.chmo_vers }})</option>{% endfor %}</select></div>
+      <div class="col-md-2"><label class="form-label required-label">Ordem</label>{{ form.ordem }}</div>
+      <div class="col-md-4"><label class="form-label required-label">Descrição</label>{{ form.descricao }}</div>
+      <div class="col-12 form-check">{{ form.obrigatorio }} <label class="form-check-label">{{ form.obrigatorio.label }}</label></div>
+    </div>
+    <div class="form-actions mt-3"><button class="btn btn-primary">Salvar</button></div>
+  </form>
+</div>
+{% endblock %}

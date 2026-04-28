@@ -1,12 +1,10 @@
-# processos/services/processo_service.py
-
 from django.utils import timezone
+
 from processos.models import Processo, ProcessoTipo
 from .checklist_service import ChecklistService
 
 
 class ProcessoService:
-
     @staticmethod
     def listar(*, db_alias, empresa, filial):
         return (
@@ -17,12 +15,30 @@ class ProcessoService:
         )
 
     @staticmethod
+    def listar_tipos(*, db_alias, empresa, filial):
+        return ProcessoTipo.objects.using(db_alias).filter(
+            prot_empr=empresa,
+            prot_fili=filial,
+            prot_ativ=True,
+        ).order_by("prot_nome")
+
+    @staticmethod
+    def criar_tipo(*, db_alias, empresa, filial, nome, codigo, ativo=True):
+        return ProcessoTipo.objects.using(db_alias).create(
+            prot_empr=empresa,
+            prot_fili=filial,
+            prot_nome=nome,
+            prot_codi=codigo,
+            prot_ativ=ativo,
+        )
+
+    @staticmethod
     def criar(*, db_alias, empresa, filial, tipo_id, descricao, usuario_id=None):
         tipo = ProcessoTipo.objects.using(db_alias).get(
             id=tipo_id,
             prot_empr=empresa,
             prot_fili=filial,
-            prot_ativo=True,
+            prot_ativ=True,
         )
 
         processo = Processo.objects.using(db_alias).create(
@@ -30,6 +46,7 @@ class ProcessoService:
             proc_fili=filial,
             proc_tipo=tipo,
             proc_desc=descricao,
+            proc_stat=Processo.STATUS_ABERTO,
             proc_data_aber=timezone.now(),
             proc_usro_aber=usuario_id,
             proc_usro_vali=usuario_id,
@@ -41,7 +58,6 @@ class ProcessoService:
             filial=filial,
             processo=processo,
         )
-
         return processo
 
     @staticmethod
@@ -51,11 +67,8 @@ class ProcessoService:
             proc_empr=empresa,
             proc_fili=filial,
         )
-
         processo.proc_stat = status
-
-        if status in ["APROVADO", "REPROVADO", "CANCELADO"]:
+        if status in [Processo.STATUS_APROVADO, Processo.STATUS_REPROVADO, Processo.STATUS_CANCELADO]:
             processo.proc_data_fech = timezone.now()
-
         processo.save(using=db_alias)
         return processo

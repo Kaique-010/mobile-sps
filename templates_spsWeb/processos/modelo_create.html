@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/form.css' %}?v=20260313">{% endblock %}
+{% block content %}
+<div class="container page-container">
+  <div class="page-header-custom"><h3 class="page-title">Novo ChecklistModelo</h3></div>
+  <form method="post" class="form-section">{% csrf_token %}
+    <div class="row g-3">
+      <div class="col-md-6"><label class="form-label required-label">Tipo</label><select name="processo_tipo_id" class="form-select">{% for t in tipos %}<option value="{{ t.id }}">{{ t.prot_codi }} - {{ t.prot_nome }}</option>{% endfor %}</select></div>
+      <div class="col-md-4"><label class="form-label required-label">Nome</label>{{ form.nome }}</div>
+      <div class="col-md-2"><label class="form-label required-label">Versão</label>{{ form.versao }}</div>
+      <div class="col-12 form-check">{{ form.ativo }} <label class="form-check-label">{{ form.ativo.label }}</label></div>
+    </div>
+    <div class="form-actions mt-3"><button class="btn btn-primary">Salvar</button></div>
+  </form>
+</div>
+{% endblock %}
