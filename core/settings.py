@@ -154,6 +154,7 @@ INSTALLED_APPS = [
     'transportes',
     'formulacao',
     'nfse',
+    'processos',
 ]
 
 # Middleware
