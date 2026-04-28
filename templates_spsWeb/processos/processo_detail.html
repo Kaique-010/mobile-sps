@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-4">
+  <h4>Processo #{{ processo.id }}</h4>
+  <p><strong>Tipo:</strong> {{ processo.proc_tipo.prot_nome }} | <strong>Status:</strong> {{ processo.proc_stat }}</p>
+  <form method="post" action="{% url 'processos:salvar_checklist' slug=slug pk=processo.id %}">{% csrf_token %}
+    <table class="table"><thead><tr><th>Item</th><th>Obrigatório</th><th>Resposta</th><th>Obs</th></tr></thead><tbody>
+    {% for r in processo.respostas.all %}
+      <tr>
+        <td>{{ r.pchr_item.chit_desc }}</td>
+        <td>{% if r.pchr_item.chit_obri %}Sim{% else %}Não{% endif %}</td>
+        <td>
+          <select name="resposta_{{ r.pchr_item.id }}" class="form-select">
+            <option value="">--</option>
+            <option value="SIM" {% if r.pchr_resp == 'SIM' %}selected{% endif %}>SIM</option>
+            <option value="NAO" {% if r.pchr_resp == 'NAO' %}selected{% endif %}>NÃO</option>
+            <option value="NA" {% if r.pchr_resp == 'NA' %}selected{% endif %}>N/A</option>
+          </select>
+        </td>
+        <td><input class="form-control" name="observacao_{{ r.pchr_item.id }}" value="{{ r.pchr_obse|default:'' }}" /></td>
+      </tr>
+    {% endfor %}
+    </tbody></table>
+    <button class="btn btn-primary">Salvar checklist</button>
+  </form>
+  <form method="post" class="mt-2" action="{% url 'processos:validar' slug=slug pk=processo.id %}">{% csrf_token %}<button class="btn btn-success">Validar processo</button></form>
+</div>
+{% endblock %}
