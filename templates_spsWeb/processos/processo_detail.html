@@ -1,61 +1,298 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/form.css' %}?v=20260313">{% endblock %}
 {% block content %}
-<div class="container page-container">
-  <div class="page-header-custom"><h3 class="page-title">Processo #{{ processo.id }}</h3></div>
+<style>
+/* ── BASE ───────────────────────────────────────────────────── */
+.processo-card {
+  border-radius: 12px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+.processo-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+}
+.processo-title {
+  font-size: 20px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.processo-title .icon {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+.meta-row { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 6px; }
+.meta-item { display: flex; align-items: center; gap: 5px; font-size: 13px; }
+.meta-item strong { font-weight: 600; }
+.badge-status {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #4d9e69;
+  color: #fff;
+}
+.section-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 12px;
+}
+.checklist-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 4px; }
+.checklist-table thead th {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 10px 14px;
+}
+.checklist-table thead th:first-child { border-radius: 8px 0 0 0; }
+.checklist-table thead th:last-child  { border-radius: 0 8px 0 0; }
+.checklist-table tbody td {
+  padding: 12px 14px;
+  vertical-align: middle;
+  font-size: 14px;
+}
+.badge-obri { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+.badge-obri.sim { background: #fef2f2; color: #b91c1c; }
+.badge-obri.nao { background: #f0fdf4; color: #15803d; }
+.select-resposta {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236b7280'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px;
+  border-radius: 7px;
+  padding: 7px 32px 7px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  min-width: 90px;
+  border: 1.5px solid;
+}
+.select-resposta:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.12); }
+.select-resposta.sim { border-color: #86efac !important; background-color: #f0fdf4 !important; color: #15803d !important; }
+.select-resposta.nao { border-color: #fca5a5 !important; background-color: #fef2f2 !important; color: #b91c1c !important; }
+.input-obs {
+  border-radius: 7px;
+  padding: 7px 10px;
+  font-size: 13px;
+  width: 100%;
+  border: 1.5px solid;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.input-obs:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.12); }
+.action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 16px;
+  margin-top: 4px;
+}
+.assinatura-card {
+  border-radius: 10px;
+  padding: 20px 24px;
+  margin-top: 20px;
+}
+.assinatura-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 
-  <div class="alert alert-secondary">
-    <strong>Tipo:</strong> {{ processo.proc_tipo.prot_nome }} |
-    <strong>Status:</strong> {{ processo.proc_stat }} |
-    <strong>Checklist:</strong> {% if checklist_modelo %}{{ checklist_modelo.chmo_nome }}{% else %}Sem modelo{% endif %} |
-    <strong>Versão:</strong> {% if checklist_versao %}v{{ checklist_versao }}{% else %}-{% endif %}
+/* ── DARK ───────────────────────────────────────────────────── */
+[data-bs-theme="dark"] .processo-card      { box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
+[data-bs-theme="dark"] .processo-header    { border-bottom: 1px solid #f5b092; }
+[data-bs-theme="dark"] .processo-title     { color: #f3d9b2; }
+[data-bs-theme="dark"] .meta-item          { color: #f3d9b2; }
+[data-bs-theme="dark"] .meta-item strong   { color: #f3d9b2; }
+[data-bs-theme="dark"] .section-label      { color: #f3d9b2; }
+[data-bs-theme="dark"] .checklist-table thead th {
+  color: #f3d9b2;
+  border-top: 1px solid #f5b092;
+  border-bottom: 1px solid #f5b092;
+}
+[data-bs-theme="dark"] .checklist-table thead th:first-child { border-left: 1px solid #f5b092; }
+[data-bs-theme="dark"] .checklist-table thead th:last-child  { border-right: 1px solid #f5b092; }
+[data-bs-theme="dark"] .checklist-table tbody tr:hover       { background: #13202c; }
+[data-bs-theme="dark"] .checklist-table tbody td             { color: #f3d9b2; border-bottom: 1px solid #2a3a42; }
+[data-bs-theme="dark"] .item-desc                            { color: #f3d9b2; }
+[data-bs-theme="dark"] .select-resposta    { border-color: #4a6070; background-color: #15262c; color: #f3d9b2; }
+[data-bs-theme="dark"] .select-resposta.na { border-color: #4a6070 !important; background-color: #1c2f38 !important; color: #9ca3af !important; }
+[data-bs-theme="dark"] .input-obs          { border-color: #4a6070; background-color: #15262c; color: #f3d9b2; }
+[data-bs-theme="dark"] .input-obs::placeholder { color: #6b8a96; }
+[data-bs-theme="dark"] .action-bar         { border-top: 1px solid #f5b092; }
+[data-bs-theme="dark"] .assinatura-card    { background: #13202c; border: 1px solid #f5b092; }
+[data-bs-theme="dark"] .assinatura-title   { color: #f3d9b2; }
+
+/* ── LIGHT ──────────────────────────────────────────────────── */
+[data-bs-theme="light"] .processo-card     { box-shadow: 0 4px 14px rgba(142,196,212,0.25); }
+[data-bs-theme="light"] .processo-header   { border-bottom: 1px solid var(--bs-border-color); }
+[data-bs-theme="light"] .processo-title    { color: var(--bs-body-color); }
+[data-bs-theme="light"] .meta-item         { color: var(--bs-secondary-color); }
+[data-bs-theme="light"] .meta-item strong  { color: var(--bs-body-color); }
+[data-bs-theme="light"] .section-label     { color: var(--bs-secondary-color); }
+[data-bs-theme="light"] .checklist-table thead th {
+  color: var(--bs-secondary-color);
+  background: var(--bs-tertiary-bg);
+  border-top: 1px solid var(--bs-border-color);
+  border-bottom: 1px solid var(--bs-border-color);
+}
+[data-bs-theme="light"] .checklist-table thead th:first-child { border-left: 1px solid var(--bs-border-color); }
+[data-bs-theme="light"] .checklist-table thead th:last-child  { border-right: 1px solid var(--bs-border-color); }
+[data-bs-theme="light"] .checklist-table tbody tr:hover       { background: var(--bs-tertiary-bg); }
+[data-bs-theme="light"] .checklist-table tbody td             { color: var(--bs-body-color); border-bottom: 1px solid var(--bs-border-color); }
+[data-bs-theme="light"] .item-desc                            { color: var(--bs-body-color); }
+[data-bs-theme="light"] .select-resposta    { border-color: var(--bs-border-color); background-color: var(--bs-body-bg); color: var(--bs-body-color); }
+[data-bs-theme="light"] .select-resposta.na { border-color: var(--bs-border-color) !important; background-color: var(--bs-tertiary-bg) !important; color: var(--bs-secondary-color) !important; }
+[data-bs-theme="light"] .input-obs          { border-color: var(--bs-border-color); background-color: var(--bs-body-bg); color: var(--bs-body-color); }
+[data-bs-theme="light"] .input-obs::placeholder { color: var(--bs-secondary-color); }
+[data-bs-theme="light"] .action-bar         { border-top: 1px solid var(--bs-border-color); }
+[data-bs-theme="light"] .assinatura-card    { background: var(--bs-tertiary-bg); border: 1px solid var(--bs-border-color); }
+[data-bs-theme="light"] .assinatura-title   { color: var(--bs-secondary-color); }
+</style>
+
+<div class="container py-4">
+<div class="processo-card card p-4">
+
+  <!-- Header -->
+  <div class="processo-header">
+    <div>
+      <div class="processo-title">
+        <span class="icon">📋</span>
+        Processo #{{ processo.id }}
+      </div>
+      <div class="meta-row">
+        <span class="meta-item"><strong>Tipo:</strong> {{ processo.proc_tipo.prot_nome }}</span>
+        <span class="meta-item"><strong>Status:</strong> <span class="badge-status">{{ processo.proc_stat }}</span></span>
+        {% if checklist_modelo %}
+        <span class="meta-item"><strong>Checklist:</strong> {{ checklist_modelo.chmo_nome }}</span>
+        {% endif %}
+        {% if checklist_versao %}
+        <span class="meta-item"><strong>Versão:</strong> v{{ checklist_versao }}</span>
+        {% endif %}
+      </div>
+    </div>
   </div>
 
-  <form method="post" action="{% url 'processos:salvar_checklist' slug=slug pk=processo.id %}" class="form-section">
+  <!-- Checklist -->
+  <div class="section-label">Itens do checklist</div>
+
+  <form method="post" action="{% url 'processos:salvar_checklist' slug=slug pk=processo.id %}">
     {% csrf_token %}
-    <table class="table"><thead><tr><th>Item</th><th>Obrigatório</th><th>Resposta</th><th>Obs</th></tr></thead><tbody>
-    {% for r in processo.respostas.all %}
-      <tr>
-        <td>{{ r.pchr_item.chit_desc }}</td>
-        <td>{% if r.pchr_item.chit_obri %}Sim{% else %}Não{% endif %}</td>
-        <td>
-          <select name="resposta_{{ r.pchr_item.id }}" class="form-select">
-            <option value="">--</option>
-            <option value="SIM" {% if r.pchr_resp == 'SIM' %}selected{% endif %}>SIM</option>
-            <option value="NAO" {% if r.pchr_resp == 'NAO' %}selected{% endif %}>NÃO</option>
-            <option value="NA" {% if r.pchr_resp == 'NA' %}selected{% endif %}>N/A</option>
-          </select>
-        </td>
-        <td><input class="form-control" name="observacao_{{ r.pchr_item.id }}" value="{{ r.pchr_obse|default:'' }}" /></td>
-      </tr>
-    {% endfor %}
-    </tbody></table>
-    <button class="btn btn-primary">Salvar checklist</button>
+    <table class="checklist-table">
+      <thead>
+        <tr>
+          <th style="width:44%">Item</th>
+          <th style="width:10%">Obrigatório</th>
+          <th style="width:15%">Resposta</th>
+          <th>Observação</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in respostas %}
+        <tr>
+          <td class="item-desc">{{ r.pchr_item.chit_desc }}</td>
+          <td>
+            {% if r.pchr_item.chit_obri %}
+              <span class="badge-obri sim">Sim</span>
+            {% else %}
+              <span class="badge-obri nao">Não</span>
+            {% endif %}
+          </td>
+          <td>
+            <select name="resposta_{{ r.pchr_item.id }}"
+              class="select-resposta {% if r.pchr_resp == 'SIM' %}sim{% elif r.pchr_resp == 'NAO' %}nao{% elif r.pchr_resp == 'NA' %}na{% endif %}"
+              onchange="colorSelect(this)">
+              <option value="">--</option>
+              <option value="SIM" {% if r.pchr_resp == 'SIM' %}selected{% endif %}>SIM</option>
+              <option value="NAO" {% if r.pchr_resp == 'NAO' %}selected{% endif %}>NÃO</option>
+              <option value="NA"  {% if r.pchr_resp == 'NA'  %}selected{% endif %}>N/A</option>
+            </select>
+          </td>
+          <td>
+            <input class="input-obs" type="text"
+              name="observacao_{{ r.pchr_item.id }}"
+              value="{{ r.pchr_obse|default:'' }}"
+              placeholder="Observação...">
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" class="text-center py-4" style="font-size:14px; color: var(--bs-secondary-color);">
+            Nenhum item de checklist encontrado para este tipo de processo.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="action-bar">
+      <button type="submit" class="btn btn-outline-primary d-inline-flex align-items-center gap-2">
+        <i class="fas fa-save"></i> Salvar checklist
+      </button>
+    </div>
   </form>
 
-  <form method="post" class="form-section mt-3" action="{% url 'processos:validar' slug=slug pk=processo.id %}">
-    {% csrf_token %}
-    <h5 class="form-section-title">Assinatura para validação</h5>
-    <div class="row g-3">
-      <div class="col-md-5">
-        <label class="form-label required-label">Nome do responsável</label>
-        <input type="text" name="assinatura_nome" class="form-control" required>
-      </div>
-      <div class="col-md-4">
-        <label class="form-label required-label">Documento (CPF/Matrícula)</label>
-        <input type="text" name="assinatura_documento" class="form-control" required>
-      </div>
-      <div class="col-md-3 d-flex align-items-end">
-        <div class="form-check">
-          <input class="form-check-input" type="checkbox" name="assinatura_confirmada" id="assinatura_confirmada" required>
-          <label class="form-check-label" for="assinatura_confirmada">Confirmo minha assinatura</label>
+  <!-- Assinatura / Validação -->
+  <div class="assinatura-card">
+    <div class="assinatura-title">
+      <i class="fas fa-pen-nib"></i> Assinatura para validação
+    </div>
+    <form method="post" action="{% url 'processos:validar' slug=slug pk=processo.id %}">
+      {% csrf_token %}
+      <div class="row g-3">
+        <div class="col-md-5">
+          <label class="form-label fw-semibold" style="font-size:13px;">Nome do responsável</label>
+          <input type="text" name="assinatura_nome" class="form-control" required placeholder="Nome completo">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold" style="font-size:13px;">Documento (CPF / Matrícula)</label>
+          <input type="text" name="assinatura_documento" class="form-control" required placeholder="000.000.000-00">
+        </div>
+        <div class="col-md-3 d-flex align-items-end pb-1">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="assinatura_confirmada" id="assinatura_confirmada" required>
+            <label class="form-check-label" for="assinatura_confirmada" style="font-size:13px;">
+              Confirmo minha assinatura
+            </label>
+          </div>
         </div>
       </div>
-    </div>
-    <div class="mt-3">
-      <button class="btn btn-success">Validar processo (aprovar/reprovar)</button>
-    </div>
-  </form>
+      <div class="mt-3">
+        <button class="btn btn-outline-success d-inline-flex align-items-center gap-2">
+          <i class="fas fa-check"></i> Validar processo
+        </button>
+      </div>
+    </form>
+  </div>
+
 </div>
+</div>
+
+<script>
+function colorSelect(el) {
+  el.className = 'select-resposta';
+  const map = { SIM: 'sim', NAO: 'nao', NA: 'na' };
+  if (map[el.value]) el.classList.add(map[el.value]);
+}
+</script>
 {% endblock %}

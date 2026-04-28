@@ -10,35 +10,57 @@ class ProcessoDetailView(DetailView):
     template_name = "processos/processo_detail.html"
     context_object_name = "processo"
 
-    def get_queryset(self):
+    def _get_db_ctx(self):
         slug = self.kwargs.get("slug")
-        db_alias = get_db_from_slug(slug) if slug else "default"
-        empresa = self.request.session.get("empresa_id", 1)
-        filial = self.request.session.get("filial_id", 1)
+        return {
+            "slug": slug,
+            "db_alias": get_db_from_slug(slug) if slug else "default",
+            "empresa": self.request.session.get("empresa_id", 1),
+            "filial": self.request.session.get("filial_id", 1),
+        }
+
+    def get_queryset(self):
+        ctx = self._get_db_ctx()
         return (
-            Processo.objects.using(db_alias)
-            .filter(proc_empr=empresa, proc_fili=filial)
+            Processo.objects.using(ctx["db_alias"])
+            .filter(proc_empr=ctx["empresa"], proc_fili=ctx["filial"])
             .select_related("proc_tipo")
-            .prefetch_related("respostas__pchr_item")
         )
+
+    def get_object(self, queryset=None):
+        obj = super().get_object(queryset)
+        ctx = self._get_db_ctx()
+        # idempotente — get_or_create internamente
+        ChecklistService.gerar_respostas_para_processo(
+            db_alias=ctx["db_alias"],
+            empresa=ctx["empresa"],
+            filial=ctx["filial"],
+            processo=obj,
+        )
+        return obj
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        slug = self.kwargs.get("slug")
-        db_alias = get_db_from_slug(slug) if slug else "default"
-        empresa = self.request.session.get("empresa_id", 1)
-        filial = self.request.session.get("filial_id", 1)
-
+        ctx = self._get_db_ctx()
         processo = context["processo"]
-        resposta = processo.respostas.first()
-        modelo = resposta.pchr_item.chit_mode if resposta else ChecklistService.obter_modelo_ativo(
-            db_alias=db_alias,
-            empresa=empresa,
-            filial=filial,
+
+        respostas = (
+            processo.respostas
+            .using(ctx["db_alias"])
+            .filter(pchr_empr=ctx["empresa"], pchr_fili=ctx["filial"])
+            .select_related("pchr_item__chit_mode")
+            .order_by("pchr_item__chit_orde")
+        )
+
+        modelo = ChecklistService.obter_modelo_ativo(
+            db_alias=ctx["db_alias"],
+            empresa=ctx["empresa"],
+            filial=ctx["filial"],
             proc_tipo=processo.proc_tipo,
         )
 
-        context["slug"] = slug
+        context["slug"] = ctx["slug"]
+        context["respostas"] = respostas
         context["checklist_modelo"] = modelo
         context["checklist_versao"] = getattr(modelo, "chmo_vers", None)
         return context
