@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-4">
+<h3>{% if modo == 'editar' %}Editar{% else %}Novo{% endif %} Pedido Pisos</h3>
+<form method="post" class="card card-body">{% csrf_token %}
+  <div class="row g-3">
+    {% for field in form %}<div class="col-md-4"><label class="form-label">{{ field.label }}</label>{{ field }}</div>{% endfor %}
+  </div>
+  <div class="mt-3 d-flex gap-2">
+    <button class="btn btn-success" type="submit">Salvar</button>
+    <a class="btn btn-outline-secondary" href="{% url 'PisosWeb:pedidos_pisos_listar' slug=slug %}">Voltar</a>
+  </div>
+</form>
+</div>
+{% endblock %}

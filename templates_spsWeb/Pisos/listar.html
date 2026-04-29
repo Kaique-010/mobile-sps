@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3"><h3>Pedidos Pisos</h3><a class="btn btn-primary" href="{% url 'PisosWeb:pedidos_pisos_criar' slug=slug %}">Novo</a></div>
+  <div class="row g-3 mb-3">
+    <div class="col"><div class="card card-body">Total pedidos: {{ metricas.total_pedidos }}</div></div>
+    <div class="col"><div class="card card-body">Total valor: R$ {{ metricas.total_valor }}</div></div>
+    <div class="col"><div class="card card-body">Fechados: {{ metricas.total_fechados }}</div></div>
+  </div>
+  <table class="table table-striped"><thead><tr><th>Nº</th><th>Cliente</th><th>Data</th><th>Total</th><th></th></tr></thead><tbody>
+    {% for p in pedidos %}<tr><td>{{ p.pedi_nume }}</td><td>{{ p.pedi_clie }}</td><td>{{ p.pedi_data }}</td><td>{{ p.pedi_tota }}</td><td><a class="btn btn-sm btn-outline-primary" href="{% url 'PisosWeb:pedidos_pisos_visualizar' slug=slug pk=p.pedi_nume %}">Abrir</a></td></tr>{% empty %}<tr><td colspan="5">Sem pedidos.</td></tr>{% endfor %}
+  </tbody></table>
+</div>
+{% endblock %}
