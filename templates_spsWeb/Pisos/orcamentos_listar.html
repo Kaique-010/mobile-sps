@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-4">
+<h3>Orçamentos Pisos</h3>
+<table class="table table-dark table-striped"><thead><tr><th>Número</th><th>Cliente</th><th>Data</th><th>Total</th><th>Status</th><th>Ações</th></tr></thead><tbody>
+{% for o in orcamentos %}<tr><td>{{ o.orca_nume }}</td><td>{{ o.orca_clie }}</td><td>{{ o.orca_data }}</td><td>{{ o.orca_tota }}</td><td>{{ o.orca_stat }}</td><td><a class="btn btn-sm btn-success" href="{% url 'PisosWeb:orcamentos_pisos_exportar' slug=slug numero=o.orca_nume %}">Exportar Pedido</a></td></tr>{% endfor %}
+</tbody></table>
+</div>
+{% endblock %}

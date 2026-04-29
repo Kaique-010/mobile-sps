@@ -24,3 +24,14 @@ def autocomplete_clientes(request, slug):
 
 def autocomplete_vendedores(request, slug):
     return autocomplete_entidades(request, slug, "vendedores")
+
+
+from Produtos.models import Produtos
+
+def autocomplete_produtos(request, slug):
+    banco = get_db_from_slug(slug)
+    q=(request.GET.get("term") or "").strip()
+    qs=Produtos.objects.using(banco).all()
+    if q: qs=qs.filter(prod_nome__icontains=q)
+    data=[{"id":p.prod_codi,"label":f"{p.prod_codi} - {p.prod_nome}","value":p.prod_codi} for p in qs[:20]]
+    return JsonResponse(data,safe=False)
