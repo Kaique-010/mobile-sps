@@ -2,7 +2,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework.exceptions import ValidationError as DRFValidationError
 
 from Pisos.models import Pedidospisos
-from Pisos.serializers import PedidospisosSerializer
+from Pisos.serializers import PedidospisosSerializer, OrcamentopisosSerializer
 
 
 class PedidoPisosWebFlowService:
@@ -39,3 +39,12 @@ def exportar_orcamento_para_pedido(banco, empresa, filial, numero):
         Itenspedidospisos.objects.using(banco).create(item_empr=pedido.pedi_empr,item_fili=pedido.pedi_fili,item_pedi=pedido.pedi_nume,item_ambi=i.item_ambi,item_prod=i.item_prod,item_m2=i.item_m2,item_quan=i.item_quan,item_unit=i.item_unit,item_suto=i.item_suto,item_obse=i.item_obse,item_nome_ambi=i.item_nome_ambi,item_nume=i.item_nume,item_caix=i.item_caix,item_desc=i.item_desc,item_queb=i.item_queb)
     orcamento.orca_stat=2; orcamento.orca_pedi=pedido.pedi_nume; orcamento.save(using=banco)
     return pedido.pedi_nume
+
+
+class OrcamentoPisosWebFlowService:
+    @staticmethod
+    def criar(banco, payload, request=None):
+        serializer = OrcamentopisosSerializer(data=payload, context={"banco": banco, "request": request})
+        serializer.is_valid(raise_exception=True)
+        return serializer.save()
+

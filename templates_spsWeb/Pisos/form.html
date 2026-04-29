@@ -137,7 +137,9 @@
     resize: vertical;
   }
 
-  /* ── Tabs ── */
+  
+
+/* ── Tabs ── */
   .tabs {
     display: flex;
     gap: 4px;
@@ -416,26 +418,24 @@
 
             <div id="tab-financeiro" class="tab-content active">
               <div class="row g-2">
-                <div class="col-12">
-                  <label>Forma Recebimento</label>
-                  {{ form.pedi_form_paga }}
+                <div class="col-12"><label>Forma Recebimento</label>{{ form.pedi_form_paga }}</div>
+                <div class="col-4"><label>Desconto (R$)</label>{{ form.pedi_desc }}</div>
+                <div class="col-4"><label>Frete (R$)</label>{{ form.pedi_fret }}</div>
+                <div class="col-4"><label>Total Líquido</label>{{ form.pedi_tota }}</div>
+                <div class="col-6"><label>Entrada (R$)</label><input id="fin-entrada" class="form-control" type="number" step="0.01" value="0"></div>
+                <div class="col-6"><label>Restante</label><input id="fin-restante" class="form-control calc-field" readonly></div>
+                <div class="col-4"><label>Parcelas</label><input id="fin-parcelas" class="form-control" type="number" min="1" value="1"></div>
+                <div class="col-8"><label>Condição (dias)</label><input id="fin-condicao" class="form-control" placeholder="Ex: 30 60 90"></div>
+                <div class="col-12 d-flex gap-2 flex-wrap">
+                  <button type="button" class="btn btn-sm btn-outline-success" id="fin-gerar">Gerar Títulos</button>
+                  <button type="button" class="btn btn-sm btn-outline-danger" id="fin-limpar">Remover</button>
                 </div>
-                <div class="col-6">
-                  <label>Desconto (R$)</label>
-                  {{ form.pedi_desc }}
-                </div>
-                <div class="col-6">
-                  <label>Frete (R$)</label>
-                  {{ form.pedi_fret }}
-                </div>
-                <div class="col-6">
-                  <label>Total Líquido</label>
-                  {{ form.pedi_tota }}
-                </div>
-                <div class="col-6">
-                  <label>Orçamento</label>
-                  {{ form.pedi_orca }}
-                </div>
+              </div>
+              <div class="table-responsive mt-2">
+                <table class="table table-sm table-dark align-middle mb-0">
+                  <thead><tr><th>Parcela</th><th>Vencimento</th><th class="text-end">Valor</th><th>Forma</th><th>Status</th></tr></thead>
+                  <tbody id="fin-titulos-body"></tbody>
+                </table>
               </div>
             </div>
 
@@ -639,6 +639,29 @@ function showToast(message, type = 'danger') {
   `;
   container.appendChild(toast);
   setTimeout(() => toast.remove(), 6500);
+}
+
+
+function gerarTitulosFinanceiro() {
+  const body = document.getElementById('fin-titulos-body');
+  if (!body) return;
+  const total = parseFloat(document.getElementById('id_pedi_tota')?.value || 0) || 0;
+  const entrada = parseFloat(document.getElementById('fin-entrada')?.value || 0) || 0;
+  const restante = Math.max(total - entrada, 0);
+  const parcelas = Math.max(parseInt(document.getElementById('fin-parcelas')?.value || '1', 10), 1);
+  const cond = (document.getElementById('fin-condicao')?.value || '').trim();
+  const dias = cond ? cond.split(/\s+/).map(x => parseInt(x,10)).filter(x => !isNaN(x)) : [];
+  const valorParcela = restante / parcelas;
+  const base = new Date();
+  body.innerHTML = '';
+  for (let i=0;i<parcelas;i++) {
+    const d = new Date(base);
+    d.setDate(d.getDate() + (dias[i] || (30 * i)));
+    const venc = d.toISOString().slice(0,10).split('-').reverse().join('/');
+    body.innerHTML += `<tr><td>${i+1}</td><td>${venc}</td><td class="text-end">${fmtBRL(valorParcela)}</td><td>${document.getElementById('id_pedi_form_paga')?.value || '-'}</td><td>Aberto</td></tr>`;
+  }
+  const finRest = document.getElementById('fin-restante');
+  if (finRest) finRest.value = fmtBRL(restante);
 }
 
 /* ── Tabs ── */
@@ -946,6 +969,9 @@ function markServerErrors() {
 document.addEventListener('DOMContentLoaded', () => {
   bindTabs();
   renderWorkflow();
+  document.getElementById("fin-gerar")?.addEventListener("click", gerarTitulosFinanceiro);
+  document.getElementById("fin-limpar")?.addEventListener("click", () => { const b=document.getElementById("fin-titulos-body"); if (b) b.innerHTML=""; });
+  document.getElementById("fin-entrada")?.addEventListener("input", gerarTitulosFinanceiro);
   markServerErrors();
   validateBeforeSubmit();
 

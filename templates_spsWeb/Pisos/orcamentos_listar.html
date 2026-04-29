@@ -1,9 +1,40 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="container py-4">
-<h3>Orçamentos Pisos</h3>
-<table class="table table-dark table-striped"><thead><tr><th>Número</th><th>Cliente</th><th>Data</th><th>Total</th><th>Status</th><th>Ações</th></tr></thead><tbody>
-{% for o in orcamentos %}<tr><td>{{ o.orca_nume }}</td><td>{{ o.orca_clie }}</td><td>{{ o.orca_data }}</td><td>{{ o.orca_tota }}</td><td>{{ o.orca_stat }}</td><td><a class="btn btn-sm btn-success" href="{% url 'PisosWeb:orcamentos_pisos_exportar' slug=slug numero=o.orca_nume %}">Exportar Pedido</a></td></tr>{% endfor %}
-</tbody></table>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">Orçamentos Pisos</h3>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header">Registrar orçamento pisos</div>
+    <div class="card-body">
+      <form method="post" action="{% url 'PisosWeb:orcamentos_pisos_criar' slug=slug %}" class="row g-2">
+        {% csrf_token %}
+        <div class="col-md-2"><input class="form-control" name="orca_clie" placeholder="Cliente código" required></div>
+        <div class="col-md-2"><input class="form-control" name="orca_vend" placeholder="Vendedor código"></div>
+        <div class="col-md-2"><input type="date" class="form-control" name="orca_data"></div>
+        <div class="col-md-2"><input type="date" class="form-control" name="orca_data_prev_entr"></div>
+        <div class="col-md-2"><input class="form-control" name="item_prod" placeholder="Produto" required></div>
+        <div class="col-md-2"><input type="number" step="0.01" class="form-control" name="item_m2" placeholder="M²"></div>
+        <div class="col-md-2"><input type="number" step="0.01" class="form-control" name="item_unit" placeholder="Unitário"></div>
+        <div class="col-md-6"><input class="form-control" name="orca_obse" placeholder="Observações"></div>
+        <div class="col-12">
+          <button class="btn btn-primary btn-sm" type="submit">Criar orçamento</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <table class="table table-dark table-striped">
+    <thead><tr><th>Número</th><th>Cliente</th><th>Data</th><th>Total</th><th>Status</th><th>Ações</th></tr></thead>
+    <tbody>
+      {% for o in orcamentos %}
+      <tr>
+        <td>{{ o.orca_nume }}</td><td>{{ o.orca_clie }}</td><td>{{ o.orca_data }}</td><td>{{ o.orca_tota }}</td><td>{{ o.orca_stat }}</td>
+        <td><a class="btn btn-sm btn-success" href="{% url 'PisosWeb:orcamentos_pisos_exportar' slug=slug numero=o.orca_nume %}">Exportar Pedido</a></td>
+      </tr>
+      {% empty %}<tr><td colspan="6">Sem orçamentos.</td></tr>{% endfor %}
+    </tbody>
+  </table>
 </div>
 {% endblock %}
