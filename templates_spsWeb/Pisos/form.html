@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+:root{--bg:#1a1d26;--bg2:#22263a;--bg3:#2a2f47;--panel:#1e2236;--border:#323760;--border2:#404880;--accent:#4f8ef7;--green:#22c55e;--orange:#f59e0b;--red:#ef4444;--gray:#8896b3;--text:#e2e8f8;--text2:#a0aec8;--input-bg:#161929;--row-hover:#2d345a;--tab-active:#2a2f47}
+.pw{max-width:1400px;margin:16px auto;background:var(--bg);border:1px solid var(--border2);border-radius:8px;color:var(--text)}
+.pw-head{padding:8px 14px;border-bottom:1px solid var(--border);color:var(--accent);font-weight:700}
+.pw-main{display:flex;min-width:0}.pw-left{width:530px;padding:12px 14px;border-right:1px solid var(--border)}.pw-right{flex:1;padding:10px 14px;min-width:0;overflow:hidden}
+label{font-size:10px;color:var(--gray);text-transform:uppercase;margin-bottom:2px;display:block} .form-row{display:flex;gap:10px;margin-bottom:8px;align-items:flex-end}
+input,select,textarea{background:var(--input-bg)!important;border:1px solid var(--border2)!important;color:var(--text)!important;font-size:12px!important}
+textarea{min-height:90px}.tabs{display:flex;border-bottom:1px solid var(--border2);margin-top:10px}.tab{padding:5px 14px;color:var(--gray);cursor:pointer}.tab.active{color:var(--accent);border-bottom:2px solid var(--accent);background:var(--tab-active)}
+.tab-content{display:none;padding-top:12px}.tab-content.active{display:block}.it-title{font-size:11px;color:var(--gray);border:1px solid var(--border2);padding:4px 10px;border-radius:5px 5px 0 0;background:var(--bg3);font-weight:700}
+.it-wrap{border:1px solid var(--border2);border-top:none;max-height:600px;overflow:auto;max-width:100%}.it-wrap table{width:100%;font-size:11px}.it-wrap th{background:var(--bg3);color:var(--gray);padding:5px 8px;text-transform:uppercase}.it-wrap td{padding:5px 8px;border-top:1px solid var(--border)}
+.actions{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--border);background:var(--bg2)}@media(max-width:1100px){.pw-main{flex-direction:column}.pw-left{width:100%;border-right:0;border-bottom:1px solid var(--border)}}
+</style>
+
+<div class="pw">
+  <div class="pw-head">::RTA4166:: Pedido Pisos</div>
+  <form method="post">{% csrf_token %}
+  <div class="pw-main">
+    <div class="pw-left">
+      <div class="form-row">
+        <div style="width:60px"><label>Loja</label>{{ form.pedi_fili }}</div>
+        <div style="flex:1"><label>Cliente</label><input id="cliente_nome" class="form-control" placeholder="Buscar cliente"><div class="d-none">{{ form.pedi_clie }}</div></div>
+        <div style="width:110px"><label>Pedido</label><input class="form-control" value="{% if pedido %}{{ pedido.pedi_nume }}{% else %}(novo){% endif %}" readonly></div>
+      </div>
+      <div class="form-row"><div style="flex:1"><label>Vendedor</label><input id="vendedor_nome" class="form-control" placeholder="Buscar vendedor"><div class="d-none">{{ form.pedi_vend }}</div></div><div style="width:110px"><label>Data</label>{{ form.pedi_data }}</div></div>
+      <div class="form-row"><div style="width:110px"><label>Data prev. entrega</label>{{ form.pedi_data_prev_entr }}</div><div style="flex:1"><label>Observações</label>{{ form.pedi_obse }}</div></div>
+
+      <div class="tabs">
+        <div class="tab active" data-tab="financeiro">Financeiro</div>
+        <div class="tab" data-tab="croqui">Croqui</div>
+        <div class="tab" data-tab="servicos">Serviços</div><div class="tab" data-tab="workflow">Workflow</div>
+      </div>
+      <div id="tab-financeiro" class="tab-content active">
+        <div class="form-row"><div style="flex:1"><label>Forma Recebimento</label>{{ form.pedi_form_paga }}</div><div style="width:90px"><label>Desconto</label>{{ form.pedi_desc }}</div><div style="width:90px"><label>Frete</label>{{ form.pedi_fret }}</div></div>
+        <div class="form-row"><div style="width:120px"><label>Total Líquido</label>{{ form.pedi_tota }}</div><div style="width:100px"><label>Status</label>{{ form.pedi_stat }}</div><div style="width:100px"><label>Orçamento</label>{{ form.pedi_orca }}</div></div>
+      </div>
+      <div id="tab-croqui" class="tab-content"><label>Croqui</label>{{ form.pedi_croq_info }}</div>
+      <div id="tab-servicos" class="tab-content"><button type="button" class="btn btn-sm btn-outline-info">Incluir Serviço</button></div><div id="tab-workflow" class="tab-content"><div id="wf-timeline" style="font-size:11px;color:var(--text2)"></div></div>
+    </div>
+
+    <div class="pw-right">
+      <div class="it-title">Itens Pedido</div>
+      {{ formset.management_form }}
+      <div class="it-wrap"><table><thead><tr><th>Nome Ambiente</th><th>Caixa</th><th>M²</th><th>Produto</th><th>Nome Produto</th><th>Quant.</th><th>Unitário</th><th>Desc</th><th>Quebra</th><th>Obs</th><th>Del</th></tr></thead><tbody>
+      {% for f in formset %}<tr><td>{{ f.item_nome_ambi }}{{ f.item_ambi.as_hidden }}</td><td>{{ f.item_caix }}</td><td>{{ f.item_m2 }}</td><td><input id="produto_busca_{{ forloop.counter0 }}" class="form-control" placeholder="Buscar produto"><div class="d-none">{{ f.item_prod }}</div></td><td>{{ f.item_prod_nome }}</td><td>{{ f.item_quan }}</td><td>{{ f.item_unit }}</td><td>{{ f.item_desc }}</td><td>{{ f.item_queb }}</td><td>{{ f.item_obse }}</td><td>{{ f.DELETE }}</td></tr>{% endfor %}
+      </tbody></table></div>
+    </div>
+  </div>
+  <div class="actions"><button class="btn btn-success btn-sm" type="submit">Gravar</button><a class="btn btn-secondary btn-sm" href="{% url 'PisosWeb:pedidos_pisos_listar' slug=slug %}">Cancelar</a></div>
+  </form>
+</div>
+<script>
+function bindTabs(){document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));t.classList.add('active');document.getElementById('tab-'+t.dataset.tab).classList.add('active');});}
+function setupAutocomplete(inputId, hiddenId, url){const inp=document.getElementById(inputId);const hid=document.getElementById(hiddenId);if(!inp||!hid)return;let box=document.createElement('div');box.className='list-group position-absolute';box.style.zIndex=50;inp.parentElement.style.position='relative';inp.parentElement.appendChild(box);inp.addEventListener('input',async()=>{if(inp.value.length<2){box.innerHTML='';return;}const r=await fetch(url+'?term='+encodeURIComponent(inp.value));const d=await r.json();box.innerHTML=d.map(i=>`<button type="button" class="list-group-item list-group-item-action">${i.label}</button>`).join('');[...box.children].forEach((b,idx)=>b.onclick=()=>{inp.value=d[idx].label;hid.value=d[idx].id;box.innerHTML='';});});}
+function renderWorkflow(){const steps=['Financeiro Ok','Compra Realizada','Pedido Instalado','Pedido Finalizado'];document.getElementById('wf-timeline').innerHTML=steps.map((s,i)=>`<div style="padding:6px 0;border-bottom:1px solid #323760">${i+1}. ${s} <button type="button" class="btn btn-sm btn-outline-primary">Concluir</button></div>`).join('');}
+document.addEventListener('DOMContentLoaded',()=>{bindTabs();renderWorkflow();setupAutocomplete('cliente_nome','id_pedi_clie',"{% url 'PisosWeb:autocomplete_clientes' slug=slug %}");setupAutocomplete('vendedor_nome','id_pedi_vend',"{% url 'PisosWeb:autocomplete_vendedores' slug=slug %}");document.querySelectorAll('[id^=produto_busca_]').forEach((el)=>{const idx=el.id.split('_').pop();setupAutocomplete(el.id,'id_itens-'+idx+'-item_prod',"{% url 'PisosWeb:autocomplete_produtos' slug=slug %}");});});
+</script>
+{% endblock %}
