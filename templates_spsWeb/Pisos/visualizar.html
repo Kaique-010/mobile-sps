@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-4">
+  <h3>Pedido Pisos #{{ pedido.pedi_nume }}</h3>
+  <div class="mb-3 d-flex gap-2">
+    <a class="btn btn-primary" href="{% url 'PisosWeb:pedidos_pisos_editar' slug=slug pk=pedido.pedi_nume %}">Editar</a>
+    <a class="btn btn-outline-secondary" href="{% url 'PisosWeb:pedidos_pisos_listar' slug=slug %}">Listar</a>
+  </div>
+  <div class="card card-body mb-3">
+    <p><b>Cliente:</b> {{ pedido.pedi_clie }} | <b>Total:</b> {{ pedido.pedi_tota }} | <b>Orçamento:</b> {{ pedido.pedi_orca }}</p>
+    <p><b>Financeiro:</b> Fluxo financeiro disponível nesta tela (baseado no template).</p>
+  </div>
+  <h5>Itens</h5>
+  <table class="table"><thead><tr><th>Produto</th><th>Qtd</th><th>Unit</th><th>Total</th></tr></thead><tbody>
+  {% for i in itens %}<tr><td>{{ i.item_prod }}</td><td>{{ i.item_quan }}</td><td>{{ i.item_unit }}</td><td>{{ i.item_suto }}</td></tr>{% empty %}<tr><td colspan="4">Sem itens</td></tr>{% endfor %}
+  </tbody></table>
+</div>
+{% endblock %}
