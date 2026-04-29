@@ -1,59 +1,988 @@
 {% extends 'base.html' %}
 {% block content %}
+
 <style>
-:root{--bg:#1a1d26;--bg2:#22263a;--bg3:#2a2f47;--panel:#1e2236;--border:#323760;--border2:#404880;--accent:#4f8ef7;--green:#22c55e;--orange:#f59e0b;--red:#ef4444;--gray:#8896b3;--text:#e2e8f8;--text2:#a0aec8;--input-bg:#161929;--row-hover:#2d345a;--tab-active:#2a2f47}
-.pw{max-width:1400px;margin:16px auto;background:var(--bg);border:1px solid var(--border2);border-radius:8px;color:var(--text)}
-.pw-head{padding:8px 14px;border-bottom:1px solid var(--border);color:var(--accent);font-weight:700}
-.pw-main{display:flex;min-width:0}.pw-left{width:530px;padding:12px 14px;border-right:1px solid var(--border)}.pw-right{flex:1;padding:10px 14px;min-width:0;overflow:hidden}
-label{font-size:10px;color:var(--gray);text-transform:uppercase;margin-bottom:2px;display:block} .form-row{display:flex;gap:10px;margin-bottom:8px;align-items:flex-end}
-input,select,textarea{background:var(--input-bg)!important;border:1px solid var(--border2)!important;color:var(--text)!important;font-size:12px!important}
-textarea{min-height:90px}.tabs{display:flex;border-bottom:1px solid var(--border2);margin-top:10px}.tab{padding:5px 14px;color:var(--gray);cursor:pointer}.tab.active{color:var(--accent);border-bottom:2px solid var(--accent);background:var(--tab-active)}
-.tab-content{display:none;padding-top:12px}.tab-content.active{display:block}.it-title{font-size:11px;color:var(--gray);border:1px solid var(--border2);padding:4px 10px;border-radius:5px 5px 0 0;background:var(--bg3);font-weight:700}
-.it-wrap{border:1px solid var(--border2);border-top:none;max-height:600px;overflow:auto;max-width:100%}.it-wrap table{width:100%;font-size:11px}.it-wrap th{background:var(--bg3);color:var(--gray);padding:5px 8px;text-transform:uppercase}.it-wrap td{padding:5px 8px;border-top:1px solid var(--border)}
-.actions{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--border);background:var(--bg2)}@media(max-width:1100px){.pw-main{flex-direction:column}.pw-left{width:100%;border-right:0;border-bottom:1px solid var(--border)}}
+  :root {
+    --bg: #151925;
+    --bg2: #202640;
+    --bg3: #252d4d;
+    --panel: #171b2a;
+    --border: #303a6b;
+    --border2: #344078;
+    --accent: #4f8ef7;
+    --accent-glow: rgba(79, 142, 247, 0.18);
+    --text: #e2e8f8;
+    --muted: #9aa8c7;
+    --input-bg: #111522;
+    --success: #22c55e;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+  }
+
+  /* ── Layout wrapper ── */
+  .pedido-wrapper {
+    max-width: calc(100vw - 48px);
+    margin: 18px auto;
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    color: var(--text);
+    overflow: hidden;
+  }
+
+  /* ── Header com status à direita ── */
+  .pedido-header {
+    padding: 10px 18px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .pedido-header-left {
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .pedido-header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .status-label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* Status select estilizado */
+  .status-select {
+    background: var(--input-bg) !important;
+    border: 1px solid var(--border2) !important;
+    color: var(--text) !important;
+    font-size: 12px !important;
+    border-radius: 6px !important;
+    padding: 4px 10px !important;
+    min-width: 140px;
+    cursor: pointer;
+  }
+
+  .status-select:focus {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 0.15rem var(--accent-glow) !important;
+    outline: none;
+  }
+
+  /* ── Body ── */
+  .pedido-body {
+    padding: 16px;
+  }
+
+  /* ── Cards ── */
+  .section-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+
+  .section-title {
+    color: #8fb3ff;
+    font-size: 11px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+  }
+
+  /* ── Labels e inputs ── */
+  label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    display: block;
+    letter-spacing: .04em;
+  }
+
+  input,
+  select,
+  textarea {
+    background: var(--input-bg) !important;
+    border: 1px solid #3b4780 !important;
+    color: #eef3ff !important;
+    font-size: 12px !important;
+    border-radius: 6px !important;
+    transition: border-color .15s, box-shadow .15s;
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 0.15rem var(--accent-glow) !important;
+  }
+
+  textarea {
+    min-height: 110px;
+    resize: vertical;
+  }
+
+  /* ── Tabs ── */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--border2);
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+
+  .tab {
+    padding: 7px 14px;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 11px;
+    border-radius: 6px 6px 0 0;
+    transition: color .15s, background .15s;
+    user-select: none;
+  }
+
+  .tab:hover { color: var(--text); background: var(--bg3); }
+
+  .tab.active {
+    color: var(--accent);
+    border-bottom: 2px solid var(--accent);
+    background: var(--bg3);
+  }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ── Tabela de itens ── */
+  .itens-table-wrap {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    max-height: 520px;
+    overflow: auto;
+  }
+
+  .itens-table-wrap table { min-width: 1380px; }
+
+  .itens-table-wrap thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--bg3) !important;
+    color: #aebcff;
+    font-size: 10px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    padding: 8px 6px;
+    letter-spacing: .04em;
+  }
+
+  .itens-table-wrap td {
+    border-color: #2c355f !important;
+    vertical-align: middle;
+    padding: 4px 6px !important;
+  }
+
+  /* Colunas calculadas (readonly) */
+  .calc-field {
+    background: #0e1320 !important;
+    border-color: #252d52 !important;
+    color: #6ee7b7 !important;
+    cursor: not-allowed;
+  }
+
+  /* Badge de caixas */
+  .badge-caix {
+    display: inline-block;
+    background: #1e3a5f;
+    border: 1px solid #2d5a9e;
+    color: #93c5fd;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 5px;
+    padding: 2px 8px;
+    min-width: 40px;
+    text-align: center;
+  }
+
+  /* ── Autocomplete ── */
+  .autocomplete-box {
+    z-index: 1050;
+    width: 100%;
+    max-height: 240px;
+    overflow-y: auto;
+    background: #1a2040;
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    top: calc(100% + 2px);
+    left: 0;
+  }
+
+  .autocomplete-box .list-group-item {
+    background: transparent;
+    border-color: #2c355f;
+    color: var(--text);
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+
+  .autocomplete-box .list-group-item:hover {
+    background: var(--bg3);
+    color: var(--accent);
+  }
+
+  /* ── Rodapé de totais ── */
+  .totais-bar {
+    padding: 8px 14px;
+    background: #0e1320;
+    border-top: 1px solid var(--border);
+    border-radius: 0 0 8px 8px;
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .total-item {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .total-item span:first-child {
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+
+  .total-item span:last-child {
+    font-size: 13px;
+    font-weight: 700;
+    color: #6ee7b7;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Actions ── */
+  .actions {
+    padding: 12px 16px;
+    background: var(--bg2);
+    border-top: 1px solid var(--border2);
+    display: flex;
+    gap: 8px;
+  }
+
+  /* ── Errors ── */
+  .field-error {
+    border-color: var(--danger) !important;
+    box-shadow: 0 0 0 0.1rem rgba(239,68,68,.2) !important;
+  }
+
+  /* ── Toast ── */
+  .toast-container { z-index: 9999; }
+
+  /* ── Spinner de cálculo ── */
+  .calc-spinner {
+    display: none;
+    width: 12px;
+    height: 12px;
+    border: 2px solid #334;
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  @keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+
+  @media (min-width: 1200px) {
+    .pedido-body { min-height: 580px; }
+  }
 </style>
 
-<div class="pw">
-  <div class="pw-head">::RTA4166:: Pedido Pisos</div>
-  <form method="post">{% csrf_token %}
-  <div class="pw-main">
-    <div class="pw-left">
-      <div class="form-row">
-        <div style="width:60px"><label>Loja</label>{{ form.pedi_fili }}</div>
-        <div style="flex:1"><label>Cliente</label><input id="cliente_nome" class="form-control" placeholder="Buscar cliente"><div class="d-none">{{ form.pedi_clie }}</div></div>
-        <div style="width:110px"><label>Pedido</label><input class="form-control" value="{% if pedido %}{{ pedido.pedi_nume }}{% else %}(novo){% endif %}" readonly></div>
-      </div>
-      <div class="form-row"><div style="flex:1"><label>Vendedor</label><input id="vendedor_nome" class="form-control" placeholder="Buscar vendedor"><div class="d-none">{{ form.pedi_vend }}</div></div><div style="width:110px"><label>Data</label>{{ form.pedi_data }}</div></div>
-      <div class="form-row"><div style="width:110px"><label>Data prev. entrega</label>{{ form.pedi_data_prev_entr }}</div><div style="flex:1"><label>Observações</label>{{ form.pedi_obse }}</div></div>
+<!-- ── Toasts ── -->
+<div class="toast-container position-fixed top-0 end-0 p-3">
+  {% if form.errors or formset.errors or formset.non_form_errors %}
+  <div class="toast text-bg-danger border-0 show" role="alert">
+    <div class="toast-header text-bg-danger border-0">
+      <strong class="me-auto">Erro ao gravar pedido</strong>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+    </div>
+    <div class="toast-body">Existem campos obrigatórios ou inválidos. Confira os dados e os itens.</div>
+  </div>
+  {% endif %}
 
-      <div class="tabs">
-        <div class="tab active" data-tab="financeiro">Financeiro</div>
-        <div class="tab" data-tab="croqui">Croqui</div>
-        <div class="tab" data-tab="servicos">Serviços</div><div class="tab" data-tab="workflow">Workflow</div>
-      </div>
-      <div id="tab-financeiro" class="tab-content active">
-        <div class="form-row"><div style="flex:1"><label>Forma Recebimento</label>{{ form.pedi_form_paga }}</div><div style="width:90px"><label>Desconto</label>{{ form.pedi_desc }}</div><div style="width:90px"><label>Frete</label>{{ form.pedi_fret }}</div></div>
-        <div class="form-row"><div style="width:120px"><label>Total Líquido</label>{{ form.pedi_tota }}</div><div style="width:100px"><label>Status</label>{{ form.pedi_stat }}</div><div style="width:100px"><label>Orçamento</label>{{ form.pedi_orca }}</div></div>
-      </div>
-      <div id="tab-croqui" class="tab-content"><label>Croqui</label>{{ form.pedi_croq_info }}</div>
-      <div id="tab-servicos" class="tab-content"><button type="button" class="btn btn-sm btn-outline-info">Incluir Serviço</button></div><div id="tab-workflow" class="tab-content"><div id="wf-timeline" style="font-size:11px;color:var(--text2)"></div></div>
+  {% for message in messages %}
+  <div class="toast text-bg-{{ message.tags|default:'info' }} border-0 show" role="alert">
+    <div class="toast-header text-bg-{{ message.tags|default:'info' }} border-0">
+      <strong class="me-auto">Aviso</strong>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+    </div>
+    <div class="toast-body">{{ message }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="pedido-wrapper">
+  <!-- ── Header ── -->
+  <div class="pedido-header">
+    <div class="pedido-header-left">
+      <i class="bi bi-patch-check"></i>
+      Pedido Pisos
+      {% if pedido %}<span style="color:var(--muted);font-weight:400">#{{ pedido.pedi_nume }}</span>{% endif %}
     </div>
 
-    <div class="pw-right">
-      <div class="it-title">Itens Pedido</div>
-      {{ formset.management_form }}
-      <div class="it-wrap"><table><thead><tr><th>Nome Ambiente</th><th>Caixa</th><th>M²</th><th>Produto</th><th>Nome Produto</th><th>Quant.</th><th>Unitário</th><th>Desc</th><th>Quebra</th><th>Obs</th><th>Del</th></tr></thead><tbody>
-      {% for f in formset %}<tr><td>{{ f.item_nome_ambi }}{{ f.item_ambi.as_hidden }}</td><td>{{ f.item_caix }}</td><td>{{ f.item_m2 }}</td><td><input id="produto_busca_{{ forloop.counter0 }}" class="form-control" placeholder="Buscar produto"><div class="d-none">{{ f.item_prod }}</div></td><td>{{ f.item_prod_nome }}</td><td>{{ f.item_quan }}</td><td>{{ f.item_unit }}</td><td>{{ f.item_desc }}</td><td>{{ f.item_queb }}</td><td>{{ f.item_obse }}</td><td>{{ f.DELETE }}</td></tr>{% endfor %}
-      </tbody></table></div>
+    <div class="pedido-header-right">
+      <span class="status-label">Status</span>
+      {{ form.pedi_stat }}
     </div>
   </div>
-  <div class="actions"><button class="btn btn-success btn-sm" type="submit">Gravar</button><a class="btn btn-secondary btn-sm" href="{% url 'PisosWeb:pedidos_pisos_listar' slug=slug %}">Cancelar</a></div>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    <div class="pedido-body">
+      <div class="row g-3 align-items-start">
+
+        <!-- ── Coluna esquerda ── -->
+        <div class="col-12 col-xl-4">
+          <div class="section-card mb-3">
+            <div class="section-title"><i class="bi bi-file-text me-1"></i>Dados do Pedido</div>
+
+            <div class="row g-2">
+              <div class="col-4">
+                <label>Loja</label>
+                {{ form.pedi_fili }}
+              </div>
+
+              <div class="col-8 position-relative">
+                <label>Cliente</label>
+                <input id="cliente_nome" class="form-control" placeholder="Buscar cliente...">
+                <div class="d-none">{{ form.pedi_clie }}</div>
+              </div>
+
+              <div class="col-4">
+                <label>Pedido</label>
+                <input class="form-control"
+                  value="{% if pedido %}{{ pedido.pedi_nume }}{% else %}(novo){% endif %}" readonly>
+              </div>
+
+              <div class="col-4">
+                <label>Data</label>
+                {{ form.pedi_data }}
+              </div>
+
+              <div class="col-4">
+                <label>Prev. Entrega</label>
+                {{ form.pedi_data_prev_entr }}
+              </div>
+
+              <div class="col-12 position-relative">
+                <label>Vendedor</label>
+                <input id="vendedor_nome" class="form-control" placeholder="Buscar vendedor...">
+                <div class="d-none">{{ form.pedi_vend }}</div>
+              </div>
+
+              <div class="col-12">
+                <label>Observações</label>
+                {{ form.pedi_obse }}
+              </div>
+            </div>
+          </div>
+
+          <div class="section-card">
+            <div class="tabs">
+              <div class="tab active" data-tab="financeiro">Financeiro</div>
+              <div class="tab" data-tab="croqui">Croqui</div>
+              <div class="tab" data-tab="servicos">Serviços</div>
+              <div class="tab" data-tab="workflow">Workflow</div>
+            </div>
+
+            <div id="tab-financeiro" class="tab-content active">
+              <div class="row g-2">
+                <div class="col-12">
+                  <label>Forma Recebimento</label>
+                  {{ form.pedi_form_paga }}
+                </div>
+                <div class="col-6">
+                  <label>Desconto (R$)</label>
+                  {{ form.pedi_desc }}
+                </div>
+                <div class="col-6">
+                  <label>Frete (R$)</label>
+                  {{ form.pedi_fret }}
+                </div>
+                <div class="col-6">
+                  <label>Total Líquido</label>
+                  {{ form.pedi_tota }}
+                </div>
+                <div class="col-6">
+                  <label>Orçamento</label>
+                  {{ form.pedi_orca }}
+                </div>
+              </div>
+            </div>
+
+            <div id="tab-croqui" class="tab-content">
+              <label>Croqui / Informações</label>
+              {{ form.pedi_croq_info }}
+            </div>
+
+            <div id="tab-servicos" class="tab-content">
+              <button type="button" class="btn btn-sm btn-outline-info">
+                <i class="bi bi-plus"></i> Incluir Serviço
+              </button>
+            </div>
+
+            <div id="tab-workflow" class="tab-content">
+              <div id="wf-timeline" style="font-size:11px;color:#a0aec8;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Coluna direita — Itens ── -->
+        <div class="col-12 col-xl-8">
+          <div class="section-card h-100 d-flex flex-column" style="padding-bottom:0">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="section-title mb-0"><i class="bi bi-grid-3x3 me-1"></i>Itens do Pedido</div>
+              <button type="button" id="btn-add-item" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-plus-lg"></i> Adicionar Item
+              </button>
+            </div>
+
+            {{ formset.management_form }}
+
+            <div class="itens-table-wrap flex-grow-1">
+              <table class="table table-sm table-dark table-hover align-middle mb-0" id="itens-table">
+                <thead>
+                  <tr>
+                    <th style="min-width:100px">Ambiente</th>
+                    <th style="min-width:60px">Caixas</th>
+                    <th style="min-width:80px">M²</th>
+                    <th style="min-width:140px">Produto</th>
+                    <th style="min-width:160px">Nome Produto</th>
+                    <th style="min-width:90px">Quant.</th>
+                    <th style="min-width:90px">Unitário</th>
+                    <th style="min-width:80px">Desc %</th>
+                    <th style="min-width:80px">Quebra %</th>
+                    <th style="min-width:90px">Subtotal</th>
+                    <th style="min-width:80px">Obs</th>
+                    <th style="min-width:36px">Del</th>
+                  </tr>
+                </thead>
+
+                <tbody id="itens-tbody">
+                  {% for f in formset %}
+                  <tr data-index="{{ forloop.counter0 }}">
+                    <td>
+                      {{ f.item_nome_ambi }}
+                      {{ f.item_ambi.as_hidden }}
+                    </td>
+
+                    <!-- Caixas (calculado) -->
+                    <td>
+                      <div class="badge-caix" id="badge-caix-{{ forloop.counter0 }}">
+                        {{ f.item_caix.value|default:"—" }}
+                      </div>
+                      <div class="d-none">{{ f.item_caix }}</div>
+                    </td>
+
+                    <!-- M² (input do usuário — dispara cálculo) -->
+                    <td class="position-relative">
+                      <input type="number" step="0.01"
+                        id="m2-{{ forloop.counter0 }}"
+                        class="form-control form-control-sm item-m2"
+                        value="{{ f.item_m2.value|default:'' }}"
+                        data-index="{{ forloop.counter0 }}"
+                        placeholder="0,00">
+                      <div class="d-none">{{ f.item_m2 }}</div>
+                      <div class="calc-spinner" id="spin-{{ forloop.counter0 }}"></div>
+                    </td>
+
+                    <!-- Produto autocomplete -->
+                    <td class="position-relative">
+                      <input id="produto_busca_{{ forloop.counter0 }}"
+                        class="form-control form-control-sm"
+                        placeholder="Buscar produto"
+                        data-index="{{ forloop.counter0 }}">
+                      <div class="d-none">{{ f.item_prod }}</div>
+                    </td>
+
+                    <td>{{ f.item_prod_nome }}</td>
+
+                    <!-- Quant. (calculado pelo service) -->
+                    <td>
+                      <input type="number" step="0.0001"
+                        id="quan-{{ forloop.counter0 }}"
+                        class="form-control form-control-sm calc-field"
+                        value="{{ f.item_quan.value|default:'' }}"
+                        readonly tabindex="-1">
+                      <div class="d-none">{{ f.item_quan }}</div>
+                    </td>
+
+                    <!-- Unitário (usuário preenche → dispara cálculo) -->
+                    <td>
+                      <input type="number" step="0.01"
+                        id="unit-{{ forloop.counter0 }}"
+                        class="form-control form-control-sm item-unit"
+                        value="{{ f.item_unit.value|default:'' }}"
+                        data-index="{{ forloop.counter0 }}"
+                        placeholder="0,00">
+                      <div class="d-none">{{ f.item_unit }}</div>
+                    </td>
+
+                    <td>{{ f.item_desc }}</td>
+
+                    <!-- Quebra % (dispara cálculo) -->
+                    <td>
+                      <input type="number" step="0.01" min="0" max="100"
+                        id="queb-{{ forloop.counter0 }}"
+                        class="form-control form-control-sm item-queb"
+                        value="{{ f.item_queb.value|default:'' }}"
+                        data-index="{{ forloop.counter0 }}"
+                        placeholder="0">
+                      <div class="d-none">{{ f.item_queb }}</div>
+                    </td>
+
+                    <!-- Subtotal (calculado) -->
+                    <td>
+                      <input type="text"
+                        id="suto-{{ forloop.counter0 }}"
+                        class="form-control form-control-sm calc-field"
+                        value="{{ f.item_suto.value|default:'' }}"
+                        readonly tabindex="-1">
+                    </td>
+
+                    <td>{{ f.item_obse }}</td>
+                    <td>{{ f.DELETE }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Totais bar -->
+            <div class="totais-bar">
+              <div class="total-item">
+                <span>Subtotal itens</span>
+                <span id="total-itens">R$ 0,00</span>
+              </div>
+              <div class="total-item">
+                <span>Desconto</span>
+                <span id="total-desc" style="color:#fbbf24">R$ 0,00</span>
+              </div>
+              <div class="total-item">
+                <span>Frete</span>
+                <span id="total-fret" style="color:#93c5fd">R$ 0,00</span>
+              </div>
+              <div class="total-item" style="margin-left:auto">
+                <span>Total Geral</span>
+                <span id="total-geral" style="font-size:16px">R$ 0,00</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-outline-success btn-sm" type="submit">
+        <i class="bi bi-check-lg"></i> Gravar
+      </button>
+      <a class="btn btn-outline-danger btn-sm"
+        href="{% url 'PisosWeb:pedidos_pisos_listar' slug=slug %}">
+        <i class="bi bi-x-lg"></i> Cancelar
+      </a>
+    </div>
   </form>
 </div>
+
 <script>
-function bindTabs(){document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));t.classList.add('active');document.getElementById('tab-'+t.dataset.tab).classList.add('active');});}
-function setupAutocomplete(inputId, hiddenId, url){const inp=document.getElementById(inputId);const hid=document.getElementById(hiddenId);if(!inp||!hid)return;let box=document.createElement('div');box.className='list-group position-absolute';box.style.zIndex=50;inp.parentElement.style.position='relative';inp.parentElement.appendChild(box);inp.addEventListener('input',async()=>{if(inp.value.length<2){box.innerHTML='';return;}const r=await fetch(url+'?term='+encodeURIComponent(inp.value));const d=await r.json();box.innerHTML=d.map(i=>`<button type="button" class="list-group-item list-group-item-action">${i.label}</button>`).join('');[...box.children].forEach((b,idx)=>b.onclick=()=>{inp.value=d[idx].label;hid.value=d[idx].id;box.innerHTML='';});});}
-function renderWorkflow(){const steps=['Financeiro Ok','Compra Realizada','Pedido Instalado','Pedido Finalizado'];document.getElementById('wf-timeline').innerHTML=steps.map((s,i)=>`<div style="padding:6px 0;border-bottom:1px solid #323760">${i+1}. ${s} <button type="button" class="btn btn-sm btn-outline-primary">Concluir</button></div>`).join('');}
-document.addEventListener('DOMContentLoaded',()=>{bindTabs();renderWorkflow();setupAutocomplete('cliente_nome','id_pedi_clie',"{% url 'PisosWeb:autocomplete_clientes' slug=slug %}");setupAutocomplete('vendedor_nome','id_pedi_vend',"{% url 'PisosWeb:autocomplete_vendedores' slug=slug %}");document.querySelectorAll('[id^=produto_busca_]').forEach((el)=>{const idx=el.id.split('_').pop();setupAutocomplete(el.id,'id_itens-'+idx+'-item_prod',"{% url 'PisosWeb:autocomplete_produtos' slug=slug %}");});});
+const SLUG = "{{ slug }}";
+const URL_CALCULAR = "{% url 'PisosWeb:api_calcular_item' slug=slug %}";
+const CSRF = "{{ csrf_token }}";
+
+/* ── Utilitários ── */
+function fmtBRL(v) {
+  const n = parseFloat(v) || 0;
+  return 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function showToast(message, type = 'danger') {
+  const container = document.querySelector('.toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast text-bg-${type} border-0 show`;
+  toast.setAttribute('role', 'alert');
+  toast.innerHTML = `
+    <div class="toast-header text-bg-${type} border-0">
+      <strong class="me-auto">Aviso</strong>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+    </div>
+    <div class="toast-body">${message}</div>
+  `;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 6500);
+}
+
+/* ── Tabs ── */
+function bindTabs() {
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      tab.classList.add('active');
+      const target = document.getElementById('tab-' + tab.dataset.tab);
+      if (target) target.classList.add('active');
+    });
+  });
+}
+
+/* ── Workflow ── */
+function renderWorkflow() {
+  const container = document.getElementById('wf-timeline');
+  if (!container) return;
+  const steps = ['Financeiro Ok', 'Compra Realizada', 'Pedido Instalado', 'Pedido Finalizado'];
+  container.innerHTML = steps.map((step, i) => `
+    <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color:#323760!important">
+      <span>${i + 1}. ${step}</span>
+      <button type="button" class="btn btn-sm btn-outline-primary">Concluir</button>
+    </div>
+  `).join('');
+}
+
+/* ── Autocomplete ── */
+function setupAutocomplete(inputId, hiddenId, url, onSelect) {
+  const input = document.getElementById(inputId);
+  const hidden = document.getElementById(hiddenId);
+  if (!input || !hidden) return;
+
+  const box = document.createElement('div');
+  box.className = 'list-group position-absolute autocomplete-box d-none';
+  input.parentElement.style.position = 'relative';
+  input.parentElement.appendChild(box);
+
+  let debounceTimer;
+
+  input.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    const term = input.value.trim();
+    if (term.length < 2) { box.classList.add('d-none'); return; }
+
+    debounceTimer = setTimeout(async () => {
+      try {
+        const res = await fetch(url + '?term=' + encodeURIComponent(term));
+        const data = await res.json();
+        box.innerHTML = data.map(item =>
+          `<button type="button" class="list-group-item list-group-item-action">${item.label}</button>`
+        ).join('');
+        box.classList.toggle('d-none', data.length === 0);
+
+        [...box.children].forEach((btn, idx) => {
+          btn.addEventListener('click', () => {
+            input.value = data[idx].label;
+            hidden.value = data[idx].id;
+            box.classList.add('d-none');
+            if (onSelect) onSelect(data[idx]);
+          });
+        });
+      } catch (e) {
+        console.error('Autocomplete error:', e);
+        box.classList.add('d-none');
+      }
+    }, 250);
+  });
+
+  document.addEventListener('click', e => {
+    if (!input.parentElement.contains(e.target)) box.classList.add('d-none');
+  });
+}
+
+/* ── Cálculo via service (AJAX) ── */
+const calcTimers = {};
+
+async function calcularItem(index) {
+  const prodInput = document.getElementById(`id_itens-${index}-item_prod`);
+  const m2Input   = document.getElementById(`m2-${index}`);
+  const unitInput = document.getElementById(`unit-${index}`);
+  const quebInput = document.getElementById(`queb-${index}`);
+  const spinner   = document.getElementById(`spin-${index}`);
+
+  const prod_id = prodInput?.value;
+  const m2      = parseFloat(m2Input?.value) || 0;
+  const unit    = parseFloat(unitInput?.value) || 0;
+  const queb    = parseFloat(quebInput?.value) || 0;
+
+  // só calcula se tiver produto e m2
+  if (!prod_id || m2 <= 0) return;
+
+  if (spinner) spinner.style.display = 'block';
+
+  try {
+    const res = await fetch(URL_CALCULAR, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': CSRF,
+      },
+      body: JSON.stringify({ item_prod: prod_id, item_m2: m2, item_unit: unit, item_queb: queb }),
+    });
+
+    if (!res.ok) throw new Error('Erro HTTP ' + res.status);
+    const data = await res.json();
+
+    /* Preencher campos calculados */
+    const badgeCaix = document.getElementById(`badge-caix-${index}`);
+    const quanInput = document.getElementById(`quan-${index}`);
+    const sutoInput = document.getElementById(`suto-${index}`);
+    const hiddenCaix = document.querySelector(`#itens-table tr[data-index="${index}"] input[name$="-item_caix"]`);
+    const hiddenQuan = document.querySelector(`#id_itens-${index}-item_quan`);
+
+    if (badgeCaix) badgeCaix.textContent = data.caixas || '—';
+    if (quanInput) quanInput.value = data.quantidade || '';
+    if (sutoInput) sutoInput.value = parseFloat(data.total || 0).toFixed(2);
+    if (hiddenCaix) hiddenCaix.value = data.caixas || '';
+    if (hiddenQuan) hiddenQuan.value = data.quantidade || '';
+
+    atualizarTotais();
+
+  } catch (e) {
+    console.error('Erro ao calcular item:', e);
+  } finally {
+    if (spinner) spinner.style.display = 'none';
+  }
+}
+
+function debounceCalc(index, delay = 600) {
+  clearTimeout(calcTimers[index]);
+  calcTimers[index] = setTimeout(() => calcularItem(index), delay);
+}
+
+/* ── Totais rodapé ── */
+function atualizarTotais() {
+  let subtotal = 0;
+  document.querySelectorAll('[id^="suto-"]').forEach(el => {
+    subtotal += parseFloat(el.value) || 0;
+  });
+
+  const desc = parseFloat(document.getElementById('id_pedi_desc')?.value) || 0;
+  const fret = parseFloat(document.getElementById('id_pedi_fret')?.value) || 0;
+  const total = subtotal - desc + fret;
+
+  document.getElementById('total-itens').textContent = fmtBRL(subtotal);
+  document.getElementById('total-desc').textContent  = fmtBRL(desc);
+  document.getElementById('total-fret').textContent  = fmtBRL(fret);
+  document.getElementById('total-geral').textContent = fmtBRL(total);
+
+  // Atualizar campo pedi_tota no form
+  const totalField = document.getElementById('id_pedi_tota');
+  if (totalField && !totalField.readOnly) totalField.value = total.toFixed(2);
+}
+
+/* ── Bind calcular em inputs de m², unit e queb ── */
+function bindCalcInputs(index) {
+  ['m2', 'unit', 'queb'].forEach(tipo => {
+    const el = document.getElementById(`${tipo}-${index}`);
+    if (!el) return;
+    el.addEventListener('input', () => debounceCalc(index));
+
+    // sincronizar hidden do formset
+    el.addEventListener('change', () => {
+      const hiddenMap = { m2: 'item_m2', unit: 'item_unit', queb: 'item_queb' };
+      const hidden = document.getElementById(`id_itens-${index}-${hiddenMap[tipo]}`);
+      if (hidden) hidden.value = el.value;
+    });
+  });
+}
+
+/* ── Adicionar item dinamicamente ── */
+function setupAddItem() {
+  const btn = document.getElementById('btn-add-item');
+  if (!btn) return;
+
+  btn.addEventListener('click', () => {
+    const totalInput = document.getElementById('id_itens-TOTAL_FORMS');
+    if (!totalInput) return;
+
+    const index = parseInt(totalInput.value, 10);
+    totalInput.value = index + 1;
+
+    const tbody = document.getElementById('itens-tbody');
+    const prefix = `itens-${index}`;
+
+    const tr = document.createElement('tr');
+    tr.dataset.index = index;
+    tr.innerHTML = `
+      <td><input name="${prefix}-item_nome_ambi" class="form-control form-control-sm" placeholder="Ambiente"></td>
+      <td>
+        <div class="badge-caix" id="badge-caix-${index}">—</div>
+        <input type="hidden" name="${prefix}-item_caix" id="id_itens-${index}-item_caix" value="">
+      </td>
+      <td class="position-relative">
+        <input type="number" step="0.01" id="m2-${index}" class="form-control form-control-sm item-m2"
+          data-index="${index}" placeholder="0,00">
+        <input type="hidden" name="${prefix}-item_m2" id="id_itens-${index}-item_m2" value="">
+        <div class="calc-spinner" id="spin-${index}"></div>
+      </td>
+      <td class="position-relative">
+        <input id="produto_busca_${index}" class="form-control form-control-sm" placeholder="Buscar produto"
+          data-index="${index}">
+        <input type="hidden" name="${prefix}-item_prod" id="id_itens-${index}-item_prod" value="">
+      </td>
+      <td>
+        <input name="${prefix}-item_prod_nome" id="id_itens-${index}-item_prod_nome"
+          class="form-control form-control-sm" placeholder="—">
+      </td>
+      <td>
+        <input type="number" step="0.0001" id="quan-${index}" class="form-control form-control-sm calc-field"
+          readonly tabindex="-1">
+        <input type="hidden" name="${prefix}-item_quan" id="id_itens-${index}-item_quan" value="">
+      </td>
+      <td>
+        <input type="number" step="0.01" id="unit-${index}" class="form-control form-control-sm item-unit"
+          data-index="${index}" placeholder="0,00">
+        <input type="hidden" name="${prefix}-item_unit" id="id_itens-${index}-item_unit" value="">
+      </td>
+      <td><input type="number" step="0.01" name="${prefix}-item_desc" class="form-control form-control-sm" placeholder="0"></td>
+      <td>
+        <input type="number" step="0.01" id="queb-${index}" class="form-control form-control-sm item-queb"
+          data-index="${index}" placeholder="0">
+        <input type="hidden" name="${prefix}-item_queb" id="id_itens-${index}-item_queb" value="">
+      </td>
+      <td>
+        <input type="text" id="suto-${index}" class="form-control form-control-sm calc-field" readonly tabindex="-1">
+      </td>
+      <td><input name="${prefix}-item_obse" class="form-control form-control-sm" placeholder="Obs"></td>
+      <td>
+        <input type="checkbox" name="${prefix}-DELETE" class="form-check-input">
+      </td>
+    `;
+    tbody.appendChild(tr);
+
+    bindCalcInputs(index);
+    setupAutocomplete(
+      `produto_busca_${index}`,
+      `id_itens-${index}-item_prod`,
+      `/{{ slug }}/pedidos/autocomplete/produtos/`,
+      (selected) => {
+        const nomeInput = document.getElementById(`id_itens-${index}-item_prod_nome`);
+        if (nomeInput) nomeInput.value = selected.label;
+        debounceCalc(index);
+      }
+    );
+  });
+}
+
+/* ── Validação antes de submeter ── */
+function validateBeforeSubmit() {
+  const form = document.querySelector('form');
+  form.addEventListener('submit', event => {
+    const required = [
+      { id: 'id_pedi_fili', label: 'Loja' },
+      { id: 'id_pedi_clie', label: 'Cliente' },
+      { id: 'id_pedi_vend', label: 'Vendedor' },
+      { id: 'id_pedi_data', label: 'Data do pedido' },
+    ];
+
+    let hasError = false;
+    let msgs = [];
+
+    required.forEach(f => {
+      const el = document.getElementById(f.id);
+      if (el && !String(el.value || '').trim()) {
+        hasError = true;
+        msgs.push(f.label);
+        el.classList.add('field-error');
+      } else if (el) {
+        el.classList.remove('field-error');
+      }
+    });
+
+    const totalForms = document.getElementById('id_itens-TOTAL_FORMS');
+    let hasValidItem = false;
+    if (totalForms) {
+      const total = parseInt(totalForms.value || '0', 10);
+      for (let i = 0; i < total; i++) {
+        const prod = document.getElementById(`id_itens-${i}-item_prod`);
+        const del  = document.querySelector(`input[name="itens-${i}-DELETE"]`);
+        if (!del?.checked && prod?.value) hasValidItem = true;
+      }
+    }
+
+    if (!hasValidItem) { hasError = true; msgs.push('Pelo menos 1 item'); }
+
+    if (hasError) {
+      event.preventDefault();
+      showToast('Preencha: ' + [...new Set(msgs)].join(', '), 'danger');
+    }
+  });
+}
+
+/* ── Marcar erros do server ── */
+function markServerErrors() {
+  {% for field in form %}{% if field.errors %}
+  const el_{{ forloop.counter }} = document.getElementById('{{ field.id_for_label }}');
+  if (el_{{ forloop.counter }}) el_{{ forloop.counter }}.classList.add('field-error');
+  {% endif %}{% endfor %}
+}
+
+/* ── Init ── */
+document.addEventListener('DOMContentLoaded', () => {
+  bindTabs();
+  renderWorkflow();
+  markServerErrors();
+  validateBeforeSubmit();
+
+  setupAutocomplete('cliente_nome',  'id_pedi_clie',
+    "{% url 'PisosWeb:autocomplete_clientes' slug=slug %}");
+
+  setupAutocomplete('vendedor_nome', 'id_pedi_vend',
+    "{% url 'PisosWeb:autocomplete_vendedores' slug=slug %}");
+
+  // Bind nos itens existentes (edição)
+  document.querySelectorAll('[id^="produto_busca_"]').forEach(input => {
+    const index = parseInt(input.dataset.index, 10);
+    bindCalcInputs(index);
+    setupAutocomplete(
+      input.id,
+      `id_itens-${index}-item_prod`,
+      "{% url 'PisosWeb:autocomplete_produtos' slug=slug %}",
+      (selected) => {
+        const nomeInput = document.querySelector(`input[name="itens-${index}-item_prod_nome"]`);
+        if (nomeInput) nomeInput.value = selected.label;
+        debounceCalc(index);
+      }
+    );
+  });
+
+  // Bind nos campos desc/fret para atualizar totais
+  ['id_pedi_desc', 'id_pedi_fret'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', atualizarTotais);
+  });
+
+  setupAddItem();
+  atualizarTotais();
+
+  {% if form.errors or formset.errors or formset.non_form_errors %}
+  showToast('O formulário voltou com erros. Revise os campos destacados.', 'danger');
+  {% endif %}
+});
 </script>
+
 {% endblock %}

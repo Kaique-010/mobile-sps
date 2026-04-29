@@ -568,6 +568,51 @@ class PedidospisosSerializer(BancoContextMixin, serializers.ModelSerializer):
         except Exception as e:
             logger.error(f"Erro ao buscar ambientes: {e}")
             return None
+    
+    
+    def _salvar_itens(self, pedido, itens_input, banco):
+        Itenspedidospisos.objects.using(banco).filter(
+            item_empr=pedido.pedi_empr,
+            item_fili=pedido.pedi_fili,
+            item_pedi=pedido.pedi_nume,
+        ).delete()
+
+        for idx, item_data in enumerate(itens_input, start=1):
+            prod_id = item_data.get("item_prod")
+            
+            # Buscar o produto para passar ao service
+            produto = None
+            if prod_id:
+                produto = Produtos.objects.using(banco).filter(prod_codi=prod_id).first()
+
+            # Calcular caixas, quantidade e total via service
+            # Criamos um objeto temporário duck-typed para o service
+            class ItemProxy:
+                item_m2 = item_data.get("item_m2") or 0
+                item_queb = item_data.get("item_queb") or 0
+                item_unit = item_data.get("item_unit") or 0
+
+            resultado = calcular_item(ItemProxy(), produto=produto)
+
+            Itenspedidospisos.objects.using(banco).create(
+                item_empr=pedido.pedi_empr,
+                item_fili=pedido.pedi_fili,
+                item_pedi=pedido.pedi_nume,
+                item_nume=idx,
+                item_prod=prod_id,
+                item_prod_nome=item_data.get("item_prod_nome", ""),
+                item_ambi=item_data.get("item_ambi") or 1,
+                item_nome_ambi=item_data.get("item_nome_ambi", ""),
+                item_m2=item_data.get("item_m2") or 0,
+                item_queb=item_data.get("item_queb") or 0,
+                item_unit=item_data.get("item_unit") or 0,
+                item_desc=item_data.get("item_desc") or 0,
+                item_obse=item_data.get("item_obse", ""),
+                # ↓ Preenchidos pelo service
+                item_caix=resultado["caixas_necessarias"] or 0,
+                item_quan=resultado["metragem_real"],
+                item_suto=resultado["total"],
+            )
 
     def create(self, validated_data):
         banco = self.context.get("banco")
