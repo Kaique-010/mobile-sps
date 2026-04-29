@@ -27,11 +27,13 @@ def autocomplete_vendedores(request, slug):
 
 
 from Produtos.models import Produtos
+from django.db.models import Q
 
 def autocomplete_produtos(request, slug):
     banco = get_db_from_slug(slug)
     q=(request.GET.get("term") or "").strip()
     qs=Produtos.objects.using(banco).all()
-    if q: qs=qs.filter(prod_nome__icontains=q)
+    if q:
+        qs = qs.filter(Q(prod_nome__icontains=q) | Q(prod_codi__icontains=q))
     data=[{"id":p.prod_codi,"label":f"{p.prod_codi} - {p.prod_nome}","value":p.prod_codi} for p in qs[:20]]
     return JsonResponse(data,safe=False)

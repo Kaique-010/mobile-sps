@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>Orçamento Pisos #{{ orcamento.orca_nume }}</h3>
+        <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-outline-secondary"
+                href="{% url 'PisosWeb:orcamentos_pisos_listar' slug=slug %}">Listar</a>
+            <a class="btn btn-primary"
+                href="{% url 'PisosWeb:orcamentos_pisos_editar' slug=slug pk=orcamento.orca_nume %}">Editar</a>
+            {% if orcamento.orca_stat != 2 %}
+            <a class="btn btn-success"
+                href="{% url 'PisosWeb:orcamentos_pisos_exportar' slug=slug numero=orcamento.orca_nume %}">Exportar para
+                Pedido</a>
+            {% else %}
+            {% if orcamento.orca_pedi %}
+            <a class="btn btn-outline-success"
+                href="{% url 'PisosWeb:pedidos_pisos_visualizar' slug=slug pk=orcamento.orca_pedi %}">Abrir Pedido #{{
+                orcamento.orca_pedi }}</a>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-lg-4">
+            <div class="card card-body">
+                <div><b>Cliente:</b> {{ orcamento.orca_clie }}</div>
+                <div><b>Vendedor:</b> {{ orcamento.orca_vend }}</div>
+                <div><b>Data:</b> {{ orcamento.orca_data }}</div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-4">
+            <div class="card card-body">
+                <div><b>Total:</b> {{ orcamento.orca_tota }}</div>
+                <div><b>Desconto:</b> {{ orcamento.orca_desc }}</div>
+                <div><b>Frete:</b> {{ orcamento.orca_fret }}</div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-4">
+            <div class="card card-body">
+                <div><b>Status:</b> {{ orcamento.get_orca_stat_display|default:orcamento.orca_stat }}</div>
+                <div><b>Pedido:</b> {{ orcamento.orca_pedi|default:"—" }}</div>
+                <div><b>Prev. Entrega:</b> {{ orcamento.orca_data_prev_entr|default:"—" }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card card-body mb-3">
+        <b>Observações</b>
+        <div>{{ orcamento.orca_obse|default:"—" }}</div>
+    </div>
+
+    <h5>Itens</h5>
+    <div class="table-responsive">
+        <table class="table table-striped align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Ambiente</th>
+                    <th>Produto</th>
+                    <th class="text-end">M²</th>
+                    <th class="text-end">Qtd</th>
+                    <th class="text-end">Unit</th>
+                    <th class="text-end">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for i in itens %}
+                <tr>
+                    <td>{{ i.item_nome_ambi|default:i.item_ambi }}</td>
+                    <td>{{ i.item_prod }}</td>
+                    <td class="text-end">{{ i.item_m2 }}</td>
+                    <td class="text-end">{{ i.item_quan }}</td>
+                    <td class="text-end">{{ i.item_unit }}</td>
+                    <td class="text-end">{{ i.item_suto }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6">Sem itens.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

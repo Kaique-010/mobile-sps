@@ -1,0 +1,836 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+  :root {
+    --bg: #151925;
+    --bg2: #202640;
+    --bg3: #252d4d;
+    --panel: #171b2a;
+    --border: #303a6b;
+    --border2: #344078;
+    --accent: #4f8ef7;
+    --accent-glow: rgba(79, 142, 247, 0.18);
+    --text: #e2e8f8;
+    --muted: #9aa8c7;
+    --input-bg: #111522;
+    --success: #22c55e;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+  }
+
+  .pedido-wrapper {
+    max-width: calc(100vw - 48px);
+    margin: 18px auto;
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    color: var(--text);
+    overflow: hidden;
+  }
+
+  .pedido-header {
+    padding: 10px 18px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .pedido-header-left {
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .pedido-header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .status-label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .pedido-body {
+    padding: 16px;
+  }
+
+  .section-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+
+  .section-title {
+    color: #8fb3ff;
+    font-size: 11px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+  }
+
+  label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    display: block;
+    letter-spacing: .04em;
+  }
+
+  input,
+  select,
+  textarea {
+    background: var(--input-bg) !important;
+    border: 1px solid #3b4780 !important;
+    color: #eef3ff !important;
+    font-size: 12px !important;
+    border-radius: 6px !important;
+    transition: border-color .15s, box-shadow .15s;
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 0.15rem var(--accent-glow) !important;
+  }
+
+  textarea {
+    min-height: 110px;
+    resize: vertical;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--border2);
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+
+  .tab {
+    padding: 7px 14px;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 11px;
+    border-radius: 6px 6px 0 0;
+    transition: color .15s, background .15s;
+    user-select: none;
+  }
+
+  .tab:hover { color: var(--text); background: var(--bg3); }
+
+  .tab.active {
+    color: var(--accent);
+    border-bottom: 2px solid var(--accent);
+    background: var(--bg3);
+  }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .itens-table-wrap {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    max-height: 520px;
+    overflow: auto;
+  }
+
+  .itens-table-wrap table { min-width: 1320px; }
+
+  .itens-table-wrap thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--bg3) !important;
+    color: #aebcff;
+    font-size: 10px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    padding: 8px 6px;
+    letter-spacing: .04em;
+  }
+
+  .itens-table-wrap td {
+    border-color: #2c355f !important;
+    vertical-align: middle;
+    padding: 4px 6px !important;
+  }
+
+  .calc-field {
+    background: #0e1320 !important;
+    border-color: #252d52 !important;
+    color: #6ee7b7 !important;
+    cursor: not-allowed;
+  }
+
+  .badge-caix {
+    display: inline-block;
+    background: #1e3a5f;
+    border: 1px solid #2d5a9e;
+    color: #93c5fd;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 5px;
+    padding: 2px 8px;
+    min-width: 40px;
+    text-align: center;
+  }
+
+  .autocomplete-box {
+    z-index: 1050;
+    width: 100%;
+    max-height: 240px;
+    overflow-y: auto;
+    background: #1a2040;
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    top: calc(100% + 2px);
+    left: 0;
+  }
+
+  .autocomplete-box .list-group-item {
+    background: transparent;
+    border-color: #2c355f;
+    color: var(--text);
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+
+  .autocomplete-box .list-group-item:hover {
+    background: var(--bg3);
+    color: var(--accent);
+  }
+
+  .totais-bar {
+    padding: 8px 14px;
+    background: #0e1320;
+    border-top: 1px solid var(--border);
+    border-radius: 0 0 8px 8px;
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .total-item {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .total-item span:first-child {
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+
+  .total-item span:last-child {
+    font-size: 13px;
+    font-weight: 700;
+    color: #6ee7b7;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .actions {
+    padding: 12px 16px;
+    background: var(--bg2);
+    border-top: 1px solid var(--border2);
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .field-error {
+    border-color: var(--danger) !important;
+    box-shadow: 0 0 0 0.1rem rgba(239,68,68,.2) !important;
+  }
+
+  .toast-container { z-index: 9999; }
+
+  .calc-spinner {
+    display: none;
+    width: 12px;
+    height: 12px;
+    border: 2px solid #334;
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  @keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+</style>
+
+<div class="toast-container position-fixed top-0 end-0 p-3">
+  {% if form.errors or formset.errors or formset.non_form_errors %}
+  <div class="toast text-bg-danger border-0 show" role="alert">
+    <div class="toast-header text-bg-danger border-0">
+      <strong class="me-auto">Erro ao gravar orçamento</strong>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+    </div>
+    <div class="toast-body">Existem campos obrigatórios ou inválidos. Confira os dados e os itens.</div>
+  </div>
+  {% endif %}
+
+  {% for message in messages %}
+  <div class="toast text-bg-{{ message.tags|default:'info' }} border-0 show" role="alert">
+    <div class="toast-header text-bg-{{ message.tags|default:'info' }} border-0">
+      <strong class="me-auto">Aviso</strong>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+    </div>
+    <div class="toast-body">{{ message }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="pedido-wrapper">
+  <div class="pedido-header">
+    <div class="pedido-header-left">
+      <i class="bi bi-receipt-cutoff"></i>
+      Orçamento Pisos
+      {% if orcamento %}<span style="color:var(--muted);font-weight:400">#{{ orcamento.orca_nume }}</span>{% endif %}
+    </div>
+
+    <div class="pedido-header-right">
+      <span class="status-label">Status</span>
+      {{ form.orca_stat }}
+    </div>
+  </div>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+    <div class="d-none">{{ form.orca_empr }}</div>
+
+    <div class="pedido-body">
+      <div class="row g-3 align-items-start">
+        <div class="col-12 col-xl-4">
+          <div class="section-card mb-3">
+            <div class="section-title"><i class="bi bi-file-text me-1"></i>Dados do Orçamento</div>
+            <div class="row g-2">
+              <div class="col-4">
+                <label>Loja</label>
+                {{ form.orca_fili }}
+              </div>
+
+              <div class="col-8 position-relative">
+                <label>Cliente</label>
+                <input id="cliente_nome" class="form-control" placeholder="Buscar cliente...">
+                <div class="d-none">{{ form.orca_clie }}</div>
+              </div>
+
+              <div class="col-4">
+                <label>Orçamento</label>
+                <input class="form-control" value="{% if orcamento %}{{ orcamento.orca_nume }}{% else %}(novo){% endif %}" readonly>
+              </div>
+
+              <div class="col-4">
+                <label>Data</label>
+                {{ form.orca_data }}
+              </div>
+
+              <div class="col-4">
+                <label>Prev. Entrega</label>
+                {{ form.orca_data_prev_entr }}
+              </div>
+
+              <div class="col-12 position-relative">
+                <label>Vendedor</label>
+                <input id="vendedor_nome" class="form-control" placeholder="Buscar vendedor...">
+                <div class="d-none">{{ form.orca_vend }}</div>
+              </div>
+
+              <div class="col-12">
+                <label>Observações</label>
+                {{ form.orca_obse }}
+              </div>
+            </div>
+          </div>
+
+          <div class="section-card">
+            <div class="tabs">
+              <div class="tab active" data-tab="financeiro">Financeiro</div>
+              <div class="tab" data-tab="croqui">Croqui</div>
+              <div class="tab" data-tab="workflow">Workflow</div>
+            </div>
+
+            <div id="tab-financeiro" class="tab-content active">
+              <div class="row g-2">
+                <div class="col-4"><label>Desconto (R$)</label>{{ form.orca_desc }}</div>
+                <div class="col-4"><label>Frete (R$)</label>{{ form.orca_fret }}</div>
+                <div class="col-4"><label>Total</label>{{ form.orca_tota }}</div>
+              </div>
+            </div>
+
+            <div id="tab-croqui" class="tab-content">
+              <label>Croqui / Informações</label>
+              {{ form.orca_croq_info }}
+            </div>
+
+            <div id="tab-workflow" class="tab-content">
+              <div style="font-size:11px;color:#a0aec8;">Workflow disponível após exportação para pedido.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 col-xl-8">
+          <div class="section-card h-100 d-flex flex-column" style="padding-bottom:0">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="section-title mb-0"><i class="bi bi-grid-3x3 me-1"></i>Itens do Orçamento</div>
+              <button type="button" id="btn-add-item" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-plus-lg"></i> Adicionar Item
+              </button>
+            </div>
+
+            {{ formset.management_form }}
+
+            <div class="itens-table-wrap flex-grow-1">
+              <table class="table table-sm table-dark table-hover align-middle mb-0" id="itens-table">
+                <thead>
+                  <tr>
+                    <th style="min-width:100px">Ambiente</th>
+                    <th style="min-width:60px">Caixas</th>
+                    <th style="min-width:80px">M²</th>
+                    <th style="min-width:140px">Produto</th>
+                    <th style="min-width:160px">Nome Produto</th>
+                    <th style="min-width:90px">Quant.</th>
+                    <th style="min-width:90px">Unitário</th>
+                    <th style="min-width:80px">Desc %</th>
+                    <th style="min-width:80px">Quebra %</th>
+                    <th style="min-width:90px">Subtotal</th>
+                    <th style="min-width:80px">Obs</th>
+                    <th style="min-width:36px">Del</th>
+                  </tr>
+                </thead>
+                <tbody id="itens-tbody">
+                  {% for f in formset %}
+                  <tr data-index="{{ forloop.counter0 }}">
+                    <td>
+                      {{ f.item_nome_ambi }}
+                      {{ f.item_ambi.as_hidden }}
+                    </td>
+                    <td>
+                      <div class="badge-caix" id="badge-caix-{{ forloop.counter0 }}">
+                        {{ f.item_caix.value|default:"—" }}
+                      </div>
+                      <div class="d-none">{{ f.item_caix }}</div>
+                    </td>
+                    <td class="position-relative">
+                      <input type="number" step="0.01" id="m2-{{ forloop.counter0 }}" class="form-control form-control-sm item-m2"
+                        value="{{ f.item_m2.value|default:'' }}" data-index="{{ forloop.counter0 }}" placeholder="0,00">
+                      <div class="d-none">{{ f.item_m2 }}</div>
+                      <div class="calc-spinner" id="spin-{{ forloop.counter0 }}"></div>
+                    </td>
+                    <td class="position-relative">
+                      <input id="produto_busca_{{ forloop.counter0 }}" class="form-control form-control-sm" placeholder="Buscar produto"
+                        data-index="{{ forloop.counter0 }}">
+                      <div class="d-none">{{ f.item_prod }}</div>
+                    </td>
+                    <td>{{ f.item_prod_nome }}</td>
+                    <td>
+                      <input type="number" step="0.0001" id="quan-{{ forloop.counter0 }}" class="form-control form-control-sm calc-field"
+                        value="{{ f.item_quan.value|default:'' }}" readonly tabindex="-1">
+                      <div class="d-none">{{ f.item_quan }}</div>
+                    </td>
+                    <td>
+                      <input type="number" step="0.01" id="unit-{{ forloop.counter0 }}" class="form-control form-control-sm item-unit"
+                        value="{{ f.item_unit.value|default:'' }}" data-index="{{ forloop.counter0 }}" placeholder="0,00">
+                      <div class="d-none">{{ f.item_unit }}</div>
+                    </td>
+                    <td>{{ f.item_desc }}</td>
+                    <td>
+                      <input type="number" step="0.01" min="0" max="100" id="queb-{{ forloop.counter0 }}" class="form-control form-control-sm item-queb"
+                        value="{{ f.item_queb.value|default:'' }}" data-index="{{ forloop.counter0 }}" placeholder="0">
+                      <div class="d-none">{{ f.item_queb }}</div>
+                    </td>
+                    <td>
+                      <input type="text" id="suto-{{ forloop.counter0 }}" class="form-control form-control-sm calc-field"
+                        value="{{ f.item_suto.value|default:'' }}" readonly tabindex="-1">
+                    </td>
+                    <td>{{ f.item_obse }}</td>
+                    <td>{{ f.DELETE }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+            <div class="totais-bar">
+              <div class="total-item">
+                <span>Subtotal itens</span>
+                <span id="total-itens">R$ 0,00</span>
+              </div>
+              <div class="total-item">
+                <span>Desconto</span>
+                <span id="total-desc" style="color:#fbbf24">R$ 0,00</span>
+              </div>
+              <div class="total-item">
+                <span>Frete</span>
+                <span id="total-fret" style="color:#93c5fd">R$ 0,00</span>
+              </div>
+              <div class="total-item" style="margin-left:auto">
+                <span>Total Geral</span>
+                <span id="total-geral" style="font-size:16px">R$ 0,00</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-outline-success btn-sm" type="submit" name="acao" value="salvar">
+        <i class="bi bi-check-lg"></i> Gravar
+      </button>
+      <button class="btn btn-outline-primary btn-sm" type="submit" name="acao" value="exportar">
+        <i class="bi bi-box-arrow-right"></i> Gravar e Exportar
+      </button>
+      <a class="btn btn-outline-danger btn-sm" href="{% url 'PisosWeb:orcamentos_pisos_listar' slug=slug %}">
+        <i class="bi bi-x-lg"></i> Cancelar
+      </a>
+    </div>
+  </form>
+</div>
+
+<script>
+const SLUG = "{{ slug }}";
+const URL_CALCULAR = "{% url 'PisosWeb:api_calcular_item' slug=slug %}";
+const CSRF = "{{ csrf_token }}";
+
+function fmtBRL(v) {
+  const n = parseFloat(v) || 0;
+  return 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function showToast(message, type = 'danger') {
+  const container = document.querySelector('.toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast text-bg-${type} border-0 show`;
+  toast.setAttribute('role', 'alert');
+  toast.innerHTML = `
+    <div class="toast-header text-bg-${type} border-0">
+      <strong class="me-auto">Aviso</strong>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+    </div>
+    <div class="toast-body">${message}</div>
+  `;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 6500);
+}
+
+function bindTabs() {
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      tab.classList.add('active');
+      const target = document.getElementById('tab-' + tab.dataset.tab);
+      if (target) target.classList.add('active');
+    });
+  });
+}
+
+function setupAutocomplete(inputId, hiddenId, url, onSelect) {
+  const input = document.getElementById(inputId);
+  const hidden = document.getElementById(hiddenId);
+  if (!input || !hidden) return;
+
+  const box = document.createElement('div');
+  box.className = 'list-group position-absolute autocomplete-box d-none';
+  input.parentElement.style.position = 'relative';
+  input.parentElement.appendChild(box);
+
+  let debounceTimer;
+
+  input.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    const term = input.value.trim();
+    if (term.length < 2) { box.classList.add('d-none'); return; }
+
+    debounceTimer = setTimeout(async () => {
+      try {
+        const res = await fetch(url + '?term=' + encodeURIComponent(term));
+        const data = await res.json();
+        box.innerHTML = data.map(item => `<button type="button" class="list-group-item list-group-item-action">${item.label}</button>`).join('');
+        box.classList.toggle('d-none', data.length === 0);
+        [...box.children].forEach((btn, idx) => {
+          btn.addEventListener('click', () => {
+            input.value = data[idx].label;
+            hidden.value = data[idx].id;
+            box.classList.add('d-none');
+            if (onSelect) onSelect(data[idx]);
+          });
+        });
+      } catch (e) {
+        box.classList.add('d-none');
+      }
+    }, 250);
+  });
+
+  document.addEventListener('click', e => {
+    if (!input.parentElement.contains(e.target)) box.classList.add('d-none');
+  });
+}
+
+async function prefillAutocomplete(inputId, hiddenId, url, onSelect) {
+  const input = document.getElementById(inputId);
+  const hidden = document.getElementById(hiddenId);
+  if (!input || !hidden) return;
+  const currentId = String(hidden.value || '').trim();
+  if (!currentId || String(input.value || '').trim()) return;
+  try {
+    const res = await fetch(url + '?term=' + encodeURIComponent(currentId));
+    const data = await res.json();
+    if (Array.isArray(data) && data.length) {
+      input.value = data[0].label;
+      hidden.value = data[0].id;
+      if (onSelect) onSelect(data[0]);
+    }
+  } catch (e) {
+  }
+}
+
+const calcTimers = {};
+
+async function calcularItem(index) {
+  const prodInput = document.getElementById(`id_itens-${index}-item_prod`);
+  const m2Input = document.getElementById(`m2-${index}`);
+  const unitInput = document.getElementById(`unit-${index}`);
+  const quebInput = document.getElementById(`queb-${index}`);
+  const spinner = document.getElementById(`spin-${index}`);
+
+  const prod_id = prodInput?.value;
+  const m2 = parseFloat(m2Input?.value) || 0;
+  const unit = parseFloat(unitInput?.value) || 0;
+  const queb = parseFloat(quebInput?.value) || 0;
+
+  if (!prod_id || m2 <= 0) return;
+
+  if (spinner) spinner.style.display = 'block';
+  try {
+    const res = await fetch(URL_CALCULAR, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': CSRF,
+      },
+      body: JSON.stringify({ item_prod: prod_id, item_m2: m2, item_unit: unit, item_queb: queb }),
+    });
+    if (!res.ok) throw new Error('Erro HTTP ' + res.status);
+    const data = await res.json();
+
+    const badgeCaix = document.getElementById(`badge-caix-${index}`);
+    const quanInput = document.getElementById(`quan-${index}`);
+    const sutoInput = document.getElementById(`suto-${index}`);
+    const hiddenCaix = document.querySelector(`#itens-table tr[data-index="${index}"] input[name$="-item_caix"]`);
+    const hiddenQuan = document.querySelector(`#id_itens-${index}-item_quan`);
+
+    if (badgeCaix) badgeCaix.textContent = data.caixas || '—';
+    if (quanInput) quanInput.value = data.quantidade || '';
+    if (sutoInput) sutoInput.value = parseFloat(data.total || 0).toFixed(2);
+    if (hiddenCaix) hiddenCaix.value = data.caixas || '';
+    if (hiddenQuan) hiddenQuan.value = data.quantidade || '';
+
+    atualizarTotais();
+  } finally {
+    if (spinner) spinner.style.display = 'none';
+  }
+}
+
+function debounceCalc(index, delay = 600) {
+  clearTimeout(calcTimers[index]);
+  calcTimers[index] = setTimeout(() => calcularItem(index), delay);
+}
+
+function atualizarTotais() {
+  let subtotal = 0;
+  document.querySelectorAll('[id^="suto-"]').forEach(el => {
+    subtotal += parseFloat(el.value) || 0;
+  });
+
+  const desc = parseFloat(document.getElementById('id_orca_desc')?.value) || 0;
+  const fret = parseFloat(document.getElementById('id_orca_fret')?.value) || 0;
+  const total = subtotal - desc + fret;
+
+  document.getElementById('total-itens').textContent = fmtBRL(subtotal);
+  document.getElementById('total-desc').textContent = fmtBRL(desc);
+  document.getElementById('total-fret').textContent = fmtBRL(fret);
+  document.getElementById('total-geral').textContent = fmtBRL(total);
+
+  const totalField = document.getElementById('id_orca_tota');
+  if (totalField) totalField.value = total.toFixed(2);
+}
+
+function bindCalcInputs(index) {
+  ['m2', 'unit', 'queb'].forEach(tipo => {
+    const el = document.getElementById(`${tipo}-${index}`);
+    if (!el) return;
+    el.addEventListener('input', () => debounceCalc(index));
+    el.addEventListener('change', () => {
+      const hiddenMap = { m2: 'item_m2', unit: 'item_unit', queb: 'item_queb' };
+      const hidden = document.getElementById(`id_itens-${index}-${hiddenMap[tipo]}`);
+      if (hidden) hidden.value = el.value;
+    });
+  });
+}
+
+function setupAddItem() {
+  const btn = document.getElementById('btn-add-item');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const totalInput = document.getElementById('id_itens-TOTAL_FORMS');
+    if (!totalInput) return;
+    const index = parseInt(totalInput.value, 10);
+    totalInput.value = index + 1;
+
+    const tbody = document.getElementById('itens-tbody');
+    const prefix = `itens-${index}`;
+
+    const tr = document.createElement('tr');
+    tr.dataset.index = index;
+    tr.innerHTML = `
+      <td>
+        <input name="${prefix}-item_nome_ambi" class="form-control form-control-sm" placeholder="Ambiente">
+        <input type="hidden" name="${prefix}-item_ambi" id="id_itens-${index}-item_ambi" value="${index + 1}">
+      </td>
+      <td>
+        <div class="badge-caix" id="badge-caix-${index}">—</div>
+        <input type="hidden" name="${prefix}-item_caix" id="id_itens-${index}-item_caix" value="">
+      </td>
+      <td class="position-relative">
+        <input type="number" step="0.01" id="m2-${index}" class="form-control form-control-sm item-m2" data-index="${index}" placeholder="0,00">
+        <input type="hidden" name="${prefix}-item_m2" id="id_itens-${index}-item_m2" value="">
+        <div class="calc-spinner" id="spin-${index}"></div>
+      </td>
+      <td class="position-relative">
+        <input id="produto_busca_${index}" class="form-control form-control-sm" placeholder="Buscar produto" data-index="${index}">
+        <input type="hidden" name="${prefix}-item_prod" id="id_itens-${index}-item_prod" value="">
+      </td>
+      <td><input name="${prefix}-item_prod_nome" id="id_itens-${index}-item_prod_nome" class="form-control form-control-sm" placeholder="—"></td>
+      <td>
+        <input type="number" step="0.0001" id="quan-${index}" class="form-control form-control-sm calc-field" readonly tabindex="-1">
+        <input type="hidden" name="${prefix}-item_quan" id="id_itens-${index}-item_quan" value="">
+      </td>
+      <td>
+        <input type="number" step="0.01" id="unit-${index}" class="form-control form-control-sm item-unit" data-index="${index}" placeholder="0,00">
+        <input type="hidden" name="${prefix}-item_unit" id="id_itens-${index}-item_unit" value="">
+      </td>
+      <td><input type="number" step="0.01" name="${prefix}-item_desc" class="form-control form-control-sm" placeholder="0"></td>
+      <td>
+        <input type="number" step="0.01" id="queb-${index}" class="form-control form-control-sm item-queb" data-index="${index}" placeholder="0">
+        <input type="hidden" name="${prefix}-item_queb" id="id_itens-${index}-item_queb" value="">
+      </td>
+      <td><input type="text" id="suto-${index}" class="form-control form-control-sm calc-field" readonly tabindex="-1"></td>
+      <td><input name="${prefix}-item_obse" class="form-control form-control-sm" placeholder="Obs"></td>
+      <td><input type="checkbox" name="${prefix}-DELETE" class="form-check-input"></td>
+    `;
+    tbody.appendChild(tr);
+
+    bindCalcInputs(index);
+    setupAutocomplete(
+      `produto_busca_${index}`,
+      `id_itens-${index}-item_prod`,
+      "{% url 'PisosWeb:autocomplete_produtos' slug=slug %}",
+      (selected) => {
+        const nomeInput = document.getElementById(`id_itens-${index}-item_prod_nome`);
+        if (nomeInput) nomeInput.value = selected.label;
+        debounceCalc(index);
+      }
+    );
+  });
+}
+
+function validateBeforeSubmit() {
+  const form = document.querySelector('form');
+  form.addEventListener('submit', event => {
+    const required = [
+      { id: 'id_orca_fili', label: 'Loja' },
+      { id: 'id_orca_clie', label: 'Cliente' },
+      { id: 'id_orca_vend', label: 'Vendedor' },
+      { id: 'id_orca_data', label: 'Data do orçamento' },
+    ];
+
+    let hasError = false;
+    let msgs = [];
+
+    required.forEach(f => {
+      const el = document.getElementById(f.id);
+      if (el && !String(el.value || '').trim()) {
+        hasError = true;
+        msgs.push(f.label);
+        el.classList.add('field-error');
+      } else if (el) {
+        el.classList.remove('field-error');
+      }
+    });
+
+    const totalForms = document.getElementById('id_itens-TOTAL_FORMS');
+    let hasValidItem = false;
+    if (totalForms) {
+      const total = parseInt(totalForms.value || '0', 10);
+      for (let i = 0; i < total; i++) {
+        const prod = document.getElementById(`id_itens-${i}-item_prod`);
+        const del = document.querySelector(`input[name="itens-${i}-DELETE"]`);
+        if (!del?.checked && prod?.value) hasValidItem = true;
+      }
+    }
+
+    if (!hasValidItem) { hasError = true; msgs.push('Pelo menos 1 item'); }
+
+    if (hasError) {
+      event.preventDefault();
+      showToast('Preencha: ' + [...new Set(msgs)].join(', '), 'danger');
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  bindTabs();
+  validateBeforeSubmit();
+
+  const URL_AUTO_CLIENTES = "{% url 'PisosWeb:autocomplete_clientes' slug=slug %}";
+  const URL_AUTO_VENDEDORES = "{% url 'PisosWeb:autocomplete_vendedores' slug=slug %}";
+  const URL_AUTO_PRODUTOS = "{% url 'PisosWeb:autocomplete_produtos' slug=slug %}";
+
+  setupAutocomplete('cliente_nome', 'id_orca_clie', URL_AUTO_CLIENTES);
+  prefillAutocomplete('cliente_nome', 'id_orca_clie', URL_AUTO_CLIENTES);
+
+  setupAutocomplete('vendedor_nome', 'id_orca_vend', URL_AUTO_VENDEDORES);
+  prefillAutocomplete('vendedor_nome', 'id_orca_vend', URL_AUTO_VENDEDORES);
+
+  document.querySelectorAll('[id^="produto_busca_"]').forEach(input => {
+    const index = parseInt(input.dataset.index, 10);
+    bindCalcInputs(index);
+    const onSelectProduto = (selected) => {
+      const nomeInput = document.querySelector(`input[name="itens-${index}-item_prod_nome"]`);
+      if (nomeInput) nomeInput.value = selected.label;
+      debounceCalc(index);
+    };
+    setupAutocomplete(input.id, `id_itens-${index}-item_prod`, URL_AUTO_PRODUTOS, onSelectProduto);
+    prefillAutocomplete(input.id, `id_itens-${index}-item_prod`, URL_AUTO_PRODUTOS, onSelectProduto);
+  });
+
+  document.getElementById('id_orca_desc')?.addEventListener('input', atualizarTotais);
+  document.getElementById('id_orca_fret')?.addEventListener('input', atualizarTotais);
+  setupAddItem();
+  atualizarTotais();
+});
+</script>
+{% endblock %}

@@ -698,6 +698,10 @@ class PedidospisosSerializer(BancoContextMixin, serializers.ModelSerializer):
             # Filtrar apenas campos existentes no modelo
             item_data_clean = {k: v for k, v in item_data_clean.items() if k in allowed_fields}
 
+            item_ambi_value = item_data_clean.get("item_ambi")
+            if item_ambi_value in (None, "", 0, "0"):
+                item_data_clean["item_ambi"] = idx
+
             # Quantizar campos decimais para evitar erros de max_digits
             for num_key in ["item_quan", "item_unit", "item_m2", "item_desc", "item_queb"]:
                 if num_key in item_data_clean and item_data_clean[num_key] is not None:

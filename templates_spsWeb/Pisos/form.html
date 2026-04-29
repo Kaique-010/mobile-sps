@@ -137,9 +137,9 @@
     resize: vertical;
   }
 
-  
 
-/* ── Tabs ── */
+
+  /* ── Tabs ── */
   .tabs {
     display: flex;
     gap: 4px;
@@ -158,7 +158,10 @@
     user-select: none;
   }
 
-  .tab:hover { color: var(--text); background: var(--bg3); }
+  .tab:hover {
+    color: var(--text);
+    background: var(--bg3);
+  }
 
   .tab.active {
     color: var(--accent);
@@ -166,8 +169,13 @@
     background: var(--bg3);
   }
 
-  .tab-content { display: none; }
-  .tab-content.active { display: block; }
+  .tab-content {
+    display: none;
+  }
+
+  .tab-content.active {
+    display: block;
+  }
 
   /* ── Tabela de itens ── */
   .itens-table-wrap {
@@ -177,7 +185,9 @@
     overflow: auto;
   }
 
-  .itens-table-wrap table { min-width: 1380px; }
+  .itens-table-wrap table {
+    min-width: 1380px;
+  }
 
   .itens-table-wrap thead th {
     position: sticky;
@@ -290,11 +300,13 @@
   /* ── Errors ── */
   .field-error {
     border-color: var(--danger) !important;
-    box-shadow: 0 0 0 0.1rem rgba(239,68,68,.2) !important;
+    box-shadow: 0 0 0 0.1rem rgba(239, 68, 68, .2) !important;
   }
 
   /* ── Toast ── */
-  .toast-container { z-index: 9999; }
+  .toast-container {
+    z-index: 9999;
+  }
 
   /* ── Spinner de cálculo ── */
   .calc-spinner {
@@ -311,10 +323,16 @@
     transform: translateY(-50%);
   }
 
-  @keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+  @keyframes spin {
+    to {
+      transform: translateY(-50%) rotate(360deg);
+    }
+  }
 
   @media (min-width: 1200px) {
-    .pedido-body { min-height: 580px; }
+    .pedido-body {
+      min-height: 580px;
+    }
   }
 </style>
 
@@ -358,6 +376,7 @@
 
   <form method="post" novalidate>
     {% csrf_token %}
+    <div class="d-none">{{ form.pedi_empr }}</div>
 
     <div class="pedido-body">
       <div class="row g-3 align-items-start">
@@ -375,14 +394,14 @@
 
               <div class="col-8 position-relative">
                 <label>Cliente</label>
-                <input id="cliente_nome" class="form-control" placeholder="Buscar cliente...">
+                <input id="cliente_nome" class="form-control" placeholder="Buscar cliente..." value="{{ cliente_label|default:'' }}">
                 <div class="d-none">{{ form.pedi_clie }}</div>
               </div>
 
               <div class="col-4">
                 <label>Pedido</label>
-                <input class="form-control"
-                  value="{% if pedido %}{{ pedido.pedi_nume }}{% else %}(novo){% endif %}" readonly>
+                <input class="form-control" value="{% if pedido %}{{ pedido.pedi_nume }}{% else %}(novo){% endif %}"
+                  readonly>
               </div>
 
               <div class="col-4">
@@ -397,7 +416,7 @@
 
               <div class="col-12 position-relative">
                 <label>Vendedor</label>
-                <input id="vendedor_nome" class="form-control" placeholder="Buscar vendedor...">
+                <input id="vendedor_nome" class="form-control" placeholder="Buscar vendedor..." value="{{ vendedor_label|default:'' }}">
                 <div class="d-none">{{ form.pedi_vend }}</div>
               </div>
 
@@ -422,10 +441,14 @@
                 <div class="col-4"><label>Desconto (R$)</label>{{ form.pedi_desc }}</div>
                 <div class="col-4"><label>Frete (R$)</label>{{ form.pedi_fret }}</div>
                 <div class="col-4"><label>Total Líquido</label>{{ form.pedi_tota }}</div>
-                <div class="col-6"><label>Entrada (R$)</label><input id="fin-entrada" class="form-control" type="number" step="0.01" value="0"></div>
-                <div class="col-6"><label>Restante</label><input id="fin-restante" class="form-control calc-field" readonly></div>
-                <div class="col-4"><label>Parcelas</label><input id="fin-parcelas" class="form-control" type="number" min="1" value="1"></div>
-                <div class="col-8"><label>Condição (dias)</label><input id="fin-condicao" class="form-control" placeholder="Ex: 30 60 90"></div>
+                <div class="col-6"><label>Entrada (R$)</label><input id="fin-entrada" class="form-control" type="number"
+                    step="0.01" value="0"></div>
+                <div class="col-6"><label>Restante</label><input id="fin-restante" class="form-control calc-field"
+                    readonly></div>
+                <div class="col-4"><label>Parcelas</label><input id="fin-parcelas" class="form-control" type="number"
+                    min="1" value="1"></div>
+                <div class="col-8"><label>Condição (dias)</label><input id="fin-condicao" class="form-control"
+                    placeholder="Ex: 30 60 90"></div>
                 <div class="col-12 d-flex gap-2 flex-wrap">
                   <button type="button" class="btn btn-sm btn-outline-success" id="fin-gerar">Gerar Títulos</button>
                   <button type="button" class="btn btn-sm btn-outline-danger" id="fin-limpar">Remover</button>
@@ -433,7 +456,15 @@
               </div>
               <div class="table-responsive mt-2">
                 <table class="table table-sm table-dark align-middle mb-0">
-                  <thead><tr><th>Parcela</th><th>Vencimento</th><th class="text-end">Valor</th><th>Forma</th><th>Status</th></tr></thead>
+                  <thead>
+                    <tr>
+                      <th>Parcela</th>
+                      <th>Vencimento</th>
+                      <th class="text-end">Valor</th>
+                      <th>Forma</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
                   <tbody id="fin-titulos-body"></tbody>
                 </table>
               </div>
@@ -505,45 +536,38 @@
 
                     <!-- M² (input do usuário — dispara cálculo) -->
                     <td class="position-relative">
-                      <input type="number" step="0.01"
-                        id="m2-{{ forloop.counter0 }}"
-                        class="form-control form-control-sm item-m2"
-                        value="{{ f.item_m2.value|default:'' }}"
-                        data-index="{{ forloop.counter0 }}"
-                        placeholder="0,00">
+                      <input type="number" step="0.01" id="m2-{{ forloop.counter0 }}"
+                        class="form-control form-control-sm item-m2" value="{{ f.item_m2.value|default:'' }}"
+                        data-index="{{ forloop.counter0 }}" placeholder="0,00">
                       <div class="d-none">{{ f.item_m2 }}</div>
                       <div class="calc-spinner" id="spin-{{ forloop.counter0 }}"></div>
                     </td>
 
                     <!-- Produto autocomplete -->
                     <td class="position-relative">
-                      <input id="produto_busca_{{ forloop.counter0 }}"
-                        class="form-control form-control-sm"
-                        placeholder="Buscar produto"
-                        data-index="{{ forloop.counter0 }}">
+                      <input id="produto_busca_{{ forloop.counter0 }}" class="form-control form-control-sm"
+                        placeholder="Buscar produto" data-index="{{ forloop.counter0 }}">
                       <div class="d-none">{{ f.item_prod }}</div>
-                    </td>
+                        data-index="{{ forloop.counter0 }}"
+                        value="{{ f.item_prod_nome.value|default:'' }}">
+
+                    <td>{{ f.item_prod_nome }}</td>
 
                     <td>{{ f.item_prod_nome }}</td>
 
                     <!-- Quant. (calculado pelo service) -->
                     <td>
-                      <input type="number" step="0.0001"
-                        id="quan-{{ forloop.counter0 }}"
-                        class="form-control form-control-sm calc-field"
-                        value="{{ f.item_quan.value|default:'' }}"
+                      <input type="number" step="0.0001" id="quan-{{ forloop.counter0 }}"
+                        class="form-control form-control-sm calc-field" value="{{ f.item_quan.value|default:'' }}"
                         readonly tabindex="-1">
                       <div class="d-none">{{ f.item_quan }}</div>
                     </td>
 
                     <!-- Unitário (usuário preenche → dispara cálculo) -->
                     <td>
-                      <input type="number" step="0.01"
-                        id="unit-{{ forloop.counter0 }}"
-                        class="form-control form-control-sm item-unit"
-                        value="{{ f.item_unit.value|default:'' }}"
-                        data-index="{{ forloop.counter0 }}"
-                        placeholder="0,00">
+                      <input type="number" step="0.01" id="unit-{{ forloop.counter0 }}"
+                        class="form-control form-control-sm item-unit" value="{{ f.item_unit.value|default:'' }}"
+                        data-index="{{ forloop.counter0 }}" placeholder="0,00">
                       <div class="d-none">{{ f.item_unit }}</div>
                     </td>
 
@@ -551,21 +575,16 @@
 
                     <!-- Quebra % (dispara cálculo) -->
                     <td>
-                      <input type="number" step="0.01" min="0" max="100"
-                        id="queb-{{ forloop.counter0 }}"
-                        class="form-control form-control-sm item-queb"
-                        value="{{ f.item_queb.value|default:'' }}"
-                        data-index="{{ forloop.counter0 }}"
-                        placeholder="0">
+                      <input type="number" step="0.01" min="0" max="100" id="queb-{{ forloop.counter0 }}"
+                        class="form-control form-control-sm item-queb" value="{{ f.item_queb.value|default:'' }}"
+                        data-index="{{ forloop.counter0 }}" placeholder="0">
                       <div class="d-none">{{ f.item_queb }}</div>
                     </td>
 
                     <!-- Subtotal (calculado) -->
                     <td>
-                      <input type="text"
-                        id="suto-{{ forloop.counter0 }}"
-                        class="form-control form-control-sm calc-field"
-                        value="{{ f.item_suto.value|default:'' }}"
+                      <input type="text" id="suto-{{ forloop.counter0 }}"
+                        class="form-control form-control-sm calc-field" value="{{ f.item_suto.value|default:'' }}"
                         readonly tabindex="-1">
                     </td>
 
@@ -606,8 +625,7 @@
       <button class="btn btn-outline-success btn-sm" type="submit">
         <i class="bi bi-check-lg"></i> Gravar
       </button>
-      <a class="btn btn-outline-danger btn-sm"
-        href="{% url 'PisosWeb:pedidos_pisos_listar' slug=slug %}">
+      <a class="btn btn-outline-danger btn-sm" href="{% url 'PisosWeb:pedidos_pisos_listar' slug=slug %}">
         <i class="bi bi-x-lg"></i> Cancelar
       </a>
     </div>
@@ -615,244 +633,266 @@
 </div>
 
 <script>
-const SLUG = "{{ slug }}";
-const URL_CALCULAR = "{% url 'PisosWeb:api_calcular_item' slug=slug %}";
-const CSRF = "{{ csrf_token }}";
+  const SLUG = "{{ slug }}";
+  const URL_CALCULAR = "{% url 'PisosWeb:api_calcular_item' slug=slug %}";
+  const CSRF = "{{ csrf_token }}";
 
-/* ── Utilitários ── */
-function fmtBRL(v) {
-  const n = parseFloat(v) || 0;
-  return 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
+  /* ── Utilitários ── */
+  function fmtBRL(v) {
+    const n = parseFloat(v) || 0;
+    return 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
 
-function showToast(message, type = 'danger') {
-  const container = document.querySelector('.toast-container');
-  const toast = document.createElement('div');
-  toast.className = `toast text-bg-${type} border-0 show`;
-  toast.setAttribute('role', 'alert');
-  toast.innerHTML = `
+  function showToast(message, type = 'danger') {
+    const container = document.querySelector('.toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast text-bg-${type} border-0 show`;
+    toast.setAttribute('role', 'alert');
+    toast.innerHTML = `
     <div class="toast-header text-bg-${type} border-0">
       <strong class="me-auto">Aviso</strong>
       <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
     </div>
     <div class="toast-body">${message}</div>
   `;
-  container.appendChild(toast);
-  setTimeout(() => toast.remove(), 6500);
-}
-
-
-function gerarTitulosFinanceiro() {
-  const body = document.getElementById('fin-titulos-body');
-  if (!body) return;
-  const total = parseFloat(document.getElementById('id_pedi_tota')?.value || 0) || 0;
-  const entrada = parseFloat(document.getElementById('fin-entrada')?.value || 0) || 0;
-  const restante = Math.max(total - entrada, 0);
-  const parcelas = Math.max(parseInt(document.getElementById('fin-parcelas')?.value || '1', 10), 1);
-  const cond = (document.getElementById('fin-condicao')?.value || '').trim();
-  const dias = cond ? cond.split(/\s+/).map(x => parseInt(x,10)).filter(x => !isNaN(x)) : [];
-  const valorParcela = restante / parcelas;
-  const base = new Date();
-  body.innerHTML = '';
-  for (let i=0;i<parcelas;i++) {
-    const d = new Date(base);
-    d.setDate(d.getDate() + (dias[i] || (30 * i)));
-    const venc = d.toISOString().slice(0,10).split('-').reverse().join('/');
-    body.innerHTML += `<tr><td>${i+1}</td><td>${venc}</td><td class="text-end">${fmtBRL(valorParcela)}</td><td>${document.getElementById('id_pedi_form_paga')?.value || '-'}</td><td>Aberto</td></tr>`;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 6500);
   }
-  const finRest = document.getElementById('fin-restante');
-  if (finRest) finRest.value = fmtBRL(restante);
-}
 
-/* ── Tabs ── */
-function bindTabs() {
-  document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      tab.classList.add('active');
-      const target = document.getElementById('tab-' + tab.dataset.tab);
-      if (target) target.classList.add('active');
+
+  function gerarTitulosFinanceiro() {
+    const body = document.getElementById('fin-titulos-body');
+    if (!body) return;
+    const total = parseFloat(document.getElementById('id_pedi_tota')?.value || 0) || 0;
+    const entrada = parseFloat(document.getElementById('fin-entrada')?.value || 0) || 0;
+    const restante = Math.max(total - entrada, 0);
+    const parcelas = Math.max(parseInt(document.getElementById('fin-parcelas')?.value || '1', 10), 1);
+    const cond = (document.getElementById('fin-condicao')?.value || '').trim();
+    const dias = cond ? cond.split(/\s+/).map(x => parseInt(x, 10)).filter(x => !isNaN(x)) : [];
+    const valorParcela = restante / parcelas;
+    const base = new Date();
+    body.innerHTML = '';
+    for (let i = 0; i < parcelas; i++) {
+      const d = new Date(base);
+      d.setDate(d.getDate() + (dias[i] || (30 * i)));
+      const venc = d.toISOString().slice(0, 10).split('-').reverse().join('/');
+      body.innerHTML += `<tr><td>${i + 1}</td><td>${venc}</td><td class="text-end">${fmtBRL(valorParcela)}</td><td>${document.getElementById('id_pedi_form_paga')?.value || '-'}</td><td>Aberto</td></tr>`;
+    }
+    const finRest = document.getElementById('fin-restante');
+    if (finRest) finRest.value = fmtBRL(restante);
+  }
+
+  /* ── Tabs ── */
+  function bindTabs() {
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        const target = document.getElementById('tab-' + tab.dataset.tab);
+        if (target) target.classList.add('active');
+      });
     });
-  });
-}
+  }
 
-/* ── Workflow ── */
-function renderWorkflow() {
-  const container = document.getElementById('wf-timeline');
-  if (!container) return;
-  const steps = ['Financeiro Ok', 'Compra Realizada', 'Pedido Instalado', 'Pedido Finalizado'];
-  container.innerHTML = steps.map((step, i) => `
+  /* ── Workflow ── */
+  function renderWorkflow() {
+    const container = document.getElementById('wf-timeline');
+    if (!container) return;
+    const steps = ['Financeiro Ok', 'Compra Realizada', 'Pedido Instalado', 'Pedido Finalizado'];
+    container.innerHTML = steps.map((step, i) => `
     <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color:#323760!important">
       <span>${i + 1}. ${step}</span>
       <button type="button" class="btn btn-sm btn-outline-primary">Concluir</button>
     </div>
   `).join('');
-}
-
-/* ── Autocomplete ── */
-function setupAutocomplete(inputId, hiddenId, url, onSelect) {
-  const input = document.getElementById(inputId);
-  const hidden = document.getElementById(hiddenId);
-  if (!input || !hidden) return;
-
-  const box = document.createElement('div');
-  box.className = 'list-group position-absolute autocomplete-box d-none';
-  input.parentElement.style.position = 'relative';
-  input.parentElement.appendChild(box);
-
-  let debounceTimer;
-
-  input.addEventListener('input', () => {
-    clearTimeout(debounceTimer);
-    const term = input.value.trim();
-    if (term.length < 2) { box.classList.add('d-none'); return; }
-
-    debounceTimer = setTimeout(async () => {
-      try {
-        const res = await fetch(url + '?term=' + encodeURIComponent(term));
-        const data = await res.json();
-        box.innerHTML = data.map(item =>
-          `<button type="button" class="list-group-item list-group-item-action">${item.label}</button>`
-        ).join('');
-        box.classList.toggle('d-none', data.length === 0);
-
-        [...box.children].forEach((btn, idx) => {
-          btn.addEventListener('click', () => {
-            input.value = data[idx].label;
-            hidden.value = data[idx].id;
-            box.classList.add('d-none');
-            if (onSelect) onSelect(data[idx]);
-          });
-        });
-      } catch (e) {
-        console.error('Autocomplete error:', e);
-        box.classList.add('d-none');
-      }
-    }, 250);
-  });
-
-  document.addEventListener('click', e => {
-    if (!input.parentElement.contains(e.target)) box.classList.add('d-none');
-  });
-}
-
-/* ── Cálculo via service (AJAX) ── */
-const calcTimers = {};
-
-async function calcularItem(index) {
-  const prodInput = document.getElementById(`id_itens-${index}-item_prod`);
-  const m2Input   = document.getElementById(`m2-${index}`);
-  const unitInput = document.getElementById(`unit-${index}`);
-  const quebInput = document.getElementById(`queb-${index}`);
-  const spinner   = document.getElementById(`spin-${index}`);
-
-  const prod_id = prodInput?.value;
-  const m2      = parseFloat(m2Input?.value) || 0;
-  const unit    = parseFloat(unitInput?.value) || 0;
-  const queb    = parseFloat(quebInput?.value) || 0;
-
-  // só calcula se tiver produto e m2
-  if (!prod_id || m2 <= 0) return;
-
-  if (spinner) spinner.style.display = 'block';
-
-  try {
-    const res = await fetch(URL_CALCULAR, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': CSRF,
-      },
-      body: JSON.stringify({ item_prod: prod_id, item_m2: m2, item_unit: unit, item_queb: queb }),
-    });
-
-    if (!res.ok) throw new Error('Erro HTTP ' + res.status);
-    const data = await res.json();
-
-    /* Preencher campos calculados */
-    const badgeCaix = document.getElementById(`badge-caix-${index}`);
-    const quanInput = document.getElementById(`quan-${index}`);
-    const sutoInput = document.getElementById(`suto-${index}`);
-    const hiddenCaix = document.querySelector(`#itens-table tr[data-index="${index}"] input[name$="-item_caix"]`);
-    const hiddenQuan = document.querySelector(`#id_itens-${index}-item_quan`);
-
-    if (badgeCaix) badgeCaix.textContent = data.caixas || '—';
-    if (quanInput) quanInput.value = data.quantidade || '';
-    if (sutoInput) sutoInput.value = parseFloat(data.total || 0).toFixed(2);
-    if (hiddenCaix) hiddenCaix.value = data.caixas || '';
-    if (hiddenQuan) hiddenQuan.value = data.quantidade || '';
-
-    atualizarTotais();
-
-  } catch (e) {
-    console.error('Erro ao calcular item:', e);
-  } finally {
-    if (spinner) spinner.style.display = 'none';
   }
-}
 
-function debounceCalc(index, delay = 600) {
-  clearTimeout(calcTimers[index]);
-  calcTimers[index] = setTimeout(() => calcularItem(index), delay);
-}
+  /* ── Autocomplete ── */
+  function setupAutocomplete(inputId, hiddenId, url, onSelect) {
+    const input = document.getElementById(inputId);
+    const hidden = document.getElementById(hiddenId);
+    if (!input || !hidden) return;
 
-/* ── Totais rodapé ── */
-function atualizarTotais() {
-  let subtotal = 0;
-  document.querySelectorAll('[id^="suto-"]').forEach(el => {
-    subtotal += parseFloat(el.value) || 0;
-  });
+    const box = document.createElement('div');
+    box.className = 'list-group position-absolute autocomplete-box d-none';
+    input.parentElement.style.position = 'relative';
+    input.parentElement.appendChild(box);
 
-  const desc = parseFloat(document.getElementById('id_pedi_desc')?.value) || 0;
-  const fret = parseFloat(document.getElementById('id_pedi_fret')?.value) || 0;
-  const total = subtotal - desc + fret;
+    let debounceTimer;
 
-  document.getElementById('total-itens').textContent = fmtBRL(subtotal);
-  document.getElementById('total-desc').textContent  = fmtBRL(desc);
-  document.getElementById('total-fret').textContent  = fmtBRL(fret);
-  document.getElementById('total-geral').textContent = fmtBRL(total);
+    input.addEventListener('input', () => {
+      clearTimeout(debounceTimer);
+      const term = input.value.trim();
+      if (term.length < 2) { box.classList.add('d-none'); return; }
 
-  // Atualizar campo pedi_tota no form
-  const totalField = document.getElementById('id_pedi_tota');
-  if (totalField && !totalField.readOnly) totalField.value = total.toFixed(2);
-}
+      debounceTimer = setTimeout(async () => {
+        try {
+          const res = await fetch(url + '?term=' + encodeURIComponent(term));
+          const data = await res.json();
+          box.innerHTML = data.map(item =>
+            `<button type="button" class="list-group-item list-group-item-action">${item.label}</button>`
+          ).join('');
+          box.classList.toggle('d-none', data.length === 0);
 
-/* ── Bind calcular em inputs de m², unit e queb ── */
-function bindCalcInputs(index) {
-  ['m2', 'unit', 'queb'].forEach(tipo => {
-    const el = document.getElementById(`${tipo}-${index}`);
-    if (!el) return;
-    el.addEventListener('input', () => debounceCalc(index));
-
-    // sincronizar hidden do formset
-    el.addEventListener('change', () => {
-      const hiddenMap = { m2: 'item_m2', unit: 'item_unit', queb: 'item_queb' };
-      const hidden = document.getElementById(`id_itens-${index}-${hiddenMap[tipo]}`);
-      if (hidden) hidden.value = el.value;
+          [...box.children].forEach((btn, idx) => {
+            btn.addEventListener('click', () => {
+              input.value = data[idx].label;
+              hidden.value = data[idx].id;
+              box.classList.add('d-none');
+              if (onSelect) onSelect(data[idx]);
+            });
+          });
+        } catch (e) {
+          console.error('Autocomplete error:', e);
+          box.classList.add('d-none');
+        }
+      }, 250);
     });
-  });
-}
 
-/* ── Adicionar item dinamicamente ── */
-function setupAddItem() {
-  const btn = document.getElementById('btn-add-item');
-  if (!btn) return;
+    document.addEventListener('click', e => {
+      if (!input.parentElement.contains(e.target)) box.classList.add('d-none');
+    });
+  }
 
-  btn.addEventListener('click', () => {
-    const totalInput = document.getElementById('id_itens-TOTAL_FORMS');
-    if (!totalInput) return;
+  async function prefillAutocomplete(inputId, hiddenId, url, onSelect) {
+    const input = document.getElementById(inputId);
+    const hidden = document.getElementById(hiddenId);
+    if (!input || !hidden) return;
+    const currentId = String(hidden.value || '').trim();
+    if (!currentId || String(input.value || '').trim()) return;
+    try {
+      const res = await fetch(url + '?term=' + encodeURIComponent(currentId));
+      const data = await res.json();
+      if (Array.isArray(data) && data.length) {
+        input.value = data[0].label;
+        hidden.value = data[0].id;
+        if (onSelect) onSelect(data[0]);
+      }
+    } catch (e) {
+      console.error('Autocomplete prefill error:', e);
+    }
+  }
 
-    const index = parseInt(totalInput.value, 10);
-    totalInput.value = index + 1;
+  /* ── Cálculo via service (AJAX) ── */
+  const calcTimers = {};
 
-    const tbody = document.getElementById('itens-tbody');
-    const prefix = `itens-${index}`;
+  async function calcularItem(index) {
+    const prodInput = document.getElementById(`id_itens-${index}-item_prod`);
+    const m2Input = document.getElementById(`m2-${index}`);
+    const unitInput = document.getElementById(`unit-${index}`);
+    const quebInput = document.getElementById(`queb-${index}`);
+    const spinner = document.getElementById(`spin-${index}`);
 
-    const tr = document.createElement('tr');
-    tr.dataset.index = index;
-    tr.innerHTML = `
-      <td><input name="${prefix}-item_nome_ambi" class="form-control form-control-sm" placeholder="Ambiente"></td>
+    const prod_id = prodInput?.value;
+    const m2 = parseFloat(m2Input?.value) || 0;
+    const unit = parseFloat(unitInput?.value) || 0;
+    const queb = parseFloat(quebInput?.value) || 0;
+
+    // só calcula se tiver produto e m2
+    if (!prod_id || m2 <= 0) return;
+
+    if (spinner) spinner.style.display = 'block';
+
+    try {
+      const res = await fetch(URL_CALCULAR, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': CSRF,
+        },
+        body: JSON.stringify({ item_prod: prod_id, item_m2: m2, item_unit: unit, item_queb: queb }),
+      });
+
+      if (!res.ok) throw new Error('Erro HTTP ' + res.status);
+      const data = await res.json();
+
+      /* Preencher campos calculados */
+      const badgeCaix = document.getElementById(`badge-caix-${index}`);
+      const quanInput = document.getElementById(`quan-${index}`);
+      const sutoInput = document.getElementById(`suto-${index}`);
+      const hiddenCaix = document.querySelector(`#itens-table tr[data-index="${index}"] input[name$="-item_caix"]`);
+      const hiddenQuan = document.querySelector(`#id_itens-${index}-item_quan`);
+
+      if (badgeCaix) badgeCaix.textContent = data.caixas || '—';
+      if (quanInput) quanInput.value = data.quantidade || '';
+      if (sutoInput) sutoInput.value = parseFloat(data.total || 0).toFixed(2);
+      if (hiddenCaix) hiddenCaix.value = data.caixas || '';
+      if (hiddenQuan) hiddenQuan.value = data.quantidade || '';
+
+      atualizarTotais();
+
+    } catch (e) {
+      console.error('Erro ao calcular item:', e);
+    } finally {
+      if (spinner) spinner.style.display = 'none';
+    }
+  }
+
+  function debounceCalc(index, delay = 600) {
+    clearTimeout(calcTimers[index]);
+    calcTimers[index] = setTimeout(() => calcularItem(index), delay);
+  }
+
+  /* ── Totais rodapé ── */
+  function atualizarTotais() {
+    let subtotal = 0;
+    document.querySelectorAll('[id^="suto-"]').forEach(el => {
+      subtotal += parseFloat(el.value) || 0;
+    });
+
+    const desc = parseFloat(document.getElementById('id_pedi_desc')?.value) || 0;
+    const fret = parseFloat(document.getElementById('id_pedi_fret')?.value) || 0;
+    const total = subtotal - desc + fret;
+
+    document.getElementById('total-itens').textContent = fmtBRL(subtotal);
+    document.getElementById('total-desc').textContent = fmtBRL(desc);
+    document.getElementById('total-fret').textContent = fmtBRL(fret);
+    document.getElementById('total-geral').textContent = fmtBRL(total);
+
+    // Atualizar campo pedi_tota no form
+    const totalField = document.getElementById('id_pedi_tota');
+    if (totalField && !totalField.readOnly) totalField.value = total.toFixed(2);
+  }
+
+  /* ── Bind calcular em inputs de m², unit e queb ── */
+  function bindCalcInputs(index) {
+    ['m2', 'unit', 'queb'].forEach(tipo => {
+      const el = document.getElementById(`${tipo}-${index}`);
+      if (!el) return;
+      el.addEventListener('input', () => debounceCalc(index));
+
+      // sincronizar hidden do formset
+      el.addEventListener('change', () => {
+        const hiddenMap = { m2: 'item_m2', unit: 'item_unit', queb: 'item_queb' };
+        const hidden = document.getElementById(`id_itens-${index}-${hiddenMap[tipo]}`);
+        if (hidden) hidden.value = el.value;
+      });
+    });
+  }
+
+  /* ── Adicionar item dinamicamente ── */
+  function setupAddItem() {
+    const btn = document.getElementById('btn-add-item');
+    if (!btn) return;
+
+    btn.addEventListener('click', () => {
+      const totalInput = document.getElementById('id_itens-TOTAL_FORMS');
+      if (!totalInput) return;
+
+      const index = parseInt(totalInput.value, 10);
+      totalInput.value = index + 1;
+
+      const tbody = document.getElementById('itens-tbody');
+      const prefix = `itens-${index}`;
+
+      const tr = document.createElement('tr');
+      tr.dataset.index = index;
+      tr.innerHTML = `
+      <td>
+        <input name="${prefix}-item_nome_ambi" class="form-control form-control-sm" placeholder="Ambiente">
+        <input type="hidden" name="${prefix}-item_ambi" id="id_itens-${index}-item_ambi" value="${index + 1}">
+      </td>
       <td>
         <div class="badge-caix" id="badge-caix-${index}">—</div>
         <input type="hidden" name="${prefix}-item_caix" id="id_itens-${index}-item_caix" value="">
@@ -896,119 +936,111 @@ function setupAddItem() {
         <input type="checkbox" name="${prefix}-DELETE" class="form-check-input">
       </td>
     `;
-    tbody.appendChild(tr);
+      tbody.appendChild(tr);
 
-    bindCalcInputs(index);
-    setupAutocomplete(
-      `produto_busca_${index}`,
-      `id_itens-${index}-item_prod`,
-      `/{{ slug }}/pedidos/autocomplete/produtos/`,
-      (selected) => {
-        const nomeInput = document.getElementById(`id_itens-${index}-item_prod_nome`);
-        if (nomeInput) nomeInput.value = selected.label;
-        debounceCalc(index);
+      bindCalcInputs(index);
+      setupAutocomplete(
+        `produto_busca_${index}`,
+        `id_itens-${index}-item_prod`,
+        `/{{ slug }}/pedidos/autocomplete/produtos/`,
+        (selected) => {
+          const nomeInput = document.getElementById(`id_itens-${index}-item_prod_nome`);
+          if (nomeInput) nomeInput.value = selected.label;
+          debounceCalc(index);
+        }
+      );
+    });
+  }
+
+  /* ── Validação antes de submeter ── */
+  function validateBeforeSubmit() {
+    const form = document.querySelector('form');
+    form.addEventListener('submit', event => {
+      const required = [
+        { id: 'id_pedi_fili', label: 'Loja' },
+        { id: 'id_pedi_clie', label: 'Cliente' },
+        { id: 'id_pedi_vend', label: 'Vendedor' },
+        { id: 'id_pedi_data', label: 'Data do pedido' },
+      ];
+
+      let hasError = false;
+      let msgs = [];
+
+      required.forEach(f => {
+        const el = document.getElementById(f.id);
+        if (el && !String(el.value || '').trim()) {
+          hasError = true;
+          msgs.push(f.label);
+          el.classList.add('field-error');
+        } else if (el) {
+          el.classList.remove('field-error');
+        }
+      });
+
+      const totalForms = document.getElementById('id_itens-TOTAL_FORMS');
+      let hasValidItem = false;
+      if (totalForms) {
+        const total = parseInt(totalForms.value || '0', 10);
+        for (let i = 0; i < total; i++) {
+          const prod = document.getElementById(`id_itens-${i}-item_prod`);
+          const del = document.querySelector(`input[name="itens-${i}-DELETE"]`);
+          if (!del?.checked && prod?.value) hasValidItem = true;
+        }
       }
-    );
-  });
-}
 
-/* ── Validação antes de submeter ── */
-function validateBeforeSubmit() {
-  const form = document.querySelector('form');
-  form.addEventListener('submit', event => {
-    const required = [
-      { id: 'id_pedi_fili', label: 'Loja' },
-      { id: 'id_pedi_clie', label: 'Cliente' },
-      { id: 'id_pedi_vend', label: 'Vendedor' },
-      { id: 'id_pedi_data', label: 'Data do pedido' },
-    ];
+      if (!hasValidItem) { hasError = true; msgs.push('Pelo menos 1 item'); }
 
-    let hasError = false;
-    let msgs = [];
-
-    required.forEach(f => {
-      const el = document.getElementById(f.id);
-      if (el && !String(el.value || '').trim()) {
-        hasError = true;
-        msgs.push(f.label);
-        el.classList.add('field-error');
-      } else if (el) {
-        el.classList.remove('field-error');
+      if (hasError) {
+        event.preventDefault();
+        showToast('Preencha: ' + [...new Set(msgs)].join(', '), 'danger');
       }
     });
+  }
 
-    const totalForms = document.getElementById('id_itens-TOTAL_FORMS');
-    let hasValidItem = false;
-    if (totalForms) {
-      const total = parseInt(totalForms.value || '0', 10);
-      for (let i = 0; i < total; i++) {
-        const prod = document.getElementById(`id_itens-${i}-item_prod`);
-        const del  = document.querySelector(`input[name="itens-${i}-DELETE"]`);
-        if (!del?.checked && prod?.value) hasValidItem = true;
-      }
-    }
 
-    if (!hasValidItem) { hasError = true; msgs.push('Pelo menos 1 item'); }
+  /* ── Init ── */
+  document.addEventListener('DOMContentLoaded', () => {
+    bindTabs();
+    renderWorkflow();
+    document.getElementById("fin-gerar")?.addEventListener("click", gerarTitulosFinanceiro);
+    document.getElementById("fin-limpar")?.addEventListener("click", () => { const b = document.getElementById("fin-titulos-body"); if (b) b.innerHTML = ""; });
+    markServerErrors();
 
-    if (hasError) {
-      event.preventDefault();
-      showToast('Preencha: ' + [...new Set(msgs)].join(', '), 'danger');
-    }
-  });
-}
+    const URL_AUTO_CLIENTES = "{% url 'PisosWeb:autocomplete_clientes' slug=slug %}";
+    const URL_AUTO_VENDEDORES = "{% url 'PisosWeb:autocomplete_vendedores' slug=slug %}";
+    const URL_AUTO_PRODUTOS = "{% url 'PisosWeb:autocomplete_produtos' slug=slug %}";
 
-/* ── Marcar erros do server ── */
-function markServerErrors() {
-  {% for field in form %}{% if field.errors %}
-  const el_{{ forloop.counter }} = document.getElementById('{{ field.id_for_label }}');
-  if (el_{{ forloop.counter }}) el_{{ forloop.counter }}.classList.add('field-error');
-  {% endif %}{% endfor %}
-}
+    setupAutocomplete('cliente_nome', 'id_pedi_clie', URL_AUTO_CLIENTES);
+    prefillAutocomplete('cliente_nome', 'id_pedi_clie', URL_AUTO_CLIENTES);
 
-/* ── Init ── */
-document.addEventListener('DOMContentLoaded', () => {
-  bindTabs();
-  renderWorkflow();
-  document.getElementById("fin-gerar")?.addEventListener("click", gerarTitulosFinanceiro);
-  document.getElementById("fin-limpar")?.addEventListener("click", () => { const b=document.getElementById("fin-titulos-body"); if (b) b.innerHTML=""; });
-  document.getElementById("fin-entrada")?.addEventListener("input", gerarTitulosFinanceiro);
-  markServerErrors();
-  validateBeforeSubmit();
+    setupAutocomplete('vendedor_nome', 'id_pedi_vend', URL_AUTO_VENDEDORES);
+    prefillAutocomplete('vendedor_nome', 'id_pedi_vend', URL_AUTO_VENDEDORES);
 
-  setupAutocomplete('cliente_nome',  'id_pedi_clie',
-    "{% url 'PisosWeb:autocomplete_clientes' slug=slug %}");
-
-  setupAutocomplete('vendedor_nome', 'id_pedi_vend',
-    "{% url 'PisosWeb:autocomplete_vendedores' slug=slug %}");
-
-  // Bind nos itens existentes (edição)
-  document.querySelectorAll('[id^="produto_busca_"]').forEach(input => {
-    const index = parseInt(input.dataset.index, 10);
-    bindCalcInputs(index);
-    setupAutocomplete(
-      input.id,
-      `id_itens-${index}-item_prod`,
-      "{% url 'PisosWeb:autocomplete_produtos' slug=slug %}",
-      (selected) => {
+    // Bind nos itens existentes (edição)
+    document.querySelectorAll('[id^="produto_busca_"]').forEach(input => {
+      const index = parseInt(input.dataset.index, 10);
+      bindCalcInputs(index);
+      const onSelectProduto = (selected) => {
         const nomeInput = document.querySelector(`input[name="itens-${index}-item_prod_nome"]`);
         if (nomeInput) nomeInput.value = selected.label;
         debounceCalc(index);
-      }
-    );
+      };
+      setupAutocomplete(input.id, `id_itens-${index}-item_prod`, URL_AUTO_PRODUTOS, onSelectProduto);
+      prefillAutocomplete(input.id, `id_itens-${index}-item_prod`, URL_AUTO_PRODUTOS, onSelectProduto);
+    });
+
+    // Bind nos campos desc/fret para atualizar totais
+    ['id_pedi_desc', 'id_pedi_fret'].forEach(id => {
+      document.getElementById(id)?.addEventListener('input', atualizarTotais);
+    });
+
+    setupAddItem();
+    atualizarTotais();
+
+    {% if form.errors or formset.errors or formset.non_form_errors %}
+    showToast('O formulário voltou com erros. Revise os campos destacados.', 'danger');
+    {% endif %}
   });
-
-  // Bind nos campos desc/fret para atualizar totais
-  ['id_pedi_desc', 'id_pedi_fret'].forEach(id => {
-    document.getElementById(id)?.addEventListener('input', atualizarTotais);
-  });
-
-  setupAddItem();
-  atualizarTotais();
-
-  {% if form.errors or formset.errors or formset.non_form_errors %}
-  showToast('O formulário voltou com erros. Revise os campos destacados.', 'danger');
-  {% endif %}
-});
 </script>
 
 {% endblock %}

@@ -1,39 +1,59 @@
 {% extends 'base.html' %}
+{% load static %}
+{% block title %}Orçamentos Pisos{% endblock %}
 {% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
+
 <div class="container py-4">
   <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3 class="mb-0">Orçamentos Pisos</h3>
+    <h3><i class="bi bi-receipt-cutoff"></i> Orçamentos Pisos</h3>
+    <a class="btn btn-outline-primary" href="{% url 'PisosWeb:orcamentos_pisos_criar' slug=slug %}">Novo</a>
   </div>
 
-  <div class="card mb-4">
-    <div class="card-header">Registrar orçamento pisos</div>
-    <div class="card-body">
-      <form method="post" action="{% url 'PisosWeb:orcamentos_pisos_criar' slug=slug %}" class="row g-2">
-        {% csrf_token %}
-        <div class="col-md-2"><input class="form-control" name="orca_clie" placeholder="Cliente código" required></div>
-        <div class="col-md-2"><input class="form-control" name="orca_vend" placeholder="Vendedor código"></div>
-        <div class="col-md-2"><input type="date" class="form-control" name="orca_data"></div>
-        <div class="col-md-2"><input type="date" class="form-control" name="orca_data_prev_entr"></div>
-        <div class="col-md-2"><input class="form-control" name="item_prod" placeholder="Produto" required></div>
-        <div class="col-md-2"><input type="number" step="0.01" class="form-control" name="item_m2" placeholder="M²"></div>
-        <div class="col-md-2"><input type="number" step="0.01" class="form-control" name="item_unit" placeholder="Unitário"></div>
-        <div class="col-md-6"><input class="form-control" name="orca_obse" placeholder="Observações"></div>
-        <div class="col-12">
-          <button class="btn btn-primary btn-sm" type="submit">Criar orçamento</button>
-        </div>
-      </form>
+  <div class="row g-3 mb-3">
+    <div class="col">
+      <div class="card card-body">Total orçamentos: {{ metricas.total_orcamentos }}</div>
+    </div>
+    <div class="col">
+      <div class="card card-body">Total valor: R$ {{ metricas.total_valor }}</div>
+    </div>
+    <div class="col">
+      <div class="card card-body">Exportados: {{ metricas.total_exportados }}</div>
     </div>
   </div>
 
-  <table class="table table-dark table-striped">
-    <thead><tr><th>Número</th><th>Cliente</th><th>Data</th><th>Total</th><th>Status</th><th>Ações</th></tr></thead>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Nº</th>
+        <th>Cliente</th>
+        <th>Data</th>
+        <th>Total</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    </thead>
     <tbody>
       {% for o in orcamentos %}
       <tr>
-        <td>{{ o.orca_nume }}</td><td>{{ o.orca_clie }}</td><td>{{ o.orca_data }}</td><td>{{ o.orca_tota }}</td><td>{{ o.orca_stat }}</td>
-        <td><a class="btn btn-sm btn-success" href="{% url 'PisosWeb:orcamentos_pisos_exportar' slug=slug numero=o.orca_nume %}">Exportar Pedido</a></td>
+        <td>{{ o.orca_nume }}</td>
+        <td>{{ o.orca_clie }}</td>
+        <td>{{ o.orca_data }}</td>
+        <td>{{ o.orca_tota }}</td>
+        <td>{{ o.get_orca_stat_display|default:o.orca_stat }}</td>
+        <td class="d-flex gap-2">
+          <a class="btn btn-sm btn-outline-primary" href="{% url 'PisosWeb:orcamentos_pisos_visualizar' slug=slug pk=o.orca_nume %}">Abrir</a>
+          {% if o.orca_stat != 2 %}
+          <a class="btn btn-sm btn-outline-success" href="{% url 'PisosWeb:orcamentos_pisos_exportar' slug=slug numero=o.orca_nume %}">Exportar</a>
+          {% endif %}
+        </td>
       </tr>
-      {% empty %}<tr><td colspan="6">Sem orçamentos.</td></tr>{% endfor %}
+      {% empty %}
+      <tr>
+        <td colspan="6">Sem orçamentos.</td>
+      </tr>
+      {% endfor %}
     </tbody>
   </table>
 </div>
