@@ -5,7 +5,7 @@ from django.shortcuts import redirect, render
 
 from core.utils import get_db_from_slug
 from Pisos.web.forms import PedidoPisosForm, ItemPedidoPisosFormSet
-from Pisos.services.web_flow_service import PedidoPisosWebFlowService
+from Pisos.services.pedido_criar_service import PedidoCriarService
 
 
 logger = logging.getLogger(__name__)
@@ -54,12 +54,16 @@ def criar_pedido_pisos(request, slug):
             "itens_input": itens,
         }
         try:
-            pedido = PedidoPisosWebFlowService.criar(banco, payload, request=request)
+            pedido = PedidoCriarService().executar(
+                banco=banco,
+                dados=form.cleaned_data,
+                itens=itens,
+            )
             messages.success(request, f"Pedido {pedido.pedi_nume} criado com sucesso.")
             return redirect("PisosWeb:pedidos_pisos_visualizar", slug=slug, pk=pedido.pedi_nume)
         except Exception as exc:
             logger.exception("Erro ao criar pedido de pisos (slug=%s, banco=%s). Payload keys=%s", slug, banco, list(payload.keys()))
-            messages.error(request, f"Erro ao criar pedido: {PedidoPisosWebFlowService.normalizar_erro(exc)}")
+            messages.error(request, f"Erro ao criar pedido: {PedidoCriarService.normalizar_erro(exc)}")
 
     if is_post and (not is_form_valid or not is_formset_valid):
         logger.warning(

@@ -3,7 +3,9 @@ from Orcamentos.models import Orcamentos, ItensOrcamento
 from Pisos.models import Orcamentopisos, Itensorcapisos
 from django.db.models import Max
 from core.decorator import get_modulos_usuario_db
-from Pisos.services.utils_service import DadosEntidadesService
+from Pisos.services.cliente_service import ClienteEnderecoService
+
+
 
 def exportar_visita_para_orcamento(visita: Controlevisita, banco: str):
     """
@@ -105,7 +107,10 @@ def exportar_visita_para_orcamento_pisos(visita: Controlevisita, banco: str, req
 
     # Preencher dados da entidade se request foi fornecido
     if request and visita.ctrl_cliente:
-        orc_pisos = DadosEntidadesService.preencher_dados_cliente(orc_pisos, request)
+        orc_pisos = ClienteEnderecoService.preencher_orcamento(
+            banco=banco,
+            orcamento=orc_pisos,
+        )
 
     # Criar itens do orçamento de pisos
     total = 0

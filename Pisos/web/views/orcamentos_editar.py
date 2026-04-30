@@ -5,7 +5,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from core.utils import get_db_from_slug
 from Pisos.models import Itensorcapisos, Orcamentopisos
-from Pisos.services.web_flow_service import OrcamentoPisosWebFlowService, exportar_orcamento_para_pedido
+from Pisos.services.orcamento_atualizar_service import OrcamentoAtualizarService
+from Pisos.services.orcamento_exportar_service import OrcamentoExportarPedidoService
 from Pisos.web.forms import ItemOrcamentoPisosFormSet, OrcamentoPisosForm
 
 
@@ -57,16 +58,26 @@ def editar_orcamento_pisos(request, slug, pk):
             "itens_input": itens,
         }
         try:
-            OrcamentoPisosWebFlowService.atualizar(banco, pk, payload, request=request)
+            OrcamentoAtualizarService().executar(
+                banco=banco,
+                orcamento=orcamento,
+                dados=form.cleaned_data,
+                itens=itens,
+            )
             if request.POST.get("acao") == "exportar":
-                pedido_numero = exportar_orcamento_para_pedido(banco, orcamento.orca_empr, orcamento.orca_fili, orcamento.orca_nume)
+                pedido_numero = OrcamentoExportarPedidoService().executar(
+                    banco=banco,
+                    empresa=orcamento.orca_empr,
+                    filial=orcamento.orca_fili,
+                    numero=orcamento.orca_nume,
+                )   
                 messages.success(request, f"Orçamento {pk} exportado para pedido {pedido_numero}.")
                 return redirect("PisosWeb:pedidos_pisos_visualizar", slug=slug, pk=pedido_numero)
             messages.success(request, f"Orçamento {pk} atualizado com sucesso.")
             return redirect("PisosWeb:orcamentos_pisos_visualizar", slug=slug, pk=pk)
         except Exception as exc:
             logger.exception("Erro ao atualizar orçamento de pisos (slug=%s, banco=%s, orca=%s).", slug, banco, pk)
-            messages.error(request, f"Erro ao atualizar orçamento: {OrcamentoPisosWebFlowService.normalizar_erro(exc)}")
+            messages.error(request, f"Erro ao atualizar orçamento: {OrcamentoAtualizarService.normalizar_erro(exc)}")
 
     if is_post and (not is_form_valid or not is_formset_valid):
         logger.warning(

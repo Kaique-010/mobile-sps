@@ -4,7 +4,8 @@ from django.contrib import messages
 from django.shortcuts import redirect, render
 
 from core.utils import get_db_from_slug
-from Pisos.services.web_flow_service import OrcamentoPisosWebFlowService, exportar_orcamento_para_pedido
+from Pisos.services.orcamento_criar_service import OrcamentoCriarService
+from Pisos.services.orcamento_exportar_service import OrcamentoExportarPedidoService
 from Pisos.web.forms import ItemOrcamentoPisosFormSet, OrcamentoPisosForm
 
 
@@ -54,16 +55,25 @@ def criar_orcamento_pisos(request, slug):
             "itens_input": itens,
         }
         try:
-            orcamento = OrcamentoPisosWebFlowService.criar(banco, payload, request=request)
+            orcamento = OrcamentoCriarService().executar(
+                banco=banco,
+                dados=form.cleaned_data,
+                itens=itens,
+            )
             if request.POST.get("acao") == "exportar":
-                pedido_numero = exportar_orcamento_para_pedido(banco, orcamento.orca_empr, orcamento.orca_fili, orcamento.orca_nume)
+                pedido_numero = OrcamentoExportarPedidoService().executar(
+                banco=banco,
+                empresa=orcamento.orca_empr,
+                filial=orcamento.orca_fili,
+                numero=orcamento.orca_nume,
+            )
                 messages.success(request, f"Orçamento {orcamento.orca_nume} exportado para pedido {pedido_numero}.")
                 return redirect("PisosWeb:pedidos_pisos_visualizar", slug=slug, pk=pedido_numero)
             messages.success(request, f"Orçamento {orcamento.orca_nume} criado com sucesso.")
             return redirect("PisosWeb:orcamentos_pisos_visualizar", slug=slug, pk=orcamento.orca_nume)
         except Exception as exc:
             logger.exception("Erro ao criar orçamento de pisos (slug=%s, banco=%s). Payload keys=%s", slug, banco, list(payload.keys()))
-            messages.error(request, f"Erro ao criar orçamento: {OrcamentoPisosWebFlowService.normalizar_erro(exc)}")
+            messages.error(request, f"Erro ao criar orçamento: {OrcamentoCriarService.normalizar_erro(exc)}")
 
     if is_post and (not is_form_valid or not is_formset_valid):
         logger.warning(

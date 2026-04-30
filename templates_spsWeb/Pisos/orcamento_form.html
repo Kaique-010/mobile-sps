@@ -131,7 +131,10 @@
     user-select: none;
   }
 
-  .tab:hover { color: var(--text); background: var(--bg3); }
+  .tab:hover {
+    color: var(--text);
+    background: var(--bg3);
+  }
 
   .tab.active {
     color: var(--accent);
@@ -139,8 +142,13 @@
     background: var(--bg3);
   }
 
-  .tab-content { display: none; }
-  .tab-content.active { display: block; }
+  .tab-content {
+    display: none;
+  }
+
+  .tab-content.active {
+    display: block;
+  }
 
   .itens-table-wrap {
     border: 1px solid var(--border);
@@ -149,7 +157,9 @@
     overflow: auto;
   }
 
-  .itens-table-wrap table { min-width: 1320px; }
+  .itens-table-wrap table {
+    min-width: 1320px;
+  }
 
   .itens-table-wrap thead th {
     position: sticky;
@@ -168,6 +178,15 @@
     border-color: #2c355f !important;
     vertical-align: middle;
     padding: 4px 6px !important;
+  }
+
+  .itens-table-wrap td.position-relative {
+    overflow: visible;
+    z-index: 3;
+  }
+
+  .itens-table-wrap td.position-relative:focus-within {
+    z-index: 1200;
   }
 
   .calc-field {
@@ -191,7 +210,7 @@
   }
 
   .autocomplete-box {
-    z-index: 1050;
+    z-index: 1210;
     width: 100%;
     max-height: 240px;
     overflow-y: auto;
@@ -257,10 +276,12 @@
 
   .field-error {
     border-color: var(--danger) !important;
-    box-shadow: 0 0 0 0.1rem rgba(239,68,68,.2) !important;
+    box-shadow: 0 0 0 0.1rem rgba(239, 68, 68, .2) !important;
   }
 
-  .toast-container { z-index: 9999; }
+  .toast-container {
+    z-index: 9999;
+  }
 
   .calc-spinner {
     display: none;
@@ -276,7 +297,11 @@
     transform: translateY(-50%);
   }
 
-  @keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+  @keyframes spin {
+    to {
+      transform: translateY(-50%) rotate(360deg);
+    }
+  }
 </style>
 
 <div class="toast-container position-fixed top-0 end-0 p-3">
@@ -338,7 +363,8 @@
 
               <div class="col-4">
                 <label>Orçamento</label>
-                <input class="form-control" value="{% if orcamento %}{{ orcamento.orca_nume }}{% else %}(novo){% endif %}" readonly>
+                <input class="form-control"
+                  value="{% if orcamento %}{{ orcamento.orca_nume }}{% else %}(novo){% endif %}" readonly>
               </div>
 
               <div class="col-4">
@@ -433,36 +459,41 @@
                       <div class="d-none">{{ f.item_caix }}</div>
                     </td>
                     <td class="position-relative">
-                      <input type="number" step="0.01" id="m2-{{ forloop.counter0 }}" class="form-control form-control-sm item-m2"
-                        value="{{ f.item_m2.value|default:'' }}" data-index="{{ forloop.counter0 }}" placeholder="0,00">
+                      <input type="number" step="0.01" id="m2-{{ forloop.counter0 }}"
+                        class="form-control form-control-sm item-m2" value="{{ f.item_m2.value|default:'' }}"
+                        data-index="{{ forloop.counter0 }}" placeholder="0,00">
                       <div class="d-none">{{ f.item_m2 }}</div>
                       <div class="calc-spinner" id="spin-{{ forloop.counter0 }}"></div>
                     </td>
                     <td class="position-relative">
-                      <input id="produto_busca_{{ forloop.counter0 }}" class="form-control form-control-sm" placeholder="Buscar produto"
-                        data-index="{{ forloop.counter0 }}">
+                      <input id="produto_busca_{{ forloop.counter0 }}" class="form-control form-control-sm"
+                        placeholder="Buscar produto" data-index="{{ forloop.counter0 }}">
                       <div class="d-none">{{ f.item_prod }}</div>
                     </td>
                     <td>{{ f.item_prod_nome }}</td>
                     <td>
-                      <input type="number" step="0.0001" id="quan-{{ forloop.counter0 }}" class="form-control form-control-sm calc-field"
-                        value="{{ f.item_quan.value|default:'' }}" readonly tabindex="-1">
+                      <input type="number" step="0.0001" id="quan-{{ forloop.counter0 }}"
+                        class="form-control form-control-sm calc-field" value="{{ f.item_quan.value|default:'' }}"
+                        readonly tabindex="-1">
                       <div class="d-none">{{ f.item_quan }}</div>
                     </td>
                     <td>
-                      <input type="number" step="0.01" id="unit-{{ forloop.counter0 }}" class="form-control form-control-sm item-unit"
-                        value="{{ f.item_unit.value|default:'' }}" data-index="{{ forloop.counter0 }}" placeholder="0,00">
+                      <input type="number" step="0.01" id="unit-{{ forloop.counter0 }}"
+                        class="form-control form-control-sm item-unit" value="{{ f.item_unit.value|default:'' }}"
+                        data-index="{{ forloop.counter0 }}" placeholder="0,00">
                       <div class="d-none">{{ f.item_unit }}</div>
                     </td>
                     <td>{{ f.item_desc }}</td>
                     <td>
-                      <input type="number" step="0.01" min="0" max="100" id="queb-{{ forloop.counter0 }}" class="form-control form-control-sm item-queb"
-                        value="{{ f.item_queb.value|default:'' }}" data-index="{{ forloop.counter0 }}" placeholder="0">
+                      <input type="number" step="0.01" min="0" max="100" id="queb-{{ forloop.counter0 }}"
+                        class="form-control form-control-sm item-queb" value="{{ f.item_queb.value|default:'' }}"
+                        data-index="{{ forloop.counter0 }}" placeholder="0">
                       <div class="d-none">{{ f.item_queb }}</div>
                     </td>
                     <td>
-                      <input type="text" id="suto-{{ forloop.counter0 }}" class="form-control form-control-sm calc-field"
-                        value="{{ f.item_suto.value|default:'' }}" readonly tabindex="-1">
+                      <input type="text" id="suto-{{ forloop.counter0 }}"
+                        class="form-control form-control-sm calc-field" value="{{ f.item_suto.value|default:'' }}"
+                        readonly tabindex="-1">
                     </td>
                     <td>{{ f.item_obse }}</td>
                     <td>{{ f.DELETE }}</td>
@@ -510,202 +541,257 @@
 </div>
 
 <script>
-const SLUG = "{{ slug }}";
-const URL_CALCULAR = "{% url 'PisosWeb:api_calcular_item' slug=slug %}";
-const CSRF = "{{ csrf_token }}";
+  const SLUG = "{{ slug }}";
+  const URL_CALCULAR = "{% url 'PisosWeb:api_calcular_item' slug=slug %}";
+  const CSRF = "{{ csrf_token }}";
 
-function fmtBRL(v) {
-  const n = parseFloat(v) || 0;
-  return 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
+  function fmtBRL(v) {
+    const n = parseNumberBR(v);
+    return 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
 
-function showToast(message, type = 'danger') {
-  const container = document.querySelector('.toast-container');
-  const toast = document.createElement('div');
-  toast.className = `toast text-bg-${type} border-0 show`;
-  toast.setAttribute('role', 'alert');
-  toast.innerHTML = `
+  function parseNumberBR(v) {
+    if (v === null || v === undefined) return 0;
+    if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+    let s = String(v).trim();
+    if (!s) return 0;
+    s = s.replace(/\s/g, '');
+    s = s.replace(/^R\$\s?/, '');
+    s = s.replace(/[^\d,.\-]/g, '');
+    if (s.includes(',') && s.includes('.')) {
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else if (s.includes(',') && !s.includes('.')) {
+      s = s.replace(',', '.');
+    }
+    const n = Number(s);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function normalizeNumberBR(v) {
+    const s = String(v ?? '').trim();
+    if (!s) return '';
+    return String(parseNumberBR(s));
+  }
+
+  function showToast(message, type = 'danger') {
+    const container = document.querySelector('.toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast text-bg-${type} border-0 show`;
+    toast.setAttribute('role', 'alert');
+    toast.innerHTML = `
     <div class="toast-header text-bg-${type} border-0">
       <strong class="me-auto">Aviso</strong>
       <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
     </div>
     <div class="toast-body">${message}</div>
   `;
-  container.appendChild(toast);
-  setTimeout(() => toast.remove(), 6500);
-}
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 6500);
+  }
 
-function bindTabs() {
-  document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      tab.classList.add('active');
-      const target = document.getElementById('tab-' + tab.dataset.tab);
-      if (target) target.classList.add('active');
+  function bindTabs() {
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        const target = document.getElementById('tab-' + tab.dataset.tab);
+        if (target) target.classList.add('active');
+      });
     });
-  });
-}
+  }
 
-function setupAutocomplete(inputId, hiddenId, url, onSelect) {
-  const input = document.getElementById(inputId);
-  const hidden = document.getElementById(hiddenId);
-  if (!input || !hidden) return;
+  function setupAutocomplete(inputId, hiddenId, url, onSelect) {
+    const input = document.getElementById(inputId);
+    const hidden = document.getElementById(hiddenId);
+    if (!input || !hidden) return;
 
-  const box = document.createElement('div');
-  box.className = 'list-group position-absolute autocomplete-box d-none';
-  input.parentElement.style.position = 'relative';
-  input.parentElement.appendChild(box);
+    const box = document.createElement('div');
+    box.className = 'list-group position-absolute autocomplete-box d-none';
+    input.parentElement.style.position = 'relative';
+    input.parentElement.appendChild(box);
 
-  let debounceTimer;
+    let debounceTimer;
 
-  input.addEventListener('input', () => {
-    clearTimeout(debounceTimer);
-    const term = input.value.trim();
-    if (term.length < 2) { box.classList.add('d-none'); return; }
-
-    debounceTimer = setTimeout(async () => {
-      try {
-        const res = await fetch(url + '?term=' + encodeURIComponent(term));
-        const data = await res.json();
-        box.innerHTML = data.map(item => `<button type="button" class="list-group-item list-group-item-action">${item.label}</button>`).join('');
-        box.classList.toggle('d-none', data.length === 0);
-        [...box.children].forEach((btn, idx) => {
-          btn.addEventListener('click', () => {
-            input.value = data[idx].label;
-            hidden.value = data[idx].id;
-            box.classList.add('d-none');
-            if (onSelect) onSelect(data[idx]);
-          });
-        });
-      } catch (e) {
-        box.classList.add('d-none');
-      }
-    }, 250);
-  });
-
-  document.addEventListener('click', e => {
-    if (!input.parentElement.contains(e.target)) box.classList.add('d-none');
-  });
-}
-
-async function prefillAutocomplete(inputId, hiddenId, url, onSelect) {
-  const input = document.getElementById(inputId);
-  const hidden = document.getElementById(hiddenId);
-  if (!input || !hidden) return;
-  const currentId = String(hidden.value || '').trim();
-  if (!currentId || String(input.value || '').trim()) return;
-  try {
-    const res = await fetch(url + '?term=' + encodeURIComponent(currentId));
-    const data = await res.json();
-    if (Array.isArray(data) && data.length) {
-      input.value = data[0].label;
-      hidden.value = data[0].id;
-      if (onSelect) onSelect(data[0]);
+    function positionBox() {
+      const top = input.offsetTop + input.offsetHeight + 2;
+      box.style.top = `${top}px`;
+      box.style.left = `${input.offsetLeft}px`;
+      box.style.width = `${input.offsetWidth}px`;
     }
-  } catch (e) {
-  }
-}
 
-const calcTimers = {};
+    positionBox();
+    input.addEventListener('focus', positionBox);
+    window.addEventListener('resize', positionBox);
 
-async function calcularItem(index) {
-  const prodInput = document.getElementById(`id_itens-${index}-item_prod`);
-  const m2Input = document.getElementById(`m2-${index}`);
-  const unitInput = document.getElementById(`unit-${index}`);
-  const quebInput = document.getElementById(`queb-${index}`);
-  const spinner = document.getElementById(`spin-${index}`);
+    input.addEventListener('input', () => {
+      clearTimeout(debounceTimer);
+      const term = input.value.trim();
+      if (term.length < 2) { box.classList.add('d-none'); return; }
 
-  const prod_id = prodInput?.value;
-  const m2 = parseFloat(m2Input?.value) || 0;
-  const unit = parseFloat(unitInput?.value) || 0;
-  const queb = parseFloat(quebInput?.value) || 0;
-
-  if (!prod_id || m2 <= 0) return;
-
-  if (spinner) spinner.style.display = 'block';
-  try {
-    const res = await fetch(URL_CALCULAR, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': CSRF,
-      },
-      body: JSON.stringify({ item_prod: prod_id, item_m2: m2, item_unit: unit, item_queb: queb }),
+      debounceTimer = setTimeout(async () => {
+        try {
+          positionBox();
+          const res = await fetch(url + '?term=' + encodeURIComponent(term));
+          const payload = await res.json();
+          const data = Array.isArray(payload) ? payload : (payload.results || []);
+          box.innerHTML = '';
+          data.forEach((item) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'list-group-item list-group-item-action';
+            btn.textContent = item.label || item.text || item.value || '';
+            box.appendChild(btn);
+          });
+          box.classList.toggle('d-none', data.length === 0);
+          [...box.children].forEach((btn, idx) => {
+            btn.addEventListener('click', () => {
+              input.value = data[idx].label || data[idx].text || '';
+              hidden.value = data[idx].id;
+              box.classList.add('d-none');
+              if (onSelect) onSelect(data[idx]);
+            });
+          });
+        } catch (e) {
+          box.classList.add('d-none');
+        }
+      }, 250);
     });
-    if (!res.ok) throw new Error('Erro HTTP ' + res.status);
-    const data = await res.json();
 
-    const badgeCaix = document.getElementById(`badge-caix-${index}`);
-    const quanInput = document.getElementById(`quan-${index}`);
-    const sutoInput = document.getElementById(`suto-${index}`);
-    const hiddenCaix = document.querySelector(`#itens-table tr[data-index="${index}"] input[name$="-item_caix"]`);
-    const hiddenQuan = document.querySelector(`#id_itens-${index}-item_quan`);
-
-    if (badgeCaix) badgeCaix.textContent = data.caixas || '—';
-    if (quanInput) quanInput.value = data.quantidade || '';
-    if (sutoInput) sutoInput.value = parseFloat(data.total || 0).toFixed(2);
-    if (hiddenCaix) hiddenCaix.value = data.caixas || '';
-    if (hiddenQuan) hiddenQuan.value = data.quantidade || '';
-
-    atualizarTotais();
-  } finally {
-    if (spinner) spinner.style.display = 'none';
-  }
-}
-
-function debounceCalc(index, delay = 600) {
-  clearTimeout(calcTimers[index]);
-  calcTimers[index] = setTimeout(() => calcularItem(index), delay);
-}
-
-function atualizarTotais() {
-  let subtotal = 0;
-  document.querySelectorAll('[id^="suto-"]').forEach(el => {
-    subtotal += parseFloat(el.value) || 0;
-  });
-
-  const desc = parseFloat(document.getElementById('id_orca_desc')?.value) || 0;
-  const fret = parseFloat(document.getElementById('id_orca_fret')?.value) || 0;
-  const total = subtotal - desc + fret;
-
-  document.getElementById('total-itens').textContent = fmtBRL(subtotal);
-  document.getElementById('total-desc').textContent = fmtBRL(desc);
-  document.getElementById('total-fret').textContent = fmtBRL(fret);
-  document.getElementById('total-geral').textContent = fmtBRL(total);
-
-  const totalField = document.getElementById('id_orca_tota');
-  if (totalField) totalField.value = total.toFixed(2);
-}
-
-function bindCalcInputs(index) {
-  ['m2', 'unit', 'queb'].forEach(tipo => {
-    const el = document.getElementById(`${tipo}-${index}`);
-    if (!el) return;
-    el.addEventListener('input', () => debounceCalc(index));
-    el.addEventListener('change', () => {
-      const hiddenMap = { m2: 'item_m2', unit: 'item_unit', queb: 'item_queb' };
-      const hidden = document.getElementById(`id_itens-${index}-${hiddenMap[tipo]}`);
-      if (hidden) hidden.value = el.value;
+    document.addEventListener('click', e => {
+      if (!input.parentElement.contains(e.target)) box.classList.add('d-none');
     });
-  });
-}
+  }
 
-function setupAddItem() {
-  const btn = document.getElementById('btn-add-item');
-  if (!btn) return;
-  btn.addEventListener('click', () => {
-    const totalInput = document.getElementById('id_itens-TOTAL_FORMS');
-    if (!totalInput) return;
-    const index = parseInt(totalInput.value, 10);
-    totalInput.value = index + 1;
+  async function prefillAutocomplete(inputId, hiddenId, url, onSelect) {
+    const input = document.getElementById(inputId);
+    const hidden = document.getElementById(hiddenId);
+    if (!input || !hidden) return;
+    const currentId = String(hidden.value || '').trim();
+    if (!currentId || String(input.value || '').trim()) return;
+    try {
+      const res = await fetch(url + '?term=' + encodeURIComponent(currentId));
+      const payload = await res.json();
+      const data = Array.isArray(payload) ? payload : (payload.results || []);
+      if (Array.isArray(data) && data.length) {
+        const exact = data.find(x => String(x?.id ?? '') === currentId || String(x?.value ?? '') === currentId);
+        const selected = exact || data[0];
+        input.value = selected.label || selected.text || '';
+        hidden.value = selected.id ?? currentId;
+        if (onSelect) onSelect(selected);
+      }
+    } catch (e) {
+    }
+  }
 
-    const tbody = document.getElementById('itens-tbody');
-    const prefix = `itens-${index}`;
+  const calcTimers = {};
 
-    const tr = document.createElement('tr');
-    tr.dataset.index = index;
-    tr.innerHTML = `
+  async function calcularItem(index) {
+    const prodInput = document.getElementById(`id_itens-${index}-item_prod`);
+    const m2Input = document.getElementById(`m2-${index}`);
+    const unitInput = document.getElementById(`unit-${index}`);
+    const quebInput = document.getElementById(`queb-${index}`);
+    const spinner = document.getElementById(`spin-${index}`);
+
+    const prod_id = prodInput?.value;
+    const m2 = parseNumberBR(m2Input?.value);
+    const unit = parseNumberBR(unitInput?.value);
+    const queb = parseNumberBR(quebInput?.value);
+
+    if (!prod_id || m2 <= 0) return;
+
+    if (spinner) spinner.style.display = 'block';
+    try {
+      const res = await fetch(URL_CALCULAR, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': CSRF,
+        },
+        body: JSON.stringify({ item_prod: prod_id, item_m2: m2, item_unit: unit, item_queb: queb }),
+      });
+      if (!res.ok) throw new Error('Erro HTTP ' + res.status);
+      const data = await res.json();
+
+      const badgeCaix = document.getElementById(`badge-caix-${index}`);
+      const quanInput = document.getElementById(`quan-${index}`);
+      const sutoInput = document.getElementById(`suto-${index}`);
+      const hiddenCaix = document.querySelector(`#itens-table tr[data-index="${index}"] input[name$="-item_caix"]`);
+      const hiddenQuan = document.querySelector(`#id_itens-${index}-item_quan`);
+
+      if (badgeCaix) badgeCaix.textContent = data.caixas || '—';
+      if (quanInput) quanInput.value = data.quantidade || '';
+      if (sutoInput) sutoInput.value = parseFloat(data.total || 0).toFixed(2);
+      if (hiddenCaix) hiddenCaix.value = data.caixas || '';
+      if (hiddenQuan) hiddenQuan.value = data.quantidade || '';
+
+      atualizarTotais();
+    } finally {
+      if (spinner) spinner.style.display = 'none';
+    }
+  }
+
+  function debounceCalc(index, delay = 600) {
+    clearTimeout(calcTimers[index]);
+    calcTimers[index] = setTimeout(() => calcularItem(index), delay);
+  }
+
+  function atualizarTotais() {
+    let subtotal = 0;
+    document.querySelectorAll('[id^="suto-"]').forEach(el => {
+      subtotal += parseNumberBR(el.value);
+    });
+
+    const desc = parseNumberBR(document.getElementById('id_orca_desc')?.value);
+    const fret = parseNumberBR(document.getElementById('id_orca_fret')?.value);
+    const total = subtotal - desc + fret;
+
+    document.getElementById('total-itens').textContent = fmtBRL(subtotal);
+    document.getElementById('total-desc').textContent = fmtBRL(desc);
+    document.getElementById('total-fret').textContent = fmtBRL(fret);
+    document.getElementById('total-geral').textContent = fmtBRL(total);
+
+    const totalField = document.getElementById('id_orca_tota');
+    if (totalField) totalField.value = total.toFixed(2);
+  }
+
+  function bindCalcInputs(index) {
+    ['m2', 'unit', 'queb'].forEach(tipo => {
+      const el = document.getElementById(`${tipo}-${index}`);
+      if (!el) return;
+      el.addEventListener('input', () => debounceCalc(index));
+      el.addEventListener('change', () => {
+        const hiddenMap = { m2: 'item_m2', unit: 'item_unit', queb: 'item_queb' };
+        const hidden = document.getElementById(`id_itens-${index}-${hiddenMap[tipo]}`);
+        if (hidden) hidden.value = normalizeNumberBR(el.value);
+      });
+    });
+  }
+
+  function maybeInitialCalc(index) {
+    const prod_id = document.getElementById(`id_itens-${index}-item_prod`)?.value;
+    const m2 = parseNumberBR(document.getElementById(`m2-${index}`)?.value);
+    if (!prod_id || m2 <= 0) return;
+    const subtotalAtual = parseNumberBR(document.getElementById(`suto-${index}`)?.value);
+    if (subtotalAtual > 0) return;
+    calcularItem(index);
+  }
+
+  function setupAddItem() {
+    const btn = document.getElementById('btn-add-item');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      const totalInput = document.getElementById('id_itens-TOTAL_FORMS');
+      if (!totalInput) return;
+      const index = parseInt(totalInput.value, 10);
+      totalInput.value = index + 1;
+
+      const tbody = document.getElementById('itens-tbody');
+      const prefix = `itens-${index}`;
+
+      const tr = document.createElement('tr');
+      tr.dataset.index = index;
+      tr.innerHTML = `
       <td>
         <input name="${prefix}-item_nome_ambi" class="form-control form-control-sm" placeholder="Ambiente">
         <input type="hidden" name="${prefix}-item_ambi" id="id_itens-${index}-item_ambi" value="${index + 1}">
@@ -741,96 +827,97 @@ function setupAddItem() {
       <td><input name="${prefix}-item_obse" class="form-control form-control-sm" placeholder="Obs"></td>
       <td><input type="checkbox" name="${prefix}-DELETE" class="form-check-input"></td>
     `;
-    tbody.appendChild(tr);
+      tbody.appendChild(tr);
 
-    bindCalcInputs(index);
-    setupAutocomplete(
-      `produto_busca_${index}`,
-      `id_itens-${index}-item_prod`,
-      "{% url 'PisosWeb:autocomplete_produtos' slug=slug %}",
-      (selected) => {
-        const nomeInput = document.getElementById(`id_itens-${index}-item_prod_nome`);
-        if (nomeInput) nomeInput.value = selected.label;
-        debounceCalc(index);
+      bindCalcInputs(index);
+      setupAutocomplete(
+        `produto_busca_${index}`,
+        `id_itens-${index}-item_prod`,
+        "{% url 'PisosWeb:autocomplete_produtos' slug=slug %}",
+        (selected) => {
+          const nomeInput = document.getElementById(`id_itens-${index}-item_prod_nome`);
+          if (nomeInput) nomeInput.value = selected.label || selected.text || '';
+          calcularItem(index);
+        }
+      );
+    });
+  }
+
+  function validateBeforeSubmit() {
+    const form = document.querySelector('form');
+    form.addEventListener('submit', event => {
+      const required = [
+        { id: 'id_orca_fili', label: 'Loja' },
+        { id: 'id_orca_clie', label: 'Cliente' },
+        { id: 'id_orca_vend', label: 'Vendedor' },
+        { id: 'id_orca_data', label: 'Data do orçamento' },
+      ];
+
+      let hasError = false;
+      let msgs = [];
+
+      required.forEach(f => {
+        const el = document.getElementById(f.id);
+        if (el && !String(el.value || '').trim()) {
+          hasError = true;
+          msgs.push(f.label);
+          el.classList.add('field-error');
+        } else if (el) {
+          el.classList.remove('field-error');
+        }
+      });
+
+      const totalForms = document.getElementById('id_itens-TOTAL_FORMS');
+      let hasValidItem = false;
+      if (totalForms) {
+        const total = parseInt(totalForms.value || '0', 10);
+        for (let i = 0; i < total; i++) {
+          const prod = document.getElementById(`id_itens-${i}-item_prod`);
+          const del = document.querySelector(`input[name="itens-${i}-DELETE"]`);
+          if (!del?.checked && prod?.value) hasValidItem = true;
+        }
       }
-    );
-  });
-}
 
-function validateBeforeSubmit() {
-  const form = document.querySelector('form');
-  form.addEventListener('submit', event => {
-    const required = [
-      { id: 'id_orca_fili', label: 'Loja' },
-      { id: 'id_orca_clie', label: 'Cliente' },
-      { id: 'id_orca_vend', label: 'Vendedor' },
-      { id: 'id_orca_data', label: 'Data do orçamento' },
-    ];
+      if (!hasValidItem) { hasError = true; msgs.push('Pelo menos 1 item'); }
 
-    let hasError = false;
-    let msgs = [];
-
-    required.forEach(f => {
-      const el = document.getElementById(f.id);
-      if (el && !String(el.value || '').trim()) {
-        hasError = true;
-        msgs.push(f.label);
-        el.classList.add('field-error');
-      } else if (el) {
-        el.classList.remove('field-error');
+      if (hasError) {
+        event.preventDefault();
+        showToast('Preencha: ' + [...new Set(msgs)].join(', '), 'danger');
       }
     });
+  }
 
-    const totalForms = document.getElementById('id_itens-TOTAL_FORMS');
-    let hasValidItem = false;
-    if (totalForms) {
-      const total = parseInt(totalForms.value || '0', 10);
-      for (let i = 0; i < total; i++) {
-        const prod = document.getElementById(`id_itens-${i}-item_prod`);
-        const del = document.querySelector(`input[name="itens-${i}-DELETE"]`);
-        if (!del?.checked && prod?.value) hasValidItem = true;
-      }
-    }
+  document.addEventListener('DOMContentLoaded', () => {
+    bindTabs();
+    validateBeforeSubmit();
 
-    if (!hasValidItem) { hasError = true; msgs.push('Pelo menos 1 item'); }
+    const URL_AUTO_CLIENTES = "{% url 'PisosWeb:autocomplete_clientes' slug=slug %}";
+    const URL_AUTO_VENDEDORES = "{% url 'PisosWeb:autocomplete_vendedores' slug=slug %}";
+    const URL_AUTO_PRODUTOS = "{% url 'PisosWeb:autocomplete_produtos' slug=slug %}";
 
-    if (hasError) {
-      event.preventDefault();
-      showToast('Preencha: ' + [...new Set(msgs)].join(', '), 'danger');
-    }
+    setupAutocomplete('cliente_nome', 'id_orca_clie', URL_AUTO_CLIENTES);
+    prefillAutocomplete('cliente_nome', 'id_orca_clie', URL_AUTO_CLIENTES);
+
+    setupAutocomplete('vendedor_nome', 'id_orca_vend', URL_AUTO_VENDEDORES);
+    prefillAutocomplete('vendedor_nome', 'id_orca_vend', URL_AUTO_VENDEDORES);
+
+    document.querySelectorAll('[id^="produto_busca_"]').forEach(input => {
+      const index = parseInt(input.dataset.index, 10);
+      bindCalcInputs(index);
+      const onSelectProduto = (selected) => {
+        const nomeInput = document.querySelector(`input[name="itens-${index}-item_prod_nome"]`);
+        if (nomeInput) nomeInput.value = selected.label || selected.text || '';
+        calcularItem(index);
+      };
+      setupAutocomplete(input.id, `id_itens-${index}-item_prod`, URL_AUTO_PRODUTOS, onSelectProduto);
+      prefillAutocomplete(input.id, `id_itens-${index}-item_prod`, URL_AUTO_PRODUTOS, onSelectProduto);
+      maybeInitialCalc(index);
+    });
+
+    document.getElementById('id_orca_desc')?.addEventListener('input', atualizarTotais);
+    document.getElementById('id_orca_fret')?.addEventListener('input', atualizarTotais);
+    setupAddItem();
+    atualizarTotais();
   });
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  bindTabs();
-  validateBeforeSubmit();
-
-  const URL_AUTO_CLIENTES = "{% url 'PisosWeb:autocomplete_clientes' slug=slug %}";
-  const URL_AUTO_VENDEDORES = "{% url 'PisosWeb:autocomplete_vendedores' slug=slug %}";
-  const URL_AUTO_PRODUTOS = "{% url 'PisosWeb:autocomplete_produtos' slug=slug %}";
-
-  setupAutocomplete('cliente_nome', 'id_orca_clie', URL_AUTO_CLIENTES);
-  prefillAutocomplete('cliente_nome', 'id_orca_clie', URL_AUTO_CLIENTES);
-
-  setupAutocomplete('vendedor_nome', 'id_orca_vend', URL_AUTO_VENDEDORES);
-  prefillAutocomplete('vendedor_nome', 'id_orca_vend', URL_AUTO_VENDEDORES);
-
-  document.querySelectorAll('[id^="produto_busca_"]').forEach(input => {
-    const index = parseInt(input.dataset.index, 10);
-    bindCalcInputs(index);
-    const onSelectProduto = (selected) => {
-      const nomeInput = document.querySelector(`input[name="itens-${index}-item_prod_nome"]`);
-      if (nomeInput) nomeInput.value = selected.label;
-      debounceCalc(index);
-    };
-    setupAutocomplete(input.id, `id_itens-${index}-item_prod`, URL_AUTO_PRODUTOS, onSelectProduto);
-    prefillAutocomplete(input.id, `id_itens-${index}-item_prod`, URL_AUTO_PRODUTOS, onSelectProduto);
-  });
-
-  document.getElementById('id_orca_desc')?.addEventListener('input', atualizarTotais);
-  document.getElementById('id_orca_fret')?.addEventListener('input', atualizarTotais);
-  setupAddItem();
-  atualizarTotais();
-});
 </script>
 {% endblock %}

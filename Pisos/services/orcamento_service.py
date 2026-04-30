@@ -4,14 +4,12 @@ from ..models import Itensorcapisos
 
 class OrcamentoService:
     @staticmethod
-    def preparar_orcamento(orcamento, request):
+    def preparar_orcamento(*, banco, orcamento):
         """
         Preenche dados do cliente e recalcula totais do orçamento.
         """
-        banco = orcamento._state.db or 'default'  # fallback seguro
-
         # 1️⃣ Preenche endereço e contato do cliente
-        DadosEntidadesService.preencher_dados_cliente(orcamento, request)
+        orcamento = ClienteEnderecoService.preencher_orcamento(banco=banco, orcamento=orcamento)
 
         # 2️⃣ Recalcula totais com base nos itens já existentes
         itens = Itensorcapisos.objects.using(banco).filter(

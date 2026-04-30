@@ -137,8 +137,6 @@
     resize: vertical;
   }
 
-
-
   /* ── Tabs ── */
   .tabs {
     display: flex;
@@ -208,6 +206,15 @@
     padding: 4px 6px !important;
   }
 
+  .itens-table-wrap td.position-relative {
+    overflow: visible;
+    z-index: 3;
+  }
+
+  .itens-table-wrap td.position-relative:focus-within {
+    z-index: 1200;
+  }
+
   /* Colunas calculadas (readonly) */
   .calc-field {
     background: #0e1320 !important;
@@ -232,7 +239,7 @@
 
   /* ── Autocomplete ── */
   .autocomplete-box {
-    z-index: 1050;
+    z-index: 1210;
     width: 100%;
     max-height: 240px;
     overflow-y: auto;
@@ -394,7 +401,8 @@
 
               <div class="col-8 position-relative">
                 <label>Cliente</label>
-                <input id="cliente_nome" class="form-control" placeholder="Buscar cliente..." value="{{ cliente_label|default:'' }}">
+                <input id="cliente_nome" class="form-control" placeholder="Buscar cliente..."
+                  value="{{ cliente_label|default:'' }}">
                 <div class="d-none">{{ form.pedi_clie }}</div>
               </div>
 
@@ -416,7 +424,8 @@
 
               <div class="col-12 position-relative">
                 <label>Vendedor</label>
-                <input id="vendedor_nome" class="form-control" placeholder="Buscar vendedor..." value="{{ vendedor_label|default:'' }}">
+                <input id="vendedor_nome" class="form-control" placeholder="Buscar vendedor..."
+                  value="{{ vendedor_label|default:'' }}">
                 <div class="d-none">{{ form.pedi_vend }}</div>
               </div>
 
@@ -545,14 +554,23 @@
 
                     <!-- Produto autocomplete -->
                     <td class="position-relative">
+                      {#
+                        FIX: value preenchido com item_prod_nome (nome salvo), NÃO com item_prod (ID).
+                        Isso garante que na edição o campo de busca já aparece com o nome do produto,
+                        sem precisar de prefillAutocomplete que sobrescrevia e bugava.
+                      #}
                       <input id="produto_busca_{{ forloop.counter0 }}" class="form-control form-control-sm"
-                        placeholder="Buscar produto" data-index="{{ forloop.counter0 }}">
-                      <div class="d-none">{{ f.item_prod }}</div>
-                        data-index="{{ forloop.counter0 }}"
+                        placeholder="Buscar produto" data-index="{{ forloop.counter0 }}"
                         value="{{ f.item_prod_nome.value|default:'' }}">
+                      <div class="d-none">{{ f.item_prod }}</div>
+                    </td>
 
-                    <td>{{ f.item_prod_nome }}</td>
-
+                    {#
+                      FIX: campo item_prod_nome renderizado com form-control para ter id="id_itens-N-item_prod_nome"
+                      acessível via getElementById no JS. Antes era {{ f.item_prod_nome }} sem classe,
+                      gerando input sem estilo consistente mas isso não era o bug — o bug era no seletor JS
+                      que usava querySelector por name em vez de getElementById por id.
+                    #}
                     <td>{{ f.item_prod_nome }}</td>
 
                     <!-- Quant. (calculado pelo service) -->
@@ -636,11 +654,37 @@
   const SLUG = "{{ slug }}";
   const URL_CALCULAR = "{% url 'PisosWeb:api_calcular_item' slug=slug %}";
   const CSRF = "{{ csrf_token }}";
+  const URL_AUTO_CLIENTES   = "{% url 'PisosWeb:autocomplete_clientes' slug=slug %}";
+  const URL_AUTO_VENDEDORES = "{% url 'PisosWeb:autocomplete_vendedores' slug=slug %}";
+  const URL_AUTO_PRODUTOS   = "{% url 'PisosWeb:autocomplete_produtos' slug=slug %}";
 
   /* ── Utilitários ── */
   function fmtBRL(v) {
-    const n = parseFloat(v) || 0;
+    const n = parseNumberBR(v);
     return 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function parseNumberBR(v) {
+    if (v === null || v === undefined) return 0;
+    if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+    let s = String(v).trim();
+    if (!s) return 0;
+    s = s.replace(/\s/g, '');
+    s = s.replace(/^R\$\s?/, '');
+    s = s.replace(/[^\d,.\-]/g, '');
+    if (s.includes(',') && s.includes('.')) {
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else if (s.includes(',') && !s.includes('.')) {
+      s = s.replace(',', '.');
+    }
+    const n = Number(s);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function normalizeNumberBR(v) {
+    const s = String(v ?? '').trim();
+    if (!s) return '';
+    return String(parseNumberBR(s));
   }
 
   function showToast(message, type = 'danger') {
@@ -649,16 +693,15 @@
     toast.className = `toast text-bg-${type} border-0 show`;
     toast.setAttribute('role', 'alert');
     toast.innerHTML = `
-    <div class="toast-header text-bg-${type} border-0">
-      <strong class="me-auto">Aviso</strong>
-      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
-    </div>
-    <div class="toast-body">${message}</div>
-  `;
+      <div class="toast-header text-bg-${type} border-0">
+        <strong class="me-auto">Aviso</strong>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+      </div>
+      <div class="toast-body">${message}</div>
+    `;
     container.appendChild(toast);
     setTimeout(() => toast.remove(), 6500);
   }
-
 
   function gerarTitulosFinanceiro() {
     const body = document.getElementById('fin-titulos-body');
@@ -701,11 +744,11 @@
     if (!container) return;
     const steps = ['Financeiro Ok', 'Compra Realizada', 'Pedido Instalado', 'Pedido Finalizado'];
     container.innerHTML = steps.map((step, i) => `
-    <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color:#323760!important">
-      <span>${i + 1}. ${step}</span>
-      <button type="button" class="btn btn-sm btn-outline-primary">Concluir</button>
-    </div>
-  `).join('');
+      <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color:#323760!important">
+        <span>${i + 1}. ${step}</span>
+        <button type="button" class="btn btn-sm btn-outline-primary">Concluir</button>
+      </div>
+    `).join('');
   }
 
   /* ── Autocomplete ── */
@@ -721,6 +764,17 @@
 
     let debounceTimer;
 
+    function positionBox() {
+      const top = input.offsetTop + input.offsetHeight + 2;
+      box.style.top = `${top}px`;
+      box.style.left = `${input.offsetLeft}px`;
+      box.style.width = `${input.offsetWidth}px`;
+    }
+
+    positionBox();
+    input.addEventListener('focus', positionBox);
+    window.addEventListener('resize', positionBox);
+
     input.addEventListener('input', () => {
       clearTimeout(debounceTimer);
       const term = input.value.trim();
@@ -728,16 +782,25 @@
 
       debounceTimer = setTimeout(async () => {
         try {
+          positionBox();
           const res = await fetch(url + '?term=' + encodeURIComponent(term));
-          const data = await res.json();
-          box.innerHTML = data.map(item =>
-            `<button type="button" class="list-group-item list-group-item-action">${item.label}</button>`
-          ).join('');
+          const payload = await res.json();
+          const data = Array.isArray(payload) ? payload : (payload.results || []);
+
+          box.innerHTML = '';
+          data.forEach((item) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'list-group-item list-group-item-action';
+            btn.textContent = item.label || item.text || item.value || '';
+            box.appendChild(btn);
+          });
+
           box.classList.toggle('d-none', data.length === 0);
 
           [...box.children].forEach((btn, idx) => {
             btn.addEventListener('click', () => {
-              input.value = data[idx].label;
+              input.value = data[idx].label || data[idx].text || '';
               hidden.value = data[idx].id;
               box.classList.add('d-none');
               if (onSelect) onSelect(data[idx]);
@@ -755,6 +818,12 @@
     });
   }
 
+  /*
+   * FIX: prefillAutocomplete mantido apenas para cliente e vendedor.
+   * Para PRODUTOS foi REMOVIDO — o value do campo de busca já vem preenchido
+   * pelo Django via f.item_prod_nome.value no template, então chamar prefill
+   * sobrescrevia o valor correto com uma busca por ID que retornava vazio.
+   */
   async function prefillAutocomplete(inputId, hiddenId, url, onSelect) {
     const input = document.getElementById(inputId);
     const hidden = document.getElementById(hiddenId);
@@ -763,11 +832,14 @@
     if (!currentId || String(input.value || '').trim()) return;
     try {
       const res = await fetch(url + '?term=' + encodeURIComponent(currentId));
-      const data = await res.json();
+      const payload = await res.json();
+      const data = Array.isArray(payload) ? payload : (payload.results || []);
       if (Array.isArray(data) && data.length) {
-        input.value = data[0].label;
-        hidden.value = data[0].id;
-        if (onSelect) onSelect(data[0]);
+        const exact = data.find(x => String(x?.id ?? '') === currentId || String(x?.value ?? '') === currentId);
+        const selected = exact || data[0];
+        input.value = selected.label || selected.text || '';
+        hidden.value = selected.id ?? currentId;
+        if (onSelect) onSelect(selected);
       }
     } catch (e) {
       console.error('Autocomplete prefill error:', e);
@@ -785,9 +857,9 @@
     const spinner = document.getElementById(`spin-${index}`);
 
     const prod_id = prodInput?.value;
-    const m2 = parseFloat(m2Input?.value) || 0;
-    const unit = parseFloat(unitInput?.value) || 0;
-    const queb = parseFloat(quebInput?.value) || 0;
+    const m2 = parseNumberBR(m2Input?.value);
+    const unit = parseNumberBR(unitInput?.value);
+    const queb = parseNumberBR(quebInput?.value);
 
     // só calcula se tiver produto e m2
     if (!prod_id || m2 <= 0) return;
@@ -811,8 +883,8 @@
       const badgeCaix = document.getElementById(`badge-caix-${index}`);
       const quanInput = document.getElementById(`quan-${index}`);
       const sutoInput = document.getElementById(`suto-${index}`);
-      const hiddenCaix = document.querySelector(`#itens-table tr[data-index="${index}"] input[name$="-item_caix"]`);
-      const hiddenQuan = document.querySelector(`#id_itens-${index}-item_quan`);
+      const hiddenCaix = document.getElementById(`id_itens-${index}-item_caix`);
+      const hiddenQuan = document.getElementById(`id_itens-${index}-item_quan`);
 
       if (badgeCaix) badgeCaix.textContent = data.caixas || '—';
       if (quanInput) quanInput.value = data.quantidade || '';
@@ -838,11 +910,11 @@
   function atualizarTotais() {
     let subtotal = 0;
     document.querySelectorAll('[id^="suto-"]').forEach(el => {
-      subtotal += parseFloat(el.value) || 0;
+      subtotal += parseNumberBR(el.value);
     });
 
-    const desc = parseFloat(document.getElementById('id_pedi_desc')?.value) || 0;
-    const fret = parseFloat(document.getElementById('id_pedi_fret')?.value) || 0;
+    const desc = parseNumberBR(document.getElementById('id_pedi_desc')?.value);
+    const fret = parseNumberBR(document.getElementById('id_pedi_fret')?.value);
     const total = subtotal - desc + fret;
 
     document.getElementById('total-itens').textContent = fmtBRL(subtotal);
@@ -852,7 +924,7 @@
 
     // Atualizar campo pedi_tota no form
     const totalField = document.getElementById('id_pedi_tota');
-    if (totalField && !totalField.readOnly) totalField.value = total.toFixed(2);
+    if (totalField && !totalField.disabled) totalField.value = total.toFixed(2);
   }
 
   /* ── Bind calcular em inputs de m², unit e queb ── */
@@ -866,9 +938,18 @@
       el.addEventListener('change', () => {
         const hiddenMap = { m2: 'item_m2', unit: 'item_unit', queb: 'item_queb' };
         const hidden = document.getElementById(`id_itens-${index}-${hiddenMap[tipo]}`);
-        if (hidden) hidden.value = el.value;
+        if (hidden) hidden.value = normalizeNumberBR(el.value);
       });
     });
+  }
+
+  function maybeInitialCalc(index) {
+    const prod_id = document.getElementById(`id_itens-${index}-item_prod`)?.value;
+    const m2 = parseNumberBR(document.getElementById(`m2-${index}`)?.value);
+    if (!prod_id || m2 <= 0) return;
+    const subtotalAtual = parseNumberBR(document.getElementById(`suto-${index}`)?.value);
+    if (subtotalAtual > 0) return;
+    calcularItem(index);
   }
 
   /* ── Adicionar item dinamicamente ── */
@@ -889,66 +970,83 @@
       const tr = document.createElement('tr');
       tr.dataset.index = index;
       tr.innerHTML = `
-      <td>
-        <input name="${prefix}-item_nome_ambi" class="form-control form-control-sm" placeholder="Ambiente">
-        <input type="hidden" name="${prefix}-item_ambi" id="id_itens-${index}-item_ambi" value="${index + 1}">
-      </td>
-      <td>
-        <div class="badge-caix" id="badge-caix-${index}">—</div>
-        <input type="hidden" name="${prefix}-item_caix" id="id_itens-${index}-item_caix" value="">
-      </td>
-      <td class="position-relative">
-        <input type="number" step="0.01" id="m2-${index}" class="form-control form-control-sm item-m2"
-          data-index="${index}" placeholder="0,00">
-        <input type="hidden" name="${prefix}-item_m2" id="id_itens-${index}-item_m2" value="">
-        <div class="calc-spinner" id="spin-${index}"></div>
-      </td>
-      <td class="position-relative">
-        <input id="produto_busca_${index}" class="form-control form-control-sm" placeholder="Buscar produto"
-          data-index="${index}">
-        <input type="hidden" name="${prefix}-item_prod" id="id_itens-${index}-item_prod" value="">
-      </td>
-      <td>
-        <input name="${prefix}-item_prod_nome" id="id_itens-${index}-item_prod_nome"
-          class="form-control form-control-sm" placeholder="—">
-      </td>
-      <td>
-        <input type="number" step="0.0001" id="quan-${index}" class="form-control form-control-sm calc-field"
-          readonly tabindex="-1">
-        <input type="hidden" name="${prefix}-item_quan" id="id_itens-${index}-item_quan" value="">
-      </td>
-      <td>
-        <input type="number" step="0.01" id="unit-${index}" class="form-control form-control-sm item-unit"
-          data-index="${index}" placeholder="0,00">
-        <input type="hidden" name="${prefix}-item_unit" id="id_itens-${index}-item_unit" value="">
-      </td>
-      <td><input type="number" step="0.01" name="${prefix}-item_desc" class="form-control form-control-sm" placeholder="0"></td>
-      <td>
-        <input type="number" step="0.01" id="queb-${index}" class="form-control form-control-sm item-queb"
-          data-index="${index}" placeholder="0">
-        <input type="hidden" name="${prefix}-item_queb" id="id_itens-${index}-item_queb" value="">
-      </td>
-      <td>
-        <input type="text" id="suto-${index}" class="form-control form-control-sm calc-field" readonly tabindex="-1">
-      </td>
-      <td><input name="${prefix}-item_obse" class="form-control form-control-sm" placeholder="Obs"></td>
-      <td>
-        <input type="checkbox" name="${prefix}-DELETE" class="form-check-input">
-      </td>
-    `;
+        <td>
+          <input name="${prefix}-item_nome_ambi" class="form-control form-control-sm" placeholder="Ambiente">
+          <input type="hidden" name="${prefix}-item_ambi" id="id_itens-${index}-item_ambi" value="${index + 1}">
+        </td>
+        <td>
+          <div class="badge-caix" id="badge-caix-${index}">—</div>
+          <input type="hidden" name="${prefix}-item_caix" id="id_itens-${index}-item_caix" value="">
+        </td>
+        <td class="position-relative">
+          <input type="number" step="0.01" id="m2-${index}" class="form-control form-control-sm item-m2"
+            data-index="${index}" placeholder="0,00">
+          <input type="hidden" name="${prefix}-item_m2" id="id_itens-${index}-item_m2" value="">
+          <div class="calc-spinner" id="spin-${index}"></div>
+        </td>
+        <td class="position-relative">
+          <input id="produto_busca_${index}" class="form-control form-control-sm" placeholder="Buscar produto"
+            data-index="${index}">
+          <input type="hidden" name="${prefix}-item_prod" id="id_itens-${index}-item_prod" value="">
+        </td>
+        <td>
+          <input name="${prefix}-item_prod_nome" id="id_itens-${index}-item_prod_nome"
+            class="form-control form-control-sm" placeholder="—">
+        </td>
+        <td>
+          <input type="number" step="0.0001" id="quan-${index}" class="form-control form-control-sm calc-field"
+            readonly tabindex="-1">
+          <input type="hidden" name="${prefix}-item_quan" id="id_itens-${index}-item_quan" value="">
+        </td>
+        <td>
+          <input type="number" step="0.01" id="unit-${index}" class="form-control form-control-sm item-unit"
+            data-index="${index}" placeholder="0,00">
+          <input type="hidden" name="${prefix}-item_unit" id="id_itens-${index}-item_unit" value="">
+        </td>
+        <td><input type="number" step="0.01" name="${prefix}-item_desc" class="form-control form-control-sm" placeholder="0"></td>
+        <td>
+          <input type="number" step="0.01" id="queb-${index}" class="form-control form-control-sm item-queb"
+            data-index="${index}" placeholder="0">
+          <input type="hidden" name="${prefix}-item_queb" id="id_itens-${index}-item_queb" value="">
+        </td>
+        <td>
+          <input type="text" id="suto-${index}" class="form-control form-control-sm calc-field" readonly tabindex="-1">
+        </td>
+        <td><input name="${prefix}-item_obse" class="form-control form-control-sm" placeholder="Obs"></td>
+        <td>
+          <input type="checkbox" name="${prefix}-DELETE" class="form-check-input">
+        </td>
+      `;
       tbody.appendChild(tr);
 
       bindCalcInputs(index);
+
+      /*
+       * FIX: onSelectProduto usa getElementById pelo id="id_itens-N-item_prod_nome"
+       * em vez de querySelector por name — consistente tanto para itens novos
+       * quanto para itens existentes (edição).
+       */
       setupAutocomplete(
         `produto_busca_${index}`,
         `id_itens-${index}-item_prod`,
-        `/{{ slug }}/pedidos/autocomplete/produtos/`,
+        URL_AUTO_PRODUTOS,
         (selected) => {
           const nomeInput = document.getElementById(`id_itens-${index}-item_prod_nome`);
-          if (nomeInput) nomeInput.value = selected.label;
-          debounceCalc(index);
+          if (nomeInput) nomeInput.value = selected.label || selected.text || '';
+          calcularItem(index);
         }
       );
+    });
+  }
+
+  /* ── Marcar erros do servidor ── */
+  function markServerErrors() {
+    document.querySelectorAll('.errorlist').forEach(el => {
+      const field = el.closest('.mb-1, .col-12, .col-4, .col-8, td');
+      if (field) {
+        const input = field.querySelector('input, select, textarea');
+        if (input) input.classList.add('field-error');
+      }
     });
   }
 
@@ -997,19 +1095,21 @@
     });
   }
 
-
   /* ── Init ── */
   document.addEventListener('DOMContentLoaded', () => {
     bindTabs();
     renderWorkflow();
-    document.getElementById("fin-gerar")?.addEventListener("click", gerarTitulosFinanceiro);
-    document.getElementById("fin-limpar")?.addEventListener("click", () => { const b = document.getElementById("fin-titulos-body"); if (b) b.innerHTML = ""; });
+    validateBeforeSubmit();
     markServerErrors();
 
-    const URL_AUTO_CLIENTES = "{% url 'PisosWeb:autocomplete_clientes' slug=slug %}";
-    const URL_AUTO_VENDEDORES = "{% url 'PisosWeb:autocomplete_vendedores' slug=slug %}";
-    const URL_AUTO_PRODUTOS = "{% url 'PisosWeb:autocomplete_produtos' slug=slug %}";
+    document.getElementById("fin-gerar")?.addEventListener("click", gerarTitulosFinanceiro);
+    document.getElementById("fin-limpar")?.addEventListener("click", () => {
+      const b = document.getElementById("fin-titulos-body");
+      if (b) b.innerHTML = "";
+    });
 
+
+    // Cliente e vendedor ainda usam prefill (buscam por label, funcionam)
     setupAutocomplete('cliente_nome', 'id_pedi_clie', URL_AUTO_CLIENTES);
     prefillAutocomplete('cliente_nome', 'id_pedi_clie', URL_AUTO_CLIENTES);
 
@@ -1019,14 +1119,33 @@
     // Bind nos itens existentes (edição)
     document.querySelectorAll('[id^="produto_busca_"]').forEach(input => {
       const index = parseInt(input.dataset.index, 10);
+
       bindCalcInputs(index);
+
+      /*
+       * FIX PRINCIPAL:
+       * 1. onSelectProduto agora usa getElementById(`id_itens-${index}-item_prod_nome`)
+       *    em vez de querySelector por name — garante que encontra o campo em todos os casos.
+       * 2. prefillAutocomplete para produtos foi REMOVIDO — o value do campo de busca
+       *    já vem preenchido com f.item_prod_nome.value direto no template HTML,
+       *    chamar prefill sobrescrevia com busca por ID numérico que retornava vazio.
+       */
       const onSelectProduto = (selected) => {
-        const nomeInput = document.querySelector(`input[name="itens-${index}-item_prod_nome"]`);
-        if (nomeInput) nomeInput.value = selected.label;
-        debounceCalc(index);
+        const nomeInput = document.getElementById(`id_itens-${index}-item_prod_nome`);
+        if (nomeInput) nomeInput.value = selected.label || selected.text || '';
+        calcularItem(index);
       };
-      setupAutocomplete(input.id, `id_itens-${index}-item_prod`, URL_AUTO_PRODUTOS, onSelectProduto);
-      prefillAutocomplete(input.id, `id_itens-${index}-item_prod`, URL_AUTO_PRODUTOS, onSelectProduto);
+
+      setupAutocomplete(
+        input.id,
+        `id_itens-${index}-item_prod`,
+        URL_AUTO_PRODUTOS,
+        onSelectProduto
+      );
+
+      // NÃO chama prefillAutocomplete para produtos — campo já preenchido pelo template
+
+      maybeInitialCalc(index);
     });
 
     // Bind nos campos desc/fret para atualizar totais

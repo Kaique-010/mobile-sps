@@ -7,10 +7,8 @@ from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.filters import SearchFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.permissions import IsAuthenticated
-from django.db import transaction
 import logging
 from decimal import Decimal, InvalidOperation
-import math
 from django.db.models import Sum, Count
 from .models import Orcamentopisos, Pedidospisos, Itensorcapisos, Itenspedidospisos                            
 from .serializers import (
@@ -19,26 +17,24 @@ from .serializers import (
     ItensorcapisosSerializer, 
     ItenspedidospisosSerializer
 )
+from django.db import transaction
 from core.mixins.vendedor_mixin import VendedorEntidadeMixin
-
 from types import SimpleNamespace
 from core.registry import get_licenca_db_config
 from core.decorator import ModuloRequeridoMixin
 from Produtos.models import Produtos, Tabelaprecos
 from Entidades.models import Entidades
-from .services.preco_service import get_preco_produto
-from .services.utils_service import parse_decimal, arredondar
-from .services.calculo_services import calcular_item, calcular_ambientes, calcular_total_geral
-from .services.orcamento_service import OrcamentoService
-from .services.pedido_service import PedidoService
-import logging
-
-logger = logging.getLogger(__name__)
-
+from Pisos.services.orcamento_exportar_service import OrcamentoExportarPedidoService
+from Pisos.services.metragem_service import MetragemProdutoService
 from rest_framework.authentication import SessionAuthentication, BaseAuthentication
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from core.utils import get_db_from_slug
 from Licencas.models import Usuarios, Empresas, Filiais
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 
 
 class CustomSessionAuthentication(BaseAuthentication):
@@ -80,7 +76,7 @@ class CustomSessionAuthentication(BaseAuthentication):
             return None
 
 
-# ALTERNATIVA MAIS SIMPLES - Se o problema persistir, use APENAS SessionAuthentication padrão:
+
 
 class BaseMultiDBModelViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
     # REMOVA o CustomSessionAuthentication se não funcionar
@@ -193,135 +189,60 @@ class OrcamentopisosViewSet(BaseMultiDBModelViewSet, VendedorEntidadeMixin):
     @transaction.atomic
     def create(self, request, *args, **kwargs):
         logger.info("[OrcamentopisosViewSet.create] Criando orçamento de pisos")
-        banco = self.get_banco()
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        # O serializer.save() já processa os itens_input e calcula os totais
         orcamento = serializer.save()
 
-        # Preenche dados adicionais do cliente
-        OrcamentoService.preparar_orcamento(orcamento, request)
-        orcamento.save(using=banco)
-
-        # Retorna o orçamento com todos os dados
         response_serializer = self.get_serializer(orcamento)
         headers = self.get_success_headers(response_serializer.data)
-        return Response(response_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+        return Response(
+            response_serializer.data,
+            status=status.HTTP_201_CREATED,
+            headers=headers,
+        )
 
         
         
+    @action(detail=False, methods=["post"])
     def exportar_pedido(self, request, empresa=None, filial=None, numero=None, slug=None):
-        """Converte orçamento em pedido"""
         banco = self.get_banco()
-        
+
         try:
-            # Buscar o orçamento pelos parâmetros da URL
-            orcamento = Orcamentopisos.objects.using(banco).get(
-                orca_empr=empresa,
-                orca_fili=filial,
-                orca_nume=numero
+            numero_pedido = OrcamentoExportarPedidoService().executar(
+                banco=banco,
+                empresa=empresa,
+                filial=filial,
+                numero=numero,
             )
-            
-            if orcamento.orca_stat == 2:  
-                return Response(
-                    {'error': 'Orçamento já foi exportado para pedido'}, 
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            # Criar pedido baseado no orçamento
-            ultimo_pedido = Pedidospisos.objects.using(banco).filter(
-                pedi_empr=orcamento.orca_empr,
-                pedi_fili=orcamento.orca_fili
-            ).order_by('-pedi_nume').first()
-            
-            proximo_numero_pedido = (ultimo_pedido.pedi_nume + 1) if ultimo_pedido else 1
-            
-            # Dados do pedido baseados no orçamento
-            dados_pedido = {
-                'pedi_empr': orcamento.orca_empr,
-                'pedi_fili': orcamento.orca_fili,
-                'pedi_nume': proximo_numero_pedido,
-                'pedi_clie': orcamento.orca_clie,
-                'pedi_data': orcamento.orca_data,
-                'pedi_tota': orcamento.orca_tota,
-                'pedi_obse': orcamento.orca_obse,
-                'pedi_vend': orcamento.orca_vend,
-                'pedi_desc': orcamento.orca_desc,
-                'pedi_fret': orcamento.orca_fret,
-                'pedi_ende': orcamento.orca_ende,
-                'pedi_nume_ende': orcamento.orca_nume_ende,
-                'pedi_comp': orcamento.orca_comp,
-                'pedi_bair': orcamento.orca_bair,
-                'pedi_cida': orcamento.orca_cida,
-                'pedi_esta': orcamento.orca_esta,
-                'pedi_orca': orcamento.orca_nume,
-                # Copiar todos os campos específicos de pisos
-                'pedi_mode_piso': orcamento.orca_mode_piso,
-                'pedi_mode_alum': orcamento.orca_mode_alum,
-                'pedi_mode_roda': orcamento.orca_mode_roda,
-                'pedi_mode_port': orcamento.orca_mode_port,
-                'pedi_mode_outr': orcamento.orca_mode_outr,
-                'pedi_sent_piso': orcamento.orca_sent_piso,
-                'pedi_ajus_port': orcamento.orca_ajus_port,
-                'pedi_degr_esca': orcamento.orca_degr_esca,
-                'pedi_obra_habi': orcamento.orca_obra_habi,
-                'pedi_movi_mobi': orcamento.orca_movi_mobi,
-                'pedi_remo_roda': orcamento.orca_remo_roda,
-                'pedi_remo_carp': orcamento.orca_remo_carp,
-                'pedi_croq_info': orcamento.orca_croq_info,
-                'pedi_stat': 0,  # Status inicial do pedido
-            }
-            
-            pedido = Pedidospisos.objects.using(banco).create(**dados_pedido)
-            
-            # Copiar itens do orçamento para o pedido
-            itens_orcamento = Itensorcapisos.objects.using(banco).filter(
-                item_empr=orcamento.orca_empr,
-                item_fili=orcamento.orca_fili,
-                item_orca=orcamento.orca_nume
+
+            return Response(
+                {
+                    "message": "Orçamento exportado com sucesso",
+                    "pedido_numero": numero_pedido,
+                },
+                status=status.HTTP_201_CREATED,
             )
-            
-            for item_orc in itens_orcamento:
-                Itenspedidospisos.objects.using(banco).create(
-                    item_empr=pedido.pedi_empr,
-                    item_fili=pedido.pedi_fili,
-                    item_pedi=pedido.pedi_nume,
-                    item_ambi=item_orc.item_ambi,
-                    item_prod=item_orc.item_prod,
-                    item_m2=item_orc.item_m2,
-                    item_quan=item_orc.item_quan,
-                    item_unit=item_orc.item_unit,
-                    item_suto=item_orc.item_suto,
-                    item_obse=item_orc.item_obse,
-                    item_nome_ambi=item_orc.item_nome_ambi,
-                    item_nume=item_orc.item_nume,
-                    item_caix=item_orc.item_caix,
-                    item_desc=item_orc.item_desc,
-                    item_queb=item_orc.item_queb,
-                    #item_inst_incl=item_orc.item_inst_incl,
-                )
-            
-            # Atualizar status do orçamento
-            orcamento.orca_stat = 2  # Exportado para pedido
-            orcamento.orca_pedi = pedido.pedi_nume
-            orcamento.save(using=banco)
-            
-            return Response({
-                'message': 'Orçamento exportado para pedido com sucesso',
-                'pedido_numero': pedido.pedi_nume
-            }, status=status.HTTP_201_CREATED)
-            
+
         except Orcamentopisos.DoesNotExist:
             return Response(
-                {'error': 'Orçamento não encontrado'}, 
-                status=status.HTTP_404_NOT_FOUND
+                {"error": "Orçamento não encontrado"},
+                status=status.HTTP_404_NOT_FOUND,
             )
-        except Exception as e:
-            logger.error(f"Erro ao exportar orçamento para pedido: {e}")
+
+        except ValueError as exc:
             return Response(
-                {'error': 'Erro ao exportar orçamento para pedido'}, 
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": str(exc)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        except Exception as e:
+            logger.error(f"Erro ao exportar: {e}", exc_info=True)
+            return Response(
+                {"error": "Erro interno"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
 
@@ -543,34 +464,21 @@ class PedidospisosViewSet(BaseMultiDBModelViewSet, VendedorEntidadeMixin):
     
     @transaction.atomic
     def create(self, request, *args, **kwargs):
-        """Criar novo pedido"""
-        try:
-            logger.info("[PedidospisosViewSet.create] Criando pedido de pisos")
-            banco = self.get_banco()
-            serializer = self.get_serializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
+        logger.info("[PedidospisosViewSet.create] Criando pedido de pisos")
 
-            # O serializer.save() já processa os itens_input e calcula os totais
-            pedido = serializer.save()
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-            # Preenche dados adicionais do cliente
-            PedidoService.preparar_pedido(pedido, request)
-            pedido.save(using=banco)
+        pedido = serializer.save()
 
-            # Retorna o pedido com todos os dados
-            response_serializer = self.get_serializer(pedido)
-            headers = self.get_success_headers(response_serializer.data)
-            return Response(response_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-            
-        except ValidationError as e:
-            logger.error(f"[PedidospisosViewSet.create] Erro de validação: {e}")
-            raise
-        except Exception as e:
-            logger.error(f"[PedidospisosViewSet.create] Erro ao criar pedido: {e}", exc_info=True)
-            return Response(
-                {'error': 'Erro ao criar pedido', 'detail': str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+        response_serializer = self.get_serializer(pedido)
+        headers = self.get_success_headers(response_serializer.data)
+
+        return Response(
+            response_serializer.data,
+            status=status.HTTP_201_CREATED,
+            headers=headers,
+        )
 
 class ItensorcapisosViewSet(BaseMultiDBModelViewSet):
     modulo_necessario = 'Pisos'
@@ -664,76 +572,50 @@ class ProdutosPisosViewSet(BaseMultiDBModelViewSet):
             logger.error(f"Erro ao buscar unidade de medida do produto: {e}")
             return None
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=["post"])
     def calcular_metragem(self, request, slug=None):
         banco = self.get_banco()
-        produto_id = request.data.get('produto_id')
-        tamanho_m2 = request.data.get('tamanho_m2')
-        percentual_quebra = request.data.get('percentual_quebra', 0)
-        condicao = request.data.get('condicao', '0')
 
-        # Log dos dados recebidos
-        logger.info(f"[calcular_metragem] Dados recebidos: {request.data}")
-        print(f"[calcular_metragem] Dados recebidos: {request.data}")
-        print(f"[calcular_metragem] produto_id: {produto_id}, tamanho_m2: {tamanho_m2}, percentual_quebra: {percentual_quebra}")
+        produto_id = request.data.get("produto_id")
+        tamanho_m2 = request.data.get("tamanho_m2")
+        percentual_quebra = request.data.get("percentual_quebra", 0)
+        condicao = request.data.get("condicao", "0")
+
+        if not produto_id:
+            return Response(
+                {"error": "produto_id é obrigatório"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not tamanho_m2:
+            return Response(
+                {"error": "tamanho_m2 é obrigatório"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
-            produto = Produtos.objects.using(banco).get(prod_codi=produto_id)
-            print(f"[calcular_metragem] Produto encontrado: {produto.prod_nome}, m2_por_caixa: {getattr(produto, 'prod_cera_m2cx', None)}, pc_por_caixa: {getattr(produto, 'prod_cera_pccx', None)}")
+            resultado = MetragemProdutoService().executar(
+                banco=banco,
+                produto_id=produto_id,
+                tamanho_m2=tamanho_m2,
+                percentual_quebra=percentual_quebra,
+                condicao=condicao,
+            )
+
+            return Response(resultado)
+
         except Produtos.DoesNotExist:
-            return Response({'error': 'Produto não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "Produto não encontrado"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
-        calculo = calcular_item(SimpleNamespace(
-            item_m2=tamanho_m2,
-            item_queb=percentual_quebra,
-            item_unit=0,
-        ), produto)
-
-        print(f"[calcular_metragem] Resultado do cálculo: {calculo}")
-
-        preco_origem = "tabela"
-        try:
-            preco_unitario = get_preco_produto(banco, produto_id, condicao)
-        except Exception as e:
-            logger.warning(f"[calcular_metragem] Preço não encontrado na tabela: {e}. Usando fallback do produto.")
-            preco_origem = "fallback_produto"
-            # Tentar usar um preço do próprio produto (se existir), senão 0
-            preco_unitario = parse_decimal(getattr(produto, "prod_prec", 0))
-
-        valor_total = arredondar(parse_decimal(calculo["metragem_real"]) * parse_decimal(preco_unitario))
-
-        prod_m2cx_attr = getattr(produto, "prod_cera_m2cx", None)
-        prod_pccx_attr = getattr(produto, "prod_cera_pccx", None)
-        
-        m2_por_caixa = parse_decimal(prod_m2cx_attr) if prod_m2cx_attr is not None else None
-        pc_por_caixa = parse_decimal(prod_pccx_attr) if prod_pccx_attr is not None else None   
-        
-        unidade = str(produto.prod_unme).strip().upper() if produto.prod_unme else None
-        if unidade in ["METRO QUADRADO", "M²", "M2", "M"]:
-            unidade = "M2"
-        elif unidade in ["PEÇA", "PÇ", "BARRA"]:
-            unidade = "PC"
-        
-        resultado = {
-            "produto_id": produto_id,
-            "produto_nome": produto.prod_nome,
-            "condicao_pagamento": "À Vista" if condicao == "0" else "A Prazo",
-            "preco_unitario": preco_unitario,
-            "valor_total": valor_total,
-            "total": valor_total,
-            "m2_por_caixa": m2_por_caixa,
-            "pc_por_caixa": pc_por_caixa,
-            "metragem_total": calculo.get("metragem_real"),
-            "metragem_real": calculo.get("metragem_real"),
-            "metragem_com_perda": calculo.get("metragem_com_perda"),
-            "caixas_necessarias": calculo.get("caixas_necessarias"),
-            "preco_origem": preco_origem,
-            "unidade_medida": unidade,
-        }
-        
-        print(f"[calcular_metragem] Resultado final: {resultado}")
-
-        return Response(resultado)
+        except Exception as exc:
+            logger.error(f"Erro ao calcular metragem: {exc}", exc_info=True)
+            return Response(
+                {"error": "Erro ao calcular metragem"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class DashPedidosPisosView(ModuloRequeridoMixin, TemplateView):

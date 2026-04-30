@@ -5,7 +5,7 @@ from core.utils import get_db_from_slug
 from Entidades.models import Entidades
 from Pisos.models import Pedidospisos, Itenspedidospisos
 from Pisos.web.forms import PedidoPisosForm, ItemPedidoPisosFormSet
-from Pisos.services.web_flow_service import PedidoPisosWebFlowService
+from Pisos.services.pedido_atualizar_service import PedidoAtualizarService
 
 
 def editar_pedido_pisos(request, slug, pk):
@@ -34,7 +34,11 @@ def editar_pedido_pisos(request, slug, pk):
 
     if request.method == "POST" and form.is_valid() and formset.is_valid():
         itens = []
-        for f in formset:
+        for i, f in enumerate(formset):
+            print(f"Form {i} initial:", f.initial)
+            print(f"Form {i} item_prod_nome value:", f['item_prod_nome'].value())
+            item = {}
+            item["item_nume"] = i + 1
             if not f.cleaned_data or f.cleaned_data.get("DELETE"):
                 continue
             item = {k: v for k, v in f.cleaned_data.items() if k != "DELETE"}
@@ -43,10 +47,14 @@ def editar_pedido_pisos(request, slug, pk):
 
         payload = {**form.cleaned_data, "itens_input": itens}
         try:
-            PedidoPisosWebFlowService.atualizar(banco, pk, payload, request=request)
+            PedidoAtualizarService().executar(
+                banco=banco,
+                pk=pk,
+                dados=payload,
+            )
             messages.success(request, f"Pedido {pk} atualizado com sucesso.")
             return redirect("PisosWeb:pedidos_pisos_visualizar", slug=slug, pk=pk)
         except Exception as exc:
-            messages.error(request, f"Erro ao atualizar pedido: {PedidoPisosWebFlowService.normalizar_erro(exc)}")
+            messages.error(request, f"Erro ao atualizar pedido: {PedidoAtualizarService.normalizar_erro(exc)}")
 
     return render(request, "Pisos/form.html", {"slug": slug, "form": form, "formset": formset, "modo": "editar", "pedido": pedido, "cliente_label": cliente_label, "vendedor_label": vendedor_label})

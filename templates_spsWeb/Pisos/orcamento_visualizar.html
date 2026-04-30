@@ -15,8 +15,7 @@
             {% else %}
             {% if orcamento.orca_pedi %}
             <a class="btn btn-outline-success"
-                href="{% url 'PisosWeb:pedidos_pisos_visualizar' slug=slug pk=orcamento.orca_pedi %}">Abrir Pedido #{{
-                orcamento.orca_pedi }}</a>
+                href="{% url 'PisosWeb:pedidos_pisos_visualizar' slug=slug pk=orcamento.orca_pedi %}">Abrir Pedido #{{ orcamento.orca_pedi }}</a>
             {% endif %}
             {% endif %}
         </div>
