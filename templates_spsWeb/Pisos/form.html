@@ -555,9 +555,9 @@
                     <!-- Produto autocomplete -->
                     <td class="position-relative">
                       {#
-                        FIX: value preenchido com item_prod_nome (nome salvo), NÃO com item_prod (ID).
-                        Isso garante que na edição o campo de busca já aparece com o nome do produto,
-                        sem precisar de prefillAutocomplete que sobrescrevia e bugava.
+                      FIX: value preenchido com item_prod_nome (nome salvo), NÃO com item_prod (ID).
+                      Isso garante que na edição o campo de busca já aparece com o nome do produto,
+                      sem precisar de prefillAutocomplete que sobrescrevia e bugava.
                       #}
                       <input id="produto_busca_{{ forloop.counter0 }}" class="form-control form-control-sm"
                         placeholder="Buscar produto" data-index="{{ forloop.counter0 }}"
@@ -566,10 +566,10 @@
                     </td>
 
                     {#
-                      FIX: campo item_prod_nome renderizado com form-control para ter id="id_itens-N-item_prod_nome"
-                      acessível via getElementById no JS. Antes era {{ f.item_prod_nome }} sem classe,
-                      gerando input sem estilo consistente mas isso não era o bug — o bug era no seletor JS
-                      que usava querySelector por name em vez de getElementById por id.
+                    FIX: campo item_prod_nome renderizado com form-control para ter id="id_itens-N-item_prod_nome"
+                    acessível via getElementById no JS. Antes era {{ f.item_prod_nome }} sem classe,
+                    gerando input sem estilo consistente mas isso não era o bug — o bug era no seletor JS
+                    que usava querySelector por name em vez de getElementById por id.
                     #}
                     <td>{{ f.item_prod_nome }}</td>
 
@@ -607,7 +607,12 @@
                     </td>
 
                     <td>{{ f.item_obse }}</td>
-                    <td>{{ f.DELETE }}</td>
+                    <td>
+                      {{ f.DELETE.as_hidden }}
+                      <button type="button" class="btn btn-sm btn-outline-danger btn-remove-item">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </td>
                   </tr>
                   {% endfor %}
                 </tbody>
@@ -654,9 +659,9 @@
   const SLUG = "{{ slug }}";
   const URL_CALCULAR = "{% url 'PisosWeb:api_calcular_item' slug=slug %}";
   const CSRF = "{{ csrf_token }}";
-  const URL_AUTO_CLIENTES   = "{% url 'PisosWeb:autocomplete_clientes' slug=slug %}";
+  const URL_AUTO_CLIENTES = "{% url 'PisosWeb:autocomplete_clientes' slug=slug %}";
   const URL_AUTO_VENDEDORES = "{% url 'PisosWeb:autocomplete_vendedores' slug=slug %}";
-  const URL_AUTO_PRODUTOS   = "{% url 'PisosWeb:autocomplete_produtos' slug=slug %}";
+  const URL_AUTO_PRODUTOS = "{% url 'PisosWeb:autocomplete_produtos' slug=slug %}";
 
   /* ── Utilitários ── */
   function fmtBRL(v) {
@@ -906,11 +911,41 @@
     calcTimers[index] = setTimeout(() => calcularItem(index), delay);
   }
 
+  function bindRemoveButtons() {
+    document.addEventListener('click', function (e) {
+      const btn = e.target.closest('.btn-remove-item');
+      if (!btn) return;
+
+      const tr = btn.closest('tr');
+      if (!tr) return;
+
+      const index = tr.dataset.index;
+      const delInput = document.getElementById(`id_itens-${index}-DELETE`);
+
+      if (delInput) {
+        delInput.value = 'on';
+        tr.style.display = 'none';
+      } else {
+        tr.remove();
+      }
+
+      atualizarTotais();
+    });
+  }
+
   /* ── Totais rodapé ── */
   function atualizarTotais() {
     let subtotal = 0;
-    document.querySelectorAll('[id^="suto-"]').forEach(el => {
-      subtotal += parseNumberBR(el.value);
+
+    document.querySelectorAll('#itens-tbody tr').forEach(tr => {
+      if (tr.style.display === 'none') return;
+
+      const index = tr.dataset.index;
+      const del = document.getElementById(`id_itens-${index}-DELETE`);
+      if (del && del.value === 'on') return;
+
+      const suto = document.getElementById(`suto-${index}`);
+      subtotal += parseNumberBR(suto?.value);
     });
 
     const desc = parseNumberBR(document.getElementById('id_pedi_desc')?.value);
@@ -922,7 +957,6 @@
     document.getElementById('total-fret').textContent = fmtBRL(fret);
     document.getElementById('total-geral').textContent = fmtBRL(total);
 
-    // Atualizar campo pedi_tota no form
     const totalField = document.getElementById('id_pedi_tota');
     if (totalField && !totalField.disabled) totalField.value = total.toFixed(2);
   }
@@ -1013,9 +1047,12 @@
           <input type="text" id="suto-${index}" class="form-control form-control-sm calc-field" readonly tabindex="-1">
         </td>
         <td><input name="${prefix}-item_obse" class="form-control form-control-sm" placeholder="Obs"></td>
-        <td>
-          <input type="checkbox" name="${prefix}-DELETE" class="form-check-input">
-        </td>
+       <td>
+  <input type="hidden" name="${prefix}-DELETE" id="id_itens-${index}-DELETE" value="">
+  <button type="button" class="btn btn-sm btn-outline-danger btn-remove-item">
+    <i class="bi bi-trash"></i>
+  </button>
+</td>
       `;
       tbody.appendChild(tr);
 
@@ -1082,7 +1119,7 @@
         for (let i = 0; i < total; i++) {
           const prod = document.getElementById(`id_itens-${i}-item_prod`);
           const del = document.querySelector(`input[name="itens-${i}-DELETE"]`);
-          if (!del?.checked && prod?.value) hasValidItem = true;
+          if (del?.value !== 'on' && prod?.value) hasValidItem = true;
         }
       }
 
@@ -1155,7 +1192,7 @@
 
     setupAddItem();
     atualizarTotais();
-
+    bindRemoveButtons();
     {% if form.errors or formset.errors or formset.non_form_errors %}
     showToast('O formulário voltou com erros. Revise os campos destacados.', 'danger');
     {% endif %}

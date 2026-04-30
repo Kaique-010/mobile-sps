@@ -5,17 +5,16 @@
         <h3>Orçamento Pisos #{{ orcamento.orca_nume }}</h3>
         <div class="d-flex gap-2 flex-wrap">
             <a class="btn btn-outline-secondary"
-                href="{% url 'PisosWeb:orcamentos_pisos_listar' slug=slug %}">Listar</a>
-            <a class="btn btn-primary"
-                href="{% url 'PisosWeb:orcamentos_pisos_editar' slug=slug pk=orcamento.orca_nume %}">Editar</a>
+                href="{% url 'PisosWeb:orcamentos_pisos_listar' slug=slug %}"><i class="bi bi-list"></i> Listar</a>
+            <a class="btn btn-outline-primary"
+                href="{% url 'PisosWeb:orcamentos_pisos_editar' slug=slug pk=orcamento.orca_nume %}"><i class="bi bi-pencil"></i> Editar</a>
             {% if orcamento.orca_stat != 2 %}
-            <a class="btn btn-success"
-                href="{% url 'PisosWeb:orcamentos_pisos_exportar' slug=slug numero=orcamento.orca_nume %}">Exportar para
-                Pedido</a>
+            <a class="btn btn-outline-success"
+                href="{% url 'PisosWeb:orcamentos_pisos_exportar' slug=slug numero=orcamento.orca_nume %}">Exportar para Pedido</a>
             {% else %}
             {% if orcamento.orca_pedi %}
             <a class="btn btn-outline-success"
-                href="{% url 'PisosWeb:pedidos_pisos_visualizar' slug=slug pk=orcamento.orca_pedi %}">Abrir Pedido #{{ orcamento.orca_pedi }}</a>
+                href="{% url 'PisosWeb:pedidos_pisos_visualizar' slug=slug pk=orcamento.orca_pedi %}"><i class="bi bi-people-fill"></i> Abrir Pedido #{{ orcamento.orca_pedi }}</a>
             {% endif %}
             {% endif %}
         </div>

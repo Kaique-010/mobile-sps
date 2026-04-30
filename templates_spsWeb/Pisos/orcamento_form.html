@@ -441,7 +441,7 @@
                     <th style="min-width:80px">Desc %</th>
                     <th style="min-width:80px">Quebra %</th>
                     <th style="min-width:90px">Subtotal</th>
-                    <th style="min-width:80px">Obs</th>
+                    <th style="min-width:40px">Obs</th>
                     <th style="min-width:36px">Del</th>
                   </tr>
                 </thead>
@@ -496,7 +496,12 @@
                         readonly tabindex="-1">
                     </td>
                     <td>{{ f.item_obse }}</td>
-                    <td>{{ f.DELETE }}</td>
+                    <td>
+                      {{ f.DELETE.as_hidden }}
+                      <button type="button" class="btn btn-sm btn-outline-danger btn-remove-item">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </td>
                   </tr>
                   {% endfor %}
                 </tbody>
@@ -684,6 +689,29 @@
     }
   }
 
+  function bindRemoveButtons() {
+    document.addEventListener('click', function (e) {
+      const btn = e.target.closest('.btn-remove-item');
+      if (!btn) return;
+
+      const tr = btn.closest('tr');
+      if (!tr) return;
+
+      const index = tr.dataset.index;
+      const delInput = document.getElementById(`id_itens-${index}-DELETE`);
+
+      if (delInput) {
+        delInput.value = 'on';
+        tr.style.display = 'none';
+      } else {
+        tr.remove();
+      }
+
+      atualizarTotais();
+    });
+  }
+
+
   const calcTimers = {};
 
   async function calcularItem(index) {
@@ -731,6 +759,7 @@
     }
   }
 
+
   function debounceCalc(index, delay = 600) {
     clearTimeout(calcTimers[index]);
     calcTimers[index] = setTimeout(() => calcularItem(index), delay);
@@ -738,8 +767,16 @@
 
   function atualizarTotais() {
     let subtotal = 0;
-    document.querySelectorAll('[id^="suto-"]').forEach(el => {
-      subtotal += parseNumberBR(el.value);
+
+    document.querySelectorAll('#itens-tbody tr').forEach(tr => {
+      if (tr.style.display === 'none') return;
+
+      const index = tr.dataset.index;
+      const del = document.getElementById(`id_itens-${index}-DELETE`);
+      if (del && del.value === 'on') return;
+
+      const suto = document.getElementById(`suto-${index}`);
+      subtotal += parseNumberBR(suto?.value);
     });
 
     const desc = parseNumberBR(document.getElementById('id_orca_desc')?.value);
@@ -825,7 +862,12 @@
       </td>
       <td><input type="text" id="suto-${index}" class="form-control form-control-sm calc-field" readonly tabindex="-1"></td>
       <td><input name="${prefix}-item_obse" class="form-control form-control-sm" placeholder="Obs"></td>
-      <td><input type="checkbox" name="${prefix}-DELETE" class="form-check-input"></td>
+      <td>
+  <input type="hidden" name="${prefix}-DELETE" id="id_itens-${index}-DELETE" value="">
+  <button type="button" class="btn btn-sm btn-outline-danger btn-remove-item">
+    <i class="bi bi-trash"></i>
+  </button>
+</td>
     `;
       tbody.appendChild(tr);
 
@@ -874,7 +916,7 @@
         for (let i = 0; i < total; i++) {
           const prod = document.getElementById(`id_itens-${i}-item_prod`);
           const del = document.querySelector(`input[name="itens-${i}-DELETE"]`);
-          if (!del?.checked && prod?.value) hasValidItem = true;
+          if (del?.value !== 'on' && prod?.value) hasValidItem = true;
         }
       }
 
@@ -917,6 +959,7 @@
     document.getElementById('id_orca_desc')?.addEventListener('input', atualizarTotais);
     document.getElementById('id_orca_fret')?.addEventListener('input', atualizarTotais);
     setupAddItem();
+    bindRemoveButtons();
     atualizarTotais();
   });
 </script>

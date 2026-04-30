@@ -1,60 +1,237 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load finance_tags %}
 {% block title %}Orçamentos Pisos{% endblock %}
 {% block content %}
+
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
-<link rel="stylesheet" href="{% static 'css/list.css' %}">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+<style>
+  .metric-card {
+    border: none; border-radius: 12px;
+    padding: 1.1rem 1.3rem;
+    display: flex; align-items: center; gap: 1rem;
+    box-shadow: 0 2px 8px rgba(187, 185, 185, 0.377);
+    transition: transform .15s, box-shadow .15s;
+  }
+  .metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .11);
+  }
+  .metric-icon {
+    width: 46px; height: 46px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.35rem; flex-shrink: 0;
+  }
+  .metric-label {
+    font-size: .72rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .06em; margin-bottom: 2px;
+  }
+  .metric-value { font-size: 1.35rem; font-weight: 700; line-height: 1; }
+  .badge-status {
+    font-size: .7rem; padding: .35em .65em;
+    border-radius: 20px; font-weight: 600; letter-spacing: .03em;
+  }
+  .table thead th {
+    font-size: .72rem; text-transform: uppercase;
+    letter-spacing: .07em; color: #7a8099;
+    border-bottom-width: 2px;
+    padding-top: .9rem; padding-bottom: .9rem;
+  }
+  .table tbody tr { vertical-align: middle; }
+  .table tbody tr:hover { background-color: #f8f9ff; }
+  .table td { font-size: .9rem; }
+  .page-title {
+    font-size: 1.8rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    gap: .5rem; color: #636161;
+  }
+  .page-title i { color: #eeb243; font-size: 1.2rem; }
+  .btn-outline-primary {
+    color: #0d7d8b; border-color: #1b565e;
+    border-width: 2px; border-radius: 8px;
+  }
+  .btn-outline-primary:hover {
+    background-color: #48547a; color: #000; border-color: #48547a;
+  }
+  .btn-outline-warning {
+    color: #c4a775; border-color: #f59e0b;
+    border-width: 2px; border-radius: 8px;
+  }
+  .btn-outline-warning:hover {
+    background-color: #f8dc9e; color: #000; border-color: #fff7e6;
+  }
+</style>
 
 <div class="container py-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3><i class="bi bi-receipt-cutoff"></i> Orçamentos Pisos</h3>
-    <a class="btn btn-outline-primary" href="{% url 'PisosWeb:orcamentos_pisos_criar' slug=slug %}">Novo</a>
+
+  <!-- Header centralizado — sem botão aqui -->
+  <div class="d-flex justify-content-center mb-4">
+    <span class="page-title">
+      <i class="bi bi-receipt-cutoff"></i> Orçamentos Pisos
+    </span>
   </div>
 
+  <!-- Metric Cards -->
   <div class="row g-3 mb-3">
-    <div class="col">
-      <div class="card card-body">Total orçamentos: {{ metricas.total_orcamentos }}</div>
+    <div class="col-12 col-sm-4">
+      <div class="metric-card">
+        <div class="metric-icon" style="background:#eef2ff; color:#4361ee;">
+          <i class="bi bi-file-earmark-text"></i>
+        </div>
+        <div>
+          <div class="metric-label">Total orçamentos</div>
+          <div class="metric-value">{{ metricas.total_orcamentos }}</div>
+        </div>
+      </div>
     </div>
-    <div class="col">
-      <div class="card card-body">Total valor: R$ {{ metricas.total_valor }}</div>
+    <div class="col-12 col-sm-4">
+      <div class="metric-card">
+        <div class="metric-icon" style="background:#e6fbf5; color:#10b981;">
+          <i class="bi bi-currency-dollar"></i>
+        </div>
+        <div>
+          <div class="metric-label">Total valor</div>
+          <div class="metric-value" style="color:#10b981;">{{ metricas.total_valor|brl }}</div>
+        </div>
+      </div>
     </div>
-    <div class="col">
-      <div class="card card-body">Exportados: {{ metricas.total_exportados }}</div>
+    <div class="col-12 col-sm-4">
+      <div class="metric-card">
+        <div class="metric-icon" style="background:#fff7e6; color:#f59e0b;">
+          <i class="bi bi-box-arrow-up-right"></i>
+        </div>
+        <div>
+          <div class="metric-label">Exportados</div>
+          <div class="metric-value" style="color:#f59e0b;">{{ metricas.total_exportados }}</div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <table class="table table-striped">
-    <thead>
-      <tr>
-        <th>Nº</th>
-        <th>Cliente</th>
-        <th>Data</th>
-        <th>Total</th>
-        <th>Status</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for o in orcamentos %}
-      <tr>
-        <td>{{ o.orca_nume }}</td>
-        <td>{{ o.orca_clie }}</td>
-        <td>{{ o.orca_data }}</td>
-        <td>{{ o.orca_tota }}</td>
-        <td>{{ o.get_orca_stat_display|default:o.orca_stat }}</td>
-        <td class="d-flex gap-2">
-          <a class="btn btn-sm btn-outline-primary" href="{% url 'PisosWeb:orcamentos_pisos_visualizar' slug=slug pk=o.orca_nume %}">Abrir</a>
-          {% if o.orca_stat != 2 %}
-          <a class="btn btn-sm btn-outline-success" href="{% url 'PisosWeb:orcamentos_pisos_exportar' slug=slug numero=o.orca_nume %}">Exportar</a>
-          {% endif %}
-        </td>
-      </tr>
-      {% empty %}
-      <tr>
-        <td colspan="6">Sem orçamentos.</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <!-- Botão Novo abaixo dos cards -->
+  <div class="d-flex justify-content-end mb-3">
+    <a class="btn btn-outline-primary d-flex align-items-center gap-2"
+      href="{% url 'PisosWeb:orcamentos_pisos_criar' slug=slug %}">
+      <i class="bi bi-plus-lg"></i> Novo
+    </a>
+  </div>
+
+  <!-- Filtros -->
+  <form method="get" class="card border-0 shadow-sm rounded-3 mb-3">
+    <div class="card-body">
+      <div class="row g-2 align-items-end">
+        <div class="col-12 col-md-2">
+          <label class="form-label">Nº Orçamento</label>
+          <input type="number" name="orca_nume" class="form-control" value="{{ filtros.orca_nume }}">
+        </div>
+        <div class="col-12 col-md-3">
+          <label class="form-label">Cliente</label>
+          <input type="text" name="cliente_nome" class="form-control" value="{{ filtros.cliente_nome }}">
+        </div>
+        <div class="col-12 col-md-3">
+          <label class="form-label">Vendedor</label>
+          <input type="text" name="vendedor_nome" class="form-control" value="{{ filtros.vendedor_nome }}">
+        </div>
+        <div class="col-12 col-md-2">
+          <label class="form-label">Status</label>
+          <select name="orca_stat" class="form-select">
+            <option value="">Todos</option>
+            <option value="1" {% if filtros.orca_stat == "1" %}selected{% endif %}>Pendente</option>
+            <option value="2" {% if filtros.orca_stat == "2" %}selected{% endif %}>Exportado</option>
+            <option value="3" {% if filtros.orca_stat == "3" %}selected{% endif %}>Cancelado</option>
+          </select>
+        </div>
+        <div class="col-12 col-md-2 d-flex gap-2">
+          <button class="btn btn-outline-primary flex-fill" type="submit">
+            <i class="bi bi-filter"></i> Filtrar
+          </button>
+          <a class="btn btn-outline-secondary flex-fill"
+            href="{% url 'PisosWeb:orcamentos_pisos_listar' slug=slug %}">
+            <i class="bi bi-eraser"></i> Limpar
+          </a>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <!-- Table -->
+  <div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-0">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th class="ps-4"><i class="bi bi-hash me-1"></i>Nº</th>
+            <th><i class="bi bi-person me-1"></i>Cliente</th>
+            <th><i class="bi bi-person me-1"></i>Nome Cliente</th>
+            <th><i class="bi bi-calendar3 me-1"></i>Data</th>
+            <th><i class="bi bi-cash-stack me-1"></i>Total</th>
+            <th><i class="bi bi-tag me-1"></i>Status</th>
+            <th><i class="bi bi-people me-1"></i>Vendedor</th>
+            <th><i class="bi bi-people me-1"></i>Nome Vendedor</th>
+            <th class="pe-4"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for o in orcamentos %}
+          <tr>
+            <td class="ps-4 fw-semibold text-success">#{{ o.orca_nume }}</td>
+            <td>{{ o.orca_clie }}</td>
+            <td>{{ o.cliente_nome }}</td>
+            <td>{{ o.orca_data }}</td>
+            <td class="fw-semibold">{{ o.orca_tota|brl }}</td>
+            <td>
+              <span class="badge-status
+                {% if o.orca_stat == 1 %}bg-warning text-dark
+                {% elif o.orca_stat == 2 %}bg-success text-white
+                {% elif o.orca_stat == 3 %}bg-danger text-white
+                {% else %}bg-secondary text-white{% endif %}">
+                {{ o.get_orca_stat_display|default:o.orca_stat }}
+              </span>
+            </td>
+            <td>{{ o.orca_vend }}</td>
+            <td>{{ o.vendedor_nome }}</td>
+            <td class="pe-4">
+              <div class="d-flex gap-2 justify-content-end">
+                <a class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
+                  href="{% url 'PisosWeb:orcamentos_pisos_visualizar' slug=slug pk=o.orca_nume %}">
+                  <i class="bi bi-eye"></i> Abrir
+                </a>
+                {% if o.orca_stat != 2 %}
+                <a class="btn btn-sm btn-outline-warning"
+                  href="{% url 'PisosWeb:orcamentos_pisos_exportar' slug=slug numero=o.orca_nume %}">
+                  <i class="bi bi-file-earmark-arrow-down"></i> Exportar
+                </a>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="9" class="text-center py-5 text-muted">
+              <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+              Nenhum orçamento encontrado.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if is_paginated %}
+  <nav class="mt-3">
+    <ul class="pagination justify-content-center d-none">
+      {% if page_obj.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.next_page_number }}">Próxima</a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% include "components/infinite_scroll.html" with infinite_append_selector="#itens-lista" %}
+  {% endif %}
+
 </div>
 {% endblock %}

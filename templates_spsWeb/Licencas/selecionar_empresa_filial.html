@@ -8,314 +8,336 @@
   }
 
   .login-card {
-    max-width: 640px;
-    box-shadow: 0 0 20px rgba(127, 198, 255, 0.938);
-  }
-
-  .login-header .subtitle {
-    color: var(--bs-secondary-color);
-  }
-
-  [data-bs-theme="dark"] .login-header .subtitle {
-    color: var(--bs-secondary-color);
+    max-width: 740px;
+    box-shadow: 0 2px 20px rgba(204, 230, 252, 0.4);
   }
 
   .login-spinner {
     width: 20px;
     height: 20px;
-    border: 2px solid rgba(255, 255, 255, 0.35);
-    border-top-color: #ffffff;
+    border: 2px solid rgba(255, 255, 255, .35);
+    border-top-color: #fff;
     border-radius: 50%;
-    animation: login-spin 0.8s linear infinite;
+    animation: spin .8s linear infinite;
   }
 
-  @keyframes login-spin {
-    from {
-      transform: rotate(0deg);
-    }
-
+  @keyframes spin {
     to {
       transform: rotate(360deg);
     }
   }
+
+  /* tabela */
+  .table-select {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 10px;
+    overflow: hidden;
+    max-height: 230px;
+    overflow-y: auto;
+  }
+
+  .table-row {
+    display: flex;
+    padding: 10px 12px;
+    gap: 10px;
+    border-bottom: 1px solid var(--bs-border-color);
+    cursor: pointer;
+    font-size: 13px;
+  }
+
+  .table-row:hover {
+    background: rgba(25, 135, 84, .08);
+  }
+
+  .table-row.active {
+    background: rgba(25, 135, 84, .18);
+  }
+
+  .table-header {
+    font-weight: 700;
+    background: rgba(108, 117, 125, .12);
+    cursor: default;
+  }
+
+  .col {
+    flex: 1;
+  }
+
+  .col-empresa {
+    flex: 1.6;
+  }
 </style>
 
-<div class="login-wrapper container min-vh-80 d-flex align-items-center justify-content-center">
+<div class="login-wrapper container d-flex justify-content-center">
   <div class="login-card w-100 bg-body border rounded-3">
-    <div class="login-header p-4 pb-0 text-center">
-      <h1 class="h4 mb-1">Seleção de Empresa e Filial</h1>
-      <p class="subtitle mb-0">Escolha a empresa e filial para continuar.</p>
+
+    <div class="p-4 text-center">
+      <h5>Seleção de Empresa e Filial</h5>
+      <small class="text-muted">Escolha para continuar</small>
     </div>
 
-    <div class="px-4 pt-3">
-      <div id="alert" class="alert alert-danger {% if not error %}d-none{% endif %}" role="alert">{% if error %}{{ error
-        }}{% endif %}</div>
-    </div>
+    <div class="p-4">
 
-    <div class="login-body p-4 pt-0">
       <form id="selForm" method="post" action="/web/selecionar-empresa/">
         {% csrf_token %}
-        <input type="hidden" id="slugInput" name="slug" />
-        <input type="hidden" id="empresaNomeInput" name="empresa_nome" />
-        <input type="hidden" id="filialNomeInput" name="filial_nome" />
-        <input type="hidden" id="usuaCodiInput" name="usua_codi" />
-        <input type="hidden" id="usuaNomeInput" name="usua_nome" />
-        <div class="form-floating mb-3">
-          <select class="form-select" id="empresa" name="empresa_id" required>
-            <option value="" selected disabled>Carregando...</option>
-          </select>
-          <label for="empresa">Empresa</label>
-        </div>
-        <div class="form-floating mb-3">
-          <select class="form-select" id="filial" name="filial_id" required>
-            <option value="" selected disabled>Selecione a empresa primeiro</option>
-          </select>
-          <label for="filial">Filial</label>
-        </div>
-        <button type="submit" class="btn btn-success w-100 d-flex align-items-center justify-content-center gap-2"
-          aria-busy="false">
-          <span id="selBtnText">Continuar</span>
-          <span class="login-spinner d-none js-sel-spinner" aria-hidden="true"></span>
-        </button>
-      </form>
-    </div>
 
-    <div class="login-footer px-4 pb-4 text-center">
-      <small class="text-body-secondary">Após selecionar, você será direcionado à home.</small>
+        <input type="hidden" id="slugInput" name="slug">
+        <input type="hidden" id="empresaIdInput" name="empresa_id">
+        <input type="hidden" id="filialIdInput" name="filial_id">
+
+        <input type="hidden" id="empresaNomeInput" name="empresa_nome">
+        <input type="hidden" id="empresaRazaoInput" name="empresa_razao">
+        <input type="hidden" id="empresaFantasiaInput" name="empresa_fantasia">
+
+        <input type="hidden" id="filialNomeInput" name="filial_nome">
+        <input type="hidden" id="filialFantasiaInput" name="filial_fantasia">
+
+        <!-- EMPRESA -->
+        <h6>Empresa</h6>
+        <div id="empresa-list" class="table-select mb-4">
+          <div class="table-row table-header">
+            <div class="col col-empresa">Empresa</div>
+            <div class="col">Fantasia</div>
+            <div class="col">Documento</div>
+          </div>
+        </div>
+
+        <!-- FILIAL -->
+        <h6>Filial</h6>
+        <div id="filial-list" class="table-select mb-4">
+          <div class="table-row table-header">
+            <div class="col col-empresa">Filial</div>
+            <div class="col">Fantasia</div>
+            <div class="col">Documento</div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-success w-100">
+          Continuar
+        </button>
+
+      </form>
     </div>
   </div>
 </div>
 
 <script>
-  // ====== Logger util para depuração no navegador ======
-  const DEBUG = true; // altere para false para silenciar
-  const L = {
-    prefix: '[SEL_EMP]'
-  };
-  L.group = (label) => DEBUG && console.groupCollapsed(`${L.prefix} ${label}`);
-  L.groupEnd = () => DEBUG && console.groupEnd();
-  L.log = (...args) => DEBUG && console.log(L.prefix, ...args);
-  L.info = (...args) => DEBUG && console.info(L.prefix, ...args);
-  L.warn = (...args) => DEBUG && console.warn(L.prefix, ...args);
-  L.error = (...args) => DEBUG && console.error(L.prefix, ...args);
-  L.time = (label) => DEBUG && console.time(`${L.prefix} ${label}`);
-  L.timeEnd = (label) => DEBUG && console.timeEnd(`${L.prefix} ${label}`);
-  L.table = (data) => DEBUG && console.table(data);
+let empresaSel = null;
+let filialSel = null;
+let isLoading = false;
 
-  const showError = (msg) => {
-    const el = document.getElementById('alert');
-    el.textContent = msg;
-    el.classList.remove('d-none');
-    L.error('Alerta mostrado:', msg);
-    setLoading(false);
-  };
+const DEBUG = true;
+const L = {
+  log: (...a) => DEBUG && console.log('[SEL_EMP]', ...a),
+  warn: (...a) => DEBUG && console.warn('[SEL_EMP]', ...a),
+  error: (...a) => DEBUG && console.error('[SEL_EMP]', ...a),
+};
 
-  const slug = localStorage.getItem('slug');
-  const access = localStorage.getItem('access');
-  L.group('Sessão');
-  L.log('slug:', slug);
-  L.log('access presente:', !!access);
-  L.groupEnd();
+const slug = localStorage.getItem('slug');
+const access = localStorage.getItem('access');
 
-  const authFetch = async (url, options = {}) => {
-    const empresa = localStorage.getItem('empresa_id') || '1';
-    const filial = localStorage.getItem('filial_id') || '1';
-    const makeHeaders = (token) => ({
-      'Authorization': token ? `Bearer ${token}` : '',
-      'Content-Type': 'application/json',
-      'X-Empresa': empresa,
-      'X-Filial': filial,
-      ...(options.headers || {})
-    });
-    let resp = await fetch(url, { ...options, credentials: 'same-origin', headers: makeHeaders(access) });
-    if (resp.status !== 401) return resp;
-    try {
-      const data = await resp.json();
-      if (data && data.next) {
-        window.location.href = data.next;
-        return resp;
-      }
-    } catch (e) { }
-    const refresh = localStorage.getItem('refresh');
-    if (!refresh) return resp;
-    try {
-      const refreshResp = await fetch(`/api/${slug}/auth/token/refresh/`, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh })
-      });
-      if (!refreshResp.ok) return resp;
-      const d = await refreshResp.json();
-      const newAccess = d && d.access;
-      if (!newAccess) return resp;
-      localStorage.setItem('access', newAccess);
-      return await fetch(url, { ...options, credentials: 'same-origin', headers: makeHeaders(newAccess) });
-    } catch (e) {
-      return resp;
-    }
-  };
+const form = document.getElementById('selForm');
+const submitBtn = form.querySelector('button[type="submit"]');
 
-  const form = document.getElementById('selForm');
-  const submitBtn = form.querySelector('button[type="submit"]');
-  const spinnerEl = submitBtn.querySelector('.js-sel-spinner');
-  const btnTextEl = document.getElementById('selBtnText');
-  let isLoading = false;
+function setLoading(loading) {
+  isLoading = loading;
+  submitBtn.disabled = loading;
+  submitBtn.textContent = loading ? 'Carregando...' : 'Continuar';
+}
+
+function showError(msg) {
+  alert(msg);
+  setLoading(false);
+}
+
+const authFetch = async (url, options = {}) => {
+  const empresa = localStorage.getItem('empresa_id') || '1';
+  const filial = localStorage.getItem('filial_id') || '1';
+
+  const makeHeaders = (token) => ({
+    Authorization: token ? `Bearer ${token}` : '',
+    'Content-Type': 'application/json',
+    'X-Empresa': empresa,
+    'X-Filial': filial,
+    ...(options.headers || {})
+  });
+
+  let resp = await fetch(url, {
+    ...options,
+    credentials: 'same-origin',
+    headers: makeHeaders(localStorage.getItem('access'))
+  });
+
+  if (resp.status !== 401) return resp;
+
+  const refresh = localStorage.getItem('refresh');
+  if (!refresh) return resp;
+
+  const refreshResp = await fetch(`/api/${slug}/auth/token/refresh/`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh })
+  });
+
+  if (!refreshResp.ok) return resp;
+
+  const data = await refreshResp.json();
+  if (!data.access) return resp;
+
+  localStorage.setItem('access', data.access);
+
+  return fetch(url, {
+    ...options,
+    credentials: 'same-origin',
+    headers: makeHeaders(data.access)
+  });
+};
+
+function hydrateUserHidden() {
   const usuaCodiInput = document.getElementById('usuaCodiInput');
   const usuaNomeInput = document.getElementById('usuaNomeInput');
 
-  const setLoading = (loading) => {
-    isLoading = loading;
-    const disabled = !!loading;
-    submitBtn.disabled = disabled;
-    submitBtn.setAttribute('aria-busy', loading ? 'true' : 'false');
-    if (spinnerEl) spinnerEl.classList.toggle('d-none', !loading);
-    if (btnTextEl) btnTextEl.textContent = loading ? 'Carregando...' : 'Continuar';
-  };
+  if (!usuaCodiInput || !usuaNomeInput) return;
 
-  const hydrateUserHidden = () => {
-    if (!usuaCodiInput || !usuaNomeInput) return;
-    try {
-      const rawUsuario = localStorage.getItem('usuario');
-      const usuario = rawUsuario ? JSON.parse(rawUsuario) : {};
-      const isObj = usuario && typeof usuario === 'object' && !Array.isArray(usuario);
-      const usuaCodi = (isObj ? (usuario?.usua_codi || usuario?.usuario_id || usuario?.id) : null) || localStorage.getItem('usua_codi') || '';
-      const usuaNome = (isObj ? (usuario?.usua_nome || usuario?.username) : String(usuario || '')) || localStorage.getItem('usua_nome') || '';
-      usuaCodiInput.value = usuaCodi ? String(usuaCodi) : '';
-      usuaNomeInput.value = usuaNome ? String(usuaNome) : '';
-      L.log('Hidden user hydrated:', { usua_codi: usuaCodiInput.value, usua_nome: usuaNomeInput.value });
-    } catch (_err) {
-      usuaCodiInput.value = localStorage.getItem('usua_codi') || '';
-      usuaNomeInput.value = localStorage.getItem('usua_nome') || '';
-      L.warn('Falha ao hidratar hidden user via JSON, usando fallback localStorage');
-    }
-  };
+  try {
+    const raw = localStorage.getItem('usuario');
+    const usuario = raw ? JSON.parse(raw) : {};
 
-  const carregarEmpresas = async () => {
-    try {
-      const url = `/api/${slug}/licencas/empresas/`;
-      L.time('Empresas:fetch');
-      const resp = await authFetch(url);
-      const data = await resp.json();
-      L.group('Empresas:resposta');
-      L.log('status:', resp.status);
-      L.log('ok:', resp.ok);
-      L.table(Array.isArray(data) ? data : [data]);
-      L.groupEnd();
-      L.timeEnd('Empresas:fetch');
-      if (!resp.ok) return showError(data?.error || 'Erro ao carregar empresas');
-      const sel = document.getElementById('empresa');
-      sel.innerHTML = '<option value="" disabled selected>Selecione...</option>';
-      data.forEach(e => {
-        const opt = document.createElement('option');
-        opt.value = e.empr_codi;
-        opt.textContent = `${e.empr_nome} (${e.empr_docu})`;
-        sel.appendChild(opt);
-      });
-      L.info('Empresas carregadas:', data.length);
-    } catch (e) {
-      console.error(e);
-      showError('Erro inesperado ao carregar empresas');
-    }
-  };
+    usuaCodiInput.value =
+      usuario?.usua_codi ||
+      usuario?.usuario_id ||
+      usuario?.id ||
+      localStorage.getItem('usua_codi') ||
+      '';
 
-  const carregarFiliais = async (empresaId) => {
-    try {
-      const url = `/api/${slug}/licencas/filiais/?empresa_id=${encodeURIComponent(empresaId)}`;
-      L.time('Filiais:fetch');
-      L.log('Empresa selecionada:', empresaId);
-      const resp = await authFetch(url);
-      const data = await resp.json();
-      L.group('Filiais:resposta');
-      L.log('status:', resp.status);
-      L.log('ok:', resp.ok);
-      L.table(Array.isArray(data) ? data : [data]);
-      L.groupEnd();
-      L.timeEnd('Filiais:fetch');
-      if (!resp.ok) return showError(data?.error || 'Erro ao carregar filiais');
-      const sel = document.getElementById('filial');
-      sel.innerHTML = '<option value="" disabled selected>Selecione...</option>';
-      data.forEach(f => {
-        const opt = document.createElement('option');
-        opt.value = f.empr_codi;
-        opt.textContent = f.empr_nome;
-        opt.dataset.emprCodi = String(f.empr_codi);
-        opt.dataset.emprEmpr = String(f.empr_empr);
-        sel.appendChild(opt);
-      });
-      L.info('Filiais carregadas:', data.length);
-    } catch (e) {
-      console.error(e);
-      showError('Erro inesperado ao carregar filiais');
-    }
-  };
+    usuaNomeInput.value =
+      usuario?.usua_nome ||
+      usuario?.username ||
+      localStorage.getItem('usua_nome') ||
+      '';
+  } catch {
+    usuaCodiInput.value = localStorage.getItem('usua_codi') || '';
+    usuaNomeInput.value = localStorage.getItem('usua_nome') || '';
+  }
+}
 
-  document.getElementById('empresa').addEventListener('change', (e) => {
-    const empresaId = e.target.value;
-    L.log('Change empresa ->', empresaId);
-    if (empresaId) carregarFiliais(empresaId);
+async function carregarEmpresas() {
+  const resp = await authFetch(`/api/${slug}/licencas/empresas/`);
+  const data = await resp.json();
+
+  if (!resp.ok) return showError(data?.error || 'Erro ao carregar empresas');
+
+  const box = document.getElementById('empresa-list');
+
+  data.forEach(e => {
+    const row = document.createElement('div');
+    row.className = 'table-row';
+
+    row.innerHTML = `
+      <div class="col col-empresa">${e.empr_nome || ''}</div>
+      <div class="col">${e.empr_fant || ''}</div>
+      <div class="col">${e.empr_docu || e.empr_cnpj || ''}</div>
+    `;
+
+    row.onclick = () => {
+      document.querySelectorAll('#empresa-list .table-row').forEach(r => r.classList.remove('active'));
+      row.classList.add('active');
+
+      empresaSel = e;
+      filialSel = null;
+
+      carregarFiliais(e.empr_codi);
+    };
+
+    box.appendChild(row);
   });
+}
 
-  // Helper para obter CSRF do cookie
-  function getCookie(name) {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) {
-      const token = parts.pop().split(';').shift();
-      L.log('CSRF do cookie encontrado:', !!token);
-      return token;
-    }
+async function carregarFiliais(empresaId) {
+  const resp = await authFetch(`/api/${slug}/licencas/filiais/?empresa_id=${encodeURIComponent(empresaId)}`);
+  const data = await resp.json();
+
+  if (!resp.ok) return showError(data?.error || 'Erro ao carregar filiais');
+
+  const box = document.getElementById('filial-list');
+
+  box.innerHTML = `
+    <div class="table-row table-header">
+      <div class="col col-empresa">Filial</div>
+      <div class="col">Fantasia</div>
+      <div class="col">Documento</div>
+    </div>
+  `;
+
+  data.forEach(f => {
+    const row = document.createElement('div');
+    row.className = 'table-row';
+
+    row.innerHTML = `
+      <div class="col col-empresa">${f.empr_nome || ''}</div>
+      <div class="col">${f.empr_fant || ''}</div>
+      <div class="col">${f.empr_cnpj || f.empr_docu || ''}</div>
+    `;
+
+    row.onclick = () => {
+      document.querySelectorAll('#filial-list .table-row').forEach(r => r.classList.remove('active'));
+      row.classList.add('active');
+
+      filialSel = f;
+    };
+
+    box.appendChild(row);
+  });
+}
+
+form.addEventListener('submit', e => {
+  if (isLoading) {
+    e.preventDefault();
+    return;
   }
 
-  form.addEventListener('submit', (e) => {
-    if (isLoading) {
-      e.preventDefault();
-      return;
-    }
-    setLoading(true);
-    const empresaId = document.getElementById('empresa').value;
-    const filialId = document.getElementById('filial').value;
-    const empresaNome = document.querySelector('#empresa option:checked')?.textContent || '';
-    const filialNome = document.querySelector('#filial option:checked')?.textContent || '';
-    // Validação mínima (browser já valida via 'required')
-    if (!empresaId || !filialId) {
-      showError('Selecione empresa e filial.');
-      e.preventDefault();
-      return;
-    }
-    const filialOpt = document.querySelector('#filial option:checked');
-    const filialEmpresaEmpr = filialOpt?.dataset?.emprEmpr;
-    if (String(filialEmpresaEmpr) !== String(empresaId)) {
-      showError('Filial não pertence à empresa selecionada.');
-      e.preventDefault();
-      return;
-    }
-    // Persistir no localStorage para compatibilidade
-    try {
-      localStorage.setItem('empresa_id', String(empresaId));
-      localStorage.setItem('filial_id', String(filialId));
-      if (empresaNome) localStorage.setItem('empresa_nome', empresaNome);
-      if (filialNome) localStorage.setItem('filial_nome', filialNome);
-      // Incluir slug e nomes no POST
-      document.getElementById('slugInput').value = slug || '';
-      document.getElementById('empresaNomeInput').value = empresaNome || '';
-      document.getElementById('filialNomeInput').value = filialNome || '';
-      hydrateUserHidden();
-      L.info('Submit nativo: LocalStorage atualizado', { empresaId, filialId });
-    } catch (err) {
-      L.warn('Falha ao persistir no localStorage:', err?.message);
-    }
-    // Deixar o envio nativo prosseguir (redirect será seguido pelo navegador)
-    L.info('Submit nativo: prosseguindo com envio do formulário');
-  });
+  setLoading(true);
 
-  // Inicializa
-  if (!slug || !access) {
-    window.location.href = '/web/login/';
-  } else {
-    L.info('Inicializando carregamento de empresas...');
-    hydrateUserHidden();
-    carregarEmpresas();
+  if (!empresaSel || !filialSel) {
+    e.preventDefault();
+    showError('Selecione empresa e filial.');
+    return;
   }
+
+  if (String(filialSel.empr_empr) !== String(empresaSel.empr_codi)) {
+    e.preventDefault();
+    showError('Filial não pertence à empresa selecionada.');
+    return;
+  }
+
+  localStorage.setItem('empresa_id', String(empresaSel.empr_codi));
+  localStorage.setItem('filial_id', String(filialSel.empr_codi));
+  localStorage.setItem('empresa_nome', empresaSel.empr_nome || '');
+  localStorage.setItem('filial_nome', filialSel.empr_nome || '');
+  localStorage.setItem('empresa_fantasia', empresaSel.empr_fant || '');
+  localStorage.setItem('filial_fantasia', filialSel.empr_fant || '');
+
+  document.getElementById('slugInput').value = slug || '';
+  document.getElementById('empresaIdInput').value = empresaSel.empr_codi || '';
+  document.getElementById('filialIdInput').value = filialSel.empr_codi || '';
+
+  document.getElementById('empresaNomeInput').value = empresaSel.empr_nome || '';
+  document.getElementById('empresaRazaoInput').value = empresaSel.empr_nome || '';
+  document.getElementById('empresaFantasiaInput').value = empresaSel.empr_fant || '';
+
+  document.getElementById('filialNomeInput').value = filialSel.empr_nome || '';
+  document.getElementById('filialFantasiaInput').value = filialSel.empr_fant || '';
+
+  hydrateUserHidden();
+});
+
+if (!slug || !access) {
+  window.location.href = '/web/login/';
+} else {
+  hydrateUserHidden();
+  carregarEmpresas();
+}
 </script>
+
 {% endblock %}

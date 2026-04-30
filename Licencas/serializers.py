@@ -10,14 +10,14 @@ from .utils import get_proximo_usuario, get_proxima_empresa, get_proxima_filial
 class EmpresaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Empresas
-        fields = ['empr_codi', 'empr_nome', 'empr_docu']
+        fields = ['empr_codi', 'empr_nome', 'empr_docu', 'empr_fant']
 
 
 class FilialSerializer(serializers.ModelSerializer):
     class Meta:
         model = Filiais
         # Inclui o identificador primário da filial (empr_empr) para uso no front
-        fields = ['empr_empr', 'empr_codi', 'empr_nome']
+        fields = ['empr_empr', 'empr_codi', 'empr_nome','empr_fant', 'empr_docu']
 
 class EmpresaDetailSerializer(serializers.ModelSerializer):
     

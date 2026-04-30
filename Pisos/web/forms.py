@@ -18,6 +18,8 @@ class PedidoPisosForm(forms.ModelForm):
         widgets = {k: forms.DateInput(attrs={"type": "date", "class": "form-control"}) for k in [
             "pedi_data", "pedi_data_prev_entr", "pedi_data_inst", "pedi_data_entr_inst"
         ]}
+        widgets["pedi_obse"] = forms.TextInput(attrs={"class": "form-control form-control-sm"})
+        widgets["pedi_croq_info"] = forms.TextInput(attrs={"rows": 1, "class": "form-control"})
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -38,10 +40,10 @@ class ItemPedidoPisosForm(forms.Form):
     item_suto = forms.DecimalField(required=False, decimal_places=4, max_digits=15)
     item_desc = forms.DecimalField(required=False, decimal_places=4, max_digits=15)
     item_queb = forms.DecimalField(required=False, decimal_places=2, max_digits=5)
-    item_obse = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 1}))
+    item_obse = forms.CharField(required=False, widget=forms.TextInput(attrs={"rows": 1}))
 
 
-ItemPedidoPisosFormSet = formset_factory(ItemPedidoPisosForm, extra=1, can_delete=True)
+ItemPedidoPisosFormSet = formset_factory(ItemPedidoPisosForm, extra=0, can_delete=True)
 
 
 class OrcamentoPisosForm(forms.ModelForm):
@@ -55,9 +57,13 @@ class OrcamentoPisosForm(forms.ModelForm):
             "orca_sent_piso", "orca_ajus_port", "orca_degr_esca", "orca_obra_habi", "orca_movi_mobi",
             "orca_remo_roda", "orca_remo_carp", "orca_stat",
         ]
-        widgets = {k: forms.DateInput(attrs={"type": "date", "class": "form-control"}) for k in [
-            "orca_data", "orca_data_prev_entr", "orca_data_inst", "orca_data_entr_inst"
-        ]}
+        widgets = {
+            **{k: forms.DateInput(attrs={"type": "date", "class": "form-control"}) for k in [
+                "orca_data", "orca_data_prev_entr", "orca_data_inst", "orca_data_entr_inst"
+            ]},
+            "orca_obse": forms.TextInput(attrs={"class": "form-control form-control-sm"}),
+            "orca_croq_info": forms.TextInput(attrs={"rows": 1, "class": "form-control"}),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -79,8 +85,8 @@ class ItemOrcamentoPisosForm(forms.Form):
     item_suto = forms.DecimalField(required=False, decimal_places=4, max_digits=15)
     item_desc = forms.DecimalField(required=False, decimal_places=4, max_digits=15)
     item_queb = forms.DecimalField(required=False, decimal_places=2, max_digits=5)
-    item_obse = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 1}))
+    item_obse = forms.CharField(required=False, widget=forms.TextInput(attrs={"rows": 1}))
     item_prod_nome = forms.CharField(required=False, max_length=100)
 
 
-ItemOrcamentoPisosFormSet = formset_factory(ItemOrcamentoPisosForm, extra=1, can_delete=True)
+ItemOrcamentoPisosFormSet = formset_factory(ItemOrcamentoPisosForm, extra=0, can_delete=True)
