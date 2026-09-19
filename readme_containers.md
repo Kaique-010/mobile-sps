@@ -259,11 +259,11 @@ em vez de utilizar diretamente o IP interno do Docker.
 
 No Windows, utilizar a chave:
 
-C:\Users\"nome usuario"\SPARTACUS.pem
+C:\Users\"leoka"\SPARTACUS.pem
 
 Comando:
 
-ssh -i "C:\Users\"nome usuario"\SPARTACUS.pem" ubuntu@168.75.73.117
+ssh -i "C:\Users\leoka\SPARTACUS.pem" ubuntu@168.75.73.117
 
 Depois de conectado:
 

@@ -1,179 +1,344 @@
-from django.views.generic import TemplateView
-from django.shortcuts import render
 import logging
-from django.db.models import Q, Subquery, OuterRef, DecimalField, Value as V, CharField, IntegerField, Case, When
+
+from django.core.paginator import Paginator
+from django.db.models import (
+    Case,
+    CharField,
+    DecimalField,
+    IntegerField,
+    OuterRef,
+    Q,
+    Subquery,
+    Value as V,
+    When,
+)
+from django.db.models.functions import Cast, Coalesce
+from django.views.generic import TemplateView
+
+from core.decorator import ModuloRequeridoMixin
+from core.registry import get_licenca_db_config
+from Produtos.models import (
+    GrupoProduto,
+    Marca,
+    Produtos,
+    SaldoProduto,
+    SubgrupoProduto,
+    Tabelaprecos,
+)
+from Produtos.servicos.grade_service import GradeService
+from Produtos.utils import formatar_dados_etiqueta
 
 logger = logging.getLogger(__name__)
-from django.db.models.functions import Coalesce, Cast
-from Produtos.models import Produtos, SaldoProduto, Tabelaprecos, Marca, GrupoProduto, SubgrupoProduto
-from Produtos.utils import formatar_dados_etiqueta
-from core.registry import get_licenca_db_config
-from core.decorator import ModuloRequeridoMixin
-from django.core.paginator import Paginator
+
 
 class EtiquetasView(ModuloRequeridoMixin, TemplateView):
     template_name = "Produtos/etiquetas_print.html"
-    modulo_necessario = 'Produtos'
-    
+    modulo_necessario = "Produtos"
+    itens_por_pagina = 50
 
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+    def _obter_empresa_filial(self, request):
+        empresa_id = (
+            getattr(request.user, "empresa_id", None)
+            or request.session.get("empresa_id")
+        )
 
+        filial_id = (
+            getattr(request.user, "filial_id", None)
+            or request.session.get("filial_id")
+        )
+
+        return empresa_id, filial_id
+
+    def _criar_grade_service(self, banco, empresa_id, filial_id):
+        if not filial_id:
+            # GradeService filtra grad_fili=filial_id; com None nenhuma grade é encontrada.
+            logger.warning(
+                "Etiquetas: filial_id vazio (empresa=%s). "
+                "As grades não serão encontradas.",
+                empresa_id,
+            )
+
+        return GradeService(
+            banco=banco,
+            empresa_id=empresa_id,
+            filial_id=filial_id,
+        )
+
+    @staticmethod
+    def _ler_quantidade(request, campo, padrao):
+        try:
+            return int(request.POST.get(campo, padrao))
+        except (ValueError, TypeError):
+            return padrao
+
+    # ------------------------------------------------------------------
+    # Busca de produtos (listagem com filtros)
+    # ------------------------------------------------------------------
+    def _buscar_produtos(
+        self,
+        request,
+        banco,
+        empresa_id,
+        grade_service,
+        busca,
+        f_marca,
+        f_grupo,
+        f_subgrupo,
+    ):
+        saldo_subquery = Subquery(
+            SaldoProduto.objects.using(banco).filter(
+                produto_codigo=OuterRef("pk")
+            ).values("saldo_estoque")[:1],
+            output_field=DecimalField(),
+        )
+
+        preco_vista_subquery = Subquery(
+            Tabelaprecos.objects.using(banco).filter(
+                tabe_prod=OuterRef("prod_codi"),
+                tabe_empr=OuterRef("prod_empr"),
+            ).exclude(
+                tabe_entr__year__lt=1900
+            ).exclude(
+                tabe_entr__year__gt=2100
+            ).values("tabe_avis")[:1],
+            output_field=DecimalField(),
+        )
+
+        qs = (
+            Produtos.objects.using(banco)
+            .select_related("prod_marc")
+            .annotate(
+                saldo_estoque=Coalesce(
+                    saldo_subquery, V(0), output_field=DecimalField()
+                ),
+                prod_preco_vista=Coalesce(
+                    preco_vista_subquery, V(0), output_field=DecimalField()
+                ),
+                prod_coba_str=Coalesce(
+                    Cast("prod_coba", CharField()), V("")
+                ),
+                prod_codi_int=Case(
+                    When(
+                        prod_codi__regex=r"^\d+$",
+                        then=Cast("prod_codi", IntegerField()),
+                    ),
+                    default=V(None),
+                    output_field=IntegerField(),
+                ),
+            )
+        )
+
+        if busca:
+            qs = qs.filter(
+                Q(prod_nome__icontains=busca)
+                | Q(prod_coba_str__exact=busca)
+                | Q(prod_codi__exact=busca)
+                | Q(prod_codi__exact=busca.lstrip("0"))
+            )
+
+        if f_marca:
+            qs = qs.filter(prod_marc__codigo=f_marca)
+
+        if f_grupo:
+            qs = qs.filter(prod_grup__codigo=f_grupo)
+
+        if f_subgrupo:
+            qs = qs.filter(prod_sugr__codigo=f_subgrupo)
+
+        if empresa_id:
+            qs = qs.filter(prod_empr=empresa_id)
+
+        qs = qs.order_by("prod_empr", "prod_codi_int")
+
+        paginator = Paginator(qs, self.itens_por_pagina)
+        page_obj = paginator.get_page(request.GET.get("page"))
+
+        # Materializa a página para poder anexar os dados de grade em cada produto.
+        page_obj.object_list = list(page_obj.object_list)
+
+        grades_por_produto = grade_service.agrupar_por_produto(
+            [produto.prod_codi for produto in page_obj.object_list]
+        )
+
+        for produto in page_obj.object_list:
+            variacoes = grades_por_produto.get(str(produto.prod_codi), [])
+            produto.grade_itens = variacoes
+            produto.tem_grade = bool(variacoes)
+
+        return page_obj
+
+    # ------------------------------------------------------------------
+    # Etiquetas via GET ?ids=1,2,3 (uma etiqueta por produto)
+    # ------------------------------------------------------------------
+    def _etiquetas_por_ids(self, banco, empresa_id, grade_service, ids):
+        lista_ids = [i.strip() for i in ids.split(",") if i.strip()]
+
+        qs = Produtos.objects.using(banco).filter(prod_codi__in=lista_ids)
+
+        if empresa_id:
+            qs = qs.filter(prod_empr=empresa_id)
+
+        produtos = list(qs.select_related("prod_marc"))
+
+        grades_por_produto = grade_service.agrupar_por_produto(
+            [produto.prod_codi for produto in produtos]
+        )
+
+        etiquetas = []
+
+        for produto in produtos:
+            dados = formatar_dados_etiqueta(produto)
+            variacoes = grades_por_produto.get(str(produto.prod_codi), [])
+
+            dados["grade"] = variacoes
+            dados["tem_grade"] = bool(variacoes)
+
+            etiquetas.append(dados)
+
+        return etiquetas
+
+    # ------------------------------------------------------------------
+    # Etiquetas via POST (seleção + quantidades)
+    # ------------------------------------------------------------------
+    def _etiquetas_por_selecao(
+        self,
+        request,
+        banco,
+        empresa_id,
+        grade_service,
+        produtos_ids,
+    ):
+        qs = Produtos.objects.using(banco).filter(prod_codi__in=produtos_ids)
+
+        if empresa_id:
+            qs = qs.filter(prod_empr=empresa_id)
+
+        produtos = list(qs.select_related("prod_marc"))
+
+        grades_por_produto = grade_service.agrupar_por_produto(
+            [produto.prod_codi for produto in produtos]
+        )
+
+        etiquetas = []
+
+        for produto in produtos:
+            produto_id = str(produto.prod_codi)
+            dados = formatar_dados_etiqueta(produto)
+            variacoes = grades_por_produto.get(produto_id, [])
+
+            if variacoes:
+                for variacao in variacoes:
+                    qtd = self._ler_quantidade(
+                        request,
+                        f"qtd_{produto_id}_{variacao['item_id']}",
+                        padrao=0,
+                    )
+
+                    if qtd <= 0:
+                        continue
+
+                    dados_grade = {**dados, "grade": variacao, "tem_grade": True}
+                    etiquetas.extend([dados_grade] * qtd)
+            else:
+                qtd = max(
+                    self._ler_quantidade(
+                        request, f"qtd_{produto_id}", padrao=1
+                    ),
+                    1,
+                )
+
+                dados_simples = {**dados, "grade": {}, "tem_grade": False}
+                etiquetas.extend([dados_simples] * qtd)
+
+        return etiquetas
+
+    # ------------------------------------------------------------------
+    # Views
+    # ------------------------------------------------------------------
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         request = self.request
         banco = get_licenca_db_config(request)
+
         if not banco:
             return context
-        
-        # Carregar listas para filtros (Marca, Grupo, Subgrupo)
-        context['marcas'] = Marca.objects.using(banco).all().order_by('nome')
-        context['grupos'] = GrupoProduto.objects.using(banco).all().order_by('descricao')
-        context['subgrupos'] = SubgrupoProduto.objects.using(banco).all().order_by('descricao')
 
-        # Capturar filtros do request
-        busca = request.GET.get('q', '').strip()
-        f_marca = request.GET.get('marca')
-        f_grupo = request.GET.get('grupo')
-        f_subgrupo = request.GET.get('sub_grupo')
+        empresa_id, filial_id = self._obter_empresa_filial(request)
+        grade_service = self._criar_grade_service(banco, empresa_id, filial_id)
 
-        # Persistir filtros no context
-        context['termo_busca'] = busca
-        context['filtro_marca'] = f_marca
-        context['filtro_grupo'] = f_grupo
-        context['filtro_subgrupo'] = f_subgrupo
+        # Listas para os filtros
+        context["marcas"] = Marca.objects.using(banco).all().order_by("nome")
+        context["grupos"] = GrupoProduto.objects.using(banco).all().order_by("descricao")
+        context["subgrupos"] = SubgrupoProduto.objects.using(banco).all().order_by("descricao")
 
-        # Se houver qualquer filtro ativo ou busca
+        # Filtros do request (string vazia em vez de None, para não virar "None" nos links)
+        busca = request.GET.get("q", "").strip()
+        f_marca = request.GET.get("marca", "")
+        f_grupo = request.GET.get("grupo", "")
+        f_subgrupo = request.GET.get("sub_grupo", "")
+
+        context["termo_busca"] = busca
+        context["filtro_marca"] = f_marca
+        context["filtro_grupo"] = f_grupo
+        context["filtro_subgrupo"] = f_subgrupo
+
         if busca or f_marca or f_grupo or f_subgrupo:
-            saldo_subquery = Subquery(
-                SaldoProduto.objects.using(banco).filter(
-                    produto_codigo=OuterRef('pk')
-                ).values('saldo_estoque')[:1],
-                output_field=DecimalField()
+            context["produtos_busca"] = self._buscar_produtos(
+                request,
+                banco,
+                empresa_id,
+                grade_service,
+                busca,
+                f_marca,
+                f_grupo,
+                f_subgrupo,
             )
 
-            preco_vista_subquery = Subquery(
-                Tabelaprecos.objects.using(banco).filter(
-                    tabe_prod=OuterRef('prod_codi'),
-                    tabe_empr=OuterRef('prod_empr')
-                ).exclude(
-                    tabe_entr__year__lt=1900
-                ).exclude(
-                    tabe_entr__year__gt=2100
-                ).values('tabe_avis')[:1],
-                output_field=DecimalField()
-            )
-            
-            qs = Produtos.objects.using(banco).annotate(
-                saldo_estoque=Coalesce(saldo_subquery, V(0), output_field=DecimalField()),
-                prod_preco_vista=Coalesce(preco_vista_subquery, V(0), output_field=DecimalField()),
-                prod_coba_str=Coalesce(Cast('prod_coba', CharField()), V('')),
-                prod_codi_int=Case(
-                    When(prod_codi__regex=r'^\d+$', then=Cast('prod_codi', IntegerField())),
-                    default=V(None),
-                    output_field=IntegerField()
-                )
-            )
+        ids = request.GET.get("ids")
 
-            # Aplicar filtros
-            if busca:
-                qs = qs.filter(
-                    Q(prod_nome__icontains=busca) |
-                    Q(prod_coba_str__exact=busca) |
-                    Q(prod_codi__exact=busca.lstrip("0"))
-                )
-            
-            if f_marca:
-                qs = qs.filter(prod_marc__codigo=f_marca)
-            
-            if f_grupo:
-                qs = qs.filter(prod_grup__codigo=f_grupo)
-                
-            if f_subgrupo:
-                qs = qs.filter(prod_sugr__codigo=f_subgrupo)
-
-            # Tenta obter empresa do contexto para filtrar lista de produtos (opcional, mas bom pra evitar sujeira)
-            empr_id = getattr(request.user, 'empresa_id', None) or request.session.get('empresa_id')
-            if empr_id:
-                qs = qs.filter(prod_empr=empr_id)
-
-            qs = qs.order_by('prod_empr', 'prod_codi_int')
-            
-            # Paginação (50 por página)
-            paginator = Paginator(qs, 50)
-            page_number = request.GET.get('page')
-            page_obj = paginator.get_page(page_number)
-            
-            context['produtos_busca'] = page_obj
-
-
-        ids = request.GET.get('ids')
         if ids:
-            lista_ids = [i.strip() for i in ids.split(',') if i.strip()]
-            empr_id = getattr(request.user, 'empresa_id', None)
-            if not empr_id:
-                empr_id = request.session.get('empresa_id')
-                
-            qs = Produtos.objects.using(banco).filter(prod_codi__in=lista_ids)
-            
-            if empr_id:
-                logger.info(f"Filtrando etiquetas por empresa (GET): {empr_id}")
-                qs = qs.filter(prod_empr=empr_id)
-            else:
-                logger.warning("Empresa não identificada na geração de etiquetas (GET). Risco de duplicidade.")
+            context["etiquetas"] = self._etiquetas_por_ids(
+                banco,
+                empresa_id,
+                grade_service,
+                ids,
+            )
 
-            produtos_imprimir = qs.select_related('prod_marc')
-            
-            etiquetas = []
-            for p in produtos_imprimir:
-                dados = formatar_dados_etiqueta(p)
-                etiquetas.append(dados)
-                logger.info(f"Etiqueta Web (GET) - Produto: {p.prod_codi}, Hash: {dados.get('hash_id')}, URL: {dados.get('qr_code_url')}")
-            
-            context['etiquetas'] = etiquetas
-            
         return context
 
-    
-    
     def post(self, request, *args, **kwargs):
-        # Quando o formulário de seleção é submetido
         context = self.get_context_data(**kwargs)
-        produtos_ids = request.POST.getlist('produtos_selecionados')
-        
-        # Fallback para input de texto separado por vírgula se houver
-        if not produtos_ids and request.POST.get('produtos_ids_manual'):
-             produtos_ids = request.POST.get('produtos_ids_manual').split(',')
-             
-        if produtos_ids:
-            banco = get_licenca_db_config(request)
-            if banco:               
-                qs = Produtos.objects.using(banco).filter(prod_codi__in=produtos_ids)
-                # Tenta obter empresa do contexto
-                empr_id = getattr(request.user, 'empresa_id', None)
-                if not empr_id:
-                     empr_id = request.session.get('empresa_id')
 
-                logger.info(f"Filtrando etiquetas por empresa: {empr_id}")
-                if empr_id:
-                     qs = qs.filter(prod_empr=empr_id)
-                
-                produtos = qs.select_related('prod_marc')
-                
-                etiquetas = []
-                for p in produtos:
-                    try:
-                        qtd = int(request.POST.get(f'qtd_{p.prod_codi}', 1))
-                        if qtd < 1: qtd = 1
-                    except (ValueError, TypeError):
-                        qtd = 1
-                    
-                    dados = formatar_dados_etiqueta(p)
-                    logger.info(f"Etiqueta Web (POST) - Produto: {p.prod_codi}, Hash: {dados.get('hash_id')}, URL: {dados.get('qr_code_url')}")
-                    for _ in range(qtd):
-                        etiquetas.append(dados)
+        produtos_ids = request.POST.getlist("produtos_selecionados")
 
-                context['etiquetas'] = etiquetas
-        
-        if 'busca' in request.POST: 
-            pass
-            
-        return render(request, self.template_name, context)
+        # Fallback: texto separado por vírgula
+        if not produtos_ids and request.POST.get("produtos_ids_manual"):
+            produtos_ids = [
+                i.strip()
+                for i in request.POST["produtos_ids_manual"].split(",")
+                if i.strip()
+            ]
+
+        banco = get_licenca_db_config(request)
+
+        if produtos_ids and banco:
+            empresa_id, filial_id = self._obter_empresa_filial(request)
+            grade_service = self._criar_grade_service(banco, empresa_id, filial_id)
+
+            etiquetas = self._etiquetas_por_selecao(
+                request,
+                banco,
+                empresa_id,
+                grade_service,
+                produtos_ids,
+            )
+
+            context["etiquetas"] = etiquetas
+            context["sem_etiquetas"] = not etiquetas
+        else:
+            context["sem_etiquetas"] = True
+
+        return self.render_to_response(context)

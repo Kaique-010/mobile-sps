@@ -95,7 +95,6 @@
         gap: 10px;
         padding: 20px;
         justify-content: center;
-        background-color: #f9f9f9;
         margin-top: 20px;
         border-top: 2px dashed #ccc;
     }
@@ -107,7 +106,7 @@
 
     /* Dark mode overrides for modal preview */
     .modal-content {
-        background-color: #f8f9fa;
+        
         color: #212529;
     }
 
@@ -223,17 +222,25 @@
         </div>
     </div>
 
+    {% if sem_etiquetas %}
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle"></i>
+        Nenhuma etiqueta gerada. Selecione ao menos um produto e, para produtos com grade,
+        clique em <strong>Grade</strong> e informe a quantidade de cada variação.
+    </div>
+    {% endif %}
+
     <!-- Resultados da Busca -->
     {% if produtos_busca %}
     <form method="post" action="">
         {% csrf_token %}
         <div class="card shadow-sm">
-            <div class="card-header bg-light">
+            <div class="card-header">
                 <h5 class="mb-0">Selecione os produtos para imprimir</h5>
             </div>
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
-                    <thead class="table-light">
+                    <thead class="table-responsive">
                         <tr>
                             <th width="40" class="text-center">
                                 <input type="checkbox" id="checkAll" class="form-check-input">
@@ -244,6 +251,7 @@
                             <th>Marca</th>
                             <th>Preço Venda</th>
                             <th>Saldo</th>
+                            <th width="150" class="text-center">Grade</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -254,9 +262,13 @@
                                     class="form-check-input produto-check">
                             </td>
                             <td class="text-center">
+                                {% if produto.tem_grade %}
+                                <span class="text-muted small">por grade</span>
+                                {% else %}
                                 <input type="number" name="qtd_{{ produto.prod_codi }}" value="1" min="1"
                                     class="form-control form-control-sm text-center"
                                     style="width: 70px; margin: 0 auto;" onclick="event.stopPropagation()">
+                                {% endif %}
                             </td>
                             <td>{{ produto.prod_codi }}</td>
                             <td>{{ produto.prod_nome }}</td>
@@ -268,11 +280,82 @@
                                     {{ produto.saldo_estoque|floatformat:0 }}
                                 </span>
                             </td>
+                            <td class="text-center">
+                                {% if produto.tem_grade %}
+                                <button type="button" class="btn btn-sm btn-outline-primary"
+                                    data-bs-toggle="modal" data-bs-target="#modalGrade{{ produto.prod_codi }}">
+                                    <i class="bi bi-grid-3x3-gap"></i> Grade ({{ produto.grade_itens|length }})
+                                </button>
+                                {% else %}
+                                <span class="badge bg-secondary">Sem grade</span>
+                                {% endif %}
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
+            {# Modais de grade fora do <tbody> (HTML válido), mas dentro do <form> #}
+            {% for produto in produtos_busca %}
+                        {% if produto.tem_grade %}
+                        <div class="modal fade" id="modalGrade{{ produto.prod_codi }}" tabindex="-1" aria-hidden="true">
+
+                            <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                                <div class="modal-content">
+
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">
+                                            Grade - {{ produto.prod_nome }}
+                                        </h5>
+
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal">
+                                        </button>
+                                    </div>
+
+                                    <div class="modal-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-bordered">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Item</th>
+                                                        <th>Tamanho</th>
+                                                        <th>Cor</th>
+                                                        <th>Saldo</th>
+                                                        <th>Qtd. etiquetas</th>
+                                                    </tr>
+                                                </thead>
+
+                                                <tbody>
+                                                    {% for variacao in produto.grade_itens %}
+                                                    <tr>
+                                                        <td>{{ variacao.item_id }}</td>
+                                                        <td>{{ variacao.tamanho|default:"-" }}</td>
+                                                        <td>{{ variacao.cor|default:"-" }}</td>
+                                                        <td>{{ variacao.saldo|default:0 }}</td>
+
+                                                        <td>
+                                                            <input type="number"
+                                                                name="qtd_{{ produto.prod_codi }}_{{ variacao.item_id }}"
+                                                                min="0" value="0" class="form-control form-control-sm">
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                            Concluir
+                                        </button>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+            {% endfor %}
             <div class="card-footer p-3">
                 <button type="submit" class="btn btn-success btn-lg">
                     <i class="bi bi-printer"></i> Gerar Etiquetas Selecionadas
@@ -341,7 +424,7 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body bg-light">
+            <div class="modal-body">
                 <div class="alert alert-success d-flex justify-content-between align-items-center no-print">
                     <div>
                         <i class="bi bi-check-circle-fill fs-4 me-2"></i>
@@ -369,6 +452,15 @@
                                 <div class="etiqueta-label">Código do produto</div>
                                 <div class="etiqueta-value">{{ etiqueta.codigo }}</div>
                             </div>
+
+                            {% if etiqueta.grade.tamanho or etiqueta.grade.cor %}
+                            <div style="margin-top: 1mm;">
+                                <div class="etiqueta-value">
+                                    {% if etiqueta.grade.tamanho %}TAM {{ etiqueta.grade.tamanho }}{% endif %}
+                                    {% if etiqueta.grade.cor %}· {{ etiqueta.grade.cor }}{% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
                         </div>
 
                         <!-- Seção: QR Code e Texto Lateral -->
