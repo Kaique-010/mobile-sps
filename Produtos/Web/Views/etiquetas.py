@@ -1,5 +1,6 @@
 import logging
 
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db.models import (
     Case,
@@ -13,6 +14,7 @@ from django.db.models import (
     When,
 )
 from django.db.models.functions import Cast, Coalesce
+from django.http import JsonResponse
 from django.views.generic import TemplateView
 
 from core.decorator import ModuloRequeridoMixin
@@ -26,6 +28,7 @@ from Produtos.models import (
     Tabelaprecos,
 )
 from Produtos.servicos.grade_service import GradeService
+from Produtos.servicos.modelo_etiqueta_service import ModeloEtiquetaService
 from Produtos.utils import formatar_dados_etiqueta
 
 logger = logging.getLogger(__name__)
@@ -62,6 +65,13 @@ class EtiquetasView(ModuloRequeridoMixin, TemplateView):
             )
 
         return GradeService(
+            banco=banco,
+            empresa_id=empresa_id,
+            filial_id=filial_id,
+        )
+
+    def _criar_modelo_etiqueta_service(self, banco, empresa_id, filial_id):
+        return ModeloEtiquetaService(
             banco=banco,
             empresa_id=empresa_id,
             filial_id=filial_id,
@@ -269,6 +279,34 @@ class EtiquetasView(ModuloRequeridoMixin, TemplateView):
         empresa_id, filial_id = self._obter_empresa_filial(request)
         grade_service = self._criar_grade_service(banco, empresa_id, filial_id)
 
+        modelo_service = self._criar_modelo_etiqueta_service(
+            banco,
+            empresa_id,
+            filial_id,
+        )
+
+        context["modelos_etiqueta"] = modelo_service.listar_modelos()
+        context["modelo_etiqueta_padrao"] = modelo_service.obter_modelo_padrao()
+
+        modelo_id = (
+            request.GET.get("modelo_etiqueta")
+            or request.POST.get("modelo_etiqueta")
+            or request.POST.get("modelo_id")
+        )
+
+        modelo_selecionado = None
+
+        if modelo_id:
+            try:
+                modelo_selecionado = modelo_service.obter_por_id(modelo_id)
+            except ValidationError:
+                pass
+
+        if not modelo_selecionado:
+            modelo_selecionado = modelo_service.obter_modelo_padrao()
+
+        context["modelo_etiqueta_selecionado"] = modelo_selecionado
+
         # Listas para os filtros
         context["marcas"] = Marca.objects.using(banco).all().order_by("nome")
         context["grupos"] = GrupoProduto.objects.using(banco).all().order_by("descricao")
@@ -310,6 +348,14 @@ class EtiquetasView(ModuloRequeridoMixin, TemplateView):
         return context
 
     def post(self, request, *args, **kwargs):
+        acao = request.POST.get("acao")
+
+        if acao == "salvar_modelo":
+            return self._salvar_modelo(request)
+
+        if acao == "novo_modelo":
+            return self._criar_novo_modelo(request)
+
         context = self.get_context_data(**kwargs)
 
         produtos_ids = request.POST.getlist("produtos_selecionados")
@@ -342,3 +388,68 @@ class EtiquetasView(ModuloRequeridoMixin, TemplateView):
             context["sem_etiquetas"] = True
 
         return self.render_to_response(context)
+
+    # ------------------------------------------------------------------
+    # Modelos de etiqueta (AJAX) — a regra fica no ModeloEtiquetaService
+    # ------------------------------------------------------------------
+    def _salvar_modelo(self, request):
+        return self._processar_modelo(request, criar=False)
+
+    def _criar_novo_modelo(self, request):
+        return self._processar_modelo(request, criar=True)
+
+    def _processar_modelo(self, request, criar):
+        banco = get_licenca_db_config(request)
+
+        if not banco:
+            return JsonResponse({
+                "sucesso": False,
+                "mensagem": "Banco da licença não identificado.",
+            }, status=400)
+
+        empresa_id, filial_id = self._obter_empresa_filial(request)
+
+        if not empresa_id:
+            return JsonResponse({
+                "sucesso": False,
+                "mensagem": "Empresa não identificada.",
+            }, status=400)
+
+        service = self._criar_modelo_etiqueta_service(
+            banco,
+            empresa_id,
+            filial_id,
+        )
+
+        try:
+            dados = service.converter_dados_formulario(request.POST)
+
+            if criar:
+                modelo = service.criar_modelo(dados)
+                mensagem = "Modelo criado com sucesso."
+            else:
+                modelo = service.atualizar_modelo(
+                    request.POST.get("modelo_id"),
+                    dados,
+                )
+                mensagem = "Modelo atualizado com sucesso."
+
+        except ValidationError as erro:
+            return JsonResponse({
+                "sucesso": False,
+                "mensagem": " ".join(erro.messages),
+            }, status=400)
+
+        except Exception:
+            logger.exception("Erro ao salvar modelo de etiqueta")
+
+            return JsonResponse({
+                "sucesso": False,
+                "mensagem": "Erro interno ao salvar o modelo.",
+            }, status=500)
+
+        return JsonResponse({
+            "sucesso": True,
+            "mensagem": mensagem,
+            "modelo": service.para_dict(modelo),
+        })
