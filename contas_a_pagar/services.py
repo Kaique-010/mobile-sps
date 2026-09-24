@@ -544,109 +544,307 @@ def baixar_titulo_pagar(
     """
     Executa a baixa completa de um título a pagar.
 
-    Responsabilidades (todas aqui, zero na view):
-      1. Validar estado do título
-      2. Calcular valores: juros, multa, desconto, líquido e acumulado
-      3. Determinar tipo da baixa: T (total) ou P (parcial)
-      4. Consumir adiantamento se forma_pagamento == 'A'
-      5. Criar registro Bapatitulos
-      6. Atualizar titu_aber no Titulospagar
-      7. Gerar lançamento bancário se forma_pagamento == 'B' e banco informado
+    Compatível com:
+      - fluxo normal do contas a pagar;
+      - baixa via banco/caixa;
+      - baixa via adiantamento;
+      - conciliação bancária.
 
-    Retorna: (baixa, lancamento | None)
-    Levanta: ValueError para regras de negócio violadas.
+    Convenção:
+      forma_pagamento = 'A'
+          -> adiantamento
+
+      forma_pagamento = 'B'
+          -> banco/caixa, sem código específico informado
+
+      forma_pagamento = código numérico
+          -> exemplo: '54', '56', '60'
+          -> bapa_form = 'B'
+          -> bapa_tipo_paga = código numérico
+
+    Retorna:
+        (baixa, lancamento | None)
     """
+
     with transaction.atomic(using=banco):
 
-        # 1. Guarda de estado
+        # ============================================================
+        # 1. Validar estado do título
+        # ============================================================
+
         if titulo.titu_aber == 'T':
-            raise ValueError("Título já está totalmente baixado.")
-
-        # 2. Cálculo de valores
-        valor_titulo   = Decimal(str(titulo.titu_valo or 0))
-        valor_pago     = Decimal(str(dados['valor_pago']))
-        valor_juros    = Decimal(str(dados.get('valor_juros') or 0))
-        valor_multa    = Decimal(str(dados.get('valor_multa') or 0))
-        valor_desconto = Decimal(str(dados.get('valor_desconto') or 0))
-        valor_liquido  = valor_pago + valor_juros + valor_multa - valor_desconto
-
-        # 3. Acumulado (inclui baixas parciais anteriores)
-        valor_ja_pago     = _calcular_valor_ja_pago(titulo, banco=banco)
-        valor_acumulado   = valor_ja_pago + valor_liquido
-        tipo_baixa        = 'T' if valor_acumulado >= valor_titulo else 'P'
-
-        # 4. Adiantamento
-        adiantamento_usado = None
-        if dados.get('forma_pagamento') == 'A':
-            adiantamento_usado = AdiantamentosService.usar_adiantamento_by_context(
-                empresa=titulo.titu_empr,
-                filial=titulo.titu_fili,
-                entidade=titulo.titu_forn,
-                tipo='P',
-                valor=valor_pago,
-                using=banco,
-                referencia={
-                    'modulo': 'contas_a_pagar',
-                    'titu': titulo.titu_titu,
-                    'seri': titulo.titu_seri,
-                    'parc': titulo.titu_parc,
-                },
+            raise ValueError(
+                "Título já está totalmente baixado."
             )
 
-        # 5. Criar baixa
-        banco_resolvido = _resolver_banco_pagamento(titulo, banco=banco, dados=dados)
-        cecu_resolvido = _resolver_centro_custo_pagamento(titulo, banco=banco, dados=dados)
+        # ============================================================
+        # 2. Normalizar forma de pagamento
+        # ============================================================
 
-        baixa = Bapatitulos.objects.using(banco).create(
-            bapa_sequ     =_next_bapa_sequ(banco),
-            bapa_ctrl     =titulo.titu_ctrl or 0,
-            bapa_empr     =titulo.titu_empr,
-            bapa_fili     =titulo.titu_fili,
-            bapa_forn     =titulo.titu_forn,
-            bapa_titu     =titulo.titu_titu,
-            bapa_seri     =titulo.titu_seri,
-            bapa_parc     =titulo.titu_parc,
-            bapa_dpag     =dados['data_pagamento'],
-            bapa_apag     =valor_titulo,
-            bapa_vmul     =valor_multa,
-            bapa_vjur     =valor_juros,
-            bapa_vdes     =valor_desconto,
-            bapa_pago     =valor_liquido,
-            bapa_valo_pago=valor_pago,
-            bapa_sub_tota =valor_liquido,
-            bapa_topa     =tipo_baixa,
-            bapa_form     =dados.get('forma_pagamento', 'B'),
-            bapa_banc     =banco_resolvido,
-            bapa_cheq     =dados.get('cheque'),
-            bapa_hist     =dados.get('historico') or f'Baixa do título {titulo.titu_titu}',
-            bapa_emis     =titulo.titu_emis,
-            bapa_venc     =titulo.titu_venc,
-            bapa_cont     =titulo.titu_cont,
-            bapa_cecu     =cecu_resolvido,
-            bapa_even     =titulo.titu_even,
-            bapa_port     =titulo.titu_port,
-            bapa_situ     =titulo.titu_situ,
-            bapa_id_adto  = int(adiantamento_usado.adia_docu) if adiantamento_usado else None,
+        forma_pagamento = dados.get("forma_pagamento")
+
+        if forma_pagamento is None:
+            forma_pagamento = "B"
+
+        forma_pagamento = str(
+            forma_pagamento
+        ).strip().upper()
+
+        if not forma_pagamento:
+            forma_pagamento = "B"
+
+        # ------------------------------------------------------------
+        # A = Adiantamento
+        # B = Banco/Caixa
+        # códigos numéricos = forma específica
+        # ------------------------------------------------------------
+
+        if forma_pagamento == "A":
+
+            tipo_forma = "A"
+            tipo_pagamento = None
+
+        elif forma_pagamento == "B":
+
+            tipo_forma = "B"
+            tipo_pagamento = None
+
+        else:
+
+            try:
+                tipo_pagamento = int(
+                    forma_pagamento
+                )
+            except (TypeError, ValueError):
+                raise ValueError(
+                    "Forma de pagamento inválida."
+                )
+
+            if tipo_pagamento < 0:
+                raise ValueError(
+                    "Forma de pagamento inválida."
+                )
+
+            # Qualquer código numérico representa
+            # uma baixa via banco/caixa.
+            tipo_forma = "B"
+
+        # ============================================================
+        # 3. Cálculo dos valores
+        # ============================================================
+
+        valor_titulo = Decimal(
+            str(titulo.titu_valo or 0)
         )
 
-        # 6. Atualizar status do título
-        _atualizar_status_titulo(titulo, tipo_baixa, banco=banco)
+        valor_pago = Decimal(
+            str(dados["valor_pago"])
+        )
 
-        # 7. Lançamento bancário (pagamento via banco/caixa)
+        valor_juros = Decimal(
+            str(dados.get("valor_juros") or 0)
+        )
+
+        valor_multa = Decimal(
+            str(dados.get("valor_multa") or 0)
+        )
+
+        valor_desconto = Decimal(
+            str(dados.get("valor_desconto") or 0)
+        )
+
+        valor_liquido = (
+            valor_pago
+            + valor_juros
+            + valor_multa
+            - valor_desconto
+        )
+
+        # ============================================================
+        # 4. Acumulado
+        # ============================================================
+
+        valor_ja_pago = _calcular_valor_ja_pago(
+            titulo,
+            banco=banco,
+        )
+
+        valor_acumulado = (
+            valor_ja_pago
+            + valor_liquido
+        )
+
+        tipo_baixa = (
+            'T'
+            if valor_acumulado >= valor_titulo
+            else 'P'
+        )
+
+        # ============================================================
+        # 5. Adiantamento
+        # ============================================================
+
+        adiantamento_usado = None
+
+        if tipo_forma == "A":
+
+            adiantamento_usado = (
+                AdiantamentosService
+                .usar_adiantamento_by_context(
+                    empresa=titulo.titu_empr,
+                    filial=titulo.titu_fili,
+                    entidade=titulo.titu_forn,
+                    tipo='P',
+                    valor=valor_pago,
+                    using=banco,
+                    referencia={
+                        'modulo': 'contas_a_pagar',
+                        'titu': titulo.titu_titu,
+                        'seri': titulo.titu_seri,
+                        'parc': titulo.titu_parc,
+                    },
+                )
+            )
+
+        # ============================================================
+        # 6. Resolver banco / caixa
+        # ============================================================
+
+        banco_resolvido = (
+            _resolver_banco_pagamento(
+                titulo,
+                banco=banco,
+                dados=dados,
+            )
+        )
+
+        cecu_resolvido = (
+            _resolver_centro_custo_pagamento(
+                titulo,
+                banco=banco,
+                dados=dados,
+            )
+        )
+
+        # ============================================================
+        # 7. Criar baixa
+        # ============================================================
+
+        campos_baixa = {
+            'bapa_sequ': _next_bapa_sequ(banco),
+            'bapa_ctrl': titulo.titu_ctrl or 0,
+            'bapa_empr': titulo.titu_empr,
+            'bapa_fili': titulo.titu_fili,
+            'bapa_forn': titulo.titu_forn,
+            'bapa_titu': titulo.titu_titu,
+            'bapa_seri': titulo.titu_seri,
+            'bapa_parc': titulo.titu_parc,
+
+            'bapa_dpag': dados['data_pagamento'],
+
+            'bapa_apag': valor_titulo,
+            'bapa_vmul': valor_multa,
+            'bapa_vjur': valor_juros,
+            'bapa_vdes': valor_desconto,
+
+            'bapa_pago': valor_liquido,
+            'bapa_valo_pago': valor_pago,
+            'bapa_sub_tota': valor_liquido,
+
+            'bapa_topa': tipo_baixa,
+
+            # SEMPRE 1 caractere
+            'bapa_form': tipo_forma,
+
+            'bapa_banc': banco_resolvido,
+
+            'bapa_cheq': dados.get('cheque'),
+
+            'bapa_hist': (
+                dados.get('historico')
+                or f'Baixa do título {titulo.titu_titu}'
+            ),
+
+            'bapa_emis': titulo.titu_emis,
+            'bapa_venc': titulo.titu_venc,
+            'bapa_cont': titulo.titu_cont,
+            'bapa_cecu': cecu_resolvido,
+            'bapa_even': titulo.titu_even,
+            'bapa_port': titulo.titu_port,
+            'bapa_situ': titulo.titu_situ,
+
+            'bapa_id_adto': (
+                int(adiantamento_usado.adia_docu)
+                if adiantamento_usado
+                else None
+            ),
+        }
+
+        # ------------------------------------------------------------
+        # Código específico da forma de pagamento
+        #
+        # Ex.:
+        #   54 = dinheiro
+        #   55 = depósito
+        #   56 = venda à vista
+        #   60 = PIX
+        #
+        # Só envia se foi informado um código numérico.
+        # ------------------------------------------------------------
+
+        if tipo_pagamento is not None:
+            campos_baixa[
+                'bapa_tipo_paga'
+            ] = tipo_pagamento
+
+        baixa = (
+            Bapatitulos.objects
+            .using(banco)
+            .create(**campos_baixa)
+        )
+
+        # ============================================================
+        # 8. Atualizar status do título
+        # ============================================================
+
+        _atualizar_status_titulo(
+            titulo,
+            tipo_baixa,
+            banco=banco,
+        )
+
+        # ============================================================
+        # 9. Gerar lançamento bancário
+        # ============================================================
+
         lancamento = None
+
         if baixa.bapa_form == 'B':
-            lancamento = _gerar_lancamento_bancario(titulo, baixa, banco=banco)
-            Bapatitulos.objects.using(banco).filter(
-                bapa_sequ=baixa.bapa_sequ,
-                bapa_empr=baixa.bapa_empr,
-                bapa_fili=baixa.bapa_fili,
-                bapa_forn=baixa.bapa_forn,
-                bapa_titu=baixa.bapa_titu,
-                bapa_seri=baixa.bapa_seri,
-                bapa_parc=baixa.bapa_parc,
-            ).update(
-                bapa_ctrl_banc=lancamento.laba_ctrl,
-                bapa_sequ_banc=lancamento.laba_ctrl,
+
+            lancamento = (
+                _gerar_lancamento_bancario(
+                    titulo,
+                    baixa,
+                    banco=banco,
+                )
+            )
+
+            (
+                Bapatitulos.objects
+                .using(banco)
+                .filter(
+                    bapa_sequ=baixa.bapa_sequ,
+                    bapa_empr=baixa.bapa_empr,
+                    bapa_fili=baixa.bapa_fili,
+                    bapa_forn=baixa.bapa_forn,
+                    bapa_titu=baixa.bapa_titu,
+                    bapa_seri=baixa.bapa_seri,
+                    bapa_parc=baixa.bapa_parc,
+                )
+                .update(
+                    bapa_ctrl_banc=lancamento.laba_ctrl,
+                    bapa_sequ_banc=lancamento.laba_ctrl,
+                )
             )
 
         return baixa, lancamento

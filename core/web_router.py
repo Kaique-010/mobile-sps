@@ -70,4 +70,5 @@ urlpatterns = [
     path("<slug:slug>/notas-de-servico/", include("nfse.Web.web_urls")),
     path("<slug:slug>/marketplace/", include("marketplace.web.urls")),
     path("<slug:slug>/localidades/", include("localidades.web.urls_web")),
+    path("<slug:slug>/conciliacao/", include("conciliacao.web.web_urls")),
 ]

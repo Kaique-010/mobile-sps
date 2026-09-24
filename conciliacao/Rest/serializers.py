@@ -50,22 +50,27 @@ class ConciliacaoFiltroSerializer(EscopoSerializer):
     numero = serializers.IntegerField(min_value=1, required=False)
 
 
-class ImportarOFXSerializer(EscopoSerializer):
+
+class ImportarOFXSerializer(serializers.Serializer):
     codigo_banco = serializers.IntegerField(min_value=1)
     arquivo = serializers.FileField()
 
     def validate(self, attrs):
-        attrs = super().validate(attrs)
         ctx = self.context["ctx"]
-        attrs.setdefault("empresa", ctx.empresa)
-        attrs.setdefault("filial", ctx.filial)
-        banco_existe = Entidades.objects.using(ctx.db_alias).filter(
+
+        banco_existe = Entidades.objects.using(
+            ctx.db_alias
+        ).filter(
             enti_empr=ctx.empresa,
             enti_clie=attrs["codigo_banco"],
             enti_tien="B",
         ).exists()
+
         if not banco_existe:
             raise serializers.ValidationError({
-                "codigo_banco": "Banco não encontrado para a empresa autenticada."
+                "codigo_banco": (
+                    "Banco não encontrado para a empresa autenticada."
+                )
             })
+
         return attrs

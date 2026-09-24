@@ -6,7 +6,11 @@ from .viewsets import ConciliacaoViewSet
 app_name = "conciliacao_api"
 
 urlpatterns = [
-    path("", ConciliacaoViewSet.as_view({"get": "list"}), name="lista"),
+    path(
+        "",
+        ConciliacaoViewSet.as_view({"get": "list"}),
+        name="lista",
+    ),
     path(
         "ofx/importar/",
         ConciliacaoViewSet.as_view({"post": "importar_ofx"}),

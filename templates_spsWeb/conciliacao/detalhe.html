@@ -1,0 +1,1615 @@
+{% extends "base.html" %}
+{% load static %}
+{% load l10n %}
+{% load finance_tags %}
+
+{% block title %}Conciliação Bancária{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
+
+{% endblock %}
+
+{% block content %}
+
+<div class="container">
+
+    <!-- CABEÇALHO -->
+    <div class="page-header-custom">
+        <div>
+            <h1 class="h3 mb-1">Conciliação Bancária</h1>
+            <p class="text-muted mb-0">
+                Conciliação nº {{ conciliacao.nume }}
+            </p>
+        </div>
+
+        <div class="d-flex gap-2">
+            <a href="{% url 'conciliacao:listar' slug=slug %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Voltar
+            </a>
+
+            <a href="{% url 'conciliacao:importar' slug=slug %}" class="btn btn-outline-primary">
+                <i class="bi bi-upload"></i> Nova importação
+            </a>
+        </div>
+    </div>
+
+    <!-- ERROS -->
+    {% if erro_consulta %}
+    <div class="alert alert-danger">
+        Não foi possível carregar todos os dados da conciliação.
+    </div>
+    {% endif %}
+
+    <!-- MENSAGENS -->
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show">
+        {{ message }}
+
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar">
+        </button>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- RESUMO -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+
+                <div class="col-6 col-md-3">
+                    <small class="text-muted d-block">Conciliação</small>
+                    <strong>#{{ conciliacao.nume }}</strong>
+                </div>
+
+                <div class="col-6 col-md-3">
+                    <small class="text-muted d-block">Empresa</small>
+                    <strong>{{ conciliacao.empresa }}</strong>
+                </div>
+
+                <div class="col-6 col-md-3">
+                    <small class="text-muted d-block">Filial</small>
+                    <strong>{{ conciliacao.filial }}</strong>
+                </div>
+
+                <div class="col-6 col-md-3">
+                    <small class="text-muted d-block">Banco</small>
+                    <strong>{{ conciliacao.codigo_banco }}</strong>
+                </div>
+
+                <div class="col-6 col-md-3">
+                    <small class="text-muted d-block">Data</small>
+                    <strong>
+                        {% if conciliacao.data %}
+                        {{ conciliacao.data|date:"d/m/Y" }}
+                        {% else %}
+                        —
+                        {% endif %}
+                    </strong>
+                </div>
+
+                <div class="col-6 col-md-3">
+                    <small class="text-muted d-block">
+                        Transações do extrato
+                    </small>
+                    <strong>{{ pagina_extrato.paginator.count }}</strong>
+                </div>
+
+                <div class="col-6 col-md-3">
+                    <small class="text-muted d-block">Itens do banco</small>
+                    <strong>{{ pagina_banco.paginator.count }}</strong>
+                </div>
+                <div class="col-6 col-md-3">
+                    <small class="text-muted d-block">Conciliados</small>
+                    <strong>{{ total_conciliados }} / {{ pagina_extrato.paginator.count }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================== -->
+    <!-- ITENS DO EXTRATO -->
+    <!-- ================================================== -->
+
+    <div class="card shadow-sm mb-4">
+
+        <div class="card-header">
+            <h5 class="mb-0">Itens do Extrato</h5>
+        </div>
+
+        <div class="card-body p-0">
+
+            {% if pagina_extrato.object_list %}
+
+            <!-- DESKTOP -->
+            <div class="table-responsive d-none d-md-block">
+
+                <table class="table table-hover table-striped mb-0">
+
+                    <thead>
+                        <tr>
+                            <th>Linha</th>
+                            <th>Data</th>
+                            <th>Documento</th>
+                            <th>Histórico</th>
+                            <th>Tipo</th>
+                            <th class="text-end">Valor</th>
+                            <th class="text-center">Selecionado</th>
+                            <th class="text-center">Ações</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        {% for item in pagina_extrato %}
+
+                        <tr>
+
+                            <td>
+                                {{ item.linha|default:"—" }}
+                            </td>
+
+                            <td>
+                                {% if item.data_operacao %}
+                                {{ item.data_operacao|date:"d/m/Y" }}
+                                {% else %}
+                                —
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {{ item.documento|default:"—" }}
+                            </td>
+
+                            <td>
+                                {{ item.historico|default:"—" }}
+                            </td>
+
+                            <td>
+                                {% if item.tipo == "E" %}
+                                <span class="badge bg-success">
+                                    Entrada
+                                </span>
+                                {% elif item.tipo == "S" %}
+                                <span class="badge bg-danger">
+                                    Saída
+                                </span>
+                                {% else %}
+                                <span class="badge bg-secondary">
+                                    {{ item.tipo|default:"—" }}
+                                </span>
+                                {% endif %}
+                            </td>
+
+                            <td class="text-end">
+                                {% if item.tipo == "S" %}
+                                -{{ item.valor|brl }}
+                                {% else %}
+                                {{ item.valor|brl }}
+                                {% endif %}
+                            </td>
+
+                            <td class="text-center">
+
+                                {% if item.status_conciliacao == "CONCILIADO" %}
+
+                                <button type="button" class="btn btn-sm btn-outline-secondary js-detalhes-vinculos"
+                                    data-bs-toggle="modal" data-bs-target="#modalDetalhesVinculos"
+                                    data-item-id="{{ item.id }}">
+                                    <i class="bi bi-eye"></i>
+                                    Detalhes
+                                </button>
+
+                                {% elif item.status_conciliacao == "PARCIAL" %}
+
+                                <span class="badge bg-warning text-dark">
+                                    Parcial
+                                </span>
+
+                                <div class="small text-muted mt-1">
+                                    Vinculado:
+                                    {{ item.total_vinculado|brl }}
+                                    <br>
+                                    Restante:
+                                    {{ item.saldo_conciliacao|brl }}
+                                </div>
+
+                                {% else %}
+
+                                <span class="badge bg-secondary">
+                                    Não conciliado
+                                </span>
+
+                                {% endif %}
+
+                            </td>
+
+                            <!-- AÇÃO DO EXTRATO -->
+                            <!-- AÇÃO DO EXTRATO -->
+                            <td class="text-center">
+
+                                {% if item.status_conciliacao == "CONCILIADO" %}
+
+                                <span class="text-success">
+                                    <i class="bi bi-check-circle"></i>
+                                    Conciliado
+                                </span>
+
+                                {% elif item.status_conciliacao == "PARCIAL" %}
+
+                                <button type="button" class="btn btn-sm btn-warning js-abrir-conciliacao"
+                                    data-bs-toggle="modal" data-bs-target="#modalConciliar" data-item-id="{{ item.id }}"
+                                    data-documento="{{ item.documento|default:'' }}"
+                                    data-historico="{{ item.historico|default:'' }}"
+                                    data-data="{{ item.data_operacao|date:'Y-m-d' }}" data-tipo="{{ item.tipo }}"
+                                    data-valor="{{ item.saldo_conciliacao|unlocalize }}">
+                                    <i class="bi bi-link-45deg"></i>
+                                    Continuar
+                                </button>
+
+                                <div class="small text-muted mt-1">
+                                    Parcial:
+                                    {{ item.total_vinculado|brl }}
+                                    / {{ item.valor|brl }}
+                                </div>
+
+                                {% else %}
+
+                                <button type="button" class="btn btn-sm btn-primary js-abrir-conciliacao"
+                                    data-bs-toggle="modal" data-bs-target="#modalConciliar" data-item-id="{{ item.id }}"
+                                    data-documento="{{ item.documento|default:'' }}"
+                                    data-historico="{{ item.historico|default:'' }}"
+                                    data-data="{{ item.data_operacao|date:'Y-m-d' }}" data-tipo="{{ item.tipo }}"
+                                    data-valor="{{ item.valor|unlocalize }}">
+                                    <i class="bi bi-link-45deg"></i>
+                                    Conciliar
+                                </button>
+
+                                {% endif %}
+
+                            </td>
+
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- MOBILE -->
+            <div class="d-md-none">
+
+                {% for item in pagina_extrato %}
+
+                <div class="border-bottom p-3">
+
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+
+                        <strong>
+                            {% if item.data_operacao %}
+                            {{ item.data_operacao|date:"d/m/Y" }}
+                            {% else %}
+                            —
+                            {% endif %}
+                        </strong>
+
+                        {% if item.tipo == "E" %}
+                        <span class="badge bg-success">
+                            Entrada
+                        </span>
+                        {% elif item.tipo == "S" %}
+                        <span class="badge bg-danger">
+                            Saída
+                        </span>
+                        {% else %}
+                        <span class="badge bg-secondary">
+                            {{ item.tipo|default:"—" }}
+                        </span>
+                        {% endif %}
+
+                    </div>
+
+                    <div class="mb-1">
+                        <strong>Linha:</strong>
+                        {{ item.linha|default:"—" }}
+                    </div>
+
+                    <div class="mb-1">
+                        <strong>Documento:</strong>
+                        {{ item.documento|default:"—" }}
+                    </div>
+
+                    <div class="mb-1">
+                        <strong>Histórico:</strong>
+                        {{ item.historico|default:"—" }}
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+
+                        <div>
+                            <strong>Valor:</strong>
+
+                            {% if item.tipo == "S" %}
+                            -{{ item.valor|brl }}
+                            {% else %}
+                            {{ item.valor|brl }}
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            {% if item.selecionado %}
+                            <span class="badge bg-success">
+                                Selecionado
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary">
+                                Não selecionado
+                            </span>
+                            {% endif %}
+                        </div>
+
+                    </div>
+
+                    <!-- AÇÃO MOBILE DO EXTRATO -->
+                    {% if not item.selecionado %}
+
+                    <button type="button" class="btn btn-primary w-100 mt-3 js-abrir-conciliacao" data-bs-toggle="modal"
+                        data-bs-target="#modalConciliar" data-item-id="{{ item.id }}"
+                        data-documento="{{ item.documento|default:'' }}"
+                        data-historico="{{ item.historico|default:'' }}"
+                        data-data="{{ item.data_operacao|date:'Y-m-d' }}" data-tipo="{{ item.tipo }}"
+                        data-valor="{{ item.valor|unlocalize }}">
+                        <i class="bi bi-link-45deg"></i>
+                        Conciliar lançamento
+                    </button>
+
+                    {% else %}
+
+                    <div class="text-success mt-3">
+                        <i class="bi bi-check-circle"></i>
+                        Lançamento conciliado
+                    </div>
+
+                    {% endif %}
+
+                </div>
+
+                {% endfor %}
+
+            </div>
+
+            {% else %}
+
+            <div class="p-4 text-center text-muted">
+                Nenhum item de extrato encontrado.
+            </div>
+
+            {% endif %}
+
+        </div>
+
+        {% include "components/infinite_scroll.html" %}
+
+    </div>
+
+    <!-- ================================================== -->
+    <!-- ITENS DO BANCO - SOMENTE CONSULTA -->
+    <!-- ================================================== -->
+
+    <div class="card shadow-sm mb-4">
+
+        <div class="card-header">
+            <h5 class="mb-0">Itens do Banco</h5>
+        </div>
+
+        <div class="card-body p-0">
+
+            {% if pagina_banco.object_list %}
+
+            <!-- DESKTOP -->
+            <div class="table-responsive d-none d-md-block">
+
+                <table class="table table-hover table-striped mb-0">
+
+                    <thead>
+                        <tr>
+                            <th>Linha</th>
+                            <th>Data</th>
+                            <th>Documento</th>
+                            <th>Histórico</th>
+                            <th>Tipo</th>
+                            <th class="text-end">Valor</th>
+                            <th class="text-center">Selecionado</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        {% for item in pagina_banco %}
+
+                        <tr>
+
+                            <td>
+                                {{ item.linha|default:"—" }}
+                            </td>
+
+                            <td>
+                                {% if item.data_operacao %}
+                                {{ item.data_operacao|date:"d/m/Y" }}
+                                {% else %}
+                                —
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {{ item.documento|default:"—" }}
+                            </td>
+
+                            <td>
+                                {{ item.historico|default:"—" }}
+                            </td>
+
+                            <td>
+                                {% if item.tipo == "E" %}
+                                <span class="badge bg-success">
+                                    Entrada
+                                </span>
+                                {% elif item.tipo == "S" %}
+                                <span class="badge bg-danger">
+                                    Saída
+                                </span>
+                                {% else %}
+                                <span class="badge bg-secondary">
+                                    {{ item.tipo|default:"—" }}
+                                </span>
+                                {% endif %}
+                            </td>
+
+                            <td class="text-end">
+                                {% if item.tipo == "S" %}
+                                -{{ item.valor|brl }}
+                                {% else %}
+                                {{ item.valor|brl }}
+                                {% endif %}
+                            </td>
+
+                            <td class="text-center">
+                                {% if item.selecionado %}
+                                <span class="badge bg-success">
+                                    Sim
+                                </span>
+                                {% else %}
+                                <span class="badge bg-secondary">
+                                    Não
+                                </span>
+                                {% endif %}
+                            </td>
+
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+            </div>
+
+            <!-- MOBILE -->
+            <div class="d-md-none">
+
+                {% for item in pagina_banco %}
+
+                <div class="border-bottom p-3">
+
+                    <div class="d-flex justify-content-between mb-2">
+
+                        <strong>
+                            {% if item.data_operacao %}
+                            {{ item.data_operacao|date:"d/m/Y" }}
+                            {% else %}
+                            —
+                            {% endif %}
+                        </strong>
+
+                        {% if item.tipo == "E" %}
+                        <span class="badge bg-success">
+                            Entrada
+                        </span>
+                        {% elif item.tipo == "S" %}
+                        <span class="badge bg-danger">
+                            Saída
+                        </span>
+                        {% else %}
+                        <span class="badge bg-secondary">
+                            {{ item.tipo|default:"—" }}
+                        </span>
+                        {% endif %}
+
+                    </div>
+
+                    <div class="mb-1">
+                        <strong>Linha:</strong>
+                        {{ item.linha|default:"—" }}
+                    </div>
+
+                    <div class="mb-1">
+                        <strong>Documento:</strong>
+                        {{ item.documento|default:"—" }}
+                    </div>
+
+                    <div class="mb-1">
+                        <strong>Histórico:</strong>
+                        {{ item.historico|default:"—" }}
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-2">
+
+                        <span>
+                            <strong>Valor:</strong>
+
+                            {% if item.tipo == "S" %}
+                            -{{ item.valor|brl }}
+                            {% else %}
+                            {{ item.valor|brl }}
+                            {% endif %}
+                        </span>
+
+                        <span>
+                            {% if item.selecionado %}
+                            <span class="badge bg-success">
+                                Selecionado
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary">
+                                Não selecionado
+                            </span>
+                            {% endif %}
+                        </span>
+
+                    </div>
+
+                </div>
+
+                {% endfor %}
+
+            </div>
+
+            {% else %}
+
+            <div class="p-4 text-center text-muted">
+                Nenhum item bancário encontrado.
+            </div>
+
+            {% endif %}
+
+        </div>
+
+        <!-- PAGINAÇÃO DO BANCO -->
+        {% if pagina_banco.paginator.num_pages > 1 %}
+
+        {% include "components/pagination.html" with page_obj=pagina_banco extra_query=querystring_banco
+        page_param="page_banco" %}
+
+        {% endif %}
+
+    </div>
+
+</div>
+
+<!-- ================================================== -->
+<!-- MODAL DE CONCILIAÇÃO -->
+<!-- ================================================== -->
+
+{% include "conciliacao/components/modal_conciliar.html" %}
+{% include "conciliacao/components/modal_detalhes_vinculos.html" %}
+{% csrf_token %}
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    /*
+    ============================================================
+    REFERÊNCIAS DOS ELEMENTOS
+    ============================================================
+    */
+
+    const modal =
+        document.getElementById(
+            "modalDetalhesVinculos"
+        );
+
+    if (!modal) {
+        return;
+    }
+
+
+    /*
+    ============================================================
+    CSRF DO DJANGO
+    ============================================================
+
+    Em vez de depender do cookie csrftoken, pegamos o token
+    diretamente do input criado pelo:
+
+        {% csrf_token %}
+
+    Isso é mais seguro para este fluxo.
+    */
+
+    const csrfInput =
+        document.querySelector(
+            '[name="csrfmiddlewaretoken"]'
+        );
+
+
+    /*
+    Guarda o token CSRF.
+    */
+
+    const csrfToken =
+        csrfInput
+            ? csrfInput.value
+            : null;
+
+
+    /*
+    ============================================================
+    CONTROLE DO ITEM ATUAL
+    ============================================================
+    */
+
+    let itemExtratoAtual = null;
+
+
+    /*
+    ============================================================
+    CONTROLE DO VÍNCULO A DESVINCULAR
+    ============================================================
+
+    Guarda o ID do vínculo enquanto o usuário está
+    no modal de confirmação.
+    */
+
+    let vinculoParaDesvincular = null;
+
+
+    /*
+    ============================================================
+    ELEMENTOS DO MODAL DE DETALHES
+    ============================================================
+    */
+
+    const loading =
+        document.getElementById(
+            "detalhesLoading"
+        );
+
+    const erro =
+        document.getElementById(
+            "detalhesErro"
+        );
+
+    const conteudo =
+        document.getElementById(
+            "detalhesConteudo"
+        );
+
+    const valorExtrato =
+        document.getElementById(
+            "detalhesValorExtrato"
+        );
+
+    const totalVinculado =
+        document.getElementById(
+            "detalhesTotalVinculado"
+        );
+
+    const saldo =
+        document.getElementById(
+            "detalhesSaldo"
+        );
+
+    const listaVinculos =
+        document.getElementById(
+            "listaVinculos"
+        );
+
+
+    /*
+    ============================================================
+    ELEMENTOS DO MODAL DE CONFIRMAÇÃO
+    ============================================================
+    */
+
+    const modalConfirmacaoElement =
+        document.getElementById(
+            "modalConfirmarDesvinculo"
+        );
+
+
+    if (!modalConfirmacaoElement) {
+
+        console.error(
+            "Modal de confirmação não encontrado."
+        );
+
+        return;
+    }
+
+
+    /*
+    Cria a instância do modal Bootstrap.
+    */
+
+    const modalConfirmacao =
+        new bootstrap.Modal(
+            modalConfirmacaoElement
+        );
+
+
+    /*
+    Botão "Sim, desvincular".
+    */
+
+    const btnConfirmarDesvinculo =
+        document.getElementById(
+            "btnConfirmarDesvinculo"
+        );
+
+
+    if (!btnConfirmarDesvinculo) {
+
+        console.error(
+            "Botão de confirmação não encontrado."
+        );
+
+        return;
+    }
+
+
+    /*
+    ============================================================
+    FORMATAÇÃO DE MOEDA
+    ============================================================
+    */
+
+    function formatarMoeda(valor) {
+
+        const numero =
+            Number(valor || 0);
+
+        return numero.toLocaleString(
+            "pt-BR",
+            {
+                style: "currency",
+                currency: "BRL"
+            }
+        );
+    }
+
+
+    /*
+    ============================================================
+    CARREGAR DETALHES
+    ============================================================
+
+    Busca no backend os vínculos do item selecionado.
+    */
+
+    function carregarDetalhes(itemId) {
+
+        /*
+        Guarda o item atualmente aberto.
+        */
+
+        itemExtratoAtual =
+            itemId;
+
+
+        /*
+        Mostra loading.
+        */
+
+        loading.classList.remove(
+            "d-none"
+        );
+
+
+        /*
+        Esconde erro anterior.
+        */
+
+        erro.classList.add(
+            "d-none"
+        );
+
+
+        /*
+        Esconde conteúdo enquanto carrega.
+        */
+
+        conteudo.classList.add(
+            "d-none"
+        );
+
+
+        /*
+        Limpa vínculos anteriores.
+        */
+
+        listaVinculos.innerHTML = "";
+
+
+        /*
+        ========================================================
+        URL DO ENDPOINT
+        ========================================================
+        */
+
+        const url =
+            "{% url 'conciliacao:detalhe_vinculos' slug=slug empresa=conciliacao.empresa filial=conciliacao.filial numero=conciliacao.nume item_id=0 %}"
+            .replace(
+                "/0/",
+                "/" + itemId + "/"
+            );
+
+
+        /*
+        ========================================================
+        GET DOS VÍNCULOS
+        ========================================================
+        */
+
+        fetch(url, {
+
+            method: "GET",
+
+            headers: {
+                "X-Requested-With":
+                    "XMLHttpRequest"
+            }
+
+        })
+
+        .then(function (response) {
+
+            if (!response.ok) {
+
+                throw new Error(
+                    "Não foi possível carregar os vínculos."
+                );
+            }
+
+            return response.json();
+
+        })
+
+        .then(function (data) {
+
+            /*
+            Valor do extrato.
+            */
+
+            valorExtrato.textContent =
+                formatarMoeda(
+                    data.valor_extrato
+                );
+
+
+            /*
+            Total vinculado.
+            */
+
+            totalVinculado.textContent =
+                formatarMoeda(
+                    data.total_vinculado
+                );
+
+
+            /*
+            Saldo.
+            */
+
+            saldo.textContent =
+                formatarMoeda(
+                    data.saldo
+                );
+
+
+            /*
+            Limpa lista.
+            */
+
+            listaVinculos.innerHTML = "";
+
+
+            /*
+            ====================================================
+            NENHUM VÍNCULO
+            ====================================================
+            */
+
+            if (
+                !data.vinculos ||
+                data.vinculos.length === 0
+            ) {
+
+                listaVinculos.innerHTML = `
+
+                    <div class="alert alert-light border">
+
+                        <i class="bi bi-info-circle me-1"></i>
+
+                        Nenhum vínculo encontrado.
+
+                    </div>
+
+                `;
+
+            }
+
+
+            /*
+            ====================================================
+            EXISTEM VÍNCULOS
+            ====================================================
+            */
+
+            else {
+
+                data.vinculos.forEach(
+                    function (vinculo) {
+
+                        /*
+                        Cria o card.
+                        */
+
+                        const elemento =
+                            document.createElement(
+                                "div"
+                            );
+
+
+                        elemento.className =
+                            "border rounded p-3 mb-3";
+
+
+                        /*
+                        Nome da entidade.
+                        */
+
+                        const nomeEntidade =
+                            vinculo.nome_entidade ||
+                            vinculo.entidade ||
+                            "—";
+
+
+                        /*
+                        Monta o card.
+                        */
+
+                        elemento.innerHTML = `
+
+                            <div class="d-flex justify-content-between align-items-start">
+
+                                <div>
+
+                                    <div class="fw-bold">
+
+                                        ${vinculo.origem || "—"}
+
+                                    </div>
+
+
+                                    <div class="small text-muted mt-1">
+
+                                        Entidade:
+                                        ${nomeEntidade}
+
+                                    </div>
+
+
+                                    <div class="small text-muted">
+
+                                        Título:
+                                        ${vinculo.titulo || "—"}
+
+                                    </div>
+
+
+                                    <div class="small text-muted">
+
+                                        Série:
+                                        ${vinculo.serie || "—"}
+
+                                        &nbsp; | &nbsp;
+
+                                        Parcela:
+                                        ${vinculo.parcela || "—"}
+
+                                    </div>
+
+
+                                    <div class="small text-muted">
+
+                                        Data:
+                                        ${vinculo.data || "—"}
+
+                                    </div>
+
+                                </div>
+
+
+                                <div class="text-end">
+
+                                    <div class="fw-bold">
+
+                                        ${formatarMoeda(vinculo.valor)}
+
+                                    </div>
+
+
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm btn-outline-danger mt-2 js-desvincular"
+                                        data-vinculo-id="${vinculo.id}">
+
+                                        <i class="bi bi-x-circle me-1"></i>
+
+                                        Desvincular
+
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                        `;
+
+
+                        /*
+                        Adiciona o card.
+                        */
+
+                        listaVinculos.appendChild(
+                            elemento
+                        );
+
+                    }
+                );
+
+            }
+
+
+            /*
+            Esconde loading.
+            */
+
+            loading.classList.add(
+                "d-none"
+            );
+
+
+            /*
+            Mostra conteúdo.
+            */
+
+            conteudo.classList.remove(
+                "d-none"
+            );
+
+        })
+
+        .catch(function (error) {
+
+            console.error(
+                error
+            );
+
+
+            loading.classList.add(
+                "d-none"
+            );
+
+
+            erro.textContent =
+                error.message;
+
+
+            erro.classList.remove(
+                "d-none"
+            );
+
+        });
+
+    }
+
+
+    /*
+    ============================================================
+    ABRIR MODAL DE DETALHES
+    ============================================================
+    */
+
+    modal.addEventListener(
+        "show.bs.modal",
+        function (event) {
+
+            const botao =
+                event.relatedTarget;
+
+
+            if (!botao) {
+                return;
+            }
+
+
+            /*
+            Recupera o ID:
+
+                data-item-id="3"
+            */
+
+            const itemId =
+                botao.dataset.itemId;
+
+
+            if (!itemId) {
+
+                erro.textContent =
+                    "ID do item do extrato não informado.";
+
+                erro.classList.remove(
+                    "d-none"
+                );
+
+                return;
+            }
+
+
+            /*
+            Guarda o item atual.
+            */
+
+            itemExtratoAtual =
+                itemId;
+
+
+            /*
+            Carrega os detalhes.
+            */
+
+            carregarDetalhes(
+                itemId
+            );
+
+        }
+    );
+
+
+    /*
+    ============================================================
+    CLIQUE EM "DESVINCULAR"
+    ============================================================
+
+    Aqui apenas abrimos o modal de confirmação.
+    Ainda NÃO fazemos o POST.
+    */
+
+    document.addEventListener(
+        "click",
+        function (event) {
+
+            /*
+            Encontra o botão de desvincular.
+
+            O closest() permite clicar também no ícone.
+            */
+
+            const botao =
+                event.target.closest(
+                    ".js-desvincular"
+                );
+
+
+            if (!botao) {
+                return;
+            }
+
+
+            /*
+            Recupera o ID do vínculo.
+            */
+
+            const histId =
+                botao.dataset.vinculoId;
+
+
+            if (!histId) {
+
+                console.error(
+                    "ID do vínculo não informado."
+                );
+
+                return;
+            }
+
+
+            /*
+            Guarda o ID.
+            */
+
+            vinculoParaDesvincular =
+                histId;
+
+
+            /*
+            Abre confirmação.
+            */
+
+            modalConfirmacao.show();
+
+        }
+    );
+
+
+    /*
+    ============================================================
+    CONFIRMAR DESVINCULAÇÃO
+    ============================================================
+
+    Agora sim fazemos o POST para o Django.
+    */
+
+    btnConfirmarDesvinculo.addEventListener(
+        "click",
+        function () {
+
+            /*
+            Verifica se existe um vínculo selecionado.
+            */
+
+            if (!vinculoParaDesvincular) {
+
+                return;
+            }
+
+
+            /*
+            Verifica se o CSRF existe.
+            */
+
+            if (!csrfToken) {
+
+                console.error(
+                    "CSRF token não encontrado."
+                );
+
+
+                alert(
+                    "Token de segurança não encontrado. Atualize a página e tente novamente."
+                );
+
+
+                return;
+            }
+
+
+            /*
+            ID do histórico que será removido.
+            */
+
+            const histId =
+                vinculoParaDesvincular;
+
+
+            /*
+            ====================================================
+            URL DO POST
+            ====================================================
+            */
+
+            const url =
+                "{% url 'conciliacao:desvincular' slug=slug empresa=conciliacao.empresa filial=conciliacao.filial numero=conciliacao.nume %}";
+
+
+            /*
+            ====================================================
+            FORM DATA
+            ====================================================
+            */
+
+            const formData =
+                new FormData();
+
+
+            formData.append(
+                "hist_id",
+                histId
+            );
+
+
+            /*
+            ====================================================
+            BLOQUEIA BOTÃO
+            ====================================================
+            */
+
+            btnConfirmarDesvinculo.disabled =
+                true;
+
+
+            btnConfirmarDesvinculo.innerHTML = `
+
+                <span
+                    class="spinner-border spinner-border-sm me-1"
+                    role="status"
+                    aria-hidden="true">
+                </span>
+
+                Desvinculando...
+
+            `;
+
+
+            /*
+            ====================================================
+            POST
+            ====================================================
+            */
+
+            fetch(url, {
+
+                method: "POST",
+
+                body: formData,
+
+                headers: {
+
+                    /*
+                    CSRF enviado diretamente
+                    no header.
+                    */
+
+                    "X-CSRFToken":
+                        csrfToken,
+
+                    /*
+                    Indica requisição AJAX.
+                    */
+
+                    "X-Requested-With":
+                        "XMLHttpRequest"
+
+                }
+
+            })
+
+
+            /*
+            ====================================================
+            TRATAMENTO DA RESPOSTA
+            ====================================================
+
+            Aqui fizemos uma alteração importante.
+
+            NÃO assumimos que toda resposta é JSON.
+
+            Se o Django devolver HTML, por exemplo um 403,
+            mostramos um erro compreensível em vez de:
+
+                Unexpected token '<'
+            */
+
+            .then(async function (response) {
+
+                const contentType =
+                    response.headers.get(
+                        "content-type"
+                    ) || "";
+
+
+                /*
+                Se for JSON, podemos processar normalmente.
+                */
+
+                if (
+                    contentType.includes(
+                        "application/json"
+                    )
+                ) {
+
+                    const data =
+                        await response.json();
+
+
+                    return {
+                        ok:
+                            response.ok,
+
+                        data:
+                            data
+                    };
+                }
+
+
+                /*
+                Se não for JSON, pegamos o texto.
+                */
+
+                const texto =
+                    await response.text();
+
+
+                console.error(
+                    "Resposta não JSON:",
+                    texto
+                );
+
+
+                throw new Error(
+                    "O servidor rejeitou a operação. HTTP " +
+                    response.status
+                );
+
+            })
+
+
+            /*
+            ====================================================
+            RESULTADO
+            ====================================================
+            */
+
+            .then(function (result) {
+
+                /*
+                Backend precisa retornar:
+
+                    {
+                        "sucesso": true
+                    }
+                */
+
+                if (
+                    !result.ok ||
+                    !result.data.sucesso
+                ) {
+
+                    throw new Error(
+
+                        result.data.erro ||
+
+                        "Não foi possível desvincular o lançamento."
+
+                    );
+                }
+
+
+                /*
+                =================================================
+                SUCESSO
+                =================================================
+
+                Fecha o modal.
+                */
+
+                modalConfirmacao.hide();
+
+
+                /*
+                Limpa vínculo selecionado.
+                */
+
+                vinculoParaDesvincular =
+                    null;
+
+
+                /*
+                Recarrega os detalhes.
+
+                O vínculo removido deverá desaparecer
+                da lista e os valores serão recalculados.
+                */
+
+                carregarDetalhes(
+                    itemExtratoAtual
+                );
+
+            })
+
+
+            /*
+            ====================================================
+            ERRO
+            ====================================================
+            */
+
+            .catch(function (error) {
+
+                console.error(
+                    "Erro ao desvincular:",
+                    error
+                );
+
+
+                alert(
+                    error.message
+                );
+
+            })
+
+
+            /*
+            ====================================================
+            FINALIZAÇÃO
+            ====================================================
+
+            Executa tanto em sucesso quanto em erro.
+
+            Restaura o botão.
+            */
+
+            .finally(function () {
+
+                btnConfirmarDesvinculo.disabled =
+                    false;
+
+
+                btnConfirmarDesvinculo.innerHTML = `
+
+                    <i class="bi bi-x-circle me-1"></i>
+
+                    Sim, desvincular
+
+                `;
+
+            });
+
+        }
+    );
+
+
+    /*
+    ============================================================
+    FECHAMENTO DO MODAL DE CONFIRMAÇÃO
+    ============================================================
+
+    Se o usuário clicar em "Cancelar" ou fechar o modal,
+    apagamos o ID que estava aguardando confirmação.
+    */
+
+    modalConfirmacaoElement.addEventListener(
+        "hidden.bs.modal",
+        function () {
+
+            vinculoParaDesvincular =
+                null;
+
+
+            /*
+            Garante que o botão volte ao estado normal.
+            */
+
+            btnConfirmarDesvinculo.disabled =
+                false;
+
+
+            btnConfirmarDesvinculo.innerHTML = `
+
+                <i class="bi bi-x-circle me-1"></i>
+
+                Sim, desvincular
+
+            `;
+
+        }
+    );
+
+});
+
+</script>
+{% endblock %}

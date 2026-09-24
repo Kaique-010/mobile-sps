@@ -184,3 +184,96 @@ class ItemExtrato(models.Model):
     class Meta:
         managed = False
         db_table = "conciliacao_itens_extrato"
+
+
+class ConciliacaoHist(models.Model):
+    id = models.AutoField(primary_key=True)
+
+    nume = models.IntegerField(
+        db_column="conc_hist_nume"
+    )
+    empresa = models.IntegerField(
+        db_column="conc_hist_empr"
+    )
+    filial = models.IntegerField(
+        db_column="conc_hist_fili"
+    )
+
+    item_extrato = models.IntegerField(
+        db_column="conc_hist_item_extrato"
+    )
+    origem = models.CharField(
+        max_length=10,
+        db_column="conc_hist_origem"
+    )
+
+    titulo = models.CharField(
+        max_length=13,
+        db_column="conc_hist_titu",
+        null=True,
+        blank=True,
+    )
+    entidade = models.IntegerField(
+        db_column="conc_hist_enti",
+        null=True,
+        blank=True,
+    )
+    serie = models.CharField(
+        max_length=5,
+        db_column="conc_hist_seri",
+        null=True,
+        blank=True,
+    )
+    parcela = models.CharField(
+        max_length=4,
+        db_column="conc_hist_parc",
+        null=True,
+        blank=True,
+    )
+
+    banco = models.IntegerField(
+        db_column="conc_hist_banc",
+        null=True,
+        blank=True,
+    )
+    controle_bancario = models.IntegerField(
+        db_column="conc_hist_ctrl_banc",
+        null=True,
+        blank=True,
+    )
+
+    valor = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        db_column="conc_hist_valor",
+    )
+
+    data = models.DateTimeField(
+        db_column="conc_hist_data",
+        auto_now_add=True,
+    )
+    
+    baixa_pagar_sequ = models.IntegerField(
+    db_column="conc_hist_baixa_pagar_sequ",
+    null=True,
+    blank=True,
+    )
+
+    baixa_receber_sequ = models.IntegerField(
+        db_column="conc_hist_baixa_receber_sequ",
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        managed = False
+        db_table = "conciliacao_hist"
+        verbose_name = "Histórico de Conciliação"
+        verbose_name_plural = "Históricos de Conciliação"
+
+    def __str__(self):
+        return "{} - {} - {}".format(
+            self.nume,
+            self.item_extrato,
+            self.origem,
+        )

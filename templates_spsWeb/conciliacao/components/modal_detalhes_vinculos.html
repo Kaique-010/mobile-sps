@@ -1,0 +1,223 @@
+<!-- ========================================================= -->
+<!-- MODAL DE DETALHES DOS VÍNCULOS                           -->
+<!-- ========================================================= -->
+
+<div class="modal fade"
+     id="modalDetalhesVinculos"
+     tabindex="-1"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+
+                <div>
+                    <h5 class="modal-title mb-1">
+                        Detalhes da conciliação
+                    </h5>
+
+                    <small class="text-muted"
+                           id="detalhesResumoExtrato">
+                    </small>
+                </div>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Fechar">
+                </button>
+
+            </div>
+
+            <div class="modal-body">
+
+                <!-- Loading -->
+                <div id="detalhesLoading"
+                     class="text-center py-4">
+
+                    <div class="spinner-border"></div>
+
+                    <div class="mt-2 text-muted">
+                        Carregando vínculos...
+                    </div>
+
+                </div>
+
+                <!-- Erro -->
+                <div id="detalhesErro"
+                     class="alert alert-danger d-none">
+                </div>
+
+                <!-- Conteúdo -->
+                <div id="detalhesConteudo"
+                     class="d-none">
+
+                    <div class="row g-3 mb-4">
+
+                        <div class="col-md-4">
+
+                            <small class="text-muted">
+                                Valor do extrato
+                            </small>
+
+                            <div class="fw-bold"
+                                 id="detalhesValorExtrato">
+                            </div>
+
+                        </div>
+
+                        <div class="col-md-4">
+
+                            <small class="text-muted">
+                                Total vinculado
+                            </small>
+
+                            <div class="fw-bold"
+                                 id="detalhesTotalVinculado">
+                            </div>
+
+                        </div>
+
+                        <div class="col-md-4">
+
+                            <small class="text-muted">
+                                Saldo
+                            </small>
+
+                            <div class="fw-bold"
+                                 id="detalhesSaldo">
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <h6 class="border-bottom pb-2">
+                        Vínculos
+                    </h6>
+
+                    <div id="listaVinculos"></div>
+
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+
+                    Fechar
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ========================================================= -->
+<!-- MODAL DE CONFIRMAÇÃO DE DESVINCULAÇÃO                    -->
+<!-- ========================================================= -->
+
+<div class="modal fade"
+     id="modalConfirmarDesvinculo"
+     tabindex="-1"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-dialog-centered">
+
+        <div class="modal-content">
+
+            <!-- Cabeçalho -->
+            <div class="modal-header border-0">
+
+                <div class="d-flex align-items-center">
+
+                    <!-- Ícone de alerta -->
+                    <div class="text-danger me-3">
+
+                        <i class="bi bi-exclamation-triangle-fill fs-2"></i>
+
+                    </div>
+
+                    <div>
+
+                        <h5 class="modal-title mb-1">
+                            Desvincular lançamento
+                        </h5>
+
+                        <small class="text-muted">
+                            Confirmação da operação
+                        </small>
+
+                    </div>
+
+                </div>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Fechar">
+                </button>
+
+            </div>
+
+
+            <!-- Corpo -->
+            <div class="modal-body">
+
+                <p class="mb-2">
+                    Deseja realmente desvincular este lançamento?
+                </p>
+
+                <div class="alert alert-warning mb-0">
+
+                    <i class="bi bi-info-circle me-1"></i>
+
+                    O vínculo será removido e o lançamento ficará
+                    disponível novamente para conciliação.
+
+                </div>
+
+            </div>
+
+
+            <!-- Rodapé -->
+            <div class="modal-footer border-0">
+
+                <!-- Cancelar -->
+                <button type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+
+                    Cancelar
+
+                </button>
+
+
+                <!-- Confirmar -->
+                <button type="button"
+                        class="btn btn-danger"
+                        id="btnConfirmarDesvinculo">
+
+                    <i class="bi bi-x-circle me-1"></i>
+
+                    Sim, desvincular
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

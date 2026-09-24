@@ -1,0 +1,1483 @@
+<div class="modal fade" id="modalConciliar" tabindex="-1" aria-labelledby="modalConciliarLabel" aria-hidden="true">
+
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+
+        <div class="modal-content">
+
+            <form method="post"
+                action="{% url 'conciliacao:conciliar' slug=slug empresa=conciliacao.empresa filial=conciliacao.filial numero=conciliacao.nume %}"
+                id="formConciliar">
+
+                {% csrf_token %}
+
+                <input type="hidden" name="item_extrato_id" id="conciliarItemId">
+
+                <!-- ================================================= -->
+                <!-- HEADER -->
+                <!-- ================================================= -->
+
+                <div class="modal-header">
+
+                    <div>
+
+                        <h5 class="modal-title" id="modalConciliarLabel">
+                            Conciliar lançamento
+                        </h5>
+
+                        <small class="text-muted" id="conciliarDescricao">
+                            Vincule o lançamento do extrato aos títulos financeiros.
+                        </small>
+
+                    </div>
+
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar">
+                    </button>
+
+                </div>
+
+
+                <!-- ================================================= -->
+                <!-- BODY -->
+                <!-- ================================================= -->
+
+                <div class="modal-body">
+
+                    <!-- ============================================= -->
+                    <!-- DADOS DO EXTRATO -->
+                    <!-- ============================================= -->
+
+                    <div class="card mb-4">
+
+                        <div class="card-body">
+
+                            <h6 class="mb-3">
+                                Lançamento do extrato
+                            </h6>
+
+                            <div class="row g-3">
+
+                                <div class="col-md-3">
+
+                                    <small class="text-muted d-block">
+                                        Data
+                                    </small>
+
+                                    <strong id="conciliarData">
+                                        —
+                                    </strong>
+
+                                </div>
+
+
+                                <div class="col-md-3">
+
+                                    <small class="text-muted d-block">
+                                        Documento
+                                    </small>
+
+                                    <strong id="conciliarDocumento">
+                                        —
+                                    </strong>
+
+                                </div>
+
+
+                                <div class="col-md-3">
+
+                                    <small class="text-muted d-block">
+                                        Tipo
+                                    </small>
+
+                                    <strong id="conciliarTipo">
+                                        —
+                                    </strong>
+
+                                </div>
+
+
+                                <div class="col-md-3">
+
+                                    <small class="text-muted d-block">
+                                        Valor
+                                    </small>
+
+                                    <strong id="conciliarValor">
+                                        —
+                                    </strong>
+
+                                </div>
+
+
+                                <div class="col-12">
+
+                                    <small class="text-muted d-block">
+                                        Histórico
+                                    </small>
+
+                                    <span id="conciliarHistorico">
+                                        —
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- ============================================= -->
+                    <!-- ORIGEM -->
+                    <!-- ============================================= -->
+
+                    <div class="card mb-4">
+
+                        <div class="card-body">
+
+                            <h6 class="mb-3">
+                                Tipo de conciliação
+                            </h6>
+
+                            <div class="row g-3">
+
+                                <div class="col-md-4">
+
+                                    <label for="conciliarOrigem" class="form-label">
+
+                                        Origem
+
+                                    </label>
+
+                                    <select class="form-select" name="origem" id="conciliarOrigem" required>
+
+                                        <option value="">
+                                            Selecione
+                                        </option>
+
+                                        <option value="RECEBER">
+                                            Recebimento
+                                        </option>
+
+                                        <option value="PAGAR">
+                                            Pagamento
+                                        </option>
+
+                                        <option value="AVULSO">
+                                            Lançamento avulso
+                                        </option>
+
+                                    </select>
+
+                                </div>
+
+
+                                <div class="col-md-4 campo-baixa">
+
+                                    <label for="conciliarDataBaixa" class="form-label">
+
+                                        Data da baixa
+
+                                    </label>
+
+                                    <input type="date" class="form-control" name="data_baixa" id="conciliarDataBaixa">
+
+                                </div>
+
+
+                                <div class="col-md-4 campo-forma">
+
+                                    <label for="conciliarForma" class="form-label">
+
+                                        Forma de pagamento
+
+                                    </label>
+
+                                    <select class="form-select" name="forma" id="conciliarForma">
+
+                                        <option value="">
+                                            Selecione
+                                        </option>
+
+                                        <option value="00">
+                                            Duplicata
+                                        </option>
+
+                                        <option value="01">
+                                            Cheque
+                                        </option>
+
+                                        <option value="02">
+                                            Promissória
+                                        </option>
+
+                                        <option value="03">
+                                            Recibo
+                                        </option>
+
+                                        <option value="50">
+                                            Cheque pré
+                                        </option>
+
+                                        <option value="51">
+                                            Cartão de crédito
+                                        </option>
+
+                                        <option value="52">
+                                            Cartão de débito
+                                        </option>
+
+                                        <option value="53">
+                                            Boleto bancário
+                                        </option>
+
+                                        <option value="54">
+                                            Dinheiro
+                                        </option>
+
+                                        <option value="55">
+                                            Depósito em conta
+                                        </option>
+
+                                        <option value="56">
+                                            Venda à vista
+                                        </option>
+
+                                        <option value="60">
+                                            PIX
+                                        </option>
+
+                                    </select>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- ============================================= -->
+                    <!-- CAMPOS DO AVULSO -->
+                    <!-- ============================================= -->
+
+                    <div id="dadosAvulso" class="card mb-4 d-none">
+
+                        <div class="card-body">
+
+                            <h6 class="mb-3">
+                                Lançamento bancário
+                            </h6>
+
+                            <div class="row g-3">
+
+                                <div class="col-md-4">
+
+                                    <label for="valorAvulso" class="form-label">
+
+                                        Valor
+
+                                    </label>
+
+                                    <input type="number" class="form-control" name="valor_avulso" id="valorAvulso"
+                                        min="0.01" step="0.01">
+
+                                    <small class="text-muted">
+                                        Informe somente o valor que será conciliado.
+                                    </small>
+
+                                </div>
+
+
+                                <div class="col-md-4">
+
+                                    <label for="bancoAvulso" class="form-label">
+
+                                        Banco / Conta
+
+                                    </label>
+
+                                    <input type="number" class="form-control" name="banco" id="bancoAvulso"
+                                        placeholder="Código da conta">
+
+                                </div>
+
+
+                                <div class="col-md-4">
+
+                                    <label for="dataAvulso" class="form-label">
+
+                                        Data do lançamento
+
+                                    </label>
+
+                                    <input type="date" class="form-control" id="dataAvulso">
+
+                                </div>
+
+
+                                <div class="col-12">
+
+                                    <label for="historicoAvulso" class="form-label">
+
+                                        Histórico
+
+                                    </label>
+
+                                    <textarea class="form-control" name="historico_avulso" id="historicoAvulso" rows="3"
+                                        maxlength="1000" placeholder="Informe o histórico do lançamento">
+                                    </textarea>
+
+                                </div>
+
+                            </div>
+
+
+                            <div class="alert alert-warning mt-3 mb-0">
+
+                                <i class="bi bi-info-circle"></i>
+
+                                <strong>Lançamento avulso:</strong>
+
+                                este lançamento não será associado a um
+                                título a pagar ou receber. Será criado
+                                diretamente no lançamento bancário.
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- ============================================= -->
+                    <!-- TÍTULOS -->
+                    <!-- ============================================= -->
+
+                    <div id="areaTitulos">
+
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+
+                            <div>
+
+                                <h6 class="mb-1">
+                                    Títulos para vincular
+                                </h6>
+
+                                <small class="text-muted">
+                                    Informe os dados dos títulos que serão baixados.
+                                </small>
+
+                            </div>
+
+
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="btnAdicionarTitulo">
+
+                                <i class="bi bi-plus-lg"></i>
+
+                                Adicionar título
+
+                            </button>
+
+                        </div>
+
+
+                        <div id="listaTitulosConciliar">
+
+                            <div class="titulo-conciliar border rounded p-3 mb-3">
+
+                                <div class="row g-3">
+
+                                    <div class="col-md-3 campo-entidade position-relative">
+
+                                        <label class="form-label js-label-entidade">
+                                            Cliente
+                                        </label>
+
+                                        <input type="number" class="form-control js-entidade" name="cliente[]"
+                                            autocomplete="off">
+
+                                        <div class="list-group position-absolute w-100 shadow-sm d-none js-sugestoes-titulos"
+                                            style="z-index:1060; max-height:220px; overflow-y:auto;">
+                                        </div>
+
+                                    </div>
+
+
+                                    <div class="col-md-3">
+
+                                        <label class="form-label">
+                                            Título
+                                        </label>
+
+                                        <input type="text" class="form-control" name="titulo[]" maxlength="13">
+
+                                    </div>
+
+
+                                    <div class="col-md-2">
+
+                                        <label class="form-label">
+                                            Série
+                                        </label>
+
+                                        <input type="text" class="form-control" name="serie[]" maxlength="5">
+
+                                    </div>
+
+
+                                    <div class="col-md-2">
+
+                                        <label class="form-label">
+                                            Parcela
+                                        </label>
+
+                                        <input type="text" class="form-control" name="parcela[]" maxlength="4">
+
+                                    </div>
+
+
+                                    <div class="col-md-2">
+
+                                        <label class="form-label">
+                                            Valor
+                                        </label>
+
+                                        <input type="number" class="form-control" name="valor[]" min="0.01" step="0.01">
+
+                                    </div>
+
+                                </div>
+
+
+                                <div class="text-end mt-2">
+
+                                    <button type="button" class="btn btn-outline-danger btn-sm js-remover-titulo">
+
+                                        Remover título
+
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- ============================================= -->
+                    <!-- ALERTA -->
+                    <!-- ============================================= -->
+
+                    <div class="alert alert-info mb-0" id="alertaConciliacao">
+
+                        <strong>Atenção:</strong>
+
+                        os dados informados serão enviados para a baixa
+                        financeira. Confira os títulos e valores antes
+                        de confirmar.
+
+                    </div>
+
+                </div>
+
+
+                <!-- ================================================= -->
+                <!-- FOOTER -->
+                <!-- ================================================= -->
+
+                <div class="modal-footer">
+
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+
+                        Cancelar
+
+                    </button>
+
+
+                    <button type="submit" class="btn btn-success" id="btnConfirmarConciliacao">
+
+                        <i class="bi bi-check-circle"></i>
+
+                        Confirmar conciliação
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+    (function () {
+
+        const modal = document.getElementById("modalConciliar");
+
+        if (!modal) {
+            return;
+        }
+
+        const form = document.getElementById("formConciliar");
+        const lista = document.getElementById("listaTitulosConciliar");
+        const origem = document.getElementById("conciliarOrigem");
+
+        const areaTitulos = document.getElementById("areaTitulos");
+        const dadosAvulso = document.getElementById("dadosAvulso");
+
+        const campoDataBaixa = document.getElementById("conciliarDataBaixa");
+        const campoDataAvulso = document.getElementById("dataAvulso");
+
+        const campoValorAvulso = document.getElementById("valorAvulso");
+        const campoHistoricoAvulso = document.getElementById("historicoAvulso");
+        const campoBancoAvulso = document.getElementById("bancoAvulso");
+
+        const campoForma = document.getElementById("conciliarForma");
+
+        const campoDataBaixaContainer =
+            campoDataBaixa.closest(".campo-baixa");
+
+        const campoFormaContainer =
+            campoForma.closest(".campo-forma");
+
+        const templateTitulo =
+            lista.querySelector(".titulo-conciliar");
+
+        const URL_TITULOS_ABERTOS =
+            "{% url 'conciliacao:titulos_abertos' slug=slug empresa=conciliacao.empresa filial=conciliacao.filial numero=conciliacao.nume %}";
+
+
+        // =========================================================
+        // FORMATAR VALOR
+        // =========================================================
+
+        function formatarValor(valor) {
+
+            const numero = Number(
+                String(valor || "").replace(",", ".")
+            );
+
+            if (!Number.isFinite(numero)) {
+                return valor || "—";
+            }
+
+            return numero.toLocaleString(
+                "pt-BR",
+                {
+                    style: "currency",
+                    currency: "BRL"
+                }
+            );
+        }
+
+
+        // =========================================================
+        // LIMPAR SUGESTÕES
+        // =========================================================
+
+        function fecharSugestoes(linha) {
+
+            const box = linha.querySelector(
+                ".js-sugestoes-titulos"
+            );
+
+            if (!box) {
+                return;
+            }
+
+            box.innerHTML = "";
+            box.classList.add("d-none");
+        }
+
+
+        // =========================================================
+        // CONFIGURA CAMPOS DOS TÍTULOS
+        // =========================================================
+
+        function configurarCamposTitulos(habilitar) {
+
+            lista.querySelectorAll(
+                ".titulo-conciliar"
+            ).forEach(function (linha) {
+
+                const entidade = linha.querySelector(
+                    ".js-entidade"
+                );
+
+                const titulo = linha.querySelector(
+                    '[name="titulo[]"]'
+                );
+
+                const serie = linha.querySelector(
+                    '[name="serie[]"]'
+                );
+
+                const parcela = linha.querySelector(
+                    '[name="parcela[]"]'
+                );
+
+                const valor = linha.querySelector(
+                    '[name="valor[]"]'
+                );
+
+
+                // Nunca deixar required nos campos dinâmicos.
+                // A validação é feita no submit e no backend.
+                entidade.required = false;
+                titulo.required = false;
+                serie.required = false;
+                parcela.required = false;
+                valor.required = false;
+
+
+                if (!habilitar) {
+
+                    entidade.disabled = true;
+                    titulo.disabled = true;
+                    serie.disabled = true;
+                    parcela.disabled = true;
+                    valor.disabled = true;
+
+                    fecharSugestoes(linha);
+
+                    return;
+                }
+
+
+                entidade.disabled = false;
+                titulo.disabled = false;
+                serie.disabled = false;
+                parcela.disabled = false;
+                valor.disabled = false;
+
+            });
+        }
+
+        // =========================================================
+        // ATUALIZA ORIGEM
+        // =========================================================
+
+        function atualizarOrigem() {
+
+            const valorOrigem = origem.value;
+
+            const isReceber = valorOrigem === "RECEBER";
+            const isPagar = valorOrigem === "PAGAR";
+            const isAvulso = valorOrigem === "AVULSO";
+
+
+            // =====================================================
+            // NENHUMA ORIGEM
+            // =====================================================
+
+            if (!valorOrigem) {
+
+                areaTitulos.classList.remove("d-none");
+                dadosAvulso.classList.add("d-none");
+
+                campoDataBaixaContainer.classList.remove("d-none");
+                campoFormaContainer.classList.remove("d-none");
+
+                campoDataBaixa.required = false;
+                campoForma.required = false;
+
+                campoValorAvulso.required = false;
+                campoHistoricoAvulso.required = false;
+                campoBancoAvulso.required = false;
+
+                configurarCamposTitulos(false);
+
+                return;
+            }
+
+
+            // =====================================================
+            // AVULSO
+            // =====================================================
+
+            if (isAvulso) {
+
+                areaTitulos.classList.add("d-none");
+                dadosAvulso.classList.remove("d-none");
+
+                campoDataBaixaContainer.classList.add("d-none");
+                campoFormaContainer.classList.add("d-none");
+
+                campoDataBaixa.required = false;
+                campoForma.required = false;
+
+                campoValorAvulso.required = true;
+                campoHistoricoAvulso.required = true;
+                campoBancoAvulso.required = true;
+
+                configurarCamposTitulos(false);
+
+
+                document.getElementById(
+                    "conciliarDescricao"
+                ).textContent =
+                    "Crie um lançamento bancário sem vincular a um título.";
+
+
+                document.getElementById(
+                    "alertaConciliacao"
+                ).innerHTML =
+                    "<strong>Atenção:</strong> " +
+                    "o lançamento será criado diretamente no banco " +
+                    "e registrado como lançamento avulso.";
+
+                return;
+            }
+
+
+            // =====================================================
+            // RECEBER / PAGAR
+            // =====================================================
+
+            areaTitulos.classList.remove("d-none");
+            dadosAvulso.classList.add("d-none");
+
+            campoDataBaixaContainer.classList.remove("d-none");
+            campoFormaContainer.classList.remove("d-none");
+
+            campoDataBaixa.required = true;
+            campoForma.required = true;
+
+            campoValorAvulso.required = false;
+            campoHistoricoAvulso.required = false;
+            campoBancoAvulso.required = false;
+
+            configurarCamposTitulos(true);
+
+
+            lista.querySelectorAll(
+                ".titulo-conciliar"
+            ).forEach(function (linha) {
+
+                const campo = linha.querySelector(
+                    ".js-entidade"
+                );
+
+                const label = linha.querySelector(
+                    ".js-label-entidade"
+                );
+
+                campo.name = isReceber
+                    ? "cliente[]"
+                    : "fornecedor[]";
+
+                label.textContent = isReceber
+                    ? "Cliente"
+                    : "Fornecedor";
+
+                fecharSugestoes(linha);
+
+            });
+
+
+            document.getElementById(
+                "conciliarDescricao"
+            ).textContent =
+                "Vincule o lançamento do extrato aos títulos financeiros.";
+
+
+            document.getElementById(
+                "alertaConciliacao"
+            ).innerHTML =
+                "<strong>Atenção:</strong> " +
+                "os dados informados serão enviados para a baixa " +
+                "financeira. Confira os títulos e valores antes de confirmar.";
+        }
+
+
+        // =========================================================
+        // DEBOUNCE
+        // =========================================================
+
+        function debounce(fn, delay) {
+
+            let timer = null;
+
+            return function (...args) {
+
+                clearTimeout(timer);
+
+                timer = setTimeout(
+                    () => fn.apply(this, args),
+                    delay
+                );
+            };
+        }
+
+
+        // =========================================================
+        // BUSCAR TÍTULOS
+        // =========================================================
+
+        async function buscarTitulos(linha, entidade) {
+
+            if (
+                !entidade ||
+                !origem.value ||
+                origem.value === "AVULSO"
+            ) {
+
+                fecharSugestoes(linha);
+                return;
+            }
+
+
+            const box = linha.querySelector(
+                ".js-sugestoes-titulos"
+            );
+
+            box.innerHTML =
+                '<div class="list-group-item small text-muted">' +
+                'Buscando...' +
+                '</div>';
+
+            box.classList.remove("d-none");
+
+
+            try {
+
+                const params = new URLSearchParams({
+                    origem: origem.value,
+                    entidade: entidade,
+                });
+
+
+                const resp = await fetch(
+                    `${URL_TITULOS_ABERTOS}?${params.toString()}`,
+                    {
+                        headers: {
+                            "X-Requested-With": "XMLHttpRequest"
+                        }
+                    }
+                );
+
+
+                if (!resp.ok) {
+
+                    box.innerHTML =
+                        '<div class="list-group-item small text-danger">' +
+                        'Erro ao buscar títulos.' +
+                        '</div>';
+
+                    return;
+                }
+
+
+                const data = await resp.json();
+
+                renderizarSugestoes(
+                    linha,
+                    data.titulos || []
+                );
+
+
+            } catch (err) {
+
+                box.innerHTML =
+                    '<div class="list-group-item small text-danger">' +
+                    'Erro ao buscar títulos.' +
+                    '</div>';
+            }
+        }
+
+
+        // =========================================================
+        // RENDERIZAR SUGESTÕES
+        // =========================================================
+
+        function renderizarSugestoes(linha, titulos) {
+
+            const box = linha.querySelector(
+                ".js-sugestoes-titulos"
+            );
+
+
+            if (!titulos.length) {
+
+                box.innerHTML =
+                    '<div class="list-group-item small text-muted">' +
+                    'Nenhum título em aberto encontrado.' +
+                    '</div>';
+
+                box.classList.remove("d-none");
+
+                return;
+            }
+
+
+            box.innerHTML = "";
+
+
+            titulos.forEach(function (titulo) {
+
+                const item = document.createElement("button");
+
+                item.type = "button";
+
+                item.className =
+                    "list-group-item list-group-item-action small";
+
+
+                const vencimento = titulo.vencimento
+                    ? new Date(
+                        titulo.vencimento + "T00:00:00"
+                    ).toLocaleDateString("pt-BR")
+                    : "—";
+
+
+                item.innerHTML = `
+                <strong>Título ${titulo.titulo}</strong>
+                — Série ${titulo.serie}
+                / Parc. ${titulo.parcela}
+
+                <span class="float-end">
+                    ${formatarValor(titulo.valor)}
+                    (venc. ${vencimento})
+                </span>
+            `;
+
+
+                item.addEventListener(
+                    "click",
+                    function () {
+
+                        linha.querySelector(
+                            '[name="titulo[]"]'
+                        ).value = titulo.titulo;
+
+
+                        linha.querySelector(
+                            '[name="serie[]"]'
+                        ).value = titulo.serie;
+
+
+                        linha.querySelector(
+                            '[name="parcela[]"]'
+                        ).value = titulo.parcela;
+
+
+                        linha.querySelector(
+                            '[name="valor[]"]'
+                        ).value = titulo.valor;
+
+
+                        fecharSugestoes(linha);
+                    }
+                );
+
+
+                box.appendChild(item);
+
+            });
+
+
+            box.classList.remove("d-none");
+        }
+
+
+        const buscarTitulosDebounced =
+            debounce(
+                buscarTitulos,
+                400
+            );
+
+
+        // =========================================================
+        // EVENTOS DA LINHA
+        // =========================================================
+
+        function vincularEventosLinha(linha) {
+
+            const campoEntidade =
+                linha.querySelector(".js-entidade");
+
+
+            campoEntidade.addEventListener(
+                "input",
+                function () {
+
+                    buscarTitulosDebounced(
+                        linha,
+                        campoEntidade.value.trim()
+                    );
+                }
+            );
+        }
+
+
+        // =========================================================
+        // ADICIONAR TÍTULO
+        // =========================================================
+
+        function adicionarTitulo() {
+
+            const clone =
+                templateTitulo.cloneNode(true);
+
+
+            clone.querySelectorAll(
+                "input"
+            ).forEach(function (input) {
+
+                input.value = "";
+            });
+
+
+            fecharSugestoes(clone);
+
+            lista.appendChild(clone);
+
+            vincularEventosLinha(clone);
+
+            atualizarOrigem();
+        }
+
+
+        // =========================================================
+        // ABERTURA DO MODAL
+        // =========================================================
+
+        modal.addEventListener(
+            "show.bs.modal",
+            function (event) {
+
+                const botao =
+                    event.relatedTarget;
+
+
+                if (!botao) {
+                    return;
+                }
+
+
+                form.reset();
+
+
+                lista.innerHTML = "";
+
+
+                const primeiraLinha =
+                    templateTitulo.cloneNode(true);
+
+
+                lista.appendChild(
+                    primeiraLinha
+                );
+
+
+                vincularEventosLinha(
+                    primeiraLinha
+                );
+
+
+                // ================================================
+                // ITEM DO EXTRATO
+                // ================================================
+
+                document.getElementById(
+                    "conciliarItemId"
+                ).value =
+                    botao.dataset.itemId || "";
+
+
+                document.getElementById(
+                    "conciliarData"
+                ).textContent =
+                    botao.dataset.data || "—";
+
+
+                document.getElementById(
+                    "conciliarDocumento"
+                ).textContent =
+                    botao.dataset.documento || "—";
+
+
+                document.getElementById(
+                    "conciliarHistorico"
+                ).textContent =
+                    botao.dataset.historico || "—";
+
+
+                document.getElementById(
+                    "conciliarTipo"
+                ).textContent =
+                    botao.dataset.tipo === "E"
+                        ? "Entrada"
+                        : botao.dataset.tipo === "S"
+                            ? "Saída"
+                            : botao.dataset.tipo || "—";
+
+
+                document.getElementById(
+                    "conciliarValor"
+                ).textContent =
+                    formatarValor(
+                        botao.dataset.valor
+                    );
+
+
+                // ================================================
+                // DATA
+                // ================================================
+
+                campoDataBaixa.value =
+                    botao.dataset.data || "";
+
+                campoDataAvulso.value =
+                    botao.dataset.data || "";
+
+
+                // ================================================
+                // VALOR AVULSO
+                // ================================================
+
+                const valorNumerico =
+                    Number(
+                        String(
+                            botao.dataset.valor || ""
+                        ).replace(",", ".")
+                    );
+
+
+                if (Number.isFinite(valorNumerico)) {
+
+                    campoValorAvulso.value =
+                        Math.abs(valorNumerico).toFixed(2);
+
+                } else {
+
+                    campoValorAvulso.value = "";
+                }
+
+
+                // ================================================
+                // HISTÓRICO AVULSO
+                // ================================================
+
+                campoHistoricoAvulso.value =
+                    botao.dataset.historico || "";
+
+
+                // ================================================
+                // VALOR DO PRIMEIRO TÍTULO
+                // ================================================
+
+                const valorInput =
+                    primeiraLinha.querySelector(
+                        '[name="valor[]"]'
+                    );
+
+
+                if (Number.isFinite(valorNumerico)) {
+
+                    valorInput.value =
+                        Math.abs(valorNumerico).toFixed(2);
+
+                } else {
+
+                    valorInput.value = "";
+                }
+
+
+                // ================================================
+                // ORIGEM COMEÇA VAZIA
+                // ================================================
+
+                origem.value = "";
+
+                atualizarOrigem();
+
+            }
+        );
+
+
+        // =========================================================
+        // ALTERAÇÃO DA ORIGEM
+        // =========================================================
+
+        origem.addEventListener(
+            "change",
+            atualizarOrigem
+        );
+
+
+        // =========================================================
+        // DATA AVULSO
+        // =========================================================
+
+        campoDataAvulso.addEventListener(
+            "change",
+            function () {
+
+                campoDataBaixa.value =
+                    campoDataAvulso.value;
+            }
+        );
+
+
+        // =========================================================
+        // ADICIONAR TÍTULO
+        // =========================================================
+
+        const btnAdicionarTitulo =
+            document.getElementById(
+                "btnAdicionarTitulo"
+            );
+
+
+        if (btnAdicionarTitulo) {
+
+            btnAdicionarTitulo.addEventListener(
+                "click",
+                adicionarTitulo
+            );
+        }
+
+
+        // =========================================================
+        // REMOVER TÍTULO
+        // =========================================================
+
+        lista.addEventListener(
+            "click",
+            function (event) {
+
+                const botao =
+                    event.target.closest(
+                        ".js-remover-titulo"
+                    );
+
+
+                if (!botao) {
+                    return;
+                }
+
+
+                const linhas =
+                    lista.querySelectorAll(
+                        ".titulo-conciliar"
+                    );
+
+
+                if (linhas.length > 1) {
+
+                    botao.closest(
+                        ".titulo-conciliar"
+                    ).remove();
+
+                }
+            }
+        );
+
+
+        // =========================================================
+        // FECHAR SUGESTÕES AO CLICAR FORA
+        // =========================================================
+
+        document.addEventListener(
+            "click",
+            function (event) {
+
+                lista.querySelectorAll(
+                    ".titulo-conciliar"
+                ).forEach(function (linha) {
+
+                    if (
+                        !linha.contains(
+                            event.target
+                        )
+                    ) {
+
+                        fecharSugestoes(linha);
+                    }
+
+                });
+            }
+        );
+
+
+        // =========================================================
+        // VALIDAÇÃO DO FORMULÁRIO
+        // =========================================================
+
+        form.addEventListener(
+            "submit",
+            function (event) {
+
+                const tipo =
+                    origem.value;
+
+
+                // ================================================
+                // ORIGEM
+                // ================================================
+
+                if (!tipo) {
+
+                    event.preventDefault();
+
+                    alert(
+                        "Selecione o tipo de conciliação."
+                    );
+
+                    origem.focus();
+
+                    return;
+                }
+
+
+                // ================================================
+                // AVULSO
+                // ================================================
+
+                if (tipo === "AVULSO") {
+
+                    if (
+                        !campoValorAvulso.value ||
+                        Number(
+                            campoValorAvulso.value
+                        ) <= 0
+                    ) {
+
+                        event.preventDefault();
+
+                        alert(
+                            "Informe um valor válido para o lançamento avulso."
+                        );
+
+                        campoValorAvulso.focus();
+
+                        return;
+                    }
+
+
+                    if (!campoBancoAvulso.value) {
+
+                        event.preventDefault();
+
+                        alert(
+                            "Informe o banco/conta do lançamento."
+                        );
+
+                        campoBancoAvulso.focus();
+
+                        return;
+                    }
+
+
+                    if (
+                        !campoHistoricoAvulso.value.trim()
+                    ) {
+
+                        event.preventDefault();
+
+                        alert(
+                            "Informe o histórico do lançamento."
+                        );
+
+                        campoHistoricoAvulso.focus();
+
+                        return;
+                    }
+
+
+                    if (!campoDataAvulso.value) {
+
+                        event.preventDefault();
+
+                        alert(
+                            "Informe a data do lançamento."
+                        );
+
+                        campoDataAvulso.focus();
+
+                        return;
+                    }
+
+
+                    // Garante que a view receba a data.
+                    campoDataBaixa.value =
+                        campoDataAvulso.value;
+
+
+                    return;
+                }
+
+
+                // ================================================
+                // RECEBER / PAGAR
+                // ================================================
+
+                const linhas =
+                    lista.querySelectorAll(
+                        ".titulo-conciliar"
+                    );
+
+
+                if (!linhas.length) {
+
+                    event.preventDefault();
+
+                    alert(
+                        "Adicione pelo menos um título."
+                    );
+
+                    return;
+                }
+
+
+                let valido = true;
+
+
+                linhas.forEach(function (linha) {
+
+                    const campos =
+                        linha.querySelectorAll(
+                            "input"
+                        );
+
+
+                    campos.forEach(function (campo) {
+
+                        if (
+                            !campo.disabled &&
+                            !campo.value.trim()
+                        ) {
+
+                            valido = false;
+                        }
+
+                    });
+
+                });
+
+
+                if (!valido) {
+
+                    event.preventDefault();
+
+                    alert(
+                        "Preencha todos os campos dos títulos."
+                    );
+
+                    return;
+                }
+
+            }
+        );
+
+    })();
+</script>

@@ -1,56 +1,107 @@
+
 from django import forms
 
 from Entidades.models import Entidades
 
 
 class ImportarOFXForm(forms.Form):
-    empresa = forms.ChoiceField(
-        label="Empresa", widget=forms.Select(attrs={"class": "form-select"})
+    empresa = forms.CharField(
+        widget=forms.HiddenInput(),
     )
-    filial = forms.ChoiceField(
-        label="Filial", widget=forms.Select(attrs={"class": "form-select"})
+    filial = forms.CharField(
+        widget=forms.HiddenInput(),
     )
     codigo_banco = forms.ChoiceField(
-        label="Banco", widget=forms.Select(attrs={"class": "form-select"})
+        label="Banco",
+        widget=forms.Select(
+            attrs={"class": "form-select"}
+        ),
     )
     arquivo = forms.FileField(
         label="Arquivo OFX",
-        widget=forms.ClearableFileInput(attrs={"class": "form-control", "accept": ".ofx"}),
+        widget=forms.ClearableFileInput(
+            attrs={
+                "class": "form-control",
+                "accept": ".ofx",
+            }
+        ),
     )
 
     def __init__(self, *args, **kwargs):
         self.contexto = kwargs.pop("contexto")
         super().__init__(*args, **kwargs)
+
         ctx = self.contexto
-        self.fields["empresa"].choices = [(str(ctx.empresa), str(ctx.empresa))]
-        self.fields["filial"].choices = [(str(ctx.filial), str(ctx.filial))]
-        for campo in ("empresa", "filial"):
-            self.fields[campo].initial = str(getattr(ctx, campo))
-            self.fields[campo].help_text = (
-                "Para selecionar outro contexto de empresa/filial, faça um novo login."
-            )
-            self.fields[campo].error_messages["invalid_choice"] = (
-                "Selecione o contexto autorizado no login."
-            )
-        bancos = Entidades.objects.using(ctx.db_alias).filter(
-            enti_empr=ctx.empresa, enti_tien="B"
-        ).values_list("enti_clie", "enti_nome")
-        self.fields["codigo_banco"].choices = [("", "Selecione um banco")] + [
-            (str(codigo), "{} - {}".format(codigo, nome))
-            for codigo, nome in bancos
+
+        self.fields["empresa"].initial = str(ctx.empresa)
+        self.fields["filial"].initial = str(ctx.filial)
+
+        bancos = Entidades.objects.using(
+            ctx.db_alias
+        ).filter(
+            enti_empr=ctx.empresa,
+            enti_tien="B",
+        ).values_list(
+            "enti_clie",
+            "enti_nome",
+        )
+
+        self.fields["codigo_banco"].choices = [
+            ("", "Selecione um banco"),
+            *[
+                (
+                    str(codigo),
+                    "{} - {}".format(codigo, nome),
+                )
+                for codigo, nome in bancos
+            ],
         ]
+
+    def clean_empresa(self):
+        empresa = self.cleaned_data["empresa"]
+
+        if empresa != str(self.contexto.empresa):
+            raise forms.ValidationError(
+                "Empresa incompatível com o contexto autenticado."
+            )
+
+        return self.contexto.empresa
+
+    def clean_filial(self):
+        filial = self.cleaned_data["filial"]
+
+        if filial != str(self.contexto.filial):
+            raise forms.ValidationError(
+                "Filial incompatível com o contexto autenticado."
+            )
+
+        return self.contexto.filial
 
 
 class ConciliacaoFiltroForm(forms.Form):
     numero = forms.IntegerField(
-        label="Número", required=False, min_value=1,
-        widget=forms.NumberInput(attrs={"class": "form-control"}),
-    )
+    required=False,
+    min_value=1,
+    widget=forms.NumberInput(attrs={
+        "class": "form-control",
+        "placeholder": "Número",
+    }),
+)
+
     codigo_banco = forms.IntegerField(
-        label="Código do banco", required=False, min_value=1,
-        widget=forms.NumberInput(attrs={"class": "form-control"}),
+        required=False,
+        min_value=1,
+        widget=forms.NumberInput(attrs={
+            "class": "form-control",
+            "placeholder": "Código do banco",
+        }),
     )
+
     data = forms.DateField(
-        label="Data", required=False, input_formats=["%Y-%m-%d", "%d/%m/%Y"],
-        widget=forms.DateInput(format="%Y-%m-%d", attrs={"class": "form-control", "type": "date"}),
+        required=False,
+        input_formats=["%Y-%m-%d", "%d/%m/%Y"],
+        widget=forms.DateInput(attrs={
+            "class": "form-control",
+            "type": "date",
+        }),
     )
