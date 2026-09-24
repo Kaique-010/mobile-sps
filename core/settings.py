@@ -168,6 +168,7 @@ INSTALLED_APPS = [
     'TrocasDevolucoes',
     'conciliacao',
     # 'Gerencial',
+    'ModeloEtiquetas',
 ]
 
 # Middleware

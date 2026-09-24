@@ -1,14 +1,23 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load l10n %}
 
 {% block title %}Impressão de Etiquetas{% endblock %}
 
 {% block content %}
 <style id="estilos-etiqueta">
+    :root {
+        --etiqueta-largura: {{ modelo_etiqueta_selecionado.largura_mm|default:40|unlocalize }}mm;
+        --etiqueta-altura: {{ modelo_etiqueta_selecionado.altura_mm|default:60|unlocalize }}mm;
+        --etiqueta-padding: 3mm;
+        --etiqueta-gap-h: {{ modelo_etiqueta_selecionado.espacamento_horizontal_mm|default:2|unlocalize }}mm;
+        --etiqueta-gap-v: {{ modelo_etiqueta_selecionado.espacamento_vertical_mm|default:2|unlocalize }}mm;
+    }
+
     /* Estilos base para a etiqueta */
     .etiqueta {
-        width: 40mm;
-        height: 60mm;
+        width: var(--etiqueta-largura);
+        height: var(--etiqueta-altura);
         background-color: #ffffff !important;
         color: #000000 !important;
         border: 1px solid #ccc;
@@ -104,11 +113,6 @@
         /* Sombra apenas na tela */
     }
 
-    /* Dark mode overrides for modal preview */
-    .modal-content {
-        
-        color: #212529;
-    }
 
     /* Ocultar elementos irrelevantes na impressão nativa se o usuário usar Ctrl+P */
     @media print {
@@ -129,8 +133,9 @@
             margin: 0;
             padding: 0;
             display: grid !important;
-            grid-template-columns: repeat(auto-fill, 40mm);
-            gap: 2mm;
+            grid-template-columns: repeat(auto-fill, var(--etiqueta-largura));
+            column-gap: var(--etiqueta-gap-h);
+            row-gap: var(--etiqueta-gap-v);
             border: none;
         }
 
@@ -153,6 +158,66 @@
 <div class="container page-container">
     <div class="page-header">
         <h2 class="page-title"><i class="bi bi-boxes"></i> Impressão de Etiquetas de Produtos</h2>
+    </div>
+
+    <!-- Modelo de etiqueta (sempre visível, independe da busca) -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label for="modelo_etiqueta" class="form-label">Modelo de etiqueta</label>
+                    {# form="formEtiquetas": o select continua indo no POST de impressão mesmo estando fora do <form> #}
+                    <select name="modelo_etiqueta" id="modelo_etiqueta" class="form-select" form="formEtiquetas">
+                        {% for modelo in modelos_etiqueta %}
+                        <option
+                            value="{{ modelo.pk }}"
+                            data-nome="{{ modelo.nome|escape }}"
+                            data-tipo-papel="{{ modelo.tipo_papel }}"
+                            data-orientacao="{{ modelo.orientacao }}"
+                            data-largura="{{ modelo.largura_mm|unlocalize }}"
+                            data-altura="{{ modelo.altura_mm|unlocalize }}"
+                            data-colunas="{{ modelo.colunas }}"
+                            data-linhas="{{ modelo.linhas }}"
+                            data-margem-superior="{{ modelo.margem_superior_mm|unlocalize }}"
+                            data-margem-inferior="{{ modelo.margem_inferior_mm|unlocalize }}"
+                            data-margem-esquerda="{{ modelo.margem_esquerda_mm|unlocalize }}"
+                            data-margem-direita="{{ modelo.margem_direita_mm|unlocalize }}"
+                            data-espacamento-horizontal="{{ modelo.espacamento_horizontal_mm|unlocalize }}"
+                            data-espacamento-vertical="{{ modelo.espacamento_vertical_mm|unlocalize }}"
+                            data-padrao="{{ modelo.padrao|yesno:'1,0' }}"
+                            {% if modelo_etiqueta_selecionado.pk == modelo.pk %}
+                                selected
+                            {% elif not modelo_etiqueta_selecionado and modelo.padrao %}
+                                selected
+                            {% endif %}
+                        >{{ modelo.nome }}</option>
+                        {% empty %}
+                        <option value="">Nenhum modelo cadastrado</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-auto">
+                    <button type="button"
+                            class="btn {% if modelos_etiqueta %}btn-outline-primary{% else %}btn-primary{% endif %}"
+                            id="btnNovoModeloEtiqueta"
+                            data-bs-toggle="modal" data-bs-target="#modalEditarModeloEtiqueta">
+                        <i class="bi bi-plus-circle"></i> Novo modelo
+                    </button>
+                    <button type="button" class="btn btn-outline-primary"
+                            id="btnEditarModeloEtiqueta"
+                            data-bs-toggle="modal" data-bs-target="#modalEditarModeloEtiqueta"
+                            {% if not modelos_etiqueta %}disabled{% endif %}>
+                        <i class="bi bi-pencil-square"></i> Editar modelo
+                    </button>
+                </div>
+            </div>
+
+            <div class="alert alert-info mt-3 mb-0 {% if modelos_etiqueta %}d-none{% endif %}" id="avisoSemModelo">
+                <i class="bi bi-info-circle"></i>
+                Nenhum modelo de etiqueta cadastrado. Clique em <strong>Novo modelo</strong>
+                para criar o primeiro (tamanho, colunas, margens e espaçamentos).
+            </div>
+        </div>
     </div>
 
     <!-- Formulário de Busca -->
@@ -232,7 +297,7 @@
 
     <!-- Resultados da Busca -->
     {% if produtos_busca %}
-    <form method="post" action="">
+    <form method="post" action="" id="formEtiquetas">
         {% csrf_token %}
         <div class="card shadow-sm">
             <div class="card-header">
@@ -295,6 +360,7 @@
                     </tbody>
                 </table>
             </div>
+
             {# Modais de grade fora do <tbody> (HTML válido), mas dentro do <form> #}
             {% for produto in produtos_busca %}
                         {% if produto.tem_grade %}
@@ -499,24 +565,43 @@
         const conteudo = document.getElementById('area-impressao').innerHTML;
         const estilos = document.getElementById('estilos-etiqueta').innerHTML;
 
-        // Estilos específicos para o layout de grade na impressão
+        // Dimensões e espaçamentos definidos pelo modelo selecionado.
         const estilosLayout = `
-            body {
+            @page {
+                size: {% if modelo_etiqueta_selecionado.tipo_papel == 'A4' %}A4{% else %}auto{% endif %} {% if modelo_etiqueta_selecionado.orientacao == 'horizontal' %}landscape{% else %}portrait{% endif %};
+                margin: {{ modelo_etiqueta_selecionado.margem_superior_mm|default:0|unlocalize }}mm
+                        {{ modelo_etiqueta_selecionado.margem_direita_mm|default:0|unlocalize }}mm
+                        {{ modelo_etiqueta_selecionado.margem_inferior_mm|default:0|unlocalize }}mm
+                        {{ modelo_etiqueta_selecionado.margem_esquerda_mm|default:0|unlocalize }}mm;
+            }
+            html, body {
                 margin: 0;
-                padding: 5mm;
+                padding: 0;
+            }
+            body {
                 display: grid;
-                grid-template-columns: repeat(auto-fill, 40mm);
-                gap: 2mm;
+                grid-template-columns: repeat({{ modelo_etiqueta_selecionado.colunas|default:1|unlocalize }}, var(--etiqueta-largura));
+                column-gap: var(--etiqueta-gap-h);
+                row-gap: var(--etiqueta-gap-v);
+                align-content: start;
+                justify-content: start;
             }
             .etiqueta {
-                border: 1px dashed #ddd !important; /* Borda de corte */
+                width: var(--etiqueta-largura) !important;
+                height: var(--etiqueta-altura) !important;
+                border: 1px dashed #ddd !important;
                 box-shadow: none !important;
                 margin: 0 !important;
                 page-break-inside: avoid;
+                break-inside: avoid;
             }
         `;
 
         const janelaImpressao = window.open('', '', 'height=600,width=800');
+        if (!janelaImpressao) {
+            alert('Permita pop-ups para imprimir as etiquetas.');
+            return;
+        }
         janelaImpressao.document.write('<html><head><title>Impressão de Etiquetas</title>');
         janelaImpressao.document.write('<style>' + estilos + estilosLayout + '</style>');
         janelaImpressao.document.write('</head><body>');
@@ -547,6 +632,205 @@
             });
         }
     });
+</script>
+
+
+<!-- Modal de criação/edição de modelo (fora do formulário de impressão) -->
+<div class="modal fade" id="modalEditarModeloEtiqueta" tabindex="-1"
+     aria-labelledby="modalEditarModeloEtiquetaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalEditarModeloEtiquetaLabel">Editar modelo de etiqueta</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <form id="formEditarModeloEtiqueta" method="post" action="">
+        {% csrf_token %}
+        <input type="hidden" name="acao" id="edit_acao" value="salvar_modelo">
+        <input type="hidden" name="modelo_id" id="edit_modelo_id">
+        <div class="modal-body">
+          <div class="alert alert-danger d-none" id="erroModeloEtiqueta"></div>
+          <div class="alert alert-success d-none" id="sucessoModeloEtiqueta"></div>
+          <div class="row g-3">
+            <div class="col-md-8"><label class="form-label" for="edit_nome">Nome</label><input class="form-control" id="edit_nome" name="nome" maxlength="100" required></div>
+            <div class="col-md-4"><label class="form-label" for="edit_tipo_papel">Papel</label><select class="form-select" id="edit_tipo_papel" name="tipo_papel"><option value="A4">Folha A4</option><option value="BOBINA">Bobina</option></select></div>
+            <div class="col-md-4"><label class="form-label" for="edit_orientacao">Orientação</label><select class="form-select" id="edit_orientacao" name="orientacao"><option value="vertical">Vertical</option><option value="horizontal">Horizontal</option></select></div>
+            <div class="col-md-4"><label class="form-label" for="edit_largura_mm">Largura (mm)</label><input type="number" min="0.01" step="0.01" class="form-control" id="edit_largura_mm" name="largura_mm" required></div>
+            <div class="col-md-4"><label class="form-label" for="edit_altura_mm">Altura (mm)</label><input type="number" min="0.01" step="0.01" class="form-control" id="edit_altura_mm" name="altura_mm" required></div>
+            <div class="col-md-6"><label class="form-label" for="edit_colunas">Colunas</label><input type="number" min="1" step="1" class="form-control" id="edit_colunas" name="colunas" required></div>
+            <div class="col-md-6"><label class="form-label" for="edit_linhas">Linhas</label><input type="number" min="1" step="1" class="form-control" id="edit_linhas" name="linhas" required></div>
+            <div class="col-12"><strong>Margens (mm)</strong></div>
+            <div class="col-md-3"><label class="form-label" for="edit_margem_superior_mm">Superior</label><input type="number" min="0" step="0.01" class="form-control" id="edit_margem_superior_mm" name="margem_superior_mm" required></div>
+            <div class="col-md-3"><label class="form-label" for="edit_margem_inferior_mm">Inferior</label><input type="number" min="0" step="0.01" class="form-control" id="edit_margem_inferior_mm" name="margem_inferior_mm" required></div>
+            <div class="col-md-3"><label class="form-label" for="edit_margem_esquerda_mm">Esquerda</label><input type="number" min="0" step="0.01" class="form-control" id="edit_margem_esquerda_mm" name="margem_esquerda_mm" required></div>
+            <div class="col-md-3"><label class="form-label" for="edit_margem_direita_mm">Direita</label><input type="number" min="0" step="0.01" class="form-control" id="edit_margem_direita_mm" name="margem_direita_mm" required></div>
+            <div class="col-12"><strong>Espaçamentos (mm)</strong></div>
+            <div class="col-md-6"><label class="form-label" for="edit_espacamento_horizontal_mm">Horizontal</label><input type="number" min="0" step="0.01" class="form-control" id="edit_espacamento_horizontal_mm" name="espacamento_horizontal_mm" required></div>
+            <div class="col-md-6"><label class="form-label" for="edit_espacamento_vertical_mm">Vertical</label><input type="number" min="0" step="0.01" class="form-control" id="edit_espacamento_vertical_mm" name="espacamento_vertical_mm" required></div>
+            <div class="col-12">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="edit_padrao" name="padrao" value="1">
+                <label class="form-check-label" for="edit_padrao">Definir como modelo padrão</label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btnSalvarModeloEtiqueta"><i class="bi bi-save"></i> <span id="txtSalvarModelo">Salvar alterações</span></button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const select = document.getElementById("modelo_etiqueta");
+  const form = document.getElementById("formEditarModeloEtiqueta");
+  const modalEl = document.getElementById("modalEditarModeloEtiqueta");
+  const erro = document.getElementById("erroModeloEtiqueta");
+  const sucesso = document.getElementById("sucessoModeloEtiqueta");
+  const salvar = document.getElementById("btnSalvarModeloEtiqueta");
+  const txtSalvar = document.getElementById("txtSalvarModelo");
+  const titulo = document.getElementById("modalEditarModeloEtiquetaLabel");
+  const inputAcao = document.getElementById("edit_acao");
+  const inputId = document.getElementById("edit_modelo_id");
+  const inputPadrao = document.getElementById("edit_padrao");
+  const btnEditar = document.getElementById("btnEditarModeloEtiqueta");
+  const btnNovo = document.getElementById("btnNovoModeloEtiqueta");
+  const avisoSemModelo = document.getElementById("avisoSemModelo");
+  if (!select || !form || !modalEl) return;
+
+  // nome do campo no form -> chave do dataset no <option>
+  const fields = {
+    nome: "nome", tipo_papel: "tipoPapel", orientacao: "orientacao",
+    largura_mm: "largura", altura_mm: "altura", colunas: "colunas", linhas: "linhas",
+    margem_superior_mm: "margemSuperior", margem_inferior_mm: "margemInferior",
+    margem_esquerda_mm: "margemEsquerda", margem_direita_mm: "margemDireita",
+    espacamento_horizontal_mm: "espacamentoHorizontal", espacamento_vertical_mm: "espacamentoVertical"
+  };
+
+  // Valores sugeridos ao criar um modelo novo
+  const padroesNovo = {
+    nome: "", tipo_papel: "A4", orientacao: "vertical",
+    largura_mm: "40", altura_mm: "60", colunas: "1", linhas: "1",
+    margem_superior_mm: "0", margem_inferior_mm: "0",
+    margem_esquerda_mm: "0", margem_direita_mm: "0",
+    espacamento_horizontal_mm: "2", espacamento_vertical_mm: "2"
+  };
+
+  function limparMensagens() {
+    erro.classList.add("d-none"); sucesso.classList.add("d-none");
+    erro.textContent = ""; sucesso.textContent = "";
+  }
+
+  function modoEditar() {
+    inputAcao.value = "salvar_modelo";
+    titulo.textContent = "Editar modelo de etiqueta";
+    txtSalvar.textContent = "Salvar alterações";
+  }
+
+  function modoNovo() {
+    inputAcao.value = "novo_modelo";
+    titulo.textContent = "Novo modelo de etiqueta";
+    txtSalvar.textContent = "Criar modelo";
+  }
+
+  function preencherEdicao() {
+    const opt = select.options[select.selectedIndex];
+    if (!opt || !opt.value) return;
+    modoEditar();
+    inputId.value = opt.value;
+    Object.entries(fields).forEach(([name, dataKey]) => {
+      const input = document.getElementById("edit_" + name);
+      if (input) input.value = opt.dataset[dataKey] || "";
+    });
+    inputPadrao.checked = opt.dataset.padrao === "1";
+    limparMensagens();
+  }
+
+  function preencherNovo() {
+    modoNovo();
+    inputId.value = "";
+    Object.entries(padroesNovo).forEach(([name, valor]) => {
+      const input = document.getElementById("edit_" + name);
+      if (input) input.value = valor;
+    });
+    // O primeiro modelo vira padrão automaticamente no servidor.
+    inputPadrao.checked = !select.querySelector("option[value]:not([value=''])");
+    limparMensagens();
+  }
+
+  function aplicarNoOption(opt, m) {
+    opt.value = m.pk;
+    opt.textContent = m.nome;
+    Object.entries(fields).forEach(([name, dataKey]) => {
+      opt.dataset[dataKey] = m[name];
+    });
+    opt.dataset.padrao = m.padrao ? "1" : "0";
+  }
+
+  function marcarPadrao(optAtual, m) {
+    if (!m.padrao) return;
+    Array.from(select.options).forEach(o => { o.dataset.padrao = "0"; });
+    optAtual.dataset.padrao = "1";
+  }
+
+  btnEditar?.addEventListener("click", preencherEdicao);
+  btnNovo?.addEventListener("click", preencherNovo);
+  select.addEventListener("change", preencherEdicao);
+
+  form.addEventListener("submit", async function (event) {
+    event.preventDefault();
+    limparMensagens();
+    salvar.disabled = true;
+
+    const criando = inputAcao.value === "novo_modelo";
+
+    try {
+      const response = await fetch(window.location.href, {
+        method: "POST", body: new FormData(form),
+        headers: {"X-Requested-With": "XMLHttpRequest"},
+        credentials: "same-origin"
+      });
+      const data = await response.json();
+      if (!response.ok || !data.sucesso) throw new Error(data.mensagem || "Falha ao salvar.");
+
+      const m = data.modelo;
+      let opt;
+
+      if (criando) {
+        // Remove o placeholder "Nenhum modelo cadastrado", se existir
+        Array.from(select.options).forEach(o => { if (!o.value) o.remove(); });
+        opt = document.createElement("option");
+        select.appendChild(opt);
+        aplicarNoOption(opt, m);
+        select.value = String(m.pk);
+        if (btnEditar) btnEditar.disabled = false;
+        if (btnNovo) {
+          btnNovo.classList.remove("btn-primary");
+          btnNovo.classList.add("btn-outline-primary");
+        }
+        avisoSemModelo?.classList.add("d-none");
+      } else {
+        opt = select.options[select.selectedIndex];
+        aplicarNoOption(opt, m);
+      }
+
+      marcarPadrao(opt, m);
+
+      sucesso.textContent = data.mensagem || (criando ? "Modelo criado." : "Modelo atualizado.");
+      sucesso.classList.remove("d-none");
+      setTimeout(() => bootstrap.Modal.getInstance(modalEl)?.hide(), 650);
+    } catch (e) {
+      erro.textContent = e.message || "Erro ao salvar o modelo.";
+      erro.classList.remove("d-none");
+    } finally {
+      salvar.disabled = false;
+    }
+  });
+});
 </script>
 
 {% endblock %}
