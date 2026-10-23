@@ -144,6 +144,7 @@ class Entidades(models.Model):
     enti_diag = models.CharField(max_length=100, blank=True, null=True)
     enti_coco = models.CharField(max_length=100, blank=True, null=True)
     enti_dico = models.CharField(max_length=100, blank=True, null=True)
+    enti_dana = models.DateField(blank=True, null=True)
     
     
     

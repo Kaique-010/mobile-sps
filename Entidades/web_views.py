@@ -506,15 +506,36 @@ class ExportarEntidadesView(DBAndSlugMixin, View):
         return response
 
 
-
+from django.db.models.functions import ExtractDay, ExtractMonth
 class RelatorioEntidadesView(TemplateView):
     template_name = "Entidades/relatorio_entidades.html"
 
+    def get_queryset_aniversariantes(self, meses=None):
+        queryset = Entidades.objects.filter(
+            enti_dana__isnull=False
+        )
+
+        if meses:
+            queryset = queryset.filter(
+                enti_dana__month__in=meses
+            )
+
+        return queryset.annotate(
+            mes=ExtractMonth("enti_dana"),
+            dia=ExtractDay("enti_dana"),
+        ).order_by("mes", "dia", "enti_nome")
+
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+
         try:
             from Licencas.models import Empresas
-            ctx["empresas"] = list(Empresas.objects.all().values("empr_codi", "empr_nome"))
+            ctx["empresas"] = list(
+                Empresas.objects.all().values(
+                    "empr_codi", "empr_nome"
+                )
+            )
         except Exception:
             ctx["empresas"] = []
+
         return ctx

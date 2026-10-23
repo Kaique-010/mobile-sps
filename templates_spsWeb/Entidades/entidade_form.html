@@ -238,8 +238,8 @@
                 <div class="form-group">
                   <label for="{{ form.enti_arqu.id_for_label }}">Arquiteto Responsável</label>
                   {{ form.enti_arqu }}
-                  <input id="autocomplete-enti-arqu" type="text" class="form-control mt-1 " value="{{ form.enti_arqu.value }}"
-                    data-enti-arqu="{{ form.enti_arqu.value }}"
+                  <input id="autocomplete-enti-arqu" type="text" class="form-control mt-1 "
+                    value="{{ form.enti_arqu.value }}" data-enti-arqu="{{ form.enti_arqu.value }}"
                     placeholder="Buscar arquiteto por nome ou código">
                   {% if form.enti_arqu.errors %}
                   <div class="text-danger">
@@ -368,12 +368,24 @@
                 </div>
               </div>
 
-              <div class="col-md-6">
+              <div class="col-md-3">
                 <div class="form-group">
                   <label for="{{ form.enti_emai.id_for_label }}">Email Pessoal</label>
                   {{ form.enti_emai }} {% if form.enti_emai.errors %}
                   <div class="text-danger">
                     {% for error in form.enti_emai.errors %}
+                    <p>{{ error }}</p>
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+               <div class="col-md-3">
+                <div class="form-group">
+                  <label for="{{ form.enti_dana.id_for_label }}">Data de Aniversário</label>
+                  {{ form.enti_dana }} {% if form.enti_dana.errors %}
+                  <div class="text-danger">
+                    {% for error in form.enti_dana.errors %}
                     <p>{{ error }}</p>
                     {% endfor %}
                   </div>

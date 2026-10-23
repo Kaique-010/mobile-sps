@@ -20,6 +20,7 @@ from django.core.cache import cache
 from .services.entidades_tipooutros import EntidadeServico
 from .services.cadastro_rapido import EntidadeCadastroRapido
 from .services.cadastro_rapido_simplificado import EntidadeCadastroRapidoSimplificado
+from .services.relatorio import EntidadesRelatorioService
 from .services.entidades_filters import apply_vinculo_filters
 
 
@@ -51,6 +52,7 @@ class EntidadesViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
         classificacao = self.request.query_params.get('enti_espe_enti')
         situacao = self.request.query_params.get('enti_situ')
         search_query = self.request.query_params.get('search')
+        
         
         # Filtro por empresa primeiro (mais eficiente)
         if empresa_id:
@@ -307,11 +309,10 @@ class EntidadesViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
 
 
 
-
 class EntidadesRelatorioAPI(APIView):
-    
-    def get(self, request, slug=None):
-        empresa_param = request.GET.get("empresa")
+ 
+    @staticmethod
+    def _resolver_banco(request, slug):
         banco = None
         try:
             if slug:
@@ -323,56 +324,27 @@ class EntidadesRelatorioAPI(APIView):
                 banco = get_licenca_db_config(request)
             except Exception:
                 banco = 'default'
-
-        qs = Entidades.objects.using(banco).all()
-
-        if empresa_param is None:
-            empresa_sess = request.session.get("empresa_id") or request.headers.get("X-Empresa")
-            empresa = empresa_sess
-        else:
-            empresa = empresa_param.strip()
-
-        if empresa:
-            qs = qs.filter(enti_empr=str(empresa))
-
-        # ativos/inativos
-        ativos = qs.filter(enti_situ='1').count()
-        inativos = qs.filter(enti_situ='0').count()
-
-        # agrupamento por tipo
-        por_tipo = list(
-            qs.values("enti_tipo_enti")
-              .annotate(total=Count("enti_clie"))
-              .order_by("-total")
+        return banco
+ 
+    def get(self, request, slug=None):
+        banco = self._resolver_banco(request, slug)
+ 
+        empresa = request.GET.get("empresa")
+        if empresa is None:
+            empresa = request.session.get("empresa_id") or request.headers.get("X-Empresa")
+ 
+        try:
+            situacao = EntidadesRelatorioService.normalizar_situacao(request.GET.get("situacao"))
+            meses = EntidadesRelatorioService.normalizar_meses(request.GET.get("meses"))
+        except ValueError as e:
+            return Response({"erro": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+ 
+        payload = EntidadesRelatorioService.gerar(
+            banco=banco,
+            empresa=empresa,
+            situacao=situacao,
+            meses=meses,
+            tipo=(request.GET.get("tipo") or "").strip(),
+            busca=request.GET.get("busca"),
         )
-
-        listar = (request.GET.get("listar") or "").strip()
-        situacao = (request.GET.get("situacao") or "").strip().lower()
-        tipo = (request.GET.get("tipo") or "").strip()
-
-        payload = {
-            "ativos": ativos,
-            "inativos": inativos,
-            "por_tipo": por_tipo,
-        }
-
-        if listar == "situacao" and situacao in {"ativos", "inativos"}:
-            alvo = '1' if situacao == 'ativos' else '0'
-            entidades = list(
-                qs.filter(enti_situ=alvo)
-                  .values("enti_clie", "enti_nome", "enti_tipo_enti", "enti_emai", "enti_fone", "enti_celu", "enti_cida", "enti_esta")
-                  .order_by("enti_nome")[:500]
-            )
-            payload["entidades"] = entidades
-            payload["filtro"] = {"tipo": "situacao", "valor": situacao}
-
-        elif listar == "tipo" and tipo:
-            entidades = list(
-                qs.filter(enti_tipo_enti=tipo)
-                  .values("enti_clie", "enti_nome", "enti_tipo_enti", "enti_emai", "enti_fone", "enti_celu", "enti_cida", "enti_esta", "enti_situ")
-                  .order_by("enti_nome")[:500]
-            )
-            payload["entidades"] = entidades
-            payload["filtro"] = {"tipo": "tipo", "valor": tipo}
-
         return Response(payload)

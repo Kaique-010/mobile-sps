@@ -2,66 +2,87 @@
 {% load static %}
 {% block content %}
 
-
 <style>
-    .metric-card {
-        border-radius: 12px;
-    }
+    .chart-box { height: 160px; position: relative; }
+    .chart-box canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }
 
-    .metric-card .card-body {
-        padding: 1rem 1.25rem;
-    }
+    .kpi-card { border-radius: 12px; cursor: pointer; transition: transform .25s ease, box-shadow .25s ease, outline-color .25s ease; outline: 3px solid transparent; }
+    .kpi-card:hover { transform: translateY(-4px); }
+    .kpi-card.selecionado { outline-color: rgba(13, 110, 253, .55); }
 
-    .chart-box {
-        height: 120px;
-        position: relative;
-    }
+    #card-ativos { background: linear-gradient(135deg, #bbd4bb 0%, #648664 100%); color: #206b2c; }
+    #card-inativos { background: linear-gradient(135deg, #d4bbaa 0%, #866464 100%); color: #db2929; }
 
-    .chart-box canvas {
-        position: absolute;
-        inset: 0;
-        width: 100% !important;
-        height: 100% !important;
-    }
-    #card-ativos {
-        background: linear-gradient(135deg, #bbd4bb 0%, #648664 100%);
-        color: #206b2c;
-        box-shadow: 0 4px 8px rgba(216, 199, 199, 0.1);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-    #card-ativos:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 16px rgba(216, 199, 199, 0.2);
-    }
-    #card-inativos {
-        background: linear-gradient(135deg, #d4bbaa 0%, #866464 100%);
-        color: #db2929;
-        box-shadow: 0 4px 8px rgba(255, 185, 185, 0.1);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-    #card-inativos:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 16px rgba(255, 185, 185, 0.2);
-    }
+    #card-tabela { transition: opacity .2s ease; }
+    #meses-menu { min-width: 280px; }
+    .chip { font-weight: 500; }
+    .chip button { color: inherit; opacity: .6; }
+    .chip button:hover { opacity: 1; }
 </style>
+
 <div class="container mt-4">
-    <h2 class="mb-4 text-center">Relatório de Entidades</h2>
-    <div class="d-flex align-items-center gap-2 mb-3">
-        <div class="col-9"></div>
-        <label class="me-2 mb-2">Empresa:</label>
-        <select id="filtro-empresa" class="form-select form-select-sm" style="max-width: 280px;">
-            <option value="">Todas</option>
-            {% for empresa in empresas %}
-            <option value="{{ empresa.empr_codi }}">{{ empresa.empr_nome }}</option>
-            {% endfor %}
-            <option value="Outros">Outros</option>
-        </select>
-        <button id="btn-filtrar" class="btn btn-outline-primary btn-sm">Filtrar</button>
+    <h2 class="mb-3 text-center">Relatório de Entidades</h2>
+
+    <!-- Filtros -->
+    <div class="card shadow-sm mb-3">
+        <div class="card-body py-3">
+            <div class="row g-2 align-items-end">
+                <div class="col-12 col-md-3">
+                    <label for="filtro-empresa" class="form-label small mb-1">Empresa</label>
+                    <select id="filtro-empresa" class="form-select form-select-sm">
+                        <option value="">Todas</option>
+                        {% for empresa in empresas %}
+                        <option value="{{ empresa.empr_codi }}">{{ empresa.empr_nome }}</option>
+                        {% endfor %}
+                        <option value="Outros">Outros</option>
+                    </select>
+                </div>
+
+                <div class="col-6 col-md-2">
+                    <label for="filtro-situacao" class="form-label small mb-1">Situação</label>
+                    <select id="filtro-situacao" class="form-select form-select-sm">
+                        <option value="">Todas</option>
+                        <option value="1">Ativos</option>
+                        <option value="0">Inativos</option>
+                    </select>
+                </div>
+
+                <div class="col-6 col-md-2">
+                    <label class="form-label small mb-1">Aniversário</label>
+                    <div class="dropdown">
+                        <button id="btn-meses" type="button"
+                                class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 text-start"
+                                data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                            Todos os meses
+                        </button>
+                        <div id="meses-menu" class="dropdown-menu p-2">
+                            <div class="d-flex gap-1 mb-2">
+                                <button type="button" class="btn btn-sm btn-outline-primary flex-fill" id="btn-mes-atual">Este mês</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary flex-fill" id="btn-meses-limpar">Limpar</button>
+                            </div>
+                            <div class="row g-1" id="meses-grid"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-3">
+                    <label for="filtro-busca" class="form-label small mb-1">Buscar</label>
+                    <input id="filtro-busca" type="search" class="form-control form-control-sm"
+                           placeholder="Nome, número ou código" autocomplete="off">
+                </div>
+
+                <div class="col-12 col-md-auto">
+                    <button id="btn-limpar" type="button" class="btn btn-outline-secondary btn-sm">Limpar filtros</button>
+                </div>
+            </div>
+            <div id="chips" class="d-flex flex-wrap gap-1 mt-2"></div>
+        </div>
     </div>
 
-    <div class="row g-3 mb-4">
+    <!-- KPIs -->
+    <div class="row g-3 mb-3">
         <div class="col-12 col-md-6">
-            <div class="card shadow-sm h-100 border-0" id="card-ativos" role="button">
+            <div class="card shadow-sm h-100 border-0 kpi-card" id="card-ativos" role="button" tabindex="0">
                 <div class="card-body d-flex align-items-center justify-content-between">
                     <div>
                         <div class="text-secondary">Ativos</div>
@@ -72,7 +93,7 @@
             </div>
         </div>
         <div class="col-12 col-md-6">
-            <div class="card shadow-sm h-100 border-0" id="card-inativos" role="button">
+            <div class="card shadow-sm h-100 border-0 kpi-card" id="card-inativos" role="button" tabindex="0">
                 <div class="card-body d-flex align-items-center justify-content-between">
                     <div>
                         <div class="text-secondary">Inativos</div>
@@ -84,59 +105,66 @@
         </div>
     </div>
 
+    <!-- Gráficos -->
     <div class="row g-3 align-items-stretch">
         <div class="col-12 col-lg-4">
             <div class="card shadow-sm h-100">
                 <div class="card-header bg-transparent fw-semibold">Entidades por Tipo</div>
-                <div class="card-body">
-                    <div class="chart-box"><canvas id="graficoTipos"></canvas></div>
-                </div>
+                <div class="card-body"><div class="chart-box"><canvas id="graficoTipos"></canvas></div></div>
             </div>
         </div>
         <div class="col-12 col-lg-4">
             <div class="card shadow-sm h-100">
-                <div class="card-header bg-transparent fw-semibold">Distribuição (Ativos x Inativos)</div>
-                <div class="card-body">
-                    <div class="chart-box"><canvas id="graficoSituacao"></canvas></div>
-                </div>
+                <div class="card-header bg-transparent fw-semibold">Ativos x Inativos</div>
+                <div class="card-body"><div class="chart-box"><canvas id="graficoSituacao"></canvas></div></div>
             </div>
         </div>
         <div class="col-12 col-lg-4">
             <div class="card shadow-sm h-100">
                 <div class="card-header bg-transparent fw-semibold">Resumo</div>
-                <div class="card-body d-flex align-items-center justify-content-between">
-                    <div>
-                        <div class="text-secondary">Total</div>
-                        <div class="fs-5" id="kpi-total">...</div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <span class="text-secondary">Total (filtro atual)</span>
+                        <span class="fs-5 fw-semibold" id="kpi-total">...</span>
                     </div>
-                    <div class="text-secondary small">Clique nas métricas para listar</div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <span class="text-secondary">Na lista</span>
+                        <span class="fs-5 fw-semibold" id="kpi-listado">...</span>
+                    </div>
+                    <div class="text-secondary small mt-3">Clique nos cards, barras ou na rosca para filtrar.</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="card mt-4 shadow-sm">
-        <div class="card-header bg-transparent fw-semibold">Entidades</div>
+    <!-- Tabela -->
+    <div class="card mt-4 shadow-sm" id="card-tabela">
+        <div class="card-header bg-transparent fw-semibold d-flex justify-content-between align-items-center">
+            <span>Entidades</span>
+            <small class="text-secondary fw-normal" id="info-lista"></small>
+        </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-sm align-middle" id="tabela-entidades">
+                <table class="table table-sm table-hover align-middle" id="tabela-entidades">
                     <thead>
                         <tr>
                             <th>ID</th>
                             <th>Nome</th>
+                            <th>Nascimento</th>
                             <th>Tipo</th>
                             <th>Cidade/UF</th>
                             <th>Contato</th>
                             <th>Email</th>
+                            <th>Situação</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
                 </table>
             </div>
-            <div class="d-flex align-items-center justify-content-between mt-2" id="paginacao-entidades">
+            <div class="d-flex align-items-center justify-content-between mt-2">
                 <div class="d-flex align-items-center gap-2">
-                    <label class="text-secondary">Itens por página</label>
-                    <select id="page-size" class="form-select form-select-sm" style="width: 100px;">
+                    <label class="text-secondary small" for="page-size">Itens por página</label>
+                    <select id="page-size" class="form-select form-select-sm" style="width: 90px;">
                         <option value="10">10</option>
                         <option value="20">20</option>
                         <option value="50">50</option>
@@ -144,7 +172,7 @@
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <button class="btn btn-outline-secondary btn-sm" id="btn-prev">Anterior</button>
-                    <span id="page-info" class="text-secondary"></span>
+                    <span id="page-info" class="text-secondary small"></span>
                     <button class="btn btn-outline-secondary btn-sm" id="btn-next">Próxima</button>
                 </div>
             </div>
@@ -154,174 +182,270 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // static/js/relatorio_entidades.js
+(() => {
+    const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    const PALETA = ['#2a9dff', '#00c4b3', '#ff7d00', '#7a53ff', '#17a2b8', '#dc3545'];
 
-    async function carregarDados(filtros = {}) {
+    // Estado único de filtros: tudo (selects, cards, gráficos, chips) lê e escreve aqui.
+    const estado = { empresa: '', situacao: '', tipo: '', busca: '', meses: new Set() };
+    const pager = { page: 1, size: 10, itens: [] };
+    const charts = { tipos: null, situacao: null };
+    let tiposAtuais = [];
+    let controller = null;
+    let timer = null;
+
+    const $ = (id) => document.getElementById(id);
+    const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const fmtData = (v) => {
+        if (!v) return '';
+        const s = String(v);
+        return s.includes('-') ? s.slice(0, 10).split('-').reverse().join('/') : s;
+    };
+
+    // ---------- Dados ----------
+    async function carregar() {
+        if (controller) controller.abort();
+        controller = new AbortController();
+
         const slug = localStorage.getItem('slug');
-        const qs = new URLSearchParams(filtros).toString();
-        const f = window.authFetch || fetch;
-        const resp = await f(`/api/${slug}/entidades/relatorio/?${qs}`);
-        if (!resp.ok) throw new Error(`Erro ao carregar dados: ${resp.status}`);
-        return await resp.json();
-    }
+        const params = new URLSearchParams({ empresa: estado.empresa });
+        if (estado.situacao) params.set('situacao', estado.situacao);
+        if (estado.tipo) params.set('tipo', estado.tipo);
+        if (estado.busca) params.set('busca', estado.busca);
+        if (estado.meses.size) params.set('meses', [...estado.meses].sort((a, b) => a - b).join(','));
 
-    function atualizarKPIs(d) {
-        document.getElementById("kpi-ativos").innerText = d.ativos;
-        document.getElementById("kpi-inativos").innerText = d.inativos;
-        const totalEl = document.getElementById("kpi-total");
-        if (totalEl) totalEl.innerText = (Number(d.ativos || 0) + Number(d.inativos || 0));
-    }
-
-    let graficoTipos = null;
-    let graficoSituacao = null;
-
-    function atualizarGrafico(dados, kpis) {
-        const labels = dados.map(x => x.enti_tipo_enti);
-        const valores = dados.map(x => x.total);
-
-        if (graficoTipos) graficoTipos.destroy();
-        if (graficoSituacao) graficoSituacao.destroy();
-
-        const ctxBar = document.getElementById("graficoTipos");
-        const colors = ['#2a9dff', '#00c4b3', '#ff7d00', '#7a53ff', '#17a2b8', '#dc3545'];
-        graficoTipos = new Chart(ctxBar, {
-            type: "bar",
-            data: {
-                labels,
-                datasets: [{
-                    label: "Quantidade",
-                    data: valores,
-                    backgroundColor: labels.map((_, i) => colors[i % colors.length]),
-                    borderRadius: 6,
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: { enabled: true },
-                },
-                scales: {
-                    y: { beginAtZero: true, grid: { drawBorder: false } },
-                    x: { grid: { display: false } }
-                },
-                onClick: async (evt, elements) => {
-                    if (!elements?.length) return;
-                    const idx = elements[0].index;
-                    const tipo = labels[idx];
-                    await listarPorTipo(tipo);
-                }
-            }
-        });
-
-        const ctxPie = document.getElementById("graficoSituacao");
-        graficoSituacao = new Chart(ctxPie, {
-            type: "doughnut",
-            data: {
-                labels: ["Ativos", "Inativos"],
-                datasets: [{
-                    data: [kpis.ativos, kpis.inativos],
-                    backgroundColor: ["#00c4b3", "#dc3545"],
-                }]
-            },
-            options: {
-                maintainAspectRatio: false,
-                plugins: { legend: { position: 'bottom' } },
-                cutout: '60%',
-                onClick: async (evt, elements) => {
-                    if (!elements?.length) return;
-                    const idx = elements[0].index;
-                    const situacao = idx === 0 ? 'ativos' : 'inativos';
-                    await listarPorSituacao(situacao);
-                }
-            }
-        });
-    }
-
-    let allEntidades = [];
-    let currentPage = 1;
-    let pageSize = 10;
-
-    function setListaEntidades(items) {
-        allEntidades = Array.isArray(items) ? items : [];
-        currentPage = 1;
-        renderPagina();
-    }
-
-    function renderPagina() {
-        const tbody = document.querySelector('#tabela-entidades tbody');
-        tbody.innerHTML = '';
-        const start = (currentPage - 1) * pageSize;
-        const end = start + pageSize;
-        const pageItems = allEntidades.slice(start, end);
-        pageItems.forEach(e => {
-            const tr = document.createElement('tr');
-            const contato = e.enti_fone || e.enti_celu || '';
-            tr.innerHTML = `
-                <td>${e.enti_clie ?? ''}</td>
-                <td>${e.enti_nome ?? ''}</td>
-                <td>${e.enti_tipo_enti ?? ''}</td>
-                <td>${(e.enti_cida ?? '')}${e.enti_esta ? '/' + e.enti_esta : ''}</td>
-                <td>${contato}</td>
-                <td>${e.enti_emai ?? ''}</td>
-            `;
-            tbody.appendChild(tr);
-        });
-        updatePagerUI();
-    }
-
-    function updatePagerUI() {
-        const totalPages = Math.max(1, Math.ceil(allEntidades.length / pageSize));
-        const info = document.getElementById('page-info');
-        info.textContent = `${currentPage} / ${totalPages}`;
-        document.getElementById('btn-prev').disabled = currentPage <= 1;
-        document.getElementById('btn-next').disabled = currentPage >= totalPages;
-    }
-
-    async function listarPorSituacao(situacao) {
-        const slug = localStorage.getItem('slug');
-        const empresa = document.getElementById("filtro-empresa").value;
-        const qs = new URLSearchParams({ empresa, listar: 'situacao', situacao }).toString();
-        const f = window.authFetch || fetch;
-        const resp = await f(`/api/${slug}/entidades/relatorio/?${qs}`);
-        const data = await resp.json();
-        setListaEntidades(data.entidades || []);
-    }
-
-    async function listarPorTipo(tipo) {
-        const slug = localStorage.getItem('slug');
-        const empresa = document.getElementById("filtro-empresa").value;
-        const qs = new URLSearchParams({ empresa, listar: 'tipo', tipo }).toString();
-        const f = window.authFetch || fetch;
-        const resp = await f(`/api/${slug}/entidades/relatorio/?${qs}`);
-        const data = await resp.json();
-        setListaEntidades(data.entidades || []);
-    }
-
-    async function aplicarFiltros() {
+        $('card-tabela').style.opacity = '.5';
         try {
-            const filtros = {
-                empresa: document.getElementById("filtro-empresa").value,
-            };
-            const dados = await carregarDados(filtros);
-            atualizarKPIs(dados);
-            atualizarGrafico(dados.por_tipo || [], { ativos: dados.ativos, inativos: dados.inativos });
+            const f = window.authFetch || fetch;
+            const resp = await f(`/api/${slug}/entidades/relatorio/?${params}`, { signal: controller.signal });
+            if (!resp.ok) {
+                const erro = await resp.json().catch(() => ({}));
+                throw new Error(erro.erro || `Erro ao carregar dados: ${resp.status}`);
+            }
+            render(await resp.json());
         } catch (e) {
-            if (window.showToast) window.showToast("Falha ao carregar relatório", { variant: "danger", delay: 4000 });
+            if (e.name === 'AbortError') return;
             console.warn(e);
+            if (window.showToast) window.showToast(e.message || 'Falha ao carregar relatório', { variant: 'danger', delay: 4000 });
+        } finally {
+            $('card-tabela').style.opacity = '1';
         }
     }
 
-    document.getElementById("btn-filtrar").addEventListener("click", aplicarFiltros);
-    document.getElementById("card-ativos").addEventListener("click", () => listarPorSituacao('ativos'));
-    document.getElementById("card-inativos").addEventListener("click", () => listarPorSituacao('inativos'));
-    document.getElementById('btn-prev').addEventListener('click', () => { currentPage = Math.max(1, currentPage - 1); renderPagina(); });
-    document.getElementById('btn-next').addEventListener('click', () => { currentPage = currentPage + 1; renderPagina(); });
-    document.getElementById('page-size').addEventListener('change', (e) => { pageSize = parseInt(e.target.value || '10', 10); currentPage = 1; renderPagina(); });
+    function agendar(ms = 0) {
+        clearTimeout(timer);
+        timer = setTimeout(carregar, ms);
+    }
 
-    // carrega ao abrir
-    aplicarFiltros();
+    // ---------- Render ----------
+    function render(d) {
+        $('kpi-ativos').textContent = d.ativos;
+        $('kpi-inativos').textContent = d.inativos;
+        $('kpi-total').textContent = d.total;
+        $('kpi-listado').textContent = d.total_listado;
 
+        $('card-ativos').classList.toggle('selecionado', estado.situacao === '1');
+        $('card-inativos').classList.toggle('selecionado', estado.situacao === '0');
+
+        renderGraficos(d);
+        renderChips();
+
+        pager.itens = d.entidades || [];
+        pager.page = 1;
+        renderTabela();
+
+        $('info-lista').textContent = d.limitado
+            ? `Mostrando os primeiros ${pager.itens.length} de ${d.total_listado} — refine os filtros`
+            : `${d.total_listado} registro(s)`;
+    }
+
+    function renderGraficos(d) {
+        tiposAtuais = d.por_tipo.map(x => x.enti_tipo_enti);
+        const labels = tiposAtuais.map(t => t || 'Sem tipo');
+        const valores = d.por_tipo.map(x => x.total);
+        const cores = tiposAtuais.map((t, i) => {
+            const c = PALETA[i % PALETA.length];
+            return (estado.tipo && t !== estado.tipo) ? c + '55' : c;
+        });
+
+        if (!charts.tipos) {
+            charts.tipos = new Chart($('graficoTipos'), {
+                type: 'bar',
+                data: { labels, datasets: [{ label: 'Quantidade', data: valores, backgroundColor: cores, borderRadius: 6 }] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true }, x: { grid: { display: false } } },
+                    onHover: (evt, els) => { evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
+                    onClick: (evt, els) => {
+                        if (!els.length) return;
+                        const tipo = tiposAtuais[els[0].index];
+                        if (!tipo) return;
+                        estado.tipo = estado.tipo === tipo ? '' : tipo;
+                        agendar();
+                    },
+                },
+            });
+        } else {
+            charts.tipos.data.labels = labels;
+            charts.tipos.data.datasets[0].data = valores;
+            charts.tipos.data.datasets[0].backgroundColor = cores;
+            charts.tipos.update();
+        }
+
+        const dadosSit = [d.ativos, d.inativos];
+        if (!charts.situacao) {
+            charts.situacao = new Chart($('graficoSituacao'), {
+                type: 'doughnut',
+                data: { labels: ['Ativos', 'Inativos'], datasets: [{ data: dadosSit, backgroundColor: ['#00c4b3', '#dc3545'] }] },
+                options: {
+                    maintainAspectRatio: false,
+                    cutout: '60%',
+                    plugins: { legend: { position: 'right' } },
+                    onHover: (evt, els) => { evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
+                    onClick: (evt, els) => {
+                        if (!els.length) return;
+                        alternarSituacao(els[0].index === 0 ? '1' : '0');
+                    },
+                },
+            });
+        } else {
+            charts.situacao.data.datasets[0].data = dadosSit;
+            charts.situacao.update();
+        }
+    }
+
+    function renderTabela() {
+        const tbody = document.querySelector('#tabela-entidades tbody');
+        const ini = (pager.page - 1) * pager.size;
+        const itens = pager.itens.slice(ini, ini + pager.size);
+
+        if (!itens.length) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-secondary py-4">Nenhuma entidade encontrada para os filtros selecionados.</td></tr>';
+        } else {
+            tbody.innerHTML = itens.map(e => {
+                const situ = e.enti_situ === '1'
+                    ? '<span class="badge text-bg-success">Ativo</span>'
+                    : (e.enti_situ === '0' ? '<span class="badge text-bg-danger">Inativo</span>' : '');
+                const cidade = `${e.enti_cida ?? ''}${e.enti_esta ? '/' + e.enti_esta : ''}`;
+                return `<tr>
+                    <td>${esc(e.enti_clie)}</td>
+                    <td>${esc(e.enti_nome)}</td>
+                    <td>${esc(fmtData(e.enti_dana))}</td>
+                    <td>${esc(e.enti_tipo_enti)}</td>
+                    <td>${esc(cidade)}</td>
+                    <td>${esc(e.enti_fone || e.enti_celu)}</td>
+                    <td>${esc(e.enti_emai)}</td>
+                    <td>${situ}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        const totalPaginas = Math.max(1, Math.ceil(pager.itens.length / pager.size));
+        $('page-info').textContent = `${pager.page} / ${totalPaginas}`;
+        $('btn-prev').disabled = pager.page <= 1;
+        $('btn-next').disabled = pager.page >= totalPaginas;
+    }
+
+    function renderChips() {
+        const chips = [];
+        if (estado.empresa) chips.push(['empresa', 'Empresa: ' + $('filtro-empresa').selectedOptions[0].textContent]);
+        if (estado.situacao) chips.push(['situacao', estado.situacao === '1' ? 'Ativos' : 'Inativos']);
+        if (estado.tipo) chips.push(['tipo', 'Tipo: ' + estado.tipo]);
+        if (estado.busca) chips.push(['busca', 'Busca: ' + estado.busca]);
+        [...estado.meses].sort((a, b) => a - b).forEach(m => chips.push([`mes-${m}`, MESES[m - 1]]));
+
+        $('chips').innerHTML = chips.map(([k, label]) =>
+            `<span class="badge rounded-pill text-bg-light border chip">${esc(label)}
+                <button type="button" class="btn p-0 border-0 lh-1 ms-1" data-chip="${esc(k)}" aria-label="Remover filtro">&times;</button>
+            </span>`).join('');
+
+        $('btn-limpar').classList.toggle('d-none', chips.length === 0);
+    }
+
+    // ---------- Meses ----------
+    function montarMeses() {
+        $('meses-grid').innerHTML = MESES.map((nome, i) => `
+            <div class="col-4">
+                <input type="checkbox" class="btn-check mes-check" id="mes-${i + 1}" value="${i + 1}">
+                <label class="btn btn-outline-primary btn-sm w-100" for="mes-${i + 1}">${nome.slice(0, 3)}</label>
+            </div>`).join('');
+    }
+
+    function sincronizarMesesUI() {
+        document.querySelectorAll('.mes-check').forEach(cb => { cb.checked = estado.meses.has(Number(cb.value)); });
+        const sel = [...estado.meses].sort((a, b) => a - b);
+        $('btn-meses').textContent = !sel.length ? 'Todos os meses'
+            : sel.length <= 2 ? sel.map(m => MESES[m - 1]).join(', ')
+            : `${sel.length} meses`;
+    }
+
+    // ---------- Ações ----------
+    function alternarSituacao(valor) {
+        estado.situacao = estado.situacao === valor ? '' : valor;
+        $('filtro-situacao').value = estado.situacao;
+        agendar();
+    }
+
+    function removerChip(chave) {
+        if (chave === 'empresa') { estado.empresa = ''; $('filtro-empresa').value = ''; }
+        else if (chave === 'situacao') { estado.situacao = ''; $('filtro-situacao').value = ''; }
+        else if (chave === 'tipo') { estado.tipo = ''; }
+        else if (chave === 'busca') { estado.busca = ''; $('filtro-busca').value = ''; }
+        else if (chave.startsWith('mes-')) { estado.meses.delete(Number(chave.slice(4))); sincronizarMesesUI(); }
+        agendar();
+    }
+
+    function limparTudo() {
+        estado.empresa = ''; estado.situacao = ''; estado.tipo = ''; estado.busca = '';
+        estado.meses.clear();
+        $('filtro-empresa').value = '';
+        $('filtro-situacao').value = '';
+        $('filtro-busca').value = '';
+        sincronizarMesesUI();
+        agendar();
+    }
+
+    // ---------- Eventos ----------
+    $('filtro-empresa').addEventListener('change', e => { estado.empresa = e.target.value; agendar(); });
+    $('filtro-situacao').addEventListener('change', e => { estado.situacao = e.target.value; agendar(); });
+    $('filtro-busca').addEventListener('input', e => { estado.busca = e.target.value.trim(); agendar(350); });
+
+    $('meses-grid').addEventListener('change', e => {
+        if (!e.target.classList.contains('mes-check')) return;
+        const mes = Number(e.target.value);
+        e.target.checked ? estado.meses.add(mes) : estado.meses.delete(mes);
+        sincronizarMesesUI();
+        agendar(250);
+    });
+    $('btn-mes-atual').addEventListener('click', () => {
+        estado.meses = new Set([new Date().getMonth() + 1]);
+        sincronizarMesesUI();
+        agendar();
+    });
+    $('btn-meses-limpar').addEventListener('click', () => { estado.meses.clear(); sincronizarMesesUI(); agendar(); });
+
+    $('chips').addEventListener('click', e => {
+        const btn = e.target.closest('[data-chip]');
+        if (btn) removerChip(btn.dataset.chip);
+    });
+    $('btn-limpar').addEventListener('click', limparTudo);
+
+    ['card-ativos', 'card-inativos'].forEach(id => {
+        const valor = id === 'card-ativos' ? '1' : '0';
+        $(id).addEventListener('click', () => alternarSituacao(valor));
+        $(id).addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); alternarSituacao(valor); } });
+    });
+
+    $('btn-prev').addEventListener('click', () => { pager.page = Math.max(1, pager.page - 1); renderTabela(); });
+    $('btn-next').addEventListener('click', () => { pager.page += 1; renderTabela(); });
+    $('page-size').addEventListener('change', e => { pager.size = parseInt(e.target.value, 10) || 10; pager.page = 1; renderTabela(); });
+
+    // ---------- Init ----------
+    montarMeses();
+    sincronizarMesesUI();
+    carregar();
+})();
 </script>
 {% endblock %}

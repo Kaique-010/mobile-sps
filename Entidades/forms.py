@@ -45,7 +45,7 @@ class EntidadesForm(forms.ModelForm):
             'enti_nome', 'enti_tipo_enti', 'enti_espe_enti', 'enti_fant', 
             'enti_cpf', 'enti_cnpj', 'enti_insc_esta', 'enti_cep', 'enti_ende', 
             'enti_nume', 'enti_cida','enti_codi_cida', 'enti_esta', 'enti_fone', 'enti_celu', 
-            'enti_emai', 'enti_situ', 'enti_vend', 'enti_arqu'
+            'enti_emai', 'enti_situ', 'enti_vend', 'enti_arqu', 'enti_dana'
         ]
         widgets = {
             'enti_nome': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome completo'}),
@@ -66,6 +66,7 @@ class EntidadesForm(forms.ModelForm):
             'enti_emai': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email Pessoal'}),
             'enti_vend': forms.HiddenInput(attrs={'class': 'form-control'}),
             'enti_arqu': forms.HiddenInput(attrs={'class': 'form-control'}),
+            'enti_dana': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             
         }
 
