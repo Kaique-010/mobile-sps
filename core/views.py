@@ -16,6 +16,8 @@ from core.middleware import get_licenca_slug
 from OrdemdeServico.models import Ordemservico, Ordemservicopecas, Ordemservicoservicos     
 from Produtos.models import Tabelaprecos
 import logging
+from datetime import date
+from django.db.models import Q
 
 logger = logging.getLogger(__name__)
 
@@ -177,12 +179,20 @@ def home(request, slug=None, empresa=None, filial=None):
         pass
 
     vendedor_selecionado = (request.GET.get('vendedor') or '').strip()
-    vendedores_qs = Entidades.objects.using(banco).filter(enti_tipo_enti='VE')
-    logger.debug(f"[home] vendedores_qs: {vendedores_qs}")
+    vendedores_qs = (
+        Entidades.objects.using(banco)
+        .filter(enti_tipo_enti='VE')
+        .filter(
+            Q(enti_dana__gte=date(1900, 1, 1))
+            | Q(enti_dana__isnull=True)
+        )
+    )
+
     if empresa_id is not None:
         vendedores_qs = vendedores_qs.filter(enti_empr=empresa_id)
     else:
         vendedores_qs = vendedores_qs.filter(enti_empr=-1)
+
     vendedores_qs = vendedores_qs.order_by('enti_nome')
 
     di = (request.GET.get('data_inicio') or '').strip()

@@ -96,7 +96,7 @@ class OrcamentopisosSerializer(BancoContextMixin, serializers.ModelSerializer):
             return None
 
         try:
-            entidades = Entidades.objects.using(banco).filter(
+            entidades = Entidades.objects.using(banco).defer("enti_dana").filter(
                 enti_clie=obj.orca_clie,
                 enti_empr=obj.orca_empr,
             ).first()
@@ -138,7 +138,7 @@ class OrcamentopisosSerializer(BancoContextMixin, serializers.ModelSerializer):
             return None
 
         try:
-            vendedor = Entidades.objects.using(banco).filter(enti_clie=obj.orca_vend).first()
+            vendedor = Entidades.objects.using(banco).defer("enti_dana").filter(enti_clie=obj.orca_vend).first()
             return vendedor.enti_nome if vendedor else None
         except Exception as e:
             logger.warning(f"Erro ao buscar vendedor: {e}")
@@ -313,7 +313,7 @@ class PedidospisosSerializer(BancoContextMixin, serializers.ModelSerializer):
             return None
 
         try:
-            entidades = Entidades.objects.using(banco).filter(
+            entidades = Entidades.objects.using(banco).defer("enti_dana").filter(
                 enti_clie=obj.pedi_clie,
                 enti_empr=obj.pedi_empr,
             ).first()
@@ -355,7 +355,7 @@ class PedidospisosSerializer(BancoContextMixin, serializers.ModelSerializer):
             return None
 
         try:
-            vendedor = Entidades.objects.using(banco).filter(enti_clie=obj.pedi_vend).first()
+            vendedor = Entidades.objects.using(banco).defer("enti_dana").filter(enti_clie=obj.pedi_vend).first()
             return vendedor.enti_nome if vendedor else None
         except Exception as e:
             logger.warning(f"Erro ao buscar vendedor: {e}")

@@ -20,6 +20,7 @@ from openpyxl.styles import Font, PatternFill, Alignment
 from .models import Entidades
 from .forms import EntidadesForm
 from core.utils import get_licenca_db_config
+from datetime import date
 
 
 class DBAndSlugMixin:
@@ -58,7 +59,11 @@ class EntidadeListView(DBAndSlugMixin, ListView):
         request = self.request
         db_alias = getattr(request, 'db_alias', None)
         qs = Entidades.objects.using(db_alias).all()
-        # Filtrar por empresa quando disponível para evitar duplicidades
+        qs = qs.filter(
+            Q(enti_dana__gte=date(1900, 1, 1))
+            | Q(enti_dana__isnull=True)
+        )
+                # Filtrar por empresa quando disponível para evitar duplicidades
         if self.empresa_id:
             qs = qs.filter(enti_empr=int(self.empresa_id))
         qs = qs.order_by('enti_empr', 'enti_nome')
@@ -179,6 +184,9 @@ class EntidadeListView(DBAndSlugMixin, ListView):
         vendedores_qs = Entidades.objects.using(db_alias).filter(
             enti_tipo_enti__in=["VE", "AM", "FU"],
             enti_situ="1",
+        ).filter(
+            Q(enti_dana__gte=date(1900, 1, 1))
+            | Q(enti_dana__isnull=True)
         )
         if empresa_id is not None:
             vendedores_qs = vendedores_qs.filter(enti_empr=empresa_id)
@@ -189,8 +197,11 @@ class EntidadeListView(DBAndSlugMixin, ListView):
         context['filter_has_arquiteto'] = bool(self.request.GET.get('has_arquiteto'))
 
         arquitetos_qs = Entidades.objects.using(db_alias).filter(
-            enti_tipo_enti__in=["AR"],
+            enti_tipo_enti="AR",
             enti_situ="1",
+        ).filter(
+            Q(enti_dana__gte=date(1900, 1, 1))
+            | Q(enti_dana__isnull=True)
         )
         if empresa_id is not None:
             arquitetos_qs = arquitetos_qs.filter(enti_empr=empresa_id)
@@ -512,7 +523,7 @@ class RelatorioEntidadesView(TemplateView):
 
     def get_queryset_aniversariantes(self, meses=None):
         queryset = Entidades.objects.filter(
-            enti_dana__isnull=False
+            enti_dana__gte=date(1900, 1, 1)
         )
 
         if meses:

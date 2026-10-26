@@ -45,7 +45,12 @@ class EntidadesViewSet(ModuloRequeridoMixin,viewsets.ModelViewSet):
             return Entidades.objects.none()
         empresa_id = self.request.query_params.get('enti_empr') or self.request.headers.get("X-Empresa") or self.request.session.get("empresa_id") or self.request.headers.get("Empresa_id")
         # Base queryset otimizada
-        queryset = Entidades.objects.using(banco).filter(enti_empr= empresa_id)
+        queryset = (
+            Entidades.objects
+            .using(banco)
+            .defer('enti_dana')
+            .filter(enti_empr=empresa_id)
+        )
         # Aplicar filtros de forma otimizada
         
         tipo = self.request.query_params.get('enti_tipo_enti')

@@ -11,6 +11,32 @@ from core.utils import get_db_from_slug
 from Pisos.services.comissao_service import ComissaoService
 
 
+def listar_vendedores_sem_data(db_alias, empresa_id):
+    """
+    Lista vendedores sem carregar enti_dana quando o serviço retorna
+    um QuerySet de modelos que possuem esse campo.
+    """
+    vendedores_qs = ComissaoService.listar_vendedores(
+        db_alias=db_alias,
+        empresa_id=empresa_id,
+    )
+
+    model = getattr(vendedores_qs, "model", None)
+    query = getattr(vendedores_qs, "query", None)
+
+    if model is not None and query is not None:
+        tem_enti_dana = any(
+            campo.name == "enti_dana"
+            for campo in model._meta.concrete_fields
+        )
+        consulta_values = bool(getattr(query, "values_select", ()))
+
+        if tem_enti_dana and not consulta_values:
+            vendedores_qs = vendedores_qs.defer("enti_dana")
+
+    return list(vendedores_qs)
+
+
 class ComissaoVendedorView(TemplateView):
     template_name = "Pisos/comissoes_vendedores.html"
 
@@ -61,11 +87,9 @@ class ComissaoVendedorView(TemplateView):
 
         context["slug"] = slug
 
-        vendedores = list(
-            ComissaoService.listar_vendedores(
-                db_alias=db_alias,
-                empresa_id=empresa_id,
-            )
+        vendedores = listar_vendedores_sem_data(
+            db_alias=db_alias,
+            empresa_id=empresa_id,
         )
         context["vendedores"] = vendedores
 
@@ -202,11 +226,9 @@ class ExportarComissoesView(View):
             data_inicial = hoje.replace(day=1).strftime("%Y-%m-%d")
 
         # Get vendedores list
-        vendedores = list(
-            ComissaoService.listar_vendedores(
-                db_alias=db_alias,
-                empresa_id=empresa_id,
-            )
+        vendedores = listar_vendedores_sem_data(
+            db_alias=db_alias,
+            empresa_id=empresa_id,
         )
 
         # Calculate commissions with filters

@@ -40,8 +40,8 @@ class EntidadesSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Entidades
-        fields = '__all__'
         read_only_fields = ['enti_clie']
+        exclude = ['enti_dana']
 
     def get_fields(self):
         fields = super().get_fields()

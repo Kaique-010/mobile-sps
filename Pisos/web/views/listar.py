@@ -120,7 +120,7 @@ class PedidopisosListView(VendedorEntidadeMixin, ListView):
 
         entidades = Entidades.objects.using(self.banco).filter(
             enti_clie__in=entidades_ids
-        )
+        ).defer("enti_dana")
         print("ENTIDADES:", [(e.enti_clie, e.enti_nome) for e in entidades[:5]])
 
         nomes = {
@@ -412,7 +412,7 @@ class ExportarPedidosView(View):
 
         entidades = Entidades.objects.using(db_alias).filter(
             enti_clie__in=entidades_ids
-        )
+        ).defer("enti_dana")
         nomes = {e.enti_clie: e.enti_nome for e in entidades}
 
         # Get status map
