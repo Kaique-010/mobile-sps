@@ -120,7 +120,7 @@ class TitulosReceberListView(DBAndSlugMixin, ListView):
 
         entidades_map = {}
         if cliente_ids:
-            ents = Entidades.objects.using(self.db_alias).filter(enti_clie__in=list(cliente_ids))
+            ents = Entidades.objects.using(self.db_alias).filter(enti_clie__in=list(cliente_ids)).defer("enti_dana")
             entidades_map = {e.enti_clie: e.enti_nome for e in ents}
 
         centros_map = {}
@@ -270,7 +270,7 @@ class TitulosReceberParcelasListView(TitulosReceberListView):
 
         entidades_map = {}
         if cliente_ids:
-            ents = Entidades.objects.using(self.db_alias).filter(enti_clie__in=list(cliente_ids))
+            ents = Entidades.objects.using(self.db_alias).filter(enti_clie__in=list(cliente_ids)).defer("enti_dana")
             entidades_map = {e.enti_clie: e.enti_nome for e in ents}
 
         centros_map = {}
@@ -313,7 +313,7 @@ def autocomplete_clientes(request, slug=None):
     banco = get_licenca_db_config(request) or 'default'
     empresa_id = request.session.get('empresa_id')
     term = (request.GET.get('term') or request.GET.get('q') or '').strip()
-    qs = Entidades.objects.using(banco).filter(enti_empr=str(empresa_id))
+    qs = Entidades.objects.using(banco).filter(enti_empr=str(empresa_id)).defer("enti_dana")
     if term:
         if term.isdigit():
             qs = qs.filter(enti_clie__icontains=term)
