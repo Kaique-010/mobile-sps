@@ -1,4 +1,9 @@
 from django.urls import path
+from .Views.produtos_detalhados_view import (
+    ExportarProdutosDetalhadosView,
+    ImprimirProdutosDetalhadosView,
+    ProdutosDetalhadosListView,
+)
 from .Views.listar import NcmFiscalPadraoListView, NcmListView
 from .Views.criar import NcmFiscalPadraoCreateView, NcmCreateView
 from .Views.update import NcmFiscalPadraoUpdateView, NcmUpdateView
@@ -62,6 +67,9 @@ urlpatterns = [
     path('<str:prod_codi>/edit/', ProdutoUpdateView.as_view(), name='produto_edit_web'),
     path('<str:prod_codi>/delete/', ProdutoDeleteView.as_view(), name='produto_delete_web'),
     path('exportar/', ExportarProdutosView.as_view(), name='exportar_produtos_web'),
+    path('produtos-detalhados/', ProdutosDetalhadosListView.as_view(), name='produtos_detalhados_web'),
+    path('produtos-detalhados/exportar/', ExportarProdutosDetalhadosView.as_view(), name='produtos_detalhados_exportar_web'),
+    path('produtos-detalhados/imprimir/', ImprimirProdutosDetalhadosView.as_view(), name='produtos_detalhados_imprimir_web'),
     path('<str:prod_codi>/foto/', ProdutoFotoView.as_view(), name='produto_foto_web'),
     
     # Unidades de Medida

@@ -448,6 +448,10 @@ class ProdutosDetalhados(models.Model):
     valor_total_venda_vista = models.DecimalField(max_digits=14, decimal_places=2, null=True)
     valor_total_venda_prazo = models.DecimalField(max_digits=14, decimal_places=2, null=True)
     ncm = models.CharField(max_length=10, null=True)
+    codigo_do_fabricante = models.CharField(max_length=60, null=True, blank=True)
+
+    # Ignora automaticamente colunas ausentes no banco do tenant (ex.: codigo_do_fabricante)
+    objects = SafeMissingColumnsManager()
 
     class Meta:
         managed = False

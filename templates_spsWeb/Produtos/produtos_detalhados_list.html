@@ -1,0 +1,270 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Relatório de Produtos Detalhados{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/list.css' %}">
+<style>
+    .product-card { transition: box-shadow .3s; height: 100%; }
+    .product-card:hover { box-shadow: 0 4px 12px rgba(0, 0, 0, .15); }
+    .filtros-chevron { transition: transform .2s; }
+    [aria-expanded="true"] .filtros-chevron { transform: rotate(180deg); }
+</style>
+
+<div class="container page-container">
+    <div class="page-header">
+        <h2 class="page-title"><i class="bi bi-box-seam"></i> Produtos Detalhados</h2>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                {% if page_obj %}
+                <div class="text-muted small">
+                    <span>{{ page_obj.paginator.count }} itens</span> ·
+                    <span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+                </div>
+                {% else %}
+                <span></span>
+                {% endif %}
+                <div class="d-flex gap-2">
+                    <a href="/web/login/"
+                        data-slug-route="/web/{slug}/produtos/produtos-detalhados/imprimir/?{{ extra_query }}"
+                        class="btn btn-outline-dark btn-sm" target="_blank" title="Imprimir em PDF">
+                        <i class="bi bi-printer"></i>
+                    </a>
+                    <a href="/web/login/"
+                        data-slug-route="/web/{slug}/produtos/produtos-detalhados/exportar/?{{ extra_query }}"
+                        class="btn btn-outline-success btn-sm" title="Exportar Excel">
+                        <i class="bi bi-file-earmark-excel"></i>
+                    </a>
+                    <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#filtrosProdutosDetalhados" aria-expanded="true"
+                        aria-controls="filtrosProdutosDetalhados" title="Mostrar/Ocultar filtros">
+                        <i class="bi bi-funnel"></i> Filtros <i class="bi bi-chevron-down filtros-chevron"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="collapse show" id="filtrosProdutosDetalhados">
+                <form method="get" class="row g-3">
+                    <div class="col-md-2">
+                        <label class="form-label">Código</label>
+                        <input type="text" name="codigo" value="{{ filters.codigo }}" class="form-control"
+                            placeholder="Código">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Nome</label>
+                        <input type="text" name="nome" value="{{ filters.nome }}" class="form-control"
+                            placeholder="Nome do produto">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Grupo</label>
+                        <input type="text" name="grupo" value="{{ filters.grupo }}" class="form-control"
+                            placeholder="Grupo">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Marca</label>
+                        <input type="text" name="marca" value="{{ filters.marca }}" class="form-control"
+                            placeholder="Marca">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">NCM</label>
+                        <input type="text" name="ncm" value="{{ filters.ncm }}" class="form-control"
+                            placeholder="NCM">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Código do Fabricante</label>
+                        <input type="text" name="codigo_do_fabricante" value="{{ filters.codigo_do_fabricante }}"
+                            class="form-control" placeholder="Código do fabricante">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Estoque</label>
+                        <select name="estoque" class="form-select">
+                            <option value="">Todos</option>
+                            <option value="com" {% if filters.estoque == 'com' %}selected{% endif %}>Com estoque
+                            </option>
+                            <option value="sem" {% if filters.estoque == 'sem' %}selected{% endif %}>Sem estoque
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Ordenar por</label>
+                        <select name="ordenar" class="form-select">
+                            <option value="nome" {% if filters.ordenar == 'nome' %}selected{% endif %}>Nome (A-Z)
+                            </option>
+                            <option value="nome_desc" {% if filters.ordenar == 'nome_desc' %}selected{% endif %}>Nome
+                                (Z-A)</option>
+                            <option value="codigo" {% if filters.ordenar == 'codigo' %}selected{% endif %}>Código
+                            </option>
+                            <option value="saldo" {% if filters.ordenar == 'saldo' %}selected{% endif %}>Maior Saldo
+                            </option>
+                            <option value="menor_preco" {% if filters.ordenar == 'menor_preco' %}selected{% endif %}>
+                                Menor Preço</option>
+                            <option value="maior_preco" {% if filters.ordenar == 'maior_preco' %}selected{% endif %}>
+                                Maior Preço</option>
+                            <option value="maior_valor_estoque"
+                                {% if filters.ordenar == 'maior_valor_estoque' %}selected{% endif %}>Maior Valor em
+                                Estoque</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Filtrar</button>
+                        <a href="/web/login/" data-slug-route="/web/{slug}/produtos/produtos-detalhados/"
+                            class="btn btn-secondary"><i class="bi bi-eraser"></i> Limpar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if produtos %}
+        <!-- Tabela (md+) -->
+        <div class="card-body pt-0 d-none d-md-block">
+            <div class="table-responsive">
+                <table class="table table-sm table-striped align-middle">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th style="padding: 10px 14px;"><i class="bi bi-upc-scan"></i> Código</th>
+                            <th style="padding: 10px 14px;"><i class="bi bi-box-seam"></i> Nome</th>
+                            <th style="padding: 10px 14px;"><i class="bi bi-rulers"></i> Un.</th>
+                            <th style="padding: 10px 14px;"><i class="bi bi-tags"></i> Grupo</th>
+                            <th style="padding: 10px 14px;"><i class="bi bi-bandaid"></i> Marca</th>
+                            <th style="padding: 10px 14px;"><i class="bi bi-barcode"></i> NCM</th>
+                            <th style="padding: 10px 14px;"><i class="bi bi-hash"></i> Cód. Fabricante</th>
+                            <th style="padding: 10px 14px;" class="text-end"><i class="bi bi-cash-coin"></i> Custo</th>
+                            <th style="padding: 10px 14px;" class="text-end"><i class="bi bi-cash-stack"></i> À Vista</th>
+                            <th style="padding: 10px 14px;" class="text-end"><i class="bi bi-credit-card"></i> A Prazo</th>
+                            <th style="padding: 10px 14px;" class="text-end"><i class="bi bi-box"></i> Saldo</th>
+                            <th style="padding: 10px 14px;" class="text-end"><i class="bi bi-coin"></i> Valor Estoque</th>
+                            <th style="padding: 10px 14px;" class="text-end"><i class="bi bi-cash"></i> Venda À Vista</th>
+                            <th style="padding: 10px 14px;" class="text-end"><i class="bi bi-receipt"></i> Venda A Prazo</th>
+                            <th style="padding: 10px 14px;"><i class="bi bi-weight"></i> Peso Bruto</th>
+                            <th style="padding: 10px 14px;"><i class="bi bi-basket3"></i> Peso Líquido</th>
+                            <th style="padding: 10px 14px;"><i class="bi bi-building"></i> Empresa</th>
+                            <th style="padding: 10px 14px;"><i class="bi bi-diagram-3"></i> Filial</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for produto in produtos %}
+                        <tr>
+                            <td>{{ produto.codigo }}</td>
+                            <td>{{ produto.nome }}</td>
+                            <td>{{ produto.unidade }}</td>
+                            <td>{{ produto.grupo_nome|default:"-" }}</td>
+                            <td>{{ produto.marca_nome|default:"-" }}</td>
+                            <td>{{ produto.ncm|default:"-" }}</td>
+                            <td>{{ produto.codigo_do_fabricante|default:"-" }}</td>
+                            <td class="text-end">{{ produto.custo|floatformat:2 }}</td>
+                            <td class="text-end">{{ produto.preco_vista|floatformat:2 }}</td>
+                            <td class="text-end">{{ produto.preco_prazo|floatformat:2 }}</td>
+                            <td class="text-end">{{ produto.saldo|floatformat:2 }}</td>
+                            <td class="text-end">{{ produto.valor_total_estoque|floatformat:2 }}</td>
+                            <td class="text-end">{{ produto.valor_total_venda_vista|floatformat:2 }}</td>
+                            <td class="text-end">{{ produto.valor_total_venda_prazo|floatformat:2 }}</td>
+                            <td>{{ produto.peso_bruto|floatformat:3 }}</td>
+                            <td>{{ produto.peso_liquido|floatformat:3 }}</td>
+                            <td>{{ produto.empresa }}</td>
+                            <td>{{ produto.filial }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% include 'components/infinite_scroll.html' with infinite_id='pd-tabela' infinite_append_selector='table tbody' %}
+        </div>
+
+        <!-- Cards (mobile) -->
+        <div class="card-body pt-0 d-md-none">
+            <div class="row g-3 pd-cards">
+                {% for produto in produtos %}
+                <div class="col-12">
+                    <div class="card product-card">
+                        {% if produto.foto %}
+                        <img src="{% url 'produto_foto_web' slug=slug prod_codi=produto.codigo %}"
+                            alt="{{ produto.nome }}" class="card-img-top" style="height: 160px; object-fit: cover;">
+                        {% endif %}
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <h5 class="card-title mb-0 flex-grow-1">{{ produto.nome }}</h5>
+                                <span class="badge bg-secondary text-nowrap ms-2">{{ produto.codigo }}</span>
+                            </div>
+
+                            <div class="mb-2">
+                                <span class="badge bg-light text-dark border me-1">{{ produto.unidade }}</span>
+                                {% if produto.grupo_nome %}
+                                <span class="badge bg-light text-dark border me-1">{{ produto.grupo_nome }}</span>
+                                {% endif %}
+                                {% if produto.marca_nome %}
+                                <span class="badge bg-light text-dark border me-1">{{ produto.marca_nome }}</span>
+                                {% endif %}
+                                {% if produto.ncm %}
+                                <span class="badge bg-light text-dark border">NCM {{ produto.ncm }}</span>
+                                {% endif %}
+                                {% if produto.codigo_do_fabricante %}
+                                <span class="badge bg-info text-dark">Fab. {{ produto.codigo_do_fabricante }}</span>
+                                {% endif %}
+                            </div>
+
+                            <dl class="row small mb-0 text-center">
+                                <div class="col-4 mb-2">
+                                    <dt class="fw-normal text-muted">Custo</dt>
+                                    <dd class="mb-0">R$ {{ produto.custo|floatformat:2 }}</dd>
+                                </div>
+                                <div class="col-4 mb-2">
+                                    <dt class="fw-normal text-muted">À vista</dt>
+                                    <dd class="mb-0">R$ {{ produto.preco_vista|floatformat:2 }}</dd>
+                                </div>
+                                <div class="col-4 mb-2">
+                                    <dt class="fw-normal text-muted">A prazo</dt>
+                                    <dd class="mb-0">R$ {{ produto.preco_prazo|floatformat:2 }}</dd>
+                                </div>
+                                <div class="col-4 mb-2">
+                                    <dt class="fw-normal text-muted">Saldo</dt>
+                                    <dd class="mb-0 {% if produto.saldo > 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                        {{ produto.saldo|floatformat:2 }}
+                                    </dd>
+                                </div>
+                                <div class="col-4 mb-2">
+                                    <dt class="fw-normal text-muted">Vlr. est.</dt>
+                                    <dd class="mb-0">R$ {{ produto.valor_total_estoque|floatformat:2 }}</dd>
+                                </div>
+                                <div class="col-4 mb-2">
+                                    <dt class="fw-normal text-muted">Vlr. venda</dt>
+                                    <dd class="mb-0">R$ {{ produto.valor_total_venda_vista|floatformat:2 }}</dd>
+                                </div>
+                                <div class="col-4 mb-2">
+                                    <dt class="fw-normal text-muted">Peso bruto</dt>
+                                    <dd class="mb-0">{{ produto.peso_bruto|floatformat:3 }}</dd>
+                                </div>
+                                <div class="col-4 mb-2">
+                                    <dt class="fw-normal text-muted">Peso líq.</dt>
+                                    <dd class="mb-0">{{ produto.peso_liquido|floatformat:3 }}</dd>
+                                </div>
+                                <div class="col-4 mb-2">
+                                    <dt class="fw-normal text-muted">Emp./Fil.</dt>
+                                    <dd class="mb-0">{{ produto.empresa }}/{{ produto.filial }}</dd>
+                                </div>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% include 'components/infinite_scroll.html' with infinite_id='pd-cards-scroll' infinite_append_selector='.pd-cards' %}
+        </div>
+
+        <!-- Paginação compartilhada -->
+        <div class="card-body pt-0">
+            {% if page_obj.has_other_pages %}
+            {% include 'components/pagination.html' with page_obj=page_obj extra_query=extra_query %}
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="card-body text-center py-5">
+            <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
+            <h4 class="mt-3 text-muted">Nenhum produto encontrado</h4>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

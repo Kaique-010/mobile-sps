@@ -16,6 +16,7 @@ PERMISSION_MAP = {
     'produto_edit_web': ('Produtos', 'produtos', 'editar'),
     'produto_delete_web': ('Produtos', 'produtos', 'excluir'),
     'exportar_produtos_web': ('Produtos', 'produtos', 'exportar'),
+    'produtos_detalhados_web': ('Produtos', 'produtos', 'listar'),
     'produto_foto_web': ('Produtos', 'produtos', 'visualizar'),
     'unidades_web': ('Produtos', 'unidademedida', 'listar'),
     'unidade_create_web': ('Produtos', 'unidademedida', 'criar'),
