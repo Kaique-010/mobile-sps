@@ -25,8 +25,7 @@ from Pisos.web.views.status_pisos_views import (
     criar_status_padrao_view,
 )
 from Pisos.web.views.status_workflow_views import alterar_status_pedido_pisos, alterar_status_orcamento_pisos
-
-
+from Pisos.web.views.views_rentabilidade import rentabilidade_documento
 
 
 app_name = "PisosWeb"
@@ -113,4 +112,9 @@ urlpatterns = [
         modal_painel_pedidos,
         name='modal_painel_pedidos'
     ),
+    path(
+    "rentabilidade/<str:tipo>/<int:numero>/",
+    rentabilidade_documento,
+    name="rentabilidade_documento",
+),
 ]

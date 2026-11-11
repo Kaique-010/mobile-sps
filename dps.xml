@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<DPS xmlns="http://www.sped.fazenda.gov.br/nfse" versao="1.01">
+    <infDPS Id="DPS411990528025635700017400001000000000000001">
+        <tpAmb>1</tpAmb>
+        <dhEmi>2026-11-04T11:37:09-03:00</dhEmi>
+        <verAplic>SpartacusSPS</verAplic>
+        <serie>1</serie>
+        <nDPS>1</nDPS>
+        <dCompet>2026-11-04</dCompet>
+        <tpEmit>1</tpEmit>
+        <cLocEmi>4119905</cLocEmi>
+        <prest>
+            <CNPJ>80256357000174</CNPJ>
+            <IM>28188</IM>
+            <fone>4230281600</fone>
+            <email>recapadoraparana@gmail.com</email>
+            <regTrib>
+                <opSimpNac>1</opSimpNac>
+                <regEspTrib>0</regEspTrib>
+            </regTrib>
+        </prest>
+        <toma>
+            <CNPJ>02320544000166</CNPJ>
+            <xNome>ELLEN TRANSPORTES RODOVIARIOS LTDA</xNome>
+            <end>
+                <endNac>
+                    <cMun>4119905</cMun>
+                    <CEP>84064000</CEP>
+                </endNac>
+                <xLgr>AV SOUZA NAVES</xLgr>
+                <nro>4440</nro>
+                <xCpl>SALA</xCpl>
+                <xBairro>CHAPADA</xBairro>
+            </end>
+            <email>adilmacedo2@hotmail.com</email>
+        </toma>
+        <serv>
+            <locPrest>
+                <cLocPrestacao>4119905</cLocPrestacao>
+            </locPrest>
+            <cServ>
+                <cTribNac>140401</cTribNac>
+                <xDescServ>84 - SERVICO DE APLICACAO DE BANDA EM PNEU</xDescServ>
+                <cNBS>120013900</cNBS>
+            </cServ>
+        </serv>
+        <valores>
+            <vServPrest>
+                <vServ>550.00</vServ>
+            </vServPrest>
+            <trib>
+                <tribMun>
+                    <tribISSQN>1</tribISSQN>
+                    <tpRetISSQN>1</tpRetISSQN>
+                </tribMun>
+                <totTrib>
+                    <vTotTrib>
+                        <vTotTribFed>0.00</vTotTribFed>
+                        <vTotTribEst>0.00</vTotTribEst>
+                        <vTotTribMun>0.00</vTotTribMun>
+                    </vTotTrib>
+                </totTrib>
+            </trib>
+        </valores>
+    </infDPS>
+    <Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+        <SignedInfo>
+            <CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+            <SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/>
+            <Reference URI="#DPS411990528025635700017400001000000000000001">
+                <Transforms>
+                    <Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+                    <Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+                </Transforms>
+                <DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+                <DigestValue>/yZnYgP2J9zanUyzcvyLOgdFfdU=</DigestValue>
+            </Reference>
+        </SignedInfo>
+        <SignatureValue>hAPe+vwRmZpxng32RMFv0PvWPb1NWFRijq0Mwo5aVrUblTJqJoUQPIVK6tuZPwcMhXDL0JZiQgdhHkbWfEIG9Bw4CGjNmmJysFuKLR0wRLzc/tlb3d2pV+5JaiERBdsTiA25sl5WALB5Efurx7HmFzg/5e6O3R4HO5TA0+VhxstHDqsi4+7v2kOrgyUx4bEAg16PhLi3CfcHhYPTX5x8DQr5/nZ1m8tQmZY79l7DMQpemuBASE8yVBVCKYNBaq7V7Kn0JnzGIE9TCwQ1vFOY/pyQP251cuNOuEI4k5tMVwh9jpGRg4pv7WfpQ0ax1FTEbQDY4c/Jwa6LFLPDkXaQRg==</SignatureValue>
+        <KeyInfo>
+            <X509Data>
+                <X509Certificate>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</X509Certificate>
+            </X509Data>
+        </KeyInfo>
+    </Signature>
+</DPS>

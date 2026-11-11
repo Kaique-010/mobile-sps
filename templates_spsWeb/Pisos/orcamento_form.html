@@ -746,9 +746,16 @@
                 <span>Total Geral</span>
                 <span id="total-geral" style="font-size:16px">R$ 0,00</span>
               </div>
-              <button type="button" id="btn-add-item-bottom" class="btn btn-sm btn-outline-primary" data-action="add-item">
+              <button type="button" id="btn-add-item-bottom" class="btn btn-sm btn-outline-primary"
+                data-action="add-item">
                 <i class="bi bi-plus-lg"></i> Adicionar Item
               </button>
+              <button type="button"
+                    class="btn btn-outline-success btn-sm"
+                    onclick="abrirRentabilidade('orcamento', '{{ orcamento.orca_nume }}')">
+              <i class="bi bi-currency-dollar"></i>
+              Rentabilidade
+            </button>
             </div>
           </div>
         </div>
@@ -770,8 +777,8 @@
   </form>
 </div>
 
-{# ── Modal fora do <form> ── #}
   {% include 'Pisos/modal_alterar_status.html' %}
+  {% include 'Pisos/modal_rentabilidade.html' %}
 
   <script>
     const SLUG = "{{ slug }}";
@@ -787,6 +794,7 @@
     const URL_ALTERAR_STATUS = "{% if orcamento %}{% url 'PisosWeb:orcamentos_pisos_alterar_status' slug=slug pk=orcamento.orca_nume %}{% endif %}";
     const STATUS_EMPRESA = "{{ orcamento.orca_empr|default:'' }}";
     const STATUS_FILIAL = "{{ orcamento.orca_fili|default:'' }}";
+    const URL_RENTABILIDADE = "{% url 'PisosWeb:rentabilidade_documento' slug=slug tipo='orcamento' numero=0 %}";
 
     /* ── KOHLER MODE ── */
     const KOHLER_MARCA = '98';
@@ -1293,93 +1301,93 @@
       if (!btns || !btns.length) return;
       btns.forEach(function (btn) {
         btn.addEventListener('click', function () {
-        var totalInput = document.getElementById('id_itens-TOTAL_FORMS');
-        if (!totalInput) return;
-        var index = parseInt(totalInput.value, 10);
-        totalInput.value = index + 1;
-        var tbody = document.getElementById('itens-tbody');
-        var prefix = 'itens-' + index;
-        var tr = document.createElement('tr');
-        tr.dataset.index = index;
-        tr.innerHTML =
-          '<td style="min-width:80px;max-width:80px">' +
-          '<input name="' + prefix + '-item_nome_ambi" class="form-control form-control-sm" placeholder="Ambiente" style="width:100%">' +
-          '<input type="hidden" name="' + prefix + '-item_ambi" id="id_itens-' + index + '-item_ambi" value="' + (index + 1) + '">' +
-          '</td>' +   // ← esse aqui
-          '<td>' +
-          '<input type="number" step="0.0001" id="caix-' + index + '" class="form-control form-control-sm item-caix" placeholder="0">' +
-          '<input type="hidden" name="' + prefix + '-item_caix" id="id_itens-' + index + '-item_caix" value="">' +
-          '</td>' +
-          '<td class="position-relative" style="min-width:60px;max-width:60px">' +
-          '<input type="number" step="0.01" id="m2-' + index + '" class="form-control form-control-sm item-m2" data-index="' + index + '" placeholder="0,00" style="width:100%">' +
-          '<input type="hidden" name="' + prefix + '-item_m2" id="id_itens-' + index + '-item_m2" value="">' +
-          '<div class="calc-spinner" id="spin-' + index + '"></div>' +
-          '</td>' +
-          '<td style="min-width:60px;max-width:60px">' +
-          '<input type="number" step="0.01" id="kg-' + index + '" class="form-control form-control-sm item-kg calc-field" data-index="' + index + '" placeholder="0,00" readonly tabindex="-1" style="width:100%">' +
-          '<input type="hidden" name="' + prefix + '-item_kg" id="id_itens-' + index + '-item_kg" value="">' +
-          '</td>' +
-          '<td class="position-relative" style="min-width:110px;max-width:110px">' +
-          '<input id="produto_busca_' + index + '" class="form-control form-control-sm" placeholder="Buscar produto" data-index="' + index + '" style="width:100%">' +
-          '<input type="hidden" name="' + prefix + '-item_prod" id="id_itens-' + index + '-item_prod" value="">' +
-          '</td>' +
-          '<td style="min-width:120px;max-width:120px">' +
-          '<input name="' + prefix + '-item_prod_nome" id="id_itens-' + index + '-item_prod_nome" class="form-control form-control-sm" placeholder="—" style="width:100%">' +
-          '</td>' +
-          '<td style="min-width:65px;max-width:65px">' +
-          '<input type="number" step="0.0001" id="quan-' + index + '" class="form-control form-control-sm item-quan" placeholder="0">' +
-          '<input type="hidden" name="' + prefix + '-item_quan" id="id_itens-' + index + '-item_quan" value="">' +
-          '</td>' +
-          '<td style="min-width:75px;max-width:75px">' +
-          '<input type="number" step="0.01" id="unit-' + index + '" class="form-control form-control-sm item-unit" data-index="' + index + '" placeholder="0,00" style="width:100%">' +
-          '<input type="hidden" name="' + prefix + '-item_unit" id="id_itens-' + index + '-item_unit" value="">' +
-          '</td>' +
-          '<td style="min-width:60px;max-width:60px">' +
-          '<input type="number" step="0.01" name="' + prefix + '-item_desc" class="form-control form-control-sm" placeholder="0" style="width:100%">' +
-          '</td>' +
-          '<td style="min-width:60px;max-width:60px">' +
-          '<input type="number" step="0.01" id="queb-' + index + '" class="form-control form-control-sm item-queb" data-index="' + index + '" placeholder="0" style="width:100%">' +
-          '<input type="hidden" name="' + prefix + '-item_queb" id="id_itens-' + index + '-item_queb" value="">' +
-          '</td>' +
-          '<td style="min-width:75px;max-width:75px">' +
-          '<input type="text" id="suto-' + index + '" class="form-control form-control-sm calc-field" readonly tabindex="-1" style="width:100%">' +
-          '</td>' +
-          '<td style="min-width:55px;max-width:55px">' +
-          '<input name="' + prefix + '-item_obse" class="form-control form-control-sm" placeholder="Obs" style="width:100%">' +
-          '</td>' +
-          '<td style="min-width:36px;max-width:36px">' +
-          '<input type="hidden" name="' + prefix + '-DELETE" id="id_itens-' + index + '-DELETE" value="">' +
-          '<button type="button" class="btn btn-sm btn-outline-danger btn-remove-item"><i class="bi bi-trash"></i></button>' +
-          '</td>';
-        tbody.appendChild(tr);
-        bindCalcInputs(index);
-        setupAutocomplete(
-          'produto_busca_' + index,
-          'id_itens-' + index + '-item_prod',
-          URL_AUTO_PRODUTOS,
-          function (selected) {
-            var nomeInput = document.getElementById('id_itens-' + index + '-item_prod_nome');
-            if (nomeInput) nomeInput.value = selected.label || selected.text || '';
-            if (kohlerModeActive) {
-              calcularItemKohler(index);
-            } else {
-              calcularItem(index);
+          var totalInput = document.getElementById('id_itens-TOTAL_FORMS');
+          if (!totalInput) return;
+          var index = parseInt(totalInput.value, 10);
+          totalInput.value = index + 1;
+          var tbody = document.getElementById('itens-tbody');
+          var prefix = 'itens-' + index;
+          var tr = document.createElement('tr');
+          tr.dataset.index = index;
+          tr.innerHTML =
+            '<td style="min-width:80px;max-width:80px">' +
+            '<input name="' + prefix + '-item_nome_ambi" class="form-control form-control-sm" placeholder="Ambiente" style="width:100%">' +
+            '<input type="hidden" name="' + prefix + '-item_ambi" id="id_itens-' + index + '-item_ambi" value="' + (index + 1) + '">' +
+            '</td>' +   // ← esse aqui
+            '<td>' +
+            '<input type="number" step="0.0001" id="caix-' + index + '" class="form-control form-control-sm item-caix" placeholder="0">' +
+            '<input type="hidden" name="' + prefix + '-item_caix" id="id_itens-' + index + '-item_caix" value="">' +
+            '</td>' +
+            '<td class="position-relative" style="min-width:60px;max-width:60px">' +
+            '<input type="number" step="0.01" id="m2-' + index + '" class="form-control form-control-sm item-m2" data-index="' + index + '" placeholder="0,00" style="width:100%">' +
+            '<input type="hidden" name="' + prefix + '-item_m2" id="id_itens-' + index + '-item_m2" value="">' +
+            '<div class="calc-spinner" id="spin-' + index + '"></div>' +
+            '</td>' +
+            '<td style="min-width:60px;max-width:60px">' +
+            '<input type="number" step="0.01" id="kg-' + index + '" class="form-control form-control-sm item-kg calc-field" data-index="' + index + '" placeholder="0,00" readonly tabindex="-1" style="width:100%">' +
+            '<input type="hidden" name="' + prefix + '-item_kg" id="id_itens-' + index + '-item_kg" value="">' +
+            '</td>' +
+            '<td class="position-relative" style="min-width:110px;max-width:110px">' +
+            '<input id="produto_busca_' + index + '" class="form-control form-control-sm" placeholder="Buscar produto" data-index="' + index + '" style="width:100%">' +
+            '<input type="hidden" name="' + prefix + '-item_prod" id="id_itens-' + index + '-item_prod" value="">' +
+            '</td>' +
+            '<td style="min-width:120px;max-width:120px">' +
+            '<input name="' + prefix + '-item_prod_nome" id="id_itens-' + index + '-item_prod_nome" class="form-control form-control-sm" placeholder="—" style="width:100%">' +
+            '</td>' +
+            '<td style="min-width:65px;max-width:65px">' +
+            '<input type="number" step="0.0001" id="quan-' + index + '" class="form-control form-control-sm item-quan" placeholder="0">' +
+            '<input type="hidden" name="' + prefix + '-item_quan" id="id_itens-' + index + '-item_quan" value="">' +
+            '</td>' +
+            '<td style="min-width:75px;max-width:75px">' +
+            '<input type="number" step="0.01" id="unit-' + index + '" class="form-control form-control-sm item-unit" data-index="' + index + '" placeholder="0,00" style="width:100%">' +
+            '<input type="hidden" name="' + prefix + '-item_unit" id="id_itens-' + index + '-item_unit" value="">' +
+            '</td>' +
+            '<td style="min-width:60px;max-width:60px">' +
+            '<input type="number" step="0.01" name="' + prefix + '-item_desc" class="form-control form-control-sm" placeholder="0" style="width:100%">' +
+            '</td>' +
+            '<td style="min-width:60px;max-width:60px">' +
+            '<input type="number" step="0.01" id="queb-' + index + '" class="form-control form-control-sm item-queb" data-index="' + index + '" placeholder="0" style="width:100%">' +
+            '<input type="hidden" name="' + prefix + '-item_queb" id="id_itens-' + index + '-item_queb" value="">' +
+            '</td>' +
+            '<td style="min-width:75px;max-width:75px">' +
+            '<input type="text" id="suto-' + index + '" class="form-control form-control-sm calc-field" readonly tabindex="-1" style="width:100%">' +
+            '</td>' +
+            '<td style="min-width:55px;max-width:55px">' +
+            '<input name="' + prefix + '-item_obse" class="form-control form-control-sm" placeholder="Obs" style="width:100%">' +
+            '</td>' +
+            '<td style="min-width:36px;max-width:36px">' +
+            '<input type="hidden" name="' + prefix + '-DELETE" id="id_itens-' + index + '-DELETE" value="">' +
+            '<button type="button" class="btn btn-sm btn-outline-danger btn-remove-item"><i class="bi bi-trash"></i></button>' +
+            '</td>';
+          tbody.appendChild(tr);
+          bindCalcInputs(index);
+          setupAutocomplete(
+            'produto_busca_' + index,
+            'id_itens-' + index + '-item_prod',
+            URL_AUTO_PRODUTOS,
+            function (selected) {
+              var nomeInput = document.getElementById('id_itens-' + index + '-item_prod_nome');
+              if (nomeInput) nomeInput.value = selected.label || selected.text || '';
+              if (kohlerModeActive) {
+                calcularItemKohler(index);
+              } else {
+                calcularItem(index);
+              }
+            },
+            true
+          );
+          requestAnimationFrame(function () {
+            var wrap = document.querySelector('.itens-table-wrap');
+            if (wrap) {
+              try {
+                wrap.scrollTo({ top: wrap.scrollHeight, behavior: 'smooth' });
+              } catch (e) {
+                wrap.scrollTop = wrap.scrollHeight;
+              }
             }
-          },
-          true
-        );
-        requestAnimationFrame(function () {
-          var wrap = document.querySelector('.itens-table-wrap');
-          if (wrap) {
-            try {
-              wrap.scrollTo({ top: wrap.scrollHeight, behavior: 'smooth' });
-            } catch (e) {
-              wrap.scrollTop = wrap.scrollHeight;
-            }
-          }
-          var prodBusca = document.getElementById('produto_busca_' + index);
-          if (prodBusca) prodBusca.focus();
-        });
+            var prodBusca = document.getElementById('produto_busca_' + index);
+            if (prodBusca) prodBusca.focus();
+          });
         });
       });
     }
@@ -1531,6 +1539,120 @@
         atualizarTotais();
       });
     });
+
+    function abrirRentabilidade(tipo, numero) {
+      const modalEl = document.getElementById('modalRentabilidade');
+      const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+      const erro = document.getElementById('rentabilidadeErro');
+      const loading = document.getElementById('rentabilidadeLoading');
+      const conteudo = document.getElementById('rentabilidadeConteudo');
+
+      const dinheiro = valor =>
+        Number(valor || 0).toLocaleString('pt-BR', {
+          style: 'currency',
+          currency: 'BRL'
+        });
+
+      const percentual = valor =>
+        `${Number(valor || 0).toLocaleString('pt-BR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        })}%`;
+
+      erro.classList.add('d-none');
+      conteudo.classList.add('d-none');
+      loading.classList.remove('d-none');
+
+      modal.show();
+
+      const url = URL_RENTABILIDADE.replace(
+        `/${tipo}/0/`,
+        `/${tipo}/${numero}/`
+      );
+
+      fetch(url, {
+          headers: { 'Accept': 'application/json' },
+          credentials: 'same-origin'
+      })
+      .then(async response => {
+          const contentType = response.headers.get('content-type') || '';
+
+          if (!contentType.includes('application/json')) {
+              const texto = await response.text();
+
+              throw new Error(
+                  `A URL retornou HTTP ${response.status}, não JSON. ` +
+                  `Verifique a rota. Resposta: ${texto.slice(0, 200)}`
+              );
+          }
+
+          const data = await response.json();
+
+          if (!response.ok) {
+              throw new Error(data.erro || 'Erro ao calcular rentabilidade.');
+          }
+
+          return data;
+      })
+        .then(data => {
+          const resumo = data.resumo;
+
+          document.getElementById('rentabilidadeDocumento').textContent =
+            `${tipo === 'orcamento' ? 'Orçamento' : 'Pedido'} #${numero}`;
+
+          document.getElementById('rentReceita').textContent =
+            dinheiro(resumo.receita_liquida);
+
+          document.getElementById('rentCusto').textContent =
+            dinheiro(resumo.custo_produtos);
+
+          const lucroEl = document.getElementById('rentLucro');
+          lucroEl.textContent = dinheiro(resumo.lucro);
+          lucroEl.className = Number(resumo.lucro) < 0
+            ? 'text-danger'
+            : 'text-success';
+
+          document.getElementById('rentMargem').textContent =
+            percentual(resumo.margem_percentual);
+
+          const tbody = document.getElementById('rentabilidadeItens');
+          tbody.replaceChildren();
+
+          data.itens.forEach(item => {
+            const tr = document.createElement('tr');
+
+            const valores = [
+              item.descricao,
+              item.quantidade,
+              dinheiro(item.receita_liquida),
+              dinheiro(item.custo_unitario),
+              dinheiro(item.custo),
+              dinheiro(item.frete_rateado),
+              dinheiro(item.lucro),
+              percentual(item.margem_percentual)
+            ];
+
+            valores.forEach((valor, index) => {
+              const td = document.createElement('td');
+              td.textContent = valor;
+              if (index > 0) td.classList.add('text-end');
+              tr.appendChild(td);
+            });
+
+            tbody.appendChild(tr);
+          });
+
+          loading.classList.add('d-none');
+          conteudo.classList.remove('d-none');
+        })
+        .catch(error => {
+          loading.classList.add('d-none');
+          erro.textContent = error.message;
+          erro.classList.remove('d-none');
+        });
+    }
+
   </script>
 
   {% endblock %}

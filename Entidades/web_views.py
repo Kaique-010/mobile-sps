@@ -17,7 +17,7 @@ from django.db.models import BigIntegerField, Case, When, Value, CharField, Inte
 from django.db.models.functions import Cast
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
-from .models import Entidades
+from .models import Entidades, campo_existe_no_banco
 from .forms import EntidadesForm
 from core.utils import get_licenca_db_config
 from datetime import date
@@ -102,20 +102,24 @@ class EntidadeListView(DBAndSlugMixin, ListView):
         if self.empresa_id:
             vendedores_sub = vendedores_sub.filter(enti_empr=int(self.empresa_id))
 
-        arquitetos_sub = Entidades.objects.using(db_alias).filter(
-            enti_clie=Cast(OuterRef("enti_arqu"), BigIntegerField())
-        )
-        if self.empresa_id:
-            arquitetos_sub = arquitetos_sub.filter(enti_empr=int(self.empresa_id))
+        annotations = {
+            "vendedor_responsavel_nome": Subquery(vendedores_sub.values("enti_nome")[:1]),
+        }
 
-        qs = qs.annotate(
-            vendedor_responsavel_nome=Subquery(
-                vendedores_sub.values("enti_nome")[:1]
-            ),
-            arquiteto_responsavel_nome=Subquery(
+        # Só referencia enti_arqu quando a coluna existir no banco do tenant
+        if campo_existe_no_banco(model=Entidades, field_name="enti_arqu", using=db_alias):
+            arquitetos_sub = Entidades.objects.using(db_alias).filter(
+                enti_clie=Cast(OuterRef("enti_arqu"), BigIntegerField())
+            )
+            if self.empresa_id:
+                arquitetos_sub = arquitetos_sub.filter(enti_empr=int(self.empresa_id))
+            annotations["arquiteto_responsavel_nome"] = Subquery(
                 arquitetos_sub.values("enti_nome")[:1]
-            ),
-        )
+            )
+        else:
+            annotations["arquiteto_responsavel_nome"] = Value(None, output_field=CharField())
+
+        qs = qs.annotate(**annotations)
         return qs
 
     def get_context_data(self, **kwargs):

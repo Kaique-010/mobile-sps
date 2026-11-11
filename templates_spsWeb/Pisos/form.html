@@ -753,6 +753,11 @@
                 data-action="add-item">
                 <i class="bi bi-plus-lg"></i> Adicionar Item
               </button>
+              <button type="button" id="btn_rentabilidade" class="btn btn-sm btn-outline-success"
+                onclick="abrirRentabilidade('pedido', '{{ pedido.pedi_nume }}')">
+                <i class="bi bi-currency-dollar"></i>
+                Rentabilidade
+              </button>
             </div>
           </div>
         </div>
@@ -784,12 +789,12 @@
   </form>
 </div>
 
-{# ── Modais — TODOS fora do <form> ── #}
   {% include 'Pisos/modal_workflow.html' %}
   {% include 'Pisos/modal_romaneio_entrega.html' %}
   {% include 'Pisos/parciais/modal_emitir_nfe.html' %}
   {% include 'Pisos/modal_alterar_status.html' %}
   {% include 'Pisos/modal_detalhes_compras.html' %}
+  {% include 'Pisos/modal_rentabilidade.html' %}
 
   <script>
     const SLUG = "{{ slug }}";
@@ -809,6 +814,7 @@
     const STATUS_EMPRESA = "{{ pedido.pedi_empr|default:'' }}";
     const STATUS_FILIAL = "{{ pedido.pedi_fili|default:'' }}";
     const KOHLER_INITIAL = "{% if kohler_inicial %}1{% else %}0{% endif %}";
+    const URL_RENTABILIDADE = "{% url 'PisosWeb:rentabilidade_documento' slug=slug tipo='pedido' numero=0 %}";
 
     /* ── KOHLER MODE ── */
     const KOHLER_MARCA = '98';
@@ -1795,6 +1801,120 @@
       showToast('O formulário voltou com erros. Revise os campos destacados.', 'danger');
       {% endif %}
     });
+
+    function abrirRentabilidade(tipo, numero) {
+      const modalEl = document.getElementById('modalRentabilidade');
+      const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+      const erro = document.getElementById('rentabilidadeErro');
+      const loading = document.getElementById('rentabilidadeLoading');
+      const conteudo = document.getElementById('rentabilidadeConteudo');
+
+      const dinheiro = valor =>
+        Number(valor || 0).toLocaleString('pt-BR', {
+          style: 'currency',
+          currency: 'BRL'
+        });
+
+      const percentual = valor =>
+        `${Number(valor || 0).toLocaleString('pt-BR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        })}%`;
+
+      erro.classList.add('d-none');
+      conteudo.classList.add('d-none');
+      loading.classList.remove('d-none');
+
+      modal.show();
+
+      const url = URL_RENTABILIDADE.replace(
+            `/${tipo}/0/`,
+            `/${tipo}/${numero}/`
+        );
+
+        fetch(url, {
+          headers: { 'Accept': 'application/json' },
+          credentials: 'same-origin'
+      })
+      .then(async response => {
+          const contentType = response.headers.get('content-type') || '';
+
+          if (!contentType.includes('application/json')) {
+              const texto = await response.text();
+
+              throw new Error(
+                  `A URL retornou HTTP ${response.status}, não JSON. ` +
+                  `Verifique a rota. Resposta: ${texto.slice(0, 200)}`
+              );
+          }
+
+          const data = await response.json();
+
+          if (!response.ok) {
+              throw new Error(data.erro || 'Erro ao calcular rentabilidade.');
+          }
+
+          return data;
+      })
+        .then(data => {
+          const resumo = data.resumo;
+
+          document.getElementById('rentabilidadeDocumento').textContent =
+            `${tipo === 'orcamento' ? 'Orçamento' : 'Pedido'} #${numero}`;
+
+          document.getElementById('rentReceita').textContent =
+            dinheiro(resumo.receita_liquida);
+
+          document.getElementById('rentCusto').textContent =
+            dinheiro(resumo.custo_produtos);
+
+          const lucroEl = document.getElementById('rentLucro');
+          lucroEl.textContent = dinheiro(resumo.lucro);
+          lucroEl.className = Number(resumo.lucro) < 0
+            ? 'text-danger'
+            : 'text-success';
+
+          document.getElementById('rentMargem').textContent =
+            percentual(resumo.margem_percentual);
+
+          const tbody = document.getElementById('rentabilidadeItens');
+          tbody.replaceChildren();
+
+          data.itens.forEach(item => {
+            const tr = document.createElement('tr');
+
+            const valores = [
+              item.descricao,
+              item.quantidade,
+              dinheiro(item.receita_liquida),
+              dinheiro(item.custo_unitario),
+              dinheiro(item.custo),
+              dinheiro(item.frete_rateado),
+              dinheiro(item.lucro),
+              percentual(item.margem_percentual)
+            ];
+
+            valores.forEach((valor, index) => {
+              const td = document.createElement('td');
+              td.textContent = valor;
+              if (index > 0) td.classList.add('text-end');
+              tr.appendChild(td);
+            });
+
+            tbody.appendChild(tr);
+          });
+
+          loading.classList.add('d-none');
+          conteudo.classList.remove('d-none');
+        })
+        .catch(error => {
+          loading.classList.add('d-none');
+          erro.textContent = error.message;
+          erro.classList.remove('d-none');
+        });
+    }
+
   </script>
 
   {% endblock %}

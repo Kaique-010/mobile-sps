@@ -11,7 +11,8 @@ urlpatterns = [
     path("webhook/", whatsapp_webhook),
     path("webhook/verify/", webhook_verify),
     path("webhook/receive/", webhook_receive),
-    
+    path("browser-reload/", include("django_browser_reload.urls")),
+
 
 
     # Health e cache

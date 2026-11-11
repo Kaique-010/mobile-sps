@@ -1,7 +1,7 @@
 from django import forms
 from django.db import transaction
 from django.db.models import Max
-from .models import Entidades
+from .models import Entidades, campo_existe_no_banco
 import logging
 
 logger = logging.getLogger(__name__)
@@ -80,6 +80,14 @@ class EntidadesForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.db_name = db_name  # Guarda o nome do banco para ser usado no save()
         self.request = request  # Store the request object
+
+        # Remove o campo do arquiteto quando a coluna não existir no banco (schema legado)
+        db_alias = getattr(request, 'db_alias', None) or db_name
+        if db_alias and 'enti_arqu' in self.fields and not campo_existe_no_banco(
+            model=Entidades, field_name='enti_arqu', using=db_alias
+        ):
+            self.fields.pop('enti_arqu', None)
+
         if 'enti_espe_enti' in self.fields:
             self.fields['enti_espe_enti'].initial = '000'
 
@@ -90,13 +98,12 @@ class EntidadesForm(forms.ModelForm):
             self.fields['is_motorista'].initial = (enti_tien == 'M')
             self.fields['is_transportadora'].initial = (enti_tien == 'T')
             self.fields['enti_espe_enti'].initial = getattr(self.instance, 'enti_espe_enti', None) or '000'
-            # Inicializa campo arquiteto responsável
-            try:
-                enti_arqu = getattr(self.instance, 'enti_arqu', None)
-            except Exception:
-                enti_arqu = None
+            # Inicializa campo arquiteto responsável (quando disponível no banco)
             if 'enti_arqu' in self.fields:
-                self.fields['enti_arqu'].initial = enti_arqu
+                try:
+                    self.fields['enti_arqu'].initial = self.instance.enti_arqu
+                except Exception:
+                    self.fields['enti_arqu'].initial = None
 
         # Tornar certos campos não obrigatórios
         for field in ['enti_cpf', 'enti_cnpj', 'enti_fone', 'enti_emai',
@@ -223,8 +230,12 @@ class EntidadesForm(forms.ModelForm):
             if commit:
                 # Na edição, usa update_fields para não tentar alterar a PK composta
                 if instance.enti_clie:
-                    # Edição: atualiza apenas campos editáveis, excluindo PKs
-                    update_fields = [f.name for f in instance._meta.fields if f.name not in ('enti_empr', 'enti_clie')]
+                    # Edição: atualiza apenas campos editáveis, excluindo PKs e colunas ausentes no banco
+                    update_fields = [
+                        f.name
+                        for f in instance._meta.fields
+                        if f.name not in ('enti_empr', 'enti_clie') and f.name in self.fields
+                    ]
                     instance.save(using=db_alias, update_fields=update_fields)
                 else:
                     # Criação: salva normalmente

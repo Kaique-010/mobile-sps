@@ -2,6 +2,8 @@ from django.db import models
 from django.utils.html import mark_safe
 from datetime import date, timedelta
 
+from core.db_columns import SafeMissingColumnsManager
+
 
 class Ncm(models.Model):
     ncm_codi = models.CharField(max_length=10, primary_key=True)
@@ -338,6 +340,9 @@ class Produtos(models.Model):
 )
     
 
+
+    # Ignora automaticamente colunas ausentes em bancos de tenant legados (ex.: prod_url)
+    objects = SafeMissingColumnsManager()
 
     class Meta:
         db_table = 'produtos'

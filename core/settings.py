@@ -72,10 +72,6 @@ else:
     }
 
 
-import logging
-logger = logging.getLogger("django")
-logger.warning("🧠 BASE USADA: %s", "LOCAL" if USE_LOCAL_DB else "REMOTA")
-
 
 
 DATABASE_ROUTERS = ['core.db_router.LicencaDBRouter']
@@ -98,6 +94,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'rest_framework',
     'rest_framework_simplejwt',
+    "django_browser_reload",
     # 'channels',  # Removido para eliminar WebSocket
     # 'sklearn',
 
@@ -381,108 +378,57 @@ SPECTACULAR_SETTINGS = {
 APPEND_SLASH = True
 
 # Configurações de timeout para produção
+
+
+
 GUNICORN_TIMEOUT = 120  # 2 minutos
 
-# Configurações de logging consolidadas
+# Configuração de logging: em produção, exibe somente ERROR e CRITICAL.
+import logging
+
+LOG_LEVEL = "DEBUG" if DEBUG else "ERROR"
+
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "[{levelname}] {asctime} {name}: {message}",
+            "style": "{",
         },
     },
-    'formatters': {
-        'verbose': {
-            'format': '[{levelname}] {asctime} {name}: {message}',
-            'style': '{',
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "level": LOG_LEVEL,
+            "formatter": "verbose",
         },
     },
-    'loggers': {
-        'django.server': {
-            'handlers': ['console'],
-            'level': 'ERROR' if not DEBUG else 'WARNING',
-            'propagate': False,
+    "root": {
+        "handlers": ["console"],
+        "level": LOG_LEVEL,
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
         },
-        'django.request': {
-            'handlers': ['console'],
-            'level': 'ERROR',
-            'propagate': False,
+        "django.server": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
         },
-        'django.db.backends': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,
+        "django.request": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
         },
-        'Orcamentos': {
-            'handlers': ['console'],
-            'level': 'DEBUG' if DEBUG else 'INFO',
-            'propagate': False,
+        "django.db.backends": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
         },
-        'O_S': {
-            'handlers': ['console'],
-            'level': 'DEBUG' if DEBUG else 'INFO',
-            'propagate': False,
-            'formatter': 'verbose',
-        },
-        'Entidades': {
-            'handlers': ['console'],
-            'level': 'DEBUG' if DEBUG else 'INFO',  
-            'propagate': False,
-        },
-        'Produtos': {
-            'handlers': ['console'],
-            'level': 'DEBUG' if DEBUG else 'INFO',
-            'propagate': False,
-        },
-        'Pedidos': {
-            'handlers': ['console'],
-            'level': 'DEBUG' if DEBUG else 'INFO',
-            'propagate': False,
-        },
-        'listacasamento.views': {
-            'handlers': ['console'],
-            'level': 'DEBUG' if DEBUG else 'INFO',
-            'propagate': False,
-            'formatter': 'verbose',
-        },
-        'Pisos': {
-            'handlers': ['console'],
-            'level': 'DEBUG' if DEBUG else 'INFO',
-            'propagate': False,
-            'formatter': 'verbose',
-        },
-        'PedidosPisos': {
-            'handlers': ['console'],
-            'level': 'DEBUG' if DEBUG else 'INFO',
-            'propagate': False,
-            'formatter': 'verbose',
-        },
-        'Assistente_Spart': {
-            'handlers': ['console'],
-            'level': 'DEBUG' if DEBUG else 'INFO',
-            'propagate': False,
-            'formatter': 'verbose',
-        },
-        'ItensPedidosPisos': {
-            'handlers': ['console'],
-            'level': 'DEBUG' if DEBUG else 'INFO',
-            'propagate': False,
-            'formatter': 'verbose',
-        },
-        'ControleDeVisitas': {
-            'handlers': ['console'],
-            'level': 'DEBUG' if DEBUG else 'INFO',
-            'propagate': False,
-            'formatter': 'verbose',
-        },
-        'perfilweb.middleware': {
-            'handlers': ['console'],
-            'level': 'DEBUG' if DEBUG else 'INFO',
-            'propagate': False,
-            'formatter': 'verbose',
-        }
     },
 }
 

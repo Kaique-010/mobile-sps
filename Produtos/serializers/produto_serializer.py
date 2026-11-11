@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from ..models import Lote, Produtos, ProdutosDetalhados, Tabelaprecos
+from core.db_columns import get_table_columns
 from core.serializers import BancoContextMixin
 from decimal import Decimal, InvalidOperation
 import base64
@@ -29,6 +30,18 @@ class ProdutoSerializer(BancoContextMixin, serializers.ModelSerializer):
         read_only_fields = ['prod_codi']
         extra_kwargs = {}
     
+    def get_fields(self):
+        """Remove campos cujas colunas não existem no banco do tenant (ex.: prod_url)."""
+        fields = super().get_fields()
+        banco = self.context.get("banco") or self.context.get("using")
+        cols = get_table_columns(using=banco, table_name=Produtos._meta.db_table)
+        if not cols:
+            return fields
+        for f in Produtos._meta.concrete_fields:
+            if f.column not in cols and f.name in fields:
+                fields.pop(f.name, None)
+        return fields
+
     def safe_decimal_conversion(self, value, default=None):
         """Converte valores para Decimal de forma segura"""
         if value is None:

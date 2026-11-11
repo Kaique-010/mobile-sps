@@ -1,5 +1,6 @@
 from django.db.models import Subquery, OuterRef, DecimalField, Value as V, Case, When, BigIntegerField, CharField, Q
 from django.db.models.functions import Coalesce, Cast
+from core.db_columns import campo_existe_no_banco
 from ..models import Produtos, SaldoProduto, Tabelaprecos
 
 def listar_produtos(banco, empresa_id=None, filial_id=None, q=None, marca_nome=None, saldo_filter=None, limit=None):
@@ -46,26 +47,32 @@ def listar_produtos(banco, empresa_id=None, filial_id=None, q=None, marca_nome=N
         output_field=DecimalField()
     )
 
-    url_imagem = Subquery(
-        Produtos.objects.using(banco).filter(
-            prod_codi=OuterRef('prod_codi')
-        ).values('prod_url')[:1],
-        output_field=CharField()
-    )
-
     # Annotate
-    queryset = queryset.annotate(
-        saldo_estoque=Coalesce(saldo_subquery, V(0), output_field=DecimalField()),
-        prod_preco_vista=Coalesce(preco_vista_subquery, V(0), output_field=DecimalField()),
-        prod_preco_normal=Coalesce(preco_normal_subquery, V(0), output_field=DecimalField()),
-        prod_coba_str=Coalesce(Cast('prod_coba', CharField()), V('')),
-        prod_url_img=Coalesce(url_imagem, V('')),
-        prod_codi_int=Case(
+    annotations = {
+        'saldo_estoque': Coalesce(saldo_subquery, V(0), output_field=DecimalField()),
+        'prod_preco_vista': Coalesce(preco_vista_subquery, V(0), output_field=DecimalField()),
+        'prod_preco_normal': Coalesce(preco_normal_subquery, V(0), output_field=DecimalField()),
+        'prod_coba_str': Coalesce(Cast('prod_coba', CharField()), V('')),
+        'prod_codi_int': Case(
             When(prod_codi__regex=r'^\d+$', then=Cast('prod_codi', BigIntegerField())),
             default=V(None),
             output_field=BigIntegerField()
+        ),
+    }
+
+    # prod_url só é referenciada quando a coluna existir no banco do tenant
+    if campo_existe_no_banco(model=Produtos, field_name='prod_url', using=banco):
+        url_imagem = Subquery(
+            Produtos.objects.using(banco).filter(
+                prod_codi=OuterRef('prod_codi')
+            ).values('prod_url')[:1],
+            output_field=CharField()
         )
-    )
+        annotations['prod_url_img'] = Coalesce(url_imagem, V(''))
+    else:
+        annotations['prod_url_img'] = V('')
+
+    queryset = queryset.annotate(**annotations)
 
     # Filtros
     if empresa_id:

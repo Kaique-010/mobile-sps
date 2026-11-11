@@ -1,0 +1,226 @@
+<style>
+  #modalRentabilidade .modal-dialog {
+    max-width: 90vw;
+    width: 90vw;
+    margin: 1.70rem auto;
+  }
+
+  #modalRentabilidade .modal-content {
+    height: 85vh;
+    max-height: 85vh;
+  }
+
+  #modalRentabilidade .modal-body {
+    overflow-y: auto;
+  }
+
+  #modalRentabilidade .rentabilidade-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #6c757d;
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+
+  #modalRentabilidade .rentabilidade-label i {
+    font-size: 1rem;
+  }
+
+  #modalRentabilidade .rent-icon-receita {
+    color: #198754;
+  }
+
+  #modalRentabilidade .rent-icon-custo {
+    color: #dc3545;
+  }
+
+  #modalRentabilidade .rent-icon-lucro {
+    color: #0d6efd;
+  }
+
+  #modalRentabilidade .rent-icon-margem {
+    color: #6f42c1;
+  }
+
+  #modalRentabilidade .rent-icon-produto {
+    color: #0d6efd;
+  }
+
+  #modalRentabilidade .rent-icon-quantidade {
+    color: #6c757d;
+  }
+
+  #modalRentabilidade .rent-icon-venda {
+    color: #198754;
+  }
+
+  #modalRentabilidade .rent-icon-frete {
+    color: #fd7e14;
+  }
+
+  #modalRentabilidade thead th {
+    white-space: nowrap;
+    font-size: 0.82rem;
+    font-weight: 600;
+    vertical-align: middle;
+  }
+
+  #modalRentabilidade thead th i {
+    margin-right: 4px;
+    font-size: 0.9rem;
+  }
+
+  #modalRentabilidade .card h5 {
+    margin-top: 8px;
+    margin-bottom: 0;
+    font-weight: 600;
+  }
+</style>
+
+<div class="modal fade" id="modalRentabilidade" tabindex="-1" aria-labelledby="tituloRentabilidade" aria-hidden="true">
+
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <div>
+          <h5 class="modal-title" id="tituloRentabilidade">
+            <i class="bi bi-currency-dollar text-success"></i>
+            Rentabilidade do documento
+          </h5>
+          <small class="text-secondary" id="rentabilidadeDocumento"></small>
+        </div>
+
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+
+      <div class="modal-body">
+        <div id="rentabilidadeErro" class="alert alert-danger d-none"></div>
+
+        <div id="rentabilidadeLoading" class="text-center py-5 d-none">
+          <div class="spinner-border text-primary"></div>
+          <p class="mt-2">Calculando rentabilidade...</p>
+        </div>
+
+        <div id="rentabilidadeConteudo" class="d-none">
+
+          <!-- Cards de indicadores -->
+          <div class="row g-3 mb-4">
+
+            <div class="col-6 col-lg-3">
+              <div class="card h-100">
+                <div class="card-body">
+                  <small class="rentabilidade-label">
+                    <i class="bi bi-cash-stack rent-icon-receita"></i>
+                    Receita líquida
+                  </small>
+                  <h5 id="rentReceita">R$ 0,00</h5>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+              <div class="card h-100">
+                <div class="card-body">
+                  <small class="rentabilidade-label">
+                    <i class="bi bi-box-seam rent-icon-custo"></i>
+                    Custo dos produtos
+                  </small>
+                  <h5 id="rentCusto">R$ 0,00</h5>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+              <div class="card h-100">
+                <div class="card-body">
+                  <small class="rentabilidade-label">
+                    <i class="bi bi-graph-up-arrow rent-icon-lucro"></i>
+                    Lucro estimado
+                  </small>
+                  <h5 id="rentLucro">R$ 0,00</h5>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+              <div class="card h-100">
+                <div class="card-body">
+                  <small class="rentabilidade-label">
+                    <i class="bi bi-percent rent-icon-margem"></i>
+                    Margem
+                  </small>
+                  <h5 id="rentMargem">0,00%</h5>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Tabela de rentabilidade -->
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle">
+
+              <thead>
+                <tr>
+                  <th>
+                    <i class="bi bi-box-seam rent-icon-produto"></i>
+                    Produto
+                  </th>
+
+                  <th class="text-end">
+                    <i class="bi bi-123 rent-icon-quantidade"></i>
+                    Quantidade
+                  </th>
+
+                  <th class="text-end">
+                    <i class="bi bi-cash-coin rent-icon-venda"></i>
+                    Venda líquida
+                  </th>
+
+                  <th class="text-end">
+                    <i class="bi bi-tag rent-icon-custo"></i>
+                    Custo unit.
+                  </th>
+
+                  <th class="text-end">
+                    <i class="bi bi-calculator rent-icon-custo"></i>
+                    Custo total
+                  </th>
+
+                  <th class="text-end">
+                    <i class="bi bi-truck rent-icon-frete"></i>
+                    Frete rateado
+                  </th>
+
+                  <th class="text-end">
+                    <i class="bi bi-graph-up-arrow rent-icon-lucro"></i>
+                    Lucro
+                  </th>
+
+                  <th class="text-end">
+                    <i class="bi bi-percent rent-icon-margem"></i>
+                    Margem
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody id="rentabilidadeItens"></tbody>
+
+            </table>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="bi bi-x-circle me-1"></i>
+          Fechar
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
