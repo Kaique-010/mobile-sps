@@ -16,6 +16,11 @@ from core.middleware import get_licenca_slug
 from ..models import ProdutosDetalhados
 from ..serializers.produto_serializer import ProdutoDetalhadoSerializer
 from logging import getLogger
+from rest_framework.pagination import LimitOffsetPagination
+
+class ProdutosDetalhadosPagination(LimitOffsetPagination):
+    default_limit = 20
+    max_limit = 500
 
 logger = getLogger(__name__)
 
@@ -26,6 +31,7 @@ class ProdutosDetalhadosViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ['codigo', 'nome', 'marca_nome', 'empresa', 'filial']
     search_fields = ['codigo', 'nome', 'marca_nome']
+    pagination_class = ProdutosDetalhadosPagination
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
