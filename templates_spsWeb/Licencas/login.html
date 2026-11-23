@@ -1,473 +1,1181 @@
+
 {% extends 'base.html' %}
 {% load static %}
 
 {% block title %}SPS WEB{% endblock %}
+
 {% block extra_css %}
 <style>
-  /*
-    ====== LOGIN (THEMES) ======
-    Organização: primeiro TEMA CLARO (default), depois TEMA ESCURO (data-bs-theme="dark").
-    Cada bloco agrupa regras por componente, com comentários explicando o impacto visual.
-  */
+/* =========================================================
+   LOGIN SPS WEB — ANIMAÇÃO CINEMATOGRÁFICA
+   Django Templates + Bootstrap + JavaScript
+   ========================================================= */
 
-  /* ===================== TEMA CLARO ===================== */
+/* ===================== FUNDO ===================== */
 
-  /* Página: fundo leve e neutro para destacar o cartão */
-  .login-wrapper {
+.login-wrapper {
     min-height: 100vh;
+    width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    /* Plano de fundo claro com leve gradiente, melhora contraste com o card */
-    background: linear-gradient(135deg, #eef2f7 0%, #f8f9fa 100%);
-  }
-
-  /* Cartão de login: branco, cantos arredondados e sombra moderada */
-  .login-card {
-    background: #ffffff;
-    border-radius: 16px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    padding: 30px 16px;
+    position: relative;
     overflow: hidden;
-    max-width: 440px;
-    width: 100%;
-  }
+    isolation: isolate;
 
-  /* Cabeçalho: gradiente na identidade para destaque do logotipo */
-  .login-header {
-    background: linear-gradient(135deg, #2f4858 0%, #356b54 100%);
-    padding: 40px 30px;
+    background:
+        radial-gradient(circle at 15% 20%, rgba(102,126,234,.15), transparent 35%),
+        radial-gradient(circle at 85% 80%, rgba(118,75,162,.15), transparent 35%),
+        linear-gradient(135deg, #eef2f7 0%, #f8f9fa 100%);
+}
+
+/* Iluminação ambiente */
+
+.login-wrapper::before,
+.login-wrapper::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+    z-index: -1;
+    animation: ambientFloat 12s ease-in-out infinite alternate;
+}
+
+.login-wrapper::before {
+    width: 350px;
+    height: 350px;
+    background: rgba(102,126,234,.20);
+    top: -120px;
+    left: -100px;
+}
+
+.login-wrapper::after {
+    width: 400px;
+    height: 400px;
+    background: rgba(118,75,162,.16);
+    bottom: -160px;
+    right: -100px;
+    animation-delay: -5s;
+}
+
+@keyframes ambientFloat {
+    0% {
+        transform: translate(0, 0) scale(1);
+    }
+    100% {
+        transform: translate(50px, 40px) scale(1.2);
+    }
+}
+
+/* ===================== CARD ===================== */
+
+.login-card {
+    position: relative;
+    width: 100%;
+    max-width: 440px;
+    background: #ffffff;
+    border-radius: 20px;
+    overflow: hidden;
+
+    box-shadow:
+        0 30px 80px rgba(0,0,0,.12),
+        0 5px 20px rgba(0,0,0,.04);
+
+    opacity: 0;
+    transform: translateY(45px) scale(.92);
+
+    animation: cardEnter 1s cubic-bezier(.16,1,.3,1) forwards;
+
+    z-index: 1;
+}
+
+@keyframes cardEnter {
+    0% {
+        opacity: 0;
+        transform: translateY(45px) scale(.92);
+    }
+
+    70% {
+        opacity: 1;
+        transform: translateY(-4px) scale(1.01);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* ===================== CABEÇALHO ===================== */
+
+.login-header {
+    position: relative;
+    padding: 42px 30px;
     text-align: center;
     color: #ffffff;
-    /* garante contraste alto com o fundo do cabeçalho */
-  }
 
-  /* Marca e título: dimensionamento e inversão para boa legibilidade */
-  .login-logo {
+    background: linear-gradient(
+        135deg,
+        #2f4858 0%,
+        #356b54 100%
+    );
+
+    overflow: hidden;
+}
+
+/* Brilho atravessando o cabeçalho */
+
+.login-header::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 60%;
+    height: 100%;
+
+    background: linear-gradient(
+        110deg,
+        transparent,
+        rgba(255,255,255,.15),
+        transparent
+    );
+
+    animation: headerShine 2s ease 1.2s forwards;
+}
+
+@keyframes headerShine {
+    to {
+        left: 150%;
+    }
+}
+
+.login-logo {
     height: 64px;
+    max-width: 180px;
+    object-fit: contain;
     margin-bottom: 16px;
     filter: brightness(0) invert(1);
-  }
 
-  .login-title {
-    font-size: 24px;
+    opacity: 0;
+    transform: translateY(15px) scale(.85);
+
+    animation: logoEnter .7s cubic-bezier(.16,1,.3,1) 0.55s forwards;
+}
+
+@keyframes logoEnter {
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.login-title {
+    font-size: 1.5rem;
+    font-family: 'Fauna', serif;
     font-weight: 600;
     margin: 0;
-  }
 
-  /* Corpo do card: espaçamento confortável para os campos */
-  .login-body {
+    opacity: 0;
+    transform: translateY(15px);
+
+    animation: fadeUp .7s ease .75s forwards;
+}
+
+@keyframes fadeUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===================== CORPO ===================== */
+
+.login-body {
     padding: 40px 30px;
-  }
+}
 
-  /* Rótulos: cor escura padrão para boa leitura */
-  .form-label {
+.login-body form {
+    width: 100%;
+}
+
+/* Entrada sequencial dos campos */
+
+.login-body .mb-3 {
+    opacity: 0;
+    transform: translateY(20px);
+
+    animation: fieldEnter .6s cubic-bezier(.16,1,.3,1) forwards;
+}
+
+.login-body form .mb-3:nth-child(1) {
+    animation-delay: .95s;
+}
+
+.login-body form .mb-3:nth-child(2) {
+    animation-delay: 1.10s;
+}
+
+.login-body form .mb-3:nth-child(3) {
+    animation-delay: 1.25s;
+}
+
+@keyframes fieldEnter {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===================== LABELS ===================== */
+
+.login-body .form-label {
     font-weight: 500;
     margin-bottom: 8px;
     color: #333;
-  }
+    font-size: .94rem;
+}
 
-  /* Campos: borda suave, foco com realce azul e sombra leve */
-  .form-control {
-    border-radius: 8px;
-    padding: 12px 16px;
+.login-body .form-label i {
+    color: #667eea;
+    font-size: 1rem;
+}
+
+/* ===================== INPUTS ===================== */
+
+.login-body .form-control {
+    border-radius: 10px;
+    padding: 13px 16px;
+
     border: 2px solid #e0e0e0;
-    transition: all 0.3s ease;
+
+    transition:
+        border-color .3s ease,
+        box-shadow .3s ease,
+        background .3s ease,
+        transform .3s ease;
+
     background: #ffffff;
     color: #212529;
-  }
+}
 
-  .form-control:focus {
+.login-body .form-control:hover {
+    border-color: #c4cbea;
+}
+
+.login-body .form-control:focus {
     border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12);
-  }
 
-  .password-wrapper {
+    box-shadow:
+        0 0 0 4px rgba(102,126,234,.13),
+        0 5px 15px rgba(102,126,234,.08);
+
+    transform: translateY(-1px);
+    outline: none;
+}
+
+/* ===================== SENHA ===================== */
+
+.password-wrapper {
     position: relative;
-  }
+}
 
-  .password-toggle {
+.password-wrapper .form-control {
+    padding-right: 48px;
+}
+
+.password-toggle {
     position: absolute;
     right: 12px;
     top: 50%;
     transform: translateY(-50%);
+
     border: none;
     background: transparent;
     color: #667eea;
-    padding: 4px;
+
+    padding: 5px;
+
     display: inline-flex;
     align-items: center;
     justify-content: center;
+
     cursor: pointer;
-  }
+    transition: color .2s ease, transform .2s ease;
+}
 
-  .password-toggle:focus {
+.password-toggle:hover {
+    color: #764ba2;
+    transform: translateY(-50%) scale(1.15);
+}
+
+.password-toggle:focus {
     outline: none;
-  }
+}
 
-  /* Botão Entrar: gradiente violeta/azul com leve elevação no hover */
-  .btn-login {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+/* ===================== BOTÃO LOGIN ===================== */
+
+.btn-login {
+    position: relative;
+    overflow: hidden;
+
+    background: linear-gradient(
+        135deg,
+        #667eea 0%,
+        #764ba2 100%
+    );
+
     border: none;
-    border-radius: 8px;
-    padding: 14px;
+    border-radius: 10px;
+
+    padding: 15px;
+
     font-weight: 600;
     color: #ffffff;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
 
-  .btn-login:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.35);
-  }
+    transition:
+        transform .25s ease,
+        box-shadow .25s ease;
 
-  /* Rodapé do card: borda sutil e links com transição */
-  .login-footer {
+    opacity: 0;
+    transform: translateY(15px);
+
+    animation: fieldEnter .6s ease 1.45s forwards;
+}
+
+.btn-login::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+
+    width: 60%;
+    height: 100%;
+
+    background: linear-gradient(
+        110deg,
+        transparent,
+        rgba(255,255,255,.25),
+        transparent
+    );
+
+    transition: left .6s ease;
+}
+
+.btn-login:hover:not(:disabled) {
+    transform: translateY(-3px);
+
+    box-shadow:
+        0 10px 25px rgba(102,126,234,.35);
+}
+
+.btn-login:hover:not(:disabled)::before {
+    left: 150%;
+}
+
+.btn-login:active:not(:disabled) {
+    transform: scale(.98);
+}
+
+.btn-login:disabled {
+    opacity: .8;
+    cursor: wait;
+}
+
+/* ===================== SPINNER ===================== */
+
+.login-spinner {
+    width: 20px;
+    height: 20px;
+
+    border: 2px solid rgba(255,255,255,.35);
+    border-top-color: #ffffff;
+
+    border-radius: 50%;
+
+    animation: login-spin .8s linear infinite;
+}
+
+@keyframes login-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ===================== FOOTER ===================== */
+
+.login-footer {
     text-align: center;
-    margin-top: 24px;
+    margin: 0 30px 28px;
     padding-top: 24px;
-    border-top: 1px solid #e0e0e0;
-  }
 
-  .login-footer a {
+    border-top: 1px solid #e0e0e0;
+
+    opacity: 0;
+    animation: fadeUp .6s ease 1.65s forwards;
+}
+
+.login-footer a {
     color: #667eea;
     text-decoration: none;
     font-weight: 500;
-    transition: color 0.2s ease;
-  }
 
-  .login-footer a:hover {
+    transition: color .2s ease;
+}
+
+.login-footer a:hover {
     color: #764ba2;
-  }
+}
 
-  /* Botão de alternância de tema: visível e sem deslocamento extra */
-  .theme-toggle-login {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    background: rgba(255, 255, 255, 0.18);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(0, 0, 0, 0.35);
-    border-radius: 50%;
-    width: 48px;
-    height: 48px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    color: #000000;
-    font-size: 20px;
-  }
+/* ===================== ALERTAS ===================== */
 
-  .theme-toggle-login:hover {
-    background: rgba(255, 255, 255, 0.28);
-    transform: rotate(180deg);
-  }
-
-  /* Ajustes gerais:
-     - Alertas sem borda para estética mais limpa
-     - Oculta footer global nesta página para foco no formulário */
-  .alert {
-    border-radius: 8px;
+.login-body .alert {
+    border-radius: 10px;
     border: none;
-  }
+    margin-bottom: 20px;
+}
 
-  .footer {
-    display: none !important;
-  }
+.login-body .alert:not(.d-none) {
+    animation: alertEnter .35s ease;
+}
 
+@keyframes alertEnter {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
 
+/* ===================== TEMA ESCURO ===================== */
 
-  /* ===================== TEMA ESCURO ===================== */
+[data-bs-theme="dark"] .login-wrapper {
+    background:
+        radial-gradient(circle at 15% 20%, rgba(102,126,234,.12), transparent 35%),
+        radial-gradient(circle at 85% 80%, rgba(118,75,162,.12), transparent 35%),
+        linear-gradient(135deg, #101522 0%, #1b2432 100%);
+}
 
-  /* Página: tons frios e profundos para reduzir brilho */
-  [data-bs-theme="dark"] .login-wrapper {
-    /* Gradiente escuro suave que evita banding e deixa o card em evidência */
-    background: linear-gradient(135deg, #101522 0%, #1b2432 100%);
-  }
-
-  /* Cartão de login: superfície escura com sombra mais presente para legibilidade */
-  [data-bs-theme="dark"] .login-card {
+[data-bs-theme="dark"] .login-card {
     background: #1f2633;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
-  }
 
-  /* Cabeçalho: variação mais escura preservando contraste do texto */
-  [data-bs-theme="dark"] .login-header {
-    background: linear-gradient(135deg, #243447 0%, #1f3a33 100%);
-  }
+    box-shadow:
+        0 30px 80px rgba(0,0,0,.45),
+        0 5px 20px rgba(0,0,0,.2);
+}
 
-  /* Rótulos: clareamento para manter contraste com o fundo escuro */
-  [data-bs-theme="dark"] .form-label {
+[data-bs-theme="dark"] .login-header {
+    background: linear-gradient(
+        135deg,
+        #243447 0%,
+        #1f3a33 100%
+    );
+}
+
+[data-bs-theme="dark"] .form-label {
     color: #e0e0e0;
-  }
+}
 
-  /* Campos: fundo escuro, borda definida e foco coerente */
-  [data-bs-theme="dark"] .form-control {
+[data-bs-theme="dark"] .login-body .form-label i {
+    color: #88a4e6;
+}
+
+[data-bs-theme="dark"] .login-body .form-control {
     background: #141a24;
     border-color: #3a4a62;
     color: #e0e0e0;
-  }
+}
 
-  [data-bs-theme="dark"] .form-control:focus {
+[data-bs-theme="dark"] .login-body .form-control::placeholder {
+    color: #8792a5;
+}
+
+[data-bs-theme="dark"] .login-body .form-control:hover {
+    border-color: #667eea;
+}
+
+[data-bs-theme="dark"] .login-body .form-control:focus {
     background: #141a24;
     border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.22);
-  }
 
-  [data-bs-theme="dark"] .password-toggle {
+    box-shadow:
+        0 0 0 4px rgba(102,126,234,.2);
+}
+
+[data-bs-theme="dark"] .password-toggle {
     color: #88a4e6;
-  }
+}
 
-  /* Botão Entrar: tons escuros coesos e sombra mais marcada no hover */
-  [data-bs-theme="dark"] .btn-login {
-    background: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
-  }
+[data-bs-theme="dark"] .btn-login {
+    background: linear-gradient(
+        135deg,
+        #0f3460 0%,
+        #16213e 100%
+    );
+}
 
-  [data-bs-theme="dark"] .btn-login:hover {
-    box-shadow: 0 8px 20px rgba(15, 52, 96, 0.5);
-  }
+[data-bs-theme="dark"] .btn-login:hover:not(:disabled) {
+    box-shadow: 0 10px 25px rgba(15,52,96,.5);
+}
 
-  /* Rodapé do card: borda ajustada e links com cor adequada ao dark */
-  [data-bs-theme="dark"] .login-footer {
+[data-bs-theme="dark"] .login-footer {
     border-top-color: #3a4a62;
-  }
+}
 
-  [data-bs-theme="dark"] .login-footer a {
+[data-bs-theme="dark"] .login-footer a {
     color: #88a4e6;
-  }
+}
 
-  /* Botão de alternância de tema: fundo e borda adaptados ao escuro */
-  [data-bs-theme="dark"] .theme-toggle-login {
-    background: rgba(32, 32, 48, 0.35);
-    border-color: rgba(255, 255, 255, 0.25);
-    color: #ffffff;
-  }
+[data-bs-theme="dark"] .login-footer a:hover {
+    color: #b1c5ff;
+}
 
-  [data-bs-theme="dark"] .theme-toggle-login:hover {
-    transform: rotate(180deg);
-    background: rgba(32, 32, 48, 0.45);
-  }
+/* ===================== BOTÃO TEMA ===================== */
 
-  .login-title {
+.theme-toggle-login {
+    position: absolute;
+    top: 20px;
+    right: 20px;
 
-    font-size: 1.5rem;
-    font-family: 'Fauna', serif;
-  }
+    z-index: 5;
 
-  .login-spinner {
-    width: 20px;
-    height: 20px;
-    border: 2px solid rgba(255, 255, 255, 0.35);
-    border-top-color: #ffffff;
+    background: rgba(255,255,255,.18);
+    backdrop-filter: blur(10px);
+
+    border: 1px solid rgba(0,0,0,.35);
     border-radius: 50%;
-    animation: login-spin 0.8s linear infinite;
-  }
 
-  @keyframes login-spin {
-    from {
-      transform: rotate(0deg);
+    width: 48px;
+    height: 48px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    cursor: pointer;
+
+    transition: all .3s ease;
+
+    color: #000000;
+    font-size: 20px;
+}
+
+.theme-toggle-login:hover {
+    background: rgba(255,255,255,.35);
+    transform: rotate(180deg);
+}
+
+[data-bs-theme="dark"] .theme-toggle-login {
+    background: rgba(32,32,48,.35);
+    border-color: rgba(255,255,255,.25);
+    color: #ffffff;
+}
+
+[data-bs-theme="dark"] .theme-toggle-login:hover {
+    background: rgba(32,32,48,.55);
+}
+
+/* ===================== RESPONSIVIDADE ===================== */
+
+@media (max-width: 576px) {
+    .login-wrapper {
+        padding: 20px 14px;
     }
 
-    to {
-      transform: rotate(360deg);
+    .login-card {
+        max-width: 100%;
     }
-  }
+
+    .login-header {
+        padding: 35px 20px;
+    }
+
+    .login-body {
+        padding: 30px 22px;
+    }
+
+    .login-footer {
+        margin: 0 22px 25px;
+    }
+
+    .login-logo {
+        height: 55px;
+    }
+
+    .theme-toggle-login {
+        width: 42px;
+        height: 42px;
+        top: 12px;
+        right: 12px;
+    }
+}
+
+/* ===================== ACESSIBILIDADE ===================== */
+
+@media (prefers-reduced-motion: reduce) {
+    .login-wrapper::before,
+    .login-wrapper::after,
+    .login-card,
+    .login-logo,
+    .login-title,
+    .login-body .mb-3,
+    .btn-login,
+    .login-footer,
+    .login-header::after {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+    }
+
+    *,
+    *::before,
+    *::after {
+        transition-duration: .01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* Ocultar footer global */
+
+.footer {
+    display: none !important;
+}
+
 </style>
 {% endblock %}
 
+
 {% block content %}
+
 <div class="login-wrapper">
-  <div class="position-fixed top-0 end-0 p-3">
-    <button id="theme-toggle" type="button" class="btn btn-outline-dark btn-sm rounded-circle theme-toggle-login"
-      aria-label="Alternar tema">
-      <i class="bi bi-moon"></i>
-    </button>
-  </div>
 
-  <div class="login-card">
-    <div class="login-header">
-      <img src="{% static 'logo.png' %}" alt="Logo Spartacus Sistemas" class="login-logo" />
-      <h1 class="login-title">SPS WEB</h1>
-    </div>
+    <!-- Alternância de tema -->
 
-    <div class="login-body">
-      <div id="alert" class="alert alert-danger d-none" role="alert"></div>
-
-      <form id="loginForm">
-        <div class="mb-3">
-          <label for="docu" class="form-label d-flex align-items-center gap-2">
-            <i class="bi bi-building"></i><span>CPF/CNPJ</span>
-          </label>
-          <input type="text" class="form-control" id="docu" name="docu"
-            placeholder="000.000.000-00 ou 00.000.000/0000-00" required maxlength="18">
-        </div>
-        <div class="mb-3">
-          <label for="username" class="form-label d-flex align-items-center gap-2">
-            <i class="bi bi-person-circle"></i><span>Usuário</span>
-          </label>
-          <input type="text" class="form-control" id="username" name="username" placeholder="seu usuário"
-            autocomplete="username" autocapitalize="none" spellcheck="false" required>
-        </div>
-        <div class="mb-3">
-          <label for="password" class="form-label d-flex align-items-center gap-2">
-            <i class="bi bi-shield-lock"></i><span>Senha</span>
-          </label>
-          <div class="password-wrapper">
-            <input type="password" class="form-control" id="password" name="password" placeholder="••••" required>
-            <button type="button" class="password-toggle" aria-label="Mostrar/ocultar senha" aria-pressed="false">
-              <i class="bi bi-eye"></i>
-            </button>
-          </div>
-        </div>
-        <button type="submit" class="btn-login w-100 d-flex align-items-center justify-content-center gap-2"
-          aria-busy="false">
-          <span id="loginBtnText">Entrar</span>
-          <span class="login-spinner d-none js-login-spinner" aria-hidden="true"></span>
-          <i class="bi bi-arrow-right js-login-arrow"></i>
+    <div class="position-fixed top-0 end-0 p-3">
+        <button
+            id="theme-toggle"
+            type="button"
+            class="btn btn-outline-dark btn-sm rounded-circle theme-toggle-login"
+            aria-label="Alternar tema"
+        >
+            <i class="bi bi-moon"></i>
         </button>
-      </form>
     </div>
 
-    <div class="login-footer">
-      <a href="https://mobile-sps.site/" target="_blank" rel="noopener">https://mobile-sps.site/</a>
+
+    <!-- Container principal -->
+
+    <div class="login-card">
+
+        <!-- Cabeçalho -->
+
+        <div class="login-header">
+
+            <img
+                src="{% static 'logo.png' %}"
+                alt="Logo Spartacus Sistemas"
+                class="login-logo"
+            />
+
+            <h1 class="login-title">SPS WEB</h1>
+
+        </div>
+
+
+        <!-- Corpo -->
+
+        <div class="login-body">
+
+            <div
+                id="alert"
+                class="alert alert-danger d-none"
+                role="alert"
+            ></div>
+
+
+            <form id="loginForm">
+
+                <!-- CPF/CNPJ -->
+
+                <div class="mb-3">
+
+                    <label
+                        for="docu"
+                        class="form-label d-flex align-items-center gap-2"
+                    >
+                        <i class="bi bi-building"></i>
+                        <span>CPF/CNPJ</span>
+                    </label>
+
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="docu"
+                        name="docu"
+                        placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                        required
+                        maxlength="14"
+                    >
+
+                </div>
+
+
+                <!-- Usuário -->
+
+                <div class="mb-3">
+
+                    <label
+                        for="username"
+                        class="form-label d-flex align-items-center gap-2"
+                    >
+                        <i class="bi bi-person-circle"></i>
+                        <span>Usuário</span>
+                    </label>
+
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="username"
+                        name="username"
+                        placeholder="seu usuário"
+                        autocomplete="username"
+                        autocapitalize="none"
+                        spellcheck="false"
+                        required
+                    >
+
+                </div>
+
+
+                <!-- Senha -->
+
+                <div class="mb-3">
+
+                    <label
+                        for="password"
+                        class="form-label d-flex align-items-center gap-2"
+                    >
+                        <i class="bi bi-shield-lock"></i>
+                        <span>Senha</span>
+                    </label>
+
+                    <div class="password-wrapper">
+
+                        <input
+                            type="password"
+                            class="form-control"
+                            id="password"
+                            name="password"
+                            placeholder="••••"
+                            autocomplete="current-password"
+                            required
+                        >
+
+                        <button
+                            type="button"
+                            class="password-toggle"
+                            aria-label="Mostrar/ocultar senha"
+                            aria-pressed="false"
+                        >
+                            <i class="bi bi-eye"></i>
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Botão entrar -->
+
+                <button
+                    type="submit"
+                    class="btn-login w-100 d-flex align-items-center justify-content-center gap-2"
+                    aria-busy="false"
+                >
+
+                    <span id="loginBtnText">Entrar</span>
+
+                    <span
+                        class="login-spinner d-none js-login-spinner"
+                        aria-hidden="true"
+                    ></span>
+
+                    <i class="bi bi-arrow-right js-login-arrow"></i>
+
+                </button>
+
+            </form>
+
+        </div>
+
+
+        <!-- Footer -->
+
+        <div class="login-footer">
+
+            <a
+                href="https://mobile-sps.site/"
+                target="_blank"
+                rel="noopener"
+            >
+                https://mobile-sps.site/
+            </a>
+
+        </div>
+
     </div>
-  </div>
+
 </div>
 
+
 <script>
-  // Auto-fill from URL params (useful for trial signup redirect)
-  window.addEventListener('DOMContentLoaded', () => {
+
+/* =========================================================
+   LOGIN SPS WEB
+   Mantida a lógica original de autenticação
+   ========================================================= */
+
+
+/* ===================== INICIALIZAÇÃO ===================== */
+
+window.addEventListener('DOMContentLoaded', () => {
+
     const params = new URLSearchParams(window.location.search);
+
     const docuParam = params.get('docu');
     const userParam = params.get('user');
     const passParam = params.get('pass');
 
-    if (docuParam) document.getElementById('docu').value = docuParam;
-    if (userParam) document.getElementById('username').value = userParam;
-    if (passParam) document.getElementById('password').value = passParam;
+    if (docuParam) {
+        document.getElementById('docu').value = docuParam;
+    }
 
-    var pwd = document.getElementById('password');
-    var toggle = document.querySelector('.password-toggle');
+    if (userParam) {
+        document.getElementById('username').value = userParam;
+    }
+
+    if (passParam) {
+        document.getElementById('password').value = passParam;
+    }
+
+
+    /* Mostrar / ocultar senha */
+
+    const pwd = document.getElementById('password');
+
+    const toggle = document.querySelector('.password-toggle');
+
     if (pwd && toggle) {
-      toggle.addEventListener('click', function () {
-        var isText = pwd.type === 'text';
-        pwd.type = isText ? 'password' : 'text';
-        toggle.setAttribute('aria-pressed', (!isText).toString());
-        var icon = toggle.querySelector('i');
-        if (icon) {
-          icon.classList.toggle('bi-eye');
-          icon.classList.toggle('bi-eye-slash');
-        }
-      });
+
+        toggle.addEventListener('click', function () {
+
+            const isText = pwd.type === 'text';
+
+            pwd.type = isText ? 'password' : 'text';
+
+            toggle.setAttribute(
+                'aria-pressed',
+                (!isText).toString()
+            );
+
+            const icon = toggle.querySelector('i');
+
+            if (icon) {
+
+                icon.classList.toggle('bi-eye');
+
+                icon.classList.toggle('bi-eye-slash');
+
+            }
+
+        });
+
     }
-  });
 
-  const showError = (msg) => {
-    const el = document.getElementById('alert');
-    el.textContent = msg;
-    el.classList.remove('d-none');
-    setLoading(false);
-  };
+});
 
-  const findSlugByDocu = async (docu) => {
-    try {
-      const resp = await fetch('/api/licencas/mapa/');
-      const data = await resp.json();
-      const cleaned = (docu || '').replace(/\D/g, '');
-      const match = data.find(x => String(x?.cnpj || '').replace(/\D/g, '') === cleaned);
-      return match ? match.slug : null;
-    } catch (e) {
-      console.error('Erro ao buscar mapa de licenças', e);
-      return null;
-    }
-  };
 
-  const form = document.getElementById('loginForm');
-  const submitBtn = form.querySelector('button[type="submit"]');
-  const spinnerEl = submitBtn.querySelector('.js-login-spinner');
-  const arrowEl = submitBtn.querySelector('.js-login-arrow');
-  const btnTextEl = document.getElementById('loginBtnText');
-  let isLoading = false;
+/* ===================== ELEMENTOS ===================== */
 
-  const setLoading = (loading) => {
+const form = document.getElementById('loginForm');
+
+const submitBtn = form.querySelector('button[type="submit"]');
+
+const spinnerEl = submitBtn.querySelector('.js-login-spinner');
+
+const arrowEl = submitBtn.querySelector('.js-login-arrow');
+
+const btnTextEl = document.getElementById('loginBtnText');
+
+let isLoading = false;
+
+
+/* ===================== LOADING ===================== */
+
+const setLoading = (loading) => {
+
     isLoading = loading;
-    if (loading) {
-      submitBtn.disabled = true;
-      submitBtn.setAttribute('aria-busy', 'true');
-      if (spinnerEl) spinnerEl.classList.remove('d-none');
-      if (arrowEl) arrowEl.classList.add('d-none');
-      if (btnTextEl) btnTextEl.textContent = 'Entrando...';
-    } else {
-      submitBtn.disabled = false;
-      submitBtn.setAttribute('aria-busy', 'false');
-      if (spinnerEl) spinnerEl.classList.add('d-none');
-      if (arrowEl) arrowEl.classList.remove('d-none');
-      if (btnTextEl) btnTextEl.textContent = 'Entrar';
-    }
-  };
 
-  form.addEventListener('submit', async (e) => {
+    if (loading) {
+
+        submitBtn.disabled = true;
+
+        submitBtn.setAttribute('aria-busy', 'true');
+
+        if (spinnerEl) {
+            spinnerEl.classList.remove('d-none');
+        }
+
+        if (arrowEl) {
+            arrowEl.classList.add('d-none');
+        }
+
+        if (btnTextEl) {
+            btnTextEl.textContent = 'Entrando...';
+        }
+
+    } else {
+
+        submitBtn.disabled = false;
+
+        submitBtn.setAttribute('aria-busy', 'false');
+
+        if (spinnerEl) {
+            spinnerEl.classList.add('d-none');
+        }
+
+        if (arrowEl) {
+            arrowEl.classList.remove('d-none');
+        }
+
+        if (btnTextEl) {
+            btnTextEl.textContent = 'Entrar';
+        }
+
+    }
+
+};
+
+
+/* ===================== ERROS ===================== */
+
+const showError = (msg) => {
+
+    const el = document.getElementById('alert');
+
+    el.textContent = msg;
+
+    el.classList.remove('d-none');
+
+    setLoading(false);
+
+};
+
+
+/* ===================== MAPA DE LICENÇAS ===================== */
+
+const findSlugByDocu = async (docu) => {
+
+    try {
+
+        const resp = await fetch('/api/licencas/mapa/');
+
+        const data = await resp.json();
+
+        const cleaned = (docu || '').replace(/\D/g, '');
+
+        const match = data.find(
+            x => String(x?.cnpj || '').replace(/\D/g, '') === cleaned
+        );
+
+        return match ? match.slug : null;
+
+    } catch (e) {
+
+        console.error('Erro ao buscar mapa de licenças', e);
+
+        return null;
+
+    }
+
+};
+
+
+/* ===================== AUTENTICAÇÃO ===================== */
+
+form.addEventListener('submit', async (e) => {
+
     e.preventDefault();
+
     if (isLoading) return;
+
     document.getElementById('alert').classList.add('d-none');
 
+
     const docu = document.getElementById('docu').value.trim();
+
     const docuDigits = (docu || '').replace(/\D/g, '');
-    const username = document.getElementById('username').value.trim().replace(/\s+/g, ' ');
+
+    const username = document
+        .getElementById('username')
+        .value
+        .trim()
+        .replace(/\s+/g, ' ');
+
     const password = document.getElementById('password').value;
+
 
     setLoading(true);
 
-    if (!docuDigits) return showError('Informe o CPF/CNPJ.');
-    if (![11, 14].includes(docuDigits.length)) return showError('CPF/CNPJ inválido.');
+
+    /* Validar CPF/CNPJ */
+
+    if (!docuDigits) {
+        return showError('Informe o CPF/CNPJ.');
+    }
+
+    if (![11, 14].includes(docuDigits.length)) {
+        return showError('CPF/CNPJ inválido.');
+    }
+
+
+    /* Buscar licença */
 
     const slug = await findSlugByDocu(docuDigits);
-    if (!slug) return showError('CPF/CNPJ inválido ou não mapeado.');
+
+    if (!slug) {
+        return showError('CPF/CNPJ inválido ou não mapeado.');
+    }
+
+
+    /* Login */
 
     try {
-      const resp = await fetch(`/api/${slug}/licencas/login/`, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ docu, username, password })
-      });
 
-      const data = await resp.json();
-      if (!resp.ok) {
-        const msg = data?.error || 'Falha no login.';
-        return showError(msg);
-      }
+        const resp = await fetch(`/api/${slug}/licencas/login/`, {
 
-      // Armazena tokens e contexto básico
-      localStorage.setItem('access', data.access);
-      localStorage.setItem('refresh', data.refresh);
-      localStorage.setItem('usuario', JSON.stringify(data.usuario));
-      localStorage.setItem('licenca', JSON.stringify(data.licenca));
-      localStorage.setItem('slug', slug);
-      localStorage.setItem('docu', docuDigits);
-      localStorage.setItem('usua_nome', username);
-      try {
-        const u = data && data.usuario ? data.usuario : null;
-        const usuaCodi = (u && (u.usua_codi || u.usuario_id || u.id)) || '';
-        if (usuaCodi) localStorage.setItem('usua_codi', String(usuaCodi));
-      } catch (_e) { }
-      try {
-        const v = encodeURIComponent(String(username || '').trim().toLowerCase());
-        if (v) document.cookie = `mobile_sps_user_hint=${v}; path=/; samesite=lax`;
-      } catch (_e) { }
+            method: 'POST',
 
-      // Avança para seleção de empresa/filial
-      window.location.href = '/web/selecionar-empresa/';
+            credentials: 'same-origin',
+
+            headers: {
+                'Content-Type': 'application/json'
+            },
+
+            body: JSON.stringify({
+                docu,
+                username,
+                password
+            })
+
+        });
+
+
+        const data = await resp.json();
+
+
+        if (!resp.ok) {
+
+            const msg = data?.error || 'Falha no login.';
+
+            return showError(msg);
+
+        }
+
+
+        /* Armazenar tokens */
+
+        localStorage.setItem('access', data.access);
+
+        localStorage.setItem('refresh', data.refresh);
+
+        localStorage.setItem(
+            'usuario',
+            JSON.stringify(data.usuario)
+        );
+
+        localStorage.setItem(
+            'licenca',
+            JSON.stringify(data.licenca)
+        );
+
+        localStorage.setItem('slug', slug);
+
+        localStorage.setItem('docu', docuDigits);
+
+        localStorage.setItem('usua_nome', username);
+
+
+        /* Código do usuário */
+
+        try {
+
+            const u = data && data.usuario ? data.usuario : null;
+
+            const usuaCodi = (
+                u && (
+                    u.usua_codi ||
+                    u.usuario_id ||
+                    u.id
+                )
+            ) || '';
+
+            if (usuaCodi) {
+
+                localStorage.setItem(
+                    'usua_codi',
+                    String(usuaCodi)
+                );
+
+            }
+
+        } catch (_e) { }
+
+
+        /* Cookie */
+
+        try {
+
+            const v = encodeURIComponent(
+                String(username || '').trim().toLowerCase()
+            );
+
+            if (v) {
+
+                document.cookie =
+                    `mobile_sps_user_hint=${v}; path=/; samesite=lax`;
+
+            }
+
+        } catch (_e) { }
+
+
+        /* Avançar para seleção de empresa/filial */
+
+        window.location.href = '/web/selecionar-empresa/';
+
+
     } catch (e) {
-      console.error(e);
-      showError('Erro inesperado ao tentar fazer login.');
+
+        console.error(e);
+
+        showError('Erro inesperado ao tentar fazer login.');
+
     }
-  });
+
+});
+
 </script>
+
 {% endblock %}
+
+
 {% block header %}{% endblock %}
+
 {% block footer %}{% endblock %}
+
 {% block body_class %}login-minimal{% endblock %}

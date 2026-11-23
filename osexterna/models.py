@@ -1,4 +1,5 @@
 from django.db import models
+from core.db_columns import SafeMissingColumnsManager
 
 status_ordem = [
     (0, "Aberta"),
@@ -33,6 +34,7 @@ class Osexterna(models.Model):
     osex_assi_clie = models.TextField(blank=True, null=True, verbose_name='Assinatura Cliente', db_column='osex_assi_clie')
     osex_assi_oper = models.TextField(blank=True, null=True, verbose_name='Assinatura Operador', db_column='osex_assi_oper')
 
+    objects = SafeMissingColumnsManager()
     class Meta:
         managed = False
         db_table = 'osexterna'
