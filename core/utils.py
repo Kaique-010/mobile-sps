@@ -6,29 +6,45 @@ from core.licenca_context import get_licencas_map
 from decimal import Decimal, ROUND_HALF_UP
 
 
+
 def get_db_from_slug(slug):
-    import time
     import logging
-    
+    import threading
+    from decouple import config
+
     logger = logging.getLogger(__name__)
-    start_time = time.time()
-    
+
     if not slug:
         return "default"
-    # #region debug-point C:db-from-slug-enter
-    import json, urllib.request; exec("try:\n urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:7777/event', data=json.dumps({'sessionId':'nota-calc-duplicate','runId':'pre-fix','hypothesisId':'C','location':'core/utils.py:get_db_from_slug','msg':'[DEBUG] get_db_from_slug called','data':{'slug':str(slug)}}).encode(), headers={'Content-Type':'application/json'}), timeout=0.5).read()\nexcept: pass")
-    # #endregion
 
-    licenca = next((lic for lic in get_licencas_map() if lic["slug"] == slug), None)
+    # Se a conexão já foi registrada, não precisamos
+    # consultar novamente a tabela de licenças.
+    if slug in settings.DATABASES:
+        return slug
+
+    licenca = next(
+        (
+            lic for lic in get_licencas_map()
+            if lic.get("slug") == slug
+        ),
+        None
+    )
+
     if not licenca:
         raise Exception(f"Licença com slug '{slug}' não encontrada.")
 
-    if slug in settings.DATABASES:
-        return slug
-    
     prefixo = slug.upper()
-    db_user = licenca.get("db_user") or config(f"{prefixo}_DB_USER", default=None)
-    db_password = licenca.get("db_password") or config(f"{prefixo}_DB_PASSWORD", default=None)
+
+    db_user = (
+        licenca.get("db_user")
+        or config(f"{prefixo}_DB_USER", default=None)
+    )
+
+    db_password = (
+        licenca.get("db_password")
+        or config(f"{prefixo}_DB_PASSWORD", default=None)
+    )
+
     if not db_user or not db_password:
         raise Exception(f"Credenciais não encontradas para {slug}")
 
@@ -54,11 +70,11 @@ def get_db_from_slug(slug):
 
     connections.ensure_defaults(slug)
     connections.prepare_test_settings(slug)
-    
-    total_time = (time.time() - start_time) * 1000
-    logger.warning(f"⏱️  Conexão {slug} criada em {total_time:.2f}ms")
+
+    logger.info("[DB] Conexão registrada: %s", slug)
 
     return slug
+
 
 
 def get_ncm_master_db(default_db: str = "default") -> str:

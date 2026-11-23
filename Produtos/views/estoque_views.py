@@ -1,6 +1,7 @@
 from rest_framework import viewsets
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.pagination import replace_query_param
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.filters import SearchFilter
 from django_filters.rest_framework import DjangoFilterBackend
@@ -8,7 +9,8 @@ from django.db.models import Sum, F, Q
 from django.core.exceptions import FieldError
 from django.db.models import Value
 from django.db.models.functions import Coalesce
-
+import time
+from django.db import connections
 from core.decorator import ModuloRequeridoMixin
 from core.registry import get_licenca_db_config
 from core.middleware import get_licenca_slug
@@ -21,6 +23,50 @@ from rest_framework.pagination import LimitOffsetPagination
 class ProdutosDetalhadosPagination(LimitOffsetPagination):
     default_limit = 20
     max_limit = 500
+
+    def paginate_queryset(self, queryset, request, view=None):
+        self.request = request
+        self.limit = self.get_limit(request)
+
+        if self.limit is None:
+            return None
+
+        self.offset = self.get_offset(request)
+
+        # Busca um registro extra para descobrir se existe próxima página.
+        resultados = list(
+            queryset[self.offset:self.offset + self.limit + 1]
+        )
+
+        self.has_next = len(resultados) > self.limit
+        self.has_previous = self.offset > 0
+
+        return resultados[:self.limit]
+
+    def get_paginated_response(self, data):
+        next_url = None
+        previous_url = None
+
+        if self.has_next:
+            next_url = replace_query_param(
+                self.request.build_absolute_uri(),
+                self.offset_query_param,
+                self.offset + self.limit
+            )
+
+        if self.has_previous:
+            previous_url = replace_query_param(
+                self.request.build_absolute_uri(),
+                self.offset_query_param,
+                max(self.offset - self.limit, 0)
+            )
+
+        return Response({
+            'next': next_url,
+            'previous': previous_url,
+            'results': data
+        })
+
 
 logger = getLogger(__name__)
 
@@ -38,8 +84,23 @@ class ProdutosDetalhadosViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         context['banco'] = get_licenca_db_config(self.request)
         return context
 
-    def get_queryset(self, slug=None):
+    
+    def get_queryset(self):
+        inicio = time.perf_counter()
+
+        logger.warning(
+            "[PRODUTOS] INICIO get_queryset | path=%s | usuario=%s",
+            self.request.path,
+            self.request.user
+        )
+
         banco = get_licenca_db_config(self.request)
+
+        logger.warning(
+            "[PRODUTOS] BANCO SELECIONADO: %s",
+            banco
+        )
+
         qs = ProdutosDetalhados.objects.using(banco).all().annotate(
             _saldo=Coalesce('saldo', Value(0))
         )
@@ -63,15 +124,21 @@ class ProdutosDetalhadosViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
         )
 
         marca_nome = self.request.query_params.get('marca_nome')
+
+        # Filtro por marca
         if marca_nome:
             if marca_nome == '__sem_marca__':
-                qs = qs.filter(Q(marca_nome__isnull=True) | Q(marca_nome=''))
+                qs = qs.filter(
+                    Q(marca_nome__isnull=True) | Q(marca_nome='')
+                )
             else:
                 qs = qs.filter(marca_nome=marca_nome)
 
+        # Filtro por empresa
         if empresa:
             try:
                 empresa_int = int(str(empresa))
+
                 qs = qs.filter(
                     Q(empresa=empresa_int)
                     | Q(empresa=0)
@@ -83,9 +150,12 @@ class ProdutosDetalhadosViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                     | Q(empresa=0)
                     | Q(empresa__isnull=True)
                 )
+
+        # Filtro por filial
         if filial:
             try:
                 filial_int = int(str(filial))
+
                 qs = qs.filter(
                     Q(filial=filial_int)
                     | Q(filial=0)
@@ -98,10 +168,14 @@ class ProdutosDetalhadosViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
                     | Q(filial__isnull=True)
                 )
 
+        # Filtros de estoque
         def _is_true(value):
             if isinstance(value, bool):
                 return value
-            return str(value).strip().lower() in ('true', '1', 't', 'yes', 'y')
+
+            return str(value).strip().lower() in (
+                'true', '1', 't', 'yes', 'y'
+            )
 
         com_saldo = self.request.query_params.get('com_saldo')
         sem_saldo = self.request.query_params.get('sem_saldo')
@@ -109,24 +183,98 @@ class ProdutosDetalhadosViewSet(ModuloRequeridoMixin, viewsets.ModelViewSet):
 
         if _is_true(com_saldo):
             qs = qs.filter(saldo__gt=0)
+
         elif _is_true(sem_saldo):
-            qs = qs.filter(Q(saldo__isnull=True) | Q(saldo__lte=0))
+            qs = qs.filter(
+                Q(saldo__isnull=True) | Q(saldo__lte=0)
+            )
+
         elif _is_true(estoque_minimo):
             try:
                 qs = qs.filter(_saldo__lt=F('estoque_minimo'))
             except FieldError:
-                pass
+                logger.exception(
+                    "[PRODUTOS] Erro ao aplicar filtro de estoque mínimo"
+                )
 
+        # Log dos filtros aplicados
         logger.info(
-            "Listar produtos detalhados com filtro: empresa=%s, filial=%s, marca=%s, com_saldo=%s, sem_saldo=%s, estoque_minimo=%s",
+            "[PRODUTOS] FILTROS | empresa=%s | filial=%s | marca=%s | "
+            "com_saldo=%s | sem_saldo=%s | estoque_minimo=%s",
             empresa,
             filial,
             marca_nome,
             com_saldo,
             sem_saldo,
-            estoque_minimo,
+            estoque_minimo
         )
+
+        tempo_total = (time.perf_counter() - inicio) * 1000
+
+        logger.warning(
+            "[PRODUTOS] FIM get_queryset | banco=%s | tempo=%.2fms",
+            banco,
+            tempo_total
+        )
+
         return qs
+
+    
+    def list(self, request, *args, **kwargs):
+        inicio = time.perf_counter()
+        consultas = []
+        banco = get_licenca_db_config(request)
+
+        def medir_sql(execute, sql, params, many, context):
+            inicio_sql = time.perf_counter()
+            try:
+                return execute(sql, params, many, context)
+            finally:
+                duracao = (time.perf_counter() - inicio_sql) * 1000
+                consultas.append(duracao)
+
+        with connections[banco].execute_wrapper(medir_sql):
+
+            inicio_filtro = time.perf_counter()
+            queryset = self.filter_queryset(self.get_queryset())
+            tempo_filtro = (time.perf_counter() - inicio_filtro) * 1000
+
+            inicio_paginacao = time.perf_counter()
+            page = self.paginate_queryset(queryset)
+            tempo_paginacao = (
+                time.perf_counter() - inicio_paginacao
+            ) * 1000
+
+            inicio_serializer = time.perf_counter()
+            serializer = self.get_serializer(page, many=True)
+            data = serializer.data
+            tempo_serializer = (
+                time.perf_counter() - inicio_serializer
+            ) * 1000
+
+            tempo_total = (time.perf_counter() - inicio) * 1000
+
+            logger.info(
+                "[PERFORMANCE PRODUTOS] "
+                "banco=%s | "
+                "registros=%s | "
+                "filtro=%.2fms | "
+                "paginacao=%.2fms | "
+                "serializer=%.2fms | "
+                "sql_total=%.2fms | "
+                "sql_count=%s | "
+                "total=%.2fms",
+                banco,
+                len(data),
+                tempo_filtro,
+                tempo_paginacao,
+                tempo_serializer,
+                sum(consultas),
+                len(consultas),
+                tempo_total,
+            )
+
+            return self.get_paginated_response(data)
 
 
 class EstoqueResumoView(APIView):
