@@ -123,49 +123,110 @@ class OrdemViewSet(BaseMultiDBModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
+    
     def _prefetch_related_objects(self, objects):
         if not objects:
             return
-            
+
         banco = self.get_banco()
-        # Collect IDs
+
+        # IDs das ordens
         orde_ids = [obj.orde_nume for obj in objects]
-        
-        # Prefetch Pecas
-        pecas = Ordemservicopecas.objects.using(banco).filter(peca_orde__in=orde_ids)
+
+        # ==========================================
+        # PREFETCH PEÇAS
+        # ==========================================
+        pecas = (
+            Ordemservicopecas.objects
+            .using(banco)
+            .filter(peca_orde__in=orde_ids)
+        )
+
         pecas_map = {}
+
         for peca in pecas:
-            if peca.peca_orde not in pecas_map:
-                pecas_map[peca.peca_orde] = []
-            pecas_map[peca.peca_orde].append(peca)
-            
-        # Prefetch Servicos
-        servicos = Ordemservicoservicos.objects.using(banco).filter(serv_orde__in=orde_ids)
+            pecas_map.setdefault(peca.peca_orde, []).append(peca)
+
+        # ==========================================
+        # PREFETCH SERVIÇOS
+        # ==========================================
+        servicos = (
+            Ordemservicoservicos.objects
+            .using(banco)
+            .filter(serv_orde__in=orde_ids)
+        )
+
         servicos_map = {}
+
         for serv in servicos:
-            if serv.serv_orde not in servicos_map:
-                servicos_map[serv.serv_orde] = []
-            servicos_map[serv.serv_orde].append(serv)
+            servicos_map.setdefault(serv.serv_orde, []).append(serv)
 
-        # Prefetch Setores
-        setor_ids = set(obj.orde_seto for obj in objects if obj.orde_seto)
-        setores = OrdemServicoFaseSetor.objects.using(banco).filter(osfs_codi__in=setor_ids)
-        setores_map = {s.osfs_codi: s.osfs_nome for s in setores}
+        # ==========================================
+        # PREFETCH SETORES
+        # ==========================================
+        setor_ids = {
+            obj.orde_seto
+            for obj in objects
+            if obj.orde_seto
+        }
 
-        # Prefetch Clientes
-        clie_ids = set(obj.orde_enti for obj in objects if obj.orde_enti)
-        # Assuming Entidades is accessible via orde_enti/enti_clie + orde_empr/enti_empr
-        clientes = Entidades.objects.using(banco).filter(enti_clie__in=clie_ids)
-        clientes_map = {}
-        for c in clientes:
-            clientes_map[(c.enti_empr, c.enti_clie)] = c.enti_nome
+        setores = (
+            OrdemServicoFaseSetor.objects
+            .using(banco)
+            .filter(osfs_codi__in=setor_ids)
+            .values_list('osfs_codi', 'osfs_nome')
+        )
 
-        # Assign to objects
+        setores_map = dict(setores)
+
+        # ==========================================
+        # PREFETCH CLIENTES
+        # ==========================================
+        clie_ids = {
+            obj.orde_enti
+            for obj in objects
+            if obj.orde_enti
+        }
+
+        clientes = (
+            Entidades.objects
+            .using(banco)
+            .filter(enti_clie__in=clie_ids)
+            .values_list(
+                'enti_empr',
+                'enti_clie',
+                'enti_nome'
+            )
+        )
+
+        # Monta o mapa sem instanciar o model Entidades.
+        # Isso impede a conversão de enti_dana e de outros
+        # campos desnecessários.
+        clientes_map = {
+            (empresa, cliente): nome
+            for empresa, cliente, nome in clientes
+        }
+
+        # ==========================================
+        # ATRIBUIÇÃO DOS DADOS ÀS ORDENS
+        # ==========================================
         for obj in objects:
-            obj._prefetched_pecas = pecas_map.get(obj.orde_nume, [])
-            obj._prefetched_servicos = servicos_map.get(obj.orde_nume, [])
-            obj._prefetched_setor_nome = setores_map.get(obj.orde_seto)
-            obj._prefetched_cliente_nome = clientes_map.get((obj.orde_empr, obj.orde_enti))
+            obj._prefetched_pecas = pecas_map.get(
+                obj.orde_nume, []
+            )
+
+            obj._prefetched_servicos = servicos_map.get(
+                obj.orde_nume, []
+            )
+
+            obj._prefetched_setor_nome = setores_map.get(
+                obj.orde_seto
+            )
+
+            obj._prefetched_cliente_nome = clientes_map.get(
+                (obj.orde_empr, obj.orde_enti)
+            )
+
 
     def get_next_ordem_numero(self, empre, fili, data):
         """

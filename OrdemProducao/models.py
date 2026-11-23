@@ -1,5 +1,6 @@
 
 from django.db import models
+from core.db_columns import SafeMissingColumnsManager, campo_existe_no_banco
 
 
 class Ordemprodfotos(models.Model):
@@ -50,6 +51,7 @@ class Ordemprodmate(models.Model):
     orpm_situ = models.BooleanField(blank=True, null=True, default=False)
     orpm_quantidade = models.DecimalField(max_digits=15, decimal_places=4, blank=True, null=True)
 
+    objects = SafeMissingColumnsManager()
     class Meta:
         managed = False
         db_table = 'ordemprodmate'
