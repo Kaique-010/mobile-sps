@@ -6,6 +6,8 @@ from django.core.cache import cache
 from django.utils import timezone
 from core.utils import get_licenca_db_config
 from Produtos.models import Produtos, SaldoProduto
+from coletaestoque.models import ColetaEstoque
+
 from coletaestoque.REST.serializers import ColetaEstoqueSerializer
 from Produtos.serializers import ProdutoSerializer
 
@@ -62,7 +64,7 @@ class ColetaEstoqueViewSet(viewsets.ModelViewSet):
                 'saldo_atual': saldo.saldo_estoque if saldo else 0
             }
             
-            return Response(data)
+            return Response(data, status=status.HTTP_200_OK, message="Produto encontrado com sucesso")
             
         except Exception as e:
             return Response({'detail': f'Erro interno: {str(e)}'}, status=500)
@@ -100,9 +102,9 @@ class ColetaEstoqueViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(data=data)
             if serializer.is_valid():
                 serializer.save()
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response(serializer.data, status=status.HTTP_201_CREATED, message="Leitura registrada com sucesso")
             
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST, message="Erro na validação dos dados")
             
         except Exception as e:
             return Response({'detail': f'Erro interno: {str(e)}'}, status=500)
@@ -143,7 +145,7 @@ class ColetaEstoqueViewSet(viewsets.ModelViewSet):
             
             resumo.sort(key=lambda x: x['cole_prod__prod_nome'])
             
-            return Response(list(resumo))
+            return Response(list(resumo), status=status.HTTP_200_OK, message="Resumo das coletas agrupadas por produto")
             
         except Exception as e:
             return Response({'detail': f'Erro interno: {str(e)}'}, status=500)
@@ -200,7 +202,7 @@ class ColetaEstoqueViewSet(viewsets.ModelViewSet):
             return Response({
                 'message': f'{len(atualizados)} produtos atualizados',
                 'produtos_atualizados': atualizados
-            })
+            }, status=status.HTTP_200_OK, message="Estoque atualizado com sucesso")
             
         except Exception as e:
-            return Response({'detail': f'Erro interno: {str(e)}'}, status=500)
+            return Response({'detail': f'Erro interno: {str(e)}'}, status=500, message="Erro ao atualizar estoque")
